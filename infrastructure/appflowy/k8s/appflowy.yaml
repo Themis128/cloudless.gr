@@ -1,48 +1,3 @@
-# AppFlowy Cloud self-host stack — Phase 1 deploy (PR #1051).
-# Replaces Notion as the operator-facing CMS for cloudless.gr.
-#
-# Topology:
-#  - 9 pods on omv (Pi 5, 16K page kernel):
-#       postgres (pgvector/pgvector:pg16) + redis + minio + gotrue
-#     + appflowy-cloud + appflowy-web + admin-frontend + nginx
-#  - 1 pod on omv-ha (Pi 4, 4K page kernel) because the worker image's
-#       jemalloc is built for 4K pages and fails on Pi 5 with
-#       "<jemalloc>: Unsupported system page size":
-#       appflowy-worker
-#  - Cloudflare tunnel: appflowy.cloudless.gr → 192.168.1.128:30810
-#       (NodePort on omv, path-routed by the in-cluster nginx).
-#       See infrastructure/appflowy/cloudflare-tunnel.yaml.
-#
-# Storage: postgres + minio PVCs on local-path (sda1 120GB SSD).
-# Memory budget: ~700 MiB across all pods (postiz-litellm eviction frees
-# ~990 MiB; see infrastructure/appflowy/evicted-deployments/postiz-litellm.yaml).
-#
-# Secrets are NOT in this manifest. The k8s Secret `appflowy-secrets` was
-# applied separately with strings generated at deploy time:
-#   POSTGRES_PASSWORD       (hex32)
-#   GOTRUE_JWT_SECRET       (hex64)
-#   GOTRUE_ADMIN_EMAIL      baltzakis.themis@gmail.com
-#   GOTRUE_ADMIN_PASSWORD   (urlsafe18 — given to operator out-of-band)
-#   APPFLOWY_S3_ACCESS_KEY  minioadmin (in-cluster MinIO defaults)
-#   APPFLOWY_S3_SECRET_KEY  minioadmin
-#
-# Env-var ordering rule: `$(POSTGRES_PASSWORD)` substitution in DATABASE_URL
-# values requires POSTGRES_PASSWORD to come FIRST in the env list. Same for
-# every other reference. K8s does string substitution top-down; an undefined
-# var expands to empty string and Postgres rejects the connection.
-#
-# Path routing (in-cluster nginx ConfigMap mirrors the official compose
-# nginx/nginx.conf, adapted for k8s DNS):
-#   /                  → appflowy-web         (Notion-like UI)
-#   /gotrue/*          → gotrue:9999          (auth + JWT)
-#   /api/*             → appflowy-cloud:8000  (REST/WebSocket API)
-#   /ws*               → appflowy-cloud:8000  (collab WebSocket)
-#   /minio/*           → minio:9001           (MinIO console)
-#   /minio-api/*       → minio:9000           (S3 presigned URLs)
-#   /console           → admin-frontend:3000  (workspace admin)
-#
-# See docs/appflowy-deploy.md for the operator runbook.
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -50,408 +5,429 @@ metadata:
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
-metadata: { name: appflowy-postgres, namespace: appflowy }
+metadata: {name: appflowy-postgres, namespace: appflowy}
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   storageClassName: local-path
-  resources: { requests: { storage: 20Gi } }
+  resources: {requests: {storage: 20Gi}}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
-metadata: { name: appflowy-minio, namespace: appflowy }
+metadata: {name: appflowy-minio, namespace: appflowy}
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   storageClassName: local-path
-  resources: { requests: { storage: 10Gi } }
+  resources: {requests: {storage: 10Gi}}
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: postgres, namespace: appflowy }
+metadata: {name: postgres, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: postgres } }
+  selector: {matchLabels: {app: postgres}}
   template:
-    metadata: { labels: { app: postgres } }
+    metadata: {labels: {app: postgres}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       # R16: continuous WAL → Cloudflare R2 via rclone (wal-g Put hangs on omv).
       # Init downloads wal-g (optional verify) + rclone, writes archive.sh into
       # a shared emptyDir. Requires Secret appflowy-walg-r2 + ConfigMap
       # appflowy-walg-env (see infrastructure/appflowy/walg-sidecar.yaml).
       # AWS_* names are the S3 client API; values are R2 tokens — not AWS IAM.
       initContainers:
-        - name: walg-bin
-          image: alpine:3.20
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -euo pipefail
-              apk add --no-cache curl ca-certificates unzip >/dev/null
-              ARCH=$(uname -m)
-              case "$ARCH" in
-                aarch64|arm64) SUFFIX=aarch64; RCLONE_ARCH=arm64 ;;
-                x86_64|amd64) SUFFIX=amd64; RCLONE_ARCH=amd64 ;;
-                *) echo "unsupported arch: $ARCH"; exit 1 ;;
-              esac
-              VER=v3.0.8
-              URL="https://github.com/wal-g/wal-g/releases/download/${VER}/wal-g-pg-24.04-${SUFFIX}.tar.gz"
-              curl -fsSL -o /tmp/wal-g.tgz "$URL"
-              tar -xzf /tmp/wal-g.tgz -C /tmp
-              install -m 755 "/tmp/wal-g-pg-24.04-${SUFFIX}" /walg-bin/wal-g
-              RCLONE_VER=v1.69.1
-              curl -fsSL -o /tmp/rclone.zip \
-                "https://github.com/rclone/rclone/releases/download/${RCLONE_VER}/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}.zip"
-              unzip -qo /tmp/rclone.zip -d /tmp
-              install -m 755 "/tmp/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}/rclone" /walg-bin/rclone
-              # Go TLS (rclone) needs a CA bundle; copy Alpine's into the shared
-              # volume so the postgres image does not need apt at runtime.
-              mkdir -p /walg-bin/certs
-              cp /etc/ssl/certs/ca-certificates.crt /walg-bin/certs/ca-certificates.crt
-              # %p may be relative to PGDATA; %f is the WAL filename for the key.
-              # Layout: r2:datalake-bucket/appflowy-wal/wal/ (raw segments).
-              printf '%s\n' \
-                '#!/bin/sh' \
-                'set -eu' \
-                'FILE=${1:?wal file path}' \
-                'NAME=${2:?wal file name}' \
-                'case "$FILE" in' \
-                '  /*) ABS="$FILE" ;;' \
-                '  *) ABS="${PGDATA%/}/$FILE" ;;' \
-                'esac' \
-                'export SSL_CERT_FILE=/walg-bin/certs/ca-certificates.crt' \
-                'export RCLONE_CONFIG_R2_TYPE=s3' \
-                'export RCLONE_CONFIG_R2_PROVIDER=Cloudflare' \
-                'export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"' \
-                'export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"' \
-                'export RCLONE_CONFIG_R2_ENDPOINT="$AWS_ENDPOINT"' \
-                'export RCLONE_CONFIG_R2_REGION=auto' \
-                'export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true' \
-                'exec timeout 120s /walg-bin/rclone copyto "$ABS" "r2:datalake-bucket/appflowy-wal/wal/$NAME"' \
-                > /walg-bin/archive.sh
-              chmod 755 /walg-bin/archive.sh
-              mkdir -p /var/lib/postgresql/wal-g
-              chown -R 999:999 /var/lib/postgresql/wal-g /walg-bin || true
-              /walg-bin/wal-g --version || true
-              /walg-bin/rclone version | head -1 || true
-          volumeMounts:
-            - { name: walg-bin, mountPath: /walg-bin }
-            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
+      - name: walg-bin
+        image: alpine:3.20
+        command: [/bin/sh, -c]
+        args:
+        - |
+          set -euo pipefail
+          apk add --no-cache curl ca-certificates unzip >/dev/null
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            aarch64|arm64) SUFFIX=aarch64; RCLONE_ARCH=arm64 ;;
+            x86_64|amd64) SUFFIX=amd64; RCLONE_ARCH=amd64 ;;
+            *) echo "unsupported arch: $ARCH"; exit 1 ;;
+          esac
+          VER=v3.0.8
+          URL="https://github.com/wal-g/wal-g/releases/download/${VER}/wal-g-pg-24.04-${SUFFIX}.tar.gz"
+          curl -fsSL -o /tmp/wal-g.tgz "$URL"
+          tar -xzf /tmp/wal-g.tgz -C /tmp
+          install -m 755 "/tmp/wal-g-pg-24.04-${SUFFIX}" /walg-bin/wal-g
+          RCLONE_VER=v1.69.1
+          curl -fsSL -o /tmp/rclone.zip \
+            "https://github.com/rclone/rclone/releases/download/${RCLONE_VER}/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}.zip"
+          unzip -qo /tmp/rclone.zip -d /tmp
+          install -m 755 "/tmp/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}/rclone" /walg-bin/rclone
+          # Go TLS (rclone) needs a CA bundle; copy Alpine's into the shared
+          # volume so the postgres image does not need apt at runtime.
+          mkdir -p /walg-bin/certs
+          cp /etc/ssl/certs/ca-certificates.crt /walg-bin/certs/ca-certificates.crt
+          # %p may be relative to PGDATA; %f is the WAL filename for the key.
+          # Layout: r2:datalake-bucket/appflowy-wal/wal/ (raw segments).
+          printf '%s\n' \
+            '#!/bin/sh' \
+            'set -eu' \
+            'FILE=${1:?wal file path}' \
+            'NAME=${2:?wal file name}' \
+            'case "$FILE" in' \
+            '  /*) ABS="$FILE" ;;' \
+            '  *) ABS="${PGDATA%/}/$FILE" ;;' \
+            'esac' \
+            'export SSL_CERT_FILE=/walg-bin/certs/ca-certificates.crt' \
+            'export RCLONE_CONFIG_R2_TYPE=s3' \
+            'export RCLONE_CONFIG_R2_PROVIDER=Cloudflare' \
+            'export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"' \
+            'export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"' \
+            'export RCLONE_CONFIG_R2_ENDPOINT="$AWS_ENDPOINT"' \
+            'export RCLONE_CONFIG_R2_REGION=auto' \
+            'export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true' \
+            'exec timeout 120s /walg-bin/rclone copyto "$ABS" "r2:datalake-bucket/appflowy-wal/wal/$NAME"' \
+            > /walg-bin/archive.sh
+          chmod 755 /walg-bin/archive.sh
+          mkdir -p /var/lib/postgresql/wal-g
+          chown -R 999:999 /var/lib/postgresql/wal-g /walg-bin || true
+          /walg-bin/wal-g --version || true
+          /walg-bin/rclone version | head -1 || true
+        volumeMounts:
+        - {name: walg-bin, mountPath: /walg-bin}
+        - {name: walg, mountPath: /var/lib/postgresql/wal-g}
       containers:
-        - name: postgres
-          image: pgvector/pgvector:pg16
-          env:
-            - { name: POSTGRES_USER, value: postgres }
-            - { name: POSTGRES_DB,   value: postgres }
-            - name: POSTGRES_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
-            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
-            - { name: AWS_EC2_METADATA_DISABLED, value: "true" }
-          envFrom:
-            - configMapRef: { name: appflowy-walg-env, optional: false }
-            - secretRef: { name: appflowy-walg-r2, optional: false }
-          args:
-            - "-c"
-            - "archive_mode=on"
-            - "-c"
-            - "archive_timeout=300"
-            - "-c"
-            - "archive_command=/walg-bin/archive.sh %p %f"
-          ports: [{ containerPort: 5432 }]
-          volumeMounts:
-            - { name: data, mountPath: /var/lib/postgresql/data }
-            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
-            - { name: walg-bin, mountPath: /walg-bin }
-          resources:
-            requests: { cpu: 50m, memory: 200Mi }
-            limits:   { cpu: 500m, memory: 400Mi }
-        - name: walg
-          image: alpine:3.20
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -euo pipefail
-              while true; do
-                /walg-bin/wal-g wal-verify integrity || true
-                sleep 300
-              done
-          envFrom:
-            - configMapRef: { name: appflowy-walg-env, optional: false }
-            - secretRef: { name: appflowy-walg-r2, optional: false }
-          env:
-            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
-          volumeMounts:
-            - { name: data, mountPath: /var/lib/postgresql/data, readOnly: true }
-            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
-            - { name: walg-bin, mountPath: /walg-bin }
-          resources:
-            requests: { cpu: 10m, memory: 32Mi }
-            limits:   { cpu: 100m, memory: 64Mi }
+      - name: postgres
+        image: pgvector/pgvector:pg16
+        env:
+        - {name: POSTGRES_USER, value: postgres}
+        - {name: POSTGRES_DB, value: postgres}
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                POSTGRES_PASSWORD}}
+        - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+        - {name: AWS_EC2_METADATA_DISABLED, value: 'true'}
+        envFrom:
+        - configMapRef: {name: appflowy-walg-env, optional: false}
+        - secretRef: {name: appflowy-walg-r2, optional: false}
+        args:
+        - -c
+        - archive_mode=on
+        - -c
+        - archive_timeout=300
+        - -c
+        - archive_command=/walg-bin/archive.sh %p %f
+        ports: [containerPort: 5432]
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/postgresql/data}
+        - {name: walg, mountPath: /var/lib/postgresql/wal-g}
+        - {name: walg-bin, mountPath: /walg-bin}
+        resources:
+          requests: {cpu: 50m, memory: 200Mi}
+          limits: {cpu: 500m, memory: 400Mi}
+      - name: walg
+        image: alpine:3.20
+        command: [/bin/sh, -c]
+        args:
+        - |
+          set -euo pipefail
+          while true; do
+            /walg-bin/wal-g wal-verify integrity || true
+            sleep 300
+          done
+        envFrom:
+        - configMapRef: {name: appflowy-walg-env, optional: false}
+        - secretRef: {name: appflowy-walg-r2, optional: false}
+        env:
+        - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/postgresql/data, readOnly: true}
+        - {name: walg, mountPath: /var/lib/postgresql/wal-g}
+        - {name: walg-bin, mountPath: /walg-bin}
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 64Mi}
       volumes:
-        - { name: data, persistentVolumeClaim: { claimName: appflowy-postgres } }
-        - { name: walg, emptyDir: {} }
-        - { name: walg-bin, emptyDir: {} }
+      - {name: data, persistentVolumeClaim: {claimName: appflowy-postgres}}
+      - {name: walg, emptyDir: {}}
+      - {name: walg-bin, emptyDir: {}}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: postgres, namespace: appflowy }
+metadata: {name: postgres, namespace: appflowy}
 spec:
-  selector: { app: postgres }
-  ports: [{ port: 5432, targetPort: 5432 }]
+  selector: {app: postgres}
+  ports: [{port: 5432, targetPort: 5432}]
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: redis, namespace: appflowy }
+metadata: {name: redis, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: redis } }
+  selector: {matchLabels: {app: redis}}
   template:
-    metadata: { labels: { app: redis } }
+    metadata: {labels: {app: redis}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: redis
-          image: redis:7-alpine
-          ports: [{ containerPort: 6379 }]
-          resources:
-            requests: { cpu: 10m, memory: 16Mi }
-            limits:   { cpu: 100m, memory: 64Mi }
+      - name: redis
+        image: redis:7-alpine
+        ports: [containerPort: 6379]
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 100m, memory: 64Mi}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: redis, namespace: appflowy }
+metadata: {name: redis, namespace: appflowy}
 spec:
-  selector: { app: redis }
-  ports: [{ port: 6379, targetPort: 6379 }]
+  selector: {app: redis}
+  ports: [{port: 6379, targetPort: 6379}]
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: minio, namespace: appflowy }
+metadata: {name: minio, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: minio } }
+  selector: {matchLabels: {app: minio}}
   template:
-    metadata: { labels: { app: minio } }
+    metadata: {labels: {app: minio}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: minio
-          image: minio/minio:latest
-          args: ["server", "/data", "--console-address", ":9001"]
-          env:
-            - name: MINIO_ROOT_USER
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
-            - name: MINIO_ROOT_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
-          ports:
-            - { containerPort: 9000 }
-            - { containerPort: 9001 }
-          volumeMounts: [{ name: data, mountPath: /data }]
-          resources:
-            requests: { cpu: 25m, memory: 80Mi }
-            limits:   { cpu: 300m, memory: 200Mi }
+      - name: minio
+        image: minio/minio:latest
+        args: [server, /data, --console-address, :9001]
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_ACCESS_KEY}}
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_SECRET_KEY}}
+        ports:
+        - {containerPort: 9000}
+        - {containerPort: 9001}
+        volumeMounts: [{name: data, mountPath: /data}]
+        resources:
+          requests: {cpu: 25m, memory: 80Mi}
+          limits: {cpu: 300m, memory: 200Mi}
       volumes:
-        - { name: data, persistentVolumeClaim: { claimName: appflowy-minio } }
+      - {name: data, persistentVolumeClaim: {claimName: appflowy-minio}}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: minio, namespace: appflowy }
+metadata: {name: minio, namespace: appflowy}
 spec:
-  selector: { app: minio }
+  selector: {app: minio}
   ports:
-    - { name: api,     port: 9000, targetPort: 9000 }
-    - { name: console, port: 9001, targetPort: 9001 }
+  - {name: api, port: 9000, targetPort: 9000}
+  - {name: console, port: 9001, targetPort: 9001}
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: gotrue, namespace: appflowy }
+metadata: {name: gotrue, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: gotrue } }
+  selector: {matchLabels: {app: gotrue}}
   template:
-    metadata: { labels: { app: gotrue } }
+    metadata: {labels: {app: gotrue}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: gotrue
-          image: appflowyinc/gotrue:latest
-          env:
+      - name: gotrue
+        image: appflowyinc/gotrue:latest
+        env:
             # POSTGRES_PASSWORD MUST come first — DATABASE_URL below uses $() expansion.
-            - name: POSTGRES_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
-            - name: GOTRUE_JWT_SECRET
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_JWT_SECRET } }
-            - name: GOTRUE_ADMIN_EMAIL
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_ADMIN_EMAIL } }
-            - name: GOTRUE_ADMIN_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_ADMIN_PASSWORD } }
-            - { name: DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres?search_path=auth" }
-            - { name: GOTRUE_SITE_URL, value: "appflowy-flutter://" }
-            - { name: GOTRUE_URI_ALLOW_LIST, value: "**" }
-            - { name: GOTRUE_DISABLE_SIGNUP, value: "true" }
-            - { name: GOTRUE_JWT_ADMIN_GROUP_NAME, value: "supabase_admin" }
-            - { name: GOTRUE_JWT_EXP, value: "604800" }
-            - { name: GOTRUE_DB_DRIVER, value: "postgres" }
-            - { name: API_EXTERNAL_URL, value: "https://appflowy.cloudless.gr/gotrue" }
-            - { name: PORT, value: "9999" }
-            - { name: GOTRUE_MAILER_AUTOCONFIRM, value: "true" }
-            - { name: GOTRUE_SMTP_MAX_FREQUENCY, value: "1ns" }
-            - { name: GOTRUE_RATE_LIMIT_EMAIL_SENT, value: "100" }
-            - { name: GOTRUE_EXTERNAL_GOOGLE_ENABLED, value: "false" }
-            - { name: GOTRUE_EXTERNAL_GITHUB_ENABLED, value: "false" }
-            - { name: GOTRUE_EXTERNAL_DISCORD_ENABLED, value: "false" }
-            - { name: GOTRUE_SAML_ENABLED, value: "false" }
-            - { name: GOTRUE_MAILER_URLPATHS_CONFIRMATION, value: "/gotrue/verify" }
-            - { name: GOTRUE_MAILER_URLPATHS_INVITE, value: "/gotrue/verify" }
-            - { name: GOTRUE_MAILER_URLPATHS_RECOVERY, value: "/gotrue/verify" }
-            - { name: GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE, value: "/gotrue/verify" }
-          ports: [{ containerPort: 9999 }]
-          resources:
-            requests: { cpu: 10m, memory: 32Mi }
-            limits:   { cpu: 200m, memory: 96Mi }
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                POSTGRES_PASSWORD}}
+        - name: GOTRUE_JWT_SECRET
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                GOTRUE_JWT_SECRET}}
+        - name: GOTRUE_ADMIN_EMAIL
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                GOTRUE_ADMIN_EMAIL}}
+        - name: GOTRUE_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                GOTRUE_ADMIN_PASSWORD}}
+        - {name: DATABASE_URL, value: 
+            postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres?search_path=auth}
+        - {name: GOTRUE_SITE_URL, value: appflowy-flutter://}
+        - {name: GOTRUE_URI_ALLOW_LIST, value: '**'}
+        - {name: GOTRUE_DISABLE_SIGNUP, value: 'true'}
+        - {name: GOTRUE_JWT_ADMIN_GROUP_NAME, value: supabase_admin}
+        - {name: GOTRUE_JWT_EXP, value: '604800'}
+        - {name: GOTRUE_DB_DRIVER, value: postgres}
+        - {name: API_EXTERNAL_URL, value: https://appflowy.cloudless.gr/gotrue}
+        - {name: PORT, value: '9999'}
+        - {name: GOTRUE_MAILER_AUTOCONFIRM, value: 'true'}
+        - {name: GOTRUE_SMTP_MAX_FREQUENCY, value: 1ns}
+        - {name: GOTRUE_RATE_LIMIT_EMAIL_SENT, value: '100'}
+        - {name: GOTRUE_EXTERNAL_GOOGLE_ENABLED, value: 'false'}
+        - {name: GOTRUE_EXTERNAL_GITHUB_ENABLED, value: 'false'}
+        - {name: GOTRUE_EXTERNAL_DISCORD_ENABLED, value: 'false'}
+        - {name: GOTRUE_SAML_ENABLED, value: 'false'}
+        - {name: GOTRUE_MAILER_URLPATHS_CONFIRMATION, value: /gotrue/verify}
+        - {name: GOTRUE_MAILER_URLPATHS_INVITE, value: /gotrue/verify}
+        - {name: GOTRUE_MAILER_URLPATHS_RECOVERY, value: /gotrue/verify}
+        - {name: GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE, value: /gotrue/verify}
+        ports: [containerPort: 9999]
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 200m, memory: 96Mi}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: gotrue, namespace: appflowy }
+metadata: {name: gotrue, namespace: appflowy}
 spec:
-  selector: { app: gotrue }
-  ports: [{ port: 9999, targetPort: 9999 }]
+  selector: {app: gotrue}
+  ports: [{port: 9999, targetPort: 9999}]
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: appflowy-cloud, namespace: appflowy }
+metadata: {name: appflowy-cloud, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: appflowy-cloud } }
+  selector: {matchLabels: {app: appflowy-cloud}}
   template:
-    metadata: { labels: { app: appflowy-cloud } }
+    metadata: {labels: {app: appflowy-cloud}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: appflowy-cloud
-          image: appflowyinc/appflowy_cloud:latest
-          env:
-            - name: POSTGRES_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
-            - name: APPFLOWY_GOTRUE_JWT_SECRET
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_JWT_SECRET } }
-            - name: APPFLOWY_S3_ACCESS_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
-            - name: APPFLOWY_S3_SECRET_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
-            - { name: APPFLOWY_DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres" }
-            - { name: RUST_LOG, value: "info" }
-            - { name: APPFLOWY_ENVIRONMENT, value: "production" }
-            - { name: APPFLOWY_REDIS_URI, value: "redis://redis:6379" }
-            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "http://gotrue:9999" }
-            - { name: APPFLOWY_S3_CREATE_BUCKET, value: "true" }
-            - { name: APPFLOWY_S3_USE_MINIO, value: "true" }
-            - { name: APPFLOWY_S3_MINIO_URL, value: "http://minio:9000" }
-            - { name: APPFLOWY_S3_BUCKET, value: "appflowy" }
-            - { name: APPFLOWY_S3_REGION, value: "us-east-1" }
-            - { name: APPFLOWY_S3_PRESIGNED_URL_ENDPOINT, value: "https://appflowy.cloudless.gr/minio-api" }
-            - { name: APPFLOWY_BASE_URL, value: "https://appflowy.cloudless.gr" }
-            - { name: APPFLOWY_WEB_URL, value: "https://appflowy.cloudless.gr" }
-            - { name: AI_ENABLED, value: "false" }
-            - { name: APPFLOWY_ACCESS_CONTROL, value: "true" }
-            - { name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: "20" }
-          ports: [{ containerPort: 8000 }]
-          resources:
-            requests: { cpu: 50m, memory: 128Mi }
-            limits:   { cpu: 500m, memory: 320Mi }
+      - name: appflowy-cloud
+        image: appflowyinc/appflowy_cloud:latest
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                POSTGRES_PASSWORD}}
+        - name: APPFLOWY_GOTRUE_JWT_SECRET
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                GOTRUE_JWT_SECRET}}
+        - name: APPFLOWY_S3_ACCESS_KEY
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_ACCESS_KEY}}
+        - name: APPFLOWY_S3_SECRET_KEY
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_SECRET_KEY}}
+        - {name: APPFLOWY_DATABASE_URL, value: 
+            postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres}
+        - {name: RUST_LOG, value: info}
+        - {name: APPFLOWY_ENVIRONMENT, value: production}
+        - {name: APPFLOWY_REDIS_URI, value: redis://redis:6379}
+        - {name: APPFLOWY_GOTRUE_BASE_URL, value: http://gotrue:9999}
+        - {name: APPFLOWY_S3_CREATE_BUCKET, value: 'true'}
+        - {name: APPFLOWY_S3_USE_MINIO, value: 'true'}
+        - {name: APPFLOWY_S3_MINIO_URL, value: http://minio:9000}
+        - {name: APPFLOWY_S3_BUCKET, value: appflowy}
+        - {name: APPFLOWY_S3_REGION, value: us-east-1}
+        - {name: APPFLOWY_S3_PRESIGNED_URL_ENDPOINT, value: 
+            https://appflowy.cloudless.gr/minio-api}
+        - {name: APPFLOWY_BASE_URL, value: https://appflowy.cloudless.gr}
+        - {name: APPFLOWY_WEB_URL, value: https://appflowy.cloudless.gr}
+        - {name: AI_ENABLED, value: 'false'}
+        - {name: APPFLOWY_ACCESS_CONTROL, value: 'true'}
+        - {name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: '20'}
+        ports: [containerPort: 8000]
+        resources:
+          requests: {cpu: 50m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 320Mi}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: appflowy-cloud, namespace: appflowy }
+metadata: {name: appflowy-cloud, namespace: appflowy}
 spec:
-  selector: { app: appflowy-cloud }
-  ports: [{ port: 8000, targetPort: 8000 }]
+  selector: {app: appflowy-cloud}
+  ports: [{port: 8000, targetPort: 8000}]
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: appflowy-worker, namespace: appflowy }
+metadata: {name: appflowy-worker, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: appflowy-worker } }
+  selector: {matchLabels: {app: appflowy-worker}}
   template:
-    metadata: { labels: { app: appflowy-worker } }
+    metadata: {labels: {app: appflowy-worker}}
     spec:
       # Pinned to omv-ha (Pi 4, 4K page kernel) — the worker image's
       # jemalloc was built for 4K pages and panics with "Unsupported
       # system page size" on omv (Pi 5, 16K kernel `2712`).
-      nodeSelector: { kubernetes.io/hostname: omv-ha }
+      nodeSelector: {kubernetes.io/hostname: omv-ha}
       containers:
-        - name: appflowy-worker
-          image: appflowyinc/appflowy_worker:latest
-          env:
-            - name: POSTGRES_PASSWORD
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
-            - name: APPFLOWY_S3_ACCESS_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
-            - name: APPFLOWY_S3_SECRET_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
-            - { name: APPFLOWY_WORKER_DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres.appflowy.svc.cluster.local:5432/postgres" }
-            - { name: APPFLOWY_WORKER_DATABASE_NAME, value: "postgres" }
-            - { name: RUST_LOG, value: "info" }
-            - { name: APPFLOWY_WORKER_REDIS_URL, value: "redis://redis.appflowy.svc.cluster.local:6379" }
-            - { name: APPFLOWY_WORKER_ENVIRONMENT, value: "production" }
-            - { name: APPFLOWY_WORKER_IMPORT_TICK_INTERVAL, value: "30" }
-            - { name: APPFLOWY_S3_USE_MINIO, value: "true" }
-            - { name: APPFLOWY_S3_MINIO_URL, value: "http://minio.appflowy.svc.cluster.local:9000" }
-            - { name: APPFLOWY_S3_BUCKET, value: "appflowy" }
-            - { name: APPFLOWY_S3_REGION, value: "us-east-1" }
-          resources:
-            requests: { cpu: 25m, memory: 80Mi }
-            limits:   { cpu: 300m, memory: 200Mi }
+      - name: appflowy-worker
+        image: appflowyinc/appflowy_worker:latest
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                POSTGRES_PASSWORD}}
+        - name: APPFLOWY_S3_ACCESS_KEY
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_ACCESS_KEY}}
+        - name: APPFLOWY_S3_SECRET_KEY
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: 
+                APPFLOWY_S3_SECRET_KEY}}
+        - {name: APPFLOWY_WORKER_DATABASE_URL, value: 
+            postgres://postgres:$(POSTGRES_PASSWORD)@postgres.appflowy.svc.cluster.local:5432/postgres}
+        - {name: APPFLOWY_WORKER_DATABASE_NAME, value: postgres}
+        - {name: RUST_LOG, value: info}
+        - {name: APPFLOWY_WORKER_REDIS_URL, value: 
+            redis://redis.appflowy.svc.cluster.local:6379}
+        - {name: APPFLOWY_WORKER_ENVIRONMENT, value: production}
+        - {name: APPFLOWY_WORKER_IMPORT_TICK_INTERVAL, value: '30'}
+        - {name: APPFLOWY_S3_USE_MINIO, value: 'true'}
+        - {name: APPFLOWY_S3_MINIO_URL, value: 
+            http://minio.appflowy.svc.cluster.local:9000}
+        - {name: APPFLOWY_S3_BUCKET, value: appflowy}
+        - {name: APPFLOWY_S3_REGION, value: us-east-1}
+        resources:
+          requests: {cpu: 25m, memory: 80Mi}
+          limits: {cpu: 300m, memory: 200Mi}
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: appflowy-web, namespace: appflowy }
+metadata: {name: appflowy-web, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: appflowy-web } }
+  selector: {matchLabels: {app: appflowy-web}}
   template:
-    metadata: { labels: { app: appflowy-web } }
+    metadata: {labels: {app: appflowy-web}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: appflowy-web
-          image: appflowyinc/appflowy_web:latest
-          env:
-            - { name: APPFLOWY_BASE_URL,        value: "https://appflowy.cloudless.gr" }
-            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "https://appflowy.cloudless.gr/gotrue" }
-            - { name: APPFLOWY_WS_BASE_URL,     value: "wss://appflowy.cloudless.gr/ws/v2" }
-          ports: [{ containerPort: 80 }]
-          resources:
-            requests: { cpu: 10m, memory: 48Mi }
-            limits:   { cpu: 200m, memory: 96Mi }
+      - name: appflowy-web
+        image: appflowyinc/appflowy_web:latest
+        env:
+        - {name: APPFLOWY_BASE_URL, value: https://appflowy.cloudless.gr}
+        - {name: APPFLOWY_GOTRUE_BASE_URL, value: 
+            https://appflowy.cloudless.gr/gotrue}
+        - {name: APPFLOWY_WS_BASE_URL, value: wss://appflowy.cloudless.gr/ws/v2}
+        ports: [containerPort: 80]
+        resources:
+          requests: {cpu: 10m, memory: 48Mi}
+          limits: {cpu: 200m, memory: 96Mi}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: appflowy-web, namespace: appflowy }
+metadata: {name: appflowy-web, namespace: appflowy}
 spec:
-  selector: { app: appflowy-web }
-  ports: [{ port: 80, targetPort: 80 }]
+  selector: {app: appflowy-web}
+  ports: [{port: 80, targetPort: 80}]
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: admin-frontend, namespace: appflowy }
+metadata: {name: admin-frontend, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: admin-frontend } }
+  selector: {matchLabels: {app: admin-frontend}}
   template:
-    metadata: { labels: { app: admin-frontend } }
+    metadata: {labels: {app: admin-frontend}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: admin-frontend
-          image: appflowyinc/admin_frontend:latest
-          env:
-            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "http://gotrue:9999" }
-            - { name: APPFLOWY_BASE_URL,        value: "http://appflowy-cloud:8000" }
-          ports: [{ containerPort: 3000 }]
-          resources:
-            requests: { cpu: 10m, memory: 48Mi }
-            limits:   { cpu: 200m, memory: 96Mi }
+      - name: admin-frontend
+        image: appflowyinc/admin_frontend:latest
+        env:
+        - {name: APPFLOWY_GOTRUE_BASE_URL, value: http://gotrue:9999}
+        - {name: APPFLOWY_BASE_URL, value: http://appflowy-cloud:8000}
+        ports: [containerPort: 3000]
+        resources:
+          requests: {cpu: 10m, memory: 48Mi}
+          limits: {cpu: 200m, memory: 96Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -459,9 +435,9 @@ metadata:
   name: admin-frontend
   namespace: appflowy
 spec:
-  selector: { app: admin-frontend }
+  selector: {app: admin-frontend}
   ports:
-    - { name: http, port: 3000, targetPort: 3000 }
+  - {name: http, port: 3000, targetPort: 3000}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -547,32 +523,32 @@ data:
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: nginx, namespace: appflowy }
+metadata: {name: nginx, namespace: appflowy}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: nginx } }
+  selector: {matchLabels: {app: nginx}}
   template:
-    metadata: { labels: { app: nginx } }
+    metadata: {labels: {app: nginx}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: nginx
-          image: nginx:1.27-alpine
-          ports: [{ containerPort: 80 }]
-          volumeMounts:
-            - { name: conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf }
-          resources:
-            requests: { cpu: 10m, memory: 16Mi }
-            limits:   { cpu: 200m, memory: 64Mi }
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports: [containerPort: 80]
+        volumeMounts:
+        - {name: conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf}
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
       volumes:
-        - { name: conf, configMap: { name: nginx-conf } }
+      - {name: conf, configMap: {name: nginx-conf}}
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: nginx, namespace: appflowy }
+metadata: {name: nginx, namespace: appflowy}
 spec:
-  selector: { app: nginx }
-  ports: [{ port: 80, targetPort: 80 }]
+  selector: {app: nginx}
+  ports: [{port: 80, targetPort: 80}]
 ---
 apiVersion: v1
 kind: Service
@@ -581,6 +557,6 @@ metadata:
   namespace: appflowy
 spec:
   type: NodePort
-  selector: { app: nginx }
+  selector: {app: nginx}
   ports:
-    - { name: http, port: 80, targetPort: 80, nodePort: 30810 }
+  - {name: http, port: 80, targetPort: 80, nodePort: 30810}

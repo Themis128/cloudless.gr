@@ -14,7 +14,7 @@ metadata:
     app.kubernetes.io/name: meilisearch
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   storageClassName: local-path
   resources:
     requests:
@@ -45,52 +45,52 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: meilisearch
-          image: getmeili/meilisearch:v1.42.1
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: http
-              containerPort: 7700
-          env:
-            - name: MEILI_ENV
-              value: production
-            - name: MEILI_NO_ANALYTICS
-              value: "true"
-            - name: MEILI_MASTER_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: meilisearch-master-key
-                  key: MEILI_MASTER_KEY
-          volumeMounts:
-            - name: data
-              mountPath: /meili_data
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 6
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 6
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-      volumes:
+      - name: meilisearch
+        image: getmeili/meilisearch:v1.42.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 7700
+        env:
+        - name: MEILI_ENV
+          value: production
+        - name: MEILI_NO_ANALYTICS
+          value: 'true'
+        - name: MEILI_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: meilisearch-master-key
+              key: MEILI_MASTER_KEY
+        volumeMounts:
         - name: data
-          persistentVolumeClaim:
-            claimName: meilisearch-data
+          mountPath: /meili_data
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 6
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: '1'
+            memory: 1Gi
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: meilisearch-data
 ---
 apiVersion: v1
 kind: Service
@@ -104,6 +104,6 @@ spec:
   selector:
     app.kubernetes.io/name: meilisearch
   ports:
-    - name: http
-      port: 7700
-      targetPort: http
+  - name: http
+    port: 7700
+    targetPort: http

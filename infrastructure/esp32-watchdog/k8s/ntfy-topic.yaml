@@ -1,22 +1,16 @@
-# Expose ntfy on a NodePort so the ESP32 can reach it from outside the cluster.
-# The ESP32 cannot use ClusterIP — it's not a cluster node.
-#
-# If ntfy already has an Ingress/route, use that URL in cloudless-watchdog.yaml
-# instead of the NodePort below and skip this file.
----
 apiVersion: v1
 kind: Service
 metadata:
-  name:      ntfy-nodeport
+  name: ntfy-nodeport
   namespace: ntfy
   labels:
     app: ntfy
 spec:
-  type:     NodePort
+  type: NodePort
   selector:
     app: ntfy           # adjust if your ntfy Pod label differs
   ports:
-    - name:       http
-      port:       80
-      targetPort: 80
-      nodePort:   30080   # → http://192.168.1.128:30080/<topic>
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30080       # → http://192.168.1.128:30080/<topic>

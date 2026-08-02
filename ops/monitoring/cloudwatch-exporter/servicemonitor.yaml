@@ -9,13 +9,13 @@ metadata:
   namespace: monitoring
 spec:
   endpoints:
-    - interval: 60s
-      path: /metrics
-      port: http
-      scrapeTimeout: 30s
+  - interval: 60s
+    path: /metrics
+    port: http
+    scrapeTimeout: 30s
   namespaceSelector:
     matchNames:
-      - monitoring
+    - monitoring
   selector:
     matchLabels:
       app.kubernetes.io/name: cloudless-cloudwatch-exporter

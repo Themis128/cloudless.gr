@@ -1,4 +1,3 @@
----
 # n8n — workflow automation
 # NodePort 30900 on omv-main (Pi 5, 8 GB).
 # Tunnel: n8n.cloudless.gr → http://192.168.1.128:30900
@@ -17,7 +16,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: n8n
-
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -30,7 +28,6 @@ spec:
   resources:
     requests:
       storage: 5Gi
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,59 +53,58 @@ spec:
       securityContext:
         fsGroup: 1000
       containers:
-        - name: n8n
-          image: n8nio/n8n:2.28.2-arm64
-          ports:
-            - containerPort: 5678
-          env:
-            - name: N8N_HOST
-              value: n8n.cloudless.gr
-            - name: N8N_PORT
-              value: "5678"
-            - name: N8N_PROTOCOL
-              value: https
-            - name: WEBHOOK_URL
-              value: https://n8n.cloudless.gr/
-            - name: N8N_BASIC_AUTH_ACTIVE
-              value: "false"
-            - name: N8N_RUNNERS_ENABLED
-              value: "false"
-            - name: EXECUTIONS_DATA_PRUNE
-              value: "true"
-            - name: EXECUTIONS_DATA_MAX_AGE
-              value: "168"       # 7 days
-            - name: GENERIC_TIMEZONE
-              value: Europe/Athens
-            - name: TZ
-              value: Europe/Athens
-          volumeMounts:
-            - name: data
-              mountPath: /home/node/.n8n
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 5678
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            failureThreshold: 5
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 5678
-            initialDelaySeconds: 30
-            periodSeconds: 10
-      volumes:
+      - name: n8n
+        image: n8nio/n8n:2.28.2-arm64
+        ports:
+        - containerPort: 5678
+        env:
+        - name: N8N_HOST
+          value: n8n.cloudless.gr
+        - name: N8N_PORT
+          value: '5678'
+        - name: N8N_PROTOCOL
+          value: https
+        - name: WEBHOOK_URL
+          value: https://n8n.cloudless.gr/
+        - name: N8N_BASIC_AUTH_ACTIVE
+          value: 'false'
+        - name: N8N_RUNNERS_ENABLED
+          value: 'false'
+        - name: EXECUTIONS_DATA_PRUNE
+          value: 'true'
+        - name: EXECUTIONS_DATA_MAX_AGE
+          value: '168'               # 7 days
+        - name: GENERIC_TIMEZONE
+          value: Europe/Athens
+        - name: TZ
+          value: Europe/Athens
+        volumeMounts:
         - name: data
-          persistentVolumeClaim:
-            claimName: n8n-data
-
+          mountPath: /home/node/.n8n
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: '1'
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 5678
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 5678
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: n8n-data
 ---
 apiVersion: v1
 kind: Service
@@ -122,11 +118,10 @@ spec:
   selector:
     app: n8n
   ports:
-    - name: http
-      port: 5678
-      targetPort: 5678
-      nodePort: 30900
-
+  - name: http
+    port: 5678
+    targetPort: 5678
+    nodePort: 30900
 ---
 # ResourceQuota: raised from 1Gi to 1536Mi 2026-06-27.
 # n8n Deployment uses limits.memory=1Gi; the daily backup CronJob
@@ -139,6 +134,6 @@ metadata:
   namespace: n8n
 spec:
   hard:
-    pods: "5"
+    pods: '5'
     requests.memory: 768Mi
     limits.memory: 1536Mi

@@ -1,36 +1,30 @@
-# Free-tier Pi origin using host-built Next standalone (no ECR).
-# Build: scripts/pi-native-standalone.sh (or Node 22 docker build on omv)
-# Apply: kubectl apply -f k8s/cloudless-app-hostpath.yaml
-# Tunnel: pi-origin.cloudless.gr → http://192.168.1.128:30300
-# Fly HA: PRIMARY=cloudless.gr FALLBACK=pi-origin.cloudless.gr
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cloudless-app-config
   namespace: cloudless
 data:
-  NODE_ENV: "production"
-  PORT: "3000"
-  HOSTNAME: "0.0.0.0"
-  SSM_DISABLED: "1"
-  NEXT_PUBLIC_SITE_URL: "https://cloudless.gr"
-  NEXT_PUBLIC_AUTH_PROVIDER: "d1"
-  SENTRY_ENVIRONMENT: "pi-standby"
-  ESPOCRM_BASE_URL: "https://espocrm.cloudless.gr"
-  POSTIZ_API_URL: "https://postiz.cloudless.gr"
-  N8N_API_URL: "https://n8n.cloudless.gr"
-  APPFLOWY_API_URL: "https://appflowy.cloudless.gr"
-  MEILI_HOST: "http://meilisearch.meilisearch.svc.cluster.local:7700"
+  NODE_ENV: production
+  PORT: '3000'
+  HOSTNAME: 0.0.0.0
+  SSM_DISABLED: '1'
+  NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+  NEXT_PUBLIC_AUTH_PROVIDER: d1
+  SENTRY_ENVIRONMENT: pi-standby
+  ESPOCRM_BASE_URL: https://espocrm.cloudless.gr
+  POSTIZ_API_URL: https://postiz.cloudless.gr
+  N8N_API_URL: https://n8n.cloudless.gr
+  APPFLOWY_API_URL: https://appflowy.cloudless.gr
+  MEILI_HOST: http://meilisearch.meilisearch.svc.cluster.local:7700
   # Public URL meili.cloudless.gr is CF-proxied; pods must use in-cluster DNS.
   # In-cluster only — public https://ntfy.cloudless.gr is CF-challenged from pods.
   # cloudless-secrets may also set NTFY_BASE_URL (secretRef wins over this ConfigMap).
-  NTFY_BASE_URL: "http://ntfy.ntfy.svc.cluster.local"
-  ADMIN_PUSH_VIA_NTFY: "1"
-  GRAFANA_URL: "https://grafana.cloudless.gr"
-  KUMA_URL: "https://kuma.cloudless.gr"
-  KUMA_BASE_URL: "http://uptime-kuma.uptime-kuma.svc.cluster.local:3001"
-  KUMA_STATUS_PAGE_SLUG: "cloudless"
+  NTFY_BASE_URL: http://ntfy.ntfy.svc.cluster.local
+  ADMIN_PUSH_VIA_NTFY: '1'
+  GRAFANA_URL: https://grafana.cloudless.gr
+  KUMA_URL: https://kuma.cloudless.gr
+  KUMA_BASE_URL: http://uptime-kuma.uptime-kuma.svc.cluster.local:3001
+  KUMA_STATUS_PAGE_SLUG: cloudless
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,49 +48,49 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: app
-          image: docker.io/library/node:22-bookworm-slim
-          imagePullPolicy: IfNotPresent
-          workingDir: /app
-          command: ["node", "server.js"]
-          ports:
-            - containerPort: 3000
-              name: http
-          envFrom:
-            - configMapRef:
-                name: cloudless-app-config
-            - secretRef:
-                name: cloudless-secrets
-                optional: false
-          volumeMounts:
-            - name: standalone
-              mountPath: /app
-          readinessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 6
-          livenessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            failureThreshold: 3
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: "1"
-              memory: 768Mi
-      volumes:
+      - name: app
+        image: docker.io/library/node:22-bookworm-slim
+        imagePullPolicy: IfNotPresent
+        workingDir: /app
+        command: [node, server.js]
+        ports:
+        - containerPort: 3000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: cloudless-app-config
+        - secretRef:
+            name: cloudless-secrets
+            optional: false
+        volumeMounts:
         - name: standalone
-          hostPath:
-            path: /home/tbaltzakis/cloudless-standalone
-            type: Directory
+          mountPath: /app
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: '1'
+            memory: 768Mi
+      volumes:
+      - name: standalone
+        hostPath:
+          path: /home/tbaltzakis/cloudless-standalone
+          type: Directory
 ---
 apiVersion: v1
 kind: Service
@@ -110,11 +104,11 @@ spec:
   selector:
     app: cloudless-app
   ports:
-    - name: http
-      port: 80
-      targetPort: 3000
-      nodePort: 30300
-      protocol: TCP
+  - name: http
+    port: 80
+    targetPort: 3000
+    nodePort: 30300
+    protocol: TCP
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:

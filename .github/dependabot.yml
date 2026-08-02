@@ -1,53 +1,53 @@
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: '06:00'
-      timezone: Europe/Athens
-    open-pull-requests-limit: 5
-    reviewers:
-      - Themis128
-    labels:
-      - dependencies
-    groups:
-      minor-and-patch:
-        update-types:
-          - minor
-          - patch
-        patterns:
-          - '*'
-        exclude-patterns:
-          - next
-          - sst
-          - typescript
-          - eslint
-      major:
-        update-types:
-          - major
-    ignore:
+- package-ecosystem: npm
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Athens
+  open-pull-requests-limit: 5
+  reviewers:
+  - Themis128
+  labels:
+  - dependencies
+  groups:
+    minor-and-patch:
+      update-types:
+      - minor
+      - patch
+      patterns:
+      - '*'
+      exclude-patterns:
+      - next
+      - sst
+      - typescript
+      - eslint
+    major:
+      update-types:
+      - major
+  ignore:
       # SST and Next.js majors need careful testing
-      - dependency-name: sst
-        update-types: ['version-update:semver-major']
-      - dependency-name: next
-        update-types: ['version-update:semver-major']
+  - dependency-name: sst
+    update-types: [version-update:semver-major]
+  - dependency-name: next
+    update-types: [version-update:semver-major]
       # eslint v10 cannot land while `eslint-plugin-react` is in the lint
       # config — its peer range still caps at eslint ^9.7 and no v10-compatible
       # release exists (latest stable 7.37.5, no 8.x/9.x/10.x lines, the `next`
       # tag is an older 7.8.0-rc.0). Re-enable when the plugin ships v10
       # support (or after migrating to @eslint-react/eslint-plugin).
-      - dependency-name: eslint
-        update-types: ['version-update:semver-major']
+  - dependency-name: eslint
+    update-types: [version-update:semver-major]
 
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: '06:00'
-      timezone: Europe/Athens
-    open-pull-requests-limit: 3
-    labels:
-      - ci
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 06:00
+    timezone: Europe/Athens
+  open-pull-requests-limit: 3
+  labels:
+  - ci

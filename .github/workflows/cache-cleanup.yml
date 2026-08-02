@@ -3,7 +3,7 @@ name: Cache Cleanup
 on:
   schedule:
     # Daily at 04:17 UTC — off-peak and off the top-of-hour cron spike.
-    - cron: "17 4 * * *"
+  - cron: 17 4 * * *
   workflow_dispatch:
 
 permissions:
@@ -21,65 +21,65 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Prune PR-scoped + stale buildkit caches
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
+    - name: Prune PR-scoped + stale buildkit caches
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
 
-          pr_cutoff=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
-          blob_cutoff=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+        pr_cutoff=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
+        blob_cutoff=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
 
-          total_reclaimed=0
-          total_deleted=0
+        total_reclaimed=0
+        total_deleted=0
 
-          delete_cache() {
-            local id="$1" size="$2"
-            if gh api -X DELETE "/repos/${REPO}/actions/caches/${id}" >/dev/null 2>&1; then
-              total_reclaimed=$((total_reclaimed + size))
-              total_deleted=$((total_deleted + 1))
-            fi
-          }
+        delete_cache() {
+          local id="$1" size="$2"
+          if gh api -X DELETE "/repos/${REPO}/actions/caches/${id}" >/dev/null 2>&1; then
+            total_reclaimed=$((total_reclaimed + size))
+            total_deleted=$((total_deleted + 1))
+          fi
+        }
 
-          echo "== PR-scoped caches not used since $pr_cutoff =="
-          while IFS=$'\t' read -r id size key ref; do
-            [[ -z "$id" ]] && continue
-            echo "  $ref :: $key :: $((size / 1024 / 1024)) MB"
-            delete_cache "$id" "$size"
-          done < <(
-            gh api -X GET "/repos/${REPO}/actions/caches" \
-              --paginate \
-              --jq '.actions_caches[]
-                | select(.ref | startswith("refs/pull/"))
-                | select(.last_accessed_at < "'"$pr_cutoff"'")
-                | "\(.id)\t\(.size_in_bytes)\t\(.key)\t\(.ref)"'
-          )
+        echo "== PR-scoped caches not used since $pr_cutoff =="
+        while IFS=$'\t' read -r id size key ref; do
+          [[ -z "$id" ]] && continue
+          echo "  $ref :: $key :: $((size / 1024 / 1024)) MB"
+          delete_cache "$id" "$size"
+        done < <(
+          gh api -X GET "/repos/${REPO}/actions/caches" \
+            --paginate \
+            --jq '.actions_caches[]
+              | select(.ref | startswith("refs/pull/"))
+              | select(.last_accessed_at < "'"$pr_cutoff"'")
+              | "\(.id)\t\(.size_in_bytes)\t\(.key)\t\(.ref)"'
+        )
 
+        echo
+        echo "== buildkit blobs not used since $blob_cutoff =="
+        while IFS=$'\t' read -r id size key; do
+          [[ -z "$id" ]] && continue
+          echo "  $key :: $((size / 1024 / 1024)) MB"
+          delete_cache "$id" "$size"
+        done < <(
+          gh api -X GET "/repos/${REPO}/actions/caches" \
+            --paginate \
+            --jq '.actions_caches[]
+              | select(.key | startswith("buildkit-blob-"))
+              | select(.last_accessed_at < "'"$blob_cutoff"'")
+              | "\(.id)\t\(.size_in_bytes)\t\(.key)"'
+        )
+
+        echo
+        echo "== Summary =="
+        echo "Reclaimed $((total_reclaimed / 1024 / 1024)) MB across $total_deleted caches"
+
+        {
+          echo "## Cache Cleanup"
           echo
-          echo "== buildkit blobs not used since $blob_cutoff =="
-          while IFS=$'\t' read -r id size key; do
-            [[ -z "$id" ]] && continue
-            echo "  $key :: $((size / 1024 / 1024)) MB"
-            delete_cache "$id" "$size"
-          done < <(
-            gh api -X GET "/repos/${REPO}/actions/caches" \
-              --paginate \
-              --jq '.actions_caches[]
-                | select(.key | startswith("buildkit-blob-"))
-                | select(.last_accessed_at < "'"$blob_cutoff"'")
-                | "\(.id)\t\(.size_in_bytes)\t\(.key)"'
-          )
-
+          echo "Reclaimed **$((total_reclaimed / 1024 / 1024)) MB** across **$total_deleted** caches."
           echo
-          echo "== Summary =="
-          echo "Reclaimed $((total_reclaimed / 1024 / 1024)) MB across $total_deleted caches"
-
-          {
-            echo "## Cache Cleanup"
-            echo
-            echo "Reclaimed **$((total_reclaimed / 1024 / 1024)) MB** across **$total_deleted** caches."
-            echo
-            echo "- PR-scoped cutoff: \`$pr_cutoff\`"
-            echo "- buildkit-blob cutoff: \`$blob_cutoff\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "- PR-scoped cutoff: \`$pr_cutoff\`"
+          echo "- buildkit-blob cutoff: \`$blob_cutoff\`"
+        } >> "$GITHUB_STEP_SUMMARY"

@@ -1,39 +1,3 @@
-# Uptime Kuma — self-hosted SaaS-monitoring replacement for healthchecks.io
-# https://github.com/louislam/uptime-kuma
-#
-# Why not healthchecks.io (the OSS Django app)? It needs PostgreSQL + Redis +
-# a worker process, ~400 Mi total. The omv node already sits at 89% memory
-# (per docs/cluster-capacity-audit-2026-06-21.md), and the Pi 4 worker node
-# (omv-ha) only has 1 GB total. Uptime Kuma is a single Node.js container
-# with embedded SQLite, ~80 Mi resident.
-#
-# What it does for us:
-#   - Replaces the 6 hc-ping.com checks the operator would otherwise have
-#     to create at https://healthchecks.io.
-#   - Probes the 6 self-hosted apps (appflowy, espocrm, postiz, n8n,
-#     grafana, ntfy) over HTTP every 60 s.
-#   - Email/Slack/Webhook alerting via Uptime Kuma's built-in notification
-#     channels (the operator wires this up in the UI on first login).
-#
-# Where it sits in the topology:
-#   - Pod pinned to omv (Pi 5) — uses ~80 Mi, fits in remaining headroom.
-#   - PVC: 1 Gi local-path → sda1 (the dedicated k3s SSD per CLAUDE.md).
-#   - Service: ClusterIP + NodePort 32501 (no port conflicts).
-#   - Cloudflare tunnel ingress: `kuma.cloudless.gr` — see
-#     skills/cloudflare-tunnel-ops/SKILL.md for the operator step to add
-#     the route to the shared tunnel (UUID e977a490-58c5-...).
-#
-# First-login bootstrap (operator):
-#   1. Visit https://kuma.cloudless.gr OR http://omv.local:32501
-#   2. Create the initial admin with the unified creds:
-#      Username: tbaltzakis  Password: TH!123789th!  (matches project_unified_admin_creds)
-#   3. Add the 6 self-hosted monitors using the URLs from
-#      .github/workflows/selfhosted-healthchecks.yml.
-#   4. (Optional) Wire a Slack/Discord/email notification channel.
-#
-# Image versions verified for arm64 from
-# https://github.com/louislam/uptime-kuma/wiki/%F0%9F%94%A7-How-to-Install
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -56,66 +20,66 @@ kind: Deployment
 metadata:
   name: uptime-kuma
   namespace: uptime-kuma
-  labels: { app: uptime-kuma }
+  labels: {app: uptime-kuma}
 spec:
   replicas: 1
   strategy:
-    type: Recreate # SQLite — must not have two pods touching the same DB file
+    type: Recreate     # SQLite — must not have two pods touching the same DB file
   selector:
-    matchLabels: { app: uptime-kuma }
+    matchLabels: {app: uptime-kuma}
   template:
     metadata:
-      labels: { app: uptime-kuma }
+      labels: {app: uptime-kuma}
     spec:
       nodeSelector:
-        kubernetes.io/hostname: omv # Pi 5 — Pi 4 (omv-ha) is full
+        kubernetes.io/hostname: omv         # Pi 5 — Pi 4 (omv-ha) is full
       containers:
-        - name: uptime-kuma
+      - name: uptime-kuma
           # Pinned major + minor for reproducibility. v2 is the current
           # stable line per the upstream How-to-Install wiki. arm64 OK.
-          image: louislam/uptime-kuma:2
-          ports:
-            - { containerPort: 3001, name: http }
+        image: louislam/uptime-kuma:2
+        ports:
+        - {containerPort: 3001, name: http}
           # Force IPv4 listen — Pi 4/5 dual-stack default makes some
           # node-net probes hit ::1 which Uptime Kuma's bundled monitors
           # don't always handle gracefully.
-          env:
-            - { name: UPTIME_KUMA_HOST, value: "0.0.0.0" }
-            - { name: UPTIME_KUMA_PORT, value: "3001" }
+        env:
+        - {name: UPTIME_KUMA_HOST, value: 0.0.0.0}
+        - {name: UPTIME_KUMA_PORT, value: '3001'}
             # After first-run setup, pin sqlite so the pod does not bounce
             # back to the setup-database entry page on restart.
-            - { name: UPTIME_KUMA_DB_TYPE, value: "sqlite" }
-          volumeMounts:
-            - { name: data, mountPath: /app/data }
+        - {name: UPTIME_KUMA_DB_TYPE, value: sqlite}
+        volumeMounts:
+        - {name: data, mountPath: /app/data}
           # Probes target the embedded /api/entry-page which is unauth
           # (returns 302 to /dashboard on healthy boot, 200 during setup).
-          startupProbe:
-            httpGet: { path: /, port: 3001 }
-            failureThreshold: 30
-            periodSeconds: 5
-          livenessProbe:
-            httpGet: { path: /, port: 3001 }
-            initialDelaySeconds: 60
-            periodSeconds: 60
-          readinessProbe:
-            httpGet: { path: /, port: 3001 }
-            periodSeconds: 30
-          resources:
-            requests: { cpu: 50m, memory: 96Mi }
-            limits: { cpu: 500m, memory: 256Mi }
+        startupProbe:
+          httpGet: {path: /, port: 3001}
+          failureThreshold: 30
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: {path: /, port: 3001}
+          initialDelaySeconds: 60
+          periodSeconds: 60
+        readinessProbe:
+          httpGet: {path: /, port: 3001}
+          periodSeconds: 30
+        resources:
+          requests: {cpu: 50m, memory: 96Mi}
+          limits: {cpu: 500m, memory: 256Mi}
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: uptime-kuma-data
+      - name: data
+        persistentVolumeClaim:
+          claimName: uptime-kuma-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: uptime-kuma
   namespace: uptime-kuma
-  labels: { app: uptime-kuma }
+  labels: {app: uptime-kuma}
 spec:
-  selector: { app: uptime-kuma }
+  selector: {app: uptime-kuma}
   type: NodePort
   ports:
-    - { name: http, port: 3001, targetPort: 3001, nodePort: 32501 }
+  - {name: http, port: 3001, targetPort: 3001, nodePort: 32501}

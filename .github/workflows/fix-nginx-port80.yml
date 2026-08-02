@@ -9,7 +9,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/fix-nginx-port80.yml"
+    - .github/workflows/fix-nginx-port80.yml
 
 permissions:
   contents: read
@@ -21,140 +21,140 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:k8s
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Write diag+fix pod manifest
-        run: |
-          cat > /tmp/nginx-fix-pod.yaml << 'EOF'
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: nginx-fix
-            namespace: default
-          spec:
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            restartPolicy: Never
-            containers:
-              - name: f
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command: [sh, -c]
-                args:
-                  - |
-                    apk add -q util-linux iproute2 2>/dev/null
+    - name: Write diag+fix pod manifest
+      run: |
+        cat > /tmp/nginx-fix-pod.yaml << 'EOF'
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: nginx-fix
+          namespace: default
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          hostNetwork: true
+          restartPolicy: Never
+          containers:
+            - name: f
+              image: alpine:3
+              securityContext:
+                privileged: true
+              command: [sh, -c]
+              args:
+                - |
+                  apk add -q util-linux iproute2 2>/dev/null
 
-                    echo "===== WHAT IS ON PORT 80? ====="
+                  echo "===== WHAT IS ON PORT 80? ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp sport = :80 2>/dev/null || true
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    fuser 80/tcp 2>/dev/null && echo "fuser found process on :80" || echo "fuser: port 80 free"
+
+                  echo ""
+                  echo "===== NGINX ERROR LOG ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    journalctl -u nginx --no-pager -n 30 2>/dev/null || true
+
+                  echo ""
+                  echo "===== NGINX CONFIG TEST ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    nginx -T 2>/dev/null | grep -E "listen|server_name|error|warn" | head -20 || true
+
+                  echo ""
+                  echo "===== MONIT STATUS (source of 233k errors) ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl status monit --no-pager 2>/dev/null | head -15 || true
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    journalctl -u monit --no-pager -n 10 2>/dev/null | tail -10 || true
+
+                  echo ""
+                  echo "===== FIX 1: Stop monit temporarily ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl stop monit 2>/dev/null && echo "monit stopped" || echo "WARN: monit stop failed"
+
+                  echo ""
+                  echo "===== FIX 2: Try nginx restart after monit stopped ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || echo "WARN: still failing"
+                  sleep 2
+                  STATUS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active nginx 2>/dev/null || echo "failed")
+                  echo "nginx status: $STATUS"
+
+                  if [ "$STATUS" = "active" ]; then
+                    echo "nginx is up — restarting monit so it monitors nginx"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl start monit 2>/dev/null && echo "monit restarted" || true
+                  else
+                    echo "===== nginx still failing — checking journalctl for reason ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl -u nginx --no-pager -n 20 2>/dev/null || true
+                    echo ""
+                    echo "===== PORT 80 after monit stopped ====="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ss -tlnp sport = :80 2>/dev/null || true
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      fuser 80/tcp 2>/dev/null && echo "fuser found process on :80" || echo "fuser: port 80 free"
-
                     echo ""
-                    echo "===== NGINX ERROR LOG ====="
+                    echo "===== ALL listening ports ====="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      journalctl -u nginx --no-pager -n 30 2>/dev/null || true
+                      ss -tlnp 2>/dev/null | grep -v "127.0.0" | head -20 || true
+                  fi
 
-                    echo ""
-                    echo "===== NGINX CONFIG TEST ====="
+                  echo ""
+                  echo "===== FIX 3: Silence monit nginx-restart loop ====="
+                  # Monit config for nginx — if it keeps trying to restart, suppress
+                  MONIT_CONF="/etc/monit/conf.d/openmediavault-nginx"
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cat "$MONIT_CONF" 2>/dev/null || \
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      nginx -T 2>/dev/null | grep -E "listen|server_name|error|warn" | head -20 || true
+                    find /etc/monit -name "*nginx*" 2>/dev/null | head -5 || \
+                    echo "(no monit nginx config found)"
 
-                    echo ""
-                    echo "===== MONIT STATUS (source of 233k errors) ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl status monit --no-pager 2>/dev/null | head -15 || true
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      journalctl -u monit --no-pager -n 10 2>/dev/null | tail -10 || true
+                  echo ""
+                  echo "===== JOURNAL ERROR COUNT AFTER FIX ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    journalctl --since "1 hour ago" -p err -q --no-pager 2>/dev/null | wc -l || true
+        EOF
 
-                    echo ""
-                    echo "===== FIX 1: Stop monit temporarily ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl stop monit 2>/dev/null && echo "monit stopped" || echo "WARN: monit stop failed"
+    - name: Run nginx fix pod
+      run: |
+        kubectl delete pod nginx-fix -n default --ignore-not-found --wait=true
+        kubectl create -f /tmp/nginx-fix-pod.yaml
+        kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+          pod/nginx-fix -n default --timeout=120s
+        kubectl logs -n default nginx-fix | tee /tmp/nginx-fix.txt
+        kubectl delete pod nginx-fix -n default --ignore-not-found
 
-                    echo ""
-                    echo "===== FIX 2: Try nginx restart after monit stopped ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || echo "WARN: still failing"
-                    sleep 2
-                    STATUS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active nginx 2>/dev/null || echo "failed")
-                    echo "nginx status: $STATUS"
-
-                    if [ "$STATUS" = "active" ]; then
-                      echo "nginx is up — restarting monit so it monitors nginx"
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        systemctl start monit 2>/dev/null && echo "monit restarted" || true
-                    else
-                      echo "===== nginx still failing — checking journalctl for reason ====="
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        journalctl -u nginx --no-pager -n 20 2>/dev/null || true
-                      echo ""
-                      echo "===== PORT 80 after monit stopped ====="
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ss -tlnp sport = :80 2>/dev/null || true
-                      echo ""
-                      echo "===== ALL listening ports ====="
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ss -tlnp 2>/dev/null | grep -v "127.0.0" | head -20 || true
-                    fi
-
-                    echo ""
-                    echo "===== FIX 3: Silence monit nginx-restart loop ====="
-                    # Monit config for nginx — if it keeps trying to restart, suppress
-                    MONIT_CONF="/etc/monit/conf.d/openmediavault-nginx"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat "$MONIT_CONF" 2>/dev/null || \
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      find /etc/monit -name "*nginx*" 2>/dev/null | head -5 || \
-                      echo "(no monit nginx config found)"
-
-                    echo ""
-                    echo "===== JOURNAL ERROR COUNT AFTER FIX ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      journalctl --since "1 hour ago" -p err -q --no-pager 2>/dev/null | wc -l || true
-          EOF
-
-      - name: Run nginx fix pod
-        run: |
-          kubectl delete pod nginx-fix -n default --ignore-not-found --wait=true
-          kubectl create -f /tmp/nginx-fix-pod.yaml
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
-            pod/nginx-fix -n default --timeout=120s
-          kubectl logs -n default nginx-fix | tee /tmp/nginx-fix.txt
-          kubectl delete pod nginx-fix -n default --ignore-not-found
-
-      - name: Post report
-        if: always()
-        run: |
-          {
-            echo "# nginx Port Conflict Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "## Root cause diagnosis"
-            echo '```'
-            grep -A5 "WHAT IS ON PORT 80\|nginx status:\|MONIT STATUS\|FIX 1\|FIX 2\|FIX 3" \
-              /tmp/nginx-fix.txt | head -60
-            echo '```'
-            echo ""
-            echo "## Full output"
-            echo '```'
-            cat /tmp/nginx-fix.txt
-            echo '```'
-          } > /tmp/nginx-report.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/nginx-report.md
+    - name: Post report
+      if: always()
+      run: |
+        {
+          echo "# nginx Port Conflict Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "## Root cause diagnosis"
+          echo '```'
+          grep -A5 "WHAT IS ON PORT 80\|nginx status:\|MONIT STATUS\|FIX 1\|FIX 2\|FIX 3" \
+            /tmp/nginx-fix.txt | head -60
+          echo '```'
+          echo ""
+          echo "## Full output"
+          echo '```'
+          cat /tmp/nginx-fix.txt
+          echo '```'
+        } > /tmp/nginx-report.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/nginx-report.md

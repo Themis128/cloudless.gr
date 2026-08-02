@@ -12,8 +12,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "infrastructure/monitoring/**"
-      - ".github/workflows/deploy-monitoring-stack.yml"
+    - infrastructure/monitoring/**
+    - .github/workflows/deploy-monitoring-stack.yml
 
 permissions:
   contents: read
@@ -23,56 +23,56 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Create monitoring namespace
-        continue-on-error: true
-        run: |
-          kubectl apply -f infrastructure/monitoring/namespace.yaml
+    - name: Create monitoring namespace
+      continue-on-error: true
+      run: |
+        kubectl apply -f infrastructure/monitoring/namespace.yaml
 
-      - name: Deploy kube-prometheus-stack
-        continue-on-error: true
-        run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo update
-          helm upgrade --install kube-prom prometheus-community/kube-prometheus-stack \
-            --namespace monitoring \
-            --values infrastructure/monitoring/kube-prom-stack-values.yaml \
-            --create-namespace \
-            --timeout 15m
+    - name: Deploy kube-prometheus-stack
+      continue-on-error: true
+      run: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo update
+        helm upgrade --install kube-prom prometheus-community/kube-prometheus-stack \
+          --namespace monitoring \
+          --values infrastructure/monitoring/kube-prom-stack-values.yaml \
+          --create-namespace \
+          --timeout 15m
 
-      - name: Deploy Loki
-        continue-on-error: true
-        run: |
-          helm upgrade --install loki grafana/loki \
-            --namespace monitoring \
-            --values infrastructure/monitoring/loki-values.yaml \
-            --timeout 10m || true
-          helm upgrade --install promtail grafana/promtail \
-            --namespace monitoring \
-            --values infrastructure/monitoring/promtail-values.yaml \
-            --timeout 10m || true
+    - name: Deploy Loki
+      continue-on-error: true
+      run: |
+        helm upgrade --install loki grafana/loki \
+          --namespace monitoring \
+          --values infrastructure/monitoring/loki-values.yaml \
+          --timeout 10m || true
+        helm upgrade --install promtail grafana/promtail \
+          --namespace monitoring \
+          --values infrastructure/monitoring/promtail-values.yaml \
+          --timeout 10m || true
 
-      - name: Deploy blackbox-exporter and probes
-        continue-on-error: true
-        run: |
-          kubectl apply -f infrastructure/monitoring/blackbox-exporter.yaml
+    - name: Deploy blackbox-exporter and probes
+      continue-on-error: true
+      run: |
+        kubectl apply -f infrastructure/monitoring/blackbox-exporter.yaml
 
-      - name: Deploy Grafana ingress
-        continue-on-error: true
-        run: |
-          kubectl apply -f infrastructure/monitoring/grafana-ingressroute.yaml
+    - name: Deploy Grafana ingress
+      continue-on-error: true
+      run: |
+        kubectl apply -f infrastructure/monitoring/grafana-ingressroute.yaml
 
-      - name: Show pod status
-        continue-on-error: true
-        run: |
-          echo "=== Monitoring namespace pods ==="
-          kubectl get pods -n monitoring -o wide || echo "Namespace not ready yet"
-          echo "=== DaemonSets ==="
-          kubectl get ds -n monitoring -o wide || true
+    - name: Show pod status
+      continue-on-error: true
+      run: |
+        echo "=== Monitoring namespace pods ==="
+        kubectl get pods -n monitoring -o wide || echo "Namespace not ready yet"
+        echo "=== DaemonSets ==="
+        kubectl get ds -n monitoring -o wide || true
 
-      - name: Report completion
-        continue-on-error: true
-        run: |
-          echo "Monitoring stack deployment completed"
-          kubectl get pods -n monitoring -o wide 2>/dev/null || echo "Check pod status manually"
+    - name: Report completion
+      continue-on-error: true
+      run: |
+        echo "Monitoring stack deployment completed"
+        kubectl get pods -n monitoring -o wide 2>/dev/null || echo "Check pod status manually"

@@ -1,2 +1,0 @@
-# DEPRECATED — replaced by proxygroup.yaml (type: ingress + kube-apiserver).
-# Old file lacked spec.type and invented probe/route fields the CRD rejects.

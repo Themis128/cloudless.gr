@@ -42,7 +42,7 @@ grafana:
     type: pvc
     storageClassName: local-path
     accessModes:
-      - ReadWriteOnce
+    - ReadWriteOnce
     size: 2Gi
 
   # Keep the sidecar that watches grafana_dashboard=1 ConfigMaps so our
@@ -52,7 +52,7 @@ grafana:
     dashboards:
       enabled: true
       label: grafana_dashboard
-      labelValue: "1"
+      labelValue: '1'
       searchNamespace: monitoring
       provider:
         foldersFromFilesStructure: true

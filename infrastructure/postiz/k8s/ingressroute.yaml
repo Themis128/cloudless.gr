@@ -8,12 +8,12 @@ metadata:
   namespace: postiz
 spec:
   entryPoints:
-    - websecure
+  - websecure
   routes:
-    - kind: Rule
-      match: Host(`postiz.cloudless.gr`)
-      services:
-        - name: postiz
-          port: 5000
+  - kind: Rule
+    match: Host(`postiz.cloudless.gr`)
+    services:
+    - name: postiz
+      port: 5000
   tls:
     certResolver: letsencrypt-cloudflare

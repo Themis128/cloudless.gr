@@ -15,19 +15,19 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/rollout-pi-force.yml"
+    - .github/workflows/rollout-pi-force.yml
   workflow_dispatch:
     inputs:
       sha:
-        description: 'Short ECR image tag (12-char SHA already in ECR)'
+        description: Short ECR image tag (12-char SHA already in ECR)
         required: true
-        default: '89b57243c994'
+        default: 89b57243c994
 
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
   # run-26-trigger: 2026-06-07
-  DEFAULT_ROLLOUT_SHA: '89b57243c994'
+  DEFAULT_ROLLOUT_SHA: 89b57243c994
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
   K3S_NAMESPACE: cloudless
@@ -42,183 +42,183 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      PI_HOST: "100.113.41.119"
-      PI_USER: "tbaltzakis"
+      PI_HOST: 100.113.41.119
+      PI_USER: tbaltzakis
 
     steps:
-      - name: Connect to tailnet
-        continue-on-error: true
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      continue-on-error: true
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Verify Tailscale path to omv-main
-        continue-on-error: true
-        run: |
-          tailscale ping -c 3 --timeout=15s 100.113.41.119 \
-            || echo "Note: Tailscale using DERP relay — will try SSH anyway"
-          nc -zv -w 10 100.113.41.119 6443 \
-            && echo "Port 6443 directly reachable" \
-            || echo "Port 6443 via nc failed"
+    - name: Verify Tailscale path to omv-main
+      continue-on-error: true
+      run: |
+        tailscale ping -c 3 --timeout=15s 100.113.41.119 \
+          || echo "Note: Tailscale using DERP relay — will try SSH anyway"
+        nc -zv -w 10 100.113.41.119 6443 \
+          && echo "Port 6443 directly reachable" \
+          || echo "Port 6443 via nc failed"
 
-      - name: Configure kubectl (remote via Tailscale)
-        continue-on-error: true
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl (remote via Tailscale)
+      continue-on-error: true
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: SSH setup + connectivity probe
-        continue-on-error: true
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+    - name: SSH setup + connectivity probe
+      continue-on-error: true
+      run: |
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          # Quick probe — report result but never fail the step
-          if ssh -i ~/.ssh/id_ed25519 \
-               -o StrictHostKeyChecking=no \
-               -o ConnectTimeout=20 \
-               "$PI_USER@$PI_HOST" 'echo ssh-probe-ok' 2>/dev/null | grep -q ssh-probe-ok; then
-            echo "Pi SSH: REACHABLE — running full diagnostics"
-          else
-            echo "::warning::Pi SSH unreachable via Tailscale (node key may be expired)."
-            echo "Diagnostics skipped. Job 2 (rollout via Pi runner) will handle the rollout."
-            exit 0
-          fi
+        # Quick probe — report result but never fail the step
+        if ssh -i ~/.ssh/id_ed25519 \
+             -o StrictHostKeyChecking=no \
+             -o ConnectTimeout=20 \
+             "$PI_USER@$PI_HOST" 'echo ssh-probe-ok' 2>/dev/null | grep -q ssh-probe-ok; then
+          echo "Pi SSH: REACHABLE — running full diagnostics"
+        else
+          echo "::warning::Pi SSH unreachable via Tailscale (node key may be expired)."
+          echo "Diagnostics skipped. Job 2 (rollout via Pi runner) will handle the rollout."
+          exit 0
+        fi
 
-          # Full diagnostics and etcd maintenance (only when SSH is working)
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=30 \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=5 \
-            "$PI_USER@$PI_HOST" '
-              echo "=== k3s service status ==="
-              systemctl is-active k3s || true
-              echo "=== last 20 k3s journal lines ==="
-              sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
-              echo "=== memory ==="
-              free -m
-              echo "=== disk ==="
-              df -h /
-              echo "=== Etcd maintenance ==="
-              ETCD_EP="https://127.0.0.1:2379"
-              ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
-              ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
-              ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
-              if systemctl is-active --quiet k3s; then
-                sudo k3s etcdctl defrag \
-                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
-                sudo k3s etcdctl alarm disarm \
-                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
-              else
-                echo "k3s not active — starting..."
-                sudo systemctl start k3s
-                sleep 30
-              fi
-            ' 2>/dev/null || echo "SSH diagnostics partial — continuing"
+        # Full diagnostics and etcd maintenance (only when SSH is working)
+        ssh -i ~/.ssh/id_ed25519 \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=30 \
+          -o ServerAliveInterval=30 \
+          -o ServerAliveCountMax=5 \
+          "$PI_USER@$PI_HOST" '
+            echo "=== k3s service status ==="
+            systemctl is-active k3s || true
+            echo "=== last 20 k3s journal lines ==="
+            sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
+            echo "=== memory ==="
+            free -m
+            echo "=== disk ==="
+            df -h /
+            echo "=== Etcd maintenance ==="
+            ETCD_EP="https://127.0.0.1:2379"
+            ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
+            ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
+            ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
+            if systemctl is-active --quiet k3s; then
+              sudo k3s etcdctl defrag \
+                --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
+              sudo k3s etcdctl alarm disarm \
+                --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
+            else
+              echo "k3s not active — starting..."
+              sudo systemctl start k3s
+              sleep 30
+            fi
+          ' 2>/dev/null || echo "SSH diagnostics partial — continuing"
 
-      - name: Restart omv-build runner service (best-effort)
-        continue-on-error: true
-        run: |
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=20 \
-            "$PI_USER@$PI_HOST" '
-              SVC="actions.runner.Themis128-cloudless.gr.omv-build.service"
-              STATUS=$(systemctl is-active "$SVC" 2>/dev/null || echo "unknown")
-              echo "Runner service status: $STATUS"
-              if [ "$STATUS" != "active" ]; then
-                echo "Restarting runner service..."
-                sudo systemctl restart "$SVC" && echo "Restart issued" || echo "Restart failed"
-                sleep 5
-                systemctl is-active "$SVC" && echo "Runner now active" || echo "Runner still not active"
-              else
-                echo "Runner already active — no restart needed"
-              fi
-            ' 2>/dev/null || echo "Runner restart SSH step failed — will continue"
+    - name: Restart omv-build runner service (best-effort)
+      continue-on-error: true
+      run: |
+        ssh -i ~/.ssh/id_ed25519 \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=20 \
+          "$PI_USER@$PI_HOST" '
+            SVC="actions.runner.Themis128-cloudless.gr.omv-build.service"
+            STATUS=$(systemctl is-active "$SVC" 2>/dev/null || echo "unknown")
+            echo "Runner service status: $STATUS"
+            if [ "$STATUS" != "active" ]; then
+              echo "Restarting runner service..."
+              sudo systemctl restart "$SVC" && echo "Restart issued" || echo "Restart failed"
+              sleep 5
+              systemctl is-active "$SVC" && echo "Runner now active" || echo "Runner still not active"
+            else
+              echo "Runner already active — no restart needed"
+            fi
+          ' 2>/dev/null || echo "Runner restart SSH step failed — will continue"
 
-      - name: SSH crictl pre-pull (best-effort)
-        continue-on-error: true
-        run: |
-          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
-          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
-          echo "Attempting SSH crictl pre-pull: ${IMAGE}"
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=20 \
-            -o ServerAliveInterval=20 \
-            -o ServerAliveCountMax=3 \
-            "$PI_USER@$PI_HOST" "
-              if sudo crictl images 2>/dev/null | grep -q '${SHA}'; then
-                echo 'Image already cached locally — skipping pull'
-                exit 0
-              fi
-              SECRET_NAME=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get secret -n cloudless -o json 2>/dev/null | python3 -c \
+    - name: SSH crictl pre-pull (best-effort)
+      continue-on-error: true
+      run: |
+        SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+        IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+        echo "Attempting SSH crictl pre-pull: ${IMAGE}"
+        ssh -i ~/.ssh/id_ed25519 \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=20 \
+          -o ServerAliveInterval=20 \
+          -o ServerAliveCountMax=3 \
+          "$PI_USER@$PI_HOST" "
+            if sudo crictl images 2>/dev/null | grep -q '${SHA}'; then
+              echo 'Image already cached locally — skipping pull'
+              exit 0
+            fi
+            SECRET_NAME=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+              get secret -n cloudless -o json 2>/dev/null | python3 -c \
+              \"import json,sys; d=json.load(sys.stdin); \
+               items=[i['metadata']['name'] for i in d.get('items',[]) \
+                 if i.get('type')=='kubernetes.io/dockerconfigjson']; \
+               print(items[0] if items else '')\" 2>/dev/null || echo '')
+            if [ -n \"\$SECRET_NAME\" ]; then
+              DOCKER_JSON=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get secret \"\$SECRET_NAME\" -n cloudless \
+                -o jsonpath='{.data.\\.dockerconfigjson}' 2>/dev/null | base64 -d)
+              AUTH_B64=\$(echo \"\$DOCKER_JSON\" | python3 -c \
                 \"import json,sys; d=json.load(sys.stdin); \
-                 items=[i['metadata']['name'] for i in d.get('items',[]) \
-                   if i.get('type')=='kubernetes.io/dockerconfigjson']; \
-                 print(items[0] if items else '')\" 2>/dev/null || echo '')
-              if [ -n \"\$SECRET_NAME\" ]; then
-                DOCKER_JSON=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  get secret \"\$SECRET_NAME\" -n cloudless \
-                  -o jsonpath='{.data.\\.dockerconfigjson}' 2>/dev/null | base64 -d)
-                AUTH_B64=\$(echo \"\$DOCKER_JSON\" | python3 -c \
-                  \"import json,sys; d=json.load(sys.stdin); \
-                   auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; \
-                   print(auths[k].get('auth','') if k else '')\" 2>/dev/null || echo '')
-                if [ -n \"\$AUTH_B64\" ]; then
-                  CREDS=\$(echo \"\$AUTH_B64\" | base64 -d)
-                  ECR_USER=\$(echo \"\$CREDS\" | cut -d: -f1)
-                  ECR_PASS=\$(echo \"\$CREDS\" | cut -d: -f2-)
-                  sudo crictl pull --creds \"\$ECR_USER:\$ECR_PASS\" '${IMAGE}' \
-                    && echo 'crictl pull succeeded — image cached' \
-                    || echo 'crictl pull failed — Pi runner will retry'
-                else
-                  echo 'No ECR auth found in Secret'
-                fi
+                 auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; \
+                 print(auths[k].get('auth','') if k else '')\" 2>/dev/null || echo '')
+              if [ -n \"\$AUTH_B64\" ]; then
+                CREDS=\$(echo \"\$AUTH_B64\" | base64 -d)
+                ECR_USER=\$(echo \"\$CREDS\" | cut -d: -f1)
+                ECR_PASS=\$(echo \"\$CREDS\" | cut -d: -f2-)
+                sudo crictl pull --creds \"\$ECR_USER:\$ECR_PASS\" '${IMAGE}' \
+                  && echo 'crictl pull succeeded — image cached' \
+                  || echo 'crictl pull failed — Pi runner will retry'
               else
-                echo 'No docker-registry Secret found'
+                echo 'No ECR auth found in Secret'
               fi
-            " 2>/dev/null || echo "SSH crictl pre-pull failed — Pi runner will handle it"
+            else
+              echo 'No docker-registry Secret found'
+            fi
+          " 2>/dev/null || echo "SSH crictl pre-pull failed — Pi runner will handle it"
 
-      - name: SSH imagePullSecrets patch (best-effort)
-        continue-on-error: true
-        run: |
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=20 \
-            -o ServerAliveInterval=20 \
-            -o ServerAliveCountMax=3 \
-            "$PI_USER@$PI_HOST" '
-              SECRET_NAME=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get secret -n cloudless -o json 2>/dev/null | python3 -c \
-                "import json,sys; d=json.load(sys.stdin); items=[i[\"metadata\"][\"name\"] for i in d.get(\"items\",[]) if i.get(\"type\")==\"kubernetes.io/dockerconfigjson\"]; print(items[0] if items else \"\")" 2>/dev/null || echo "")
-              if [ -n "$SECRET_NAME" ]; then
-                CURRENT=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  get deployment/cloudless -n cloudless \
-                  -o jsonpath="{.spec.template.spec.imagePullSecrets[0].name}" 2>/dev/null || echo "")
-                if [ "$CURRENT" = "$SECRET_NAME" ]; then
-                  echo "imagePullSecrets already set to $SECRET_NAME"
-                else
-                  sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                    patch deployment/cloudless -n cloudless \
-                    -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
-                    && echo "imagePullSecrets patched → $SECRET_NAME" \
-                    || echo "patch failed"
-                fi
+    - name: SSH imagePullSecrets patch (best-effort)
+      continue-on-error: true
+      run: |
+        ssh -i ~/.ssh/id_ed25519 \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=20 \
+          -o ServerAliveInterval=20 \
+          -o ServerAliveCountMax=3 \
+          "$PI_USER@$PI_HOST" '
+            SECRET_NAME=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+              get secret -n cloudless -o json 2>/dev/null | python3 -c \
+              "import json,sys; d=json.load(sys.stdin); items=[i[\"metadata\"][\"name\"] for i in d.get(\"items\",[]) if i.get(\"type\")==\"kubernetes.io/dockerconfigjson\"]; print(items[0] if items else \"\")" 2>/dev/null || echo "")
+            if [ -n "$SECRET_NAME" ]; then
+              CURRENT=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get deployment/cloudless -n cloudless \
+                -o jsonpath="{.spec.template.spec.imagePullSecrets[0].name}" 2>/dev/null || echo "")
+              if [ "$CURRENT" = "$SECRET_NAME" ]; then
+                echo "imagePullSecrets already set to $SECRET_NAME"
               else
-                echo "No docker-registry Secret found"
+                sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  patch deployment/cloudless -n cloudless \
+                  -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
+                  && echo "imagePullSecrets patched → $SECRET_NAME" \
+                  || echo "patch failed"
               fi
-            ' 2>/dev/null || echo "imagePullSecrets SSH patch failed — Pi runner will handle it"
+            else
+              echo "No docker-registry Secret found"
+            fi
+          ' 2>/dev/null || echo "imagePullSecrets SSH patch failed — Pi runner will handle it"
 
   # ─── Job 2: Direct rollout via Pi self-hosted runner ──────────────────────
   # Runs ON the Pi — no SSH or Tailscale needed.
@@ -233,129 +233,129 @@ jobs:
     if: always()
 
     steps:
-      - name: Pre-pull ECR image via crictl (direct, no SSH)
-        run: |
-          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
-          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
-          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+    - name: Pre-pull ECR image via crictl (direct, no SSH)
+      run: |
+        SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+        IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+        KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
 
-          if sudo crictl images 2>/dev/null | grep -q "${SHA}"; then
-            echo "Image ${SHA} already in local containerd cache — skipping pull"
-            exit 0
+        if sudo crictl images 2>/dev/null | grep -q "${SHA}"; then
+          echo "Image ${SHA} already in local containerd cache — skipping pull"
+          exit 0
+        fi
+
+        echo "Image not cached — pulling: ${IMAGE}"
+        SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
+          "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
+          2>/dev/null || echo "")
+
+        if [ -z "$SECRET_NAME" ]; then
+          echo "No docker-registry Secret found — skipping pre-pull (pod will attempt pull on startup)"
+          exit 0
+        fi
+
+        DOCKER_JSON=$($KUBECTL get secret "$SECRET_NAME" -n cloudless \
+          -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
+        AUTH_B64=$(echo "$DOCKER_JSON" | python3 -c \
+          "import json,sys; d=json.load(sys.stdin); auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; print(auths[k].get('auth','') if k else '')" \
+          2>/dev/null || echo "")
+
+        if [ -z "$AUTH_B64" ]; then
+          echo "Could not extract ECR auth from Secret — skipping pre-pull"
+          exit 0
+        fi
+
+        CREDS=$(echo "$AUTH_B64" | base64 -d)
+        ECR_USER=$(echo "$CREDS" | cut -d: -f1)
+        ECR_PASS=$(echo "$CREDS" | cut -d: -f2-)
+        sudo crictl pull --creds "$ECR_USER:$ECR_PASS" "$IMAGE" \
+          && echo "crictl pull succeeded — image cached locally" \
+          || echo "crictl pull failed — pod will attempt pull on startup"
+
+    - name: Wire imagePullSecrets (idempotent)
+      run: |
+        KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+        SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
+          "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
+          2>/dev/null || echo "")
+
+        if [ -z "$SECRET_NAME" ]; then
+          echo "No docker-registry Secret found — skipping imagePullSecrets patch"
+          exit 0
+        fi
+
+        CURRENT=$($KUBECTL get deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
+          -o jsonpath='{.spec.template.spec.imagePullSecrets[0].name}' 2>/dev/null || echo "")
+
+        if [ "$CURRENT" = "$SECRET_NAME" ]; then
+          echo "imagePullSecrets already set to $SECRET_NAME — no patch needed"
+        else
+          $KUBECTL patch deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
+            -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
+            && echo "imagePullSecrets → $SECRET_NAME: patched" \
+            || echo "imagePullSecrets patch failed (continuing)"
+        fi
+
+    - name: Set image and trigger rollout
+      run: |
+        SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+        IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+        KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+        NS="${{ env.K3S_NAMESPACE }}"
+        DEPLOY="${{ env.K3S_DEPLOYMENT }}"
+
+        echo "Rolling out: ${IMAGE}"
+
+        # Scale to 0 to free RAM for the new pod start
+        $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=0 2>/dev/null \
+          && echo "Scaled to 0" || echo "Scale-to-0 skipped (k3s not ready yet)"
+        sleep 5
+
+        # Extend progress deadline so rollout monitor doesn't time out prematurely
+        $KUBECTL patch deployment/$DEPLOY -n $NS \
+          -p '{"spec":{"progressDeadlineSeconds":3600}}' 2>/dev/null \
+          && echo "Progress deadline: 3600s" || true
+
+        # Set the new image
+        $KUBECTL set image deployment/$DEPLOY ${DEPLOY}=${IMAGE} -n $NS
+        echo "Image set: ${DEPLOY}=${IMAGE}"
+
+        # Scale back to 1
+        sleep 5
+        $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=1 2>/dev/null \
+          && echo "Scaled to 1" || echo "Scale-to-1 skipped"
+
+    - name: Wait for rollout readiness (up to 25 min)
+      run: |
+        KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+        NS="${{ env.K3S_NAMESPACE }}"
+        DEPLOY="${{ env.K3S_DEPLOYMENT }}"
+
+        echo "Waiting for pod to become ready (up to 25 min)..."
+        ROLLOUT_DONE=0
+        for i in $(seq 1 150); do
+          READY=$($KUBECTL get deployment/$DEPLOY -n $NS \
+            -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)
+          if [ "${READY:-0}" = "1" ]; then
+            echo "Rollout complete — 1/1 replicas ready (attempt ${i})"
+            ROLLOUT_DONE=1
+            break
           fi
-
-          echo "Image not cached — pulling: ${IMAGE}"
-          SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
-            "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
-            2>/dev/null || echo "")
-
-          if [ -z "$SECRET_NAME" ]; then
-            echo "No docker-registry Secret found — skipping pre-pull (pod will attempt pull on startup)"
-            exit 0
-          fi
-
-          DOCKER_JSON=$($KUBECTL get secret "$SECRET_NAME" -n cloudless \
-            -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
-          AUTH_B64=$(echo "$DOCKER_JSON" | python3 -c \
-            "import json,sys; d=json.load(sys.stdin); auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; print(auths[k].get('auth','') if k else '')" \
-            2>/dev/null || echo "")
-
-          if [ -z "$AUTH_B64" ]; then
-            echo "Could not extract ECR auth from Secret — skipping pre-pull"
-            exit 0
-          fi
-
-          CREDS=$(echo "$AUTH_B64" | base64 -d)
-          ECR_USER=$(echo "$CREDS" | cut -d: -f1)
-          ECR_PASS=$(echo "$CREDS" | cut -d: -f2-)
-          sudo crictl pull --creds "$ECR_USER:$ECR_PASS" "$IMAGE" \
-            && echo "crictl pull succeeded — image cached locally" \
-            || echo "crictl pull failed — pod will attempt pull on startup"
-
-      - name: Wire imagePullSecrets (idempotent)
-        run: |
-          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
-          SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
-            "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
-            2>/dev/null || echo "")
-
-          if [ -z "$SECRET_NAME" ]; then
-            echo "No docker-registry Secret found — skipping imagePullSecrets patch"
-            exit 0
-          fi
-
-          CURRENT=$($KUBECTL get deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
-            -o jsonpath='{.spec.template.spec.imagePullSecrets[0].name}' 2>/dev/null || echo "")
-
-          if [ "$CURRENT" = "$SECRET_NAME" ]; then
-            echo "imagePullSecrets already set to $SECRET_NAME — no patch needed"
-          else
-            $KUBECTL patch deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
-              -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
-              && echo "imagePullSecrets → $SECRET_NAME: patched" \
-              || echo "imagePullSecrets patch failed (continuing)"
-          fi
-
-      - name: Set image and trigger rollout
-        run: |
-          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
-          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
-          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
-          NS="${{ env.K3S_NAMESPACE }}"
-          DEPLOY="${{ env.K3S_DEPLOYMENT }}"
-
-          echo "Rolling out: ${IMAGE}"
-
-          # Scale to 0 to free RAM for the new pod start
-          $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=0 2>/dev/null \
-            && echo "Scaled to 0" || echo "Scale-to-0 skipped (k3s not ready yet)"
-          sleep 5
-
-          # Extend progress deadline so rollout monitor doesn't time out prematurely
-          $KUBECTL patch deployment/$DEPLOY -n $NS \
-            -p '{"spec":{"progressDeadlineSeconds":3600}}' 2>/dev/null \
-            && echo "Progress deadline: 3600s" || true
-
-          # Set the new image
-          $KUBECTL set image deployment/$DEPLOY ${DEPLOY}=${IMAGE} -n $NS
-          echo "Image set: ${DEPLOY}=${IMAGE}"
-
-          # Scale back to 1
-          sleep 5
-          $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=1 2>/dev/null \
-            && echo "Scaled to 1" || echo "Scale-to-1 skipped"
-
-      - name: Wait for rollout readiness (up to 25 min)
-        run: |
-          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
-          NS="${{ env.K3S_NAMESPACE }}"
-          DEPLOY="${{ env.K3S_DEPLOYMENT }}"
-
-          echo "Waiting for pod to become ready (up to 25 min)..."
-          ROLLOUT_DONE=0
-          for i in $(seq 1 150); do
-            READY=$($KUBECTL get deployment/$DEPLOY -n $NS \
-              -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)
-            if [ "${READY:-0}" = "1" ]; then
-              echo "Rollout complete — 1/1 replicas ready (attempt ${i})"
-              ROLLOUT_DONE=1
-              break
-            fi
-            echo "  ${i}/150 — readyReplicas=${READY:-0}, waiting 10s..."
-            if [ $((i % 6)) -eq 0 ]; then
-              echo "--- pod status (attempt ${i}) ---"
-              $KUBECTL get pod -n $NS -o wide 2>/dev/null || true
-            fi
-            sleep 10
-          done
-
-          if [ "$ROLLOUT_DONE" -ne 1 ]; then
-            echo "::error::Rollout timed out after 25 min — dumping pod details"
+          echo "  ${i}/150 — readyReplicas=${READY:-0}, waiting 10s..."
+          if [ $((i % 6)) -eq 0 ]; then
+            echo "--- pod status (attempt ${i}) ---"
             $KUBECTL get pod -n $NS -o wide 2>/dev/null || true
-            echo "---"
-            $KUBECTL describe pod -n $NS 2>/dev/null | tail -60 || true
-            echo "---"
-            $KUBECTL logs -n $NS -l app=$DEPLOY --tail=30 --previous 2>/dev/null || true
-            exit 1
           fi
-          echo "Rollout complete: SHA=${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+          sleep 10
+        done
+
+        if [ "$ROLLOUT_DONE" -ne 1 ]; then
+          echo "::error::Rollout timed out after 25 min — dumping pod details"
+          $KUBECTL get pod -n $NS -o wide 2>/dev/null || true
+          echo "---"
+          $KUBECTL describe pod -n $NS 2>/dev/null | tail -60 || true
+          echo "---"
+          $KUBECTL logs -n $NS -l app=$DEPLOY --tail=30 --previous 2>/dev/null || true
+          exit 1
+        fi
+        echo "Rollout complete: SHA=${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"

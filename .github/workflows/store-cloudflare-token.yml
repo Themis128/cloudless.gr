@@ -19,10 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       cloudflare_token:
-        description: "Cloudflare API token (Zone:Read, LB:Edit, DNS:Edit for cloudless.gr)"
+        description: Cloudflare API token (Zone:Read, LB:Edit, DNS:Edit for 
+          cloudless.gr)
         required: true
       apply:
-        description: "Also apply the HA load balancer after storing (true=apply, false=store only)"
+        description: Also apply the HA load balancer after storing (true=apply, 
+          false=store only)
         type: boolean
         required: false
         default: true
@@ -45,69 +47,71 @@ jobs:
       # Issue comments use the default token; secret writes use GH_PAT below.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Store Cloudflare token as GitHub Actions secret
-        id: store
-        env:
-          CF_TOKEN: ${{ github.event.inputs.cloudflare_token }}
+    - name: Store Cloudflare token as GitHub Actions secret
+      id: store
+      env:
+        CF_TOKEN: ${{ github.event.inputs.cloudflare_token }}
           # GITHUB_TOKEN cannot write secrets — need GH_PAT with repo scope.
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-          GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
-        run: |
-          set -uo pipefail
-          echo "::add-mask::$CF_TOKEN"
-          if [ -z "$CF_TOKEN" ]; then
-            echo "::error::cloudflare_token input is empty"
-            exit 1
-          fi
-          if [ "$GH_PAT_SET" != "true" ]; then
-            echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write CLOUDFLARE_API_TOKEN."
-            exit 1
-          fi
-          if ! printf '%s' "$CF_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN --repo "${{ github.repository }}" --body -; then
-            echo "::error::Failed to store GitHub Actions secret CLOUDFLARE_API_TOKEN"
-            exit 1
-          fi
-          echo "✓ Token stored as GitHub secret CLOUDFLARE_API_TOKEN"
-          echo "stored=true" >> "$GITHUB_OUTPUT"
+        GH_TOKEN: ${{ secrets.GH_PAT }}
+        GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
+      run: |
+        set -uo pipefail
+        echo "::add-mask::$CF_TOKEN"
+        if [ -z "$CF_TOKEN" ]; then
+          echo "::error::cloudflare_token input is empty"
+          exit 1
+        fi
+        if [ "$GH_PAT_SET" != "true" ]; then
+          echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write CLOUDFLARE_API_TOKEN."
+          exit 1
+        fi
+        if ! printf '%s' "$CF_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN --repo "${{ github.repository }}" --body -; then
+          echo "::error::Failed to store GitHub Actions secret CLOUDFLARE_API_TOKEN"
+          exit 1
+        fi
+        echo "✓ Token stored as GitHub secret CLOUDFLARE_API_TOKEN"
+        echo "stored=true" >> "$GITHUB_OUTPUT"
 
-      - name: Apply Cloudflare HA load balancer
-        id: apply
-        if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored == 'true' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
-          MODE: apply
-          CONFIRM: "1"
-        run: |
-          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
-          set -o pipefail
-          bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
+    - name: Apply Cloudflare HA load balancer
+      id: apply
+      if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored 
+        == 'true' }}
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
+        MODE: apply
+        CONFIRM: '1'
+      run: |
+        echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+        set -o pipefail
+        bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
 
-      - name: Report (store-only mode)
-        id: report
-        if: ${{ github.event.inputs.apply != 'true' && steps.store.outputs.stored == 'true' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
-          MODE: report
-          CONFIRM: "0"
-        run: |
-          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
-          set -o pipefail
-          bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
+    - name: Report (store-only mode)
+      id: report
+      if: ${{ github.event.inputs.apply != 'true' && steps.store.outputs.stored 
+        == 'true' }}
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
+        MODE: report
+        CONFIRM: '0'
+      run: |
+        echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+        set -o pipefail
+        bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
 
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          APPLY="${{ github.event.inputs.apply }}"
-          {
-            echo "# Cloudflare HA load balancer — $(date -u '+%F %T')Z"
-            echo ""
-            echo "**Mode:** $( [ "$APPLY" = "true" ] && echo 'apply (token stored + LB wired)' || echo 'store-only (token in GH secret, report run)' )"
-            echo "**Job:** ${{ job.status }}"
-            echo ""
-            echo '```'
-            cat cloudflare-lb.log 2>/dev/null || echo '(no log — token stored as GitHub secret)'
-            echo '```'
-          } > c.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        APPLY="${{ github.event.inputs.apply }}"
+        {
+          echo "# Cloudflare HA load balancer — $(date -u '+%F %T')Z"
+          echo ""
+          echo "**Mode:** $( [ "$APPLY" = "true" ] && echo 'apply (token stored + LB wired)' || echo 'store-only (token in GH secret, report run)' )"
+          echo "**Job:** ${{ job.status }}"
+          echo ""
+          echo '```'
+          cat cloudflare-lb.log 2>/dev/null || echo '(no log — token stored as GitHub secret)'
+          echo '```'
+        } > c.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

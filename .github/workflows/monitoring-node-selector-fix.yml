@@ -20,8 +20,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/monitoring-node-selector-fix.yml"
-      - "infrastructure/monitoring/kube-prom-stack-values.yaml"
+    - .github/workflows/monitoring-node-selector-fix.yml
+    - infrastructure/monitoring/kube-prom-stack-values.yaml
 
 permissions:
   contents: read
@@ -32,47 +32,47 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Patch Prometheus StatefulSet
-        continue-on-error: true
-        run: |
-          kubectl patch statefulset prometheus-monitoring-prometheus -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Prometheus StatefulSet not found or already patched"
+    - name: Patch Prometheus StatefulSet
+      continue-on-error: true
+      run: |
+        kubectl patch statefulset prometheus-monitoring-prometheus -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Prometheus StatefulSet not found or already patched"
 
-      - name: Patch Alertmanager StatefulSet
-        continue-on-error: true
-        run: |
-          kubectl patch statefulset alertmanager-monitoring-alertmanager -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Alertmanager StatefulSet not found or already patched"
+    - name: Patch Alertmanager StatefulSet
+      continue-on-error: true
+      run: |
+        kubectl patch statefulset alertmanager-monitoring-alertmanager -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Alertmanager StatefulSet not found or already patched"
 
-      - name: Patch kube-state-metrics Deployment
-        continue-on-error: true
-        run: |
-          kubectl patch deployment kube-prom-kube-state-metrics -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "kube-state-metrics Deployment not found or already patched"
+    - name: Patch kube-state-metrics Deployment
+      continue-on-error: true
+      run: |
+        kubectl patch deployment kube-prom-kube-state-metrics -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "kube-state-metrics Deployment not found or already patched"
 
-      - name: Patch cloudwatch-exporter Deployment
-        continue-on-error: true
-        run: |
-          kubectl patch deployment cloudless-cloudwatch-exporter -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "cloudwatch-exporter Deployment not found or already patched"
+    - name: Patch cloudwatch-exporter Deployment
+      continue-on-error: true
+      run: |
+        kubectl patch deployment cloudless-cloudwatch-exporter -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "cloudwatch-exporter Deployment not found or already patched"
 
-      - name: Patch cloudflared-drift omv-ha CronJob nodeSelector
-        continue-on-error: true
-        run: |
-          kubectl patch cronjob cloudflared-drift-count-omv-ha -n monitoring --type strategic --patch '{"spec":{"jobTemplate":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"}}}}}' 2>/dev/null || echo "cloudflared-drift-count-omv-ha CronJob not found or already patched"
+    - name: Patch cloudflared-drift omv-ha CronJob nodeSelector
+      continue-on-error: true
+      run: |
+        kubectl patch cronjob cloudflared-drift-count-omv-ha -n monitoring --type strategic --patch '{"spec":{"jobTemplate":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"}}}}}' 2>/dev/null || echo "cloudflared-drift-count-omv-ha CronJob not found or already patched"
 
-      - name: Wait for rollouts to complete (60s timeout)
-        continue-on-error: true
-        run: |
-          echo "Waiting for Prometheus rollout..."
-          kubectl rollout status statefulset/prometheus-monitoring-prometheus -n monitoring --timeout=60s || true
-          echo "Waiting for Alertmanager rollout..."
-          kubectl rollout status statefulset/alertmanager-monitoring-alertmanager -n monitoring --timeout=60s || true
-          echo "Waiting for kube-state-metrics rollout..."
-          kubectl rollout status deployment/kube-prom-kube-state-metrics -n monitoring --timeout=60s || true
-          echo "Waiting for cloudwatch-exporter rollout..."
-          kubectl rollout status deployment/cloudless-cloudwatch-exporter -n monitoring --timeout=60s || true
+    - name: Wait for rollouts to complete (60s timeout)
+      continue-on-error: true
+      run: |
+        echo "Waiting for Prometheus rollout..."
+        kubectl rollout status statefulset/prometheus-monitoring-prometheus -n monitoring --timeout=60s || true
+        echo "Waiting for Alertmanager rollout..."
+        kubectl rollout status statefulset/alertmanager-monitoring-alertmanager -n monitoring --timeout=60s || true
+        echo "Waiting for kube-state-metrics rollout..."
+        kubectl rollout status deployment/kube-prom-kube-state-metrics -n monitoring --timeout=60s || true
+        echo "Waiting for cloudwatch-exporter rollout..."
+        kubectl rollout status deployment/cloudless-cloudwatch-exporter -n monitoring --timeout=60s || true
 
-      - name: Show pod status
-        continue-on-error: true
-        run: |
-          echo "=== Final pod status in monitoring namespace ==="
-          kubectl get pods -n monitoring -o wide
+    - name: Show pod status
+      continue-on-error: true
+      run: |
+        echo "=== Final pod status in monitoring namespace ==="
+        kubectl get pods -n monitoring -o wide

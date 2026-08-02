@@ -29,54 +29,54 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: loki
-          image: grafana/loki:2.9.8
-          args:
-            - -target=all
-            - -config.file=/etc/loki/loki.yaml
-            - -config.expand-env=true
-          ports:
-            - name: http
-              containerPort: 3100
-              protocol: TCP
-            - name: grpc
-              containerPort: 9095
-              protocol: TCP
-            - name: http-memberlist
-              containerPort: 7946
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /ready
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              cpu: 200m
-              memory: 384Mi
-          volumeMounts:
-            - name: config
-              mountPath: /etc/loki
-            - name: storage
-              mountPath: /loki
-      volumes:
+      - name: loki
+        image: grafana/loki:2.9.8
+        args:
+        - -target=all
+        - -config.file=/etc/loki/loki.yaml
+        - -config.expand-env=true
+        ports:
+        - name: http
+          containerPort: 3100
+          protocol: TCP
+        - name: grpc
+          containerPort: 9095
+          protocol: TCP
+        - name: http-memberlist
+          containerPort: 7946
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        volumeMounts:
         - name: config
-          configMap:
-            name: loki-config
+          mountPath: /etc/loki
         - name: storage
-          persistentVolumeClaim:
-            claimName: storage-loki-0
+          mountPath: /loki
+      volumes:
+      - name: config
+        configMap:
+          name: loki-config
+      - name: storage
+        persistentVolumeClaim:
+          claimName: storage-loki-0

@@ -14,12 +14,12 @@ metadata:
   labels:
     app.kubernetes.io/name: mariadb-xbstream-backup
 rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create"]
+- apiGroups: ['']
+  resources: [pods]
+  verbs: [get, list]
+- apiGroups: ['']
+  resources: [pods/exec]
+  verbs: [create]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -33,9 +33,9 @@ roleRef:
   kind: Role
   name: mariadb-xbstream-backup
 subjects:
-  - kind: ServiceAccount
-    name: mariadb-xbstream-backup
-    namespace: espocrm
+- kind: ServiceAccount
+  name: mariadb-xbstream-backup
+  namespace: espocrm
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -48,7 +48,7 @@ metadata:
     backup.cloudless.gr/target: espocrm-mariadb
     backup.cloudless.gr/rpo: 1h
 spec:
-  schedule: "0 * * * *"
+  schedule: 0 * * * *
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 7
   successfulJobsHistoryLimit: 3
@@ -61,101 +61,101 @@ spec:
           serviceAccountName: mariadb-xbstream-backup
           restartPolicy: Never
           containers:
-            - name: backup
-              image: alpine:3.20
-              imagePullPolicy: IfNotPresent
-              command:
-                - /bin/sh
-                - -c
-              args:
-                - |
-                  set -eu
+          - name: backup
+            image: alpine:3.20
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            args:
+            - |
+              set -eu
 
-                  # Install tools: aws-cli for S3, kubectl for pod exec
-                  apk add --no-cache aws-cli kubectl >/dev/null 2>&1
+              # Install tools: aws-cli for S3, kubectl for pod exec
+              apk add --no-cache aws-cli kubectl >/dev/null 2>&1
 
-                  # Get the currently Running MariaDB pod.
-                  # In the 2-node Pi cluster, this avoids selecting a Terminating
-                  # pod during reschedule/failover windows.
-                  POD=$(kubectl get pod \
-                    -n espocrm \
-                    -l app=espocrm,component=mariadb \
-                    --field-selector=status.phase=Running \
-                    -o jsonpath='{.items[0].metadata.name}')
+              # Get the currently Running MariaDB pod.
+              # In the 2-node Pi cluster, this avoids selecting a Terminating
+              # pod during reschedule/failover windows.
+              POD=$(kubectl get pod \
+                -n espocrm \
+                -l app=espocrm,component=mariadb \
+                --field-selector=status.phase=Running \
+                -o jsonpath='{.items[0].metadata.name}')
 
-                  [ -n "${POD}" ] || {
-                    echo "❌ no running MariaDB pod found"
-                    exit 1
-                  }
+              [ -n "${POD}" ] || {
+                echo "❌ no running MariaDB pod found"
+                exit 1
+              }
 
-                  echo "→ backing up via pod: ${POD}"
+              echo "→ backing up via pod: ${POD}"
 
-                  # Timestamp and S3 path
-                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
-                  KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
-                  BUCKET="cloudless-analytics-data"
+              # Timestamp and S3 path
+              DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+              KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
+              BUCKET="cloudless-analytics-data"
 
-                  echo "→ streaming xbstream → s3://${BUCKET}/${KEY}"
+              echo "→ streaming xbstream → s3://${BUCKET}/${KEY}"
 
-                  # Exec into the MariaDB pod and run mariadb-backup --stream=xbstream.
-                  # Inside the pod, localhost resolves to the MariaDB server itself,
-                  # and --password passes the root credential from the secret.
-                  kubectl exec -n espocrm "${POD}" -- \
-                    mariadb-backup \
-                      --backup \
-                      --stream=xbstream \
-                      --host=localhost \
-                      --port=3306 \
-                      --user=root \
-                      --password="${MARIADB_ROOT_PASSWORD}" \
-                      --target-dir=/tmp/mariadb-backup-tmp \
-                      2>/dev/null \
-                    | aws s3 cp \
-                        - \
-                        "s3://${BUCKET}/${KEY}"
+              # Exec into the MariaDB pod and run mariadb-backup --stream=xbstream.
+              # Inside the pod, localhost resolves to the MariaDB server itself,
+              # and --password passes the root credential from the secret.
+              kubectl exec -n espocrm "${POD}" -- \
+                mariadb-backup \
+                  --backup \
+                  --stream=xbstream \
+                  --host=localhost \
+                  --port=3306 \
+                  --user=root \
+                  --password="${MARIADB_ROOT_PASSWORD}" \
+                  --target-dir=/tmp/mariadb-backup-tmp \
+                  2>/dev/null \
+                | aws s3 cp \
+                    - \
+                    "s3://${BUCKET}/${KEY}"
 
-                  # Verify the upload
-                  SIZE=$(aws s3api head-object \
-                    --bucket "${BUCKET}" \
-                    --key "${KEY}" \
-                    --query ContentLength \
-                    --output text)
+              # Verify the upload
+              SIZE=$(aws s3api head-object \
+                --bucket "${BUCKET}" \
+                --key "${KEY}" \
+                --query ContentLength \
+                --output text)
 
-                  echo "✅ uploaded ${SIZE} bytes"
+              echo "✅ uploaded ${SIZE} bytes"
 
-                  # Sanity check: backup should be at least 10KB to be valid
-                  [ "${SIZE}" -ge 10000 ] || {
-                    echo "❌ backup too small (${SIZE} bytes < 10 KB); likely failed silently"
-                    exit 1
-                  }
+              # Sanity check: backup should be at least 10KB to be valid
+              [ "${SIZE}" -ge 10000 ] || {
+                echo "❌ backup too small (${SIZE} bytes < 10 KB); likely failed silently"
+                exit 1
+              }
 
-                  # Cleanup temp dir inside the pod
-                  kubectl exec -n espocrm "${POD}" -- \
-                    rm -rf /tmp/mariadb-backup-tmp
+              # Cleanup temp dir inside the pod
+              kubectl exec -n espocrm "${POD}" -- \
+                rm -rf /tmp/mariadb-backup-tmp
 
-                  echo "✅ xbstream backup complete"
-              env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_ACCESS_KEY_ID
-                      name: pvc-backup-aws
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      key: AWS_SECRET_ACCESS_KEY
-                      name: pvc-backup-aws
-                - name: AWS_DEFAULT_REGION
-                  value: us-east-1
-                - name: MARIADB_ROOT_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      key: mariadb-root-password
-                      name: espocrm-secrets
-              resources:
-                requests:
-                  cpu: 100m
-                  memory: 128Mi
-                limits:
-                  cpu: 500m
-                  memory: 256Mi
+              echo "✅ xbstream backup complete"
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: AWS_ACCESS_KEY_ID
+                  name: pvc-backup-aws
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: AWS_SECRET_ACCESS_KEY
+                  name: pvc-backup-aws
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mariadb-root-password
+                  name: espocrm-secrets
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi

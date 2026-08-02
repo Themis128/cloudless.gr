@@ -15,7 +15,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/cloudflared-restart.yml"
+    - .github/workflows/cloudflared-restart.yml
   workflow_dispatch:
 
 permissions:
@@ -30,195 +30,195 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Connect to tailnet
-        id: tailscale
-        uses: tailscale/github-action@v0.3.0
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-        continue-on-error: true
+    - name: Connect to tailnet
+      id: tailscale
+      uses: tailscale/github-action@v0.3.0
+      with:
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+      continue-on-error: true
 
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Check cloudless pod and pi-origin before restart
-        run: |
-          echo "=== cloudless pods ==="
-          kubectl get pods -n cloudless
-          echo ""
-          echo "=== kube-system pods (Traefik health) ==="
-          kubectl get pods -n kube-system | grep -E "traefik|svclb" || echo "(no traefik pods found)"
-          echo ""
-          echo "=== pi-origin health (before) ==="
+    - name: Check cloudless pod and pi-origin before restart
+      run: |
+        echo "=== cloudless pods ==="
+        kubectl get pods -n cloudless
+        echo ""
+        echo "=== kube-system pods (Traefik health) ==="
+        kubectl get pods -n kube-system | grep -E "traefik|svclb" || echo "(no traefik pods found)"
+        echo ""
+        echo "=== pi-origin health (before) ==="
+        code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
+          https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+        echo "HTTP $code"
+
+    - name: Check port 18443 on Pi host via privileged pod
+      run: |
+        kubectl delete pod cf-probe -n default --ignore-not-found --wait=true
+        cat <<'PODEOF' | kubectl create -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: cf-probe
+          namespace: default
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          hostNetwork: true
+          containers:
+            - name: w
+              image: alpine:3
+              securityContext:
+                privileged: true
+              command:
+                - sh
+                - -c
+                - |
+                  apk add -q util-linux curl 2>/dev/null
+                  echo "=== ss -tlnp | grep 18443 ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
+                  echo "=== curl https://localhost:18443 (max 5s) ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    curl -ksS --max-time 5 https://localhost:18443/ -o /dev/null -w "HTTP %{http_code}\n" 2>&1 || echo "curl failed"
+                  echo "=== all HTTPS/TLS ports listening on host ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep -E ":443|:8443|:18443|:9443|:9000" || echo "(none found)"
+                  echo "=== traefik process ports (all) ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep traefik || echo "(traefik not in ss — check k3s NodePorts)"
+                  echo "=== k3s NodePort services ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    sh -c 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get svc -A --field-selector spec.type=NodePort 2>/dev/null | head -20 || echo "kubectl not available"'
+                  echo "=== traefik pods ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active k3s 2>&1 || true
+        PODEOF
+        kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-probe \
+          -n default --timeout=90s || true
+        kubectl logs -n default cf-probe || true
+        kubectl delete pod -n default cf-probe --ignore-not-found
+
+    - name: Restart cloudflared via privileged pod (nsenter)
+      run: |
+        kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
+        cat <<'PODEOF' | kubectl create -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: cf-restart
+          namespace: default
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          hostNetwork: true
+          containers:
+            - name: w
+              image: alpine:3
+              securityContext:
+                privileged: true
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  apk add -q util-linux 2>/dev/null
+                  echo "=== current traefik-ipv6-proxy.service ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cat /etc/systemd/system/traefik-ipv6-proxy.service 2>/dev/null || echo "(unit file not found)"
+                  echo "=== updating traefik-ipv6-proxy.service ==="
+                  # Root cause: the systemd unit has Restart=always with the dead keepalived VIP
+                  # (192.168.1.200:18443) and TCP6-LISTEN+ipv6only=1 (IPv6-only). It respawns socat
+                  # within 5s of any manual kill, undoing all previous fix attempts.
+                  # Fix: rewrite ExecStart to use Traefik ClusterIP 10.43.64.171:18443 (reachable
+                  # directly from host network namespace via kube-proxy iptables OUTPUT rules) and
+                  # TCP-LISTEN (dual-stack) so cloudflared's IPv4 connections reach the socket.
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    sh -c 'cat > /etc/systemd/system/traefik-ipv6-proxy.service << '"'"'EOF'"'"'
+                  [Unit]
+                  Description=IPv6 proxy for Traefik 18443
+                  After=network.target k3s.service
+
+                  [Service]
+                  ExecStart=/usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:10.43.64.171:18443
+                  Restart=always
+                  RestartSec=5
+
+                  [Install]
+                  WantedBy=multi-user.target
+                  EOF'
+                  echo "=== reloading systemd daemon ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl daemon-reload
+                  echo "=== restarting traefik-ipv6-proxy ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart traefik-ipv6-proxy
+                  sleep 3
+                  echo "=== traefik-ipv6-proxy status ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active traefik-ipv6-proxy
+                  echo "=== socat cmdline after fix ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
+                  PID=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep 18443 | awk -F 'pid=' '{split($2,a,","); print a[1]}')
+                  [ -n "$PID" ] && nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cat /proc/$PID/cmdline 2>/dev/null | tr '\0' ' ' || echo "no socat pid found"
+                  echo ""
+                  echo "=== restarting cloudflared ==="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart cloudflared
+                  sleep 5
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active cloudflared
+                  echo "done"
+        PODEOF
+        echo "=== waiting for pod to complete (up to 150s) ==="
+        kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
+          -n default --timeout=150s || {
+          echo "=== pod did not succeed — current state ==="
+          kubectl get pod cf-restart -n default -o wide || true
+          kubectl describe pod cf-restart -n default || true
+          kubectl logs cf-restart -n default || true
+          exit 1
+        }
+        kubectl logs -n default cf-restart
+        kubectl delete pod -n default cf-restart --ignore-not-found
+
+    - name: Wait for pi-origin to recover
+      run: |
+        echo "=== polling pi-origin.cloudless.gr/api/health (up to 90s) ==="
+        for i in $(seq 1 9); do
           code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
             https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
-          echo "HTTP $code"
+          echo "  [$i/9] HTTP $code"
+          if [ "$code" = "200" ]; then
+            echo "✓ pi-origin is healthy"
+            exit 0
+          fi
+          sleep 10
+        done
+        echo "::warning::pi-origin did not recover within 90s after cloudflared restart"
 
-      - name: Check port 18443 on Pi host via privileged pod
-        run: |
-          kubectl delete pod cf-probe -n default --ignore-not-found --wait=true
-          cat <<'PODEOF' | kubectl create -f -
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: cf-probe
-            namespace: default
-          spec:
-            restartPolicy: Never
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            containers:
-              - name: w
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command:
-                  - sh
-                  - -c
-                  - |
-                    apk add -q util-linux curl 2>/dev/null
-                    echo "=== ss -tlnp | grep 18443 ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
-                    echo "=== curl https://localhost:18443 (max 5s) ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      curl -ksS --max-time 5 https://localhost:18443/ -o /dev/null -w "HTTP %{http_code}\n" 2>&1 || echo "curl failed"
-                    echo "=== all HTTPS/TLS ports listening on host ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep -E ":443|:8443|:18443|:9443|:9000" || echo "(none found)"
-                    echo "=== traefik process ports (all) ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep traefik || echo "(traefik not in ss — check k3s NodePorts)"
-                    echo "=== k3s NodePort services ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get svc -A --field-selector spec.type=NodePort 2>/dev/null | head -20 || echo "kubectl not available"'
-                    echo "=== traefik pods ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active k3s 2>&1 || true
-          PODEOF
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-probe \
-            -n default --timeout=90s || true
-          kubectl logs -n default cf-probe || true
-          kubectl delete pod -n default cf-probe --ignore-not-found
-
-      - name: Restart cloudflared via privileged pod (nsenter)
-        run: |
-          kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
-          cat <<'PODEOF' | kubectl create -f -
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: cf-restart
-            namespace: default
-          spec:
-            restartPolicy: Never
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            containers:
-              - name: w
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command:
-                  - sh
-                  - -c
-                  - |
-                    set -e
-                    apk add -q util-linux 2>/dev/null
-                    echo "=== current traefik-ipv6-proxy.service ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /etc/systemd/system/traefik-ipv6-proxy.service 2>/dev/null || echo "(unit file not found)"
-                    echo "=== updating traefik-ipv6-proxy.service ==="
-                    # Root cause: the systemd unit has Restart=always with the dead keepalived VIP
-                    # (192.168.1.200:18443) and TCP6-LISTEN+ipv6only=1 (IPv6-only). It respawns socat
-                    # within 5s of any manual kill, undoing all previous fix attempts.
-                    # Fix: rewrite ExecStart to use Traefik ClusterIP 10.43.64.171:18443 (reachable
-                    # directly from host network namespace via kube-proxy iptables OUTPUT rules) and
-                    # TCP-LISTEN (dual-stack) so cloudflared's IPv4 connections reach the socket.
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'cat > /etc/systemd/system/traefik-ipv6-proxy.service << '"'"'EOF'"'"'
-                    [Unit]
-                    Description=IPv6 proxy for Traefik 18443
-                    After=network.target k3s.service
-
-                    [Service]
-                    ExecStart=/usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:10.43.64.171:18443
-                    Restart=always
-                    RestartSec=5
-
-                    [Install]
-                    WantedBy=multi-user.target
-                    EOF'
-                    echo "=== reloading systemd daemon ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl daemon-reload
-                    echo "=== restarting traefik-ipv6-proxy ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart traefik-ipv6-proxy
-                    sleep 3
-                    echo "=== traefik-ipv6-proxy status ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active traefik-ipv6-proxy
-                    echo "=== socat cmdline after fix ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
-                    PID=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 | awk -F 'pid=' '{split($2,a,","); print a[1]}')
-                    [ -n "$PID" ] && nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /proc/$PID/cmdline 2>/dev/null | tr '\0' ' ' || echo "no socat pid found"
-                    echo ""
-                    echo "=== restarting cloudflared ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart cloudflared
-                    sleep 5
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active cloudflared
-                    echo "done"
-          PODEOF
-          echo "=== waiting for pod to complete (up to 150s) ==="
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
-            -n default --timeout=150s || {
-            echo "=== pod did not succeed — current state ==="
-            kubectl get pod cf-restart -n default -o wide || true
-            kubectl describe pod cf-restart -n default || true
-            kubectl logs cf-restart -n default || true
-            exit 1
-          }
-          kubectl logs -n default cf-restart
-          kubectl delete pod -n default cf-restart --ignore-not-found
-
-      - name: Wait for pi-origin to recover
-        run: |
-          echo "=== polling pi-origin.cloudless.gr/api/health (up to 90s) ==="
-          for i in $(seq 1 9); do
-            code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
-              https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
-            echo "  [$i/9] HTTP $code"
-            if [ "$code" = "200" ]; then
-              echo "✓ pi-origin is healthy"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::warning::pi-origin did not recover within 90s after cloudflared restart"
-
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# cloudflared restart — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "**Job:** ${{ job.status }}"
-            echo ""
-            echo "Trigger: pi-origin HTTP 000 while cloudless pod healthy"
-          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        {
+          echo "# cloudflared restart — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "**Job:** ${{ job.status }}"
+          echo ""
+          echo "Trigger: pi-origin HTTP 000 while cloudless pod healthy"
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

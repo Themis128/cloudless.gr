@@ -10,7 +10,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/fix-omv-nginx-port.yml"
+    - .github/workflows/fix-omv-nginx-port.yml
 
 permissions:
   contents: read
@@ -22,142 +22,142 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:k8s
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Write fix pod manifest
-        run: |
-          cat > /tmp/omv-nginx-pod.yaml << 'EOF'
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: omv-nginx-fix
-            namespace: default
-          spec:
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            restartPolicy: Never
-            containers:
-              - name: f
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command: [sh, -c]
-                args:
-                  - |
-                    apk add -q util-linux 2>/dev/null
+    - name: Write fix pod manifest
+      run: |
+        cat > /tmp/omv-nginx-pod.yaml << 'EOF'
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: omv-nginx-fix
+          namespace: default
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          hostNetwork: true
+          restartPolicy: Never
+          containers:
+            - name: f
+              image: alpine:3
+              securityContext:
+                privileged: true
+              command: [sh, -c]
+              args:
+                - |
+                  apk add -q util-linux 2>/dev/null
 
-                    echo "===== nginx config (listen directives) ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      grep -rn "listen" /etc/nginx/sites-enabled/ \
-                                        /etc/nginx/conf.d/ \
-                                        /etc/nginx/nginx.conf \
-                      2>/dev/null | grep -v "^Binary\|#" | head -20
+                  echo "===== nginx config (listen directives) ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    grep -rn "listen" /etc/nginx/sites-enabled/ \
+                                      /etc/nginx/conf.d/ \
+                                      /etc/nginx/nginx.conf \
+                    2>/dev/null | grep -v "^Binary\|#" | head -20
 
-                    echo ""
-                    echo "===== OMV nginx site config ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ls /etc/nginx/sites-enabled/ 2>/dev/null
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /etc/nginx/sites-enabled/openmediavault-webgui 2>/dev/null | \
-                      grep -v "^#\|^$" | head -30 || \
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /etc/nginx/sites-enabled/default 2>/dev/null | \
-                      grep -v "^#\|^$" | head -30
+                  echo ""
+                  echo "===== OMV nginx site config ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ls /etc/nginx/sites-enabled/ 2>/dev/null
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cat /etc/nginx/sites-enabled/openmediavault-webgui 2>/dev/null | \
+                    grep -v "^#\|^$" | head -30 || \
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cat /etc/nginx/sites-enabled/default 2>/dev/null | \
+                    grep -v "^#\|^$" | head -30
 
-                    echo ""
-                    echo "===== FIX: patch nginx to listen on 8090 instead of 80 ====="
-                    # OMV regenerates nginx config from its own template — we patch the
-                    # live site config directly (OMV will overwrite on next engined run,
-                    # but that's ok — we'll also patch OMV's port setting below)
-                    for CONF in \
-                      /etc/nginx/sites-enabled/openmediavault-webgui \
-                      /etc/nginx/sites-enabled/default \
-                      /etc/nginx/conf.d/openmediavault.conf; do
-                      if nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        test -f "$CONF"; then
-                        echo "Patching $CONF..."
-                        nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                          sed -i 's/listen 80;/listen 8090;/g; s/listen \[::\]:80;/listen [::]:8090;/g' \
-                          "$CONF" && echo "PATCHED $CONF"
-                      fi
-                    done
+                  echo ""
+                  echo "===== FIX: patch nginx to listen on 8090 instead of 80 ====="
+                  # OMV regenerates nginx config from its own template — we patch the
+                  # live site config directly (OMV will overwrite on next engined run,
+                  # but that's ok — we'll also patch OMV's port setting below)
+                  for CONF in \
+                    /etc/nginx/sites-enabled/openmediavault-webgui \
+                    /etc/nginx/sites-enabled/default \
+                    /etc/nginx/conf.d/openmediavault.conf; do
+                    if nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      test -f "$CONF"; then
+                      echo "Patching $CONF..."
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sed -i 's/listen 80;/listen 8090;/g; s/listen \[::\]:80;/listen [::]:8090;/g' \
+                        "$CONF" && echo "PATCHED $CONF"
+                    fi
+                  done
 
-                    echo ""
-                    echo "===== OMV workbench port setting ====="
-                    # OMV 6/7 stores the web UI port in its config DB
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      omv-env get OMV_WEBGUI_NGINX_PORT 2>/dev/null || \
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      grep -r "webguiport\|webgui.*port\|nginx.*port" \
-                        /etc/openmediavault/ 2>/dev/null | grep -v "^Binary" | head -5 || \
-                      echo "(OMV port config not found via grep)"
+                  echo ""
+                  echo "===== OMV workbench port setting ====="
+                  # OMV 6/7 stores the web UI port in its config DB
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    omv-env get OMV_WEBGUI_NGINX_PORT 2>/dev/null || \
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    grep -r "webguiport\|webgui.*port\|nginx.*port" \
+                      /etc/openmediavault/ 2>/dev/null | grep -v "^Binary" | head -5 || \
+                    echo "(OMV port config not found via grep)"
 
-                    echo ""
-                    echo "===== nginx config test ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      nginx -t 2>&1
+                  echo ""
+                  echo "===== nginx config test ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    nginx -t 2>&1
 
-                    echo ""
-                    echo "===== Restart nginx ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || \
-                      echo "WARN: nginx failed"
-                    sleep 2
-                    NGINX=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active nginx 2>/dev/null || echo "failed")
-                    echo "nginx: $NGINX"
+                  echo ""
+                  echo "===== Restart nginx ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || \
+                    echo "WARN: nginx failed"
+                  sleep 2
+                  NGINX=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active nginx 2>/dev/null || echo "failed")
+                  echo "nginx: $NGINX"
 
-                    echo ""
-                    echo "===== Port map after fix ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep -E ":(80|8090|443|8080) " | head -10 || true
+                  echo ""
+                  echo "===== Port map after fix ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep -E ":(80|8090|443|8080) " | head -10 || true
 
-                    echo ""
-                    echo "===== OMV reachable on :8090? ====="
-                    wget -qO- --timeout=5 http://localhost:8090/ 2>/dev/null | head -3 && \
-                      echo "OMV nginx responding on :8090" || echo "WARN: :8090 not responding"
-          EOF
+                  echo ""
+                  echo "===== OMV reachable on :8090? ====="
+                  wget -qO- --timeout=5 http://localhost:8090/ 2>/dev/null | head -3 && \
+                    echo "OMV nginx responding on :8090" || echo "WARN: :8090 not responding"
+        EOF
 
-      - name: Run fix pod
-        run: |
-          kubectl delete pod omv-nginx-fix -n default --ignore-not-found --wait=true
-          kubectl create -f /tmp/omv-nginx-pod.yaml
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
-            pod/omv-nginx-fix -n default --timeout=120s
-          kubectl logs -n default omv-nginx-fix | tee /tmp/omv-nginx-fix.txt
-          kubectl delete pod omv-nginx-fix -n default --ignore-not-found
+    - name: Run fix pod
+      run: |
+        kubectl delete pod omv-nginx-fix -n default --ignore-not-found --wait=true
+        kubectl create -f /tmp/omv-nginx-pod.yaml
+        kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+          pod/omv-nginx-fix -n default --timeout=120s
+        kubectl logs -n default omv-nginx-fix | tee /tmp/omv-nginx-fix.txt
+        kubectl delete pod omv-nginx-fix -n default --ignore-not-found
 
-      - name: Post report
-        if: always()
-        run: |
-          NGINX=$(grep "^nginx:" /tmp/omv-nginx-fix.txt | tail -1 || echo "unknown")
-          {
-            echo "# OMV nginx port fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "**Strategy:** move OMV nginx from port 80 → 8090 (Pi-hole FTL holds port 80 and cannot be displaced via remote systemctl)"
-            echo ""
-            echo "nginx status: **$NGINX**"
-            echo ""
-            echo "After fix: **OMV web UI** → http://omv:8090 | **Pi-hole admin** → http://omv:80/admin"
-            echo ""
-            echo '```'
-            cat /tmp/omv-nginx-fix.txt
-            echo '```'
-          } > /tmp/omv-nginx-report.md
-          gh issue comment 382 --repo "${{ github.repository }}" \
-            --body-file /tmp/omv-nginx-report.md
+    - name: Post report
+      if: always()
+      run: |
+        NGINX=$(grep "^nginx:" /tmp/omv-nginx-fix.txt | tail -1 || echo "unknown")
+        {
+          echo "# OMV nginx port fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "**Strategy:** move OMV nginx from port 80 → 8090 (Pi-hole FTL holds port 80 and cannot be displaced via remote systemctl)"
+          echo ""
+          echo "nginx status: **$NGINX**"
+          echo ""
+          echo "After fix: **OMV web UI** → http://omv:8090 | **Pi-hole admin** → http://omv:80/admin"
+          echo ""
+          echo '```'
+          cat /tmp/omv-nginx-fix.txt
+          echo '```'
+        } > /tmp/omv-nginx-report.md
+        gh issue comment 382 --repo "${{ github.repository }}" \
+          --body-file /tmp/omv-nginx-report.md

@@ -1,51 +1,17 @@
-# Cluster-wide event scanner that pushes Critical events to Slack #errors.
-#
-# Why: the 2026-05-29 cluster overload incident was only caught when the user
-# noticed pi-origin slowness. With this CronJob, the same incident would have
-# fired into #errors within ~5 min: "n8n/n8n-* CrashLoopBackOff x97"
-# and "analytics/duckdb-api-* CrashLoopBackOff x108".
-#
-# Scope: read-only over Events + Pods cluster-wide. Posts to #errors via the
-# Slack chat.postMessage API using the `cloudless_bot` bot token stored in the
-# `cluster-alerts-secret` Secret in the `monitoring` namespace.
-#
-# Why bot token vs incoming webhook: the legacy SLACK_WEBHOOK_URL in SSM is
-# dead (Slack returns `no_service`). The bot token is the live path the Next.js
-# app uses for per-channel routing; it survives webhook rotation.
-#
-# Prereq (one-time): mirror the bot token from SSM into a cluster secret:
-#
-#   BOT=$(aws ssm get-parameter --region us-east-1 \
-#     --name /cloudless/production/SLACK_BOT_TOKEN \
-#     --with-decryption --query Parameter.Value --output text)
-#   kubectl -n monitoring create secret generic cluster-alerts-secret \
-#     --from-literal=SLACK_BOT_TOKEN="$BOT"
-#
-# Also: invite @cloudless_bot to #errors once: `/invite @cloudless_bot` in
-# that channel — otherwise chat.postMessage returns not_in_channel.
-#
-# Apply:
-#   kubectl apply -f k8s/cluster-protection/alerts/cluster-alerts.yaml
-#
-# Verify:
-#   kubectl -n monitoring logs -l app=cluster-alerts --tail=50
-
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cluster-alerts
   namespace: monitoring
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: cluster-alerts-reader
 rules:
-  - apiGroups: [""]
-    resources: ["events", "pods"]
-    verbs: ["get", "list"]
+- apiGroups: ['']
+  resources: [events, pods]
+  verbs: [get, list]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -57,10 +23,9 @@ roleRef:
   kind: ClusterRole
   name: cluster-alerts-reader
 subjects:
-  - kind: ServiceAccount
-    name: cluster-alerts
-    namespace: monitoring
-
+- kind: ServiceAccount
+  name: cluster-alerts
+  namespace: monitoring
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -70,7 +35,7 @@ metadata:
   labels:
     app: cluster-alerts
 spec:
-  schedule: "*/5 * * * *"
+  schedule: '*/5 * * * *'
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -85,114 +50,114 @@ spec:
           serviceAccountName: cluster-alerts
           restartPolicy: Never
           containers:
-            - name: scanner
+          - name: scanner
               # alpine/k8s bundles kubectl + curl + jq + python3 in one image.
               # Matches the cluster's k3s minor version (v1.35.x). bitnami/kubectl
               # was withdrawn from Docker Hub mid-2026.
-              image: alpine/k8s:1.35.5
-              resources:
-                requests:
-                  memory: 32Mi
-                  cpu: 25m
-                limits:
-                  memory: 128Mi
-                  cpu: 200m
-              env:
-                - name: SLACK_BOT_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-secret
-                      key: SLACK_BOT_TOKEN
+            image: alpine/k8s:1.35.5
+            resources:
+              requests:
+                memory: 32Mi
+                cpu: 25m
+              limits:
+                memory: 128Mi
+                cpu: 200m
+            env:
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-alerts-secret
+                  key: SLACK_BOT_TOKEN
                 # The channel to post into. Default #errors.
-                - name: SLACK_CHANNEL
-                  value: "#errors"
+            - name: SLACK_CHANNEL
+              value: '#errors'
                 # Look back this many minutes for events; matches the schedule
                 # plus 1 min buffer to catch events at the boundary.
-                - name: WINDOW_MIN
-                  value: "6"
-              command:
-                - /bin/bash
-                - -c
-                - |
-                  set -eo pipefail
-                  STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            - name: WINDOW_MIN
+              value: '6'
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -eo pipefail
+              STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-                  if [ -z "${SLACK_BOT_TOKEN:-}" ]; then
-                    echo "[${STAMP}] SLACK_BOT_TOKEN not set — exiting noop"
-                    exit 0
-                  fi
-                  : "${SLACK_CHANNEL:=#errors}"
+              if [ -z "${SLACK_BOT_TOKEN:-}" ]; then
+                echo "[${STAMP}] SLACK_BOT_TOKEN not set — exiting noop"
+                exit 0
+              fi
+              : "${SLACK_CHANNEL:=#errors}"
 
-                  # ── 1. Crash-loop pods cluster-wide ─────────────────────────
-                  CRASH_LOOP="$(kubectl get pods -A \
-                    -o jsonpath='{range .items[?(@.status.containerStatuses[*].state.waiting.reason=="CrashLoopBackOff")]}{.metadata.namespace}/{.metadata.name} ({.status.containerStatuses[0].restartCount}x){"\n"}{end}' \
-                    2>/dev/null || true)"
+              # ── 1. Crash-loop pods cluster-wide ─────────────────────────
+              CRASH_LOOP="$(kubectl get pods -A \
+                -o jsonpath='{range .items[?(@.status.containerStatuses[*].state.waiting.reason=="CrashLoopBackOff")]}{.metadata.namespace}/{.metadata.name} ({.status.containerStatuses[0].restartCount}x){"\n"}{end}' \
+                2>/dev/null || true)"
 
-                  # ── 2. OOMKilled pods in last window ────────────────────────
-                  OOM="$(kubectl get pods -A \
-                    -o jsonpath='{range .items[?(@.status.containerStatuses[*].lastState.terminated.reason=="OOMKilled")]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' \
-                    2>/dev/null || true)"
+              # ── 2. OOMKilled pods in last window ────────────────────────
+              OOM="$(kubectl get pods -A \
+                -o jsonpath='{range .items[?(@.status.containerStatuses[*].lastState.terminated.reason=="OOMKilled")]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' \
+                2>/dev/null || true)"
 
-                  # ── 3. Quota / admission failures from recent events ────────
-                  EVENTS="$(kubectl get events -A \
-                    --field-selector type=Warning \
-                    --sort-by=.lastTimestamp \
-                    -o json 2>/dev/null \
-                    | python3 -c '
-                  import json, sys, datetime as dt
-                  win = int(__import__("os").environ.get("WINDOW_MIN","6"))
-                  cutoff = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=win)
-                  data = json.load(sys.stdin)
-                  out = []
-                  for e in data.get("items", []):
-                      ts = e.get("lastTimestamp") or e.get("eventTime") or ""
-                      if not ts: continue
-                      try:
-                          when = dt.datetime.fromisoformat(ts.replace("Z","+00:00"))
-                      except Exception:
-                          continue
-                      if when < cutoff: continue
-                      reason = e.get("reason","")
-                      if reason not in ("FailedCreate","FailedScheduling","Evicted","FailedMount","BackOff"):
-                          continue
-                      msg = (e.get("message") or "").splitlines()[0][:200]
-                      obj = e.get("involvedObject",{})
-                      ns = e.get("metadata", {}).get("namespace", "-")
-                      nm = obj.get("name", "?")
-                      out.append(f"{ns}/{nm} {reason}: {msg}")
-                  print("\n".join(out[-15:]))
-                  ' || true)"
+              # ── 3. Quota / admission failures from recent events ────────
+              EVENTS="$(kubectl get events -A \
+                --field-selector type=Warning \
+                --sort-by=.lastTimestamp \
+                -o json 2>/dev/null \
+                | python3 -c '
+              import json, sys, datetime as dt
+              win = int(__import__("os").environ.get("WINDOW_MIN","6"))
+              cutoff = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=win)
+              data = json.load(sys.stdin)
+              out = []
+              for e in data.get("items", []):
+                  ts = e.get("lastTimestamp") or e.get("eventTime") or ""
+                  if not ts: continue
+                  try:
+                      when = dt.datetime.fromisoformat(ts.replace("Z","+00:00"))
+                  except Exception:
+                      continue
+                  if when < cutoff: continue
+                  reason = e.get("reason","")
+                  if reason not in ("FailedCreate","FailedScheduling","Evicted","FailedMount","BackOff"):
+                      continue
+                  msg = (e.get("message") or "").splitlines()[0][:200]
+                  obj = e.get("involvedObject",{})
+                  ns = e.get("metadata", {}).get("namespace", "-")
+                  nm = obj.get("name", "?")
+                  out.append(f"{ns}/{nm} {reason}: {msg}")
+              print("\n".join(out[-15:]))
+              ' || true)"
 
-                  if [ -z "${CRASH_LOOP}${OOM}${EVENTS}" ]; then
-                    echo "[${STAMP}] all clear"
-                    exit 0
-                  fi
+              if [ -z "${CRASH_LOOP}${OOM}${EVENTS}" ]; then
+                echo "[${STAMP}] all clear"
+                exit 0
+              fi
 
-                  # ── Compose Slack payload ───────────────────────────────────
-                  BODY=":rotating_light: *omv k3s alerts* (window: ${WINDOW_MIN}m)\n"
-                  [ -n "${CRASH_LOOP}" ] && BODY="${BODY}\n*CrashLoopBackOff:*\n\`\`\`${CRASH_LOOP}\`\`\`"
-                  [ -n "${OOM}" ]        && BODY="${BODY}\n*OOMKilled (last terminate):*\n\`\`\`${OOM}\`\`\`"
-                  [ -n "${EVENTS}" ]     && BODY="${BODY}\n*Recent warnings:*\n\`\`\`${EVENTS}\`\`\`"
+              # ── Compose Slack payload ───────────────────────────────────
+              BODY=":rotating_light: *omv k3s alerts* (window: ${WINDOW_MIN}m)\n"
+              [ -n "${CRASH_LOOP}" ] && BODY="${BODY}\n*CrashLoopBackOff:*\n\`\`\`${CRASH_LOOP}\`\`\`"
+              [ -n "${OOM}" ]        && BODY="${BODY}\n*OOMKilled (last terminate):*\n\`\`\`${OOM}\`\`\`"
+              [ -n "${EVENTS}" ]     && BODY="${BODY}\n*Recent warnings:*\n\`\`\`${EVENTS}\`\`\`"
 
-                  # JSON-encode BODY via stdin so we don't depend on env-var
-                  # propagation through `cmd VAR=val` (which sets a python argv,
-                  # not an env entry, in many shells/images).
-                  PAYLOAD="$(printf '%s' "${BODY}" | python3 -c '
-                  import json,os,sys
-                  print(json.dumps({"channel": os.environ.get("SLACK_CHANNEL","#errors"), "text": sys.stdin.read()}))
-                  ')"
+              # JSON-encode BODY via stdin so we don't depend on env-var
+              # propagation through `cmd VAR=val` (which sets a python argv,
+              # not an env entry, in many shells/images).
+              PAYLOAD="$(printf '%s' "${BODY}" | python3 -c '
+              import json,os,sys
+              print(json.dumps({"channel": os.environ.get("SLACK_CHANNEL","#errors"), "text": sys.stdin.read()}))
+              ')"
 
-                  echo "[${STAMP}] posting alert to Slack channel ${SLACK_CHANNEL}"
-                  echo "${BODY}" | head -50
-                  RESP="$(curl -sS -X POST https://slack.com/api/chat.postMessage \
-                    -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
-                    -H 'Content-Type: application/json; charset=utf-8' \
-                    --data "${PAYLOAD}" \
-                    --max-time 8 || echo '{"ok":false,"error":"curl_failed"}')"
-                  OK="$(printf '%s' "${RESP}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')"
-                  if [ "${OK}" = "True" ]; then
-                    echo "[${STAMP}] alert posted"
-                  else
-                    echo "[${STAMP}] Slack post failed: ${RESP}"
-                    exit 1
-                  fi
+              echo "[${STAMP}] posting alert to Slack channel ${SLACK_CHANNEL}"
+              echo "${BODY}" | head -50
+              RESP="$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+                -H 'Content-Type: application/json; charset=utf-8' \
+                --data "${PAYLOAD}" \
+                --max-time 8 || echo '{"ok":false,"error":"curl_failed"}')"
+              OK="$(printf '%s' "${RESP}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')"
+              if [ "${OK}" = "True" ]; then
+                echo "[${STAMP}] alert posted"
+              else
+                echo "[${STAMP}] Slack post failed: ${RESP}"
+                exit 1
+              fi

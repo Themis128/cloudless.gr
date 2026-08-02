@@ -14,15 +14,15 @@ description: |
   appVersion 1.3.0 and has no Temporal templates.
 type: application
 version: 0.1.0
-appVersion: "2.11.2"
+appVersion: 2.11.2
 maintainers:
-  - name: cloudless.gr
-    email: baltzakis.themis@gmail.com
+- name: cloudless.gr
+  email: baltzakis.themis@gmail.com
 sources:
-  - https://github.com/gitroomhq/postiz-app
-  - https://docs.postiz.com
+- https://github.com/gitroomhq/postiz-app
+- https://docs.postiz.com
 keywords:
-  - postiz
-  - social-media
-  - scheduling
+- postiz
+- social-media
+- scheduling
 home: https://postiz.cloudless.gr

@@ -1,8 +1,3 @@
-# R10c — Uptime Kuma SQLite daily backup to Cloudflare R2
-#
-# sqlite3 .backup + gzip → rclone → r2://datalake-bucket/pvc-backups/uptime-kuma/daily/
-# at 04:45 UTC. CronJob NS = uptime-kuma (same as PVC + pods). No AWS CLI.
----
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -14,7 +9,7 @@ metadata:
     app.kubernetes.io/part-of: cloudless-backup
     backup.cloudless.gr/target: uptime-kuma-sqlite
 spec:
-  schedule: "45 4 * * *"
+  schedule: 45 4 * * *
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7
@@ -40,80 +35,81 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: backup
-              image: alpine:3.20
-              env:
-                - name: R2_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: pvc-backup-r2
-                      key: ACCESS_KEY_ID
-                - name: R2_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: pvc-backup-r2
-                      key: SECRET_ACCESS_KEY
-                - name: R2_ENDPOINT
-                  value: "https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com"
-                - name: R2_BUCKET
-                  value: "datalake-bucket"
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  set -euo pipefail
-                  apk add --no-cache rclone sqlite gzip >/dev/null
-                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
-                  KEY="pvc-backups/uptime-kuma/daily/${DATE}.sqlite.gz"
-                  LOCAL_FILE=/tmp/kuma.sqlite.gz
-                  DB=""
-                  for f in /kuma-data/kuma.db /kuma-data/db/kuma.db /kuma-data/database.db; do
-                    if [ -f "$f" ]; then DB="$f"; break; fi
-                  done
-                  if [ -z "$DB" ]; then
-                    echo "ERROR no Kuma sqlite under /kuma-data" >&2
-                    find /kuma-data -type f 2>/dev/null | head -20 >&2 || true
-                    exit 1
-                  fi
-                  echo "→ snapshotting ${DB}"
-                  sqlite3 "${DB}" ".backup /tmp/kuma.sqlite"
-                  gzip -9 -c /tmp/kuma.sqlite > "${LOCAL_FILE}"
-                  export RCLONE_CONFIG_R2_TYPE=s3
-                  export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
-                  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}"
-                  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}"
-                  export RCLONE_CONFIG_R2_ENDPOINT="${R2_ENDPOINT}"
-                  export RCLONE_CONFIG_R2_REGION=auto
-                  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
-                  SIZE=$(wc -c < "${LOCAL_FILE}")
-                  echo "→ uploading ${SIZE} bytes → r2://${R2_BUCKET}/${KEY}"
-                  rclone copyto "${LOCAL_FILE}" "r2:${R2_BUCKET}/${KEY}" --s3-no-check-bucket
-                  REMOTE_SIZE=$(rclone lsjson "r2:${R2_BUCKET}/${KEY}" | sed -n 's/.*"Size": *\([0-9]*\).*/\1/p' | head -1)
-                  echo "OK remote size ${REMOTE_SIZE} bytes"
-                  if [ "${REMOTE_SIZE:-0}" -lt 1000 ]; then
-                    echo "ERROR backup suspiciously small (<1KB) — failing job for retry" >&2
-                    exit 1
-                  fi
-              volumeMounts:
-                - name: kuma-data
-                  mountPath: /kuma-data
-                  readOnly: true
-              resources:
-                requests:
-                  memory: "64Mi"
-                  cpu: "100m"
-                limits:
-                  memory: "256Mi"
-                  cpu: "300m"
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop: ["ALL"]
-          volumes:
+          - name: backup
+            image: alpine:3.20
+            env:
+            - name: R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pvc-backup-r2
+                  key: ACCESS_KEY_ID
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pvc-backup-r2
+                  key: SECRET_ACCESS_KEY
+            - name: R2_ENDPOINT
+              value: 
+                https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
+            - name: R2_BUCKET
+              value: datalake-bucket
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              apk add --no-cache rclone sqlite gzip >/dev/null
+              DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+              KEY="pvc-backups/uptime-kuma/daily/${DATE}.sqlite.gz"
+              LOCAL_FILE=/tmp/kuma.sqlite.gz
+              DB=""
+              for f in /kuma-data/kuma.db /kuma-data/db/kuma.db /kuma-data/database.db; do
+                if [ -f "$f" ]; then DB="$f"; break; fi
+              done
+              if [ -z "$DB" ]; then
+                echo "ERROR no Kuma sqlite under /kuma-data" >&2
+                find /kuma-data -type f 2>/dev/null | head -20 >&2 || true
+                exit 1
+              fi
+              echo "→ snapshotting ${DB}"
+              sqlite3 "${DB}" ".backup /tmp/kuma.sqlite"
+              gzip -9 -c /tmp/kuma.sqlite > "${LOCAL_FILE}"
+              export RCLONE_CONFIG_R2_TYPE=s3
+              export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+              export RCLONE_CONFIG_R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}"
+              export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}"
+              export RCLONE_CONFIG_R2_ENDPOINT="${R2_ENDPOINT}"
+              export RCLONE_CONFIG_R2_REGION=auto
+              export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+              SIZE=$(wc -c < "${LOCAL_FILE}")
+              echo "→ uploading ${SIZE} bytes → r2://${R2_BUCKET}/${KEY}"
+              rclone copyto "${LOCAL_FILE}" "r2:${R2_BUCKET}/${KEY}" --s3-no-check-bucket
+              REMOTE_SIZE=$(rclone lsjson "r2:${R2_BUCKET}/${KEY}" | sed -n 's/.*"Size": *\([0-9]*\).*/\1/p' | head -1)
+              echo "OK remote size ${REMOTE_SIZE} bytes"
+              if [ "${REMOTE_SIZE:-0}" -lt 1000 ]; then
+                echo "ERROR backup suspiciously small (<1KB) — failing job for retry" >&2
+                exit 1
+              fi
+            volumeMounts:
             - name: kuma-data
-              persistentVolumeClaim:
-                claimName: uptime-kuma-data
-                readOnly: true
+              mountPath: /kuma-data
+              readOnly: true
+            resources:
+              requests:
+                memory: 64Mi
+                cpu: 100m
+              limits:
+                memory: 256Mi
+                cpu: 300m
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+          volumes:
+          - name: kuma-data
+            persistentVolumeClaim:
+              claimName: uptime-kuma-data
+              readOnly: true
           securityContext:
             seccompProfile:
               type: RuntimeDefault

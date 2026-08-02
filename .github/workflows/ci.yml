@@ -2,60 +2,60 @@ name: CI
 # runner: self-hosted via vars.RUNNER_GENERIC (toggle-runner.sh pi|hosted)
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - "src/**"
-      - "public/**"
-      - "e2e/**"
-      - "__tests__/**"
-      - "sst.config.ts"
-      - "next.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "tsconfig.json"
-      - "mcp.json"
-      - ".mcp.json"
-      - ".github/workflows/**"
+    - src/**
+    - public/**
+    - e2e/**
+    - __tests__/**
+    - sst.config.ts
+    - next.config.ts
+    - package.json
+    - pnpm-lock.yaml
+    - tsconfig.json
+    - mcp.json
+    - .mcp.json
+    - .github/workflows/**
       # Root-level config that affects build/lint/quality gates.
       # Without these, PRs editing only these files hang on the required
       # "Build" check because CI never triggers.
-      - ".codacy/**"
-      - ".sonarcloud.properties"
-      - ".eslintrc*"
-      - "eslint.config.*"
-      - ".prettierrc*"
-      - "prettier.config.*"
-      - ".markdownlint-cli2.*"
-      - ".markdownlint.*"
-      - ".yamllint.yml"
-      - ".yamllint.yaml"
+    - .codacy/**
+    - .sonarcloud.properties
+    - .eslintrc*
+    - eslint.config.*
+    - .prettierrc*
+    - prettier.config.*
+    - .markdownlint-cli2.*
+    - .markdownlint.*
+    - .yamllint.yml
+    - .yamllint.yaml
       # Python tooling config + sources linted by the python-lint job
       # (ruff/mypy). Without these, a Python-only change never fires CI.
-      - "pyproject.toml"
-      - ".bandit"
-      - "scripts/**"
-      - "lambda/**"
+    - pyproject.toml
+    - .bandit
+    - scripts/**
+    - lambda/**
       # Cluster manifests, docs, agent skills, repo-root ignore rules, and
       # infrastructure firmware/k8s configs also gate the required "Build"
       # check — without these, PRs that touch only those paths are BLOCKED
       # forever because the required check never fires.
-      - "k8s/**"
-      - "docs/**"
-      - ".claude/**"
+    - k8s/**
+    - docs/**
+    - .claude/**
       # Root-level project-memory docs (CLAUDE.md, AGENTS.md, README.md) also
       # gate the required "Build" check — they live at the repo root, not under
       # docs/, so without listing them a docs-only edit is BLOCKED forever.
-      - "*.md"
-      - ".gitignore"
-      - "infrastructure/**"
+    - '*.md'
+    - .gitignore
+    - infrastructure/**
       # Slack app manifest — slack-manifest-apply.yml deploys it, but the
       # required "Build" check still has to fire for the PR to merge.
       # Without this, a manifest-only edit stays BLOCKED forever.
-      - "slack-app.manifest.json"
+    - slack-app.manifest.json
 
 concurrency:
   group: ci-${{ github.head_ref }}
@@ -73,76 +73,76 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm lint
-      - run: pnpm format:check
-      - run: pnpm lint:md
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1         # v4
+      with:
+        dest: ~/setup-pnpm-${{ runner.name }}
+    - name: pin pnpm store to persistent local path
+      run: |
+        mkdir -p "$HOME/.pnpm-store"
+        pnpm config set store-dir "$HOME/.pnpm-store"
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm lint
+    - run: pnpm format:check
+    - run: pnpm lint:md
 
   yaml-lint:
     name: YAML Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.12"
-      - name: Install yamllint + actionlint
-        run: |
-          pipx install yamllint==1.38.0
-          mkdir -p "$HOME/.local/bin"
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - run: bash scripts/lint-yaml.sh
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405         # v6.2.0
+      with:
+        python-version: '3.12'
+    - name: Install yamllint + actionlint
+      run: |
+        pipx install yamllint==1.38.0
+        mkdir -p "$HOME/.local/bin"
+        bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - run: bash scripts/lint-yaml.sh
 
   python-lint:
     name: Python Lint & Types
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.12"
-      - name: Install Ruff + Mypy
-        run: pipx install ruff==0.15.15 && pipx install mypy==2.1.0
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy scripts infrastructure lambda
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405         # v6.2.0
+      with:
+        python-version: '3.12'
+    - name: Install Ruff + Mypy
+      run: pipx install ruff==0.15.15 && pipx install mypy==2.1.0
+    - run: ruff check .
+    - run: ruff format --check .
+    - run: mypy scripts infrastructure lambda
 
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm typecheck
-        env:
-          NODE_OPTIONS: --max-old-space-size=3072
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1         # v4
+      with:
+        dest: ~/setup-pnpm-${{ runner.name }}
+    - name: pin pnpm store to persistent local path
+      run: |
+        mkdir -p "$HOME/.pnpm-store"
+        pnpm config set store-dir "$HOME/.pnpm-store"
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm typecheck
+      env:
+        NODE_OPTIONS: --max-old-space-size=3072
 
   build:
     name: Build
@@ -155,47 +155,48 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
       NEXT_PUBLIC_AUTH_PROVIDER: d1
       NEXT_PUBLIC_SITE_URL: https://cloudless.gr
-      SSM_DISABLED: "1"
+      SSM_DISABLED: '1'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - name: Restore Next.js build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            nextjs-${{ runner.os }}-
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm build
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1         # v4
+      with:
+        dest: ~/setup-pnpm-${{ runner.name }}
+    - name: pin pnpm store to persistent local path
+      run: |
+        mkdir -p "$HOME/.pnpm-store"
+        pnpm config set store-dir "$HOME/.pnpm-store"
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+    - name: Restore Next.js build cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
+      with:
+        path: .next/cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ 
+          hashFiles('src/**') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          nextjs-${{ runner.os }}-
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm build
 
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm test:ci
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1         # v4
+      with:
+        dest: ~/setup-pnpm-${{ runner.name }}
+    - name: pin pnpm store to persistent local path
+      run: |
+        mkdir -p "$HOME/.pnpm-store"
+        pnpm config set store-dir "$HOME/.pnpm-store"
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm test:ci

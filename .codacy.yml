@@ -1,4 +1,3 @@
----
 engines:
   eslint:
     enabled: false
@@ -21,15 +20,15 @@ engines:
   lizard:
     enabled: true
 exclude_paths:
-  - "infrastructure/**"
-  - "scripts/**"
-  - "e2e/**"
-  - "tests/**"
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "**/*.spec.ts"
-  - "**/__tests__/**"
-  - "**/node_modules/**"
-  - ".next/**"
-  - "dist/**"
-  - "build/**"
+- infrastructure/**
+- scripts/**
+- e2e/**
+- tests/**
+- '**/*.test.ts'
+- '**/*.test.tsx'
+- '**/*.spec.ts'
+- '**/__tests__/**'
+- '**/node_modules/**'
+- .next/**
+- dist/**
+- build/**

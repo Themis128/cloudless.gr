@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-REPO="/home/tbaltzakis/code/cloudless.gr"
+REPO="/home/tbaltzakis/cloudless.gr"
 PORT=4000
 CLEAN=${1:-}
 

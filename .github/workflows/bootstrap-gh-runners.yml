@@ -9,7 +9,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/bootstrap-gh-runners.yml'
+    - .github/workflows/bootstrap-gh-runners.yml
 
 permissions:
   actions: write
@@ -20,21 +20,21 @@ jobs:
     name: Clear RUNNER_GENERIC → ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - name: Clear RUNNER_GENERIC
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh variable delete RUNNER_GENERIC --repo "$GITHUB_REPOSITORY" 2>/dev/null \
-            && echo "RUNNER_GENERIC cleared — all instrumented workflows now use ubuntu-latest." \
-            || echo "RUNNER_GENERIC was already unset — nothing to do."
+    - name: Clear RUNNER_GENERIC
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable delete RUNNER_GENERIC --repo "$GITHUB_REPOSITORY" 2>/dev/null \
+          && echo "RUNNER_GENERIC cleared — all instrumented workflows now use ubuntu-latest." \
+          || echo "RUNNER_GENERIC was already unset — nothing to do."
 
-      - name: Summary
-        run: |
-          {
-            echo "## ✅ Switched to GitHub-hosted runners"
-            echo ""
-            echo "**RUNNER_GENERIC** cleared."
-            echo "All instrumented workflows now use \`ubuntu-latest\` (free for public repos)."
-            echo ""
-            echo "To switch back to Pi runners: Actions → **Switch Runner Mode** → \`pi\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+    - name: Summary
+      run: |
+        {
+          echo "## ✅ Switched to GitHub-hosted runners"
+          echo ""
+          echo "**RUNNER_GENERIC** cleared."
+          echo "All instrumented workflows now use \`ubuntu-latest\` (free for public repos)."
+          echo ""
+          echo "To switch back to Pi runners: Actions → **Switch Runner Mode** → \`pi\`"
+        } >> "$GITHUB_STEP_SUMMARY"

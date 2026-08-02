@@ -15,7 +15,7 @@ name: Cluster health ping (healthchecks.io)
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+  - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -27,40 +27,41 @@ jobs:
     timeout-minutes: 5
     env:
       HC_URL: ${{ secrets.HEALTHCHECKS_CLUSTER_URL }}
-      PI_HOST: "100.113.41.119"
+      PI_HOST: 100.113.41.119
     steps:
-      - name: Skip if secret not configured
-        if: ${{ env.HC_URL == '' }}
-        run: |
-          echo "HEALTHCHECKS_CLUSTER_URL is not set — skipping ping."
-          exit 0
+    - name: Skip if secret not configured
+      if: ${{ env.HC_URL == '' }}
+      run: |
+        echo "HEALTHCHECKS_CLUSTER_URL is not set — skipping ping."
+        exit 0
 
-      - name: Connect to tailnet
-        if: ${{ env.HC_URL != '' }}
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      if: ${{ env.HC_URL != '' }}
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Ping /start
-        if: ${{ env.HC_URL != '' }}
-        run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null || true
+    - name: Ping /start
+      if: ${{ env.HC_URL != '' }}
+      run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null || 
+        true
 
-      - name: Check cluster reachability (port 6443)
-        if: ${{ env.HC_URL != '' }}
-        id: check
-        run: |
-          if nc -zv -w5 "$PI_HOST" 6443 2>/dev/null; then
-            echo "exit_code=0" >> "$GITHUB_OUTPUT"
-          else
-            echo "exit_code=1" >> "$GITHUB_OUTPUT"
-          fi
+    - name: Check cluster reachability (port 6443)
+      if: ${{ env.HC_URL != '' }}
+      id: check
+      run: |
+        if nc -zv -w5 "$PI_HOST" 6443 2>/dev/null; then
+          echo "exit_code=0" >> "$GITHUB_OUTPUT"
+        else
+          echo "exit_code=1" >> "$GITHUB_OUTPUT"
+        fi
 
-      - name: Ping result (0=up, 1=down)
-        if: ${{ env.HC_URL != '' }}
-        run: |
-          EXIT="${{ steps.check.outputs.exit_code }}"
-          curl -fsS --retry 3 --max-time 10 "${HC_URL}/${EXIT}" > /dev/null || true
-          if [ "$EXIT" = "1" ]; then
-            echo "::warning::Cluster port 6443 is unreachable — failure ping sent to healthchecks.io"
-          fi
+    - name: Ping result (0=up, 1=down)
+      if: ${{ env.HC_URL != '' }}
+      run: |
+        EXIT="${{ steps.check.outputs.exit_code }}"
+        curl -fsS --retry 3 --max-time 10 "${HC_URL}/${EXIT}" > /dev/null || true
+        if [ "$EXIT" = "1" ]; then
+          echo "::warning::Cluster port 6443 is unreachable — failure ping sent to healthchecks.io"
+        fi

@@ -4,7 +4,7 @@ metadata:
   name: postiz-uploads
   namespace: postiz
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   resources:
     requests:
       storage: 20Gi

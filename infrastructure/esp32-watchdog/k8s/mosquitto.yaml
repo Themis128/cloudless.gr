@@ -1,16 +1,3 @@
-# Mosquitto MQTT broker — namespace: monitoring
-# ClusterIP: 1883 (internal) | NodePort: 31883 (LAN)
-# Used by Alert API v3.0 to publish homelab/alerts/status (retained, QoS 1)
-# and homelab/alerts/events (QoS 0) topics.
-# Display ESP32 (homelab_alert_led.ino) subscribes via NodePort 31883.
-#
-# AUTH (2026-06-21): credentials live in the `mosquitto-passwords` Secret
-# (managed separately — see skills/mqtt-auth-rollout/SKILL.md to rotate).
-# The config below is DUAL-MODE — accepts both anonymous and authenticated
-# clients during the rollout. Operator flips `allow_anonymous` to `false`
-# once every client (alert-api Deployment, Display ESP32 firmware) has
-# been updated with creds. The flip is a one-line edit + pod restart.
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -57,43 +44,43 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: mosquitto
-          image: eclipse-mosquitto:2.0
-          ports:
-            - containerPort: 1883
-              name: mqtt
-          volumeMounts:
-            - name: config
-              mountPath: /mosquitto/config/mosquitto.conf
-              subPath: mosquitto.conf
-            - name: data
-              mountPath: /mosquitto/data
-            - name: secret
-              mountPath: /mosquitto/secret
-              readOnly: true
-          resources:
-            requests:
-              cpu: 10m
-              memory: 16Mi
-              ephemeral-storage: 32Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
-              ephemeral-storage: 128Mi
-      volumes:
+      - name: mosquitto
+        image: eclipse-mosquitto:2.0
+        ports:
+        - containerPort: 1883
+          name: mqtt
+        volumeMounts:
         - name: config
-          configMap:
-            name: mosquitto-config
+          mountPath: /mosquitto/config/mosquitto.conf
+          subPath: mosquitto.conf
         - name: data
-          emptyDir: {}
+          mountPath: /mosquitto/data
         - name: secret
+          mountPath: /mosquitto/secret
+          readOnly: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+            ephemeral-storage: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+            ephemeral-storage: 128Mi
+      volumes:
+      - name: config
+        configMap:
+          name: mosquitto-config
+      - name: data
+        emptyDir: {}
+      - name: secret
           # defaultMode 0644 (420 decimal) — mosquitto runs as uid 1883
           # but reads /mosquitto/secret/passwords; 0600 made it root-only
           # and the broker crashlooped with "Error opening password file"
           # (2026-06-21).
-          secret:
-            secretName: mosquitto-passwords
-            defaultMode: 420
+        secret:
+          secretName: mosquitto-passwords
+          defaultMode: 420
 ---
 apiVersion: v1
 kind: Service
@@ -107,7 +94,7 @@ spec:
     app: mosquitto
   type: NodePort
   ports:
-    - port: 1883
-      targetPort: 1883
-      nodePort: 31883
-      name: mqtt
+  - port: 1883
+    targetPort: 1883
+    nodePort: 31883
+    name: mqtt

@@ -24,14 +24,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "infrastructure/pi-alert-api/**"
-      - ".github/workflows/deploy-alert-api.yml"
+    - infrastructure/pi-alert-api/**
+    - .github/workflows/deploy-alert-api.yml
   workflow_dispatch:
     inputs:
       version_tag:
-        description: "Image tag to ship (e.g. v3.5)"
+        description: Image tag to ship (e.g. v3.5)
         required: true
-        default: "v3.5"
+        default: v3.5
 
 permissions:
   contents: read
@@ -48,59 +48,59 @@ jobs:
     env:
       TAG: ${{ inputs.version_tag || 'v3.5' }}
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v5
 
-      - name: Sync Python sources to ~/alert-api/
-        run: |
-          set -euo pipefail
-          # The Dockerfile + requirements.txt live in ~/alert-api/ on the
-          # Pi (pre-CI history). Only the .py modules are tracked in the
-          # repo; sync them so the image build picks up the latest code.
-          for f in main.py slack_notify.py mqtt_publish.py tls_check.py esp32_command_routes.py; do
-            if [[ -f "infrastructure/pi-alert-api/${f}" ]]; then
-              cp "infrastructure/pi-alert-api/${f}" "${HOME}/alert-api/${f}"
-            fi
-          done
-          # Ensure paho-mqtt is in requirements (idempotent)
-          REQ="${HOME}/alert-api/requirements.txt"
-          if ! grep -qi "^paho-mqtt" "${REQ}" 2>/dev/null; then
-            echo "paho-mqtt>=1.6" >> "${REQ}"
+    - name: Sync Python sources to ~/alert-api/
+      run: |
+        set -euo pipefail
+        # The Dockerfile + requirements.txt live in ~/alert-api/ on the
+        # Pi (pre-CI history). Only the .py modules are tracked in the
+        # repo; sync them so the image build picks up the latest code.
+        for f in main.py slack_notify.py mqtt_publish.py tls_check.py esp32_command_routes.py; do
+          if [[ -f "infrastructure/pi-alert-api/${f}" ]]; then
+            cp "infrastructure/pi-alert-api/${f}" "${HOME}/alert-api/${f}"
           fi
+        done
+        # Ensure paho-mqtt is in requirements (idempotent)
+        REQ="${HOME}/alert-api/requirements.txt"
+        if ! grep -qi "^paho-mqtt" "${REQ}" 2>/dev/null; then
+          echo "paho-mqtt>=1.6" >> "${REQ}"
+        fi
 
-      - name: Build image
-        working-directory: /home/tbaltzakis/alert-api
-        run: docker build -t "alert-api:${TAG}" -t alert-api:v3 .
+    - name: Build image
+      working-directory: /home/tbaltzakis/alert-api
+      run: docker build -t "alert-api:${TAG}" -t alert-api:v3 .
 
-      - name: Import into k3s containerd
-        run: docker save "alert-api:${TAG}" | sudo k3s ctr images import -
+    - name: Import into k3s containerd
+      run: docker save "alert-api:${TAG}" | sudo k3s ctr images import -
 
-      - name: Bump Deployment image
-        run: |
-          kubectl -n alert-manager set image deployment/alert-api \
-            "alert-api=docker.io/library/alert-api:${TAG}"
-          kubectl -n alert-manager rollout status deployment/alert-api --timeout=180s
+    - name: Bump Deployment image
+      run: |
+        kubectl -n alert-manager set image deployment/alert-api \
+          "alert-api=docker.io/library/alert-api:${TAG}"
+        kubectl -n alert-manager rollout status deployment/alert-api --timeout=180s
 
-      - name: Verify MQTT_USERNAME + MQTT_PASSWORD are live in pod
-        run: |
-          set -euo pipefail
-          POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
-          # Both env names should be present; their values come from the
-          # alert-api-mqtt-creds Secret (optional, so absence wouldn't
-          # crash the pod — but for v3.4 we expect them set).
-          kubectl -n alert-manager exec "${POD}" -- env | grep -E '^MQTT_(USERNAME|PASSWORD)=' | sed 's/=.*/=<set>/'
+    - name: Verify MQTT_USERNAME + MQTT_PASSWORD are live in pod
+      run: |
+        set -euo pipefail
+        POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
+        # Both env names should be present; their values come from the
+        # alert-api-mqtt-creds Secret (optional, so absence wouldn't
+        # crash the pod — but for v3.4 we expect them set).
+        kubectl -n alert-manager exec "${POD}" -- env | grep -E '^MQTT_(USERNAME|PASSWORD)=' | sed 's/=.*/=<set>/'
 
-      - name: Smoke-test authenticated publish from inside pod
-        run: |
-          set -euo pipefail
-          POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
-          kubectl -n alert-manager exec "${POD}" -- python3 -c '
-          import os, paho.mqtt.publish as publish, json, time
-          publish.single(
-              "homelab/alerts/events",
-              json.dumps({"src": "deploy-smoke", "ts": int(time.time())}),
-              hostname="mosquitto.monitoring.svc.cluster.local",
-              port=1883,
-              auth={"username": os.environ["MQTT_USERNAME"], "password": os.environ["MQTT_PASSWORD"]},
-              qos=0,
-          )
-          print("ok-auth")'
+    - name: Smoke-test authenticated publish from inside pod
+      run: |
+        set -euo pipefail
+        POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
+        kubectl -n alert-manager exec "${POD}" -- python3 -c '
+        import os, paho.mqtt.publish as publish, json, time
+        publish.single(
+            "homelab/alerts/events",
+            json.dumps({"src": "deploy-smoke", "ts": int(time.time())}),
+            hostname="mosquitto.monitoring.svc.cluster.local",
+            port=1883,
+            auth={"username": os.environ["MQTT_USERNAME"], "password": os.environ["MQTT_PASSWORD"]},
+            qos=0,
+        )
+        print("ok-auth")'

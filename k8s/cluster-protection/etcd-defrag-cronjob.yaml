@@ -1,33 +1,3 @@
-# Weekly etcd defragmentation for the k3s embedded etcd.
-#
-# Why this exists:
-#   etcd has TWO different things called "compaction":
-#     1. auto-compaction-retention=1h   — drops historical revisions
-#        (already configured in /etc/rancher/k3s/config.yaml). Cheap. Frequent.
-#     2. defragmentation                — actually reclaims the freed disk
-#        space inside the boltdb file. NOT done automatically. Without it,
-#        the file just keeps growing toward quota-backend-bytes (2 GiB).
-#
-#   When the boltdb file gets large, every compaction has to walk more pages.
-#   That's what produced the
-#     "Failed compaction, error: interrupted due to stop signal"
-#   log line during the 2026-05-29 03:00–05:55 k3s flap storm.
-#
-# What this does:
-#   Runs every Sunday at 04:00 UTC (= cluster idle hour). Uses the official
-#   quay.io/coreos/etcd image purely for its `etcdctl` binary (k3s does not
-#   ship etcdctl). The job is bound to the omv node (control-plane,etcd
-#   role) via nodeSelector, runs in host network so it can hit 127.0.0.1:2379,
-#   and mounts the k3s TLS cert directory read-only.
-#
-# Verify it ran:
-#   sudo kubectl -n monitoring get cronjob etcd-defrag
-#   sudo kubectl -n monitoring get jobs -l app=etcd-defrag --sort-by=.metadata.creationTimestamp
-#   sudo kubectl -n monitoring logs -l app=etcd-defrag --tail=40
-#
-# Trigger manually:
-#   sudo kubectl -n monitoring create job --from=cronjob/etcd-defrag etcd-defrag-manual-$(date +%s)
----
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -37,7 +7,7 @@ metadata:
     app: etcd-defrag
 spec:
   # Sunday at 04:00 UTC. Cluster is idle: no ML retraining, no newsletter job.
-  schedule: "0 4 * * 0"
+  schedule: 0 4 * * 0
   startingDeadlineSeconds: 600
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
@@ -59,49 +29,50 @@ spec:
           nodeSelector:
             kubernetes.io/hostname: omv
           tolerations:
-            - operator: Exists
+          - operator: Exists
           # Host network → reach 127.0.0.1:2379 directly.
           hostNetwork: true
           containers:
-            - name: defrag
+          - name: defrag
               # registry.k8s.io/etcd is distroless — no shell, just etcdctl
               # at /usr/local/bin/etcdctl. Call it directly with all flags as
               # args; no echo/ls diagnostic output (worth it: image is
               # already in k3s containerd because kubelet uses it).
-              image: registry.k8s.io/etcd:3.5.13-0
-              command:
-                - /usr/local/bin/etcdctl
-              args:
-                - "--endpoints=https://127.0.0.1:2379"
-                - "--cacert=/etcd-certs/server-ca.crt"
-                - "--cert=/etcd-certs/server-client.crt"
-                - "--key=/etcd-certs/server-client.key"
-                - "--command-timeout=5m"
-                - defrag
-                - "--cluster=false"
-              env:
-                - name: ETCDCTL_API
-                  value: "3"
-              volumeMounts:
-                - name: etcd-certs
-                  mountPath: /etcd-certs
-                  readOnly: true
-              securityContext:
+            image: registry.k8s.io/etcd:3.5.13-0
+            command:
+            - /usr/local/bin/etcdctl
+            args:
+            - --endpoints=https://127.0.0.1:2379
+            - --cacert=/etcd-certs/server-ca.crt
+            - --cert=/etcd-certs/server-client.crt
+            - --key=/etcd-certs/server-client.key
+            - --command-timeout=5m
+            - defrag
+            - --cluster=false
+            env:
+            - name: ETCDCTL_API
+              value: '3'
+            volumeMounts:
+            - name: etcd-certs
+              mountPath: /etcd-certs
+              readOnly: true
+            securityContext:
                 # Certs are mode 600 root:root — need root to read.
-                runAsUser: 0
-                capabilities:
-                  drop: ["ALL"]
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 64Mi
-                limits:
-                  cpu: 500m
-                  memory: 256Mi
+              runAsUser: 0
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
           volumes:
             # NOTE: k3s data-dir is on the SSD (not the default /var/lib/rancher/k3s).
             # If you move it back to default, update this path.
-            - name: etcd-certs
-              hostPath:
-                path: /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/tls/etcd
-                type: Directory
+          - name: etcd-certs
+            hostPath:
+              path: 
+                /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/tls/etcd
+              type: Directory

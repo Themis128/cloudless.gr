@@ -13,8 +13,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/cloudflare-skip-cron-challenge.yml"
-      - "scripts/cf-skip-cron-challenge.sh"
+    - .github/workflows/cloudflare-skip-cron-challenge.yml
+    - scripts/cf-skip-cron-challenge.sh
   workflow_dispatch:
 
 permissions:
@@ -29,45 +29,45 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Disable Bot Fight Mode (zone setting)
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-        run: bash scripts/cf-skip-cron-challenge.sh
+    - name: Disable Bot Fight Mode (zone setting)
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      run: bash scripts/cf-skip-cron-challenge.sh
 
-      - name: Verify cron path is not challenged
-        id: verify
-        continue-on-error: true
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          set -euo pipefail
-          BODY=$(mktemp)
-          # Even without a valid secret we must NOT get the challenge HTML.
-          # Expect 401/403 from the app, never Cloudflare interstitial.
-          STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
-            -H "Authorization: Bearer ${CRON_SECRET:-missing}" \
-            -H "User-Agent: github-actions/cf-skip-cron-verify" \
-            --max-time 30 \
-            "https://cloudless.gr/api/cron/ad-analytics-poll" || true)
-          echo "HTTP $STATUS"
-          head -c 512 "$BODY" || true
-          echo
-          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
-            echo "::warning::Still receiving Cloudflare challenge HTML. Free Bot Fight Mode is often dashboard-only — turn it OFF at Security → Bots, then re-run this workflow."
-            exit 1
-          fi
-          if [[ "$STATUS" == "000" ]]; then
-            echo "::error::curl failed to reach origin"
-            exit 1
-          fi
-          echo "✓ no Cloudflare challenge interstitial (app responded with HTTP $STATUS)"
+    - name: Verify cron path is not challenged
+      id: verify
+      continue-on-error: true
+      env:
+        CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      run: |
+        set -euo pipefail
+        BODY=$(mktemp)
+        # Even without a valid secret we must NOT get the challenge HTML.
+        # Expect 401/403 from the app, never Cloudflare interstitial.
+        STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
+          -H "Authorization: Bearer ${CRON_SECRET:-missing}" \
+          -H "User-Agent: github-actions/cf-skip-cron-verify" \
+          --max-time 30 \
+          "https://cloudless.gr/api/cron/ad-analytics-poll" || true)
+        echo "HTTP $STATUS"
+        head -c 512 "$BODY" || true
+        echo
+        if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
+          echo "::warning::Still receiving Cloudflare challenge HTML. Free Bot Fight Mode is often dashboard-only — turn it OFF at Security → Bots, then re-run this workflow."
+          exit 1
+        fi
+        if [[ "$STATUS" == "000" ]]; then
+          echo "::error::curl failed to reach origin"
+          exit 1
+        fi
+        echo "✓ no Cloudflare challenge interstitial (app responded with HTTP $STATUS)"
 
-      - name: Require operator action if challenge remains
-        if: steps.verify.outcome == 'failure'
-        run: |
-          echo "::notice::Operator action required: Cloudflare Dashboard → cloudless.gr → Security → Bots → Bot Fight Mode → Off"
-          echo "Workflow stays green so other CI is not blocked; cron polls will keep failing until BFM is off."
+    - name: Require operator action if challenge remains
+      if: steps.verify.outcome == 'failure'
+      run: |
+        echo "::notice::Operator action required: Cloudflare Dashboard → cloudless.gr → Security → Bots → Bot Fight Mode → Off"
+        echo "Workflow stays green so other CI is not blocked; cron polls will keep failing until BFM is off."
 

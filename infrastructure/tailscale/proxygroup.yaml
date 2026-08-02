@@ -11,10 +11,10 @@ metadata:
   name: ingress
 spec:
   type: ingress
-  replicas: 1 # raise to 2 when omv-ha has spare RAM
+  replicas: 1   # raise to 2 when omv-ha has spare RAM
   hostnamePrefix: ingress
   tags:
-    - tag:k8s
+  - tag:k8s
   proxyClass: pi-fabric
 ---
 # Optional: kubectl over Tailscale with identity impersonation.
@@ -30,7 +30,7 @@ spec:
   replicas: 1
   hostnamePrefix: kube
   tags:
-    - tag:k8s
+  - tag:k8s
   proxyClass: pi-fabric
   kubeAPIServer:
     mode: auth

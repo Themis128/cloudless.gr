@@ -26,7 +26,7 @@ name: Self-hosted apps healthchecks.io ping
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+  - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -44,51 +44,51 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - app: appflowy
-            url: https://appflowy.cloudless.gr/api/health
-            secret_var: HEALTHCHECKS_APPFLOWY_URL
-            expect_codes: "200"
-          - app: espocrm
-            url: https://espocrm.cloudless.gr/
-            secret_var: HEALTHCHECKS_ESPOCRM_URL
-            expect_codes: "200 302"
-          - app: postiz
-            url: https://postiz.cloudless.gr/
-            secret_var: HEALTHCHECKS_POSTIZ_URL
-            expect_codes: "200 307 308"
-          - app: n8n
-            url: https://n8n.cloudless.gr/healthz
-            secret_var: HEALTHCHECKS_N8N_URL
-            expect_codes: "200"
-          - app: grafana
-            url: https://grafana.cloudless.gr/api/health
-            secret_var: HEALTHCHECKS_GRAFANA_URL
-            expect_codes: "200"
-          - app: ntfy
-            url: https://ntfy.cloudless.gr/v1/health
-            secret_var: HEALTHCHECKS_NTFY_URL
-            expect_codes: "200 401"   # 401 if auth required but service is up
+        - app: appflowy
+          url: https://appflowy.cloudless.gr/api/health
+          secret_var: HEALTHCHECKS_APPFLOWY_URL
+          expect_codes: '200'
+        - app: espocrm
+          url: https://espocrm.cloudless.gr/
+          secret_var: HEALTHCHECKS_ESPOCRM_URL
+          expect_codes: 200 302
+        - app: postiz
+          url: https://postiz.cloudless.gr/
+          secret_var: HEALTHCHECKS_POSTIZ_URL
+          expect_codes: 200 307 308
+        - app: n8n
+          url: https://n8n.cloudless.gr/healthz
+          secret_var: HEALTHCHECKS_N8N_URL
+          expect_codes: '200'
+        - app: grafana
+          url: https://grafana.cloudless.gr/api/health
+          secret_var: HEALTHCHECKS_GRAFANA_URL
+          expect_codes: '200'
+        - app: ntfy
+          url: https://ntfy.cloudless.gr/v1/health
+          secret_var: HEALTHCHECKS_NTFY_URL
+          expect_codes: 200 401             # 401 if auth required but service is up
     steps:
-      - name: Probe ${{ matrix.app }} and ping healthchecks.io
-        env:
-          APP: ${{ matrix.app }}
-          URL: ${{ matrix.url }}
-          EXPECT: ${{ matrix.expect_codes }}
-          SECRET_NAME: ${{ matrix.secret_var }}
-          HC_URL: ${{ secrets[matrix.secret_var] }}
-        run: |
-          set -e
-          if [ -z "$HC_URL" ]; then
-            echo "::warning::Repo secret $SECRET_NAME not set — skipping $APP ping. Create the check at healthchecks.io and add its URL as a repo secret."
-            exit 0
-          fi
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
-          echo "$APP HTTP $CODE (expected: $EXPECT)"
-          if echo " $EXPECT " | grep -q " $CODE "; then
-            curl -fsS --max-time 10 --retry 3 "$HC_URL" -d "$APP healthy ($CODE)" >/dev/null
-            echo "✓ pinged $APP healthy"
-          else
-            curl -fsS --max-time 10 --retry 3 "$HC_URL/fail" -d "$APP returned HTTP $CODE (expected $EXPECT)" >/dev/null
-            echo "✗ pinged $APP fail (HTTP $CODE)"
-            exit 1
-          fi
+    - name: Probe ${{ matrix.app }} and ping healthchecks.io
+      env:
+        APP: ${{ matrix.app }}
+        URL: ${{ matrix.url }}
+        EXPECT: ${{ matrix.expect_codes }}
+        SECRET_NAME: ${{ matrix.secret_var }}
+        HC_URL: ${{ secrets[matrix.secret_var] }}
+      run: |
+        set -e
+        if [ -z "$HC_URL" ]; then
+          echo "::warning::Repo secret $SECRET_NAME not set — skipping $APP ping. Create the check at healthchecks.io and add its URL as a repo secret."
+          exit 0
+        fi
+        CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
+        echo "$APP HTTP $CODE (expected: $EXPECT)"
+        if echo " $EXPECT " | grep -q " $CODE "; then
+          curl -fsS --max-time 10 --retry 3 "$HC_URL" -d "$APP healthy ($CODE)" >/dev/null
+          echo "✓ pinged $APP healthy"
+        else
+          curl -fsS --max-time 10 --retry 3 "$HC_URL/fail" -d "$APP returned HTTP $CODE (expected $EXPECT)" >/dev/null
+          echo "✗ pinged $APP fail (HTTP $CODE)"
+          exit 1
+        fi

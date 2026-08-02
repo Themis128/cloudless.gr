@@ -24,13 +24,13 @@ on:
     # Every 15 minutes, 24/7. GitHub Actions cron is approximate — actual
     # cadence is closer to 15-18 min in practice. Fine for an ad-analytics
     # digest where LinkedIn's own reporting pipeline lag is 10-15 min anyway.
-    - cron: "*/15 * * * *"
+  - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       reason:
-        description: "Why are you triggering manually? (audit trail only)"
+        description: Why are you triggering manually? (audit trail only)
         required: false
-        default: "manual smoke test"
+        default: manual smoke test
 
 concurrency:
   group: ad-analytics-poll
@@ -45,35 +45,36 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
-      - name: Curl the cron endpoint
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    - name: Curl the cron endpoint
+      env:
+        CRON_SECRET: ${{ secrets.CRON_SECRET }}
           # Default to pi-origin so GitHub Actions bypasses Cloudflare Bot Fight
           # Mode on the apex (GHA IPs get 403 interstitials). Override via
           # vars.AD_ANALYTICS_SITE_ORIGIN for preview deploys.
-          SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 'https://pi-origin.cloudless.gr' }}
-        run: |
-          set -euo pipefail
-          if [ -z "${CRON_SECRET:-}" ]; then
-            echo "::error::CRON_SECRET not configured at the repo level"
-            exit 1
-          fi
-          BODY=$(mktemp)
-          STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            -H "User-Agent: github-actions/linkedin-poll" \
-            --max-time 90 \
-            "${SITE_ORIGIN}/api/cron/ad-analytics-poll")
-          echo "HTTP $STATUS"
-          # Truncate to keep the workflow log readable when the campaign set
-          # grows; the full payload lives in CloudWatch.
-          head -c 4096 "$BODY" || true
-          echo
-          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
-            echo "::error::Cloudflare Bot Fight Mode intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml (disables bot_fight_mode) or turn Bot Fight Mode off in the CF dashboard."
-            exit 1
-          fi
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::poll returned non-200 status: $STATUS"
-            exit 1
-          fi
+        SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 
+          'https://pi-origin.cloudless.gr' }}
+      run: |
+        set -euo pipefail
+        if [ -z "${CRON_SECRET:-}" ]; then
+          echo "::error::CRON_SECRET not configured at the repo level"
+          exit 1
+        fi
+        BODY=$(mktemp)
+        STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
+          -H "Authorization: Bearer ${CRON_SECRET}" \
+          -H "User-Agent: github-actions/linkedin-poll" \
+          --max-time 90 \
+          "${SITE_ORIGIN}/api/cron/ad-analytics-poll")
+        echo "HTTP $STATUS"
+        # Truncate to keep the workflow log readable when the campaign set
+        # grows; the full payload lives in CloudWatch.
+        head -c 4096 "$BODY" || true
+        echo
+        if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
+          echo "::error::Cloudflare Bot Fight Mode intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml (disables bot_fight_mode) or turn Bot Fight Mode off in the CF dashboard."
+          exit 1
+        fi
+        if [ "$STATUS" != "200" ]; then
+          echo "::error::poll returned non-200 status: $STATUS"
+          exit 1
+        fi

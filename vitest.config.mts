@@ -63,7 +63,7 @@ export default defineConfig({
     },
     maxWorkers: 2,
     testTimeout: 15000,
-    include: ["__tests__/**/*.test.{ts,tsx}"],
+    include: ["__tests__/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     // etl-aws-cost-to-lake imports @dsnp/parquetjs from scripts/etl/'s
     // separate npm project. Vitest's root resolver can't see it, and
     // adding it at root would duplicate a heavy native-build dep. Skip

@@ -30,11 +30,11 @@ ignore: |
   .github/workflows/*.lock.yml
 
 yaml-files:
-  - "*.yaml"
-  - "*.yml"
-  - ".yamllint"
-  - ".yamllint.yaml"
-  - ".yamllint.yml"
+- '*.yaml'
+- '*.yml'
+- .yamllint
+- .yamllint.yaml
+- .yamllint.yml
 
 rules:
   # Workflows, kubectl, and Helm values routinely exceed 80/120 cols.
@@ -45,7 +45,7 @@ rules:
 
   # GitHub Actions uses on: / off: as keys; allow common YAML 1.1 truthy forms.
   truthy:
-    allowed-values: ["true", "false", "on", "off", "yes", "no"]
+    allowed-values: ['true', 'false', on, off, yes, no]
     check-keys: false
 
   comments:

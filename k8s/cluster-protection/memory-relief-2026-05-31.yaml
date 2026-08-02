@@ -1,26 +1,3 @@
-# Memory relief — 2026-05-31
-#
-# omv (Pi 5) is in iowait death-spiral: 95% iowait, 93% memory, kswapd active.
-# Root cause: 33 pods on omv vs 5 on omv-ha, several without limits.
-#
-# This file:
-#   1. Adds LimitRange defaults to namespaces that had none
-#      (analytics, n8n, ntfy, home-assistant, oncall, alert-manager)
-#   2. Sets memory limits on the limit-less pods on omv
-#   3. Caps the heaviest single offenders (metabase, oncall stack, n8n)
-#
-# Apply order matters. Use the companion script:
-#   bash k8s/cluster-protection/apply-memory-relief.sh
-#
-# Expected memory reclaim on omv after restart of affected workloads:
-#   metabase     (cap 400Mi, was 927 Mi)  → -527 Mi
-#   prometheus   (already capped 700 Mi, slim scrape config drops it further)
-#   home-assistant scaled to 0           → -314 Mi
-#   oncall stack scaled to 0             → -900 Mi
-#   ------------------------------------------------
-#   Estimated total free                   ~1.85 GiB
-
----
 # ── Namespace-level defaults (was missing for these namespaces) ──
 apiVersion: v1
 kind: LimitRange
@@ -29,10 +6,10 @@ metadata:
   namespace: analytics
 spec:
   limits:
-    - type: Container
-      default:        { memory: 512Mi, cpu: 1 }
-      defaultRequest: { memory: 128Mi, cpu: 100m }
-      max:            { memory: 1Gi, cpu: 2 }
+  - type: Container
+    default: {memory: 512Mi, cpu: 1}
+    defaultRequest: {memory: 128Mi, cpu: 100m}
+    max: {memory: 1Gi, cpu: 2}
 
 ---
 apiVersion: v1
@@ -42,10 +19,10 @@ metadata:
   namespace: n8n
 spec:
   limits:
-    - type: Container
-      default:        { memory: 256Mi, cpu: 500m }
-      defaultRequest: { memory: 64Mi, cpu: 50m }
-      max:            { memory: 384Mi, cpu: 1 }
+  - type: Container
+    default: {memory: 256Mi, cpu: 500m}
+    defaultRequest: {memory: 64Mi, cpu: 50m}
+    max: {memory: 384Mi, cpu: 1}
 
 ---
 apiVersion: v1
@@ -55,10 +32,10 @@ metadata:
   namespace: ntfy
 spec:
   limits:
-    - type: Container
-      default:        { memory: 96Mi, cpu: 200m }
-      defaultRequest: { memory: 32Mi, cpu: 25m }
-      max:            { memory: 128Mi, cpu: 500m }
+  - type: Container
+    default: {memory: 96Mi, cpu: 200m}
+    defaultRequest: {memory: 32Mi, cpu: 25m}
+    max: {memory: 128Mi, cpu: 500m}
 
 ---
 apiVersion: v1
@@ -68,10 +45,10 @@ metadata:
   namespace: alert-manager
 spec:
   limits:
-    - type: Container
-      default:        { memory: 128Mi, cpu: 200m }
-      defaultRequest: { memory: 32Mi, cpu: 25m }
-      max:            { memory: 200Mi, cpu: 500m }
+  - type: Container
+    default: {memory: 128Mi, cpu: 200m}
+    defaultRequest: {memory: 32Mi, cpu: 25m}
+    max: {memory: 200Mi, cpu: 500m}
 
 ---
 # ── Per-deployment hard caps for known memory hogs ──
@@ -87,15 +64,15 @@ spec:
   template:
     spec:
       containers:
-        - name: metabase
-          env:
-            - name: JAVA_OPTS
-              value: "-Xmx320m -Xms128m"
-            - name: MB_JETTY_MAXTHREADS
-              value: "20"
-          resources:
-            requests: { memory: 200Mi, cpu: 100m }
-            limits:   { memory: 400Mi, cpu: 1 }
+      - name: metabase
+        env:
+        - name: JAVA_OPTS
+          value: -Xmx320m -Xms128m
+        - name: MB_JETTY_MAXTHREADS
+          value: '20'
+        resources:
+          requests: {memory: 200Mi, cpu: 100m}
+          limits: {memory: 400Mi, cpu: 1}
 
 ---
 # n8n — 117 Mi → 256 Mi cap (keep headroom for workflow spikes)
@@ -108,10 +85,10 @@ spec:
   template:
     spec:
       containers:
-        - name: n8n
-          resources:
-            requests: { memory: 80Mi, cpu: 50m }
-            limits:   { memory: 256Mi, cpu: 500m }
+      - name: n8n
+        resources:
+          requests: {memory: 80Mi, cpu: 50m}
+          limits: {memory: 256Mi, cpu: 500m}
 
 ---
 # ntfy — already small, just cap it
@@ -124,7 +101,7 @@ spec:
   template:
     spec:
       containers:
-        - name: ntfy
-          resources:
-            requests: { memory: 24Mi, cpu: 10m }
-            limits:   { memory: 96Mi, cpu: 200m }
+      - name: ntfy
+        resources:
+          requests: {memory: 24Mi, cpu: 10m}
+          limits: {memory: 96Mi, cpu: 200m}

@@ -27,7 +27,7 @@ spec:
               name: grafana-slack-proxy-secrets
               key: SLACK_WEBHOOK_URL
         - name: SLACK_DEFAULT_CHANNEL
-          value: "#ads-test-scope"
+          value: '#ads-test-scope'
         - name: SLACK_SIGNING_SECRET
           valueFrom:
             secretKeyRef:

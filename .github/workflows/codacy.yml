@@ -1,22 +1,22 @@
 name: Codacy Security Scan
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   push:
     branches: [main]
     paths:
-      - "src/**"
-      - ".github/workflows/codacy.yml"
+    - src/**
+    - .github/workflows/codacy.yml
   pull_request:
     branches: [main]
     paths:
-      - "src/**"
-      - ".github/workflows/codacy.yml"
+    - src/**
+    - .github/workflows/codacy.yml
   workflow_dispatch:
   schedule:
-    - cron: "29 15 * * 4" # Every Thursday at 15:29 UTC
+  - cron: 29 15 * * 4       # Every Thursday at 15:29 UTC
 
 permissions:
   contents: read
@@ -36,33 +36,34 @@ jobs:
       actions: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4
 
-      - name: Run Codacy Analysis CLI
-        id: codacy
-        uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08
-        continue-on-error: true  # exit 13 = OOM/timeout on runner; non-blocking
-        with:
-          verbose: true
-          output: results.sarif
-          format: sarif
-          gh-code-scanning-compat: true
-          max-allowed-issues: 2147483647
-          tool: "opengrep,trivy,lizard"
+    - name: Run Codacy Analysis CLI
+      id: codacy
+      uses: 
+        codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08
+      continue-on-error: true         # exit 13 = OOM/timeout on runner; non-blocking
+      with:
+        verbose: true
+        output: results.sarif
+        format: sarif
+        gh-code-scanning-compat: true
+        max-allowed-issues: 2147483647
+        tool: opengrep,trivy,lizard
 
-      - name: Validate SARIF before upload
-        id: validate
-        run: |
-          if [ -f results.sarif ] && python3 -c "import json,sys; json.load(open('results.sarif'))" 2>/dev/null; then
-            echo "valid=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "valid=false" >> "$GITHUB_OUTPUT"
-            echo "SARIF file missing or invalid — skipping upload"
-          fi
+    - name: Validate SARIF before upload
+      id: validate
+      run: |
+        if [ -f results.sarif ] && python3 -c "import json,sys; json.load(open('results.sarif'))" 2>/dev/null; then
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "valid=false" >> "$GITHUB_OUTPUT"
+          echo "SARIF file missing or invalid — skipping upload"
+        fi
 
-      - name: Upload SARIF results
-        if: steps.validate.outputs.valid == 'true'
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: results.sarif
+    - name: Upload SARIF results
+      if: steps.validate.outputs.valid == 'true'
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: results.sarif

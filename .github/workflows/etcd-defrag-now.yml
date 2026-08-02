@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/etcd-defrag-now.yml"
+    - .github/workflows/etcd-defrag-now.yml
   workflow_dispatch:
 
 permissions:
@@ -27,67 +27,67 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: "100.113.41.119"
-      PI_USER: "tbaltzakis"
+      PI_HOST: 100.113.41.119
+      PI_USER: tbaltzakis
     steps:
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+    - name: Install SSH key
+      run: |
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Run etcd defrag
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            "$PI_USER@$PI_HOST" bash <<'REMOTE' 2>&1 | tee defrag.log
-          set -e
-          ETCD_EP="https://127.0.0.1:2379"
-          ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
-          ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
-          ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
-          ETCDCTL="sudo k3s etcdctl --endpoints=$ETCD_EP --cacert=$ETCD_CA --cert=$ETCD_CRT --key=$ETCD_KEY"
+    - name: Run etcd defrag
+      run: |
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+          "$PI_USER@$PI_HOST" bash <<'REMOTE' 2>&1 | tee defrag.log
+        set -e
+        ETCD_EP="https://127.0.0.1:2379"
+        ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
+        ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
+        ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
+        ETCDCTL="sudo k3s etcdctl --endpoints=$ETCD_EP --cacert=$ETCD_CA --cert=$ETCD_CRT --key=$ETCD_KEY"
 
-          echo "=== endpoint status BEFORE ==="
-          $ETCDCTL endpoint status -w table 2>&1 || echo "(status failed)"
+        echo "=== endpoint status BEFORE ==="
+        $ETCDCTL endpoint status -w table 2>&1 || echo "(status failed)"
 
+        echo ""
+        echo "=== compact to current revision ==="
+        REV=$($ETCDCTL endpoint status --write-out=json 2>/dev/null \
+          | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
+        if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
+          echo "compacting to revision $REV"
+          $ETCDCTL compact "$REV" 2>&1 && echo "compact done" || echo "compact skipped"
+        else
+          echo "could not determine revision — skipping compact"
+        fi
+
+        echo ""
+        echo "=== defrag ==="
+        $ETCDCTL defrag 2>&1 && echo "defrag done" || echo "defrag failed"
+
+        echo ""
+        echo "=== disarm NOSPACE alarm (if any) ==="
+        $ETCDCTL alarm disarm 2>&1 || echo "(no alarm to disarm)"
+
+        echo ""
+        echo "=== endpoint status AFTER ==="
+        $ETCDCTL endpoint status -w table 2>&1 || echo "(status failed)"
+        REMOTE
+
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        {
+          echo "# etcd defrag — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
           echo ""
-          echo "=== compact to current revision ==="
-          REV=$($ETCDCTL endpoint status --write-out=json 2>/dev/null \
-            | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
-          if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
-            echo "compacting to revision $REV"
-            $ETCDCTL compact "$REV" 2>&1 && echo "compact done" || echo "compact skipped"
-          else
-            echo "could not determine revision — skipping compact"
-          fi
-
-          echo ""
-          echo "=== defrag ==="
-          $ETCDCTL defrag 2>&1 && echo "defrag done" || echo "defrag failed"
-
-          echo ""
-          echo "=== disarm NOSPACE alarm (if any) ==="
-          $ETCDCTL alarm disarm 2>&1 || echo "(no alarm to disarm)"
-
-          echo ""
-          echo "=== endpoint status AFTER ==="
-          $ETCDCTL endpoint status -w table 2>&1 || echo "(status failed)"
-          REMOTE
-
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# etcd defrag — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo '```'
-            cat defrag.log 2>/dev/null || echo "(no log)"
-            echo '```'
-          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+          echo '```'
+          cat defrag.log 2>/dev/null || echo "(no log)"
+          echo '```'
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

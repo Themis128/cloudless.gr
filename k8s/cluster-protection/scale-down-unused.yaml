@@ -1,26 +1,3 @@
-# Scale-down of workloads to free memory on omv (Pi 5).
-#
-# Per decision 2026-05-31:
-#   - Home Assistant: scale to 0 (frees 314 MiB). Currently shows 0 API calls
-#     in 24h and the cluster is in iowait death-spiral. Re-scale to 1 with
-#     `kubectl scale deploy home-assistant -n home-assistant --replicas=1`
-#     if/when actually used. State is preserved on the PVC.
-#
-#   - Oncall stack (engine + celery + mariadb + redis): scale to 0 (frees ~900 MiB).
-#     The cluster already has Slack notifier (src/lib/slack-notify.ts) and
-#     Grafana IRM/Contact Points for alerting. Oncall added duplication and
-#     was the single biggest contributor to memory pressure.
-#
-# Apply with:
-#   bash k8s/cluster-protection/apply-memory-relief.sh
-#
-# Reverse (if needed):
-#   kubectl scale deploy/home-assistant -n home-assistant --replicas=1
-#   kubectl scale deploy/oncall-engine oncall-celery -n oncall --replicas=1
-#   kubectl scale statefulset/oncall-mariadb -n oncall --replicas=1
-#   kubectl scale deploy/oncall-redis -n oncall --replicas=1
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,7 +5,6 @@ metadata:
   namespace: home-assistant
 spec:
   replicas: 0
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,7 +13,6 @@ metadata:
   namespace: oncall
 spec:
   replicas: 0
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -46,7 +21,6 @@ metadata:
   namespace: oncall
 spec:
   replicas: 0
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -55,7 +29,6 @@ metadata:
   namespace: oncall
 spec:
   replicas: 0
-
 ---
 # StatefulSet for mariadb — replicas: 0 preserves PVCs
 apiVersion: apps/v1

@@ -1,10 +1,10 @@
-name: "ETL: EspoCRM to R2"
+name: 'ETL: EspoCRM to R2'
 # Hourly ETL sync from EspoCRM to R2 data lake. Uses Wrangler secrets, no AWS dependency.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
 
 on:
   schedule:
-    - cron: "20 * * * *" # hourly at :20 (offset from EspoCRM 03:15 + Stripe 03:30)
+  - cron: 20 * * * *       # hourly at :20 (offset from EspoCRM 03:15 + Stripe 03:30)
   workflow_dispatch:
 
 permissions:
@@ -16,71 +16,72 @@ jobs:
     # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
     # Default MUST be a JSON array of labels. A comma-string becomes one label
     # and the job queues forever with no matching runner.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted","omv","build"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || 
+      '["self-hosted","omv","build"]') }}
     timeout-minutes: 20
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4.3.1
+    - name: Checkout repository
+      uses: actions/checkout@v4.3.1
 
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: 22
+    - name: Set up Node.js 22
+      uses: actions/setup-node@v4.4.0
+      with:
+        node-version: 22
 
-      - name: Install dependencies (use pnpm, avoid npm ci on pnpm-managed repo)
-        working-directory: scripts/etl
-        run: |
-          # Ensure pnpm is available via corepack, then install production deps
-          corepack enable || true
-          corepack prepare pnpm@latest --activate || true
-          pnpm install --frozen-lockfile --prod
+    - name: Install dependencies (use pnpm, avoid npm ci on pnpm-managed repo)
+      working-directory: scripts/etl
+      run: |
+        # Ensure pnpm is available via corepack, then install production deps
+        corepack enable || true
+        corepack prepare pnpm@latest --activate || true
+        pnpm install --frozen-lockfile --prod
 
-      - name: Run EspoCRM-to-R2 sync
-        working-directory: scripts/etl
-        env:
+    - name: Run EspoCRM-to-R2 sync
+      working-directory: scripts/etl
+      env:
           # Bypass Cloudflare bot challenge — runner is on omv (NodePort 30700).
-          ESPOCRM_BASE_URL: http://127.0.0.1:30700
-          ESPOCRM_API_KEY: ${{ secrets.ESPOCRM_API_KEY }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
-          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-        run: node espocrm-to-r2.mjs
+        ESPOCRM_BASE_URL: http://127.0.0.1:30700
+        ESPOCRM_API_KEY: ${{ secrets.ESPOCRM_API_KEY }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+        CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+      run: node espocrm-to-r2.mjs
 
-      - name: Ping Kuma on success
-        if: always() && github.event_name != 'push'
-        uses: actions/github-script@v9
-        env:
-          KUMA_PUSH_URL: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            if (process.env.KUMA_PUSH_URL) {
-              fetch(process.env.KUMA_PUSH_URL).catch(() => {});
-            }
+    - name: Ping Kuma on success
+      if: always() && github.event_name != 'push'
+      uses: actions/github-script@v9
+      env:
+        KUMA_PUSH_URL: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          if (process.env.KUMA_PUSH_URL) {
+            fetch(process.env.KUMA_PUSH_URL).catch(() => {});
+          }
 
-      - name: Notify Slack on failure
-        if: failure()
-        uses: actions/github-script@v9
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            if (process.env.SLACK_WEBHOOK_URL) {
-              const payload = {
-                text: `ETL: EspoCRM to R2 failed in workflow run ${context.runId}`,
-                blocks: [{
-                  type: "section",
-                  text: { type: "mrkdwn", text: ":x: ETL: EspoCRM to R2 failed" }
-                }]
-              };
-              fetch(process.env.SLACK_WEBHOOK_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-              }).catch(() => {});
-            }
+    - name: Notify Slack on failure
+      if: failure()
+      uses: actions/github-script@v9
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          if (process.env.SLACK_WEBHOOK_URL) {
+            const payload = {
+              text: `ETL: EspoCRM to R2 failed in workflow run ${context.runId}`,
+              blocks: [{
+                type: "section",
+                text: { type: "mrkdwn", text: ":x: ETL: EspoCRM to R2 failed" }
+              }]
+            };
+            fetch(process.env.SLACK_WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            }).catch(() => {});
+          }
 
 # Required secrets (add via GitHub repo → Settings → Secrets → Actions):
 # ESPOCRM_API_KEY - Already in Wrangler secrets

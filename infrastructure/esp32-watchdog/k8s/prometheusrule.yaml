@@ -1,319 +1,306 @@
-# PrometheusRule — fires alerts when the ESP32 watchdog detects outages
-# These are truly independent of k3s: the ESP32 reports its own observations
-# from outside the cluster, so these fire even if k3s itself is down.
-#
-# Metric notes:
-#   esphome_binary_sensor_value — exported by ESPHome Prometheus component
-#   esphome_sensor_value        — exported by ESPHome Prometheus component
-#
-#   Label "id" is the slug ESPHome assigns (lowercase, spaces→underscores,
-#   special chars→double-underscores).  Examples:
-#     id="omv__192_168_1_128__reachable"
-#     id="omv-ha__192_168_1_130__reachable"
-#     id="cloudless_gr__aws__reachable"
-#     id="omv_probe_failures"
-#     id="omv-ha_probe_failures"
-#     id="cloudless_gr_probe_failures"
-#     id="wi-fi_signal"
-#
-#   ⚠️  Do NOT use the "name" label — it contains the human-readable sensor
-#       name and is NOT what ESPHome exports as a metric label.
-# ---------------------------------------------------------------------------
----
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name:      esp32-watchdog-alerts
+  name: esp32-watchdog-alerts
   namespace: monitoring
   labels:
     release: kube-prom          # must match kube-prometheus-stack ruleSelector
 spec:
   groups:
-    - name: esp32-watchdog
-      interval: 30s
-      rules:
+  - name: esp32-watchdog
+    interval: 30s
+    rules:
 
         # ── ESP32 itself is unreachable (scrape failing) ──────────────────────
-        - alert: ESP32WatchdogDown
-          expr:  up{job="esp32-watchdog-metrics"} == 0
-          for:   2m
-          labels:
-            severity: warning
-            target:   esp32-watchdog
-            probe:    prometheus-scrape
-          annotations:
-            summary:     "ESP32 watchdog scrape target DOWN (192.168.1.201:9101)"
-            description: |
-              Prometheus has been unable to scrape the ESP32 watchdog at
-              192.168.1.201:9101 for the past 2 minutes. The board may have
-              rebooted, lost Wi-Fi association, or been power-cycled.
+    - alert: ESP32WatchdogDown
+      expr: up{job="esp32-watchdog-metrics"} == 0
+      for: 2m
+      labels:
+        severity: warning
+        target: esp32-watchdog
+        probe: prometheus-scrape
+      annotations:
+        summary: ESP32 watchdog scrape target DOWN (192.168.1.201:9101)
+        description: |
+          Prometheus has been unable to scrape the ESP32 watchdog at
+          192.168.1.201:9101 for the past 2 minutes. The board may have
+          rebooted, lost Wi-Fi association, or been power-cycled.
 
-              Impact: while the watchdog is down we lose the only external,
-              k3s-independent view of node + AWS reachability — meaning a
-              real outage during this window could go unnoticed.
+          Impact: while the watchdog is down we lose the only external,
+          k3s-independent view of node + AWS reachability — meaning a
+          real outage during this window could go unnoticed.
 
-              Check in this order:
-                1. ping 192.168.1.201           — is the board on the LAN?
-                2. curl http://192.168.1.201:9101/metrics  — is /metrics serving?
-                3. Wi-Fi RSSI on the device (esphome_sensor_value{id="wi-fi_signal"})
-                4. Power supply / USB cable — brownouts cause reboot loops.
+          Check in this order:
+            1. ping 192.168.1.201           — is the board on the LAN?
+            2. curl http://192.168.1.201:9101/metrics  — is /metrics serving?
+            3. Wi-Fi RSSI on the device (esphome_sensor_value{id="wi-fi_signal"})
+            4. Power supply / USB cable — brownouts cause reboot loops.
 
         # ── omv unreachable as seen from ESP32 ────────────────────────────────
-        - alert: OmvUnreachableFromESP32
-          expr: >
-            esphome_binary_sensor_value{
-              id="omv__192_168_1_128__reachable",
-              job="esp32-watchdog-metrics"
-            } == 0
-          for:   1m
-          labels:
-            severity: critical
-            node:     omv
-            target:   omv
-            probe:    esp32-http
-          annotations:
-            summary:     "omv (192.168.1.128) UNREACHABLE from ESP32 external probe (1m+)"
-            description: |
-              The ESP32 watchdog (off-cluster) has been unable to HTTP-probe
-              omv:9100/metrics for more than 1 minute. Because this probe is
-              external to k3s, a failure here is independent of any cluster
-              component — meaning the host itself is almost certainly down.
+    - alert: OmvUnreachableFromESP32
+      expr: >
+        esphome_binary_sensor_value{
+          id="omv__192_168_1_128__reachable",
+          job="esp32-watchdog-metrics"
+        } == 0
+      for: 1m
+      labels:
+        severity: critical
+        node: omv
+        target: omv
+        probe: esp32-http
+      annotations:
+        summary: omv (192.168.1.128) UNREACHABLE from ESP32 external probe (1m+)
+        description: |
+          The ESP32 watchdog (off-cluster) has been unable to HTTP-probe
+          omv:9100/metrics for more than 1 minute. Because this probe is
+          external to k3s, a failure here is independent of any cluster
+          component — meaning the host itself is almost certainly down.
 
-              Most likely causes (in order of frequency):
-                • Hard crash / kernel panic        — check `dmesg` after reboot
-                • Power loss / brownout            — check UPS + PSU
-                • Network cable / switch port      — check link LED
-                • node_exporter port :9100 stopped — systemctl status node_exporter
-                • k3s OOM-killed node_exporter pod — kubectl -n monitoring get pods
+          Most likely causes (in order of frequency):
+            • Hard crash / kernel panic        — check `dmesg` after reboot
+            • Power loss / brownout            — check UPS + PSU
+            • Network cable / switch port      — check link LED
+            • node_exporter port :9100 stopped — systemctl status node_exporter
+            • k3s OOM-killed node_exporter pod — kubectl -n monitoring get pods
 
-              If omv-ha is still UP, the cluster has already failed over to
-              the standby — verify via /ha-status.
+          If omv-ha is still UP, the cluster has already failed over to
+          the standby — verify via /ha-status.
 
         # ── omv-ha unreachable as seen from ESP32 ─────────────────────────────
-        - alert: OmvHaUnreachableFromESP32
-          expr: >
-            esphome_binary_sensor_value{
-              id="omv-ha__192_168_1_130__reachable",
-              job="esp32-watchdog-metrics"
-            } == 0
-          for:   1m
-          labels:
-            severity: critical
-            node:     omv-ha
-            target:   omv-ha
-            probe:    esp32-http
-          annotations:
-            summary:     "omv-ha (192.168.1.130) UNREACHABLE from ESP32 external probe (1m+)"
-            description: |
-              The ESP32 watchdog (off-cluster) has been unable to HTTP-probe
-              omv-ha:9100/metrics for more than 1 minute. The HA standby Pi
-              looks offline from outside k3s.
+    - alert: OmvHaUnreachableFromESP32
+      expr: >
+        esphome_binary_sensor_value{
+          id="omv-ha__192_168_1_130__reachable",
+          job="esp32-watchdog-metrics"
+        } == 0
+      for: 1m
+      labels:
+        severity: critical
+        node: omv-ha
+        target: omv-ha
+        probe: esp32-http
+      annotations:
+        summary: omv-ha (192.168.1.130) UNREACHABLE from ESP32 external probe 
+          (1m+)
+        description: |
+          The ESP32 watchdog (off-cluster) has been unable to HTTP-probe
+          omv-ha:9100/metrics for more than 1 minute. The HA standby Pi
+          looks offline from outside k3s.
 
-              Impact:
-                • If omv is UP: cluster is still serving — but HA failover
-                  capability is LOST. A subsequent omv failure becomes
-                  catastrophic. Restore omv-ha urgently.
-                • If omv is DOWN: full cluster outage — see BothNodesUnreachableFromESP32.
+          Impact:
+            • If omv is UP: cluster is still serving — but HA failover
+              capability is LOST. A subsequent omv failure becomes
+              catastrophic. Restore omv-ha urgently.
+            • If omv is DOWN: full cluster outage — see BothNodesUnreachableFromESP32.
 
-              Check in this order:
-                1. ping 192.168.1.130           — on the LAN at all?
-                2. ssh tbaltzakis@192.168.1.130 — can we log in?
-                3. systemctl status k3s-agent   — is the agent healthy?
-                4. systemctl status node_exporter — is :9100 serving?
+          Check in this order:
+            1. ping 192.168.1.130           — on the LAN at all?
+            2. ssh tbaltzakis@192.168.1.130 — can we log in?
+            3. systemctl status k3s-agent   — is the agent healthy?
+            4. systemctl status node_exporter — is :9100 serving?
 
         # ── Both Pi nodes down — cluster-level emergency ──────────────────────
-        - alert: BothNodesUnreachableFromESP32
-          expr: >
-            (
-              esphome_binary_sensor_value{id="omv__192_168_1_128__reachable",job="esp32-watchdog-metrics"} == 0
-            )
-            and
-            (
-              esphome_binary_sensor_value{id="omv-ha__192_168_1_130__reachable",job="esp32-watchdog-metrics"} == 0
-            )
-          for:   1m
-          labels:
-            severity: critical
-            target:   k3s-cluster
-            probe:    esp32-http
-          annotations:
-            summary:     "FULL CLUSTER OUTAGE — both omv and omv-ha unreachable (ESP32 probe, 1m+)"
-            description: |
-              Both Pi nodes are unreachable from the ESP32 watchdog for 1m+.
-              This is a total cluster outage — CloudFront is now serving
-              from the AWS Lambda origin (HA failover).
+    - alert: BothNodesUnreachableFromESP32
+      expr: >
+        (
+          esphome_binary_sensor_value{id="omv__192_168_1_128__reachable",job="esp32-watchdog-metrics"}
+        == 0
+        )
+        and
+        (
+          esphome_binary_sensor_value{id="omv-ha__192_168_1_130__reachable",job="esp32-watchdog-metrics"}
+        == 0
+        )
+      for: 1m
+      labels:
+        severity: critical
+        target: k3s-cluster
+        probe: esp32-http
+      annotations:
+        summary: FULL CLUSTER OUTAGE — both omv and omv-ha unreachable (ESP32 
+          probe, 1m+)
+        description: |
+          Both Pi nodes are unreachable from the ESP32 watchdog for 1m+.
+          This is a total cluster outage — CloudFront is now serving
+          from the AWS Lambda origin (HA failover).
 
-              Most likely causes (when BOTH go down together):
-                • Whole-rack power loss              — check UPS state
-                • Switch / router failure            — both Pis share LAN
-                • Upstream WAN outage masking probes — verify from another LAN host
-                • ISP outage with Pis on PoE switch  — combined power+network
+          Most likely causes (when BOTH go down together):
+            • Whole-rack power loss              — check UPS state
+            • Switch / router failure            — both Pis share LAN
+            • Upstream WAN outage masking probes — verify from another LAN host
+            • ISP outage with Pis on PoE switch  — combined power+network
 
-              Immediate actions:
-                1. Verify power to the rack (LED indicators on switch + PoE).
-                2. Check `/ha-status` from another host on the LAN.
-                3. Confirm CloudFront failover via `/ha-failover` check.
-                4. Page on-call if outage > 5 minutes.
+          Immediate actions:
+            1. Verify power to the rack (LED indicators on switch + PoE).
+            2. Check `/ha-status` from another host on the LAN.
+            3. Confirm CloudFront failover via `/ha-failover` check.
+            4. Page on-call if outage > 5 minutes.
 
         # ── AWS app unreachable as seen from ESP32 ────────────────────────────
-        - alert: AWSAppUnreachableFromESP32
-          expr: >
-            esphome_binary_sensor_value{
-              id="cloudless_gr__aws__reachable",
-              job="esp32-watchdog-metrics"
-            } == 0
-          for:   2m
-          labels:
-            severity: critical
-            target:   cloudless.gr
-            probe:    esp32-https
-          annotations:
-            summary:     "cloudless.gr AWS app UNREACHABLE from ESP32 external probe (2m+)"
-            description: |
-              The ESP32 watchdog's HTTPS probe to https://cloudless.gr/api/health
-              has been returning non-2xx or timing out for more than 2 minutes.
-              The probe is external to k3s AND to AWS — a sustained failure
-              indicates a real customer-facing outage.
+    - alert: AWSAppUnreachableFromESP32
+      expr: >
+        esphome_binary_sensor_value{
+          id="cloudless_gr__aws__reachable",
+          job="esp32-watchdog-metrics"
+        } == 0
+      for: 2m
+      labels:
+        severity: critical
+        target: cloudless.gr
+        probe: esp32-https
+      annotations:
+        summary: cloudless.gr AWS app UNREACHABLE from ESP32 external probe 
+          (2m+)
+        description: |
+          The ESP32 watchdog's HTTPS probe to https://cloudless.gr/api/health
+          has been returning non-2xx or timing out for more than 2 minutes.
+          The probe is external to k3s AND to AWS — a sustained failure
+          indicates a real customer-facing outage.
 
-              Possible causes (in order of likelihood):
-                • Lambda cold-start storm / 5xx        — check CloudWatch logs
-                • CloudFront origin failover stuck     — see /ha-status
-                • TLS cert expired or rotated          — curl -vI https://cloudless.gr
-                • Cloudflare proxy outage              — status.cloudflare.com
-                • Route53 health-check flapping        — AWS console > Route53
-                • Full WAN outage at the watchdog     — see ESP32WatchdogDown
+          Possible causes (in order of likelihood):
+            • Lambda cold-start storm / 5xx        — check CloudWatch logs
+            • CloudFront origin failover stuck     — see /ha-status
+            • TLS cert expired or rotated          — curl -vI https://cloudless.gr
+            • Cloudflare proxy outage              — status.cloudflare.com
+            • Route53 health-check flapping        — AWS console > Route53
+            • Full WAN outage at the watchdog     — see ESP32WatchdogDown
 
-              Customer impact: any user load on cloudless.gr will fail until
-              CloudFront serves either the Lambda origin or the Pi origin
-              successfully. Investigate immediately.
+          Customer impact: any user load on cloudless.gr will fail until
+          CloudFront serves either the Lambda origin or the Pi origin
+          successfully. Investigate immediately.
 
         # ── ESP32 Wi-Fi signal degraded (early warning) ───────────────────────
-        - alert: ESP32WifiWeak
-          expr: >
-            esphome_sensor_value{
-              id="wi-fi_signal",
-              job="esp32-watchdog-metrics"
-            } < -80
-          for:   5m
-          labels:
-            severity: warning
-            target:   esp32-watchdog
-            probe:    wifi-rssi
-          annotations:
-            summary:     "ESP32 watchdog Wi-Fi RSSI weak (< -80 dBm for 5m+) — value: {{ $value | printf \"%.0f\" }} dBm"
-            description: |
-              ESP32 watchdog Wi-Fi RSSI is {{ $value | printf "%.0f" }} dBm,
-              below the -80 dBm degradation threshold for 5+ minutes.
+    - alert: ESP32WifiWeak
+      expr: >
+        esphome_sensor_value{
+          id="wi-fi_signal",
+          job="esp32-watchdog-metrics"
+        } < -80
+      for: 5m
+      labels:
+        severity: warning
+        target: esp32-watchdog
+        probe: wifi-rssi
+      annotations:
+        summary: 'ESP32 watchdog Wi-Fi RSSI weak (< -80 dBm for 5m+) — value: {{ $value
+          | printf "%.0f" }} dBm'
+        description: |
+          ESP32 watchdog Wi-Fi RSSI is {{ $value | printf "%.0f" }} dBm,
+          below the -80 dBm degradation threshold for 5+ minutes.
 
-              At this signal level the board may start dropping the
-              association entirely, which would silence the only external
-              probe of cluster + AWS reachability.
+          At this signal level the board may start dropping the
+          association entirely, which would silence the only external
+          probe of cluster + AWS reachability.
 
-              Remediation:
-                • Move the ESP32 closer to the AP.
-                • Switch the AP to a less-congested 2.4 GHz channel
-                  (the ESP32-S3 board only supports 2.4 GHz).
-                • Add a Wi-Fi extender on the rack side.
+          Remediation:
+            • Move the ESP32 closer to the AP.
+            • Switch the AP to a less-congested 2.4 GHz channel
+              (the ESP32-S3 board only supports 2.4 GHz).
+            • Add a Wi-Fi extender on the rack side.
 
         # ── omv probe failure rate elevated ───────────────────────────────────
         # Fires if omv accumulates >5 probe failures in any 5-minute window.
         # The counter resets on reboot so use increase() not rate().
         # `for: 2m` requires the rate to stay elevated for 2 minutes — filters
         # one-off network blips that recover by the next probe cycle.
-        - alert: OmvProbeFailuresElevated
-          expr: >
-            increase(
-              esphome_sensor_value{
-                id="omv_probe_failures",
-                job="esp32-watchdog-metrics"
-              }[5m]
-            ) > 5
-          for:   2m
-          labels:
-            severity: warning
-            node:     omv
-            target:   omv
-            probe:    esp32-http
-          annotations:
-            summary:     "omv probe failure rate elevated — {{ $value | printf \"%.0f\" }} failed probes in last 5m (threshold: 5)"
-            description: |
-              In the last 5 minutes, the ESP32 watchdog saw
-              {{ $value | printf "%.0f" }} failed HTTP probes to
-              omv:9100/metrics (out of ~10 attempts at 30s interval).
-              The node is still considered REACHABLE — this is an
-              intermittent-connectivity early warning, not an outage.
+    - alert: OmvProbeFailuresElevated
+      expr: >
+        increase(
+          esphome_sensor_value{
+            id="omv_probe_failures",
+            job="esp32-watchdog-metrics"
+          }[5m]
+        ) > 5
+      for: 2m
+      labels:
+        severity: warning
+        node: omv
+        target: omv
+        probe: esp32-http
+      annotations:
+        summary: 'omv probe failure rate elevated — {{ $value | printf "%.0f" }} failed
+          probes in last 5m (threshold: 5)'
+        description: |
+          In the last 5 minutes, the ESP32 watchdog saw
+          {{ $value | printf "%.0f" }} failed HTTP probes to
+          omv:9100/metrics (out of ~10 attempts at 30s interval).
+          The node is still considered REACHABLE — this is an
+          intermittent-connectivity early warning, not an outage.
 
-              Common causes:
-                • Brief Wi-Fi/LAN congestion on the watchdog side
-                • node_exporter pod restarting (kubectl -n monitoring rollout)
-                • omv under heavy load — probes timing out at 8s
-                • Switch port flapping
-                • A genuine pre-outage degradation — escalates to
-                  OmvUnreachableFromESP32 if the node actually goes down.
+          Common causes:
+            • Brief Wi-Fi/LAN congestion on the watchdog side
+            • node_exporter pod restarting (kubectl -n monitoring rollout)
+            • omv under heavy load — probes timing out at 8s
+            • Switch port flapping
+            • A genuine pre-outage degradation — escalates to
+              OmvUnreachableFromESP32 if the node actually goes down.
 
-              If this keeps firing without escalating, suppress via
-              flap_guard or raise the threshold (currently > 5 in 5m, for 2m).
+          If this keeps firing without escalating, suppress via
+          flap_guard or raise the threshold (currently > 5 in 5m, for 2m).
 
         # ── omv-ha probe failure rate elevated ────────────────────────────────
-        - alert: OmvHaProbeFailuresElevated
-          expr: >
-            increase(
-              esphome_sensor_value{
-                id="omv-ha_probe_failures",
-                job="esp32-watchdog-metrics"
-              }[5m]
-            ) > 5
-          for:   2m
-          labels:
-            severity: warning
-            node:     omv-ha
-            target:   omv-ha
-            probe:    esp32-http
-          annotations:
-            summary:     "omv-ha probe failure rate elevated — {{ $value | printf \"%.0f\" }} failed probes in last 5m (threshold: 5)"
-            description: |
-              In the last 5 minutes, the ESP32 watchdog saw
-              {{ $value | printf "%.0f" }} failed HTTP probes to
-              omv-ha:9100/metrics (out of ~10 attempts at 30s interval).
-              The standby is still REACHABLE — this is an intermittent-
-              connectivity early warning, not an outage.
+    - alert: OmvHaProbeFailuresElevated
+      expr: >
+        increase(
+          esphome_sensor_value{
+            id="omv-ha_probe_failures",
+            job="esp32-watchdog-metrics"
+          }[5m]
+        ) > 5
+      for: 2m
+      labels:
+        severity: warning
+        node: omv-ha
+        target: omv-ha
+        probe: esp32-http
+      annotations:
+        summary: 'omv-ha probe failure rate elevated — {{ $value | printf "%.0f" }}
+          failed probes in last 5m (threshold: 5)'
+        description: |
+          In the last 5 minutes, the ESP32 watchdog saw
+          {{ $value | printf "%.0f" }} failed HTTP probes to
+          omv-ha:9100/metrics (out of ~10 attempts at 30s interval).
+          The standby is still REACHABLE — this is an intermittent-
+          connectivity early warning, not an outage.
 
-              Same diagnostic checklist as OmvProbeFailuresElevated, applied
-              to omv-ha. If this co-occurs with the same alert on omv, the
-              issue is likely the ESP32's Wi-Fi or the shared switch — check
-              ESP32WifiWeak first.
+          Same diagnostic checklist as OmvProbeFailuresElevated, applied
+          to omv-ha. If this co-occurs with the same alert on omv, the
+          issue is likely the ESP32's Wi-Fi or the shared switch — check
+          ESP32WifiWeak first.
 
         # ── AWS probe failure rate elevated ───────────────────────────────────
-        - alert: AWSProbeFailuresElevated
-          expr: >
-            increase(
-              esphome_sensor_value{
-                id="cloudless_gr_probe_failures",
-                job="esp32-watchdog-metrics"
-              }[5m]
-            ) > 4
-          for:   2m
-          labels:
-            severity: warning
-            target:   cloudless.gr
-            probe:    esp32-https
-          annotations:
-            summary:     "cloudless.gr probe failure rate elevated — {{ $value | printf \"%.0f\" }} failed HTTPS probes in last 5m (threshold: 4)"
-            description: |
-              In the last 5 minutes, the ESP32 watchdog saw
-              {{ $value | printf "%.0f" }} failed HTTPS probes to
-              https://cloudless.gr/api/health (out of ~5 attempts at 60s
-              interval). The endpoint is still REACHABLE — this is an
-              early warning, not a confirmed outage.
+    - alert: AWSProbeFailuresElevated
+      expr: >
+        increase(
+          esphome_sensor_value{
+            id="cloudless_gr_probe_failures",
+            job="esp32-watchdog-metrics"
+          }[5m]
+        ) > 4
+      for: 2m
+      labels:
+        severity: warning
+        target: cloudless.gr
+        probe: esp32-https
+      annotations:
+        summary: 'cloudless.gr probe failure rate elevated — {{ $value | printf "%.0f"
+          }} failed HTTPS probes in last 5m (threshold: 4)'
+        description: |
+          In the last 5 minutes, the ESP32 watchdog saw
+          {{ $value | printf "%.0f" }} failed HTTPS probes to
+          https://cloudless.gr/api/health (out of ~5 attempts at 60s
+          interval). The endpoint is still REACHABLE — this is an
+          early warning, not a confirmed outage.
 
-              Possible causes:
-                • Cloudflare TLS handshake slow (>8s ESP32 timeout) under load
-                • Lambda cold start exceeding probe timeout
-                • Brief AWS / Cloudflare edge instability
-                • Local Wi-Fi packet loss on the watchdog
-                • Genuine pre-outage degradation — escalates to
-                  AWSAppUnreachableFromESP32 if probes start failing entirely.
+          Possible causes:
+            • Cloudflare TLS handshake slow (>8s ESP32 timeout) under load
+            • Lambda cold start exceeding probe timeout
+            • Brief AWS / Cloudflare edge instability
+            • Local Wi-Fi packet loss on the watchdog
+            • Genuine pre-outage degradation — escalates to
+              AWSAppUnreachableFromESP32 if probes start failing entirely.
 
-              Verify from another network: `curl -w "%{http_code} %{time_total}s\n" https://cloudless.gr/api/health`
-              If consistently fast and 200, the issue is local to the ESP32's
-              network path — not customer-facing.
+          Verify from another network: `curl -w "%{http_code} %{time_total}s\n" https://cloudless.gr/api/health`
+          If consistently fast and 200, the issue is local to the ESP32's
+          network path — not customer-facing.

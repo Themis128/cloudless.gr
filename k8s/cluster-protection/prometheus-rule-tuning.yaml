@@ -1,32 +1,3 @@
-# Prometheus rule tuning for the omv 2-Pi cluster.
-#
-# The kube-prometheus-stack helm chart ships defaults sized for production
-# clusters. Several of those rules misbehave on this hardware:
-#
-#   - kube-apiserver-burnrate.rules and kube-apiserver-availability.rules
-#     compute `burnrate3d` / `increase30d` over the apiserver_request_*
-#     series. On a Pi-class node those queries time out and trigger
-#     PrometheusMissingRuleEvaluations. Nothing in the chart actually fires
-#     on the resulting recording series (the slos group has no alerts on
-#     this install), so they are pure cost. Drop the rule groups.
-#
-#   - KubeMemoryOvercommit fires intrinsically on a 2-node cluster with
-#     highly asymmetric nodes (omv 8 GiB vs omv-ha 1 GiB): if you lose omv,
-#     omv-ha can't hold the rescheduled requests, so the HA branch of the
-#     expression is permanently true. There is no actionable fix without
-#     more hardware. Remove the alert.
-#
-#   - NodeMemoryPressure ships with a fixed 200 MiB available threshold,
-#     which is normal baseline on omv-ha's 955 MiB total RAM. Switch to a
-#     percentage-based threshold so the alert is meaningful on both nodes.
-#
-# Apply via: bash k8s/cluster-protection/apply-prometheus-rule-tuning.sh
-#
-# These changes survive helm upgrade only if the chart no longer regenerates
-# the dropped rule groups. The apply script is idempotent and safe to re-run
-# after every `helm upgrade kube-prom`.
-
----
 # 1. Replace cluster-node-alerts with percentage-based memory thresholds.
 #    Source-of-truth definition lives here; the apply script `kubectl apply`s it.
 apiVersion: monitoring.coreos.com/v1
@@ -39,113 +10,123 @@ metadata:
     role: alert-rules
 spec:
   groups:
-    - name: node.disk
-      interval: 60s
-      rules:
-        - alert: NodeDiskUsageHigh
-          annotations:
-            description: 'Root filesystem on {{ $labels.instance }} is {{ printf "%.1f" $value }}% full. Free up space or expand storage.'
-            summary: Node {{ $labels.instance }} root disk usage above 80%
-          expr: |
-            (
-              1 - (
-                node_filesystem_avail_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
-                / node_filesystem_size_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
-              )
-            ) * 100 > 80
-          for: 5m
-          labels:
-            severity: warning
-        - alert: NodeDiskUsageCritical
-          annotations:
-            description: 'Root filesystem on {{ $labels.instance }} is {{ printf "%.1f" $value }}% full. Immediate action required — cluster operations may be impacted.'
-            summary: Node {{ $labels.instance }} root disk usage CRITICAL (>90%)
-          expr: |
-            (
-              1 - (
-                node_filesystem_avail_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
-                / node_filesystem_size_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
-              )
-            ) * 100 > 90
-          for: 2m
-          labels:
-            severity: critical
-        - alert: NodeDiskUsageOmvMain
+  - name: node.disk
+    interval: 60s
+    rules:
+    - alert: NodeDiskUsageHigh
+      annotations:
+        description: Root filesystem on {{ $labels.instance }} is {{ printf 
+          "%.1f" $value }}% full. Free up space or expand storage.
+        summary: Node {{ $labels.instance }} root disk usage above 80%
+      expr: |
+        (
+          1 - (
+            node_filesystem_avail_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
+          )
+        ) * 100 > 80
+      for: 5m
+      labels:
+        severity: warning
+    - alert: NodeDiskUsageCritical
+      annotations:
+        description: Root filesystem on {{ $labels.instance }} is {{ printf 
+          "%.1f" $value }}% full. Immediate action required — cluster operations
+          may be impacted.
+        summary: Node {{ $labels.instance }} root disk usage CRITICAL (>90%)
+      expr: |
+        (
+          1 - (
+            node_filesystem_avail_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{job="node-exporter", mountpoint="/", fstype!="tmpfs"}
+          )
+        ) * 100 > 90
+      for: 2m
+      labels:
+        severity: critical
+    - alert: NodeDiskUsageOmvMain
           # 80% (was 75%) — at 70% steady state, 75% triggered constantly.
           # 80% gives the operator time to prune before EtcdDiskSpaceLow (88%)
           # turns critical.
-          annotations:
-            description: 'omv-main disk is {{ printf "%.1f" $value }}% full. omv-main hosts etcd data and duckdb-data PVC — disk pressure risks cluster stability. Escalates to EtcdDiskSpaceLow (critical) at 88%.'
-            summary: omv-main root disk above 80% (etcd + PVC node)
-          expr: |
-            (
-              1 - (
-                node_filesystem_avail_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
-                / node_filesystem_size_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
-              )
-            ) * 100 > 80
-          for: 15m
-          labels:
-            node: omv-main
-            severity: warning
-    - name: node.memory
-      interval: 60s
-      rules:
-        - alert: NodeMemoryPressure
-          annotations:
-            description: 'Available memory on {{ $labels.instance }} is below 10% of total ({{ printf "%.1f" $value }}%). Risk of OOMKill for running pods.'
-            summary: Node {{ $labels.instance }} available memory below 10%
-          expr: |
-            (
-              node_memory_MemAvailable_bytes{job="node-exporter"}
-              / node_memory_MemTotal_bytes{job="node-exporter"}
-            ) * 100 < 10
-          for: 10m
-          labels:
-            severity: warning
-        - alert: NodeMemoryPressureCritical
-          annotations:
-            description: 'Available memory on {{ $labels.instance }} is below 5% of total ({{ printf "%.1f" $value }}%). OOMKill imminent.'
-            summary: Node {{ $labels.instance }} available memory CRITICAL (<5%)
-          expr: |
-            (
-              node_memory_MemAvailable_bytes{job="node-exporter"}
-              / node_memory_MemTotal_bytes{job="node-exporter"}
-            ) * 100 < 5
-          for: 3m
-          labels:
-            severity: critical
-        - alert: NodeHighSwapUsage
-          annotations:
-            description: 'Swap usage on {{ $labels.instance }} exceeded 500Mi (current: {{ $value }}B). High swap usage indicates sustained memory pressure.'
-            summary: Node {{ $labels.instance }} swap usage above 500Mi
-          expr: |
-            (
-              node_memory_SwapTotal_bytes{job="node-exporter"} > 0
-            ) and (
-              node_memory_SwapUsed_bytes{job="node-exporter"} > 500 * 1024 * 1024
-            )
-          for: 10m
-          labels:
-            severity: warning
-    - name: node.etcd
-      interval: 30s
-      rules:
-        - alert: EtcdDiskSpaceLow
+      annotations:
+        description: omv-main disk is {{ printf "%.1f" $value }}% full. omv-main
+          hosts etcd data and duckdb-data PVC — disk pressure risks cluster 
+          stability. Escalates to EtcdDiskSpaceLow (critical) at 88%.
+        summary: omv-main root disk above 80% (etcd + PVC node)
+      expr: |
+        (
+          1 - (
+            node_filesystem_avail_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
+          )
+        ) * 100 > 80
+      for: 15m
+      labels:
+        node: omv-main
+        severity: warning
+  - name: node.memory
+    interval: 60s
+    rules:
+    - alert: NodeMemoryPressure
+      annotations:
+        description: Available memory on {{ $labels.instance }} is below 10% of 
+          total ({{ printf "%.1f" $value }}%). Risk of OOMKill for running pods.
+        summary: Node {{ $labels.instance }} available memory below 10%
+      expr: |
+        (
+          node_memory_MemAvailable_bytes{job="node-exporter"}
+          / node_memory_MemTotal_bytes{job="node-exporter"}
+        ) * 100 < 10
+      for: 10m
+      labels:
+        severity: warning
+    - alert: NodeMemoryPressureCritical
+      annotations:
+        description: Available memory on {{ $labels.instance }} is below 5% of 
+          total ({{ printf "%.1f" $value }}%). OOMKill imminent.
+        summary: Node {{ $labels.instance }} available memory CRITICAL (<5%)
+      expr: |
+        (
+          node_memory_MemAvailable_bytes{job="node-exporter"}
+          / node_memory_MemTotal_bytes{job="node-exporter"}
+        ) * 100 < 5
+      for: 3m
+      labels:
+        severity: critical
+    - alert: NodeHighSwapUsage
+      annotations:
+        description: 'Swap usage on {{ $labels.instance }} exceeded 500Mi (current:
+          {{ $value }}B). High swap usage indicates sustained memory pressure.'
+        summary: Node {{ $labels.instance }} swap usage above 500Mi
+      expr: |
+        (
+          node_memory_SwapTotal_bytes{job="node-exporter"} > 0
+        ) and (
+          node_memory_SwapUsed_bytes{job="node-exporter"} > 500 * 1024 * 1024
+        )
+      for: 10m
+      labels:
+        severity: warning
+  - name: node.etcd
+    interval: 30s
+    rules:
+    - alert: EtcdDiskSpaceLow
           # 88% (was 85%) — etcd compacts down to ~70-80% baseline on this Pi,
           # and 85% was firing on normal steady-state usage. The real read-only
           # threshold inside etcd is 95%, so 88% gives 7% headroom + early warning.
-          annotations:
-            description: 'omv-main disk is {{ printf "%.1f" $value }}% full. etcd hard-blocks writes at 95%. Free up space NOW — clear journal logs, prune old images, expand storage.'
-            summary: etcd node (omv-main) disk above 88% — cluster write risk
-          expr: |
-            (
-              1 - (
-                node_filesystem_avail_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
-                / node_filesystem_size_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
-              )
-            ) * 100 > 88
-          for: 10m
-          labels:
-            component: etcd
-            severity: critical
+      annotations:
+        description: omv-main disk is {{ printf "%.1f" $value }}% full. etcd 
+          hard-blocks writes at 95%. Free up space NOW — clear journal logs, 
+          prune old images, expand storage.
+        summary: etcd node (omv-main) disk above 88% — cluster write risk
+      expr: |
+        (
+          1 - (
+            node_filesystem_avail_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{job="node-exporter", instance=~"192\\.168\\.1\\.128.*", mountpoint="/", fstype!="tmpfs"}
+          )
+        ) * 100 > 88
+      for: 10m
+      labels:
+        component: etcd
+        severity: critical

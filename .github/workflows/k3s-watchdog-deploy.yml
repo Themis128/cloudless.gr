@@ -16,8 +16,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/k3s-watchdog-deploy.yml"
-      - "scripts/k3s-watchdog-install.sh"
+    - .github/workflows/k3s-watchdog-deploy.yml
+    - scripts/k3s-watchdog-install.sh
   workflow_dispatch:
 
 permissions:
@@ -30,57 +30,57 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: "100.113.41.119"
-      PI_USER: "tbaltzakis"
+      PI_HOST: 100.113.41.119
+      PI_USER: tbaltzakis
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Check OMV_SSH_KEY secret is set
-        run: |
-          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
-            echo "::error::OMV_SSH_KEY secret is not set."
-            echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
-            echo "  GitHub → Settings → Secrets → Actions → New repository secret"
-            echo "  Name: OMV_SSH_KEY"
-            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
-            exit 1
-          fi
-          echo "OMV_SSH_KEY is set — proceeding"
+    - name: Check OMV_SSH_KEY secret is set
+      run: |
+        if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+          echo "::error::OMV_SSH_KEY secret is not set."
+          echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
+          echo "  GitHub → Settings → Secrets → Actions → New repository secret"
+          echo "  Name: OMV_SSH_KEY"
+          echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
+          exit 1
+        fi
+        echo "OMV_SSH_KEY is set — proceeding"
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+    - name: Install SSH key
+      run: |
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Copy watchdog install script to Pi
-        run: |
-          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-            scripts/k3s-watchdog-install.sh \
-            "$PI_USER@$PI_HOST:/tmp/k3s-watchdog-install.sh"
+    - name: Copy watchdog install script to Pi
+      run: |
+        scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+          scripts/k3s-watchdog-install.sh \
+          "$PI_USER@$PI_HOST:/tmp/k3s-watchdog-install.sh"
 
-      - name: Run watchdog install on Pi
-        run: |
-          echo "=== k3s watchdog deploy $(date -u '+%F %T')Z ===" | tee watchdog-deploy.log
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            "$PI_USER@$PI_HOST" \
-            "chmod +x /tmp/k3s-watchdog-install.sh && bash /tmp/k3s-watchdog-install.sh" \
-            2>&1 | tee -a watchdog-deploy.log
+    - name: Run watchdog install on Pi
+      run: |
+        echo "=== k3s watchdog deploy $(date -u '+%F %T')Z ===" | tee watchdog-deploy.log
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          "$PI_USER@$PI_HOST" \
+          "chmod +x /tmp/k3s-watchdog-install.sh && bash /tmp/k3s-watchdog-install.sh" \
+          2>&1 | tee -a watchdog-deploy.log
 
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# k3s watchdog deploy — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo '```'
-            cat watchdog-deploy.log 2>/dev/null || echo "(no log)"
-            echo '```'
-          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        {
+          echo "# k3s watchdog deploy — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo '```'
+          cat watchdog-deploy.log 2>/dev/null || echo "(no log)"
+          echo '```'
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

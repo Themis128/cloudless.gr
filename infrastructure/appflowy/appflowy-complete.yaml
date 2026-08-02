@@ -14,7 +14,8 @@ type: Opaque
 stringData:
   # Encryption key for data at rest (64 hex chars)
   # Generate: openssl rand -hex 32
-  ENCRYPTION_KEY: "GENERATE_AND_STORE_IN_SSM_/cloudless/production/APPFLOWY_ENCRYPTION_KEY"
+  ENCRYPTION_KEY: 
+    GENERATE_AND_STORE_IN_SSM_/cloudless/production/APPFLOWY_ENCRYPTION_KEY
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -55,10 +56,10 @@ spec:
   selector:
     app: appflowy
   ports:
-    - name: http
-      port: 80
-      targetPort: 5000
-      nodePort: 30810
+  - name: http
+    port: 80
+    targetPort: 5000
+    nodePort: 30810
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -90,64 +91,65 @@ spec:
       securityContext:
         fsGroup: 1000
       containers:
-        - name: appflowy
-          image: appflowy:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5000
-          env:
-            - name: DATABASE_URL
-              value: "postgres://postgres@postgres.database.svc.cluster.local:5432/cloudless"
-            - name: ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: appflowy-secrets
-                  key: ENCRYPTION_KEY
-          volumeMounts:
-            - name: appflowy-data
-              mountPath: /app/data
-            - name: appflowy-config
-              mountPath: /app/config
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 5000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 5000
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 2
-          resources:
-            requests:
-              cpu: 500m
-              memory: 1Gi
-            limits:
-              cpu: 1000m
-              memory: 2Gi
-      volumes:
+      - name: appflowy
+        image: appflowy:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          value: 
+            postgres://postgres@postgres.database.svc.cluster.local:5432/cloudless
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: appflowy-secrets
+              key: ENCRYPTION_KEY
+        volumeMounts:
         - name: appflowy-data
-          persistentVolumeClaim:
-            claimName: appflowy-data
+          mountPath: /app/data
         - name: appflowy-config
-          configMap:
-            name: appflowy-config
+          mountPath: /app/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 2
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+      volumes:
+      - name: appflowy-data
+        persistentVolumeClaim:
+          claimName: appflowy-data
+      - name: appflowy-config
+        configMap:
+          name: appflowy-config
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
-          podAffinityTerm:
-            labelSelector:
-              matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                    - postgres
-            topologyKey: kubernetes.io/hostname
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - postgres
+          topologyKey: kubernetes.io/hostname
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -167,17 +169,17 @@ metadata:
   name: appflowy-tailscale
   namespace: appflowy
   annotations:
-    tailscale.com/hostname: "appflowy"
+    tailscale.com/hostname: appflowy
 spec:
   ingressClassName: tailscale
   rules:
-    - host: appflowy.ts.cloudless.gr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: appflowy
-                port:
-                  number: 80
+  - host: appflowy.ts.cloudless.gr
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: appflowy
+            port:
+              number: 80

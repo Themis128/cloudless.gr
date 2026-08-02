@@ -3,90 +3,90 @@
 # values-prod.yaml (currently identical to defaults; kept separate so per-
 # environment forks have an obvious entry point).
 
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 image:
   postiz:
     # Pinned — see Chart.yaml description for the v2.11.2 rationale.
     repository: ghcr.io/gitroomhq/postiz-app
-    tag: "v2.11.2"
+    tag: v2.11.2
     pullPolicy: IfNotPresent
   postgres:
     repository: postgres
-    tag: "17-alpine"
+    tag: 17-alpine
     pullPolicy: IfNotPresent
   redis:
     repository: redis
-    tag: "7-alpine"
+    tag: 7-alpine
     pullPolicy: IfNotPresent
 
 # Postiz app config (non-secret env)
 postiz:
-  mainUrl: "https://postiz.cloudless.gr"
-  frontendUrl: "https://postiz.cloudless.gr"
-  backendUrl: "https://postiz.cloudless.gr/api"
+  mainUrl: https://postiz.cloudless.gr
+  frontendUrl: https://postiz.cloudless.gr
+  backendUrl: https://postiz.cloudless.gr/api
   # Server-side (SSR) calls stay inside the container — without this the
   # frontend fetches "undefined/auth/..." and renders errors.
-  internalBackendUrl: "http://localhost:3000"
-  isGeneral: "true"
+  internalBackendUrl: http://localhost:3000
+  isGeneral: 'true'
   # Admin account exists (creds in SSM POSTIZ_ADMIN_EMAIL/PASSWORD,
   # created 2026-06-12) — registration stays locked.
-  disableRegistration: "true"
-  storageProvider: "local"
-  uploadDirectory: "/uploads"
+  disableRegistration: 'true'
+  storageProvider: local
+  uploadDirectory: /uploads
   # Server-side allowlist for POST /public/v1/upload-from-url
   # (docs.postiz.com → Configuration Reference → RESTRICT_UPLOAD_DOMAINS).
   # Comma-separated list of hostnames Postiz will fetch from. Defense in
   # depth on top of the route's own SSRF prefilter in
   # src/app/api/admin/postiz/upload/route.ts — leave commented to allow any
   # public URL; set when you want to restrict to your own CDNs.
-  restrictUploadDomains: "cloudless.gr,uploads.postiz.cloudless.gr"
+  restrictUploadDomains: cloudless.gr,uploads.postiz.cloudless.gr
   resources:
     requests:
-      cpu: "200m"
-      memory: "512Mi"
+      cpu: 200m
+      memory: 512Mi
     limits:
-      cpu: "1"
-      memory: "1536Mi"
+      cpu: '1'
+      memory: 1536Mi
   uploadsPvc:
     size: 2Gi
-    storageClassName: "local-path"
+    storageClassName: local-path
   # Secret with JWT_SECRET + POSTGRES_PASSWORD, created out-of-band by the
   # secret-bootstrap.sh script. The chart does NOT template this — keeping
   # secrets out of Helm values means they never hit /tmp on render.
-  secretName: "postiz-secrets"
+  secretName: postiz-secrets
   # Optional secret with social-provider OAuth credentials
   # (FACEBOOK_APP_ID/SECRET, LINKEDIN_CLIENT_ID/SECRET, X_API_KEY/SECRET,
   # TIKTOK_CLIENT_ID/SECRET). Marked optional in the Deployment so a fresh
   # cluster boots before this exists.
-  providersSecretName: "postiz-providers"
+  providersSecretName: postiz-providers
 
 postgres:
-  user: "postiz"
-  database: "postiz"
+  user: postiz
+  database: postiz
   resources:
     requests:
-      cpu: "50m"
-      memory: "128Mi"
+      cpu: 50m
+      memory: 128Mi
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: 500m
+      memory: 512Mi
   pvc:
     size: 2Gi
-    storageClassName: "local-path"
+    storageClassName: local-path
 
 redis:
   resources:
     requests:
-      cpu: "10m"
-      memory: "32Mi"
+      cpu: 10m
+      memory: 32Mi
     limits:
-      cpu: "200m"
-      memory: "128Mi"
+      cpu: 200m
+      memory: 128Mi
   pvc:
     size: 512Mi
-    storageClassName: "local-path"
+    storageClassName: local-path
 
 service:
   type: NodePort
@@ -98,15 +98,15 @@ service:
 # ingress-controller path.
 ingress:
   enabled: false
-  className: "nginx"
-  hostname: "postiz.cloudless.gr"
+  className: nginx
+  hostname: postiz.cloudless.gr
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
   tls:
     enabled: true
-    secretName: "postiz-tls"
+    secretName: postiz-tls
 
 # Pin the entire stack to omv — local-path PVs are node-bound.
 nodeSelector:
-  kubernetes.io/hostname: "omv"
+  kubernetes.io/hostname: omv

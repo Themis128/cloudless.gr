@@ -5,9 +5,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/index-cloudflare-free.js"
-      - "scripts/extract-static-assets.sh"
-      - ".github/workflows/deploy-cloudflare.yml"
+    - src/index-cloudflare-free.js
+    - scripts/extract-static-assets.sh
+    - .github/workflows/deploy-cloudflare.yml
 
 jobs:
   deploy:
@@ -16,69 +16,69 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v5
+    - uses: pnpm/action-setup@v5
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: pnpm
 
-      - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build for Cloudflare
-        run: pnpm cf:build
-        env:
-          NEXT_PUBLIC_AUTH_PROVIDER: d1
-          NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+    - name: Build for Cloudflare
+      run: pnpm cf:build
+      env:
+        NEXT_PUBLIC_AUTH_PROVIDER: d1
+        NEXT_PUBLIC_SITE_URL: https://cloudless.gr
 
-      - name: Upload static assets to R2
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: |
-          cp -r .next/static ./out/ 2>/dev/null || true
-          cp -r public/* ./out/ 2>/dev/null || true
+    - name: Upload static assets to R2
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      run: |
+        cp -r .next/static ./out/ 2>/dev/null || true
+        cp -r public/* ./out/ 2>/dev/null || true
 
-          # Create locale-specific index.html files
-          for locale in en el fr; do
-            mkdir -p "./out/${locale}"
-            echo "<!DOCTYPE html><html lang=\"${locale}\"><head><meta charset=\"utf-8\"/><title>Cloudless</title></head><body><div id=\"root\">Loading...</div></body></html>" > "./out/${locale}/index.html"
-          done
+        # Create locale-specific index.html files
+        for locale in en el fr; do
+          mkdir -p "./out/${locale}"
+          echo "<!DOCTYPE html><html lang=\"${locale}\"><head><meta charset=\"utf-8\"/><title>Cloudless</title></head><body><div id=\"root\">Loading...</div></body></html>" > "./out/${locale}/index.html"
+        done
 
-          # Create fallback index.html
-          echo "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"/><title>Cloudless</title></head><body><div id=\"root\">Loading...</div></body></html>" > ./out/index.html
+        # Create fallback index.html
+        echo "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"/><title>Cloudless</title></head><body><div id=\"root\">Loading...</div></body></html>" > ./out/index.html
 
-          # Upload all files to R2 bucket
-          find ./out -type f | while read -r file; do
-            rel_path="${file#./out/}"
+        # Upload all files to R2 bucket
+        find ./out -type f | while read -r file; do
+          rel_path="${file#./out/}"
 
-            # Skip hidden files
-            if [[ "$rel_path" == .* ]]; then
-              continue
-            fi
-
-            echo "Uploading: $rel_path"
-            npx wrangler r2 object put "cloudless-assets/$rel_path" --file="$file" || exit 1
-          done
-
-          echo "✅ Assets uploaded to R2"
-
-      - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: deploy -c wrangler-cloudflare-free.json
-          wranglerVersion: "4.15.0"
-
-      - name: Validate Cloudflare account ID secret
-        if: always()
-        run: |
-          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
-            echo "❌ Missing required secret: CF_ACCOUNT_ID"
-            echo "Please add this GitHub repository secret with your Cloudflare account ID"
-            exit 1
+          # Skip hidden files
+          if [[ "$rel_path" == .* ]]; then
+            continue
           fi
-          echo "✅ CF_ACCOUNT_ID secret is configured"
+
+          echo "Uploading: $rel_path"
+          npx wrangler r2 object put "cloudless-assets/$rel_path" --file="$file" || exit 1
+        done
+
+        echo "✅ Assets uploaded to R2"
+
+    - name: Deploy Worker
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CF_ACCOUNT_ID }}
+        command: deploy -c wrangler-cloudflare-free.json
+        wranglerVersion: 4.15.0
+
+    - name: Validate Cloudflare account ID secret
+      if: always()
+      run: |
+        if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+          echo "❌ Missing required secret: CF_ACCOUNT_ID"
+          echo "Please add this GitHub repository secret with your Cloudflare account ID"
+          exit 1
+        fi
+        echo "✅ CF_ACCOUNT_ID secret is configured"

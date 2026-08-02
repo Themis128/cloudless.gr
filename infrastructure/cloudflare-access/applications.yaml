@@ -8,155 +8,155 @@
 
 # --- Grafana Monitoring Dashboard ---
 grafana:
-  name: "Grafana Monitoring"
-  domain: "grafana.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: Grafana Monitoring
+  domain: grafana.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
-  logo_url: "https://grafana.com/static/assets/logo.png"
+  logo_url: https://grafana.com/static/assets/logo.png
   policies:
-    - name: "Admin Access Only"
-      decision: "allow"
-      include:
-        - email:
-          - "themisbaltzakis@gmail.com"
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
-      exclude: []
-      require: []
+  - name: Admin Access Only
+    decision: allow
+    include:
+    - email:
+      - themisbaltzakis@gmail.com
+    - email_domain:
+      - baltzakis-themis.workers.dev
+    exclude: []
+    require: []
 
 # --- n8n Workflow Automation ---
 n8n:
-  name: "n8n Workflows"
-  domain: "n8n.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: n8n Workflows
+  domain: n8n.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Authenticated Users"
-      decision: "allow"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: Authenticated Users
+    decision: allow
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
+    - email:
+      - themisbaltzakis@gmail.com
 
 # --- AppFlowy CMS ---
 appflowy:
-  name: "AppFlowy CMS"
-  domain: "appflowy.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: AppFlowy CMS
+  domain: appflowy.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Authenticated Users"
-      decision: "allow"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: Authenticated Users
+    decision: allow
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
+    - email:
+      - themisbaltzakis@gmail.com
 
 # --- Postiz Social Publisher ---
 postiz:
-  name: "Postiz Publishing"
-  domain: "postiz.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: Postiz Publishing
+  domain: postiz.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Authenticated Users"
-      decision: "allow"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: Authenticated Users
+    decision: allow
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
+    - email:
+      - themisbaltzakis@gmail.com
 
 # --- omv Web UI ---
 omv:
-  name: "OMV Admin"
-  domain: "omv.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "1h"
+  name: OMV Admin
+  domain: omv.cloudless.gr
+  type: self_hosted
+  session_duration: 1h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Admin Only"
-      decision: "allow"
-      include:
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: Admin Only
+    decision: allow
+    include:
+    - email:
+      - themisbaltzakis@gmail.com
 
 # --- Documentation Portal ---
 docs:
-  name: "Cloudless Docs"
-  domain: "docs.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: Cloudless Docs
+  domain: docs.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Authenticated Users"
-      decision: "allow"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
+  - name: Authenticated Users
+    decision: allow
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
 
 # --- Meilisearch ---
 meilisearch:
-  name: "Search API"
-  domain: "meili.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "1h"
+  name: Search API
+  domain: meili.cloudless.gr
+  type: self_hosted
+  session_duration: 1h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Internal Services Only"
-      decision: "allow"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
+  - name: Internal Services Only
+    decision: allow
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
 
 # --- Uptime Kuma ---
 kuma:
-  name: "Uptime Monitoring"
-  domain: "kuma.cloudless.gr"
-  type: "self_hosted"
-  session_duration: "24h"
+  name: Uptime Monitoring
+  domain: kuma.cloudless.gr
+  type: self_hosted
+  session_duration: 24h
   auto_redirect_https: true
   http_only: false
   policies:
-    - name: "Admin Access Only"
-      decision: "allow"
-      include:
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: Admin Access Only
+    decision: allow
+    include:
+    - email:
+      - themisbaltzakis@gmail.com
 
 # ==============================================================================
 # Terraform Configuration Template
 # ==============================================================================
 
 terraform:
-  cloudflare_zone_id: "${CLOUDFLARE_ZONE_ID}"  # Get from Cloudflare dashboard
+  cloudflare_zone_id: ${CLOUDFLARE_ZONE_ID}    # Get from Cloudflare dashboard
 
   # Access Groups
   access_groups:
-    - name: "admins"
-      description: "Admin users with full access"
-      include:
-        - email:
-          - "themisbaltzakis@gmail.com"
+  - name: admins
+    description: Admin users with full access
+    include:
+    - email:
+      - themisbaltzakis@gmail.com
 
-    - name: "authenticated"
-      description: "All authenticated users"
-      include:
-        - email_domain:
-          - "baltzakis-themis.workers.dev"
+  - name: authenticated
+    description: All authenticated users
+    include:
+    - email_domain:
+      - baltzakis-themis.workers.dev
 
 # ==============================================================================
 # Setup Instructions

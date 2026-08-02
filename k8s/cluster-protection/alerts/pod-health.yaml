@@ -17,21 +17,17 @@ spec:
           "%.0f" }} times in 15 m. Run: kubectl logs -p {{ $labels.pod }} -n {{ $labels.namespace
           }}'
         summary: '{{ $labels.namespace }}/{{ $labels.pod }} crash-looping'
-      expr: 'rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 3
-
-        '
+      expr: "rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 3\n"
       for: 5m
       labels:
         severity: warning
     - alert: PodOOMKilled
       annotations:
-        description: Container {{ $labels.container }} was OOM-killed. Raise its memory
-          limit or investigate a leak.
+        description: Container {{ $labels.container }} was OOM-killed. Raise its
+          memory limit or investigate a leak.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }} OOMKilled'
-      expr: 'kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}
-        == 1
-
-        '
+      expr: "kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"\
+        } == 1\n"
       for: 0m
       labels:
         severity: critical
@@ -39,9 +35,7 @@ spec:
       annotations:
         summary: '{{ $labels.namespace }}/{{ $labels.pod }} restarted {{ $value |
           printf "%.0f" }}x in last hour'
-      expr: 'increase(kube_pod_container_status_restarts_total[1h]) >= 5
-
-        '
+      expr: "increase(kube_pod_container_status_restarts_total[1h]) >= 5\n"
       for: 10m
       labels:
         severity: warning
@@ -52,9 +46,7 @@ spec:
         description: 'Check: kubectl describe pod {{ $labels.pod }} -n {{ $labels.namespace
           }}'
         summary: '{{ $labels.namespace }}/{{ $labels.pod }} not ready for 5 m'
-      expr: 'kube_pod_status_ready{condition="true"} == 0
-
-        '
+      expr: "kube_pod_status_ready{condition=\"true\"} == 0\n"
       for: 5m
       labels:
         severity: warning
@@ -64,9 +56,7 @@ spec:
           PVC not bound. Check: kubectl describe pod {{ $labels.pod }} -n {{ $labels.namespace
           }}'
         summary: '{{ $labels.namespace }}/{{ $labels.pod }} stuck Pending for 10 m'
-      expr: 'kube_pod_status_phase{phase="Pending"} == 1
-
-        '
+      expr: "kube_pod_status_phase{phase=\"Pending\"} == 1\n"
       for: 10m
       labels:
         severity: warning
@@ -85,8 +75,8 @@ spec:
     rules:
     - alert: ContainerHighMemory
       annotations:
-        description: "Using {{ $value | humanizePercentage }} \u2014 OOMKill risk.\
-          \ Current limit may be too low."
+        description: Using {{ $value | humanizePercentage }} — OOMKill risk. 
+          Current limit may be too low.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }}
           memory > 90% of limit'
       expr: "(\n  container_memory_working_set_bytes{container!=\"\",container!=\"\
@@ -97,8 +87,8 @@ spec:
         severity: warning
     - alert: ContainerHighCPU
       annotations:
-        description: "Using {{ $value | humanizePercentage }} of CPU limit for 10\
-          \ m \u2014 consider raising limit or adding replicas."
+        description: Using {{ $value | humanizePercentage }} of CPU limit for 10
+          m — consider raising limit or adding replicas.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }}
           CPU > 90% of limit'
       expr: "(\n  rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"\
@@ -109,7 +99,8 @@ spec:
         severity: warning
     - alert: ContainerThrottled
       annotations:
-        description: Container is heavily throttled. Raise cpu limit or reduce load.
+        description: Container is heavily throttled. Raise cpu limit or reduce 
+          load.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }}
           CPU throttled > 50%'
       expr: "rate(container_cpu_cfs_throttled_seconds_total{container!=\"\"}[5m])\n\
@@ -121,20 +112,20 @@ spec:
     rules:
     - alert: HPAMaxedOut
       annotations:
-        description: Autoscaler cannot add more pods. Consider raising maxReplicas
-          or reducing load.
-        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }}
-          at max replicas for 15 m
+        description: Autoscaler cannot add more pods. Consider raising 
+          maxReplicas or reducing load.
+        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler 
+          }} at max replicas for 15 m
       expr: "kube_horizontalpodautoscaler_status_current_replicas\n  == kube_horizontalpodautoscaler_spec_max_replicas\n"
       for: 15m
       labels:
         severity: warning
     - alert: HPAScalingFailure
       annotations:
-        description: metrics-server may be unavailable or resource requests missing
-          on the target deployment.
-        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }}
-          scaling is inactive
+        description: metrics-server may be unavailable or resource requests 
+          missing on the target deployment.
+        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler 
+          }} scaling is inactive
       expr: "kube_horizontalpodautoscaler_status_condition{\n  condition=\"ScalingActive\"\
         , status=\"false\"\n} == 1\n"
       for: 5m

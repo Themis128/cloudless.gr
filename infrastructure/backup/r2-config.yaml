@@ -14,6 +14,6 @@ metadata:
     app.kubernetes.io/name: pvc-backup
     app.kubernetes.io/component: r2-config
 data:
-  R2_ENDPOINT: "https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com"
-  R2_BUCKET: "datalake-bucket"
-  R2_REGION: "auto"
+  R2_ENDPOINT: https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
+  R2_BUCKET: datalake-bucket
+  R2_REGION: auto

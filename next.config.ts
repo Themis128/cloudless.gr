@@ -22,6 +22,34 @@ const COVERAGE =
   process.env.COVERAGE === "1" || process.env.NEXT_PUBLIC_COVERAGE === "1";
 
 const nextConfig: NextConfig = {
+  poweredBy: false,
+  reactStrictMode: true,
+  webpack: (config, options) => {
+    config.experiments = {
+      layers: true,
+      optimizePackageImports: false,
+    };
+    return config;
+  },
+  env: {
+    NEXT_PUBLIC_API_KEY: process.env.NEXT_PUBLIC_API_KEY || '',
+  },
+  images: {
+    domains: ['localhost', 'example.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+        path: '/',
+        width: 0,
+        height: 0,
+      },
+    ],
+  },
+  turbopack: {
+    root: resolve(import.meta.dirname),
+    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
+  },
   // Compression of HTTP responses (gzip via the Next.js server). On Lambda
   // the compression is applied before CloudFront passes through; on the Pi
   // the in-process compression is what users actually receive (Pi nginx
@@ -56,15 +84,6 @@ const nextConfig: NextConfig = {
   // without the .js extension which fails when loaded as an external ESM
   // module. Use transpilePackages so Turbopack bundles it explicitly instead.
   transpilePackages: ["next-auth"],
-  serverExternalPackages: [
-    "@aws-sdk/client-bedrock-runtime",
-    "@aws-sdk/client-dynamodb",
-    "@aws-sdk/client-sesv2",
-    "@aws-sdk/client-ssm",
-    // Free Workers = 3 MiB gzip. Keep OG font/WASM out of the traced server
-    // package; OpenNext still pre-renders opengraph-image routes at build time.
-    "@vercel/og",
-  ],
   // Drop traced copies of OG binaries from the OpenNext server function package.
   // See https://opennext.js.org/cloudflare/troubleshooting (Worker size limit).
   outputFileTracingExcludes: {
@@ -114,7 +133,19 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
-    optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+    // optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+  },
+  // TypeScript configuration
+  typescript: {
+    // Ensure compatibility with Turbopack
+    ignoreBuildErrors: false,
+    // Set to true if you're having issues with type checking
+    // check: false,
+  },
+  // Additional Turbopack configuration
+  turbopack: {
+    root: resolve(import.meta.dirname),
+    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
   },
 };
 

@@ -50,7 +50,7 @@ stringData:
   #          --dry-run=client -o yaml | kubectl apply -f -
   # If absent, the probe still runs but the alert POST is skipped
   # (logged as warning; the job itself doesn't fail).
-  ADMIN_ALERT_SECRET: ""
+  ADMIN_ALERT_SECRET: ''
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -61,7 +61,7 @@ metadata:
     app.kubernetes.io/name: sdb1-readme-and-probe
     cloudless.gr/owner: operator
 spec:
-  schedule: "30 4 * * *"
+  schedule: 30 4 * * *
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7
@@ -75,90 +75,91 @@ spec:
           nodeSelector:
             kubernetes.io/hostname: omv
           tolerations:
-            - operator: Exists
+          - operator: Exists
           containers:
-            - name: readme-and-probe
-              image: alpine:3.20
-              imagePullPolicy: IfNotPresent
-              env:
-                - name: README_URL
-                  value: https://raw.githubusercontent.com/Themis128/cloudless.gr/main/docs/google-to-omv-migration.md
-                - name: MOUNT
-                  value: /sdb1
-                - name: SHARE_DIR
-                  value: /sdb1/google-archive
-                - name: ALERT_FREE_GB
-                  value: "200"
-                - name: HARD_FLOOR_GB
-                  value: "100"
-                - name: ADMIN_ALERT_URL
-                  value: https://cloudless.gr/api/webhooks/admin-alert
-                - name: ADMIN_ALERT_SECRET
-                  valueFrom:
-                    secretKeyRef:
-                      name: admin-alert-secret
-                      key: ADMIN_ALERT_SECRET
-                      optional: true
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  set -u
-                  apk add --no-cache curl coreutils >/dev/null
+          - name: readme-and-probe
+            image: alpine:3.20
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: README_URL
+              value: 
+                https://raw.githubusercontent.com/Themis128/cloudless.gr/main/docs/google-to-omv-migration.md
+            - name: MOUNT
+              value: /sdb1
+            - name: SHARE_DIR
+              value: /sdb1/google-archive
+            - name: ALERT_FREE_GB
+              value: '200'
+            - name: HARD_FLOOR_GB
+              value: '100'
+            - name: ADMIN_ALERT_URL
+              value: https://cloudless.gr/api/webhooks/admin-alert
+            - name: ADMIN_ALERT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: admin-alert-secret
+                  key: ADMIN_ALERT_SECRET
+                  optional: true
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -u
+              apk add --no-cache curl coreutils >/dev/null
 
-                  # 1. Make sure the share dir exists, sync README
-                  mkdir -p "$SHARE_DIR"
-                  if curl -fsSL --max-time 15 "$README_URL" -o "$SHARE_DIR/README.md.tmp"; then
-                    mv "$SHARE_DIR/README.md.tmp" "$SHARE_DIR/README.md"
-                    echo "README synced ($(wc -c < "$SHARE_DIR/README.md") bytes)"
-                  else
-                    rm -f "$SHARE_DIR/README.md.tmp"
-                    echo "::warning::README fetch failed (network blip?); leaving previous copy in place"
-                  fi
+              # 1. Make sure the share dir exists, sync README
+              mkdir -p "$SHARE_DIR"
+              if curl -fsSL --max-time 15 "$README_URL" -o "$SHARE_DIR/README.md.tmp"; then
+                mv "$SHARE_DIR/README.md.tmp" "$SHARE_DIR/README.md"
+                echo "README synced ($(wc -c < "$SHARE_DIR/README.md") bytes)"
+              else
+                rm -f "$SHARE_DIR/README.md.tmp"
+                echo "::warning::README fetch failed (network blip?); leaving previous copy in place"
+              fi
 
-                  # 2. Probe sdb1 capacity (POSIX-compatible parsing — alpine
-                  #    /bin/sh is BusyBox ash, no `read <<<` herestrings).
-                  DFLINE=$(df -BG --output=size,used,avail,pcent,target "$MOUNT" | tail -1)
-                  SIZE_GB=$(echo "$DFLINE" | awk '{print $1}' | tr -d 'G')
-                  USED_GB=$(echo "$DFLINE" | awk '{print $2}' | tr -d 'G')
-                  AVAIL_GB=$(echo "$DFLINE" | awk '{print $3}' | tr -d 'G')
-                  PCT=$(echo "$DFLINE" | awk '{print $4}')
-                  MOUNTED=$(echo "$DFLINE" | awk '{print $5}')
-                  echo "sdb1: size=${SIZE_GB}G used=${USED_GB}G avail=${AVAIL_GB}G (${PCT}) at ${MOUNTED}"
+              # 2. Probe sdb1 capacity (POSIX-compatible parsing — alpine
+              #    /bin/sh is BusyBox ash, no `read <<<` herestrings).
+              DFLINE=$(df -BG --output=size,used,avail,pcent,target "$MOUNT" | tail -1)
+              SIZE_GB=$(echo "$DFLINE" | awk '{print $1}' | tr -d 'G')
+              USED_GB=$(echo "$DFLINE" | awk '{print $2}' | tr -d 'G')
+              AVAIL_GB=$(echo "$DFLINE" | awk '{print $3}' | tr -d 'G')
+              PCT=$(echo "$DFLINE" | awk '{print $4}')
+              MOUNTED=$(echo "$DFLINE" | awk '{print $5}')
+              echo "sdb1: size=${SIZE_GB}G used=${USED_GB}G avail=${AVAIL_GB}G (${PCT}) at ${MOUNTED}"
 
-                  SEVERITY=""
-                  TITLE=""
-                  if [ "$AVAIL_GB" -lt "$HARD_FLOOR_GB" ]; then
-                    SEVERITY="high"
-                    TITLE="sdb1 BELOW HARD FLOOR — only ${AVAIL_GB}G free (<${HARD_FLOOR_GB}G). NAS unusable for new writes; prune now."
-                  elif [ "$AVAIL_GB" -lt "$ALERT_FREE_GB" ]; then
-                    SEVERITY="medium"
-                    TITLE="sdb1 free space below NAS-headroom budget — ${AVAIL_GB}G free (<${ALERT_FREE_GB}G target)"
-                  else
-                    echo "sdb1 healthy — ${AVAIL_GB}G free comfortably above ${ALERT_FREE_GB}G alert threshold."
-                    exit 0
-                  fi
+              SEVERITY=""
+              TITLE=""
+              if [ "$AVAIL_GB" -lt "$HARD_FLOOR_GB" ]; then
+                SEVERITY="high"
+                TITLE="sdb1 BELOW HARD FLOOR — only ${AVAIL_GB}G free (<${HARD_FLOOR_GB}G). NAS unusable for new writes; prune now."
+              elif [ "$AVAIL_GB" -lt "$ALERT_FREE_GB" ]; then
+                SEVERITY="medium"
+                TITLE="sdb1 free space below NAS-headroom budget — ${AVAIL_GB}G free (<${ALERT_FREE_GB}G target)"
+              else
+                echo "sdb1 healthy — ${AVAIL_GB}G free comfortably above ${ALERT_FREE_GB}G alert threshold."
+                exit 0
+              fi
 
-                  echo "::warning::$TITLE"
-                  MESSAGE="omv-main sdb1 (/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7) at ${USED_GB}G of ${SIZE_GB}G, only ${AVAIL_GB}G free. Headroom budget = ${ALERT_FREE_GB}G alert / ${HARD_FLOOR_GB}G hard floor. Prune Google-archive snapshots or WindowsImageBackup. See docs/google-to-omv-migration.md."
+              echo "::warning::$TITLE"
+              MESSAGE="omv-main sdb1 (/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7) at ${USED_GB}G of ${SIZE_GB}G, only ${AVAIL_GB}G free. Headroom budget = ${ALERT_FREE_GB}G alert / ${HARD_FLOOR_GB}G hard floor. Prune Google-archive snapshots or WindowsImageBackup. See docs/google-to-omv-migration.md."
 
-                  if [ -n "${ADMIN_ALERT_SECRET:-}" ]; then
-                    curl -fsS -X POST "$ADMIN_ALERT_URL" \
-                      -H "Content-Type: application/json" \
-                      -H "x-cloudless-alert-secret: $ADMIN_ALERT_SECRET" \
-                      -d "$(printf '{"severity":"%s","source":"sdb1-capacity","title":"%s","message":"%s"}' "$SEVERITY" "$TITLE" "$MESSAGE")" \
-                      || echo "::warning::admin-alert POST failed (alert lost; check logs)"
-                  else
-                    echo "::warning::ADMIN_ALERT_SECRET not set in omv-ops/admin-alert-secret Secret — alert logged only, not POSTed."
-                  fi
+              if [ -n "${ADMIN_ALERT_SECRET:-}" ]; then
+                curl -fsS -X POST "$ADMIN_ALERT_URL" \
+                  -H "Content-Type: application/json" \
+                  -H "x-cloudless-alert-secret: $ADMIN_ALERT_SECRET" \
+                  -d "$(printf '{"severity":"%s","source":"sdb1-capacity","title":"%s","message":"%s"}' "$SEVERITY" "$TITLE" "$MESSAGE")" \
+                  || echo "::warning::admin-alert POST failed (alert lost; check logs)"
+              else
+                echo "::warning::ADMIN_ALERT_SECRET not set in omv-ops/admin-alert-secret Secret — alert logged only, not POSTed."
+              fi
 
-                  # Don't fail the job on capacity alert (probe is informational)
-                  exit 0
-              volumeMounts:
-                - name: sdb1
-                  mountPath: /sdb1
-          volumes:
+              # Don't fail the job on capacity alert (probe is informational)
+              exit 0
+            volumeMounts:
             - name: sdb1
-              hostPath:
-                path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
-                type: Directory
+              mountPath: /sdb1
+          volumes:
+          - name: sdb1
+            hostPath:
+              path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+              type: Directory

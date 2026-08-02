@@ -1,20 +1,20 @@
 name: API Contract Audit
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/app/api/**'
-      - '__tests__/*api.test.ts'
-      - '__tests__/stripe-webhook-api.test.ts'
-      - '__tests__/health-api.test.ts'
-      - '__tests__/subscribe-api.test.ts'
-      - '__tests__/admin-api.test.ts'
-      - '__tests__/slack/**'
-      - '__tests__/calendar-api.test.ts'
+    - src/app/api/**
+    - __tests__/*api.test.ts
+    - __tests__/stripe-webhook-api.test.ts
+    - __tests__/health-api.test.ts
+    - __tests__/subscribe-api.test.ts
+    - __tests__/admin-api.test.ts
+    - __tests__/slack/**
+    - __tests__/calendar-api.test.ts
   workflow_dispatch:
 
 permissions:
@@ -32,27 +32,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1         # v4
+      with:
+        dest: ~/setup-pnpm-${{ runner.name }}
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
       # The `--` separator is dropped intentionally: pnpm passes it through to
       # vitest, which then treats subsequent args as positional rather than
       # test-file filters, so vitest runs the full suite. Passing files
       # directly to `pnpm test:ci` filters correctly.
-      - name: Run public API contract tests
-        run: pnpm test:ci __tests__/contact-api.test.ts __tests__/checkout-api.test.ts __tests__/health-api.test.ts __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts
+    - name: Run public API contract tests
+      run: pnpm test:ci __tests__/contact-api.test.ts 
+        __tests__/checkout-api.test.ts __tests__/health-api.test.ts 
+        __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts
 
-      - name: Run admin API contract tests
-        run: pnpm test:ci __tests__/admin-api.test.ts
+    - name: Run admin API contract tests
+      run: pnpm test:ci __tests__/admin-api.test.ts
 
-      - name: Run Slack API contract tests
-        run: pnpm test:ci __tests__/slack/slack-commands.test.ts __tests__/slack/slack-events.test.ts __tests__/slack/slack-interactions.test.ts __tests__/slack/slack-notify.test.ts __tests__/slack/slack-verify.test.ts
+    - name: Run Slack API contract tests
+      run: pnpm test:ci __tests__/slack/slack-commands.test.ts 
+        __tests__/slack/slack-events.test.ts 
+        __tests__/slack/slack-interactions.test.ts 
+        __tests__/slack/slack-notify.test.ts 
+        __tests__/slack/slack-verify.test.ts
 
-      - name: Run Calendar API contract tests
-        run: pnpm test:ci __tests__/calendar-api.test.ts
+    - name: Run Calendar API contract tests
+      run: pnpm test:ci __tests__/calendar-api.test.ts

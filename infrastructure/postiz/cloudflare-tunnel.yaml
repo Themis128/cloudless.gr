@@ -1,15 +1,3 @@
-# Cloudflare Tunnel route: postiz.cloudless.gr → Postiz NodePort on omv-main
-#
-# Same tunnel as logs.cloudless.gr (ID e977a490-58c5-4fdb-9155-86832e3e636a).
-# DNS: postiz.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
-#   (add via mcp__cloudless-infra__cloudflare_add_dns_record_gr or the CF dashboard)
-#
-# To activate on omv-main:
-#   1. Append the ingress rule below to /etc/cloudflared/config.yml
-#      under the "ingress:" key, BEFORE the catch-all rule.
-#   2. sudo systemctl reload cloudflared
-#   3. Verify: curl -I https://postiz.cloudless.gr
----
 # Ingress rule fragment — paste into /etc/cloudflared/config.yml
 ingress_rule:
   hostname: postiz.cloudless.gr

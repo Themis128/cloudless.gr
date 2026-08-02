@@ -1,29 +1,3 @@
-# Cloudflare Tunnel route: appflowy.cloudless.gr → AppFlowy nginx NodePort on omv
-#
-# Same tunnel as espocrm.cloudless.gr / postiz.cloudless.gr / logs.cloudless.gr
-# (ID e977a490-58c5-4fdb-9155-86832e3e636a).
-#
-# DNS record to add in Cloudflare (Themis128 zone cloudless.gr):
-#   appflowy.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
-#   (proxied=true, TTL=auto)
-#
-# To activate on omv:
-#   1. Append the ingress rule below to /etc/cloudflared/config.yml under
-#      the existing `ingress:` key, BEFORE the catch-all `service: http_status:404`
-#      rule. Place it ABOVE the existing espocrm.cloudless.gr entry so order
-#      doesn't matter.
-#   2. nsenter from a privileged k8s pod (cloudflared SIGHUP reload is known
-#      not to pick up new ingress rules — see CLAUDE.md "Cluster Incident
-#      Response"):  systemctl restart cloudflared
-#   3. Verify: curl -I https://appflowy.cloudless.gr        # expect 302 (root → /login)
-#              curl -I https://appflowy.cloudless.gr/gotrue/health   # expect 200
-#              curl -I https://appflowy.cloudless.gr/api/health      # expect 200
-#              curl -I https://appflowy.cloudless.gr/console         # expect 200
-#
-# The appflowy nginx pod (in-cluster) handles the path routing for /gotrue/*,
-# /api/*, /ws/*, /minio/*, /console — everything else falls through to /
-# (appflowy_web). See infrastructure/appflowy/k8s/* for the full ConfigMap.
----
 # Ingress rule fragment — paste into /etc/cloudflared/config.yml
 ingress_rule:
   hostname: appflowy.cloudless.gr

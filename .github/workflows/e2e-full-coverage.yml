@@ -2,11 +2,11 @@ name: e2e-full-coverage
 on:
   pull_request:
     paths:
-      - "src/**"
-      - "e2e/**"
-      - "playwright.config.mts"
-      - "package.json"
-      - ".github/workflows/e2e-full-coverage.yml"
+    - src/**
+    - e2e/**
+    - playwright.config.mts
+    - package.json
+    - .github/workflows/e2e-full-coverage.yml
   workflow_dispatch:
 
 permissions:
@@ -18,52 +18,52 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      NEXT_PUBLIC_E2E: "1"
+      NEXT_PUBLIC_E2E: '1'
       E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
-      CI: "true"
+      CI: 'true'
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
 
-      - uses: pnpm/action-setup@v4
+    - uses: pnpm/action-setup@v4
 
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/pnpm/store
+        key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Install deps
-        run: pnpm install --frozen-lockfile
+    - name: Install deps
+      run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+    - name: Install Playwright browsers
+      run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run Playwright migrated + sweeps + journeys
-        run: |
-          pnpm exec playwright test \
-            --project=chromium \
-            --reporter=line \
-            --workers=2 \
-            e2e/migrated/ \
-            e2e/admin-api-sweep.spec.ts \
-            e2e/public-api-sweep.spec.ts \
-            e2e/journey-blog-nav.spec.ts \
-            e2e/journey-contact-lead.spec.ts \
-            e2e/journey-store-checkout.spec.ts \
-            e2e/journey-theme-locale.spec.ts \
-            e2e/journey-admin-tour.spec.ts \
-            e2e/admin-pages-sweep.spec.ts
+    - name: Run Playwright migrated + sweeps + journeys
+      run: |
+        pnpm exec playwright test \
+          --project=chromium \
+          --reporter=line \
+          --workers=2 \
+          e2e/migrated/ \
+          e2e/admin-api-sweep.spec.ts \
+          e2e/public-api-sweep.spec.ts \
+          e2e/journey-blog-nav.spec.ts \
+          e2e/journey-contact-lead.spec.ts \
+          e2e/journey-store-checkout.spec.ts \
+          e2e/journey-theme-locale.spec.ts \
+          e2e/journey-admin-tour.spec.ts \
+          e2e/admin-pages-sweep.spec.ts
 
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
+    - name: Upload Playwright report on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 7

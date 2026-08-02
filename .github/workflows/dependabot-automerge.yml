@@ -15,35 +15,35 @@ jobs:
     if: github.actor == 'dependabot[bot]'
 
     steps:
-      - name: Fetch Dependabot metadata
-        id: meta
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Fetch Dependabot metadata
+      id: meta
+      uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98         # v3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-merge minor and patch updates
+    - name: Auto-merge minor and patch updates
         # Exclude framework-level packages whose node_modules content is read by
         # AI agents via AGENTS.md. Those packages must go through human review to
         # prevent supply-chain prompt injection even for patch bumps.
-        if: |
-          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-           steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
-        run: gh pr merge --auto --squash "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: |
+        (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+         steps.meta.outputs.update-type == 'version-update:semver-minor') &&
+        !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
+        !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
+        !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
+      run: gh pr merge --auto --squash "$PR_URL"
+      env:
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Require human review for framework packages
-        if: |
-          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-           steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-          (contains(fromJson(steps.meta.outputs.dependency-names), 'next') ||
-           contains(fromJson(steps.meta.outputs.dependency-names), 'react') ||
-           contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom'))
-        run: |
-          echo "::warning::Framework package update detected (next/react/react-dom)."
-          echo "::warning::AGENTS.md reads from node_modules — human review required before merge."
-          echo "::warning::Skipping auto-merge for ${{ steps.meta.outputs.dependency-names }}."
+    - name: Require human review for framework packages
+      if: |
+        (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+         steps.meta.outputs.update-type == 'version-update:semver-minor') &&
+        (contains(fromJson(steps.meta.outputs.dependency-names), 'next') ||
+         contains(fromJson(steps.meta.outputs.dependency-names), 'react') ||
+         contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom'))
+      run: |
+        echo "::warning::Framework package update detected (next/react/react-dom)."
+        echo "::warning::AGENTS.md reads from node_modules — human review required before merge."
+        echo "::warning::Skipping auto-merge for ${{ steps.meta.outputs.dependency-names }}."

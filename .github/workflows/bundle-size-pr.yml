@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "src/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "next.config.ts"
+    - src/**
+    - package.json
+    - pnpm-lock.yaml
+    - next.config.ts
 
 permissions:
   contents: read
@@ -17,59 +17,60 @@ jobs:
   bundle-size:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+    - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
 
       # Cache Next.js build output between runs. Mirrors deploy.yml.
-      - name: Restore Next.js build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            nextjs-${{ runner.os }}-
+    - name: Restore Next.js build cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
+      with:
+        path: .next/cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ 
+          hashFiles('src/**') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          nextjs-${{ runner.os }}-
 
-      - run: pnpm install --frozen-lockfile
+    - run: pnpm install --frozen-lockfile
 
-      - name: Build and capture bundle stats
-        run: |
-          pnpm next build
-          # Extract route sizes from .next/routes-manifest and build output
-          node -e "
-            const fs = require('fs');
-            const path = require('path');
-            const buildDir = '.next';
+    - name: Build and capture bundle stats
+      run: |
+        pnpm next build
+        # Extract route sizes from .next/routes-manifest and build output
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const buildDir = '.next';
 
-            // Parse build-manifest for JS bundle sizes
-            const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, 'build-manifest.json'), 'utf8'));
-            const pages = Object.keys(manifest.pages);
+          // Parse build-manifest for JS bundle sizes
+          const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, 'build-manifest.json'), 'utf8'));
+          const pages = Object.keys(manifest.pages);
 
-            let report = '## Bundle Size Report\n\n';
-            report += '| Route | JS Chunks |\n|-------|----------|\n';
+          let report = '## Bundle Size Report\n\n';
+          report += '| Route | JS Chunks |\n|-------|----------|\n';
 
-            for (const page of pages.sort()) {
-              const chunks = manifest.pages[page] || [];
-              const totalKB = chunks.reduce((sum, chunk) => {
-                const filePath = path.join(buildDir, chunk);
-                if (fs.existsSync(filePath)) {
-                  return sum + fs.statSync(filePath).size;
-                }
-                return sum;
-              }, 0);
-              report += '| ' + page + ' | ' + (totalKB / 1024).toFixed(1) + ' KB |\n';
-            }
+          for (const page of pages.sort()) {
+            const chunks = manifest.pages[page] || [];
+            const totalKB = chunks.reduce((sum, chunk) => {
+              const filePath = path.join(buildDir, chunk);
+              if (fs.existsSync(filePath)) {
+                return sum + fs.statSync(filePath).size;
+              }
+              return sum;
+            }, 0);
+            report += '| ' + page + ' | ' + (totalKB / 1024).toFixed(1) + ' KB |\n';
+          }
 
-            fs.writeFileSync('/tmp/bundle-report.md', report);
-          "
+          fs.writeFileSync('/tmp/bundle-report.md', report);
+        "
 
-      - name: Comment on PR
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: /tmp/bundle-report.md
+    - name: Comment on PR
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        path: /tmp/bundle-report.md

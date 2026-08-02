@@ -21,22 +21,22 @@ name: Apply Slack App Manifest
 #   SSM /cloudless/production/SLACK_APP_CONFIG_REFRESH_TOKEN (seed once)
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   push:
     branches: [main]
     paths:
-      - "slack-app.manifest.json"
+    - slack-app.manifest.json
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run (validate only, do not apply)"
+        description: Dry run (validate only, do not apply)
         required: false
-        default: "false"
+        default: 'false'
 
 permissions:
-  id-token: write # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:Get/PutParameter
+  id-token: write   # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:Get/PutParameter
   contents: read
 
 jobs:
@@ -44,72 +44,75 @@ jobs:
     name: Apply Slack Manifest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
 
-      - name: Validate manifest JSON
-        run: |
-          echo "Validating slack-app.manifest.json..."
-          python3 -m json.tool slack-app.manifest.json > /dev/null
-          echo "✓ JSON is valid"
+    - name: Validate manifest JSON
+      run: |
+        echo "Validating slack-app.manifest.json..."
+        python3 -m json.tool slack-app.manifest.json > /dev/null
+        echo "✓ JSON is valid"
 
-      - name: Rotate Slack app-config token and persist to repo secrets
-        id: rotate
-        env:
-          SLACK_APP_CONFIG_REFRESH_TOKEN: ${{ secrets.SLACK_APP_CONFIG_REFRESH_TOKEN }}
-          SECRETS_PAT: ${{ secrets.SCRIPTS_SECRETS_PAT }}
-        run: |
-          set -euo pipefail
-          bash scripts/rotate-slack-app-config-token-gh.sh
-        # The script writes to GITHUB_OUTPUT: token and rotated/skip
+    - name: Rotate Slack app-config token and persist to repo secrets
+      id: rotate
+      env:
+        SLACK_APP_CONFIG_REFRESH_TOKEN: ${{ 
+          secrets.SLACK_APP_CONFIG_REFRESH_TOKEN }}
+        SECRETS_PAT: ${{ secrets.SCRIPTS_SECRETS_PAT }}
+      run: |
+        set -euo pipefail
+        bash scripts/rotate-slack-app-config-token-gh.sh
+       # The script writes to GITHUB_OUTPUT: token and rotated/skip
 
-      - name: Validate manifest with Slack API
-        id: validate
-        if: ${{ steps.rotate.outputs.skip != 'true' && steps.rotate.outputs.rotated == 'true' }}
-        env:
-          SLACK_TOKEN: ${{ steps.rotate.outputs.token }}
-        run: |
-          MANIFEST=$(cat slack-app.manifest.json)
-          BODY=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(json.dumps({'manifest':m}))" "$MANIFEST")
-          RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.validate \
-            -H "Authorization: Bearer $SLACK_TOKEN" \
-            -H "Content-Type: application/json; charset=utf-8" \
-            -d "$BODY")
-          echo "$RESULT"
-          OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
-          ERROR=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',''))")
-          # If we still see auth errors here despite a fresh rotation, the
-          # refresh token itself has been revoked or rotated out of band.
-          # Fail loudly so the operator reseeds via the seed script.
-          if [ "$ERROR" = "invalid_auth" ] || [ "$ERROR" = "token_expired" ] || [ "$ERROR" = "not_authed" ]; then
-            echo "::warning::Slack app config token expired ($ERROR). Register commands manually or run: bash scripts/seed-slack-app-config-tokens.sh"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [ "$OK" != "True" ]; then
-            echo "::error::Manifest validation failed"
-            exit 1
-          fi
-          echo "✓ Manifest is valid"
+    - name: Validate manifest with Slack API
+      id: validate
+      if: ${{ steps.rotate.outputs.skip != 'true' && 
+        steps.rotate.outputs.rotated == 'true' }}
+      env:
+        SLACK_TOKEN: ${{ steps.rotate.outputs.token }}
+      run: |
+        MANIFEST=$(cat slack-app.manifest.json)
+        BODY=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(json.dumps({'manifest':m}))" "$MANIFEST")
+        RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.validate \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json; charset=utf-8" \
+          -d "$BODY")
+        echo "$RESULT"
+        OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+        ERROR=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('error',''))")
+        # If we still see auth errors here despite a fresh rotation, the
+        # refresh token itself has been revoked or rotated out of band.
+        # Fail loudly so the operator reseeds via the seed script.
+        if [ "$ERROR" = "invalid_auth" ] || [ "$ERROR" = "token_expired" ] || [ "$ERROR" = "not_authed" ]; then
+          echo "::warning::Slack app config token expired ($ERROR). Register commands manually or run: bash scripts/seed-slack-app-config-tokens.sh"
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [ "$OK" != "True" ]; then
+          echo "::error::Manifest validation failed"
+          exit 1
+        fi
+        echo "✓ Manifest is valid"
 
-      - name: Apply manifest to Slack app
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.rotate.outputs.skip != 'true' && steps.validate.outputs.skip != 'true' }}
-        env:
-          SLACK_TOKEN: ${{ steps.rotate.outputs.token }}
-        run: |
-          MANIFEST=$(cat slack-app.manifest.json)
-          BODY=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(json.dumps({'app_id': '${{ secrets.SLACK_APP_ID }}','manifest':m}))" "$MANIFEST")
-          RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.update \
-            -H "Authorization: Bearer $SLACK_TOKEN" \
-            -H "Content-Type: application/json; charset=utf-8" \
-            -d "$BODY")
-          echo "$RESULT"
-          OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
-          if [ "$OK" != "True" ]; then
-            echo "::error::Manifest apply failed"
-            exit 1
-          fi
-          echo "✓ Manifest applied successfully"
+    - name: Apply manifest to Slack app
+      if: ${{ github.event.inputs.dry_run != 'true' && steps.rotate.outputs.skip
+        != 'true' && steps.validate.outputs.skip != 'true' }}
+      env:
+        SLACK_TOKEN: ${{ steps.rotate.outputs.token }}
+      run: |
+        MANIFEST=$(cat slack-app.manifest.json)
+        BODY=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(json.dumps({'app_id': '${{ secrets.SLACK_APP_ID }}','manifest':m}))" "$MANIFEST")
+        RESULT=$(curl -s -X POST https://slack.com/api/apps.manifest.update \
+          -H "Authorization: Bearer $SLACK_TOKEN" \
+          -H "Content-Type: application/json; charset=utf-8" \
+          -d "$BODY")
+        echo "$RESULT"
+        OK=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+        if [ "$OK" != "True" ]; then
+          echo "::error::Manifest apply failed"
+          exit 1
+        fi
+        echo "✓ Manifest applied successfully"
 
-      - name: Dry run notice
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "Dry run — manifest validated but not applied."
+    - name: Dry run notice
+      if: ${{ github.event.inputs.dry_run == 'true' }}
+      run: echo "Dry run — manifest validated but not applied."

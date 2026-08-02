@@ -3,55 +3,56 @@ name: failover-drill
 on:
   schedule:
     # Monthly at 08:00 UTC on day 1
-    - cron: "0 8 1 * *"
+  - cron: 0 8 1 * *
   workflow_dispatch:
     inputs:
       require_secondary_healthy:
-        description: "Fail the run if secondary health endpoint is not healthy"
+        description: Fail the run if secondary health endpoint is not healthy
         required: false
-        default: "true"
+        default: 'true'
 
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe primary and secondary health
-        env:
-          PRIMARY_URL: https://cloudless.gr/api/health
-          SECONDARY_URL: https://pi-origin.cloudless.gr/api/health
-          REQUIRE_SECONDARY_HEALTHY: ${{ github.event.inputs.require_secondary_healthy || 'true' }}
-        run: |
-          set -euo pipefail
+    - name: Probe primary and secondary health
+      env:
+        PRIMARY_URL: https://cloudless.gr/api/health
+        SECONDARY_URL: https://pi-origin.cloudless.gr/api/health
+        REQUIRE_SECONDARY_HEALTHY: ${{ 
+          github.event.inputs.require_secondary_healthy || 'true' }}
+      run: |
+        set -euo pipefail
 
-          probe() {
-            local label="$1"
-            local url="$2"
-            local out
-            out="$(curl -sS -m 15 -w '\n%{http_code}' "$url" || true)"
-            local code="${out##*$'\n'}"
-            local body="${out%$'\n'*}"
-            echo "::group::${label}"
-            echo "url=$url"
-            echo "http_code=$code"
-            echo "body=$body"
-            echo "::endgroup::"
+        probe() {
+          local label="$1"
+          local url="$2"
+          local out
+          out="$(curl -sS -m 15 -w '\n%{http_code}' "$url" || true)"
+          local code="${out##*$'\n'}"
+          local body="${out%$'\n'*}"
+          echo "::group::${label}"
+          echo "url=$url"
+          echo "http_code=$code"
+          echo "body=$body"
+          echo "::endgroup::"
 
-            if [ "$code" -lt 200 ] || [ "$code" -ge 500 ]; then
-              echo "$label probe failed with HTTP $code"
-              return 1
-            fi
-            return 0
-          }
-
-          probe "PRIMARY" "$PRIMARY_URL"
-
-          if [ "$REQUIRE_SECONDARY_HEALTHY" = "true" ]; then
-            probe "SECONDARY" "$SECONDARY_URL"
-          else
-            echo "Secondary strict check disabled for this run."
+          if [ "$code" -lt 200 ] || [ "$code" -ge 500 ]; then
+            echo "$label probe failed with HTTP $code"
+            return 1
           fi
+          return 0
+        }
 
-      - name: Drill summary
-        run: |
-          echo "Failover drill probes completed."
-          echo "This workflow currently validates primary + secondary health reachability."
+        probe "PRIMARY" "$PRIMARY_URL"
+
+        if [ "$REQUIRE_SECONDARY_HEALTHY" = "true" ]; then
+          probe "SECONDARY" "$SECONDARY_URL"
+        else
+          echo "Secondary strict check disabled for this run."
+        fi
+
+    - name: Drill summary
+      run: |
+        echo "Failover drill probes completed."
+        echo "This workflow currently validates primary + secondary health reachability."

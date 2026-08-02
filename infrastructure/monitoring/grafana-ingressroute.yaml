@@ -21,12 +21,12 @@ metadata:
   namespace: monitoring
 spec:
   entryPoints:
-    - websecure
+  - websecure
   routes:
-    - kind: Rule
-      match: Host(`grafana.cloudless.gr`)
-      services:
-        - name: kube-prom-grafana
-          port: 80
+  - kind: Rule
+    match: Host(`grafana.cloudless.gr`)
+    services:
+    - name: kube-prom-grafana
+      port: 80
   tls:
     certResolver: letsencrypt-cloudflare

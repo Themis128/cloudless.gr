@@ -1,42 +1,10 @@
-# EspoCRM — self-hosted CRM (EspoCRM replacement). DEPLOYED + LIVE 2026-06-20.
-# Namespace: espocrm | App: espocrm/espocrm:9 | DB: mariadb:11
-#
-# Components (both run on omv only — nodeSelector kubernetes.io/hostname=omv):
-#   - mariadb (PVC 4Gi)  — Database, port 3306 ClusterIP only
-#   - espocrm (PVC 4Gi)  — Apache+PHP-FPM, port 80, NodePort 30700
-#
-# Exposure: Cloudflare tunnel hostname espocrm.cloudless.gr →
-# http://192.168.1.128:30700 (see ../cloudflare-tunnel.yaml).
-#
-# REQUIRED before apply — create the secret (replace ALL four values with
-# fresh random strings; never reuse the dev examples in this comment):
-#   kubectl create namespace espocrm
-#   kubectl -n espocrm create secret generic espocrm-secrets \
-#     --from-literal=mariadb-root-password="$(openssl rand -hex 24)" \
-#     --from-literal=mariadb-password="$(openssl rand -hex 24)" \
-#     --from-literal=admin-username="admin" \
-#     --from-literal=admin-password="$(openssl rand -hex 16)"
-#
-# Apply: kubectl apply -f infrastructure/espocrm/k8s/espocrm.yaml
-# Verify:
-#   kubectl -n espocrm get pods
-#   kubectl -n espocrm exec deploy/espocrm -- curl -sI http://localhost/ | head -1
-#
-# Why this exists (and not the Helm chart from PR #1028):
-#   - The twenty20/espocrm Helm chart does NOT bundle a database (we'd
-#     need to install MariaDB separately anyway).
-#   - Bitnami's MariaDB sub-chart (used by the cloudpirates chart) is
-#     amd64-only — won't run on the Pi 5.
-#   - The Postiz pattern (raw manifests + cloudflare tunnel) is already
-#     proven on this cluster; this matches it exactly.
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: espocrm-mariadb-data
   namespace: espocrm
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   storageClassName: local-path        # → /srv/dev-disk-by-uuid-a9a5a108-…/k3s/storage = sda1 (120 Gi SSD)
   resources:
     requests:
@@ -48,7 +16,7 @@ metadata:
   name: espocrm-app-data
   namespace: espocrm
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   storageClassName: local-path
   resources:
     requests:
@@ -64,7 +32,7 @@ metadata:
     component: mariadb
 spec:
   replicas: 1
-  strategy: { type: Recreate }
+  strategy: {type: Recreate}
   selector:
     matchLabels:
       app: espocrm
@@ -76,45 +44,47 @@ spec:
         component: mariadb
     spec:
       nodeSelector:
-        kubernetes.io/hostname: omv   # k3s node label is `omv` (not `omv-main`); both PVCs are local-path so pod must stay here
+        kubernetes.io/hostname: omv         # k3s node label is `omv` (not `omv-main`); both PVCs are local-path so pod must stay here
       containers:
-        - name: mariadb
-          image: mariadb:11
-          args:
-            - "--character-set-server=utf8mb4"
-            - "--collation-server=utf8mb4_unicode_ci"
-            - "--innodb-buffer-pool-size=128M"
-            - "--max-connections=50"
-          env:
-            - name: MARIADB_ROOT_PASSWORD
-              valueFrom: { secretKeyRef: { name: espocrm-secrets, key: mariadb-root-password } }
-            - name: MARIADB_DATABASE
-              value: "espocrm"
-            - name: MARIADB_USER
-              value: "espocrm"
-            - name: MARIADB_PASSWORD
-              valueFrom: { secretKeyRef: { name: espocrm-secrets, key: mariadb-password } }
-          ports:
-            - { containerPort: 3306, name: mysql }
-          resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits:   { cpu: 500m, memory: 512Mi }
-          livenessProbe:
-            exec: { command: ["healthcheck.sh", "--connect", "--innodb_initialized"] }
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 10
-          readinessProbe:
-            exec: { command: ["healthcheck.sh", "--connect", "--innodb_initialized"] }
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-          volumeMounts:
-            - { name: data, mountPath: /var/lib/mysql }
+      - name: mariadb
+        image: mariadb:11
+        args:
+        - --character-set-server=utf8mb4
+        - --collation-server=utf8mb4_unicode_ci
+        - --innodb-buffer-pool-size=128M
+        - --max-connections=50
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
+                mariadb-root-password}}
+        - name: MARIADB_DATABASE
+          value: espocrm
+        - name: MARIADB_USER
+          value: espocrm
+        - name: MARIADB_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
+                mariadb-password}}
+        ports:
+        - {containerPort: 3306, name: mysql}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        livenessProbe:
+          exec: {command: [healthcheck.sh, --connect, --innodb_initialized]}
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec: {command: [healthcheck.sh, --connect, --innodb_initialized]}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/mysql}
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: espocrm-mariadb-data
+      - name: data
+        persistentVolumeClaim:
+          claimName: espocrm-mariadb-data
 ---
 apiVersion: v1
 kind: Service
@@ -127,7 +97,7 @@ spec:
     app: espocrm
     component: mariadb
   ports:
-    - { port: 3306, targetPort: 3306, name: mysql }
+  - {port: 3306, targetPort: 3306, name: mysql}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -139,7 +109,7 @@ metadata:
     component: web
 spec:
   replicas: 1
-  strategy: { type: Recreate }
+  strategy: {type: Recreate}
   selector:
     matchLabels:
       app: espocrm
@@ -153,48 +123,49 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: espocrm
-          image: espocrm/espocrm:9
-          env:
-            - { name: ESPOCRM_DATABASE_PLATFORM, value: "Mysql" }
-            - { name: ESPOCRM_DATABASE_HOST,     value: "espocrm-mariadb" }
-            - { name: ESPOCRM_DATABASE_PORT,     value: "3306" }
-            - { name: ESPOCRM_DATABASE_NAME,     value: "espocrm" }
-            - { name: ESPOCRM_DATABASE_USER,     value: "espocrm" }
-            - name: ESPOCRM_DATABASE_PASSWORD
-              valueFrom: { secretKeyRef: { name: espocrm-secrets, key: mariadb-password } }
-            - name: ESPOCRM_ADMIN_USERNAME
-              valueFrom: { secretKeyRef: { name: espocrm-secrets, key: admin-username } }
-            - name: ESPOCRM_ADMIN_PASSWORD
-              valueFrom: { secretKeyRef: { name: espocrm-secrets, key: admin-password } }
-            - { name: ESPOCRM_SITE_URL,                value: "https://espocrm.cloudless.gr" }
-            - { name: ESPOCRM_CONFIG_USE_WEBSOCKET,    value: "false" }
-            - { name: ESPOCRM_CONFIG_DEFAULT_TIMEZONE, value: "Europe/Athens" }
-            - { name: ESPOCRM_CONFIG_DEFAULT_LANGUAGE, value: "en_US" }
-            - { name: ESPOCRM_CRON_ENABLED,            value: "true" }
-          ports:
-            - { containerPort: 80, name: http }
-          resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits:   { cpu: 1000m, memory: 768Mi }
-          livenessProbe:
-            httpGet: { path: /, port: 80 }
-            initialDelaySeconds: 180
-            periodSeconds: 30
-            timeoutSeconds: 10
-            failureThreshold: 5
-          readinessProbe:
-            httpGet: { path: /, port: 80 }
-            initialDelaySeconds: 90
-            periodSeconds: 15
-            timeoutSeconds: 10
-            failureThreshold: 6
-          volumeMounts:
-            - { name: data, mountPath: /var/www/html }
+      - name: espocrm
+        image: espocrm/espocrm:9
+        env:
+        - {name: ESPOCRM_DATABASE_PLATFORM, value: Mysql}
+        - {name: ESPOCRM_DATABASE_HOST, value: espocrm-mariadb}
+        - {name: ESPOCRM_DATABASE_PORT, value: '3306'}
+        - {name: ESPOCRM_DATABASE_NAME, value: espocrm}
+        - {name: ESPOCRM_DATABASE_USER, value: espocrm}
+        - name: ESPOCRM_DATABASE_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
+                mariadb-password}}
+        - name: ESPOCRM_ADMIN_USERNAME
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-username}}
+        - name: ESPOCRM_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-password}}
+        - {name: ESPOCRM_SITE_URL, value: https://espocrm.cloudless.gr}
+        - {name: ESPOCRM_CONFIG_USE_WEBSOCKET, value: 'false'}
+        - {name: ESPOCRM_CONFIG_DEFAULT_TIMEZONE, value: Europe/Athens}
+        - {name: ESPOCRM_CONFIG_DEFAULT_LANGUAGE, value: en_US}
+        - {name: ESPOCRM_CRON_ENABLED, value: 'true'}
+        ports:
+        - {containerPort: 80, name: http}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: 1000m, memory: 768Mi}
+        livenessProbe:
+          httpGet: {path: /, port: 80}
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet: {path: /, port: 80}
+          initialDelaySeconds: 90
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 6
+        volumeMounts:
+        - {name: data, mountPath: /var/www/html}
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: espocrm-app-data
+      - name: data
+        persistentVolumeClaim:
+          claimName: espocrm-app-data
 ---
 apiVersion: v1
 kind: Service
@@ -207,4 +178,4 @@ spec:
     app: espocrm
     component: web
   ports:
-    - { port: 80, targetPort: 80, nodePort: 30700, name: http }
+  - {port: 80, targetPort: 80, nodePort: 30700, name: http}

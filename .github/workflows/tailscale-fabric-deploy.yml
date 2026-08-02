@@ -24,89 +24,89 @@ jobs:
       TAILSCALE_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
       TS_OPERATOR_NS: tailscale
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Resolve OAuth + kubeconfig
-        run: |
-          set -euo pipefail
-          ID="${TS_CLIENT_ID:-${TAILSCALE_CLIENT_ID:-}}"
-          SECRET="${TS_CLIENT_SECRET:-${TAILSCALE_CLIENT_SECRET:-}}"
-          if [ -z "$SECRET" ]; then
-            SECRET="${{ secrets.TAILSCALE_OAUTH_SECRET }}"
-          fi
-          if [ -z "$ID" ] || [ -z "$SECRET" ]; then
-            echo "::error::Missing Tailscale OAuth (TS_CLIENT_ID/SECRET or TAILSCALE_OAUTH_*)"
-            exit 1
-          fi
-          echo "TS_CLIENT_ID=$ID" >> "$GITHUB_ENV"
-          echo "TS_CLIENT_SECRET=$SECRET" >> "$GITHUB_ENV"
+    - name: Resolve OAuth + kubeconfig
+      run: |
+        set -euo pipefail
+        ID="${TS_CLIENT_ID:-${TAILSCALE_CLIENT_ID:-}}"
+        SECRET="${TS_CLIENT_SECRET:-${TAILSCALE_CLIENT_SECRET:-}}"
+        if [ -z "$SECRET" ]; then
+          SECRET="${{ secrets.TAILSCALE_OAUTH_SECRET }}"
+        fi
+        if [ -z "$ID" ] || [ -z "$SECRET" ]; then
+          echo "::error::Missing Tailscale OAuth (TS_CLIENT_ID/SECRET or TAILSCALE_OAUTH_*)"
+          exit 1
+        fi
+        echo "TS_CLIENT_ID=$ID" >> "$GITHUB_ENV"
+        echo "TS_CLIENT_SECRET=$SECRET" >> "$GITHUB_ENV"
 
-          if [ -r /etc/rancher/k3s/k3s.yaml ]; then
-            if kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
-              echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> "$GITHUB_ENV"
-            else
-              echo "USE_SUDO_K3S=1" >> "$GITHUB_ENV"
-              echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> "$GITHUB_ENV"
-            fi
-          elif [ -n "${HOME:-}" ] && [ -r "$HOME/.kube/config" ]; then
-            echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+        if [ -r /etc/rancher/k3s/k3s.yaml ]; then
+          if kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
+            echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> "$GITHUB_ENV"
           else
-            echo "::error::No kubeconfig found on runner"
-            exit 1
+            echo "USE_SUDO_K3S=1" >> "$GITHUB_ENV"
+            echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> "$GITHUB_ENV"
           fi
+        elif [ -n "${HOME:-}" ] && [ -r "$HOME/.kube/config" ]; then
+          echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+        else
+          echo "::error::No kubeconfig found on runner"
+          exit 1
+        fi
 
-      - name: Ensure helm
-        run: |
-          set -euo pipefail
-          if ! command -v helm >/dev/null; then
-            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          fi
-          helm version -c
-          kubectl version --client
+    - name: Ensure helm
+      run: |
+        set -euo pipefail
+        if ! command -v helm >/dev/null; then
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        fi
+        helm version -c
+        kubectl version --client
 
-      - name: Deploy fabric
-        run: |
-          set -euo pipefail
-          run_deploy() {
+    - name: Deploy fabric
+      run: |
+        set -euo pipefail
+        run_deploy() {
+          bash infrastructure/tailscale/deploy.sh
+        }
+        if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
+          sudo -E env \
+            "PATH=$PATH" \
+            "HOME=$HOME" \
+            "TS_CLIENT_ID=$TS_CLIENT_ID" \
+            "TS_CLIENT_SECRET=$TS_CLIENT_SECRET" \
+            "TS_OPERATOR_NS=$TS_OPERATOR_NS" \
+            "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
             bash infrastructure/tailscale/deploy.sh
-          }
-          if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
-            sudo -E env \
-              "PATH=$PATH" \
-              "HOME=$HOME" \
-              "TS_CLIENT_ID=$TS_CLIENT_ID" \
-              "TS_CLIENT_SECRET=$TS_CLIENT_SECRET" \
-              "TS_OPERATOR_NS=$TS_OPERATOR_NS" \
-              "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
-              bash infrastructure/tailscale/deploy.sh
-          else
-            run_deploy
-          fi
+        else
+          run_deploy
+        fi
 
-      - name: Wait for Ready
-        run: |
-          set -euo pipefail
-          KCTL=(kubectl)
-          if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
-            KCTL=(sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl)
-          fi
-          "${KCTL[@]}" wait --for=condition=ProxyClassReady proxyclass/pi-fabric --timeout=3m || true
-          "${KCTL[@]}" wait --for=condition=ConnectorReady connector/k3s-cidrs --timeout=5m || \
-            "${KCTL[@]}" get connector k3s-cidrs -o yaml | tail -40
-          "${KCTL[@]}" wait --for=condition=ProxyGroupReady proxygroup/ingress --timeout=5m || \
-            "${KCTL[@]}" get proxygroup ingress -o yaml | tail -40
-          "${KCTL[@]}" wait --for=condition=ProxyGroupReady proxygroup/kube --timeout=5m || \
-            "${KCTL[@]}" get proxygroup kube -o yaml | tail -40
+    - name: Wait for Ready
+      run: |
+        set -euo pipefail
+        KCTL=(kubectl)
+        if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
+          KCTL=(sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl)
+        fi
+        "${KCTL[@]}" wait --for=condition=ProxyClassReady proxyclass/pi-fabric --timeout=3m || true
+        "${KCTL[@]}" wait --for=condition=ConnectorReady connector/k3s-cidrs --timeout=5m || \
+          "${KCTL[@]}" get connector k3s-cidrs -o yaml | tail -40
+        "${KCTL[@]}" wait --for=condition=ProxyGroupReady proxygroup/ingress --timeout=5m || \
+          "${KCTL[@]}" get proxygroup ingress -o yaml | tail -40
+        "${KCTL[@]}" wait --for=condition=ProxyGroupReady proxygroup/kube --timeout=5m || \
+          "${KCTL[@]}" get proxygroup kube -o yaml | tail -40
 
-      - name: Status
-        if: always()
-        run: |
-          set +e
-          KCTL=(kubectl)
-          if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
-            KCTL=(sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl)
-          fi
-          "${KCTL[@]}" get connector,proxygroup,proxyclass -A
-          "${KCTL[@]}" get pods -n tailscale -o wide
-          "${KCTL[@]}" get ingress -A | grep -iE 'NAME|tail' || true
-          "${KCTL[@]}" get svc -n monitoring kube-prom-grafana -o wide 2>/dev/null || true
+    - name: Status
+      if: always()
+      run: |
+        set +e
+        KCTL=(kubectl)
+        if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
+          KCTL=(sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl)
+        fi
+        "${KCTL[@]}" get connector,proxygroup,proxyclass -A
+        "${KCTL[@]}" get pods -n tailscale -o wide
+        "${KCTL[@]}" get ingress -A | grep -iE 'NAME|tail' || true
+        "${KCTL[@]}" get svc -n monitoring kube-prom-grafana -o wide 2>/dev/null || true

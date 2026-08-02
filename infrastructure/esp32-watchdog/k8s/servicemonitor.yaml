@@ -1,50 +1,40 @@
-# ServiceMonitor — tells the existing kube-prometheus-stack to scrape the ESP32
-# Prometheus operator in the monitoring namespace will pick this up automatically.
-#
-# The ESP32 has a static IP: 192.168.1.201  port: 9101
-# (set in cloudless-watchdog.yaml → wifi.manual_ip)
-#
-# Pattern: headless Service + Endpoints for a static out-of-cluster IP.
-# ExternalName services do NOT work with Prometheus ServiceMonitors — they
-# cannot be backed by Endpoints, so the scraper cannot resolve the target.
----
 # Headless service for the ESP32 static IP
 apiVersion: v1
 kind: Service
 metadata:
-  name:      esp32-watchdog-metrics
+  name: esp32-watchdog-metrics
   namespace: monitoring
   labels:
-    app:       esp32-watchdog
+    app: esp32-watchdog
     component: metrics
 spec:
   clusterIP: None   # headless — no kube-proxy, resolves directly via Endpoints
   ports:
-    - name:       metrics
-      port:       9101
-      protocol:   TCP
-      targetPort: 9101
+  - name: metrics
+    port: 9101
+    protocol: TCP
+    targetPort: 9101
 ---
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name:      esp32-watchdog-metrics
+  name: esp32-watchdog-metrics
   namespace: monitoring
   labels:
-    app:       esp32-watchdog
+    app: esp32-watchdog
     component: metrics
 subsets:
-  - addresses:
-      - ip: 192.168.1.201   # ESP32 static IP
-    ports:
-      - name:     metrics
-        port:     9101
-        protocol: TCP
+- addresses:
+  - ip: 192.168.1.201         # ESP32 static IP
+  ports:
+  - name: metrics
+    port: 9101
+    protocol: TCP
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name:      esp32-watchdog
+  name: esp32-watchdog
   namespace: monitoring
   labels:
     # Must match the Prometheus CR's serviceMonitorSelector
@@ -53,14 +43,14 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app:       esp32-watchdog
+      app: esp32-watchdog
       component: metrics
   namespaceSelector:
     matchNames:
-      - monitoring
+    - monitoring
   endpoints:
-    - port:            metrics
-      path:            /metrics
-      interval:        30s
-      scrapeTimeout:   10s
-      honorLabels:     true
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true

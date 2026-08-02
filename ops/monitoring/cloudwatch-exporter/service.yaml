@@ -8,10 +8,10 @@ metadata:
   namespace: monitoring
 spec:
   ports:
-    - name: http
-      port: 9106
-      protocol: TCP
-      targetPort: http
+  - name: http
+    port: 9106
+    protocol: TCP
+    targetPort: http
   selector:
     app.kubernetes.io/name: cloudless-cloudwatch-exporter
   type: ClusterIP

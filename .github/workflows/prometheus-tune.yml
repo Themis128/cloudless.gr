@@ -12,8 +12,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/prometheus-tune.yml"
-      - "scripts/prometheus-tune.sh"
+    - .github/workflows/prometheus-tune.yml
+    - scripts/prometheus-tune.sh
 
 permissions:
   contents: read
@@ -25,25 +25,25 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Tune Prometheus rules
-        run: bash scripts/prometheus-tune.sh 2>&1 | tee prom-tune.log
+    - name: Tune Prometheus rules
+      run: bash scripts/prometheus-tune.sh 2>&1 | tee prom-tune.log
 
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          { echo '# Prometheus tune — '"$(date -u '+%Y-%m-%d %H:%M:%SZ')"; echo; echo '```'; cat prom-tune.log 2>/dev/null || echo '(no log)'; echo '```'; } > prom-comment.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file prom-comment.md
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        { echo '# Prometheus tune — '"$(date -u '+%Y-%m-%d %H:%M:%SZ')"; echo; echo '```'; cat prom-tune.log 2>/dev/null || echo '(no log)'; echo '```'; } > prom-comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file prom-comment.md

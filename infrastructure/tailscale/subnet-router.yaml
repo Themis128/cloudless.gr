@@ -1,3 +1,0 @@
-# DEPRECATED — replaced by connector.yaml (Connector CRD).
-# ProxyGroup cannot advertise subnet routes; use Connector.subnetRouter.
-# See: https://tailscale.com/docs/kubernetes-operator/connector/deploy-subnet-router

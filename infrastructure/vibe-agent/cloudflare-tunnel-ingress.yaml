@@ -1,12 +1,3 @@
-# Adds agent.cloudless.gr and vibe.cloudless.gr ingress rules to cloudflared
-# on BOTH cluster nodes (omv + omv-ha), then restarts cloudflared on each.
-#
-# Apply:  kubectl apply -f infrastructure/vibe-agent/cloudflare-tunnel-ingress.yaml
-# Verify: kubectl logs -n monitoring cf-ingress-vibe-omv
-#         kubectl logs -n monitoring cf-ingress-vibe-omvha
-# Cleanup: kubectl delete -f infrastructure/vibe-agent/cloudflare-tunnel-ingress.yaml
-
----
 # ── omv (control-plane Pi 5) ──────────────────────────────────────────────────
 apiVersion: v1
 kind: Pod
@@ -20,79 +11,79 @@ spec:
   hostNetwork: true
   restartPolicy: Never
   containers:
-    - name: edit
-      image: alpine:3
-      securityContext:
-        privileged: true
-      command:
-        - sh
-        - -c
-        - |
-          apk add --no-cache util-linux python3 >/dev/null 2>&1
-          nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
-            set -e
-            CFG=/etc/cloudflared/config.yml
+  - name: edit
+    image: alpine:3
+    securityContext:
+      privileged: true
+    command:
+    - sh
+    - -c
+    - |
+      apk add --no-cache util-linux python3 >/dev/null 2>&1
+      nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
+        set -e
+        CFG=/etc/cloudflared/config.yml
 
-            python3 - "$CFG" <<EOF
-          import sys, yaml
+        python3 - "$CFG" <<EOF
+      import sys, yaml
 
-          p = sys.argv[1]
-          with open(p) as f:
-              cfg = yaml.safe_load(f)
+      p = sys.argv[1]
+      with open(p) as f:
+          cfg = yaml.safe_load(f)
 
-          ing = cfg.get("ingress", [])
-          existing = {r.get("hostname") for r in ing}
+      ing = cfg.get("ingress", [])
+      existing = {r.get("hostname") for r in ing}
 
-          new_rules = [
-            {
-              "hostname": "agent.cloudless.gr",
-              "service":  "http://192.168.1.128:30924",
-              "originRequest": {
-                "connectTimeout": "15s",
-                "tcpKeepAlive":   "30s",
-                "noTLSVerify":    False,
-                "httpHostHeader": "agent.cloudless.gr",
-              },
-            },
-            {
-              "hostname": "vibe.cloudless.gr",
-              "service":  "http://192.168.1.128:30301",
-              "originRequest": {
-                "connectTimeout": "15s",
-                "tcpKeepAlive":   "30s",
-                "noTLSVerify":    False,
-                "httpHostHeader": "vibe.cloudless.gr",
-              },
-            },
-          ]
+      new_rules = [
+        {
+          "hostname": "agent.cloudless.gr",
+          "service":  "http://192.168.1.128:30924",
+          "originRequest": {
+            "connectTimeout": "15s",
+            "tcpKeepAlive":   "30s",
+            "noTLSVerify":    False,
+            "httpHostHeader": "agent.cloudless.gr",
+          },
+        },
+        {
+          "hostname": "vibe.cloudless.gr",
+          "service":  "http://192.168.1.128:30301",
+          "originRequest": {
+            "connectTimeout": "15s",
+            "tcpKeepAlive":   "30s",
+            "noTLSVerify":    False,
+            "httpHostHeader": "vibe.cloudless.gr",
+          },
+        },
+      ]
 
-          # Find catch-all index; insert before it
-          idx = len(ing) - 1
-          for i, r in enumerate(ing):
-              if "http_status" in str(r.get("service", "")):
-                  idx = i
-                  break
+      # Find catch-all index; insert before it
+      idx = len(ing) - 1
+      for i, r in enumerate(ing):
+          if "http_status" in str(r.get("service", "")):
+              idx = i
+              break
 
-          added = []
-          for rule in reversed(new_rules):
-              if rule["hostname"] not in existing:
-                  ing.insert(idx, rule)
-                  added.append(rule["hostname"])
+      added = []
+      for rule in reversed(new_rules):
+          if rule["hostname"] not in existing:
+              ing.insert(idx, rule)
+              added.append(rule["hostname"])
 
-          if not added:
-              print("All rules already present — no changes.")
-              sys.exit(0)
+      if not added:
+          print("All rules already present — no changes.")
+          sys.exit(0)
 
-          cfg["ingress"] = ing
-          with open(p, "w") as f:
-              yaml.safe_dump(cfg, f, sort_keys=False)
-          print("Added:", added, "| total rules:", len(ing))
-          EOF
+      cfg["ingress"] = ing
+      with open(p, "w") as f:
+          yaml.safe_dump(cfg, f, sort_keys=False)
+      print("Added:", added, "| total rules:", len(ing))
+      EOF
 
-            systemctl restart cloudflared
-            sleep 3
-            systemctl is-active cloudflared
-          '
+        systemctl restart cloudflared
+        sleep 3
+        systemctl is-active cloudflared
+      '
 
 ---
 # ── omv-ha (worker Pi 3) ─────────────────────────────────────────────────────
@@ -108,75 +99,75 @@ spec:
   hostNetwork: true
   restartPolicy: Never
   containers:
-    - name: edit
-      image: alpine:3
-      securityContext:
-        privileged: true
-      command:
-        - sh
-        - -c
-        - |
-          apk add --no-cache util-linux python3 >/dev/null 2>&1
-          nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
-            set -e
-            CFG=/etc/cloudflared/config.yml
+  - name: edit
+    image: alpine:3
+    securityContext:
+      privileged: true
+    command:
+    - sh
+    - -c
+    - |
+      apk add --no-cache util-linux python3 >/dev/null 2>&1
+      nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
+        set -e
+        CFG=/etc/cloudflared/config.yml
 
-            python3 - "$CFG" <<EOF
-          import sys, yaml
+        python3 - "$CFG" <<EOF
+      import sys, yaml
 
-          p = sys.argv[1]
-          with open(p) as f:
-              cfg = yaml.safe_load(f)
+      p = sys.argv[1]
+      with open(p) as f:
+          cfg = yaml.safe_load(f)
 
-          ing = cfg.get("ingress", [])
-          existing = {r.get("hostname") for r in ing}
+      ing = cfg.get("ingress", [])
+      existing = {r.get("hostname") for r in ing}
 
-          new_rules = [
-            {
-              "hostname": "agent.cloudless.gr",
-              "service":  "http://192.168.1.128:30924",
-              "originRequest": {
-                "connectTimeout": "15s",
-                "tcpKeepAlive":   "30s",
-                "noTLSVerify":    False,
-                "httpHostHeader": "agent.cloudless.gr",
-              },
-            },
-            {
-              "hostname": "vibe.cloudless.gr",
-              "service":  "http://192.168.1.128:30301",
-              "originRequest": {
-                "connectTimeout": "15s",
-                "tcpKeepAlive":   "30s",
-                "noTLSVerify":    False,
-                "httpHostHeader": "vibe.cloudless.gr",
-              },
-            },
-          ]
+      new_rules = [
+        {
+          "hostname": "agent.cloudless.gr",
+          "service":  "http://192.168.1.128:30924",
+          "originRequest": {
+            "connectTimeout": "15s",
+            "tcpKeepAlive":   "30s",
+            "noTLSVerify":    False,
+            "httpHostHeader": "agent.cloudless.gr",
+          },
+        },
+        {
+          "hostname": "vibe.cloudless.gr",
+          "service":  "http://192.168.1.128:30301",
+          "originRequest": {
+            "connectTimeout": "15s",
+            "tcpKeepAlive":   "30s",
+            "noTLSVerify":    False,
+            "httpHostHeader": "vibe.cloudless.gr",
+          },
+        },
+      ]
 
-          idx = len(ing) - 1
-          for i, r in enumerate(ing):
-              if "http_status" in str(r.get("service", "")):
-                  idx = i
-                  break
+      idx = len(ing) - 1
+      for i, r in enumerate(ing):
+          if "http_status" in str(r.get("service", "")):
+              idx = i
+              break
 
-          added = []
-          for rule in reversed(new_rules):
-              if rule["hostname"] not in existing:
-                  ing.insert(idx, rule)
-                  added.append(rule["hostname"])
+      added = []
+      for rule in reversed(new_rules):
+          if rule["hostname"] not in existing:
+              ing.insert(idx, rule)
+              added.append(rule["hostname"])
 
-          if not added:
-              print("All rules already present — no changes.")
-              sys.exit(0)
+      if not added:
+          print("All rules already present — no changes.")
+          sys.exit(0)
 
-          cfg["ingress"] = ing
-          with open(p, "w") as f:
-              yaml.safe_dump(cfg, f, sort_keys=False)
-          print("Added:", added, "| total rules:", len(ing))
-          EOF
+      cfg["ingress"] = ing
+      with open(p, "w") as f:
+          yaml.safe_dump(cfg, f, sort_keys=False)
+      print("Added:", added, "| total rules:", len(ing))
+      EOF
 
-            systemctl restart cloudflared
-            sleep 3
-            systemctl is-active cloudflared
-          '
+        systemctl restart cloudflared
+        sleep 3
+        systemctl is-active cloudflared
+      '

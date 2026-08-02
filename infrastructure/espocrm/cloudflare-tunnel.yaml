@@ -1,18 +1,3 @@
-# Cloudflare Tunnel route: espocrm.cloudless.gr → EspoCRM NodePort on omv-main
-#
-# Same tunnel as logs.cloudless.gr and postiz.cloudless.gr
-# (ID e977a490-58c5-4fdb-9155-86832e3e636a).
-#
-# DNS record to add in Cloudflare (Themis128 zone cloudless.gr):
-#   espocrm.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
-#   (proxied=true, TTL=auto)
-#
-# To activate on omv-main:
-#   1. Append the ingress rule below to /etc/cloudflared/config.yml under
-#      the existing `ingress:` key, BEFORE the catch-all `service: http_status:404` rule.
-#   2. sudo systemctl reload cloudflared
-#   3. Verify: curl -I https://espocrm.cloudless.gr   # expect 200 (login page)
----
 # Ingress rule fragment — paste into /etc/cloudflared/config.yml
 ingress_rule:
   hostname: espocrm.cloudless.gr

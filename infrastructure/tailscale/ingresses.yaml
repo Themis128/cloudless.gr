@@ -18,8 +18,8 @@ metadata:
 spec:
   ingressClassName: tailscale
   tls:
-    - hosts:
-        - grafana
+  - hosts:
+    - grafana
   defaultBackend:
     service:
       name: kube-prom-grafana
@@ -40,8 +40,8 @@ metadata:
 spec:
   ingressClassName: tailscale
   tls:
-    - hosts:
-        - meilisearch
+  - hosts:
+    - meilisearch
   defaultBackend:
     service:
       name: meilisearch

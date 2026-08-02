@@ -4,20 +4,20 @@ services:
     image: mcr.microsoft.com/playwright/mcp:latest
     container_name: cloudless-playwright-mcp
     environment:
-      - PLAYWRIGHT_DEBUG=1
-      - BROWSER=chromium
-      - PLAYWRIGHT_HEADLESS=true
-      - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
+    - PLAYWRIGHT_DEBUG=1
+    - BROWSER=chromium
+    - PLAYWRIGHT_HEADLESS=true
+    - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
     volumes:
-      - /home/tbaltzakis/cloudless.gr:/workspace:cached
-      - playwright-cache:/ms-playwright
-      - /home/tbaltzakis/cloudless.gr/node_modules:/workspace/node_modules:ro
+    - /home/tbaltzakis/cloudless.gr:/workspace:cached
+    - playwright-cache:/ms-playwright
+    - /home/tbaltzakis/cloudless.gr/node_modules:/workspace/node_modules:ro
     networks:
-      - cloudless-network
+    - cloudless-network
     ports:
-      - "8888:8888"
+    - 8888:8888
     profiles:
-      - mcp
+    - mcp
 
   # Enhanced Playwright runner for E2E tests (local execution)
   playwright-runner:
@@ -25,14 +25,14 @@ services:
     container_name: cloudless-playwright-runner
     working_dir: /workspace
     volumes:
-      - /home/tbaltzakis/cloudless.gr:/workspace:cached
-      - playwright-cache:/ms-playwright
+    - /home/tbaltzakis/cloudless.gr:/workspace:cached
+    - playwright-cache:/ms-playwright
     environment:
-      - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
-      - CI=false
-      - PLAYWRIGHT_HEADLESS=true
+    - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
+    - CI=false
+    - PLAYWRIGHT_HEADLESS=true
     networks:
-      - cloudless-network
+    - cloudless-network
     command: >
       bash -c "npx -y @playwright/mcp && echo 'Playwright MCP ready'"
 
@@ -44,14 +44,14 @@ services:
     container_name: cloudless-pages-mcp
     working_dir: /app
     environment:
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}
+    - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}
     volumes:
-      - /home/tbaltzakis/cloudless.gr:/workspace:cached
+    - /home/tbaltzakis/cloudless.gr:/workspace:cached
     networks:
-      - cloudless-network
+    - cloudless-network
     profiles:
-      - mcp
+    - mcp
     command: node /app/src/index.js
 
 volumes:

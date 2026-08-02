@@ -23,59 +23,60 @@ spec:
         app: metabase
     spec:
       initContainers:
-        - name: install-duckdb-driver
-          image: alpine:3
-          command: ["sh", "-c"]
-          args:
-            - |
-              wget -q https://github.com/motherduckdb/metabase_duckdb_driver/releases/download/0.4.1/duckdb.metabase-driver.jar \
-                -O /plugins/duckdb.metabase-driver.jar &&
-              echo "23a00260cc8d574e51c2e4cc35696e3f3da06ff7e52bb673a103da590f04fd0b  /plugins/duckdb.metabase-driver.jar" | sha256sum -c - &&
-              chmod 777 /plugins && chmod 644 /plugins/duckdb.metabase-driver.jar
-          env:
-            - { name: MB_PLUGINS_DIR, value: /plugins }
-          volumeMounts:
-            - { name: plugins, mountPath: /plugins }
+      - name: install-duckdb-driver
+        image: alpine:3
+        command: [sh, -c]
+        args:
+        - |
+          wget -q https://github.com/motherduckdb/metabase_duckdb_driver/releases/download/0.4.1/duckdb.metabase-driver.jar \
+            -O /plugins/duckdb.metabase-driver.jar &&
+          echo "23a00260cc8d574e51c2e4cc35696e3f3da06ff7e52bb673a103da590f04fd0b  /plugins/duckdb.metabase-driver.jar" | sha256sum -c - &&
+          chmod 777 /plugins && chmod 644 /plugins/duckdb.metabase-driver.jar
+        env:
+        - {name: MB_PLUGINS_DIR, value: /plugins}
+        volumeMounts:
+        - {name: plugins, mountPath: /plugins}
       containers:
-        - name: metabase
-          image: metabase/metabase:v0.55.13
-          env:
-            - { name: MB_DB_TYPE,        value: h2 }
-            - { name: MB_DB_FILE,        value: /metabase-data/metabase.db }
-            - { name: JAVA_OPTS,         value: "-Xmx768m -Xms128m" }
-            - { name: MB_JETTY_MAXTHREADS, value: "20" }
-            - { name: MB_JETTY_LOG_LEVEL, value: WARN }
-            - { name: MB_LOG_LEVEL,      value: WARN }
-            - { name: MB_SITE_URL,       value: "https://metrics.cloudless.gr" }
-            - { name: MB_EMOJI_IN_LOGS,  value: "false" }
-            - { name: MB_PLUGINS_DIR,    value: /plugins }
-          ports:
-            - containerPort: 3000
-              name: http
-          livenessProbe:
-            httpGet: { path: /api/health, port: 3000 }
-            initialDelaySeconds: 300
-            periodSeconds: 30
-            timeoutSeconds: 10
-            failureThreshold: 3
-          readinessProbe:
-            httpGet: { path: /api/health, port: 3000 }
-            initialDelaySeconds: 240
-            periodSeconds: 15
-            timeoutSeconds: 10
-            failureThreshold: 6
-          resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits:   { cpu: "1",  memory: 1Gi }
-          volumeMounts:
-            - { mountPath: /etc/metabase,  name: logback-config }
-            - { mountPath: /metabase-data, name: data }
-            - { mountPath: /plugins,       name: plugins }
-            - { mountPath: /duckdb-data,   name: duckdb-data, readOnly: true }
+      - name: metabase
+        image: metabase/metabase:v0.55.13
+        env:
+        - {name: MB_DB_TYPE, value: h2}
+        - {name: MB_DB_FILE, value: /metabase-data/metabase.db}
+        - {name: JAVA_OPTS, value: -Xmx768m -Xms128m}
+        - {name: MB_JETTY_MAXTHREADS, value: '20'}
+        - {name: MB_JETTY_LOG_LEVEL, value: WARN}
+        - {name: MB_LOG_LEVEL, value: WARN}
+        - {name: MB_SITE_URL, value: https://metrics.cloudless.gr}
+        - {name: MB_EMOJI_IN_LOGS, value: 'false'}
+        - {name: MB_PLUGINS_DIR, value: /plugins}
+        ports:
+        - containerPort: 3000
+          name: http
+        livenessProbe:
+          httpGet: {path: /api/health, port: 3000}
+          initialDelaySeconds: 300
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /api/health, port: 3000}
+          initialDelaySeconds: 240
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 6
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: '1', memory: 1Gi}
+        volumeMounts:
+        - {mountPath: /etc/metabase, name: logback-config}
+        - {mountPath: /metabase-data, name: data}
+        - {mountPath: /plugins, name: plugins}
+        - {mountPath: /duckdb-data, name: duckdb-data, readOnly: true}
       nodeSelector:
         kubernetes.io/hostname: omv
       volumes:
-        - { name: logback-config, configMap: { name: metabase-logback } }
-        - { name: data,           persistentVolumeClaim: { claimName: metabase-data } }
-        - { name: plugins,        emptyDir: {} }
-        - { name: duckdb-data,    persistentVolumeClaim: { claimName: duckdb-data, readOnly: true } }
+      - {name: logback-config, configMap: {name: metabase-logback}}
+      - {name: data, persistentVolumeClaim: {claimName: metabase-data}}
+      - {name: plugins, emptyDir: {}}
+      - {name: duckdb-data, persistentVolumeClaim: {claimName: duckdb-data, 
+            readOnly: true}}

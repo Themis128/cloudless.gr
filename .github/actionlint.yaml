@@ -6,7 +6,7 @@
 # and the RUNNER_GENERIC failover (see CLAUDE.md → CI Runner Failover / Deployment).
 self-hosted-runner:
   labels:
-    - omv
-    - pi
-    - build
-    - legion
+  - omv
+  - pi
+  - build
+  - legion

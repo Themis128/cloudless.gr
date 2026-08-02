@@ -24,18 +24,18 @@ name: cloudless.gr HTTPS health probe
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+  - cron: 0 */6 * * *
   push:
     branches: [main]
     paths:
-      - ".github/workflows/cloudless-https-health-probe.yml"
-      - "docs/TAILSCALE-FABRIC.md"
+    - .github/workflows/cloudless-https-health-probe.yml
+    - docs/TAILSCALE-FABRIC.md
   workflow_dispatch:
     inputs:
       skip_tls_floor:
-        description: "Skip TLS 1.0/1.1 floor check (set to 'true' to bypass)"
+        description: Skip TLS 1.0/1.1 floor check (set to 'true' to bypass)
         required: false
-        default: "false"
+        default: 'false'
 
 permissions:
   contents: read
@@ -44,9 +44,9 @@ env:
   MIN_DAYS_REMAINING: 14
   SKIP_TLS_FLOOR: ${{ inputs.skip_tls_floor || 'false' }}
   # Private fabric — MagicDNS host for github-omv (never hardcode CGNAT).
-  TS_ORIGIN_HOST: "github-omv.tail4ecae1.ts.net"
+  TS_ORIGIN_HOST: github-omv.tail4ecae1.ts.net
   # Same NodePort Cloudflare Tunnel terminates on (prod origin).
-  TS_ORIGIN_NODEPORT: "30300"
+  TS_ORIGIN_NODEPORT: '30300'
 
 jobs:
   probe-primary:
@@ -54,447 +54,447 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      PROBE_HOST: "cloudless.gr"
+      PROBE_HOST: cloudless.gr
     steps:
-      - name: TLS handshake + cert validity
-        run: |
-          set -euo pipefail
+    - name: TLS handshake + cert validity
+      run: |
+        set -euo pipefail
 
-          echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
-          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
-            echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare edge or upstream offline."
-            exit 1
-          fi
-          echo "  ✓ TCP 443 open"
-
-          echo "→ TLS handshake (SNI=${PROBE_HOST})"
-          set +e
-          timeout 20 openssl s_client \
-            -connect "${PROBE_HOST}:443" \
-            -servername "${PROBE_HOST}" \
-            -showcerts -verify_return_error \
-            < /dev/null > /tmp/openssl.out 2>&1
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::TLS handshake failed (exit=${rc})"
-            echo "::group::openssl output"
-            cat /tmp/openssl.out >&2
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          echo "→ Verifying TLS version floor (reject 1.0/1.1, allow 1.2+)"
-          if [ "${SKIP_TLS_FLOOR}" != "true" ]; then
-            if timeout 10 openssl s_client -tls1 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls10.out 2>&1; then
-              echo "::error::TLS 1.0 handshake unexpectedly succeeded on ${PROBE_HOST}."
-              exit 1
-            fi
-            if timeout 10 openssl s_client -tls1_1 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls11.out 2>&1; then
-              echo "::error::TLS 1.1 handshake unexpectedly succeeded on ${PROBE_HOST}."
-              exit 1
-            fi
-            if ! timeout 10 openssl s_client -tls1_2 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls12.out 2>&1; then
-              echo "::error::TLS 1.2 handshake failed on ${PROBE_HOST}."
-              cat /tmp/tls12.out >&2
-              exit 1
-            fi
-            echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
-          fi
-
-          cert=$(cat /tmp/openssl.out)
-          leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
-
-          not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
-          not_after_epoch=$(date -d "$not_after" +%s)
-          days_left=$(( (not_after_epoch - $(date +%s)) / 86400 ))
-          echo "→ notAfter: ${not_after} (${days_left} days remaining)"
-
-          if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
-            echo "::error::Cert for ${PROBE_HOST} expires in ${days_left} days (< ${MIN_DAYS_REMAINING})."
-            exit 1
-          fi
-
-          san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
-          if echo "$san" | grep -qE "DNS:${PROBE_HOST}(\b|$)"; then
-            echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
-          else
-            echo "::error::Cert at ${PROBE_HOST} does not include ${PROBE_HOST} in SAN: ${san}"
-            exit 1
-          fi
-
-          echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
-
-      - name: GET /api/health
-        id: health
-        run: |
-          set -euo pipefail
-          echo "→ GET https://${PROBE_HOST}/api/health"
-          response=$(curl -sS \
-            --max-time 20 \
-            --retry 2 --retry-delay 10 --retry-all-errors \
-            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "https://${PROBE_HOST}/api/health" || echo "000|n/a")
-          code="${response%%|*}"
-          elapsed="${response#*|}"
-          body=$(cat /tmp/body 2>/dev/null || true)
-          echo "  → HTTP ${code} in ${elapsed}"
-          echo "  → body: $(head -c 300 <<<"$body")"
-
-          challenged=0
-          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
-            challenged=1
-          fi
-
-          if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
-            status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
-            if [ "${status}" != "ok" ]; then
-              echo "::warning::${PROBE_HOST}/api/health returned 200 but status field is '${status}' (expected 'ok')"
-            fi
-            {
-              echo "HEALTH_STATUS=${status}"
-              echo "HEALTH_ELAPSED=${elapsed}"
-              echo "HEALTH_VIA=public"
-            } >> "$GITHUB_ENV"
-            echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
-            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
-            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          # 502/503 from Worker/Tunnel while TLS works = edge hop flap or origin down.
-          # Probe fabric next so the error message distinguishes the two.
-          if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
-            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
-            echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
-            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          echo "::error::${PROBE_HOST}/api/health returned ${code}."
+        echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
+        if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
+          echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare edge or upstream offline."
           exit 1
+        fi
+        echo "  ✓ TCP 443 open"
 
-      - name: Tailscale (private fabric)
-        if: steps.health.outputs.need_origin_fallback == 'true'
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+        echo "→ TLS handshake (SNI=${PROBE_HOST})"
+        set +e
+        timeout 20 openssl s_client \
+          -connect "${PROBE_HOST}:443" \
+          -servername "${PROBE_HOST}" \
+          -showcerts -verify_return_error \
+          < /dev/null > /tmp/openssl.out 2>&1
+        rc=$?
+        set -e
+        if [ "$rc" -ne 0 ]; then
+          echo "::error::TLS handshake failed (exit=${rc})"
+          echo "::group::openssl output"
+          cat /tmp/openssl.out >&2
+          echo "::endgroup::"
+          exit 1
+        fi
 
-      - name: GET /api/health via private fabric (MagicDNS NodePort)
-        if: steps.health.outputs.need_origin_fallback == 'true'
-        run: |
-          set -euo pipefail
-
-          echo "→ tailscale status (snippet)"
-          tailscale status | head -20 || true
-
-          # Resolve MagicDNS only after join — CGNAT addresses rotate.
-          echo "→ resolve ${TS_ORIGIN_HOST}"
-          getent hosts "${TS_ORIGIN_HOST}" || true
-          IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
-          if [ -z "${IP}" ]; then
-            echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+        echo "→ Verifying TLS version floor (reject 1.0/1.1, allow 1.2+)"
+        if [ "${SKIP_TLS_FLOOR}" != "true" ]; then
+          if timeout 10 openssl s_client -tls1 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls10.out 2>&1; then
+            echo "::error::TLS 1.0 handshake unexpectedly succeeded on ${PROBE_HOST}."
             exit 1
           fi
-          echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
-
-          # L4: same NodePort Cloudflare Tunnel uses (production origin).
-          URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
-          echo "→ GET ${URL} (Host: ${PROBE_HOST})"
-          : > /tmp/body
-          response=$(curl -sS \
-            --max-time 25 \
-            --retry 3 --retry-delay 5 \
-            -H "Host: ${PROBE_HOST}" \
-            -H "X-Forwarded-Proto: https" \
-            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "${URL}" || echo "000|n/a")
-          code="${response%%|*}"
-          elapsed="${response#*|}"
-          body=$(cat /tmp/body 2>/dev/null || true)
-          echo "  → HTTP ${code} in ${elapsed}"
-          echo "  → body: $(head -c 300 <<<"$body")"
-
-          if [ "${code}" != "200" ]; then
-            echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
+          if timeout 10 openssl s_client -tls1_1 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls11.out 2>&1; then
+            echo "::error::TLS 1.1 handshake unexpectedly succeeded on ${PROBE_HOST}."
             exit 1
           fi
+          if ! timeout 10 openssl s_client -tls1_2 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls12.out 2>&1; then
+            echo "::error::TLS 1.2 handshake failed on ${PROBE_HOST}."
+            cat /tmp/tls12.out >&2
+            exit 1
+          fi
+          echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
+        fi
 
+        cert=$(cat /tmp/openssl.out)
+        leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
+
+        not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
+        not_after_epoch=$(date -d "$not_after" +%s)
+        days_left=$(( (not_after_epoch - $(date +%s)) / 86400 ))
+        echo "→ notAfter: ${not_after} (${days_left} days remaining)"
+
+        if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
+          echo "::error::Cert for ${PROBE_HOST} expires in ${days_left} days (< ${MIN_DAYS_REMAINING})."
+          exit 1
+        fi
+
+        san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
+        if echo "$san" | grep -qE "DNS:${PROBE_HOST}(\b|$)"; then
+          echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
+        else
+          echo "::error::Cert at ${PROBE_HOST} does not include ${PROBE_HOST} in SAN: ${san}"
+          exit 1
+        fi
+
+        echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
+
+    - name: GET /api/health
+      id: health
+      run: |
+        set -euo pipefail
+        echo "→ GET https://${PROBE_HOST}/api/health"
+        response=$(curl -sS \
+          --max-time 20 \
+          --retry 2 --retry-delay 10 --retry-all-errors \
+          -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+          -o /tmp/body -w "%{http_code}|%{time_total}s" \
+          "https://${PROBE_HOST}/api/health" || echo "000|n/a")
+        code="${response%%|*}"
+        elapsed="${response#*|}"
+        body=$(cat /tmp/body 2>/dev/null || true)
+        echo "  → HTTP ${code} in ${elapsed}"
+        echo "  → body: $(head -c 300 <<<"$body")"
+
+        challenged=0
+        if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
+          challenged=1
+        fi
+
+        if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
-            exit 1
+            echo "::warning::${PROBE_HOST}/api/health returned 200 but status field is '${status}' (expected 'ok')"
           fi
-
-          # Public path was 502/503 but origin is healthy → Tunnel/Worker flap (not app crash).
-          if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
-            echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
-            exit 1
-          fi
-
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_ELAPSED=${elapsed}"
-            echo "HEALTH_VIA=tailscale-nodeport-magicdns"
-            echo "HEALTH_TS_IP=${IP}"
+            echo "HEALTH_VIA=public"
           } >> "$GITHUB_ENV"
+          echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
 
-      - name: Step summary
-        if: success()
-        run: |
-          {
-            echo "## PRIMARY HTTPS Health — cloudless.gr"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Host | \`${PROBE_HOST}\` |"
-            echo "| Path | Cloudflare → Workers (cloudless2) → Tunnel → Pi |"
-            echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
-            echo "| Cert days remaining | ${DAYS_LEFT} |"
-            echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
-            echo "| health.status | ${HEALTH_STATUS} |"
-            echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+        if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
+          echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
+          echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        # 502/503 from Worker/Tunnel while TLS works = edge hop flap or origin down.
+        # Probe fabric next so the error message distinguishes the two.
+        if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
+          echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
+          echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
+          echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
+          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        echo "::error::${PROBE_HOST}/api/health returned ${code}."
+        exit 1
+
+    - name: Tailscale (private fabric)
+      if: steps.health.outputs.need_origin_fallback == 'true'
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+
+    - name: GET /api/health via private fabric (MagicDNS NodePort)
+      if: steps.health.outputs.need_origin_fallback == 'true'
+      run: |
+        set -euo pipefail
+
+        echo "→ tailscale status (snippet)"
+        tailscale status | head -20 || true
+
+        # Resolve MagicDNS only after join — CGNAT addresses rotate.
+        echo "→ resolve ${TS_ORIGIN_HOST}"
+        getent hosts "${TS_ORIGIN_HOST}" || true
+        IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
+        if [ -z "${IP}" ]; then
+          echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+          exit 1
+        fi
+        echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
+
+        # L4: same NodePort Cloudflare Tunnel uses (production origin).
+        URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
+        echo "→ GET ${URL} (Host: ${PROBE_HOST})"
+        : > /tmp/body
+        response=$(curl -sS \
+          --max-time 25 \
+          --retry 3 --retry-delay 5 \
+          -H "Host: ${PROBE_HOST}" \
+          -H "X-Forwarded-Proto: https" \
+          -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+          -o /tmp/body -w "%{http_code}|%{time_total}s" \
+          "${URL}" || echo "000|n/a")
+        code="${response%%|*}"
+        elapsed="${response#*|}"
+        body=$(cat /tmp/body 2>/dev/null || true)
+        echo "  → HTTP ${code} in ${elapsed}"
+        echo "  → body: $(head -c 300 <<<"$body")"
+
+        if [ "${code}" != "200" ]; then
+          echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
+          exit 1
+        fi
+
+        status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+        if [ "${status}" != "ok" ]; then
+          echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
+          exit 1
+        fi
+
+        # Public path was 502/503 but origin is healthy → Tunnel/Worker flap (not app crash).
+        if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
+          echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
+          exit 1
+        fi
+
+        {
+          echo "HEALTH_STATUS=${status}"
+          echo "HEALTH_ELAPSED=${elapsed}"
+          echo "HEALTH_VIA=tailscale-nodeport-magicdns"
+          echo "HEALTH_TS_IP=${IP}"
+        } >> "$GITHUB_ENV"
+
+    - name: Step summary
+      if: success()
+      run: |
+        {
+          echo "## PRIMARY HTTPS Health — cloudless.gr"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Host | \`${PROBE_HOST}\` |"
+          echo "| Path | Cloudflare → Workers (cloudless2) → Tunnel → Pi |"
+          echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
+          echo "| Cert days remaining | ${DAYS_LEFT} |"
+          echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
+          echo "| health.status | ${HEALTH_STATUS} |"
+          echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
+        } >> "$GITHUB_STEP_SUMMARY"
 
   probe-standby:
     name: Probe STANDBY (pi-origin.cloudless.gr via Tunnel → Pi/k3s)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      PROBE_HOST: "pi-origin.cloudless.gr"
+      PROBE_HOST: pi-origin.cloudless.gr
     steps:
-      - name: TLS handshake + cert validity
-        run: |
-          set -euo pipefail
+    - name: TLS handshake + cert validity
+      run: |
+        set -euo pipefail
 
-          echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
-          if ! timeout 15 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
-            echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare Tunnel or Pi/k3s offline."
-            exit 1
-          fi
-          echo "  ✓ TCP 443 open"
-
-          echo "→ TLS handshake (SNI=${PROBE_HOST})"
-          set +e
-          timeout 20 openssl s_client \
-            -connect "${PROBE_HOST}:443" \
-            -servername "${PROBE_HOST}" \
-            -showcerts -verify_return_error \
-            < /dev/null > /tmp/openssl.out 2>&1
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::TLS handshake failed for ${PROBE_HOST} (exit=${rc})"
-            echo "::group::openssl output"
-            cat /tmp/openssl.out >&2
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          echo "→ Verifying TLS version floor"
-          if [ "${SKIP_TLS_FLOOR}" != "true" ]; then
-            if timeout 10 openssl s_client -tls1 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls10.out 2>&1; then
-              echo "::error::TLS 1.0 unexpectedly accepted by ${PROBE_HOST}."
-              exit 1
-            fi
-            if timeout 10 openssl s_client -tls1_1 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls11.out 2>&1; then
-              echo "::error::TLS 1.1 unexpectedly accepted by ${PROBE_HOST}."
-              exit 1
-            fi
-            if ! timeout 10 openssl s_client -tls1_2 \
-                -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
-                < /dev/null > /tmp/tls12.out 2>&1; then
-              echo "::error::TLS 1.2 failed for ${PROBE_HOST}."
-              cat /tmp/tls12.out >&2
-              exit 1
-            fi
-            echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
-          fi
-
-          cert=$(cat /tmp/openssl.out)
-          leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
-
-          not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
-          not_after_epoch=$(date -d "$not_after" +%s)
-          days_left=$(( (not_after_epoch - $(date +%s)) / 86400 ))
-          echo "→ notAfter: ${not_after} (${days_left} days remaining)"
-
-          if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
-            echo "::error::Cert for ${PROBE_HOST} expires in ${days_left} days (< ${MIN_DAYS_REMAINING})."
-            exit 1
-          fi
-
-          san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
-          if echo "$san" | grep -qE "DNS:(${PROBE_HOST}|\*\.cloudless\.gr)(\b|$)"; then
-            echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
-          else
-            echo "::error::Cert at ${PROBE_HOST} does not cover ${PROBE_HOST} in SAN: ${san}"
-            exit 1
-          fi
-
-          echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
-
-      - name: GET /api/health
-        id: health
-        run: |
-          set -euo pipefail
-          echo "→ GET https://${PROBE_HOST}/api/health"
-          response=$(curl -sS \
-            --max-time 30 \
-            --retry 3 --retry-delay 15 --retry-all-errors \
-            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "https://${PROBE_HOST}/api/health" || echo "000|n/a")
-          code="${response%%|*}"
-          elapsed="${response#*|}"
-          body=$(cat /tmp/body 2>/dev/null || true)
-          echo "  → HTTP ${code} in ${elapsed}"
-          echo "  → body: $(head -c 300 <<<"$body")"
-
-          challenged=0
-          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
-            challenged=1
-          fi
-
-          if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
-            status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
-            version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
-            if [ "${status}" != "ok" ]; then
-              echo "::warning::${PROBE_HOST}/api/health returned 200 but status='${status}' (expected 'ok')"
-            fi
-            {
-              echo "HEALTH_STATUS=${status}"
-              echo "HEALTH_VERSION=${version}"
-              echo "HEALTH_ELAPSED=${elapsed}"
-              echo "HEALTH_VIA=public"
-            } >> "$GITHUB_ENV"
-            echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
-            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
-            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
-            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
-            echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
-            echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
-            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
+        echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
+        if ! timeout 15 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
+          echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare Tunnel or Pi/k3s offline."
           exit 1
+        fi
+        echo "  ✓ TCP 443 open"
 
-      - name: Tailscale (private fabric)
-        if: steps.health.outputs.need_origin_fallback == 'true'
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+        echo "→ TLS handshake (SNI=${PROBE_HOST})"
+        set +e
+        timeout 20 openssl s_client \
+          -connect "${PROBE_HOST}:443" \
+          -servername "${PROBE_HOST}" \
+          -showcerts -verify_return_error \
+          < /dev/null > /tmp/openssl.out 2>&1
+        rc=$?
+        set -e
+        if [ "$rc" -ne 0 ]; then
+          echo "::error::TLS handshake failed for ${PROBE_HOST} (exit=${rc})"
+          echo "::group::openssl output"
+          cat /tmp/openssl.out >&2
+          echo "::endgroup::"
+          exit 1
+        fi
 
-      - name: GET /api/health via private fabric (MagicDNS NodePort)
-        if: steps.health.outputs.need_origin_fallback == 'true'
-        run: |
-          set -euo pipefail
-
-          echo "→ tailscale status (snippet)"
-          tailscale status | head -20 || true
-
-          echo "→ resolve ${TS_ORIGIN_HOST}"
-          getent hosts "${TS_ORIGIN_HOST}" || true
-          IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
-          if [ -z "${IP}" ]; then
-            echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+        echo "→ Verifying TLS version floor"
+        if [ "${SKIP_TLS_FLOOR}" != "true" ]; then
+          if timeout 10 openssl s_client -tls1 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls10.out 2>&1; then
+            echo "::error::TLS 1.0 unexpectedly accepted by ${PROBE_HOST}."
             exit 1
           fi
-          echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
-
-          URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
-          echo "→ GET ${URL} (Host: ${PROBE_HOST})"
-          : > /tmp/body
-          response=$(curl -sS \
-            --max-time 30 \
-            --retry 3 --retry-delay 5 \
-            -H "Host: ${PROBE_HOST}" \
-            -H "X-Forwarded-Proto: https" \
-            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "${URL}" || echo "000|n/a")
-          code="${response%%|*}"
-          elapsed="${response#*|}"
-          body=$(cat /tmp/body 2>/dev/null || true)
-          echo "  → HTTP ${code} in ${elapsed}"
-          echo "  → body: $(head -c 300 <<<"$body")"
-
-          if [ "${code}" != "200" ]; then
-            echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
+          if timeout 10 openssl s_client -tls1_1 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls11.out 2>&1; then
+            echo "::error::TLS 1.1 unexpectedly accepted by ${PROBE_HOST}."
             exit 1
           fi
+          if ! timeout 10 openssl s_client -tls1_2 \
+              -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
+              < /dev/null > /tmp/tls12.out 2>&1; then
+            echo "::error::TLS 1.2 failed for ${PROBE_HOST}."
+            cat /tmp/tls12.out >&2
+            exit 1
+          fi
+          echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
+        fi
 
+        cert=$(cat /tmp/openssl.out)
+        leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
+
+        not_after=$(echo "$leaf" | openssl x509 -noout -enddate | cut -d= -f2)
+        not_after_epoch=$(date -d "$not_after" +%s)
+        days_left=$(( (not_after_epoch - $(date +%s)) / 86400 ))
+        echo "→ notAfter: ${not_after} (${days_left} days remaining)"
+
+        if [ "$days_left" -lt "${MIN_DAYS_REMAINING}" ]; then
+          echo "::error::Cert for ${PROBE_HOST} expires in ${days_left} days (< ${MIN_DAYS_REMAINING})."
+          exit 1
+        fi
+
+        san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
+        if echo "$san" | grep -qE "DNS:(${PROBE_HOST}|\*\.cloudless\.gr)(\b|$)"; then
+          echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
+        else
+          echo "::error::Cert at ${PROBE_HOST} does not cover ${PROBE_HOST} in SAN: ${san}"
+          exit 1
+        fi
+
+        echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
+
+    - name: GET /api/health
+      id: health
+      run: |
+        set -euo pipefail
+        echo "→ GET https://${PROBE_HOST}/api/health"
+        response=$(curl -sS \
+          --max-time 30 \
+          --retry 3 --retry-delay 15 --retry-all-errors \
+          -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+          -o /tmp/body -w "%{http_code}|%{time_total}s" \
+          "https://${PROBE_HOST}/api/health" || echo "000|n/a")
+        code="${response%%|*}"
+        elapsed="${response#*|}"
+        body=$(cat /tmp/body 2>/dev/null || true)
+        echo "  → HTTP ${code} in ${elapsed}"
+        echo "  → body: $(head -c 300 <<<"$body")"
+
+        challenged=0
+        if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
+          challenged=1
+        fi
+
+        if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
-            exit 1
+            echo "::warning::${PROBE_HOST}/api/health returned 200 but status='${status}' (expected 'ok')"
           fi
-
-          if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
-            echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
-            exit 1
-          fi
-
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_VERSION=${version}"
             echo "HEALTH_ELAPSED=${elapsed}"
-            echo "HEALTH_VIA=tailscale-nodeport-magicdns"
-            echo "HEALTH_TS_IP=${IP}"
+            echo "HEALTH_VIA=public"
           } >> "$GITHUB_ENV"
+          echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
 
-      - name: Step summary
-        if: success()
-        run: |
-          {
-            echo "## STANDBY HTTPS Health — pi-origin.cloudless.gr"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Host | \`${PROBE_HOST}\` |"
-            echo "| Serving path | Cloudflare Tunnel → Pi/k3s NodePort |"
-            echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
-            echo "| Cert days remaining | ${DAYS_LEFT} |"
-            echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
-            echo "| health.status | ${HEALTH_STATUS} |"
-            echo "| app version | ${HEALTH_VERSION:-n/a} |"
-            echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+        if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
+          echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
+          echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
+          echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
+          echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+          echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
+          echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
+          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
+        exit 1
+
+    - name: Tailscale (private fabric)
+      if: steps.health.outputs.need_origin_fallback == 'true'
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+
+    - name: GET /api/health via private fabric (MagicDNS NodePort)
+      if: steps.health.outputs.need_origin_fallback == 'true'
+      run: |
+        set -euo pipefail
+
+        echo "→ tailscale status (snippet)"
+        tailscale status | head -20 || true
+
+        echo "→ resolve ${TS_ORIGIN_HOST}"
+        getent hosts "${TS_ORIGIN_HOST}" || true
+        IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
+        if [ -z "${IP}" ]; then
+          echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+          exit 1
+        fi
+        echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
+
+        URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
+        echo "→ GET ${URL} (Host: ${PROBE_HOST})"
+        : > /tmp/body
+        response=$(curl -sS \
+          --max-time 30 \
+          --retry 3 --retry-delay 5 \
+          -H "Host: ${PROBE_HOST}" \
+          -H "X-Forwarded-Proto: https" \
+          -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+          -o /tmp/body -w "%{http_code}|%{time_total}s" \
+          "${URL}" || echo "000|n/a")
+        code="${response%%|*}"
+        elapsed="${response#*|}"
+        body=$(cat /tmp/body 2>/dev/null || true)
+        echo "  → HTTP ${code} in ${elapsed}"
+        echo "  → body: $(head -c 300 <<<"$body")"
+
+        if [ "${code}" != "200" ]; then
+          echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
+          exit 1
+        fi
+
+        status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+        version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
+        if [ "${status}" != "ok" ]; then
+          echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
+          exit 1
+        fi
+
+        if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
+          echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
+          exit 1
+        fi
+
+        {
+          echo "HEALTH_STATUS=${status}"
+          echo "HEALTH_VERSION=${version}"
+          echo "HEALTH_ELAPSED=${elapsed}"
+          echo "HEALTH_VIA=tailscale-nodeport-magicdns"
+          echo "HEALTH_TS_IP=${IP}"
+        } >> "$GITHUB_ENV"
+
+    - name: Step summary
+      if: success()
+      run: |
+        {
+          echo "## STANDBY HTTPS Health — pi-origin.cloudless.gr"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Host | \`${PROBE_HOST}\` |"
+          echo "| Serving path | Cloudflare Tunnel → Pi/k3s NodePort |"
+          echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
+          echo "| Cert days remaining | ${DAYS_LEFT} |"
+          echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
+          echo "| health.status | ${HEALTH_STATUS} |"
+          echo "| app version | ${HEALTH_VERSION:-n/a} |"
+          echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
+        } >> "$GITHUB_STEP_SUMMARY"

@@ -22,7 +22,7 @@ spec:
   storageClassName: local-path
   resources:
     requests:
-      storage: 20Gi  # Sufficient for quantized models
+      storage: 20Gi       # Sufficient for quantized models
 ---
 # llama.cpp deployment optimized for Pi 5 ARM64
 # Uses GGUF quantized models (works on ARM64 CPU)
@@ -47,59 +47,59 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: llama-cpp
+      - name: llama-cpp
           # Custom ARM64 image - build via docker buildx on omv or push to registry
-          image: registry.local/omv-ai/llama-cpp-python:pi5
-          imagePullPolicy: IfNotPresent
-          command: ["/bin/bash", "-c"]
-          args:
-            - |
-              # Download Qwen-7B-Instruct Q4_K_M GGUF if not present
-              if [ ! -f /model-cache/qwen-instruct-q4.gguf ]; then
-                echo "Downloading Qwen-7B-Instruct Q4_K_M..."
-                curl -L -o /model-cache/qwen-instruct-q4.gguf \
-                  https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf
-              fi
-              # Start OpenAI-compatible server (llama-cpp-python)
-              python -m llama_cpp.server \
-                --model /model-cache/qwen-instruct-q4.gguf \
-                --host 0.0.0.0 \
-                --port 8000
-          ports:
-            - containerPort: 8000
-              name: http
-          env:
-            - name: LLAMA_CACHE
-              value: "/model-cache"
-          volumeMounts:
-            - name: model-cache
-              mountPath: /model-cache
-          resources:
-            requests:
-              memory: 2Gi
-              cpu: 250m
-            limits:
-              memory: 4Gi
-              cpu: 1000m
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 180
-            periodSeconds: 60
-            timeoutSeconds: 15
-            failureThreshold: 6
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 120
-            periodSeconds: 30
-            timeoutSeconds: 10
-      volumes:
+        image: registry.local/omv-ai/llama-cpp-python:pi5
+        imagePullPolicy: IfNotPresent
+        command: [/bin/bash, -c]
+        args:
+        - |
+          # Download Qwen-7B-Instruct Q4_K_M GGUF if not present
+          if [ ! -f /model-cache/qwen-instruct-q4.gguf ]; then
+            echo "Downloading Qwen-7B-Instruct Q4_K_M..."
+            curl -L -o /model-cache/qwen-instruct-q4.gguf \
+              https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf
+          fi
+          # Start OpenAI-compatible server (llama-cpp-python)
+          python -m llama_cpp.server \
+            --model /model-cache/qwen-instruct-q4.gguf \
+            --host 0.0.0.0 \
+            --port 8000
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: LLAMA_CACHE
+          value: /model-cache
+        volumeMounts:
         - name: model-cache
-          persistentVolumeClaim:
-            claimName: vllm-model-cache
+          mountPath: /model-cache
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 250m
+          limits:
+            memory: 4Gi
+            cpu: 1000m
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 180
+          periodSeconds: 60
+          timeoutSeconds: 15
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: vllm-model-cache
 ---
 # Service for llama.cpp (OpenAI-compatible API on port 8000)
 apiVersion: v1
@@ -112,10 +112,10 @@ spec:
   selector:
     app: vllm-kimi
   ports:
-    - name: http
-      port: 8000
-      targetPort: 8000
-      nodePort: 30800
+  - name: http
+    port: 8000
+    targetPort: 8000
+    nodePort: 30800
 ---
 # Monitoring Probe for llama.cpp health
 apiVersion: monitoring.coreos.com/v1
@@ -125,7 +125,7 @@ metadata:
   namespace: monitoring
   labels:
     release: kube-prom
-    cluster-protection.io/health: "true"
+    cluster-protection.io/health: 'true'
 spec:
   jobName: vllm-kimi-health
   interval: 60s
@@ -134,7 +134,7 @@ spec:
     url: blackbox-exporter.monitoring.svc.cluster.local:9115
   targets:
     staticConfig:
-      static: ["http://omv:30800/health"]
+      static: [http://omv:30800/health]
       labels:
         app: vllm-kimi
         scope: backend
@@ -149,25 +149,25 @@ metadata:
     release: kube-prom
 spec:
   groups:
-    - name: vllm-kimi.rules
-      rules:
-        - alert: VLLMKimiDown
-          expr: probe_success{app="vllm-kimi", scope="backend"} == 0
-          for: 3m
-          labels:
-            severity: critical
-            app: vllm-kimi
-          annotations:
-            summary: "Kimi vLLM DOWN on OMV — /health failing for 3m+"
-            description: |
-              The vLLM inference server for Kimi-k2.6 on omv-main is not responding.
-              All requests to the Kimi model will fail until it recovers.
-              Check: kubectl -n omv-ai get pods -l app=vllm-kimi
-        - alert: VLLMKimiSlow
-          expr: probe_duration_seconds{app="vllm-kimi"} > 5
-          for: 5m
-          labels:
-            severity: warning
-            app: vllm-kimi
-          annotations:
-            summary: "Kimi vLLM slow responses (>5s) for 5m"
+  - name: vllm-kimi.rules
+    rules:
+    - alert: VLLMKimiDown
+      expr: probe_success{app="vllm-kimi", scope="backend"} == 0
+      for: 3m
+      labels:
+        severity: critical
+        app: vllm-kimi
+      annotations:
+        summary: Kimi vLLM DOWN on OMV — /health failing for 3m+
+        description: |
+          The vLLM inference server for Kimi-k2.6 on omv-main is not responding.
+          All requests to the Kimi model will fail until it recovers.
+          Check: kubectl -n omv-ai get pods -l app=vllm-kimi
+    - alert: VLLMKimiSlow
+      expr: probe_duration_seconds{app="vllm-kimi"} > 5
+      for: 5m
+      labels:
+        severity: warning
+        app: vllm-kimi
+      annotations:
+        summary: Kimi vLLM slow responses (>5s) for 5m

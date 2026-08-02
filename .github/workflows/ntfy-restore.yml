@@ -13,14 +13,14 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/ntfy-restore.yml"
-      - "scripts/ntfy-restore.sh"
+    - .github/workflows/ntfy-restore.yml
+    - scripts/ntfy-restore.sh
   workflow_dispatch:
     inputs:
       ntfy_mem_limit:
-        description: "ntfy memory limit (default: 128Mi; current live limit is 96Mi)"
+        description: 'ntfy memory limit (default: 128Mi; current live limit is 96Mi)'
         required: false
-        default: "128Mi"
+        default: 128Mi
 
 permissions:
   contents: read
@@ -34,35 +34,35 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       NTFY_MEM_LIMIT: ${{ github.event.inputs.ntfy_mem_limit || '128Mi' }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Run ntfy-restore
-        id: restore
-        run: |
-          set -o pipefail
-          bash scripts/ntfy-restore.sh 2>&1 | tee restore.log
+    - name: Run ntfy-restore
+      id: restore
+      run: |
+        set -o pipefail
+        bash scripts/ntfy-restore.sh 2>&1 | tee restore.log
 
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# ntfy restore — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "**Status:** ${{ job.status }}"
-            echo ""
-            echo '```'
-            cat restore.log 2>/dev/null || echo "(no log)"
-            echo '```'
-          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        {
+          echo "# ntfy restore — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "**Status:** ${{ job.status }}"
+          echo ""
+          echo '```'
+          cat restore.log 2>/dev/null || echo "(no log)"
+          echo '```'
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

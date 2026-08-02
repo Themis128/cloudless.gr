@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       skip_api_test:
-        description: "Skip API verification (only check MCP binary exists)"
+        description: Skip API verification (only check MCP binary exists)
         type: boolean
         default: false
 
@@ -22,44 +22,44 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Add token to environment
-        id: token
-        run: |
-          echo "CLOUDFLARE_API_TOKEN<<EOF" >> "$GITHUB_ENV"
-          echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" >> "$GITHUB_ENV"
-          echo "EOF" >> "$GITHUB_ENV"
-          # Mask in logs (extra caution)
-          echo "::add_mask::${{ secrets.CLOUDFLARE_API_TOKEN }}"
+    - name: Add token to environment
+      id: token
+      run: |
+        echo "CLOUDFLARE_API_TOKEN<<EOF" >> "$GITHUB_ENV"
+        echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" >> "$GITHUB_ENV"
+        echo "EOF" >> "$GITHUB_ENV"
+        # Mask in logs (extra caution)
+        echo "::add_mask::${{ secrets.CLOUDFLARE_API_TOKEN }}"
 
-      - name: Verify MCP server binary
-        run: |
-          echo "Checking MCP server binary..."
-          ls -la cloudflare-pages-mcp/src/index.ts 2>/dev/null || echo "::warning::cloudflare-pages-mcp source not in repo"
+    - name: Verify MCP server binary
+      run: |
+        echo "Checking MCP server binary..."
+        ls -la cloudflare-pages-mcp/src/index.ts 2>/dev/null || echo "::warning::cloudflare-pages-mcp source not in repo"
 
-      - name: Run Cloudflare fix script
-        if: ${{ github.event.inputs.skip_api_test != 'true' }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
-          SKIP_MCP_CHECK: true
-        run: |
-          set -uo pipefail
-          echo "::add_mask::${{ secrets.CLOUDFLARE_API_TOKEN }}"
-          bash scripts/cloudflare-fix.sh 2>&1 | tee cloudflare-fix.log || true
+    - name: Run Cloudflare fix script
+      if: ${{ github.event.inputs.skip_api_test != 'true' }}
+      env:
+        CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
+        SKIP_MCP_CHECK: true
+      run: |
+        set -uo pipefail
+        echo "::add_mask::${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        bash scripts/cloudflare-fix.sh 2>&1 | tee cloudflare-fix.log || true
 
-      - name: Summary
-        if: always()
-        run: |
-          {
-            echo "# Cloudflare MCP Verification — $(date -u '+%F %T')Z"
+    - name: Summary
+      if: always()
+      run: |
+        {
+          echo "# Cloudflare MCP Verification — $(date -u '+%F %T')Z"
+          echo ""
+          echo "**Skip API test:** ${{ github.event.inputs.skip_api_test }}"
+          echo "**Job status:** ${{ job.status }}"
+          if [ -f cloudflare-fix.log ]; then
             echo ""
-            echo "**Skip API test:** ${{ github.event.inputs.skip_api_test }}"
-            echo "**Job status:** ${{ job.status }}"
-            if [ -f cloudflare-fix.log ]; then
-              echo ""
-              echo '```'
-              cat cloudflare-fix.log
-              echo '```'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo '```'
+            cat cloudflare-fix.log
+            echo '```'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"

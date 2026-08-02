@@ -1,20 +1,12 @@
-# Grants the cloudless app pod (cloudless/default SA) read access to
-# cronjobs + jobs in the monitoring namespace, so /api/admin/cluster/watchdogs
-# can surface the live state of cluster-alerts / omv-disk-watchdog /
-# omv-backup-verify / postiz-slack-notify in the admin UI.
-#
-# Read-only — the app cannot create/patch/delete anything. Patching cronjobs
-# (e.g. suspend/unsuspend) still requires kubectl admin access.
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: watchdog-reader
   namespace: monitoring
 rules:
-  - apiGroups: ["batch"]
-    resources: ["cronjobs", "jobs"]
-    verbs: ["get", "list"]
+- apiGroups: [batch]
+  resources: [cronjobs, jobs]
+  verbs: [get, list]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -22,9 +14,9 @@ metadata:
   name: watchdog-reader-for-cloudless-app
   namespace: monitoring
 subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: cloudless
+- kind: ServiceAccount
+  name: default
+  namespace: cloudless
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

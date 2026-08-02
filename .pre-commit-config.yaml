@@ -1,0 +1,21 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: Ruff Format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: ruff-lint
+        name: Ruff Lint
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+
+      - id: pyright
+        name: Pyright Type Check
+        entry: uv run pyright
+        language: system
+        types: [python]
+        exclude: ^(tools/langsmith_api/|scripts/grafana-esp32-query\.py|monitoring/grafana-slack-proxy/)

@@ -4,7 +4,7 @@ metadata:
   name: grafana-slack-proxy
   namespace: grafana-slack-proxy
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
 spec:
   ingressClassName: nginx
   rules:

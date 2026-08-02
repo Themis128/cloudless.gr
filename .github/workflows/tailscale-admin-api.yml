@@ -6,21 +6,21 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Set true to preview without POST/DELETE"
+        description: Set true to preview without POST/DELETE
         required: false
-        default: "false"
+        default: 'false'
         type: choice
         options:
-          - "false"
-          - "true"
+        - 'false'
+        - 'true'
       acl_only:
-        description: "Merge/POST ACL only (skip stale device DELETE)"
+        description: Merge/POST ACL only (skip stale device DELETE)
         required: false
-        default: "true"
+        default: 'true'
         type: choice
         options:
-          - "true"
-          - "false"
+        - 'true'
+        - 'false'
 
 permissions:
   contents: read
@@ -37,16 +37,17 @@ jobs:
       TS_CLIENT_ID: ${{ secrets.TS_CLIENT_ID }}
       TS_CLIENT_SECRET: ${{ secrets.TS_CLIENT_SECRET }}
       TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET 
+        }}
       TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
       DRY_RUN: ${{ inputs.dry_run }}
       ACL_ONLY: ${{ inputs.acl_only }}
       TAILSCALE_TAILNET: tail4ecae1.ts.net
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Install jq
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+    - name: Install jq
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
 
-      - name: Run Tailscale Admin API script
-        run: bash scripts/tailscale-admin-api.sh
+    - name: Run Tailscale Admin API script
+      run: bash scripts/tailscale-admin-api.sh

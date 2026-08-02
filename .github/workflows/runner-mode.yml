@@ -9,12 +9,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Runner pool for generic CI jobs"
+        description: Runner pool for generic CI jobs
         required: true
         type: choice
         options:
-          - hosted   # ubuntu-latest — free for public repos
-          - pi       # self-hosted Pi build runners
+        - hosted             # ubuntu-latest — free for public repos
+        - pi             # self-hosted Pi build runners
 
 permissions:
   actions: write
@@ -25,40 +25,40 @@ jobs:
     name: Switch to ${{ inputs.mode }} runners
     runs-on: ubuntu-latest
     steps:
-      - name: Clear RUNNER_GENERIC (→ ubuntu-latest)
-        if: inputs.mode == 'hosted'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh variable delete RUNNER_GENERIC --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
-          echo "RUNNER_GENERIC cleared — workflows will use ubuntu-latest."
+    - name: Clear RUNNER_GENERIC (→ ubuntu-latest)
+      if: inputs.mode == 'hosted'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable delete RUNNER_GENERIC --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+        echo "RUNNER_GENERIC cleared — workflows will use ubuntu-latest."
 
-      - name: Set RUNNER_GENERIC (→ Pi build runners)
-        if: inputs.mode == 'pi'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh variable set RUNNER_GENERIC \
-            --body '["self-hosted","omv","build"]' \
-            --repo "$GITHUB_REPOSITORY"
-          echo "RUNNER_GENERIC set to [self-hosted, omv, build]."
+    - name: Set RUNNER_GENERIC (→ Pi build runners)
+      if: inputs.mode == 'pi'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable set RUNNER_GENERIC \
+          --body '["self-hosted","omv","build"]' \
+          --repo "$GITHUB_REPOSITORY"
+        echo "RUNNER_GENERIC set to [self-hosted, omv, build]."
 
-      - name: Print summary
-        run: |
-          if [ "${{ inputs.mode }}" = "hosted" ]; then
-            {
-              echo "## Runner mode: GitHub-hosted"
-              echo ""
-              echo "**RUNNER_GENERIC** cleared."
-              echo "All instrumented workflows now use \`ubuntu-latest\` (free for public repos)."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo "## Runner mode: Pi self-hosted"
-              echo ""
-              echo "**RUNNER_GENERIC** = \`[\"self-hosted\",\"omv\",\"build\"]\`"
-              echo "All instrumented workflows route to the Pi build runner pool."
-              echo ""
-              echo "> **Reminder:** already-queued jobs are not re-routed — cancel and re-run them."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+    - name: Print summary
+      run: |
+        if [ "${{ inputs.mode }}" = "hosted" ]; then
+          {
+            echo "## Runner mode: GitHub-hosted"
+            echo ""
+            echo "**RUNNER_GENERIC** cleared."
+            echo "All instrumented workflows now use \`ubuntu-latest\` (free for public repos)."
+          } >> "$GITHUB_STEP_SUMMARY"
+        else
+          {
+            echo "## Runner mode: Pi self-hosted"
+            echo ""
+            echo "**RUNNER_GENERIC** = \`[\"self-hosted\",\"omv\",\"build\"]\`"
+            echo "All instrumented workflows route to the Pi build runner pool."
+            echo ""
+            echo "> **Reminder:** already-queued jobs are not re-routed — cancel and re-run them."
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi

@@ -5,145 +5,146 @@
 routes:
   # Main application — Workers Free: tiny pi-origin-proxy on cloudless2;
   # Tunnel pi-origin → NodePort 30300; app image via deploy-pi.yml
-  - hostname: cloudless.gr
-    service: cloudless-app
-    port: 30300
-    healthPath: /api/health
-    node: omv
-    status: active
-    description: Apex via Worker proxy → pi-origin → Pi (Workers Free)
+- hostname: cloudless.gr
+  service: cloudless-app
+  port: 30300
+  healthPath: /api/health
+  node: omv
+  status: active
+  description: Apex via Worker proxy → pi-origin → Pi (Workers Free)
 
-  - hostname: manage.cloudless.gr
-    service: cloudless-app
-    port: 30300
-    healthPath: /api/health
-    node: omv
-    status: active
-    description: Management UI (same as apex)
+- hostname: manage.cloudless.gr
+  service: cloudless-app
+  port: 30300
+  healthPath: /api/health
+  node: omv
+  status: active
+  description: Management UI (same as apex)
 
-  - hostname: pi-origin.cloudless.gr
-    service: cloudless-app
-    port: 30300
-    healthPath: /api/health
-    node: omv
-    status: active
-    description: Direct Tunnel origin for Worker proxy (must not loop to Worker)
+- hostname: pi-origin.cloudless.gr
+  service: cloudless-app
+  port: 30300
+  healthPath: /api/health
+  node: omv
+  status: active
+  description: Direct Tunnel origin for Worker proxy (must not loop to Worker)
 
   # Wildcard catch-all disabled — subdomains have explicit Tunnel routes.
   # Do not send * to Workers (OpenNext exceeds Free 3 MiB).
-  - hostname: "*.cloudless.gr"
-    service: http_status
-    port: 404
-    healthPath: /
-    node: omv
-    status: inactive
-    description: Disabled catch-all (was Workers; Free plan cannot host OpenNext)
+- hostname: '*.cloudless.gr'
+  service: http_status
+  port: 404
+  healthPath: /
+  node: omv
+  status: inactive
+  description: Disabled catch-all (was Workers; Free plan cannot host OpenNext)
 
   # Infrastructure services
-  - hostname: omv.cloudless.gr
-    service: omv-webui
-    port: 80
-    healthPath: /
-    node: omv
-    status: active
-    description: OpenMediaVault admin panel
+- hostname: omv.cloudless.gr
+  service: omv-webui
+  port: 80
+  healthPath: /
+  node: omv
+  status: active
+  description: OpenMediaVault admin panel
 
-  - hostname: ftp.cloudless.gr
-    service: omv-ftp
-    port: 21
-    healthPath: null
-    node: omv
-    status: active
-    description: FTP server (TCP, no HTTP health)
+- hostname: ftp.cloudless.gr
+  service: omv-ftp
+  port: 21
+  healthPath:
+  node: omv
+  status: active
+  description: FTP server (TCP, no HTTP health)
 
   # Documentation
-  - hostname: docs.cloudless.gr
-    service: docs-server
-    port: 30901
-    healthPath: /
-    node: omv
-    status: active
-    description: Documentation portal (NodePort)
+- hostname: docs.cloudless.gr
+  service: docs-server
+  port: 30901
+  healthPath: /
+  node: omv
+  status: active
+  description: Documentation portal (NodePort)
 
   # Search
-  - hostname: meili.cloudless.gr
-    service: meilisearch
-    port: 30902
-    healthPath: /health
-    node: omv
-    status: active
-    description: Meilisearch search engine (NodePort)
+- hostname: meili.cloudless.gr
+  service: meilisearch
+  port: 30902
+  healthPath: /health
+  node: omv
+  status: active
+  description: Meilisearch search engine (NodePort)
 
   # CRM
-  - hostname: espocrm.cloudless.gr
-    service: espocrm
-    port: 30700
-    healthPath: /
-    node: omv
-    status: active
-    description: EspoCRM customer relationship management
+- hostname: espocrm.cloudless.gr
+  service: espocrm
+  port: 30700
+  healthPath: /
+  node: omv
+  status: active
+  description: EspoCRM customer relationship management
 
   # Notifications
-  - hostname: ntfy.cloudless.gr
-    service: ntfy
-    port: 30080
-    healthPath: /
-    node: omv
-    status: active
-    description: ntfy notification service
+- hostname: ntfy.cloudless.gr
+  service: ntfy
+  port: 30080
+  healthPath: /
+  node: omv
+  status: active
+  description: ntfy notification service
 
   # Monitoring
-  - hostname: grafana.cloudless.gr
-    service: grafana
-    port: 30850
-    healthPath: /api/health
-    node: omv
-    status: active
-    description: Grafana monitoring dashboard
+- hostname: grafana.cloudless.gr
+  service: grafana
+  port: 30850
+  healthPath: /api/health
+  node: omv
+  status: active
+  description: Grafana monitoring dashboard
 
-  - hostname: kuma.cloudless.gr
-    service: uptime-kuma
-    port: 32501
-    healthPath: /
-    node: omv
-    status: active
-    description: Uptime Kuma monitoring
+- hostname: kuma.cloudless.gr
+  service: uptime-kuma
+  port: 32501
+  healthPath: /
+  node: omv
+  status: active
+  description: Uptime Kuma monitoring
 
   # Workflow
-  - hostname: n8n.cloudless.gr
-    service: n8n
-    port: 30900
-    healthPath: /
-    node: omv
-    status: active
-    description: n8n workflow automation
+- hostname: n8n.cloudless.gr
+  service: n8n
+  port: 30900
+  healthPath: /
+  node: omv
+  status: active
+  description: n8n workflow automation
 
   # Postiz
-  - hostname: postiz.cloudless.gr
-    service: postiz
-    port: 30500
-    healthPath: /
-    node: omv
-    status: active
-    description: Postiz social publishing engine
+- hostname: postiz.cloudless.gr
+  service: postiz
+  port: 30500
+  healthPath: /
+  node: omv
+  status: active
+  description: Postiz social publishing engine
 
   # AppFlowy
-  - hostname: appflowy.cloudless.gr
-    service: appflowy
-    port: 30810
-    healthPath: /
-    node: omv
-    status: active
-    description: AppFlowy CMS (NodePort)
+- hostname: appflowy.cloudless.gr
+  service: appflowy
+  port: 30810
+  healthPath: /
+  node: omv
+  status: active
+  description: AppFlowy CMS (NodePort)
 
   # HA Failover - Workers fallback for edge delivery
-  - hostname: cloudless-failover.baltzakis-themis.workers.dev
-    service: cloudflare-workers
-    port: 443
-    healthPath: /api/health
-    node: cloudflare
-    status: active
-    description: Workers fallback (static assets + auth endpoints) - activated when Pi primary fails
+- hostname: cloudless-failover.baltzakis-themis.workers.dev
+  service: cloudflare-workers
+  port: 443
+  healthPath: /api/health
+  node: cloudflare
+  status: active
+  description: Workers fallback (static assets + auth endpoints) - activated 
+    when Pi primary fails
 
 # Tunnel configuration
 tunnel:
@@ -164,4 +165,4 @@ nodes:
     ip: 192.168.1.130
     tailscaleIp: 100.125.175.60
     role: standby-agent
-    storage: null
+    storage:

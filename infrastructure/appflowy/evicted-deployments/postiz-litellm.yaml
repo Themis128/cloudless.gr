@@ -1,16 +1,3 @@
-# EVICTED 2026-06-21 to free omv RAM for the AppFlowy Phase-1 deploy
-# (memory: project_appflowy_rejected → unrejected once disk + Notion
-# decom freed ~1 GB headroom). Keep this manifest in source so the
-# operator can `kubectl apply -f` it back if Postiz AI features are
-# wanted again — none of the ConfigMaps or Secrets it depends on
-# (postiz-litellm-config, postiz-anthropic, postiz-litellm-secrets)
-# are deleted; only the Deployment is.
-#
-# Effect of evicting: Postiz's AI caption-suggestion + content-generation
-# features stop working. Postiz publishing/scheduling continues to work.
-# Per memory project_bedrock_chat_model the main chat already moved to
-# Bedrock Nova Micro, so this LiteLLM proxy is the only consumer left.
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,53 +17,53 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-        - name: litellm
-          image: ghcr.io/berriai/litellm:main-stable
-          imagePullPolicy: IfNotPresent
-          args:
-            - "--config"
-            - "/etc/litellm/config.yaml"
-            - "--port"
-            - "4000"
-            - "--num_workers"
-            - "1"
-          env:
-            - name: LITELLM_LOG
-              value: WARNING
-            - name: STORE_MODEL_IN_DB
-              value: "False"
-          envFrom:
-            - secretRef:
-                name: postiz-anthropic
-            - secretRef:
-                name: postiz-litellm-secrets
-          ports:
-            - containerPort: 4000
-          livenessProbe:
-            httpGet:
-              path: /health/liveliness
-              port: 4000
-            initialDelaySeconds: 60
-            periodSeconds: 30
-          readinessProbe:
-            httpGet:
-              path: /health/readiness
-              port: 4000
-            initialDelaySeconds: 20
-            periodSeconds: 10
-            failureThreshold: 12
-          resources:
-            requests:
-              cpu: "150m"
-              memory: "640Mi"
-            limits:
-              cpu: "1"
-              memory: "1280Mi"
-          volumeMounts:
-            - name: config
-              mountPath: /etc/litellm
-              readOnly: true
-      volumes:
+      - name: litellm
+        image: ghcr.io/berriai/litellm:main-stable
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config
+        - /etc/litellm/config.yaml
+        - --port
+        - '4000'
+        - --num_workers
+        - '1'
+        env:
+        - name: LITELLM_LOG
+          value: WARNING
+        - name: STORE_MODEL_IN_DB
+          value: 'False'
+        envFrom:
+        - secretRef:
+            name: postiz-anthropic
+        - secretRef:
+            name: postiz-litellm-secrets
+        ports:
+        - containerPort: 4000
+        livenessProbe:
+          httpGet:
+            path: /health/liveliness
+            port: 4000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: 4000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 12
+        resources:
+          requests:
+            cpu: 150m
+            memory: 640Mi
+          limits:
+            cpu: '1'
+            memory: 1280Mi
+        volumeMounts:
         - name: config
-          configMap:
-            name: postiz-litellm-config
+          mountPath: /etc/litellm
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: postiz-litellm-config

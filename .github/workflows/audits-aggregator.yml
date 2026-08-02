@@ -1,7 +1,7 @@
 name: Audit Reports Aggregator
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 # Pulls the latest run of every audit workflow, downloads each report
 # artifact, and synthesizes a single rolling dashboard:
@@ -14,7 +14,7 @@ env:
 on:
   schedule:
     # Daily at 06:00 UTC — after every other audit has had a chance to land.
-    - cron: '0 6 * * *'
+  - cron: 0 6 * * *
   workflow_dispatch:
 
 permissions:
@@ -32,29 +32,29 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      with:
+        node-version: 22
 
-      - name: Aggregate
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -e
-          mkdir -p audit-report
+    - name: Aggregate
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -e
+        mkdir -p audit-report
 
-          node scripts/audit/aggregate.mjs \
-            --repo "$REPO" \
-            --out-dir audit-report
+        node scripts/audit/aggregate.mjs \
+          --repo "$REPO" \
+          --out-dir audit-report
 
-          cat audit-report/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+        cat audit-report/dashboard.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload dashboard
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
-        with:
-          name: audits-dashboard-${{ github.run_id }}
-          path: audit-report/
-          retention-days: 60
-          if-no-files-found: error
+    - name: Upload dashboard
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1         # v4
+      with:
+        name: audits-dashboard-${{ github.run_id }}
+        path: audit-report/
+        retention-days: 60
+        if-no-files-found: error

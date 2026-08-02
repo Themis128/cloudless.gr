@@ -9,11 +9,12 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Target service to reconnect (all, operator, proxies, subnet-router)'
+        description: Target service to reconnect (all, operator, proxies, 
+          subnet-router)
         required: false
-        default: 'all'
+        default: all
       restart_tailscale_daemon:
-        description: 'Restart tailscaled on Pi host before reconnecting'
+        description: Restart tailscaled on Pi host before reconnecting
         required: false
         default: 'true'
       issue_number:
@@ -32,177 +33,177 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Check required secrets
-        run: |
-          if [ -z "${{ secrets.TS_CLIENT_ID }}" ] || [ -z "${{ secrets.TS_CLIENT_SECRET }}" ]; then
-            echo "::error::TS_CLIENT_ID and/or TS_CLIENT_SECRET secrets are missing"
-            echo "Add Tailscale OAuth credentials to GitHub secrets"
-            echo "See: https://login.tailscale.com/admin/settings#oauth"
-            exit 1
-          fi
-          echo "All required secrets available"
+    - name: Check required secrets
+      run: |
+        if [ -z "${{ secrets.TS_CLIENT_ID }}" ] || [ -z "${{ secrets.TS_CLIENT_SECRET }}" ]; then
+          echo "::error::TS_CLIENT_ID and/or TS_CLIENT_SECRET secrets are missing"
+          echo "Add Tailscale OAuth credentials to GitHub secrets"
+          echo "See: https://login.tailscale.com/admin/settings#oauth"
+          exit 1
+        fi
+        echo "All required secrets available"
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:k8s
 
-      - name: Setup kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Setup kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Restart tailscaled on Pi host (if requested)
-        if: ${{ inputs.restart_tailscale_daemon == 'true' }}
-        run: |
-          echo "=== Attempting to restart tailscaled on Pi host ==="
+    - name: Restart tailscaled on Pi host (if requested)
+      if: ${{ inputs.restart_tailscale_daemon == 'true' }}
+      run: |
+        echo "=== Attempting to restart tailscaled on Pi host ==="
 
-          mkdir -p ~/.ssh
-          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
+        mkdir -p ~/.ssh
+        echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          # Try LAN SSH (Pi may be online locally but off tailnet)
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            tbaltzakis@192.168.1.128 \
-            "sudo systemctl restart tailscaled && sudo tailscale up --accept-routes --accept-dns --accept-ssh && echo 'tailscaled restarted on Pi host'" 2>&1 || {
-            echo "::warning::LAN SSH failed - Pi may be powered off or network unavailable"
-            echo "Will continue with operator redeployment when cluster is online"
-          }
+        # Try LAN SSH (Pi may be online locally but off tailnet)
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          tbaltzakis@192.168.1.128 \
+          "sudo systemctl restart tailscaled && sudo tailscale up --accept-routes --accept-dns --accept-ssh && echo 'tailscaled restarted on Pi host'" 2>&1 || {
+          echo "::warning::LAN SSH failed - Pi may be powered off or network unavailable"
+          echo "Will continue with operator redeployment when cluster is online"
+        }
 
-      - name: Wait for Tailscale to stabilize
-        if: ${{ inputs.restart_tailscale_daemon == 'true' }}
-        run: |
-          echo "Waiting 10s for Tailscale to establish connections..."
-          sleep 10
+    - name: Wait for Tailscale to stabilize
+      if: ${{ inputs.restart_tailscale_daemon == 'true' }}
+      run: |
+        echo "Waiting 10s for Tailscale to establish connections..."
+        sleep 10
 
-          # Check if we can now reach Pi on tailnet
-          if ping -c 1 100.113.41.119 2>/dev/null; then
-            echo "✅ Pi is now reachable on Tailscale"
-          else
-            echo "⚠️ Pi still unreachable on Tailscale (may need power cycle)"
-          fi
+        # Check if we can now reach Pi on tailnet
+        if ping -c 1 100.113.41.119 2>/dev/null; then
+          echo "✅ Pi is now reachable on Tailscale"
+        else
+          echo "⚠️ Pi still unreachable on Tailscale (may need power cycle)"
+        fi
 
-      - name: Check k3s API availability
-        run: |
-          echo "=== Checking k3s API availability ==="
-          if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-            echo "::warning::k3s API (100.74.191.58:6443) not reachable"
-            echo "Cluster may be unreachable - check Pi status"
-          fi
+    - name: Check k3s API availability
+      run: |
+        echo "=== Checking k3s API availability ==="
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "::warning::k3s API (100.74.191.58:6443) not reachable"
+          echo "Cluster may be unreachable - check Pi status"
+        fi
 
-      - name: Deploy Tailscale Operator
-        if: ${{ inputs.target == 'all' || inputs.target == 'operator' }}
-        run: |
-          echo "=== Deploying Tailscale Operator ==="
+    - name: Deploy Tailscale Operator
+      if: ${{ inputs.target == 'all' || inputs.target == 'operator' }}
+      run: |
+        echo "=== Deploying Tailscale Operator ==="
 
-          # Add Helm repo
-          helm repo add tailscale https://pkgs.tailscale.com/helmcharts
-          helm repo update
+        # Add Helm repo
+        helm repo add tailscale https://pkgs.tailscale.com/helmcharts
+        helm repo update
 
-          # Check if cluster is reachable before attempting deployment
-          if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-            echo "⚠️ k3s API unreachable - skipping Helm deploy"
-            echo "Operator will be deployed when cluster comes online"
-            exit 0
-          fi
+        # Check if cluster is reachable before attempting deployment
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "⚠️ k3s API unreachable - skipping Helm deploy"
+          echo "Operator will be deployed when cluster comes online"
+          exit 0
+        fi
 
-          # Install or upgrade operator
-          helm upgrade --install tailscale-operator tailscale/tailscale-operator \
-            --namespace tailscale-operator \
-            --create-namespace \
-            --set-string oauth.clientID="${{ secrets.TS_CLIENT_ID }}" \
-            --set-string oauth.clientSecret="${{ secrets.TS_CLIENT_SECRET }}" \
-            --set operatorLogLevel=info \
-            --timeout 300s --wait=false || {
-              echo "⚠️ Helm install queued - will deploy when cluster is online"
-          }
+        # Install or upgrade operator
+        helm upgrade --install tailscale-operator tailscale/tailscale-operator \
+          --namespace tailscale-operator \
+          --create-namespace \
+          --set-string oauth.clientID="${{ secrets.TS_CLIENT_ID }}" \
+          --set-string oauth.clientSecret="${{ secrets.TS_CLIENT_SECRET }}" \
+          --set operatorLogLevel=info \
+          --timeout 300s --wait=false || {
+            echo "⚠️ Helm install queued - will deploy when cluster is online"
+        }
 
-      - name: Restart Tailscale proxies
-        if: ${{ inputs.target == 'all' || inputs.target == 'proxies' }}
-        run: |
-          echo "=== Restarting Tailscale Proxy pods ==="
+    - name: Restart Tailscale proxies
+      if: ${{ inputs.target == 'all' || inputs.target == 'proxies' }}
+      run: |
+        echo "=== Restarting Tailscale Proxy pods ==="
 
-          # Check if cluster is reachable
-          if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-            echo "⚠️ k3s API unreachable - skipping proxy restart"
-            exit 0
-          fi
+        # Check if cluster is reachable
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "⚠️ k3s API unreachable - skipping proxy restart"
+          exit 0
+        fi
 
-          # Delete existing proxy pods to force recreation
-          kubectl delete pods -n tailscale-operator -l tailscale=proxy --ignore-not-found=true || true
-          kubectl delete pods -n monitoring -l tailscale=proxy --ignore-not-found=true || true
+        # Delete existing proxy pods to force recreation
+        kubectl delete pods -n tailscale-operator -l tailscale=proxy --ignore-not-found=true || true
+        kubectl delete pods -n monitoring -l tailscale=proxy --ignore-not-found=true || true
 
-          # Wait for recreation
-          sleep 5
+        # Wait for recreation
+        sleep 5
 
-          # Check new proxy status
-          kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
-          kubectl get pods -n monitoring -o wide || echo "Could not reach cluster"
+        # Check new proxy status
+        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        kubectl get pods -n monitoring -o wide || echo "Could not reach cluster"
 
-      - name: Restart subnet router
-        if: ${{ inputs.target == 'all' || inputs.target == 'subnet-router' }}
-        run: |
-          echo "=== Restarting Tailscale Subnet Router ==="
+    - name: Restart subnet router
+      if: ${{ inputs.target == 'all' || inputs.target == 'subnet-router' }}
+      run: |
+        echo "=== Restarting Tailscale Subnet Router ==="
 
-          # Check if cluster is reachable
-          if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-            echo "⚠️ k3s API unreachable - skipping subnet router restart"
-            exit 0
-          fi
+        # Check if cluster is reachable
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "⚠️ k3s API unreachable - skipping subnet router restart"
+          exit 0
+        fi
 
-          kubectl delete pods -n tailscale-operator -l tailscale=subnet-router --ignore-not-found=true || true
-          kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        kubectl delete pods -n tailscale-operator -l tailscale=subnet-router --ignore-not-found=true || true
+        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
 
-      - name: Verify Tailscale connectivity
-        run: |
-          echo "=== Tailscale Verification ==="
+    - name: Verify Tailscale connectivity
+      run: |
+        echo "=== Tailscale Verification ==="
 
-          # Check if cluster is reachable
-          if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-            echo "⚠️ k3s API unreachable - skipping verification"
-            exit 0
-          fi
+        # Check if cluster is reachable
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "⚠️ k3s API unreachable - skipping verification"
+          exit 0
+        fi
 
-          echo "Tailscale Operator pods:"
-          kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        echo "Tailscale Operator pods:"
+        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
 
+        echo ""
+        echo "ProxyGroup status:"
+        kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
+
+        echo ""
+        echo "Endpoints with Tailscale ingress:"
+        kubectl get endpoints -A -o wide 2>/dev/null | grep -E "ts_proxy|tailscale" || echo "No Tailscale endpoints found"
+
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        # Determine issue number
+        ISSUE_NUM="${{ inputs.issue_number }}"
+        if [ -z "$ISSUE_NUM" ]; then
+          # Create new issue if none specified
+          ISSUE_NUM=$(gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d')" \
+            --body "Automated Tailscale reconnect report" \
+            --label "tailscale,cluster" 2>/dev/null || echo "382")
+        fi
+
+        {
+          echo "# Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d %H:%M:%SZ')"
           echo ""
-          echo "ProxyGroup status:"
-          kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
-
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Target: ${{ inputs.target }}"
           echo ""
-          echo "Endpoints with Tailscale ingress:"
-          kubectl get endpoints -A -o wide 2>/dev/null | grep -E "ts_proxy|tailscale" || echo "No Tailscale endpoints found"
-
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          # Determine issue number
-          ISSUE_NUM="${{ inputs.issue_number }}"
-          if [ -z "$ISSUE_NUM" ]; then
-            # Create new issue if none specified
-            ISSUE_NUM=$(gh issue create \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d')" \
-              --body "Automated Tailscale reconnect report" \
-              --label "tailscale,cluster" 2>/dev/null || echo "382")
-          fi
-
-          {
-            echo "# Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "Triggered by: ${{ github.actor }}"
-            echo "Target: ${{ inputs.target }}"
-            echo ""
-            echo "Secrets: TAILSCALE_OAUTH_CLIENT_ID=✅, KUBECONFIG_B64=✅"
-            echo ""
-            echo "Recommendations:"
-            echo "- If Pi is unreachable, power cycle the device"
-            echo "- Check Tailscale admin: https://login.tailscale.com/admin/machines"
-          } | gh issue comment "$ISSUE_NUM" --repo "$GITHUB_REPOSITORY" --body-file - || true
+          echo "Secrets: TAILSCALE_OAUTH_CLIENT_ID=✅, KUBECONFIG_B64=✅"
+          echo ""
+          echo "Recommendations:"
+          echo "- If Pi is unreachable, power cycle the device"
+          echo "- Check Tailscale admin: https://login.tailscale.com/admin/machines"
+        } | gh issue comment "$ISSUE_NUM" --repo "$GITHUB_REPOSITORY" --body-file - || true

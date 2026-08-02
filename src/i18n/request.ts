@@ -15,13 +15,21 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // signature expected by getRequestConfig.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let messages: any;
-  if (locale === "el") {
-    messages = (await import("../locales/el.json")).default;
-  } else if (locale === "fr") {
-    messages = (await import("../locales/fr.json")).default;
-  } else if (locale === "de") {
-    messages = (await import("../locales/de.json")).default;
-  } else {
+
+  // Use try-catch to handle potential import errors gracefully
+  try {
+    if (locale === "el") {
+      messages = (await import("../locales/el.json")).default;
+    } else if (locale === "fr") {
+      messages = (await import("../locales/fr.json")).default;
+    } else if (locale === "de") {
+      messages = (await import("../locales/de.json")).default;
+    } else {
+      messages = (await import("../locales/en.json")).default;
+    }
+  } catch (error) {
+    // Fallback to English if locale file can't be loaded
+    console.warn(`Failed to load locale ${locale}, falling back to English`, error);
     messages = (await import("../locales/en.json")).default;
   }
 

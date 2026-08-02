@@ -1,31 +1,10 @@
-# Postiz — self-hosted social publishing engine (Phase 2, one-stop-shop roadmap)
-# Namespace: postiz | App: ghcr.io/gitroomhq/postiz-app
-#
-# Components:
-#   - postgres (PVC 2Gi)  — Postiz database
-#   - redis    (PVC 512Mi) — queue/cache
-#   - postiz   (port 5000, NodePort 30500) — app + API
-#
-# Exposure: Cloudflare tunnel hostname postiz.cloudless.gr → http://192.168.1.128:30500
-# (see infrastructure/postiz/cloudflare-tunnel.yaml).
-#
-# REQUIRED before apply — create the secret (values are examples of the *shape*,
-# generate real random strings):
-#   kubectl create namespace postiz
-#   kubectl -n postiz create secret generic postiz-secrets \
-#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -hex 24)" \
-#     --from-literal=JWT_SECRET="$(openssl rand -hex 32)"
-#
-# Apply: kubectl apply -f infrastructure/postiz/k8s/postiz.yaml
-# Verify: kubectl -n postiz get pods && curl -I https://postiz.cloudless.gr
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postiz-postgres-data
   namespace: postiz
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   resources:
     requests:
       storage: 2Gi
@@ -36,7 +15,7 @@ metadata:
   name: postiz-redis-data
   namespace: postiz
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   resources:
     requests:
       storage: 512Mi
@@ -47,7 +26,7 @@ metadata:
   name: postiz-uploads
   namespace: postiz
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: [ReadWriteOnce]
   resources:
     requests:
       storage: 2Gi
@@ -73,39 +52,39 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-        - name: postgres
-          image: postgres:17-alpine
-          ports:
-            - containerPort: 5432
-          env:
-            - name: POSTGRES_USER
-              value: postiz
-            - name: POSTGRES_DB
-              value: postiz
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: postiz-secrets
-                  key: POSTGRES_PASSWORD
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/postgresql/data
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-          readinessProbe:
-            exec:
-              command: ["pg_isready", "-U", "postiz"]
-            initialDelaySeconds: 5
-            periodSeconds: 10
-      volumes:
+      - name: postgres
+        image: postgres:17-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: postiz
+        - name: POSTGRES_DB
+          value: postiz
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postiz-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
         - name: data
-          persistentVolumeClaim:
-            claimName: postiz-postgres-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          exec:
+            command: [pg_isready, -U, postiz]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postiz-postgres-data
 ---
 apiVersion: v1
 kind: Service
@@ -116,8 +95,8 @@ spec:
   selector:
     app: postiz-postgres
   ports:
-    - port: 5432
-      targetPort: 5432
+  - port: 5432
+    targetPort: 5432
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -140,30 +119,30 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-        - name: redis
-          image: redis:7-alpine
-          args: ["--appendonly", "yes"]
-          ports:
-            - containerPort: 6379
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
-          readinessProbe:
-            exec:
-              command: ["redis-cli", "ping"]
-            initialDelaySeconds: 5
-            periodSeconds: 10
-      volumes:
+      - name: redis
+        image: redis:7-alpine
+        args: [--appendonly, yes]
+        ports:
+        - containerPort: 6379
+        volumeMounts:
         - name: data
-          persistentVolumeClaim:
-            claimName: postiz-redis-data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        readinessProbe:
+          exec:
+            command: [redis-cli, ping]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postiz-redis-data
 ---
 apiVersion: v1
 kind: Service
@@ -174,8 +153,8 @@ spec:
   selector:
     app: postiz-redis
   ports:
-    - port: 6379
-      targetPort: 6379
+  - port: 6379
+    targetPort: 6379
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -198,15 +177,15 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-        - name: postiz
+      - name: postiz
           # Pinned to v2.11.2 — the last release before Postiz made the Temporal
           # workflow server mandatory (v2.12.0+ needs temporal + its own DB +
           # optional Elasticsearch, too heavy for the Pi cluster). Upgrading past
           # this tag requires deploying Temporal alongside; see
           # https://docs.postiz.com/installation/migration
-          image: ghcr.io/gitroomhq/postiz-app:v2.11.2
-          ports:
-            - containerPort: 5000
+        image: ghcr.io/gitroomhq/postiz-app:v2.11.2
+        ports:
+        - containerPort: 5000
           # Social-provider OAuth app credentials (FACEBOOK_APP_ID/SECRET,
           # LINKEDIN_CLIENT_ID/SECRET, X_API_KEY/SECRET, TIKTOK_CLIENT_ID/SECRET).
           # Created out-of-band from SSM /cloudless/production values:
@@ -214,98 +193,99 @@ spec:
           #     --from-literal=FACEBOOK_APP_ID=... (etc.)
           # Marked optional so the manifest still applies on a fresh cluster
           # before the secret exists — channel buttons just stay disabled.
-          envFrom:
-            - secretRef:
-                name: postiz-providers
-                optional: true
-          env:
-            - name: MAIN_URL
-              value: "https://postiz.cloudless.gr"
-            - name: FRONTEND_URL
-              value: "https://postiz.cloudless.gr"
-            - name: NEXT_PUBLIC_BACKEND_URL
-              value: "https://postiz.cloudless.gr/api"
+        envFrom:
+        - secretRef:
+            name: postiz-providers
+            optional: true
+        env:
+        - name: MAIN_URL
+          value: https://postiz.cloudless.gr
+        - name: FRONTEND_URL
+          value: https://postiz.cloudless.gr
+        - name: NEXT_PUBLIC_BACKEND_URL
+          value: https://postiz.cloudless.gr/api
             # Server-side (SSR) calls from the frontend to the backend stay
             # inside the container — without this the frontend fetches
             # "undefined/auth/..." and renders errors.
-            - name: BACKEND_INTERNAL_URL
-              value: "http://localhost:3000"
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: postiz-secrets
-                  key: POSTGRES_PASSWORD
-            - name: DATABASE_URL
-              value: "postgresql://postiz:$(POSTGRES_PASSWORD)@postiz-postgres:5432/postiz"
-            - name: REDIS_URL
-              value: "redis://postiz-redis:6379"
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: postiz-secrets
-                  key: JWT_SECRET
-            - name: IS_GENERAL
-              value: "true"
-            - name: DISABLE_REGISTRATION
+        - name: BACKEND_INTERNAL_URL
+          value: http://localhost:3000
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postiz-secrets
+              key: POSTGRES_PASSWORD
+        - name: DATABASE_URL
+          value: 
+            postgresql://postiz:$(POSTGRES_PASSWORD)@postiz-postgres:5432/postiz
+        - name: REDIS_URL
+          value: redis://postiz-redis:6379
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: postiz-secrets
+              key: JWT_SECRET
+        - name: IS_GENERAL
+          value: 'true'
+        - name: DISABLE_REGISTRATION
               # Admin account exists (creds in SSM POSTIZ_ADMIN_EMAIL/PASSWORD,
               # created 2026-06-12) — registration stays locked.
-              value: "true"
-            - name: STORAGE_PROVIDER
-              value: "local"
-            - name: UPLOAD_DIRECTORY
-              value: "/uploads"
-            - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
-              value: "/uploads"
+          value: 'true'
+        - name: STORAGE_PROVIDER
+          value: local
+        - name: UPLOAD_DIRECTORY
+          value: /uploads
+        - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
+          value: /uploads
             # Server-side allowlist for POST /public/v1/upload-from-url, per
             # docs.postiz.com → Configuration Reference. Defense in depth on
             # top of the route-level SSRF prefilter in src/app/api/admin/
             # postiz/upload/route.ts. Only hostnames in this comma-separated
             # list will be fetched by Postiz; everything else is rejected.
-            - name: RESTRICT_UPLOAD_DOMAINS
-              value: "cloudless.gr,uploads.postiz.cloudless.gr"
-          volumeMounts:
-            - name: uploads
-              mountPath: /uploads
-          resources:
-            requests:
-              cpu: 200m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1536Mi
+        - name: RESTRICT_UPLOAD_DOMAINS
+          value: cloudless.gr,uploads.postiz.cloudless.gr
+        volumeMounts:
+        - name: uploads
+          mountPath: /uploads
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: '1'
+            memory: 1536Mi
           # Startup probe — gives the backend generous time to finish Prisma
           # migrations and NestJS bootstrap before liveness checks kick in.
           # If the pod hasn't become healthy in 5 minutes, Kubernetes restarts it.
-          startupProbe:
-            httpGet:
-              path: /
-              port: 5000
-            initialDelaySeconds: 30
-            periodSeconds: 15
-            failureThreshold: 20  # 30s + (15s × 20) = 5 min grace period
-            timeoutSeconds: 5
+        startupProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 20             # 30s + (15s × 20) = 5 min grace period
+          timeoutSeconds: 5
           # Liveness probe — once the pod is healthy, check every 30s. If the
           # backend gets stuck (as happened on 2026-07-31 when the NestJS
           # process entered a sleeping state without binding to port 3000),
           # Kubernetes will restart the pod automatically after 90s of failures.
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 5000
-            periodSeconds: 30
-            failureThreshold: 3  # 90s of failures → restart
-            timeoutSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 5000
-            periodSeconds: 15
-            failureThreshold: 6
-            timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          periodSeconds: 30
+          failureThreshold: 3             # 90s of failures → restart
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          periodSeconds: 15
+          failureThreshold: 6
+          timeoutSeconds: 5
       volumes:
-        - name: uploads
-          persistentVolumeClaim:
-            claimName: postiz-uploads
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: postiz-uploads
 ---
 apiVersion: v1
 kind: Service
@@ -317,6 +297,6 @@ spec:
   selector:
     app: postiz
   ports:
-    - port: 5000
-      targetPort: 5000
-      nodePort: 30500
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30500

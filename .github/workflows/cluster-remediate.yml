@@ -13,7 +13,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/cluster-remediate.yml"
+    - .github/workflows/cluster-remediate.yml
 
 permissions:
   contents: read
@@ -25,108 +25,108 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: 1. ntfy — force-delete stuck Error/Evicted pods
-        run: |
-          set -uo pipefail
-          echo "=== ntfy — before ===" | tee ntfy.log
-          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
+    - name: 1. ntfy — force-delete stuck Error/Evicted pods
+      run: |
+        set -uo pipefail
+        echo "=== ntfy — before ===" | tee ntfy.log
+        kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
-          echo "" | tee -a ntfy.log
-          STUCK=$(kubectl -n ntfy get pods --no-headers 2>/dev/null \
-            | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
-          if [ -n "${STUCK}" ]; then
-            echo "Pods to delete: ${STUCK}" | tee -a ntfy.log
-            for POD in ${STUCK}; do
-              kubectl -n ntfy patch pod "${POD}" \
-                -p '{"metadata":{"finalizers":[]}}' \
-                --type=merge 2>&1 | tee -a ntfy.log || true
-              kubectl -n ntfy delete pod "${POD}" \
-                --grace-period=0 --force --ignore-not-found 2>&1 | tee -a ntfy.log || true
-            done
-          else
-            echo "No stuck pods — already clean." | tee -a ntfy.log
-          fi
-
-          echo "" | tee -a ntfy.log
-          echo "=== ntfy — after ===" | tee -a ntfy.log
-          sleep 5
-          kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
-
-          echo "" | tee -a ntfy.log
-          echo "=== ntfy deployment logs (tail 10) ===" | tee -a ntfy.log
-          kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
-
-      - name: 2. maintenance — delete Error CronJob pods
-        run: |
-          set -uo pipefail
-          echo "=== maintenance ns — before ===" | tee maintenance.log
-          kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
-
-          echo "" | tee -a maintenance.log
-          STUCK=$(kubectl -n maintenance get pods --no-headers 2>/dev/null \
-            | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
-          if [ -n "${STUCK}" ]; then
-            echo "Deleting: ${STUCK}" | tee -a maintenance.log
-            echo "${STUCK}" | xargs kubectl -n maintenance delete pod \
-              --ignore-not-found --wait=false 2>&1 | tee -a maintenance.log || true
-          else
-            echo "No Error pods in maintenance ns." | tee -a maintenance.log
-          fi
-
-          echo "" | tee -a maintenance.log
-          echo "=== maintenance ns — after ===" | tee -a maintenance.log
-          sleep 3
-          kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
-
-      - name: 3. cloudless ns — rollout restart cloudless-manager + oauth2-proxy
-        run: |
-          set -uo pipefail
-          echo "=== cloudless ns — before ===" | tee cloudless.log
-          kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
-
-          echo "" | tee -a cloudless.log
-          for DEPLOY in cloudless-manager oauth2-proxy; do
-            echo "--- rollout restart ${DEPLOY} ---" | tee -a cloudless.log
-            kubectl -n cloudless rollout restart "deploy/${DEPLOY}" 2>&1 | tee -a cloudless.log || true
+        echo "" | tee -a ntfy.log
+        STUCK=$(kubectl -n ntfy get pods --no-headers 2>/dev/null \
+          | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
+        if [ -n "${STUCK}" ]; then
+          echo "Pods to delete: ${STUCK}" | tee -a ntfy.log
+          for POD in ${STUCK}; do
+            kubectl -n ntfy patch pod "${POD}" \
+              -p '{"metadata":{"finalizers":[]}}' \
+              --type=merge 2>&1 | tee -a ntfy.log || true
+            kubectl -n ntfy delete pod "${POD}" \
+              --grace-period=0 --force --ignore-not-found 2>&1 | tee -a ntfy.log || true
           done
+        else
+          echo "No stuck pods — already clean." | tee -a ntfy.log
+        fi
 
-          echo "" | tee -a cloudless.log
-          echo "=== waiting for rollouts (90s each) ===" | tee -a cloudless.log
-          for DEPLOY in cloudless-manager oauth2-proxy; do
-            kubectl -n cloudless rollout status "deploy/${DEPLOY}" \
-              --timeout=90s 2>&1 | tee -a cloudless.log || true
-          done
+        echo "" | tee -a ntfy.log
+        echo "=== ntfy — after ===" | tee -a ntfy.log
+        sleep 5
+        kubectl -n ntfy get pods -o wide 2>&1 | tee -a ntfy.log || true
 
-          echo "" | tee -a cloudless.log
-          echo "=== cloudless ns — after ===" | tee -a cloudless.log
-          kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
+        echo "" | tee -a ntfy.log
+        echo "=== ntfy deployment logs (tail 10) ===" | tee -a ntfy.log
+        kubectl -n ntfy logs deployment/ntfy --tail=10 2>&1 | tee -a ntfy.log || true
+
+    - name: 2. maintenance — delete Error CronJob pods
+      run: |
+        set -uo pipefail
+        echo "=== maintenance ns — before ===" | tee maintenance.log
+        kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
+
+        echo "" | tee -a maintenance.log
+        STUCK=$(kubectl -n maintenance get pods --no-headers 2>/dev/null \
+          | awk '/Error|Evicted|OOMKilled/{print $1}' || true)
+        if [ -n "${STUCK}" ]; then
+          echo "Deleting: ${STUCK}" | tee -a maintenance.log
+          echo "${STUCK}" | xargs kubectl -n maintenance delete pod \
+            --ignore-not-found --wait=false 2>&1 | tee -a maintenance.log || true
+        else
+          echo "No Error pods in maintenance ns." | tee -a maintenance.log
+        fi
+
+        echo "" | tee -a maintenance.log
+        echo "=== maintenance ns — after ===" | tee -a maintenance.log
+        sleep 3
+        kubectl -n maintenance get pods 2>&1 | tee -a maintenance.log || true
+
+    - name: 3. cloudless ns — rollout restart cloudless-manager + oauth2-proxy
+      run: |
+        set -uo pipefail
+        echo "=== cloudless ns — before ===" | tee cloudless.log
+        kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
+
+        echo "" | tee -a cloudless.log
+        for DEPLOY in cloudless-manager oauth2-proxy; do
+          echo "--- rollout restart ${DEPLOY} ---" | tee -a cloudless.log
+          kubectl -n cloudless rollout restart "deploy/${DEPLOY}" 2>&1 | tee -a cloudless.log || true
+        done
+
+        echo "" | tee -a cloudless.log
+        echo "=== waiting for rollouts (90s each) ===" | tee -a cloudless.log
+        for DEPLOY in cloudless-manager oauth2-proxy; do
+          kubectl -n cloudless rollout status "deploy/${DEPLOY}" \
+            --timeout=90s 2>&1 | tee -a cloudless.log || true
+        done
+
+        echo "" | tee -a cloudless.log
+        echo "=== cloudless ns — after ===" | tee -a cloudless.log
+        kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
 
 
-      - name: Post results to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# Cluster cleanup — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+    - name: Post results to tracking issue
+      if: always()
+      run: |
+        {
+          echo "# Cluster cleanup — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          for section in ntfy maintenance cloudless; do
+            echo "## ${section}"
+            echo '```'
+            cat "${section}.log" 2>/dev/null || echo "(no log)"
+            echo '```'
             echo ""
-            for section in ntfy maintenance cloudless; do
-              echo "## ${section}"
-              echo '```'
-              cat "${section}.log" 2>/dev/null || echo "(no log)"
-              echo '```'
-              echo ""
-            done
-          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+          done
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

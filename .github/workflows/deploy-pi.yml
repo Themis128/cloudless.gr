@@ -15,14 +15,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/**"
-      - "public/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "next.config.ts"
-      - "patches/**"
-      - ".github/workflows/deploy-pi.yml"
+    - src/**
+    - public/**
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - next.config.ts
+    - patches/**
+    - .github/workflows/deploy-pi.yml
   workflow_dispatch:
 
 concurrency:
@@ -46,143 +46,145 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Skip if SHA already live
-        id: skip
-        run: |
-          set -euo pipefail
-          WANT="${{ github.sha }}"
-          LIVE=""
-          for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
-            BODY=$(curl -sS --max-time 5 "$candidate" || true)
-            if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
-              LIVE=$(echo "$BODY" | jq -r .version)
-              echo "health $candidate → version=${LIVE}"
-              break
-            fi
-            echo "health $candidate → unreachable or invalid"
-          done
-          if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
-            echo "already=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "## Deploy skipped"
-              echo "Live hostPath already serves \`${WANT}\`."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "Already deployed ${WANT} — skipping build/rollout"
-          else
-            echo "already=false" >> "$GITHUB_OUTPUT"
-            echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
+    - name: Skip if SHA already live
+      id: skip
+      run: |
+        set -euo pipefail
+        WANT="${{ github.sha }}"
+        LIVE=""
+        for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
+          BODY=$(curl -sS --max-time 5 "$candidate" || true)
+          if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
+            LIVE=$(echo "$BODY" | jq -r .version)
+            echo "health $candidate → version=${LIVE}"
+            break
           fi
+          echo "health $candidate → unreachable or invalid"
+        done
+        if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
+          echo "already=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deploy skipped"
+            echo "Live hostPath already serves \`${WANT}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Already deployed ${WANT} — skipping build/rollout"
+        else
+          echo "already=false" >> "$GITHUB_OUTPUT"
+          echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
+        fi
 
-      - name: Clean stale build output
-        if: steps.skip.outputs.already != 'true'
-        run: |
-          set -euo pipefail
-          if [ -d .next ]; then
-            echo "Removing stale .next/ from previous build..."
-            rm -rf .next
-            echo "Cleaned .next/"
-          else
-            echo "No stale .next/ — clean workspace"
-          fi
+    - name: Clean stale build output
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        if [ -d .next ]; then
+          echo "Removing stale .next/ from previous build..."
+          rm -rf .next
+          echo "Cleaned .next/"
+        else
+          echo "No stale .next/ — clean workspace"
+        fi
 
-      - name: Setup Node
-        if: steps.skip.outputs.already != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+    - name: Setup Node
+      if: steps.skip.outputs.already != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
 
-      - name: Enable corepack / pnpm
-        if: steps.skip.outputs.already != 'true'
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-          pnpm --version
+    - name: Enable corepack / pnpm
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        corepack enable
+        corepack prepare pnpm@latest --activate
+        pnpm --version
 
-      - name: Install dependencies
-        if: steps.skip.outputs.already != 'true'
-        run: pnpm install --frozen-lockfile
+    - name: Install dependencies
+      if: steps.skip.outputs.already != 'true'
+      run: pnpm install --frozen-lockfile
 
-      - name: Build Next.js standalone
-        if: steps.skip.outputs.already != 'true'
-        env:
-          NEXT_OUTPUT_STANDALONE: "1"
-          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-          NEXT_PUBLIC_STAGE: production
-          NEXT_PUBLIC_AUTH_PROVIDER: d1
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_ENVIRONMENT: pi-standby
-          NEXT_PUBLIC_SENTRY_ENVIRONMENT: pi-standby
-          NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
-          NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
-          APP_VERSION: ${{ github.sha }}
-          NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
-          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
-        run: pnpm build
+    - name: Build Next.js standalone
+      if: steps.skip.outputs.already != 'true'
+      env:
+        NEXT_OUTPUT_STANDALONE: '1'
+        NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        NEXT_PUBLIC_STAGE: production
+        NEXT_PUBLIC_AUTH_PROVIDER: d1
+        NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+        SENTRY_ENVIRONMENT: pi-standby
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: pi-standby
+        NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
+        NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ 
+          secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
+        APP_VERSION: ${{ github.sha }}
+        NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+        NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: 
+          LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+      run: pnpm build
 
-      - name: Sync standalone → hostPath
-        if: steps.skip.outputs.already != 'true'
-        run: |
-          set -euo pipefail
-          DEST="${{ env.STANDALONE_HOSTPATH }}"
-          STAGE="${DEST}.next-${GITHUB_SHA::12}"
-          SRC=".next/standalone"
-          if [ ! -f "${SRC}/server.js" ]; then
-            echo "::error::Standalone build output not found at ${SRC}/server.js. The 'Build Next.js standalone' step may have failed. Check the build logs above for errors."
-            exit 1
-          fi
-          sudo rm -rf "${STAGE}"
-          sudo mkdir -p "${STAGE}"
-          sudo rsync -a "${SRC}/" "${STAGE}/"
-          if [ -d .next/static ]; then
-            sudo mkdir -p "${STAGE}/.next/static"
-            sudo rsync -a .next/static/ "${STAGE}/.next/static/"
-          fi
-          if [ -d public ]; then
-            sudo mkdir -p "${STAGE}/public"
-            sudo rsync -a public/ "${STAGE}/public/"
-          fi
-          sudo mkdir -p "${DEST}"
-          sudo rsync -a --delete "${STAGE}/" "${DEST}/"
-          sudo rm -rf "${STAGE}"
-          if [ ! -f "${DEST}/server.js" ]; then
-            echo "::error::Sync completed but ${DEST}/server.js does not exist — rsync failed silently."
-            exit 1
-          fi
-          echo "Synced standalone → ${DEST}"
+    - name: Sync standalone → hostPath
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        DEST="${{ env.STANDALONE_HOSTPATH }}"
+        STAGE="${DEST}.next-${GITHUB_SHA::12}"
+        SRC=".next/standalone"
+        if [ ! -f "${SRC}/server.js" ]; then
+          echo "::error::Standalone build output not found at ${SRC}/server.js. The 'Build Next.js standalone' step may have failed. Check the build logs above for errors."
+          exit 1
+        fi
+        sudo rm -rf "${STAGE}"
+        sudo mkdir -p "${STAGE}"
+        sudo rsync -a "${SRC}/" "${STAGE}/"
+        if [ -d .next/static ]; then
+          sudo mkdir -p "${STAGE}/.next/static"
+          sudo rsync -a .next/static/ "${STAGE}/.next/static/"
+        fi
+        if [ -d public ]; then
+          sudo mkdir -p "${STAGE}/public"
+          sudo rsync -a public/ "${STAGE}/public/"
+        fi
+        sudo mkdir -p "${DEST}"
+        sudo rsync -a --delete "${STAGE}/" "${DEST}/"
+        sudo rm -rf "${STAGE}"
+        if [ ! -f "${DEST}/server.js" ]; then
+          echo "::error::Sync completed but ${DEST}/server.js does not exist — rsync failed silently."
+          exit 1
+        fi
+        echo "Synced standalone → ${DEST}"
 
-      - name: Resolve kubectl
-        if: steps.skip.outputs.already != 'true'
-        id: kubectl
-        run: |
-          set -euo pipefail
-          if command -v kubectl >/dev/null 2>&1 && kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
-            echo "bin=kubectl" >> "$GITHUB_OUTPUT"
-          elif sudo kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
-            echo "bin=sudo kubectl" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::kubectl cannot reach the cluster"
-            exit 1
-          fi
+    - name: Resolve kubectl
+      if: steps.skip.outputs.already != 'true'
+      id: kubectl
+      run: |
+        set -euo pipefail
+        if command -v kubectl >/dev/null 2>&1 && kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
+          echo "bin=kubectl" >> "$GITHUB_OUTPUT"
+        elif sudo kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
+          echo "bin=sudo kubectl" >> "$GITHUB_OUTPUT"
+        else
+          echo "::error::kubectl cannot reach the cluster"
+          exit 1
+        fi
 
-      - name: Roll out cloudless-app
-        if: steps.skip.outputs.already != 'true'
-        env:
-          KUBECTL: ${{ steps.kubectl.outputs.bin }}
-        run: |
-          set -euo pipefail
-          FULL_SHA="${{ github.sha }}"
-          $KUBECTL set env "deployment/${{ env.K3S_DEPLOYMENT }}" \
-            -n "${{ env.K3S_NAMESPACE }}" \
-            "APP_VERSION=${FULL_SHA}" \
-            "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}" \
-            "NEXT_PUBLIC_AUTH_PROVIDER=d1" \
-            "SSM_DISABLED=1"
-          $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" \
-            -n "${{ env.K3S_NAMESPACE }}"
-          $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \
-            -n "${{ env.K3S_NAMESPACE }}" --timeout=600s
-          curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
-          echo
+    - name: Roll out cloudless-app
+      if: steps.skip.outputs.already != 'true'
+      env:
+        KUBECTL: ${{ steps.kubectl.outputs.bin }}
+      run: |
+        set -euo pipefail
+        FULL_SHA="${{ github.sha }}"
+        $KUBECTL set env "deployment/${{ env.K3S_DEPLOYMENT }}" \
+          -n "${{ env.K3S_NAMESPACE }}" \
+          "APP_VERSION=${FULL_SHA}" \
+          "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}" \
+          "NEXT_PUBLIC_AUTH_PROVIDER=d1" \
+          "SSM_DISABLED=1"
+        $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" \
+          -n "${{ env.K3S_NAMESPACE }}"
+        $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \
+          -n "${{ env.K3S_NAMESPACE }}" --timeout=600s
+        curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
+        echo

@@ -40,6 +40,15 @@ vi.mock("@/lib/stripe", () => ({
   formatPrice: vi.fn((amount: number) => `€${(amount / 100).toFixed(2)}`),
 }));
 
+// Hoist SSM config mock
+const { getConfigMock } = vi.hoisted(() => ({
+  getConfigMock: vi.fn(),
+}));
+
+vi.mock("@/lib/ssm-config", () => ({
+  getConfig: getConfigMock,
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -49,6 +58,10 @@ function verifyOk(payloadJson: object) {
     payload: JSON.stringify(payloadJson),
   }).toString();
   mockVerify.mockResolvedValue({ ok: true, body });
+}
+
+function setGithubToken(token: string) {
+  getConfigMock.mockResolvedValue({ GITHUB_TOKEN: token });
 }
 
 function makeRequest(payloadJson: object): Request {
@@ -254,7 +267,8 @@ describe("view_submission: deploy-confirm-modal", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Default: all fetches succeed
+    // Default: all fetches succeed, GitHub token configured
+    setGithubToken("ghp_test_token");
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const mod = await import("@/app/api/slack/interactions/route");
     POST = mod.POST;
@@ -297,7 +311,7 @@ describe("view_submission: deploy-confirm-modal", () => {
   });
 
   it("calls GitHub Actions workflow dispatch API", async () => {
-    process.env.GITHUB_TOKEN = "ghp_test_token";
+    setGithubToken("ghp_test_token");
 
     const payload = deploySubmission();
     verifyOk(payload);
@@ -311,12 +325,10 @@ describe("view_submission: deploy-confirm-modal", () => {
     );
     expect(githubCall).toBeDefined();
     expect(githubCall![0]).toContain("dispatches");
-
-    delete process.env.GITHUB_TOKEN;
   });
 
   it("posts error to #deployments when GITHUB_TOKEN is missing", async () => {
-    delete process.env.GITHUB_TOKEN;
+    setGithubToken("");
 
     const payload = deploySubmission();
     verifyOk(payload);
@@ -340,7 +352,7 @@ describe("view_submission: deploy-confirm-modal", () => {
   });
 
   it("posts failure message when GitHub returns non-2xx", async () => {
-    process.env.GITHUB_TOKEN = "ghp_test_token";
+    setGithubToken("ghp_test_token");
 
     // First fetch (deploy started Slack post) succeeds, GitHub returns 422
     mockFetch
@@ -360,12 +372,10 @@ describe("view_submission: deploy-confirm-modal", () => {
       return body.includes("failed") || body.includes("422");
     });
     expect(failPost).toBeDefined();
-
-    delete process.env.GITHUB_TOKEN;
   });
 
   it("recovers user identity from private_metadata", async () => {
-    process.env.GITHUB_TOKEN = "ghp_test_token";
+    setGithubToken("ghp_test_token");
 
     const payload = deploySubmission({
       userId: "U777",
@@ -380,7 +390,5 @@ describe("view_submission: deploy-confirm-modal", () => {
       (c[0] as string).includes("chat.postMessage")
     );
     expect(deployPost![1].body as string).toContain("U777");
-
-    delete process.env.GITHUB_TOKEN;
   });
 });

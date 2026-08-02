@@ -49,46 +49,46 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: redis
-          image: redis:7-alpine
-          command:
-            - redis-server
-            - /usr/local/etc/redis/redis.conf
-          ports:
-            - containerPort: 6379
-          volumeMounts:
-            - name: redis-config
-              mountPath: /usr/local/etc/redis
-            - name: redis-data
-              mountPath: /data
-          livenessProbe:
-            exec:
-              command:
-                - redis-cli
-                - ping
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            exec:
-              command:
-                - redis-cli
-                - ping
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512Mi
-            limits:
-              cpu: 500m
-              memory: 2Gi
-      volumes:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - /usr/local/etc/redis/redis.conf
+        ports:
+        - containerPort: 6379
+        volumeMounts:
         - name: redis-config
-          configMap:
-            name: redis-config
+          mountPath: /usr/local/etc/redis
         - name: redis-data
-          emptyDir:
-            sizeLimit: 5Gi
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 2Gi
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+      - name: redis-data
+        emptyDir:
+          sizeLimit: 5Gi
 ---
 apiVersion: v1
 kind: Service
@@ -98,8 +98,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 6379
-      targetPort: 6379
+  - port: 6379
+    targetPort: 6379
   selector:
     app: redis
 ---

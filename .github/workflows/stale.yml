@@ -2,7 +2,7 @@ name: Stale Issues & PRs
 
 on:
   schedule:
-    - cron: '0 8 * * *' # Daily at 08:00 UTC
+  - cron: 0 8 * * *       # Daily at 08:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -15,23 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
-      - uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899 # v10.3.0
-        with:
-          days-before-stale: 30
-          days-before-close: 7
-          stale-issue-label: stale
-          stale-pr-label: stale
-          stale-issue-message: >
-            This issue has been inactive for 30 days and will be closed
-            in 7 days unless there is new activity. Feel free to reopen
-            if still relevant.
-          stale-pr-message: >
-            This PR has been inactive for 30 days and will be closed
-            in 7 days unless there is new activity.
-          close-issue-message: Closed due to inactivity.
-          close-pr-message: Closed due to inactivity.
-          exempt-issue-labels: pinned,security,bug
-          exempt-pr-labels: pinned,security
+    - uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899         # v10.3.0
+      with:
+        days-before-stale: 30
+        days-before-close: 7
+        stale-issue-label: stale
+        stale-pr-label: stale
+        stale-issue-message: >
+          This issue has been inactive for 30 days and will be closed
+          in 7 days unless there is new activity. Feel free to reopen
+          if still relevant.
+        stale-pr-message: >
+          This PR has been inactive for 30 days and will be closed
+          in 7 days unless there is new activity.
+        close-issue-message: Closed due to inactivity.
+        close-pr-message: Closed due to inactivity.
+        exempt-issue-labels: pinned,security,bug
+        exempt-pr-labels: pinned,security

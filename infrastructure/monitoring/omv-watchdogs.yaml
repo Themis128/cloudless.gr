@@ -1,22 +1,3 @@
-# OMV NAS health watchdogs — in-cluster CronJobs that REPLACE the failing
-# remote Claude Code on the Web routines documented in the Slack thread
-# 2026-06-20 03:04 → 2026-06-21 09:05 ("OMV NAS Remediation Routine —
-# BLOCKED", "NAS-backup routine could not run", etc).
-#
-# The remote routines failed every 4h because the cloud container has no
-# SSH client + no NAS_HOST env. These CronJobs run INSIDE the cluster on
-# the omv node itself, so no SSH/network config is needed — they exec
-# directly on the host via `nsenter --target 1`. The exact same pattern
-# used by the cloudflared restart pod (see CLAUDE.md "Cluster Incident
-# Response").
-#
-# Once these are healthy, the operator must DISABLE the remote routines
-# in their separate Claude Code on the Web environment — see
-# docs/in-cluster-monitoring.md for the exact UI steps.
-#
-# Both jobs alert to Slack via the existing cluster-alerts-secret
-# (SLACK_BOT_TOKEN), same token already proven in monitoring/cluster-alerts.
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -35,7 +16,7 @@ metadata:
   labels:
     app: omv-disk-watchdog
 spec:
-  schedule: "*/15 * * * *"
+  schedule: '*/15 * * * *'
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -56,96 +37,96 @@ spec:
           # Privileged + hostPID so nsenter can run df on the host's namespaces.
           hostPID: true
           containers:
-            - name: watchdog
-              image: alpine/k8s:1.33.0
-              imagePullPolicy: IfNotPresent
-              securityContext:
-                privileged: true
-              env:
-                - name: SLACK_BOT_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-secret
-                      key: SLACK_BOT_TOKEN
-                - name: SLACK_CHANNEL
-                  value: "C09AF5W3X16"
-                - name: WARN_PCT
-                  value: "80"
-                - name: CRIT_PCT
-                  value: "90"
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  set -eo pipefail
-                  STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          - name: watchdog
+            image: alpine/k8s:1.33.0
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              privileged: true
+            env:
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-alerts-secret
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_CHANNEL
+              value: C09AF5W3X16
+            - name: WARN_PCT
+              value: '80'
+            - name: CRIT_PCT
+              value: '90'
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -eo pipefail
+              STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-                  # Exec df on the omv host (not the container's small overlay).
-                  # /, /var/lib/rancher/k3s, and the OMV data mount under /srv/...
-                  HOST_DF=$(nsenter --target 1 --mount --uts --ipc --net --pid \
-                    df -h --output=source,fstype,size,used,avail,pcent,target \
-                    2>/dev/null | \
-                    grep -E '^(/dev/sd[ab]1|/dev/mmcblk0p2)\b' || true)
+              # Exec df on the omv host (not the container's small overlay).
+              # /, /var/lib/rancher/k3s, and the OMV data mount under /srv/...
+              HOST_DF=$(nsenter --target 1 --mount --uts --ipc --net --pid \
+                df -h --output=source,fstype,size,used,avail,pcent,target \
+                2>/dev/null | \
+                grep -E '^(/dev/sd[ab]1|/dev/mmcblk0p2)\b' || true)
 
-                  if [ -z "$HOST_DF" ]; then
-                    echo "[${STAMP}] no monitored mounts found — host df returned nothing"
-                    exit 0
-                  fi
+              if [ -z "$HOST_DF" ]; then
+                echo "[${STAMP}] no monitored mounts found — host df returned nothing"
+                exit 0
+              fi
 
-                  echo "[${STAMP}] omv df:"
-                  echo "$HOST_DF"
+              echo "[${STAMP}] omv df:"
+              echo "$HOST_DF"
 
-                  WARNS=""
-                  CRITS=""
-                  while IFS= read -r line; do
-                    [ -z "$line" ] && continue
-                    PCT=$(echo "$line" | awk '{print $6}' | tr -d '%')
-                    SRC=$(echo "$line" | awk '{print $1}')
-                    MNT=$(echo "$line" | awk '{print $7}')
-                    [ -z "$PCT" ] && continue
-                    if [ "$PCT" -ge "$CRIT_PCT" ]; then
-                      CRITS="${CRITS}\n• ${SRC} at ${MNT}: *${PCT}%*"
-                    elif [ "$PCT" -ge "$WARN_PCT" ]; then
-                      WARNS="${WARNS}\n• ${SRC} at ${MNT}: ${PCT}%"
-                    fi
-                  done <<EOF
-                  $HOST_DF
-                  EOF
+              WARNS=""
+              CRITS=""
+              while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                PCT=$(echo "$line" | awk '{print $6}' | tr -d '%')
+                SRC=$(echo "$line" | awk '{print $1}')
+                MNT=$(echo "$line" | awk '{print $7}')
+                [ -z "$PCT" ] && continue
+                if [ "$PCT" -ge "$CRIT_PCT" ]; then
+                  CRITS="${CRITS}\n• ${SRC} at ${MNT}: *${PCT}%*"
+                elif [ "$PCT" -ge "$WARN_PCT" ]; then
+                  WARNS="${WARNS}\n• ${SRC} at ${MNT}: ${PCT}%"
+                fi
+              done <<EOF
+              $HOST_DF
+              EOF
 
-                  if [ -z "$WARNS$CRITS" ]; then
-                    echo "[${STAMP}] all monitored mounts under ${WARN_PCT}%"
-                    exit 0
-                  fi
+              if [ -z "$WARNS$CRITS" ]; then
+                echo "[${STAMP}] all monitored mounts under ${WARN_PCT}%"
+                exit 0
+              fi
 
-                  EMOJI=":warning:"
-                  [ -n "$CRITS" ] && EMOJI=":rotating_light:"
-                  BODY="${EMOJI} *omv disk watchdog* ($(echo "$HOST_DF" | wc -l) mounts checked)"
-                  [ -n "$CRITS" ] && BODY="${BODY}\n*CRITICAL (≥${CRIT_PCT}%):*${CRITS}"
-                  [ -n "$WARNS" ] && BODY="${BODY}\n*WARNING (≥${WARN_PCT}%):*${WARNS}"
-                  BODY="${BODY}\n\nFull df:\n\`\`\`\n${HOST_DF}\n\`\`\`"
+              EMOJI=":warning:"
+              [ -n "$CRITS" ] && EMOJI=":rotating_light:"
+              BODY="${EMOJI} *omv disk watchdog* ($(echo "$HOST_DF" | wc -l) mounts checked)"
+              [ -n "$CRITS" ] && BODY="${BODY}\n*CRITICAL (≥${CRIT_PCT}%):*${CRITS}"
+              [ -n "$WARNS" ] && BODY="${BODY}\n*WARNING (≥${WARN_PCT}%):*${WARNS}"
+              BODY="${BODY}\n\nFull df:\n\`\`\`\n${HOST_DF}\n\`\`\`"
 
-                  PAYLOAD=$(printf '%s' "$BODY" | python3 -c '
-                  import json,os,sys
-                  print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))
-                  ')
-                  echo "[${STAMP}] posting to ${SLACK_CHANNEL}"
-                  RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
-                    -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
-                    -H 'Content-Type: application/json; charset=utf-8' \
-                    --data "$PAYLOAD" --max-time 10)
-                  OK=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')
-                  if [ "$OK" != "True" ]; then
-                    echo "[${STAMP}] Slack post failed: $RESP"
-                    exit 1
-                  fi
-                  echo "[${STAMP}] alert posted"
-              resources:
-                requests:
-                  cpu: 25m
-                  memory: 32Mi
-                limits:
-                  cpu: 200m
-                  memory: 128Mi
+              PAYLOAD=$(printf '%s' "$BODY" | python3 -c '
+              import json,os,sys
+              print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))
+              ')
+              echo "[${STAMP}] posting to ${SLACK_CHANNEL}"
+              RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+                -H 'Content-Type: application/json; charset=utf-8' \
+                --data "$PAYLOAD" --max-time 10)
+              OK=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')
+              if [ "$OK" != "True" ]; then
+                echo "[${STAMP}] Slack post failed: $RESP"
+                exit 1
+              fi
+              echo "[${STAMP}] alert posted"
+            resources:
+              requests:
+                cpu: 25m
+                memory: 32Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi
 ---
 # omv-backup-verify — every 6h, confirms the k3s etcd snapshot on
 # /srv/.../Backups/k3s-db/ is fresh (< 2h old).
@@ -169,7 +150,7 @@ metadata:
   labels:
     app: omv-backup-verify
 spec:
-  schedule: "30 */6 * * *"
+  schedule: 30 */6 * * *
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
@@ -187,61 +168,62 @@ spec:
             kubernetes.io/hostname: omv
           hostPID: true
           containers:
-            - name: verify
-              image: alpine/k8s:1.33.0
-              imagePullPolicy: IfNotPresent
-              securityContext:
-                privileged: true
-              env:
-                - name: SLACK_BOT_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-secret
-                      key: SLACK_BOT_TOKEN
-                - name: SLACK_CHANNEL
-                  value: "C09AF5W3X16"
-                - name: MAX_AGE_HOURS
-                  value: "2"
-                - name: SNAPSHOT_DIR
-                  value: "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db"
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  set -eo pipefail
-                  STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-                  # Newest file under SNAPSHOT_DIR via nsenter (host fs).
-                  NEWEST=$(nsenter --target 1 --mount --uts --ipc --net --pid \
-                    find "$SNAPSHOT_DIR" -type f -printf '%T@ %p\n' 2>/dev/null \
-                    | sort -nr | head -1 || true)
-                  if [ -z "$NEWEST" ]; then
-                    BODY=":rotating_light: *k3s etcd snapshot directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
-                  else
-                    MTIME=$(printf '%s' "$NEWEST" | awk '{print $1}' | cut -d. -f1)
-                    NOW=$(date +%s)
-                    AGE_H=$(( (NOW - MTIME) / 3600 ))
-                    if [ $AGE_H -gt $MAX_AGE_HOURS ]; then
-                      LATEST_FILE=$(printf '%s' "$NEWEST" | cut -d' ' -f2-)
-                      BODY=":warning: *k3s etcd snapshot is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check the hourly snapshot cron on omv-main."
-                    else
-                      echo "[${STAMP}] backup healthy: newest snapshot ${AGE_H}h old"
-                      exit 0
-                    fi
-                  fi
-                  PAYLOAD=$(printf '%s' "$BODY" | python3 -c 'import json,os,sys; print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))')
-                  RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
-                    -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
-                    -H 'Content-Type: application/json; charset=utf-8' \
-                    --data "$PAYLOAD" --max-time 10)
-                  OK=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')
-                  if [ "$OK" != "True" ]; then
-                    echo "[${STAMP}] Slack post failed: $RESP"
-                    exit 1
-                  fi
-              resources:
-                requests:
-                  cpu: 25m
-                  memory: 32Mi
-                limits:
-                  cpu: 200m
-                  memory: 128Mi
+          - name: verify
+            image: alpine/k8s:1.33.0
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              privileged: true
+            env:
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-alerts-secret
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_CHANNEL
+              value: C09AF5W3X16
+            - name: MAX_AGE_HOURS
+              value: '2'
+            - name: SNAPSHOT_DIR
+              value: 
+                /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -eo pipefail
+              STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+              # Newest file under SNAPSHOT_DIR via nsenter (host fs).
+              NEWEST=$(nsenter --target 1 --mount --uts --ipc --net --pid \
+                find "$SNAPSHOT_DIR" -type f -printf '%T@ %p\n' 2>/dev/null \
+                | sort -nr | head -1 || true)
+              if [ -z "$NEWEST" ]; then
+                BODY=":rotating_light: *k3s etcd snapshot directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
+              else
+                MTIME=$(printf '%s' "$NEWEST" | awk '{print $1}' | cut -d. -f1)
+                NOW=$(date +%s)
+                AGE_H=$(( (NOW - MTIME) / 3600 ))
+                if [ $AGE_H -gt $MAX_AGE_HOURS ]; then
+                  LATEST_FILE=$(printf '%s' "$NEWEST" | cut -d' ' -f2-)
+                  BODY=":warning: *k3s etcd snapshot is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check the hourly snapshot cron on omv-main."
+                else
+                  echo "[${STAMP}] backup healthy: newest snapshot ${AGE_H}h old"
+                  exit 0
+                fi
+              fi
+              PAYLOAD=$(printf '%s' "$BODY" | python3 -c 'import json,os,sys; print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))')
+              RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+                -H 'Content-Type: application/json; charset=utf-8' \
+                --data "$PAYLOAD" --max-time 10)
+              OK=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ok"))')
+              if [ "$OK" != "True" ]; then
+                echo "[${STAMP}] Slack post failed: $RESP"
+                exit 1
+              fi
+            resources:
+              requests:
+                cpu: 25m
+                memory: 32Mi
+              limits:
+                cpu: 200m
+                memory: 128Mi

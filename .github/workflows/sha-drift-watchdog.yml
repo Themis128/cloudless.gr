@@ -6,7 +6,7 @@ name: SHA drift watchdog
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+  - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,38 +19,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Re-trigger drift detector if last run failed
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Check conclusion of most recent completed drift run
-          conclusion=$(gh run list \
+    - name: Re-trigger drift detector if last run failed
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Check conclusion of most recent completed drift run
+        conclusion=$(gh run list \
+          --repo "${{ github.repository }}" \
+          --workflow sha-drift-detector.yml \
+          --status completed \
+          --limit 1 \
+          --json conclusion \
+          --jq '.[0].conclusion // "none"')
+
+        echo "Last drift detector conclusion: $conclusion"
+
+        if [ "$conclusion" != "success" ] && [ "$conclusion" != "none" ]; then
+          # Skip if a drift run is already in progress (concurrency group would cancel it)
+          in_progress=$(gh run list \
             --repo "${{ github.repository }}" \
             --workflow sha-drift-detector.yml \
-            --status completed \
+            --status in_progress \
             --limit 1 \
-            --json conclusion \
-            --jq '.[0].conclusion // "none"')
+            --json databaseId \
+            --jq 'length')
 
-          echo "Last drift detector conclusion: $conclusion"
-
-          if [ "$conclusion" != "success" ] && [ "$conclusion" != "none" ]; then
-            # Skip if a drift run is already in progress (concurrency group would cancel it)
-            in_progress=$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow sha-drift-detector.yml \
-              --status in_progress \
-              --limit 1 \
-              --json databaseId \
-              --jq 'length')
-
-            if [ "$in_progress" -gt 0 ]; then
-              echo "Drift detector already running — skipping trigger."
-            else
-              echo "Drift detected — triggering re-check."
-              gh workflow run sha-drift-detector.yml \
-                --repo "${{ github.repository }}"
-            fi
+          if [ "$in_progress" -gt 0 ]; then
+            echo "Drift detector already running — skipping trigger."
           else
-            echo "No drift — watchdog idle."
+            echo "Drift detected — triggering re-check."
+            gh workflow run sha-drift-detector.yml \
+              --repo "${{ github.repository }}"
           fi
+        else
+          echo "No drift — watchdog idle."
+        fi

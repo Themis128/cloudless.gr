@@ -17,15 +17,15 @@ services:
     image: mcr.microsoft.com/playwright/mcp:latest
     container_name: cloudless-playwright-mcp
     environment:
-      - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
-      - PLAYWRIGHT_HEADLESS=true
+    - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
+    - PLAYWRIGHT_HEADLESS=true
     volumes:
-      - /home/tbaltzakis/cloudless.gr:/workspace:cached
-      - playwright-cache:/ms-playwright
+    - /home/tbaltzakis/cloudless.gr:/workspace:cached
+    - playwright-cache:/ms-playwright
     networks:
-      - cloudless-network
+    - cloudless-network
     profiles:
-      - mcp
+    - mcp
     # Note: Run with: docker run -i --rm -it ... for proper stdio handling
     stdin_open: true
     tty: true
@@ -44,9 +44,9 @@ services:
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
     networks:
-      - cloudless-network
+    - cloudless-network
     profiles:
-      - mcp
+    - mcp
     # Note: Run with: docker run -i --rm ... for proper stdio handling
     stdin_open: true
     tty: true

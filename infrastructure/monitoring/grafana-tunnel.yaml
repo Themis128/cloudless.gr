@@ -1,37 +1,3 @@
-# Cloudflare Tunnel route: grafana.cloudless.gr → Grafana NodePort on omv-main
-#
-# Same tunnel as espocrm / appflowy / postiz / logs
-# (ID e977a490-58c5-4fdb-9155-86832e3e636a).
-#
-# DNS record to add in Cloudflare (Themis128 zone cloudless.gr):
-#   grafana.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
-#   (proxied=true, TTL=auto)
-#
-# To activate:
-#   1. Apply the updated kube-prom-stack Helm values so Grafana becomes NodePort 30850:
-#        helm upgrade kube-prom prometheus-community/kube-prometheus-stack \
-#          --namespace monitoring \
-#          --values infrastructure/monitoring/kube-prom-stack-values.yaml
-#      Verify: kubectl get svc -n monitoring kube-prom-grafana
-#
-#   2. Append the ingress rule below to /etc/cloudflared/config.yml on omv-main
-#      (under `ingress:`, BEFORE the catch-all `service: http_status:404` rule).
-#
-#   3. Reload cloudflared:
-#        sudo systemctl restart cloudflared
-#
-#   4. Verify:
-#        curl -I https://grafana.cloudless.gr/api/health     # → 200 {"database":"ok","version":"..."}
-#        curl -I https://grafana.cloudless.gr/login          # → 200
-#
-#   5. Store GRAFANA_BASE_URL in SSM (already done for GRAFANA_API_TOKEN):
-#        aws ssm put-parameter --name /cloudless/production/GRAFANA_BASE_URL \
-#          --value https://grafana.cloudless.gr --type SecureString --overwrite
-#
-#   6. Sync Prometheus datasource via the admin API:
-#        curl -X POST https://cloudless.gr/api/admin/grafana/datasources \
-#          -H "Authorization: Bearer <admin-token>" -H "Content-Type: application/json" -d '{}'
----
 # Ingress rule fragment — paste into /etc/cloudflared/config.yml
 ingress_rule:
   hostname: grafana.cloudless.gr

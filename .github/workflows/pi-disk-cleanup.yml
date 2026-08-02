@@ -8,14 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       issue:
-        description: "Issue number to post the result to"
+        description: Issue number to post the result to
         required: false
-        default: "382"
+        default: '382'
   push:
     branches: [main]
     paths:
-      - ".github/workflows/pi-disk-cleanup.yml"
-      - "scripts/pi-disk-cleanup.sh"
+    - .github/workflows/pi-disk-cleanup.yml
+    - scripts/pi-disk-cleanup.sh
 
 permissions:
   contents: read
@@ -28,35 +28,35 @@ jobs:
       ISSUE: ${{ github.event.inputs.issue || '382' }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
-      - name: Run disk cleanup via SSH
-        run: |
-          SSH_KEY="/tmp/omv_key"
-          echo "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
-          chmod 600 "$SSH_KEY"
+    - name: Run disk cleanup via SSH
+      run: |
+        SSH_KEY="/tmp/omv_key"
+        echo "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
+        chmod 600 "$SSH_KEY"
 
-          scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-            scripts/pi-disk-cleanup.sh \
-            omv@100.113.41.119:/tmp/pi-disk-cleanup.sh
+        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+          scripts/pi-disk-cleanup.sh \
+          omv@100.113.41.119:/tmp/pi-disk-cleanup.sh
 
-          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-            omv@100.113.41.119 \
-            "sudo bash /tmp/pi-disk-cleanup.sh" 2>&1 | tee cleanup-output.md
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+          omv@100.113.41.119 \
+          "sudo bash /tmp/pi-disk-cleanup.sh" 2>&1 | tee cleanup-output.md
 
-          rm -f "$SSH_KEY"
+        rm -f "$SSH_KEY"
 
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          if [ ! -s cleanup-output.md ]; then
-            printf '# Disk cleanup\n\n_SSH or cleanup script produced no output._\n' > cleanup-output.md
-          fi
-          gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
-            --body-file cleanup-output.md
+    - name: Post result to tracking issue
+      if: always()
+      run: |
+        if [ ! -s cleanup-output.md ]; then
+          printf '# Disk cleanup\n\n_SSH or cleanup script produced no output._\n' > cleanup-output.md
+        fi
+        gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+          --body-file cleanup-output.md

@@ -10,7 +10,7 @@ metadata:
   name: cloudless-main
   namespace: cloudless
   annotations:
-    traefik.io/v1alpha1: "true"
+    traefik.io/v1alpha1: 'true'
 spec:
   entryPoints:
   - websecure

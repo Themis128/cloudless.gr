@@ -1,20 +1,3 @@
-# alert-api — FastAPI alert pipeline (ESP32 / Alertmanager → Slack + MQTT)
-#
-# Restored 2026-07-30 as an in-cluster Deployment. Kuma previously probed the
-# non-existent pi-alert-api.default.svc name (permanent ENOTFOUND, mislabeled
-# as a DNS flap).
-#
-# Ports:
-#   container / ClusterIP: 8080
-#   NodePort: 30820  (NOT 30800 — reserved in omv-ai vllm-kimi.yaml)
-#
-# Image is built on omv via .github/workflows/deploy-alert-api.yml into local
-# containerd (docker.io/library/alert-api:<tag>). imagePullPolicy: Never.
-#
-# Apply:
-#   kubectl apply -f infrastructure/pi-alert-api/k8s/alert-api.yaml
-#   # then copy bot token + MQTT creds into secrets (see README)
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,10 +12,10 @@ metadata:
   namespace: alert-manager
 spec:
   limits:
-    - type: Container
-      default: { memory: 128Mi, cpu: 200m }
-      defaultRequest: { memory: 32Mi, cpu: 25m }
-      max: { memory: 200Mi, cpu: 500m }
+  - type: Container
+    default: {memory: 128Mi, cpu: 200m}
+    defaultRequest: {memory: 32Mi, cpu: 25m}
+    max: {memory: 200Mi, cpu: 500m}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -77,67 +60,67 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-        - name: alert-api
-          image: docker.io/library/alert-api:v3.5
-          imagePullPolicy: Never
-          ports:
-            - name: http
-              containerPort: 8080
-          env:
-            - name: SLACK_WEBHOOK_URL
-              valueFrom:
-                secretKeyRef:
-                  name: alert-api-secrets
-                  key: SLACK_WEBHOOK_URL
-                  optional: true
-            - name: SLACK_BOT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: alert-api-secrets
-                  key: SLACK_BOT_TOKEN
-                  optional: true
-            - name: SLACK_CHANNEL_ID
-              valueFrom:
-                secretKeyRef:
-                  name: alert-api-secrets
-                  key: SLACK_CHANNEL_ID
-                  optional: true
-            - name: MQTT_BROKER_HOST
-              value: mosquitto.monitoring.svc.cluster.local
-            - name: MQTT_BROKER_PORT
-              value: "1883"
-            - name: MQTT_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: alert-api-mqtt-creds
-                  key: MQTT_USERNAME
-                  optional: true
-            - name: MQTT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: alert-api-mqtt-creds
-                  key: MQTT_PASSWORD
-                  optional: true
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          resources:
-            requests: { memory: 64Mi, cpu: 50m }
-            limits: { memory: 200Mi, cpu: 500m }
-          startupProbe:
-            httpGet: { path: /health, port: http }
-            failureThreshold: 30
-            periodSeconds: 5
-          livenessProbe:
-            httpGet: { path: /health, port: http }
-            periodSeconds: 30
-          readinessProbe:
-            httpGet: { path: /health, port: http }
-            periodSeconds: 10
-      volumes:
+      - name: alert-api
+        image: docker.io/library/alert-api:v3.5
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: alert-api-secrets
+              key: SLACK_WEBHOOK_URL
+              optional: true
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: alert-api-secrets
+              key: SLACK_BOT_TOKEN
+              optional: true
+        - name: SLACK_CHANNEL_ID
+          valueFrom:
+            secretKeyRef:
+              name: alert-api-secrets
+              key: SLACK_CHANNEL_ID
+              optional: true
+        - name: MQTT_BROKER_HOST
+          value: mosquitto.monitoring.svc.cluster.local
+        - name: MQTT_BROKER_PORT
+          value: '1883'
+        - name: MQTT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: alert-api-mqtt-creds
+              key: MQTT_USERNAME
+              optional: true
+        - name: MQTT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: alert-api-mqtt-creds
+              key: MQTT_PASSWORD
+              optional: true
+        volumeMounts:
         - name: data
-          persistentVolumeClaim:
-            claimName: alert-api-data
+          mountPath: /data
+        resources:
+          requests: {memory: 64Mi, cpu: 50m}
+          limits: {memory: 200Mi, cpu: 500m}
+        startupProbe:
+          httpGet: {path: /health, port: http}
+          failureThreshold: 30
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: {path: /health, port: http}
+          periodSeconds: 30
+        readinessProbe:
+          httpGet: {path: /health, port: http}
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: alert-api-data
 ---
 apiVersion: v1
 kind: Service
@@ -151,7 +134,7 @@ spec:
   selector:
     app: alert-api
   ports:
-    - name: http
-      port: 8080
-      targetPort: http
-      nodePort: 30820
+  - name: http
+    port: 8080
+    targetPort: http
+    nodePort: 30820

@@ -1,23 +1,9 @@
-# Two new Grafana dashboards backed by the blackbox-exporter Probe CRDs
-# from infrastructure/monitoring/blackbox-exporter.yaml.
-#
-# - Self-hosted Apps Health: live stat panel + probe duration + HTTP status code
-# - Self-hosted Apps SLO: 30-day uptime %, 5-min rolling success rate, error
-#   budget burn rate (1h vs 99.9% target)
-#
-# Loaded into Grafana via the kube-prom-grafana-sc-dashboard sidecar which
-# watches ConfigMaps with label grafana_dashboard=1 in the monitoring ns.
-#
-# To edit a panel, modify the JSON below + kubectl apply. The sidecar
-# re-syncs every 30 s. Grafana sidecar provider is `allowUiUpdates: false`
-# so UI edits would be lost — always edit here.
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard-selfhosted-health
   namespace: monitoring
-  labels: { grafana_dashboard: "1" }
+  labels: {grafana_dashboard: '1'}
 data:
   selfhosted-health.json: |
     {
@@ -86,7 +72,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-selfhosted-slo
   namespace: monitoring
-  labels: { grafana_dashboard: "1" }
+  labels: {grafana_dashboard: '1'}
 data:
   selfhosted-slo.json: |
     {

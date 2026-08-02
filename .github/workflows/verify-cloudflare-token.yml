@@ -16,12 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       zone_name:
-        description: "Zone to verify against (default: cloudless.gr)"
+        description: 'Zone to verify against (default: cloudless.gr)'
         required: false
         default: cloudless.gr
 
 permissions:
-  id-token: write # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:GetParameter
+  id-token: write   # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:GetParameter
   contents: read
 
 concurrency:
@@ -37,44 +37,44 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-      - name: Read Cloudflare token from repository secrets
-        id: fetch
-        run: |
-          CF="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-          if [ -z "$CF" ] || [ "$CF" = "None" ]; then
-            echo "::error::No Cloudflare token in repository secrets. Please add CLOUDFLARE_API_TOKEN to repo Secrets."
-            exit 1
-          fi
-          echo "::add-mask::$CF"
-          echo "CLOUDFLARE_API_TOKEN<<EOF" >> "$GITHUB_ENV"
-          echo "$CF" >> "$GITHUB_ENV"
-          echo "EOF" >> "$GITHUB_ENV"
-          echo "token_present=true" >> "$GITHUB_OUTPUT"
+    - name: Read Cloudflare token from repository secrets
+      id: fetch
+      run: |
+        CF="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        if [ -z "$CF" ] || [ "$CF" = "None" ]; then
+          echo "::error::No Cloudflare token in repository secrets. Please add CLOUDFLARE_API_TOKEN to repo Secrets."
+          exit 1
+        fi
+        echo "::add-mask::$CF"
+        echo "CLOUDFLARE_API_TOKEN<<EOF" >> "$GITHUB_ENV"
+        echo "$CF" >> "$GITHUB_ENV"
+        echo "EOF" >> "$GITHUB_ENV"
+        echo "token_present=true" >> "$GITHUB_OUTPUT"
 
-      - name: Run smoke-test
-        id: smoke
-        env:
-          ZONE_NAME: ${{ github.event.inputs.zone_name }}
-        run: |
-          set -o pipefail
-          bash scripts/cf-token-smoketest.sh 2>&1 | tee smoke.log
-          # Preserve the exit code from the script (set -o pipefail above).
-          status=${PIPESTATUS[0]:-${pipestatus[1]:-0}}
-          echo "exit_status=$status" >> "$GITHUB_OUTPUT"
-          exit "$status"
+    - name: Run smoke-test
+      id: smoke
+      env:
+        ZONE_NAME: ${{ github.event.inputs.zone_name }}
+      run: |
+        set -o pipefail
+        bash scripts/cf-token-smoketest.sh 2>&1 | tee smoke.log
+        # Preserve the exit code from the script (set -o pipefail above).
+        status=${PIPESTATUS[0]:-${pipestatus[1]:-0}}
+        echo "exit_status=$status" >> "$GITHUB_OUTPUT"
+        exit "$status"
 
-      - name: Summarize
-        if: always()
-        run: |
-          {
-            echo "# Cloudflare token verify — $(date -u '+%F %T')Z"
-            echo
-            echo "**Zone:** ${{ github.event.inputs.zone_name }}"
-            echo "**Job status:** ${{ job.status }}"
-            echo
-            echo '```'
-            tail -n 80 smoke.log 2>/dev/null || echo '(no log)'
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+    - name: Summarize
+      if: always()
+      run: |
+        {
+          echo "# Cloudflare token verify — $(date -u '+%F %T')Z"
+          echo
+          echo "**Zone:** ${{ github.event.inputs.zone_name }}"
+          echo "**Job status:** ${{ job.status }}"
+          echo
+          echo '```'
+          tail -n 80 smoke.log 2>/dev/null || echo '(no log)'
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

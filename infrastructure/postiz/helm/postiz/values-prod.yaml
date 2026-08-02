@@ -8,10 +8,10 @@
 #     -f infrastructure/postiz/helm/postiz/values-prod.yaml
 
 postiz:
-  mainUrl: "https://postiz.cloudless.gr"
-  frontendUrl: "https://postiz.cloudless.gr"
-  backendUrl: "https://postiz.cloudless.gr/api"
-  disableRegistration: "true"
+  mainUrl: https://postiz.cloudless.gr
+  frontendUrl: https://postiz.cloudless.gr
+  backendUrl: https://postiz.cloudless.gr/api
+  disableRegistration: 'true'
 
 service:
   type: NodePort
@@ -22,4 +22,4 @@ ingress:
   enabled: false
 
 nodeSelector:
-  kubernetes.io/hostname: "omv-main"
+  kubernetes.io/hostname: omv-main

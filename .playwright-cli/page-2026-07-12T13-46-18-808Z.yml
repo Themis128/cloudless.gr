@@ -1,6 +1,6 @@
 - generic [active] [ref=e1]:
   - link "Skip to content" [ref=e2] [cursor=pointer]:
-    - /url: "#main-content"
+    - /url: '#main-content'
   - banner [ref=e3]:
     - navigation [ref=e6]:
       - link "Home" [ref=e7] [cursor=pointer]:
@@ -23,9 +23,10 @@
           - 'button "Language: English. Click to change." [ref=e36]': EN
   - main [ref=e39]:
     - generic [ref=e42]:
-      - paragraph [ref=e43]: "[ CONTACT ]"
+      - paragraph [ref=e43]: '[ CONTACT ]'
       - heading "Get in touch." [level=1] [ref=e44]
-      - paragraph [ref=e45]: Ready to go cloudless? Tell us about your project, and we'll get back to you within 24 hours.
+      - paragraph [ref=e45]: Ready to go cloudless? Tell us about your project, 
+          and we'll get back to you within 24 hours.
     - generic [ref=e49]:
       - generic [ref=e51]:
         - generic [ref=e52]:
@@ -54,11 +55,14 @@
         - generic [ref=e65]:
           - generic [ref=e66]: Message *
           - textbox "Message *" [ref=e67]:
-            - /placeholder: What are you working on? What challenges are you facing?
+            - /placeholder: What are you working on? What challenges are you 
+                facing?
         - generic [ref=e68]:
-          - checkbox "I agree that my data will be processed to respond to my enquiry, as described in the Privacy Policy. *" [ref=e69]
+          - checkbox "I agree that my data will be processed to respond to my 
+            enquiry, as described in the Privacy Policy. *" [ref=e69]
           - generic [ref=e70]:
-            - text: I agree that my data will be processed to respond to my enquiry, as described in the
+            - text: I agree that my data will be processed to respond to my 
+                enquiry, as described in the
             - link "Privacy Policy" [ref=e71] [cursor=pointer]:
               - /url: /en/privacy
             - text: . *
@@ -68,23 +72,23 @@
           - heading "What happens next?" [level=2] [ref=e76]
           - list [ref=e77]:
             - listitem [ref=e78]:
-              - generic [ref=e79]: "1"
+              - generic [ref=e79]: '1'
               - text: We review your message and get back within 24 hours.
             - listitem [ref=e80]:
-              - generic [ref=e81]: "2"
+              - generic [ref=e81]: '2'
               - text: Free 30-minute audit call to understand your needs.
             - listitem [ref=e82]:
-              - generic [ref=e83]: "3"
+              - generic [ref=e83]: '3'
               - text: Custom proposal with clear scope, timeline & pricing.
         - generic [ref=e85]:
           - heading "Direct Contact" [level=2] [ref=e86]
           - generic [ref=e87]:
             - paragraph [ref=e88]:
-              - text: "EMAIL:"
+              - text: 'EMAIL:'
               - link "tbaltzakis@cloudless.gr" [ref=e89] [cursor=pointer]:
                 - /url: mailto:tbaltzakis@cloudless.gr
-            - paragraph [ref=e90]: "LOCATION: Greece, EU"
-            - paragraph [ref=e91]: "RESPONSE: Within 24 hours"
+            - paragraph [ref=e90]: 'LOCATION: Greece, EU'
+            - paragraph [ref=e91]: 'RESPONSE: Within 24 hours'
           - generic [ref=e92]:
             - paragraph [ref=e93]: CONNECT
             - generic [ref=e94]:
@@ -99,7 +103,8 @@
           - link "cloudless.gr — home" [ref=e105] [cursor=pointer]:
             - /url: /en
             - generic "cloudless.gr" [ref=e106]
-          - paragraph [ref=e115]: Clear skies. Zero friction.Cloud architecture, serverless, data analytics & AI marketing for startups and SMBs.
+          - paragraph [ref=e115]: Clear skies. Zero friction.Cloud architecture,
+              serverless, data analytics & AI marketing for startups and SMBs.
         - generic [ref=e116]:
           - paragraph [ref=e117]: NAVIGATE
           - list [ref=e118]:
@@ -132,12 +137,14 @@
               - /url: https://github.com/cloudless-gr
         - generic [ref=e143]:
           - paragraph [ref=e144]: NEWSLETTER
-          - paragraph [ref=e145]: Cloud tips, cost-saving strategies, and growth hacks. No spam.
+          - paragraph [ref=e145]: Cloud tips, cost-saving strategies, and growth
+              hacks. No spam.
           - generic [ref=e146]:
             - textbox "your@email.com" [ref=e147]
             - button "Subscribe" [ref=e148]
           - paragraph [ref=e149]:
-            - text: By subscribing, you agree to receive our newsletter and accept our
+            - text: By subscribing, you agree to receive our newsletter and 
+                accept our
             - link "Privacy Policy" [ref=e150] [cursor=pointer]:
               - /url: /en/privacy
             - text: . Unsubscribe anytime.

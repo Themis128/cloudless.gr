@@ -1,4 +1,3 @@
----
 # Hourly physical backup of EspoCRM MariaDB via mariadb-backup → S3 xbstream.
 # Fix 2026-06-27: switched from alpine:3.20 (dropped aws-cli + kubectl packages)
 # to alpine/k8s:1.35.5 which ships kubectl; aws-cli installed via pip.
@@ -13,7 +12,7 @@ metadata:
     backup.cloudless.gr/target: espocrm-mariadb
     backup.cloudless.gr/rpo: 1h
 spec:
-  schedule: "0 * * * *"
+  schedule: 0 * * * *
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 7
   successfulJobsHistoryLimit: 3
@@ -26,66 +25,69 @@ spec:
           serviceAccountName: mariadb-xbstream-backup
           restartPolicy: Never
           containers:
-            - name: backup
+          - name: backup
               # alpine/k8s ships kubectl; we add aws-cli via pip (pip3 is in the image).
               # alpine:3.20 dropped both aws-cli and kubectl from community repo.
-              image: alpine/k8s:1.35.5
-              imagePullPolicy: IfNotPresent
-              resources:
-                requests: { cpu: 100m, memory: 128Mi }
-                limits:   { cpu: 500m, memory: 256Mi }
-              env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom: { secretKeyRef: { name: pvc-backup-aws, key: AWS_ACCESS_KEY_ID } }
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom: { secretKeyRef: { name: pvc-backup-aws, key: AWS_SECRET_ACCESS_KEY } }
-                - name: AWS_DEFAULT_REGION
-                  value: us-east-1
-                - name: MARIADB_ROOT_PASSWORD
-                  valueFrom: { secretKeyRef: { name: espocrm-secrets, key: mariadb-root-password } }
-              command: ["/bin/sh", "-c"]
-              args:
-                - |
-                  set -euo pipefail
+            image: alpine/k8s:1.35.5
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests: {cpu: 100m, memory: 128Mi}
+              limits: {cpu: 500m, memory: 256Mi}
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: 
+                    AWS_ACCESS_KEY_ID}}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: 
+                    AWS_SECRET_ACCESS_KEY}}
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
+                    mariadb-root-password}}
+            command: [/bin/sh, -c]
+            args:
+            - |
+              set -euo pipefail
 
-                  STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-                  log() { echo "[${STAMP}] $*" >&2; }
+              STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+              log() { echo "[${STAMP}] $*" >&2; }
 
-                  log "→ installing aws-cli via pip"
-                  pip3 install --quiet --no-cache-dir awscli
+              log "→ installing aws-cli via pip"
+              pip3 install --quiet --no-cache-dir awscli
 
-                  POD=$(kubectl get pod \
-                    -n espocrm \
-                    -l app=espocrm,component=mariadb \
-                    --field-selector=status.phase=Running \
-                    -o jsonpath='{.items[0].metadata.name}')
-                  [ -n "${POD}" ] || { log "❌ no running MariaDB pod found"; exit 1; }
-                  log "→ backing up via pod: ${POD}"
+              POD=$(kubectl get pod \
+                -n espocrm \
+                -l app=espocrm,component=mariadb \
+                --field-selector=status.phase=Running \
+                -o jsonpath='{.items[0].metadata.name}')
+              [ -n "${POD}" ] || { log "❌ no running MariaDB pod found"; exit 1; }
+              log "→ backing up via pod: ${POD}"
 
-                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
-                  KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
-                  BUCKET="cloudless-analytics-data"
-                  log "→ streaming xbstream → s3://${BUCKET}/${KEY}"
+              DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+              KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
+              BUCKET="cloudless-analytics-data"
+              log "→ streaming xbstream → s3://${BUCKET}/${KEY}"
 
-                  kubectl exec -n espocrm "${POD}" -- \
-                    mariadb-backup \
-                      --backup \
-                      --stream=xbstream \
-                      --host=localhost \
-                      --port=3306 \
-                      --user=root \
-                      --password="${MARIADB_ROOT_PASSWORD}" \
-                      --target-dir=/tmp/mariadb-backup-tmp \
-                    | aws s3 cp - "s3://${BUCKET}/${KEY}"
+              kubectl exec -n espocrm "${POD}" -- \
+                mariadb-backup \
+                  --backup \
+                  --stream=xbstream \
+                  --host=localhost \
+                  --port=3306 \
+                  --user=root \
+                  --password="${MARIADB_ROOT_PASSWORD}" \
+                  --target-dir=/tmp/mariadb-backup-tmp \
+                | aws s3 cp - "s3://${BUCKET}/${KEY}"
 
-                  SIZE=$(aws s3api head-object \
-                    --bucket "${BUCKET}" \
-                    --key "${KEY}" \
-                    --query ContentLength \
-                    --output text)
-                  log "✅ uploaded ${SIZE} bytes"
+              SIZE=$(aws s3api head-object \
+                --bucket "${BUCKET}" \
+                --key "${KEY}" \
+                --query ContentLength \
+                --output text)
+              log "✅ uploaded ${SIZE} bytes"
 
-                  [ "${SIZE}" -ge 10000 ] || { log "❌ backup too small (${SIZE} bytes < 10KB)"; exit 1; }
+              [ "${SIZE}" -ge 10000 ] || { log "❌ backup too small (${SIZE} bytes < 10KB)"; exit 1; }
 
-                  kubectl exec -n espocrm "${POD}" -- rm -rf /tmp/mariadb-backup-tmp || true
-                  log "✅ xbstream backup complete"
+              kubectl exec -n espocrm "${POD}" -- rm -rf /tmp/mariadb-backup-tmp || true
+              log "✅ xbstream backup complete"

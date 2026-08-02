@@ -14,11 +14,11 @@ spec:
   hostnamePrefix: k3s-subnet-router
   proxyClass: pi-fabric
   tags:
-    - tag:k8s
+  - tag:k8s
   subnetRouter:
     advertiseRoutes:
-      - "10.42.0.0/16" # pods
-      - "10.43.0.0/16" # ClusterIP services
+    - 10.42.0.0/16         # pods
+    - 10.43.0.0/16         # ClusterIP services
 ---
 # Pi-friendly ProxyClass for Connector + ProxyGroup pods.
 # Docs: https://tailscale.com/docs/kubernetes-operator/concepts/proxyclass

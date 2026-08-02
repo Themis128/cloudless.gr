@@ -1,8 +1,3 @@
-# R20: enable logical decoding on AppFlowy postgres (publisher side)
-#
-# Apply alongside (or after) the R16 WAL-G wiring. Logical decoding needs
-# wal_level=logical which is compatible with archive_mode=on.
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -36,38 +31,38 @@ spec:
         kubernetes.io/hostname: omv
       restartPolicy: OnFailure
       containers:
-        - name: psql
-          image: pgvector/pgvector:pg16
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -euo pipefail
-              export PGPASSWORD="$POSTGRES_PASSWORD"
-              psql -h postgres.appflowy.svc.cluster.local -U postgres -d postgres <<'SQL'
-              DO $$
-              BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'cloudless_appflowy') THEN
-                  CREATE PUBLICATION cloudless_appflowy FOR ALL TABLES;
-                END IF;
-              END $$;
-              SELECT CASE
-                WHEN EXISTS (SELECT 1 FROM pg_replication_slots WHERE slot_name = 'cloudless_appflowy')
-                THEN 'slot-exists'
-                ELSE (
-                  SELECT 'slot-created' FROM pg_create_logical_replication_slot('cloudless_appflowy', 'pgoutput')
-                )
-              END AS slot_status;
-              SQL
-          env:
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: appflowy-secrets
-                  key: POSTGRES_PASSWORD
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
+      - name: psql
+        image: pgvector/pgvector:pg16
+        command: [/bin/sh, -c]
+        args:
+        - |
+          set -euo pipefail
+          export PGPASSWORD="$POSTGRES_PASSWORD"
+          psql -h postgres.appflowy.svc.cluster.local -U postgres -d postgres <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'cloudless_appflowy') THEN
+              CREATE PUBLICATION cloudless_appflowy FOR ALL TABLES;
+            END IF;
+          END $$;
+          SELECT CASE
+            WHEN EXISTS (SELECT 1 FROM pg_replication_slots WHERE slot_name = 'cloudless_appflowy')
+            THEN 'slot-exists'
+            ELSE (
+              SELECT 'slot-created' FROM pg_create_logical_replication_slot('cloudless_appflowy', 'pgoutput')
+            )
+          END AS slot_status;
+          SQL
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: appflowy-secrets
+              key: POSTGRES_PASSWORD
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi

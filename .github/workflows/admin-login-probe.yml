@@ -12,12 +12,12 @@ name: Self-hosted admin login probe
 
 on:
   schedule:
-    - cron: "0 */6 * * *"        # every 6 hours
+  - cron: 0 */6 * * *            # every 6 hours
   workflow_dispatch:
   push:
     paths:
-      - "scripts/probe-selfhosted-admin.sh"
-      - ".github/workflows/admin-login-probe.yml"
+    - scripts/probe-selfhosted-admin.sh
+    - .github/workflows/admin-login-probe.yml
 
 permissions:
   contents: read
@@ -31,14 +31,14 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - name: Probe all self-hosted admin endpoints
-        env:
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_UNIFIED }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
-            echo "::warning::ADMIN_PASSWORD_UNIFIED repo secret not set — skipping probe"
-            exit 0
-          fi
-          bash scripts/probe-selfhosted-admin.sh
+    - uses: actions/checkout@v5
+    - name: Probe all self-hosted admin endpoints
+      env:
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_UNIFIED }}
+      run: |
+        set -euo pipefail
+        if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
+          echo "::warning::ADMIN_PASSWORD_UNIFIED repo secret not set — skipping probe"
+          exit 0
+        fi
+        bash scripts/probe-selfhosted-admin.sh

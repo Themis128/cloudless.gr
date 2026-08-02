@@ -1,14 +1,14 @@
 name: Validate Dev Container
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   push:
     branches: [main]
-    paths: ['.devcontainer/**']
+    paths: [.devcontainer/**]
   pull_request:
-    paths: ['.devcontainer/**']
+    paths: [.devcontainer/**]
   workflow_dispatch:
 
 concurrency:
@@ -23,34 +23,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5         # v4
 
-      - name: Build dev container image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
-        with:
-          context: .
-          file: .devcontainer/Dockerfile
-          push: false
-          load: true
-          tags: cloudless-devcontainer:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Build dev container image
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf         # v7
+      with:
+        context: .
+        file: .devcontainer/Dockerfile
+        push: false
+        load: true
+        tags: cloudless-devcontainer:ci
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-      - name: Verify AWS CLI
-        run: |
-          docker run --rm cloudless-devcontainer:ci \
-            sh -c 'aws --version && echo "arch: $(uname -m)"'
+    - name: Verify AWS CLI
+      run: |
+        docker run --rm cloudless-devcontainer:ci \
+          sh -c 'aws --version && echo "arch: $(uname -m)"'
 
-      - name: Verify pnpm store is writable as node user
-        run: |
-          docker run --rm --user node cloudless-devcontainer:ci \
-            sh -c 'touch /pnpm-store/.write-test && rm /pnpm-store/.write-test && echo "pnpm store writable"'
+    - name: Verify pnpm store is writable as node user
+      run: |
+        docker run --rm --user node cloudless-devcontainer:ci \
+          sh -c 'touch /pnpm-store/.write-test && rm /pnpm-store/.write-test && echo "pnpm store writable"'
 
-      - name: Verify CI env var is NOT set in image
-        run: |
-          docker run --rm cloudless-devcontainer:ci \
-            sh -c 'if [ "${CI:-}" = "true" ]; then echo "ERROR: CI=true is set" && exit 1; fi && echo "CI not forced in image - OK"'
+    - name: Verify CI env var is NOT set in image
+      run: |
+        docker run --rm cloudless-devcontainer:ci \
+          sh -c 'if [ "${CI:-}" = "true" ]; then echo "ERROR: CI=true is set" && exit 1; fi && echo "CI not forced in image - OK"'

@@ -10,7 +10,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/fix-pihole-nginx-conflict.yml"
+    - .github/workflows/fix-pihole-nginx-conflict.yml
 
 permissions:
   contents: read
@@ -22,171 +22,171 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: $${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: $${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:k8s
 
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
 
-      - name: Write fix pod manifest
-        run: |
-          cat > /tmp/pihole-fix-pod.yaml << 'EOF'
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: pihole-fix
-            namespace: default
-          spec:
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            restartPolicy: Never
-            volumes:
-              - name: pihole-etc
-                hostPath:
-                  path: /etc/pihole
-              - name: lighttpd-etc
-                hostPath:
-                  path: /etc/lighttpd
-            containers:
-              - name: f
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                volumeMounts:
-                  - name: pihole-etc
-                    mountPath: /host-pihole
-                  - name: lighttpd-etc
-                    mountPath: /host-lighttpd
-                command: [sh, -c]
-                args:
-                  - |
-                    apk add -q util-linux 2>/dev/null
+    - name: Write fix pod manifest
+      run: |
+        cat > /tmp/pihole-fix-pod.yaml << 'EOF'
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: pihole-fix
+          namespace: default
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          hostNetwork: true
+          restartPolicy: Never
+          volumes:
+            - name: pihole-etc
+              hostPath:
+                path: /etc/pihole
+            - name: lighttpd-etc
+              hostPath:
+                path: /etc/lighttpd
+          containers:
+            - name: f
+              image: alpine:3
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: pihole-etc
+                  mountPath: /host-pihole
+                - name: lighttpd-etc
+                  mountPath: /host-lighttpd
+              command: [sh, -c]
+              args:
+                - |
+                  apk add -q util-linux 2>/dev/null
 
-                    echo "===== Pi-hole version detection ====="
-                    PIHOLE_VERSION=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      pihole -v 2>/dev/null | head -1 || echo "unknown")
-                    echo "Pi-hole version: $PIHOLE_VERSION"
+                  echo "===== Pi-hole version detection ====="
+                  PIHOLE_VERSION=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    pihole -v 2>/dev/null | head -1 || echo "unknown")
+                  echo "Pi-hole version: $PIHOLE_VERSION"
 
-                    echo ""
-                    echo "===== Pi-hole config files ====="
-                    ls -la /host-pihole/ 2>/dev/null | head -20
-                    ls -la /host-lighttpd/ 2>/dev/null | head -10 || echo "(no lighttpd dir)"
+                  echo ""
+                  echo "===== Pi-hole config files ====="
+                  ls -la /host-pihole/ 2>/dev/null | head -20
+                  ls -la /host-lighttpd/ 2>/dev/null | head -10 || echo "(no lighttpd dir)"
 
-                    echo ""
-                    echo "===== FIX: Move Pi-hole web UI to port 8080 ====="
+                  echo ""
+                  echo "===== FIX: Move Pi-hole web UI to port 8080 ====="
 
-                    # Pi-hole v6: uses pihole.toml
-                    if [ -f /host-pihole/pihole.toml ]; then
-                      echo "Detected Pi-hole v6 (pihole.toml)"
-                      grep -i "port\|webserver\|listen" /host-pihole/pihole.toml | head -10 || true
+                  # Pi-hole v6: uses pihole.toml
+                  if [ -f /host-pihole/pihole.toml ]; then
+                    echo "Detected Pi-hole v6 (pihole.toml)"
+                    grep -i "port\|webserver\|listen" /host-pihole/pihole.toml | head -10 || true
 
-                      # Set webserver.port = 8080 in pihole.toml
-                      if grep -q "^\s*port\s*=" /host-pihole/pihole.toml; then
-                        sed -i 's|^\(\s*port\s*=\s*\).*|\18080|' /host-pihole/pihole.toml
-                        echo "PATCHED: port = 8080 in pihole.toml"
-                      elif grep -q "\[webserver\]" /host-pihole/pihole.toml; then
-                        sed -i '/\[webserver\]/a port = 8080' /host-pihole/pihole.toml
-                        echo "ADDED: port = 8080 under [webserver]"
-                      else
-                        printf '\n[webserver]\nport = 8080\n' >> /host-pihole/pihole.toml
-                        echo "APPENDED: [webserver] port = 8080"
-                      fi
-                      echo "=== webserver section ==="
-                      grep -A5 "\[webserver\]" /host-pihole/pihole.toml || true
-
-                    # Pi-hole v5: uses lighttpd on port 80
-                    elif [ -d /host-lighttpd ]; then
-                      echo "Detected Pi-hole v5 (lighttpd)"
-                      # Override port in lighttpd external.conf
-                      EXTCONF=/host-lighttpd/external.conf
-                      if [ -f "$EXTCONF" ]; then
-                        echo "Current external.conf:"
-                        cat "$EXTCONF"
-                      fi
-                      printf 'server.port := 8080\n' > "$EXTCONF"
-                      echo "PATCHED: lighttpd external.conf → port 8080"
-
+                    # Set webserver.port = 8080 in pihole.toml
+                    if grep -q "^\s*port\s*=" /host-pihole/pihole.toml; then
+                      sed -i 's|^\(\s*port\s*=\s*\).*|\18080|' /host-pihole/pihole.toml
+                      echo "PATCHED: port = 8080 in pihole.toml"
+                    elif grep -q "\[webserver\]" /host-pihole/pihole.toml; then
+                      sed -i '/\[webserver\]/a port = 8080' /host-pihole/pihole.toml
+                      echo "ADDED: port = 8080 under [webserver]"
                     else
-                      echo "WARN: cannot detect Pi-hole version/config — manual fix needed"
-                      ls /host-pihole/ 2>/dev/null
+                      printf '\n[webserver]\nport = 8080\n' >> /host-pihole/pihole.toml
+                      echo "APPENDED: [webserver] port = 8080"
                     fi
+                    echo "=== webserver section ==="
+                    grep -A5 "\[webserver\]" /host-pihole/pihole.toml || true
 
-                    echo ""
-                    echo "===== Restart pihole-FTL ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart pihole-FTL 2>/dev/null && echo "pihole-FTL restarted" || \
-                      echo "WARN: pihole-FTL restart failed"
-                    sleep 3
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active pihole-FTL 2>/dev/null || echo "pihole-FTL status unknown"
+                  # Pi-hole v5: uses lighttpd on port 80
+                  elif [ -d /host-lighttpd ]; then
+                    echo "Detected Pi-hole v5 (lighttpd)"
+                    # Override port in lighttpd external.conf
+                    EXTCONF=/host-lighttpd/external.conf
+                    if [ -f "$EXTCONF" ]; then
+                      echo "Current external.conf:"
+                      cat "$EXTCONF"
+                    fi
+                    printf 'server.port := 8080\n' > "$EXTCONF"
+                    echo "PATCHED: lighttpd external.conf → port 8080"
 
-                    echo ""
-                    echo "===== Port 80 after pihole-FTL restart ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp sport = :80 2>/dev/null || true
+                  else
+                    echo "WARN: cannot detect Pi-hole version/config — manual fix needed"
+                    ls /host-pihole/ 2>/dev/null
+                  fi
 
-                    echo ""
-                    echo "===== Restart nginx ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || \
-                      echo "WARN: nginx still failing"
-                    sleep 2
-                    NGINX_STATUS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active nginx 2>/dev/null || echo "failed")
-                    echo "nginx is: $NGINX_STATUS"
+                  echo ""
+                  echo "===== Restart pihole-FTL ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart pihole-FTL 2>/dev/null && echo "pihole-FTL restarted" || \
+                    echo "WARN: pihole-FTL restart failed"
+                  sleep 3
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active pihole-FTL 2>/dev/null || echo "pihole-FTL status unknown"
 
-                    echo ""
-                    echo "===== Restart monit ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl start monit 2>/dev/null && echo "monit started" || true
+                  echo ""
+                  echo "===== Port 80 after pihole-FTL restart ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp sport = :80 2>/dev/null || true
 
-                    echo ""
-                    echo "===== Final port summary ====="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep -E ":80 |:8080 |:443 " | head -10 || true
+                  echo ""
+                  echo "===== Restart nginx ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || \
+                    echo "WARN: nginx still failing"
+                  sleep 2
+                  NGINX_STATUS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl is-active nginx 2>/dev/null || echo "failed")
+                  echo "nginx is: $NGINX_STATUS"
 
-                    echo ""
-                    echo "===== OMV web UI reachable? ====="
-                    wget -qO- --timeout=5 http://localhost/ | head -3 2>/dev/null && \
-                      echo "OMV nginx responding on :80" || echo "WARN: localhost:80 not responding"
-          EOF
+                  echo ""
+                  echo "===== Restart monit ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    systemctl start monit 2>/dev/null && echo "monit started" || true
 
-      - name: Run fix pod
-        run: |
-          kubectl delete pod pihole-fix -n default --ignore-not-found --wait=true
-          kubectl create -f /tmp/pihole-fix-pod.yaml
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
-            pod/pihole-fix -n default --timeout=120s
-          kubectl logs -n default pihole-fix | tee /tmp/pihole-fix.txt
-          kubectl delete pod pihole-fix -n default --ignore-not-found
+                  echo ""
+                  echo "===== Final port summary ====="
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ss -tlnp 2>/dev/null | grep -E ":80 |:8080 |:443 " | head -10 || true
 
-      - name: Post report
-        if: always()
-        run: |
-          {
-            echo "# Pi-hole / nginx Port 80 Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "**Root cause:** \`pihole-FTL\` (PID 2841) was holding port 80 for Pi-hole web UI, preventing nginx (OMV web UI) from starting."
-            echo ""
-            echo "**Fix:** Moved Pi-hole web UI to port 8080, restarted pihole-FTL, then restarted nginx."
-            echo ""
-            echo "**Pi-hole admin** is now at http://omv:8080/admin (LAN only)."
-            echo "**OMV web UI** is back on http://omv/ (port 80)."
-            echo ""
-            echo "## Output"
-            echo '```'
-            cat /tmp/pihole-fix.txt
-            echo '```'
-          } > /tmp/pihole-report.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/pihole-report.md
+                  echo ""
+                  echo "===== OMV web UI reachable? ====="
+                  wget -qO- --timeout=5 http://localhost/ | head -3 2>/dev/null && \
+                    echo "OMV nginx responding on :80" || echo "WARN: localhost:80 not responding"
+        EOF
+
+    - name: Run fix pod
+      run: |
+        kubectl delete pod pihole-fix -n default --ignore-not-found --wait=true
+        kubectl create -f /tmp/pihole-fix-pod.yaml
+        kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+          pod/pihole-fix -n default --timeout=120s
+        kubectl logs -n default pihole-fix | tee /tmp/pihole-fix.txt
+        kubectl delete pod pihole-fix -n default --ignore-not-found
+
+    - name: Post report
+      if: always()
+      run: |
+        {
+          echo "# Pi-hole / nginx Port 80 Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "**Root cause:** \`pihole-FTL\` (PID 2841) was holding port 80 for Pi-hole web UI, preventing nginx (OMV web UI) from starting."
+          echo ""
+          echo "**Fix:** Moved Pi-hole web UI to port 8080, restarted pihole-FTL, then restarted nginx."
+          echo ""
+          echo "**Pi-hole admin** is now at http://omv:8080/admin (LAN only)."
+          echo "**OMV web UI** is back on http://omv/ (port 80)."
+          echo ""
+          echo "## Output"
+          echo '```'
+          cat /tmp/pihole-fix.txt
+          echo '```'
+        } > /tmp/pihole-report.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/pihole-report.md

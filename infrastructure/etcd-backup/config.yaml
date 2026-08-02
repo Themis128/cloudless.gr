@@ -27,10 +27,10 @@
 # both in sync is the job of scripts/configure-k3s.sh.
 
 tls-san:
-  - 192.168.1.128
-  - 192.168.1.130
-  - 100.74.191.58
-  - 100.113.41.119
+- 192.168.1.128
+- 192.168.1.130
+- 100.74.191.58
+- 100.113.41.119
 
 secrets-encryption: true
 
@@ -39,7 +39,7 @@ secrets-encryption: true
 # (symlinked -> /srv/.../k3s/server/db/snapshots/). The
 # k3s-snapshot-mirror.timer (every 30 min) rsyncs them to
 # /srv/.../Backups/k3s-db/snapshots/ for the omv-backup-verify watchdog.
-etcd-snapshot-schedule-cron: "0 */1 * * *"
+etcd-snapshot-schedule-cron: 0 */1 * * *
 etcd-snapshot-retention: 24
 
 # S3 backup configuration for off-site etcd snapshot replication.
@@ -52,12 +52,12 @@ etcd-s3-region: us-east-1
 etcd-s3-folder: etcd
 
 etcd-arg:
-  - "--auto-compaction-mode=periodic"
-  - "--auto-compaction-retention=30m"
-  - "--snapshot-count=5000"
-  - "--quota-backend-bytes=1073741824"
+- --auto-compaction-mode=periodic
+- --auto-compaction-retention=30m
+- --snapshot-count=5000
+- --quota-backend-bytes=1073741824
 
 kube-apiserver-arg:
-  - "--max-requests-inflight=100"
-  - "--max-mutating-requests-inflight=50"
-  - "--encryption-provider-config=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/cred/encryption-config.json"
+- --max-requests-inflight=100
+- --max-mutating-requests-inflight=50
+- --encryption-provider-config=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/cred/encryption-config.json

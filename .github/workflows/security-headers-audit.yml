@@ -1,19 +1,19 @@
 name: Security Headers Audit
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   schedule:
     # Daily at 05:30 UTC — after Lighthouse, before the aggregator at 06:00.
-    - cron: '30 5 * * *'
+  - cron: 30 5 * * *
   workflow_dispatch:
     inputs:
       target:
         description: 'Target URL (default: cloudless.gr root + /en)'
         default: ''
       strict:
-        description: 'Fail on any grade below B'
+        description: Fail on any grade below B
         type: boolean
         default: false
 
@@ -31,58 +31,58 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
 
-      - name: Run audit
-        id: audit
-        env:
-          TARGET: ${{ github.event.inputs.target }}
-          STRICT: ${{ github.event.inputs.strict || 'false' }}
-        run: |
-          set -e
-          mkdir -p audit-report
+    - name: Run audit
+      id: audit
+      env:
+        TARGET: ${{ github.event.inputs.target }}
+        STRICT: ${{ github.event.inputs.strict || 'false' }}
+      run: |
+        set -e
+        mkdir -p audit-report
 
-          URLS=(
-            "https://cloudless.gr/"
-            "https://cloudless.gr/en"
-            "https://cloudless.gr/en/services"
-            "https://cloudless.gr/en/contact"
-            "https://cloudless.gr/en/store"
-            "https://cloudless.gr/api/health"
-          )
-          if [ -n "$TARGET" ]; then
-            URLS=("$TARGET")
-          fi
+        URLS=(
+          "https://cloudless.gr/"
+          "https://cloudless.gr/en"
+          "https://cloudless.gr/en/services"
+          "https://cloudless.gr/en/contact"
+          "https://cloudless.gr/en/store"
+          "https://cloudless.gr/api/health"
+        )
+        if [ -n "$TARGET" ]; then
+          URLS=("$TARGET")
+        fi
 
-          node scripts/audit/security-headers.mjs "${URLS[@]}" \
-            --json audit-report/security-headers.json \
-            --md   audit-report/security-headers.md
+        node scripts/audit/security-headers.mjs "${URLS[@]}" \
+          --json audit-report/security-headers.json \
+          --md   audit-report/security-headers.md
 
-          cat audit-report/security-headers.md >> "$GITHUB_STEP_SUMMARY"
+        cat audit-report/security-headers.md >> "$GITHUB_STEP_SUMMARY"
 
-          # Honor STRICT mode: fail if any URL grades below B
-          if [ "$STRICT" = "true" ]; then
-            BAD=$(node -e "
-              const r = require('./audit-report/security-headers.json');
-              const order = ['A+','A','A-','B+','B','B-','C','D','F'];
-              const minIdx = order.indexOf('B');
-              const fail = r.results.filter(x => order.indexOf(x.grade) > minIdx);
-              if (fail.length) {
-                console.log(fail.map(x => x.url + ' (' + x.grade + ')').join('\\n'));
-                process.exit(1);
-              }
-            ") || {
-              echo "::error::Security headers grading failed in strict mode"
-              echo "$BAD"
-              exit 1
+        # Honor STRICT mode: fail if any URL grades below B
+        if [ "$STRICT" = "true" ]; then
+          BAD=$(node -e "
+            const r = require('./audit-report/security-headers.json');
+            const order = ['A+','A','A-','B+','B','B-','C','D','F'];
+            const minIdx = order.indexOf('B');
+            const fail = r.results.filter(x => order.indexOf(x.grade) > minIdx);
+            if (fail.length) {
+              console.log(fail.map(x => x.url + ' (' + x.grade + ')').join('\\n'));
+              process.exit(1);
             }
-          fi
+          ") || {
+            echo "::error::Security headers grading failed in strict mode"
+            echo "$BAD"
+            exit 1
+          }
+        fi
 
-      - name: Upload security headers report
-        if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
-        with:
-          name: security-headers-report-${{ github.run_id }}
-          path: audit-report/
-          retention-days: 30
-          if-no-files-found: warn
+    - name: Upload security headers report
+      if: always()
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1         # v4
+      with:
+        name: security-headers-report-${{ github.run_id }}
+        path: audit-report/
+        retention-days: 30
+        if-no-files-found: warn

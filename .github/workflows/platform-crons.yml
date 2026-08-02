@@ -14,18 +14,18 @@ name: Platform crons
 
 on:
   schedule:
-    - cron: "0 6 * * 1" # owner-digest — Mondays 06:00 UTC
-    - cron: "0 8 1 * *" # client-reports — 1st of the month 08:00 UTC
+  - cron: 0 6 * * 1       # owner-digest — Mondays 06:00 UTC
+  - cron: 0 8 1 * *       # client-reports — 1st of the month 08:00 UTC
   workflow_dispatch:
     inputs:
       target:
-        description: "Which cron endpoint(s) to trigger"
+        description: Which cron endpoint(s) to trigger
         type: choice
         default: both
         options:
-          - both
-          - owner-digest
-          - client-reports
+        - both
+        - owner-digest
+        - client-reports
 
 permissions:
   id-token: write
@@ -42,61 +42,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Read CRON_SECRET from repository secrets
-        id: secret
-        run: |
-          SECRET="${{ secrets.CRON_SECRET }}"
-          if [ -z "$SECRET" ]; then
-            echo "::error::CRON_SECRET not set in repository secrets — cron endpoints cannot authenticate."
-            exit 1
-          fi
-          echo "::add-mask::$SECRET"
-          echo "value=$SECRET" >> "$GITHUB_OUTPUT"
+    - name: Read CRON_SECRET from repository secrets
+      id: secret
+      run: |
+        SECRET="${{ secrets.CRON_SECRET }}"
+        if [ -z "$SECRET" ]; then
+          echo "::error::CRON_SECRET not set in repository secrets — cron endpoints cannot authenticate."
+          exit 1
+        fi
+        echo "::add-mask::$SECRET"
+        echo "value=$SECRET" >> "$GITHUB_OUTPUT"
 
-      - name: Decide targets
-        id: targets
-        run: |
-          EVENT="${{ github.event_name }}"
-          SCHEDULE="${{ github.event.schedule }}"
-          INPUT="${{ github.event.inputs.target }}"
-          RUN_DIGEST="false"
-          RUN_REPORTS="false"
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            case "$INPUT" in
-              both)            RUN_DIGEST="true"; RUN_REPORTS="true" ;;
-              owner-digest)    RUN_DIGEST="true" ;;
-              client-reports)  RUN_REPORTS="true" ;;
-            esac
-          elif [ "$SCHEDULE" = "0 6 * * 1" ]; then
-            RUN_DIGEST="true"
-          elif [ "$SCHEDULE" = "0 8 1 * *" ]; then
-            RUN_REPORTS="true"
-          fi
-          echo "digest=$RUN_DIGEST" >> "$GITHUB_OUTPUT"
-          echo "reports=$RUN_REPORTS" >> "$GITHUB_OUTPUT"
+    - name: Decide targets
+      id: targets
+      run: |
+        EVENT="${{ github.event_name }}"
+        SCHEDULE="${{ github.event.schedule }}"
+        INPUT="${{ github.event.inputs.target }}"
+        RUN_DIGEST="false"
+        RUN_REPORTS="false"
+        if [ "$EVENT" = "workflow_dispatch" ]; then
+          case "$INPUT" in
+            both)            RUN_DIGEST="true"; RUN_REPORTS="true" ;;
+            owner-digest)    RUN_DIGEST="true" ;;
+            client-reports)  RUN_REPORTS="true" ;;
+          esac
+        elif [ "$SCHEDULE" = "0 6 * * 1" ]; then
+          RUN_DIGEST="true"
+        elif [ "$SCHEDULE" = "0 8 1 * *" ]; then
+          RUN_REPORTS="true"
+        fi
+        echo "digest=$RUN_DIGEST" >> "$GITHUB_OUTPUT"
+        echo "reports=$RUN_REPORTS" >> "$GITHUB_OUTPUT"
 
-      - name: Trigger owner-digest
-        if: steps.targets.outputs.digest == 'true'
-        run: |
-          echo "Calling $BASE_URL/api/cron/owner-digest"
-          RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 60 \
-            -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/owner-digest")
-          echo "Response: $RESPONSE"
-          echo "## Owner digest" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+    - name: Trigger owner-digest
+      if: steps.targets.outputs.digest == 'true'
+      run: |
+        echo "Calling $BASE_URL/api/cron/owner-digest"
+        RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 60 \
+          -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
+          "$BASE_URL/api/cron/owner-digest")
+        echo "Response: $RESPONSE"
+        echo "## Owner digest" >> "$GITHUB_STEP_SUMMARY"
+        echo '```json' >> "$GITHUB_STEP_SUMMARY"
+        echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Trigger client-reports
-        if: steps.targets.outputs.reports == 'true'
-        run: |
-          echo "Calling $BASE_URL/api/cron/client-reports"
-          RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 120 \
-            -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/client-reports")
-          echo "Response: $RESPONSE"
-          echo "## Client reports" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+    - name: Trigger client-reports
+      if: steps.targets.outputs.reports == 'true'
+      run: |
+        echo "Calling $BASE_URL/api/cron/client-reports"
+        RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 120 \
+          -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
+          "$BASE_URL/api/cron/client-reports")
+        echo "Response: $RESPONSE"
+        echo "## Client reports" >> "$GITHUB_STEP_SUMMARY"
+        echo '```json' >> "$GITHUB_STEP_SUMMARY"
+        echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"

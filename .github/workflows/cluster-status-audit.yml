@@ -1,7 +1,7 @@
 name: Cluster Status Audit
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 # Snapshot of the k3s cluster + node health, written as a JSON+Markdown
 # report so the audits-aggregator can show it on /admin/audits alongside
@@ -19,11 +19,11 @@ env:
 on:
   schedule:
     # Every 30 min for fast incident detection.
-    - cron: '*/30 * * * *'
+  - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       strict:
-        description: 'Fail on any non-Ready node'
+        description: Fail on any non-Ready node
         type: boolean
         default: false
 
@@ -42,36 +42,36 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
 
-      - name: Collect cluster + node + runner status
-        id: collect
-        env:
-          STRICT: ${{ github.event.inputs.strict || 'false' }}
-        run: |
-          set -e
-          mkdir -p audit-report
-          bash scripts/audit/cluster-status.sh \
-            --json audit-report/cluster.json \
-            --md   audit-report/cluster.md
-          cat audit-report/cluster.md >> "$GITHUB_STEP_SUMMARY"
+    - name: Collect cluster + node + runner status
+      id: collect
+      env:
+        STRICT: ${{ github.event.inputs.strict || 'false' }}
+      run: |
+        set -e
+        mkdir -p audit-report
+        bash scripts/audit/cluster-status.sh \
+          --json audit-report/cluster.json \
+          --md   audit-report/cluster.md
+        cat audit-report/cluster.md >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$STRICT" = "true" ]; then
-            BAD=$(node -e "
-              const r = require('./audit-report/cluster.json');
-              const notReady = (r.nodes || []).filter(n => n.status !== 'Ready').length;
-              if (notReady > 0) { console.log(notReady); process.exit(1); }
-            ") || {
-              echo "::error::Cluster has non-Ready nodes"
-              exit 1
-            }
-          fi
+        if [ "$STRICT" = "true" ]; then
+          BAD=$(node -e "
+            const r = require('./audit-report/cluster.json');
+            const notReady = (r.nodes || []).filter(n => n.status !== 'Ready').length;
+            if (notReady > 0) { console.log(notReady); process.exit(1); }
+          ") || {
+            echo "::error::Cluster has non-Ready nodes"
+            exit 1
+          }
+        fi
 
-      - name: Upload cluster status report
-        if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
-        with:
-          name: cluster-status-report-${{ github.run_id }}
-          path: audit-report/
-          retention-days: 14
-          if-no-files-found: warn
+    - name: Upload cluster status report
+      if: always()
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1         # v4
+      with:
+        name: cluster-status-report-${{ github.run_id }}
+        path: audit-report/
+        retention-days: 14
+        if-no-files-found: warn

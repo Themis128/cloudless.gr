@@ -1,21 +1,6 @@
-# Blackbox exporter — HTTP/HTTPS probes for the 6 self-hosted apps.
-#
-# Prometheus uses these as a second monitoring channel alongside
-# kube-state-metrics (which only sees pod state, not "is the app
-# actually serving HTTP 200"). Probe results show up as
-# `probe_success{instance="..."}` in Prometheus + drive the new
-# Grafana "Self-hosted Apps Health" dashboard (to be added in a
-# follow-on PR per the scope discussion).
-#
-# Image: ghcr.io/prometheus/blackbox-exporter (arm64+amd64).
-# Resources: tiny — 50m CPU, 32Mi RAM. Pinned to omv (Pi 5) to keep
-# the probes inside the cluster so they actually test "can my user
-# reach this via Cloudflare tunnel" by going through the tunnel.
-
----
 apiVersion: v1
 kind: ConfigMap
-metadata: { name: blackbox-exporter-config, namespace: monitoring }
+metadata: {name: blackbox-exporter-config, namespace: monitoring}
 data:
   blackbox.yml: |
     modules:
@@ -50,39 +35,39 @@ data:
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: blackbox-exporter, namespace: monitoring }
+metadata: {name: blackbox-exporter, namespace: monitoring}
 spec:
   replicas: 1
-  selector: { matchLabels: { app: blackbox-exporter } }
+  selector: {matchLabels: {app: blackbox-exporter}}
   template:
-    metadata: { labels: { app: blackbox-exporter } }
+    metadata: {labels: {app: blackbox-exporter}}
     spec:
-      nodeSelector: { kubernetes.io/hostname: omv }
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
-        - name: blackbox-exporter
-          image: quay.io/prometheus/blackbox-exporter:v0.27.0
-          args:
-            - --config.file=/etc/blackbox/blackbox.yml
-            - --web.listen-address=:9115
-          ports: [{ containerPort: 9115, name: http }]
-          volumeMounts:
-            - { name: cfg, mountPath: /etc/blackbox }
-          resources:
-            requests: { cpu: 10m, memory: 16Mi }
-            limits:   { cpu: 100m, memory: 64Mi }
+      - name: blackbox-exporter
+        image: quay.io/prometheus/blackbox-exporter:v0.27.0
+        args:
+        - --config.file=/etc/blackbox/blackbox.yml
+        - --web.listen-address=:9115
+        ports: [{containerPort: 9115, name: http}]
+        volumeMounts:
+        - {name: cfg, mountPath: /etc/blackbox}
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 100m, memory: 64Mi}
       volumes:
-        - { name: cfg, configMap: { name: blackbox-exporter-config } }
+      - {name: cfg, configMap: {name: blackbox-exporter-config}}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: blackbox-exporter
   namespace: monitoring
-  labels: { app: blackbox-exporter }
+  labels: {app: blackbox-exporter}
 spec:
-  selector: { app: blackbox-exporter }
+  selector: {app: blackbox-exporter}
   ports:
-    - { name: http, port: 9115, targetPort: 9115 }
+  - {name: http, port: 9115, targetPort: 9115}
 ---
 # Probe CRDs (one per self-hosted app) — Prometheus Operator translates
 # these into blackbox-exporter scrape targets automatically.
@@ -91,7 +76,7 @@ kind: Probe
 metadata:
   name: selfhosted-appflowy
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels: {release: kube-prom}
 spec:
   jobName: selfhosted-appflowy
   interval: 60s
@@ -100,56 +85,56 @@ spec:
     url: blackbox-exporter.monitoring.svc.cluster.local:9115
   targets:
     staticConfig:
-      static: ["https://appflowy.cloudless.gr/api/health"]
-      labels: { app: appflowy, scope: selfhosted }
+      static: [https://appflowy.cloudless.gr/api/health]
+      labels: {app: appflowy, scope: selfhosted}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: selfhosted-espocrm
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels: {release: kube-prom}
 spec:
   jobName: selfhosted-espocrm
   interval: 60s
   module: http_2xx_3xx
-  prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
   targets:
     staticConfig:
-      static: ["https://espocrm.cloudless.gr/"]
-      labels: { app: espocrm, scope: selfhosted }
+      static: [https://espocrm.cloudless.gr/]
+      labels: {app: espocrm, scope: selfhosted}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: selfhosted-postiz
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels: {release: kube-prom}
 spec:
   jobName: selfhosted-postiz
   interval: 60s
   module: http_2xx_3xx
-  prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
   targets:
     staticConfig:
-      static: ["https://postiz.cloudless.gr/"]
-      labels: { app: postiz, scope: selfhosted }
+      static: [https://postiz.cloudless.gr/]
+      labels: {app: postiz, scope: selfhosted}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: selfhosted-n8n
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels: {release: kube-prom}
 spec:
   jobName: selfhosted-n8n
   interval: 60s
   module: http_2xx
-  prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
   targets:
     staticConfig:
-      static: ["https://n8n.cloudless.gr/healthz"]
-      labels: { app: n8n, scope: selfhosted }
+      static: [https://n8n.cloudless.gr/healthz]
+      labels: {app: n8n, scope: selfhosted}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
@@ -158,12 +143,12 @@ metadata:
   namespace: monitoring
   labels:
     release: kube-prom
-    cluster-protection.io/health: "true"
+    cluster-protection.io/health: 'true'
 spec:
   jobName: selfhosted-grafana
   interval: 60s
   module: http_2xx
-  prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
   targets:
     staticConfig:
       # Grafana is NOT publicly exposed via the Cloudflare tunnel —
@@ -172,8 +157,8 @@ spec:
       # "is the pod actually serving" rather than "is the public route up".
       # External public-route monitoring lives in healthchecks.io via
       # `.github/workflows/selfhosted-healthchecks.yml` instead.
-      static: ["http://kube-prom-grafana.monitoring.svc.cluster.local/api/health"]
-      labels: { app: grafana, scope: selfhosted }
+      static: [http://kube-prom-grafana.monitoring.svc.cluster.local/api/health]
+      labels: {app: grafana, scope: selfhosted}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
@@ -182,20 +167,20 @@ metadata:
   namespace: monitoring
   labels:
     release: kube-prom
-    cluster-protection.io/health: "true"
+    cluster-protection.io/health: 'true'
 spec:
   jobName: selfhosted-ntfy
   interval: 60s
   module: http_2xx
-  prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
   targets:
     staticConfig:
       # ntfy is NOT publicly exposed via the Cloudflare tunnel — only
       # accessible on the LAN. Probe the in-cluster Service directly
       # (where /v1/health does return 200; the public 404 we saw was a
       # missing tunnel-ingress rule, not an app-side issue).
-      static: ["http://ntfy.ntfy.svc.cluster.local/v1/health"]
-      labels: { app: ntfy, scope: selfhosted }
+      static: [http://ntfy.ntfy.svc.cluster.local/v1/health]
+      labels: {app: ntfy, scope: selfhosted}
 ---
 # Alert rule — fire when any self-hosted app probe stays down for > 5 min.
 apiVersion: monitoring.coreos.com/v1
@@ -203,15 +188,15 @@ kind: PrometheusRule
 metadata:
   name: selfhosted-apps-health
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels: {release: kube-prom}
 spec:
   groups:
-    - name: selfhosted.rules
-      rules:
-        - alert: SelfHostedAppDown
-          expr: probe_success{scope="selfhosted"} == 0
-          for: 5m
-          labels: { severity: warning }
-          annotations:
-            summary: "Self-hosted app {{ $labels.app }} probe failing"
-            description: "{{ $labels.instance }} has been unreachable for 5+ minutes."
+  - name: selfhosted.rules
+    rules:
+    - alert: SelfHostedAppDown
+      expr: probe_success{scope="selfhosted"} == 0
+      for: 5m
+      labels: {severity: warning}
+      annotations:
+        summary: Self-hosted app {{ $labels.app }} probe failing
+        description: '{{ $labels.instance }} has been unreachable for 5+ minutes.'

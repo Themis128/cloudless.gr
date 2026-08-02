@@ -5,8 +5,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/pi-auth-logs.yml"
-      - "scripts/pi-auth-logs.sh"
+    - .github/workflows/pi-auth-logs.yml
+    - scripts/pi-auth-logs.sh
 
 permissions:
   contents: read
@@ -18,21 +18,21 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-      - name: Collect
-        run: bash scripts/pi-auth-logs.sh 2>&1 | tee pal.log
-      - name: Post to tracking issue
-        if: always()
-        run: |
-          { echo "# Pi auth logs — $(date -u '+%F %T')Z"; echo; echo '```'; cat pal.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
-          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+    - name: Collect
+      run: bash scripts/pi-auth-logs.sh 2>&1 | tee pal.log
+    - name: Post to tracking issue
+      if: always()
+      run: |
+        { echo "# Pi auth logs — $(date -u '+%F %T')Z"; echo; echo '```'; cat pal.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

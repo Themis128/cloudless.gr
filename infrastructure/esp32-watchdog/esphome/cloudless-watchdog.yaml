@@ -26,17 +26,17 @@
 # from re-enabling.
 
 substitutions:
-  node_name:       cloudless-watchdog
-  wifi_ssid:       !secret wifi_ssid
-  wifi_pass:       !secret wifi_password
-  ntfy_url:        "http://192.168.1.130:30080/cloudless-alerts"  # omv-ha NodePort — survives omv outage
-  ntfy_token:      !secret ntfy_token
-  omv_probe:       "http://192.168.1.128:9100/metrics"   # node_exporter — always HTTP 200
-  omv_ha_probe:    "http://192.168.1.130:9100/metrics"
+  node_name: cloudless-watchdog
+  wifi_ssid: !secret wifi_ssid
+  wifi_pass: !secret wifi_password
+  ntfy_url: http://192.168.1.130:30080/cloudless-alerts           # omv-ha NodePort — survives omv outage
+  ntfy_token: !secret ntfy_token
+  omv_probe: http://192.168.1.128:9100/metrics           # node_exporter — always HTTP 200
+  omv_ha_probe: http://192.168.1.130:9100/metrics
   # k3s API health probe — node_exporter keeps responding even when k3s API
   # is dead (the death-spiral scenario). This probe exercises etcd + apiserver
   # so we can hardware-reset omv when k3s is wedged but the OS is still up.
-  omv_k3s_probe:   "https://192.168.1.128:6443/livez"
+  omv_k3s_probe: https://192.168.1.128:6443/livez
   # AWS probe removed 2026-06-21 — ESP32 now watches CLUSTER ONLY per the
   # operator's monitoring-scope cleanup. The `aws_up` global stays
   # `initial_value: "true"` so the existing LED-state matrix collapses
@@ -48,14 +48,14 @@ substitutions:
   # Wiring: ESP32 GPIO10 → NPN base (10kΩ) → relay coil GND ; coil VCC → 5V
   # The relay's NC contact is in series with the Pi power cable.
   # Set "none" to disable hardware reset entirely (LED + ntfy only).
-  relay_gpio:      "GPIO10"
+  relay_gpio: GPIO10
   # Reset threshold: number of consecutive k3s probe failures before hardware
   # reset fires. 30s interval × 6 = 3 minutes of k3s outage triggers reset.
-  k3s_reset_threshold: "6"
+  k3s_reset_threshold: '6'
 
 esphome:
   name: ${node_name}
-  friendly_name: "Cloudless Cluster Watchdog"
+  friendly_name: Cloudless Cluster Watchdog
   # ── PlatformIO best-practice: use locally-installed packages ──────────────
   # ESPHome 2026.5 generates URL-based platform + platform_packages specs which
   # force fresh network downloads every compile — causing MissingPackageManifest
@@ -72,23 +72,23 @@ esphome:
   on_boot:
     priority: -100
     then:
-      - light.turn_on:
-          id:         status_led
-          brightness: 50%
-          red:   0%
-          green: 0%
-          blue:  100%
-      - delay: 20s          # wait for Wi-Fi + DHCP to settle before sending ntfy
-      - script.execute: update_led
-      - http_request.post:
-          url:  ${ntfy_url}
-          request_headers:
-            Content-Type: text/plain
-            Authorization: "Bearer ${ntfy_token}"
-            Title: "✅ Cloudless watchdog online"
-            Priority: "low"
-            Tags: "white_check_mark,satellite"
-          body: "ESP32 cluster watchdog booted and connected. All probes starting."
+    - light.turn_on:
+        id: status_led
+        brightness: 50%
+        red: 0%
+        green: 0%
+        blue: 100%
+    - delay: 20s            # wait for Wi-Fi + DHCP to settle before sending ntfy
+    - script.execute: update_led
+    - http_request.post:
+        url: ${ntfy_url}
+        request_headers:
+          Content-Type: text/plain
+          Authorization: Bearer ${ntfy_token}
+          Title: ✅ Cloudless watchdog online
+          Priority: low
+          Tags: white_check_mark,satellite
+        body: ESP32 cluster watchdog booted and connected. All probes starting.
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -98,26 +98,26 @@ esp32:
     sdkconfig_options:
       # Disable reproducible builds: the -fdebug-prefix-map compiler flag it adds
       # cannot handle paths with spaces and causes cc1plus.exe to error.
-      CONFIG_APP_REPRODUCIBLE_BUILD: "n"
+      CONFIG_APP_REPRODUCIBLE_BUILD: n
       # Extend task watchdog to 10 s (default: 5 s in Arduino framework).
       # http_request has a 5 s timeout; during a silent TCP drop the socket can
       # hang until the timeout fires. 10 s gives a 5 s safety margin.
-      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "10"
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: '10'
 
 # ---------------------------------------------------------------------------
 # Wi-Fi
 # ---------------------------------------------------------------------------
 wifi:
-  ssid:     ${wifi_ssid}
+  ssid: ${wifi_ssid}
   password: ${wifi_pass}
   manual_ip:
-    static_ip:  192.168.1.201
-    gateway:    192.168.1.1
-    subnet:     255.255.255.0
-    dns1:       1.1.1.1
+    static_ip: 192.168.1.201
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+    dns1: 1.1.1.1
 
   ap:
-    ssid:     "${node_name}-fallback"
+    ssid: ${node_name}-fallback
     password: !secret ap_password
 
 captive_portal:
@@ -133,8 +133,8 @@ api:
     key: !secret api_key
 
 ota:
-  - platform: esphome
-    password: !secret ota_password
+- platform: esphome
+  password: !secret ota_password
 
 # ---------------------------------------------------------------------------
 # Web server (needed by prometheus component) + Prometheus metrics endpoint
@@ -164,163 +164,163 @@ http_request:
 # ---------------------------------------------------------------------------
 globals:
   # ── Probe state ─────────────────────────────────────────────────────────────
-  - id: omv_up
-    type: bool
-    restore_value: false
-    initial_value: "true"
-  - id: omv_ha_up
-    type: bool
-    restore_value: false
-    initial_value: "true"
-  - id: aws_up
-    type: bool
-    restore_value: false
-    initial_value: "true"
+- id: omv_up
+  type: bool
+  restore_value: false
+  initial_value: 'true'
+- id: omv_ha_up
+  type: bool
+  restore_value: false
+  initial_value: 'true'
+- id: aws_up
+  type: bool
+  restore_value: false
+  initial_value: 'true'
   # k3s API health — separate signal from node_exporter. node_exporter keeps
   # responding even when k3s API is wedged (the actual death-spiral scenario).
-  - id: omv_k3s_up
-    type: bool
-    restore_value: false
-    initial_value: "true"
+- id: omv_k3s_up
+  type: bool
+  restore_value: false
+  initial_value: 'true'
   # Lockout for hardware reset — prevents reset-loops. After a reset fires
   # we hold this true for 5 minutes regardless of probe state, giving the
   # Pi time to boot + k3s to start.
-  - id: reset_lockout_until
-    type: uint32_t
-    restore_value: false
-    initial_value: "0"
-  - id: omv_k3s_fail_count
-    type: int
-    restore_value: false
-    initial_value: "0"
+- id: reset_lockout_until
+  type: uint32_t
+  restore_value: false
+  initial_value: '0'
+- id: omv_k3s_fail_count
+  type: int
+  restore_value: false
+  initial_value: '0'
 
   # ── Failure counters (increment on each probe error; reset on reboot) ───────
-  - id: omv_fail_count
-    type: int
-    restore_value: false
-    initial_value: "0"
-  - id: omv_ha_fail_count
-    type: int
-    restore_value: false
-    initial_value: "0"
-  - id: aws_fail_count
-    type: int
-    restore_value: false
-    initial_value: "0"
+- id: omv_fail_count
+  type: int
+  restore_value: false
+  initial_value: '0'
+- id: omv_ha_fail_count
+  type: int
+  restore_value: false
+  initial_value: '0'
+- id: aws_fail_count
+  type: int
+  restore_value: false
+  initial_value: '0'
 
   # ── Alert deduplication timestamps (millis() of last ntfy POST per target) ──
   # Value 0 = never alerted. Re-alert only after 600 000 ms (10 min) of silence.
-  - id: omv_last_alerted
-    type: uint32_t
-    restore_value: false
-    initial_value: "0"
-  - id: omv_ha_last_alerted
-    type: uint32_t
-    restore_value: false
-    initial_value: "0"
-  - id: aws_last_alerted
-    type: uint32_t
-    restore_value: false
-    initial_value: "0"
+- id: omv_last_alerted
+  type: uint32_t
+  restore_value: false
+  initial_value: '0'
+- id: omv_ha_last_alerted
+  type: uint32_t
+  restore_value: false
+  initial_value: '0'
+- id: aws_last_alerted
+  type: uint32_t
+  restore_value: false
+  initial_value: '0'
 
 # ---------------------------------------------------------------------------
 # Virtual binary sensors — expose probe state to Prometheus / HA
 # ---------------------------------------------------------------------------
 binary_sensor:
-  - platform: template
-    id:         omv_reachable
-    name:       "omv (192.168.1.128) reachable"
-    entity_category: diagnostic
-    lambda: "return id(omv_up);"
+- platform: template
+  id: omv_reachable
+  name: omv (192.168.1.128) reachable
+  entity_category: diagnostic
+  lambda: return id(omv_up);
 
-  - platform: template
-    id:         omv_ha_reachable
-    name:       "omv-ha (192.168.1.130) reachable"
-    entity_category: diagnostic
-    lambda: "return id(omv_ha_up);"
+- platform: template
+  id: omv_ha_reachable
+  name: omv-ha (192.168.1.130) reachable
+  entity_category: diagnostic
+  lambda: return id(omv_ha_up);
 
   # aws_app_reachable removed 2026-06-21 — AWS probe disabled (cluster-only scope).
 
-  - platform: template
-    id:         omv_k3s_reachable
-    name:       "omv k3s API reachable"
-    entity_category: diagnostic
-    lambda: "return id(omv_k3s_up);"
+- platform: template
+  id: omv_k3s_reachable
+  name: omv k3s API reachable
+  entity_category: diagnostic
+  lambda: return id(omv_k3s_up);
 
 # ---------------------------------------------------------------------------
 # On-board RGB LED  (GPIO48 = v1.0 — v1.1 uses GPIO38, do NOT swap)
 # ---------------------------------------------------------------------------
 light:
-  - platform:   esp32_rmt_led_strip
-    id:         status_led
-    name:       "Status LED"
-    pin:        GPIO48
-    num_leds:   1
-    rmt_symbols: 64
-    chipset:    WS2812
-    rgb_order:  GRB
-    restore_mode: ALWAYS_OFF
-    effects:
+- platform: esp32_rmt_led_strip
+  id: status_led
+  name: Status LED
+  pin: GPIO48
+  num_leds: 1
+  rmt_symbols: 64
+  chipset: WS2812
+  rgb_order: GRB
+  restore_mode: ALWAYS_OFF
+  effects:
       # AWS only down — slow orange blink
-      - strobe:
-          name: "blink_orange"
-          colors:
-            - state: true
-              brightness: 80%
-              red:   100%
-              green: 40%
-              blue:  0%
-              duration: 600ms
-            - state: false
-              duration: 800ms
+  - strobe:
+      name: blink_orange
+      colors:
+      - state: true
+        brightness: 80%
+        red: 100%
+        green: 40%
+        blue: 0%
+        duration: 600ms
+      - state: false
+        duration: 800ms
       # One Pi node down — slow yellow blink
-      - strobe:
-          name: "blink_yellow"
-          colors:
-            - state: true
-              brightness: 70%
-              red:   100%
-              green: 80%
-              blue:  0%
-              duration: 600ms
-            - state: false
-              duration: 800ms
+  - strobe:
+      name: blink_yellow
+      colors:
+      - state: true
+        brightness: 70%
+        red: 100%
+        green: 80%
+        blue: 0%
+        duration: 600ms
+      - state: false
+        duration: 800ms
       # Both Pi nodes down — fast red blink
-      - strobe:
-          name: "blink_red_fast"
-          colors:
-            - state: true
-              brightness: 100%
-              red:   100%
-              green: 0%
-              blue:  0%
-              duration: 250ms
-            - state: false
-              duration: 250ms
+  - strobe:
+      name: blink_red_fast
+      colors:
+      - state: true
+        brightness: 100%
+        red: 100%
+        green: 0%
+        blue: 0%
+        duration: 250ms
+      - state: false
+        duration: 250ms
       # AWS + one Pi — fast deep-orange blink
-      - strobe:
-          name: "blink_deep_orange_fast"
-          colors:
-            - state: true
-              brightness: 90%
-              red:   100%
-              green: 20%
-              blue:  0%
-              duration: 250ms
-            - state: false
-              duration: 300ms
+  - strobe:
+      name: blink_deep_orange_fast
+      colors:
+      - state: true
+        brightness: 90%
+        red: 100%
+        green: 20%
+        blue: 0%
+        duration: 250ms
+      - state: false
+        duration: 300ms
       # Total outage — magenta fast blink
-      - strobe:
-          name: "blink_magenta"
-          colors:
-            - state: true
-              brightness: 100%
-              red:   100%
-              green: 0%
-              blue:  100%
-              duration: 250ms
-            - state: false
-              duration: 250ms
+  - strobe:
+      name: blink_magenta
+      colors:
+      - state: true
+        brightness: 100%
+        red: 100%
+        green: 0%
+        blue: 100%
+        duration: 250ms
+      - state: false
+        duration: 250ms
 
 # ---------------------------------------------------------------------------
 # Health probes — poll every 30 s (Pi nodes) / 60 s (AWS)
@@ -329,75 +329,75 @@ light:
 # ---------------------------------------------------------------------------
 interval:
   # omv probe — fires immediately then every 30 s
-  - id: probe_omv
-    interval: 30s
-    then:
-      - http_request.get:
-          url: ${omv_probe}
-          on_response:
-            then:
-              - lambda: |-
-                  bool was = id(omv_up);
-                  bool now = (response->status_code >= 200 && response->status_code < 400);
-                  if (!now) id(omv_fail_count)++;
-                  if (was != now) {
-                    id(omv_up) = now;
-                    id(omv_reachable).publish_state(now);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
-                  if (!was && now) {
-                    // Recovery — reset dedup timer and send recovery notification
-                    id(omv_last_alerted) = 0;
-                    id(send_omv_recovery).execute();
-                  }
-          on_error:
-            then:
-              - lambda: |-
-                  id(omv_fail_count)++;
-                  if (id(omv_up)) {
-                    id(omv_up) = false;
-                    id(omv_reachable).publish_state(false);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
+- id: probe_omv
+  interval: 30s
+  then:
+  - http_request.get:
+      url: ${omv_probe}
+      on_response:
+        then:
+        - lambda: |-
+            bool was = id(omv_up);
+            bool now = (response->status_code >= 200 && response->status_code < 400);
+            if (!now) id(omv_fail_count)++;
+            if (was != now) {
+              id(omv_up) = now;
+              id(omv_reachable).publish_state(now);
+              id(update_led).execute();
+              id(heartbeat_pulse).execute();
+            }
+            if (!was && now) {
+              // Recovery — reset dedup timer and send recovery notification
+              id(omv_last_alerted) = 0;
+              id(send_omv_recovery).execute();
+            }
+      on_error:
+        then:
+        - lambda: |-
+            id(omv_fail_count)++;
+            if (id(omv_up)) {
+              id(omv_up) = false;
+              id(omv_reachable).publish_state(false);
+              id(update_led).execute();
+              id(heartbeat_pulse).execute();
+            }
 
   # omv-ha probe — startup_delay staggers it 15 s after omv probe without
   # blocking the scheduler (a delay: inside interval caused the [component:522]
   # "took a long time" warnings because the delay held the interval callback
   # for 15 s, well above the 30 ms threshold).
-  - id: probe_omv_ha
-    interval: 30s
-    startup_delay: 15s
-    then:
-      - http_request.get:
-          url: ${omv_ha_probe}
-          on_response:
-            then:
-              - lambda: |-
-                  bool was = id(omv_ha_up);
-                  bool now = (response->status_code >= 200 && response->status_code < 400);
-                  if (!now) id(omv_ha_fail_count)++;
-                  if (was != now) {
-                    id(omv_ha_up) = now;
-                    id(omv_ha_reachable).publish_state(now);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
-                  if (!was && now) {
-                    id(omv_ha_last_alerted) = 0;
-                    id(send_omv_ha_recovery).execute();
-                  }
-          on_error:
-            then:
-              - lambda: |-
-                  id(omv_ha_fail_count)++;
-                  if (id(omv_ha_up)) {
-                    id(omv_ha_up) = false;
-                    id(omv_ha_reachable).publish_state(false);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
+- id: probe_omv_ha
+  interval: 30s
+  startup_delay: 15s
+  then:
+  - http_request.get:
+      url: ${omv_ha_probe}
+      on_response:
+        then:
+        - lambda: |-
+            bool was = id(omv_ha_up);
+            bool now = (response->status_code >= 200 && response->status_code < 400);
+            if (!now) id(omv_ha_fail_count)++;
+            if (was != now) {
+              id(omv_ha_up) = now;
+              id(omv_ha_reachable).publish_state(now);
+              id(update_led).execute();
+              id(heartbeat_pulse).execute();
+            }
+            if (!was && now) {
+              id(omv_ha_last_alerted) = 0;
+              id(send_omv_ha_recovery).execute();
+            }
+      on_error:
+        then:
+        - lambda: |-
+            id(omv_ha_fail_count)++;
+            if (id(omv_ha_up)) {
+              id(omv_ha_up) = false;
+              id(omv_ha_reachable).publish_state(false);
+              id(update_led).execute();
+              id(heartbeat_pulse).execute();
+            }
 
   # probe_aws interval removed 2026-06-21 — ESP32 watches CLUSTER ONLY.
 
@@ -406,77 +406,79 @@ interval:
   # 401 Unauthorized counts as healthy — we don't have client cert; we just
   # want to know that apiserver+etcd are responsive. The TLS handshake alone
   # proves the kube-apiserver process is alive.
-  - id: probe_omv_k3s
-    interval: 30s
-    startup_delay: 22s
-    then:
-      - http_request.get:
-          url: ${omv_k3s_probe}
-          on_response:
-            then:
-              - lambda: |-
-                  // 200 = healthy livez, 401 = TLS up + apiserver responds but no auth (fine for liveness)
-                  bool now = (response->status_code == 200 || response->status_code == 401);
-                  bool was = id(omv_k3s_up);
-                  if (!now) {
-                    id(omv_k3s_fail_count)++;
-                  } else {
-                    id(omv_k3s_fail_count) = 0;
-                  }
-                  if (was != now) {
-                    id(omv_k3s_up) = now;
-                  }
-                  // Hardware reset trigger
-                  if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
-                    id(maybe_hard_reset).execute();
-                  }
-          on_error:
-            then:
-              - lambda: |-
-                  id(omv_k3s_fail_count)++;
-                  if (id(omv_k3s_up)) id(omv_k3s_up) = false;
-                  if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
-                    id(maybe_hard_reset).execute();
-                  }
+- id: probe_omv_k3s
+  interval: 30s
+  startup_delay: 22s
+  then:
+  - http_request.get:
+      url: ${omv_k3s_probe}
+      on_response:
+        then:
+        - lambda: |-
+            // 200 = healthy livez, 401 = TLS up + apiserver responds but no auth (fine for liveness)
+            bool now = (response->status_code == 200 || response->status_code == 401);
+            bool was = id(omv_k3s_up);
+            if (!now) {
+              id(omv_k3s_fail_count)++;
+            } else {
+              id(omv_k3s_fail_count) = 0;
+            }
+            if (was != now) {
+              id(omv_k3s_up) = now;
+            }
+            // Hardware reset trigger
+            if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
+              id(maybe_hard_reset).execute();
+            }
+      on_error:
+        then:
+        - lambda: |-
+            id(omv_k3s_fail_count)++;
+            if (id(omv_k3s_up)) id(omv_k3s_up) = false;
+            if (id(omv_k3s_fail_count) >= ${k3s_reset_threshold}) {
+              id(maybe_hard_reset).execute();
+            }
 
   # ntfy alerts — single combined interval every 60 s
   # Dedup: only re-alert per target if >10 minutes have passed since the last POST.
   # First alert fires immediately (last_alerted == 0); subsequent ones every 10 min.
-  - id: notify_alerts
-    interval: 60s
-    then:
+- id: notify_alerts
+  interval: 60s
+  then:
       # AWS alert removed 2026-06-21 — cluster-only scope.
-      - if:
-          condition:
-            lambda: "return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() - id(omv_last_alerted)) >= 600000);"
-          then:
-            - http_request.post:
-                url:  ${ntfy_url}
-                request_headers:
-                  Content-Type: text/plain
-                  Authorization: "Bearer ${ntfy_token}"
-                  Title: "🔴 omv (192.168.1.128) UNREACHABLE"
-                  Priority: "urgent"
-                  Tags: "warning,skull"
-                body: "HTTP probe to omv:9100 failed. Node may be down."
-            - lambda: "id(omv_last_alerted) = millis();"
-      - if:
-          condition:
-            lambda: "return !id(omv_ha_up) && (id(omv_ha_last_alerted) == 0 || (millis() - id(omv_ha_last_alerted)) >= 600000);"
-          then:
-            - http_request.post:
-                url:  ${ntfy_url}
-                request_headers:
-                  Content-Type: text/plain
-                  Authorization: "Bearer ${ntfy_token}"
-                  Title: "🔴 omv-ha (192.168.1.130) UNREACHABLE"
-                  Priority: "urgent"
-                  Tags: "warning,skull"
-                body: "HTTP probe to omv-ha:9100 failed. Node may be down."
-            - lambda: "id(omv_ha_last_alerted) = millis();"
+  - if:
+      condition:
+        lambda: return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() - 
+          id(omv_last_alerted)) >= 600000);
+      then:
+      - http_request.post:
+          url: ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: Bearer ${ntfy_token}
+            Title: 🔴 omv (192.168.1.128) UNREACHABLE
+            Priority: urgent
+            Tags: warning,skull
+          body: HTTP probe to omv:9100 failed. Node may be down.
+      - lambda: id(omv_last_alerted) = millis();
+  - if:
+      condition:
+        lambda: return !id(omv_ha_up) && (id(omv_ha_last_alerted) == 0 || 
+          (millis() - id(omv_ha_last_alerted)) >= 600000);
+      then:
+      - http_request.post:
+          url: ${ntfy_url}
+          request_headers:
+            Content-Type: text/plain
+            Authorization: Bearer ${ntfy_token}
+            Title: 🔴 omv-ha (192.168.1.130) UNREACHABLE
+            Priority: urgent
+            Tags: warning,skull
+          body: HTTP probe to omv-ha:9100 failed. Node may be down.
+      - lambda: id(omv_ha_last_alerted) = millis();
       # Periodic LED self-correction — ensures the LED always reflects the true
       # probe state even if a prior update was interrupted or lost.
-      - script.execute: update_led
+  - script.execute: update_led
 
 # ---------------------------------------------------------------------------
 # LED update script — priority order (worst first):
@@ -491,204 +493,206 @@ script:
   # ── Heartbeat pulse ─────────────────────────────────────────────────────────
   # Brief white flash on every probe state-change — visual proof the board is
   # alive and actively processing results (not frozen).
-  - id: heartbeat_pulse
-    mode: single          # ignore re-triggers while pulse is in progress
+- id: heartbeat_pulse
+  mode: single            # ignore re-triggers while pulse is in progress
     # Called immediately AFTER update_led in probe transition blocks.
     # Sequence: update_led runs (completes in ~1 ms) → heartbeat waits 50 ms →
     # white flash → 150 ms → update_led again to restore the correct effect.
     # update_led is mode:restart; no race here because the first update_led call
     # finishes well before the 50 ms delay expires.
-    then:
-      - delay: 50ms                  # let update_led finish before the flash
-      - light.turn_on:
-          id:         status_led
-          brightness: 80%
-          red:   100%
-          green: 100%
-          blue:  100%
-      - delay: 150ms
-      - script.execute: update_led   # restore correct color/effect after flash
+  then:
+  - delay: 50ms                      # let update_led finish before the flash
+  - light.turn_on:
+      id: status_led
+      brightness: 80%
+      red: 100%
+      green: 100%
+      blue: 100%
+  - delay: 150ms
+  - script.execute: update_led         # restore correct color/effect after flash
 
   # ── Recovery notifications ──────────────────────────────────────────────────
-  - id: send_omv_recovery
-    mode: single
-    then:
-      - http_request.post:
-          url:  ${ntfy_url}
-          request_headers:
-            Content-Type: text/plain
-            Authorization: "Bearer ${ntfy_token}"
-            Title: "✅ omv (192.168.1.128) RECOVERED"
-            Priority: "default"
-            Tags: "white_check_mark,computer"
-          body: "HTTP probe to omv:9100 is responding again. Node is back online."
+- id: send_omv_recovery
+  mode: single
+  then:
+  - http_request.post:
+      url: ${ntfy_url}
+      request_headers:
+        Content-Type: text/plain
+        Authorization: Bearer ${ntfy_token}
+        Title: ✅ omv (192.168.1.128) RECOVERED
+        Priority: default
+        Tags: white_check_mark,computer
+      body: HTTP probe to omv:9100 is responding again. Node is back online.
 
-  - id: send_omv_ha_recovery
-    mode: single
-    then:
-      - http_request.post:
-          url:  ${ntfy_url}
-          request_headers:
-            Content-Type: text/plain
-            Authorization: "Bearer ${ntfy_token}"
-            Title: "✅ omv-ha (192.168.1.130) RECOVERED"
-            Priority: "default"
-            Tags: "white_check_mark,computer"
-          body: "HTTP probe to omv-ha:9100 is responding again. Node is back online."
+- id: send_omv_ha_recovery
+  mode: single
+  then:
+  - http_request.post:
+      url: ${ntfy_url}
+      request_headers:
+        Content-Type: text/plain
+        Authorization: Bearer ${ntfy_token}
+        Title: ✅ omv-ha (192.168.1.130) RECOVERED
+        Priority: default
+        Tags: white_check_mark,computer
+      body: HTTP probe to omv-ha:9100 is responding again. Node is back online.
 
   # ── Hardware reset — last-resort recovery when k3s is wedged ────────────────
   # Fires when omv_k3s_fail_count >= 6 (≈3 min of k3s API unavailable).
   # Cools down for 5 minutes to prevent reset loops.
-  - id: maybe_hard_reset
-    mode: single
-    then:
-      - lambda: |-
-          uint32_t now = millis();
-          if (now < id(reset_lockout_until)) {
-            ESP_LOGW("watchdog", "k3s reset suppressed — lockout active");
-            return;
-          }
-          // Set lockout 5 minutes from now
-          id(reset_lockout_until) = now + 300000;
-          // Reset the fail counter so we don't immediately re-trigger
-          id(omv_k3s_fail_count) = 0;
-      - if:
-          condition:
-            lambda: "return millis() >= id(reset_lockout_until) - 295000;"  # we just set it
-          then:
-            - http_request.post:
-                url:  ${ntfy_url}
-                request_headers:
-                  Content-Type: text/plain
-                  Authorization: "Bearer ${ntfy_token}"
-                  Title: "🔄 omv HARDWARE RESET (k3s wedged)"
-                  Priority: "max"
-                  Tags: "warning,electric_plug,arrows_counterclockwise"
-                body: "k3s API has been unreachable for 3 min while OS is responsive. Pulsing power relay for 5 s. 5 min lockout before next reset."
-            - switch.turn_off: pi_power_relay
-            - delay: 5s
-            - switch.turn_on: pi_power_relay
-
-  - id: send_aws_recovery
-    mode: single
-    then:
+- id: maybe_hard_reset
+  mode: single
+  then:
+  - lambda: |-
+      uint32_t now = millis();
+      if (now < id(reset_lockout_until)) {
+        ESP_LOGW("watchdog", "k3s reset suppressed — lockout active");
+        return;
+      }
+      // Set lockout 5 minutes from now
+      id(reset_lockout_until) = now + 300000;
+      // Reset the fail counter so we don't immediately re-trigger
+      id(omv_k3s_fail_count) = 0;
+  - if:
+      condition:
+        lambda: return millis() >= id(reset_lockout_until) - 295000;             # we just set it
+      then:
       - http_request.post:
-          url:  ${ntfy_url}
+          url: ${ntfy_url}
           request_headers:
             Content-Type: text/plain
-            Authorization: "Bearer ${ntfy_token}"
-            Title: "✅ cloudless.gr (AWS) RECOVERED"
-            Priority: "default"
-            Tags: "white_check_mark,cloud"
-          body: "HTTPS probe to cloudless.gr is responding again. Service is back online."
+            Authorization: Bearer ${ntfy_token}
+            Title: 🔄 omv HARDWARE RESET (k3s wedged)
+            Priority: max
+            Tags: warning,electric_plug,arrows_counterclockwise
+          body: k3s API has been unreachable for 3 min while OS is responsive. 
+            Pulsing power relay for 5 s. 5 min lockout before next reset.
+      - switch.turn_off: pi_power_relay
+      - delay: 5s
+      - switch.turn_on: pi_power_relay
+
+- id: send_aws_recovery
+  mode: single
+  then:
+  - http_request.post:
+      url: ${ntfy_url}
+      request_headers:
+        Content-Type: text/plain
+        Authorization: Bearer ${ntfy_token}
+        Title: ✅ cloudless.gr (AWS) RECOVERED
+        Priority: default
+        Tags: white_check_mark,cloud
+      body: HTTPS probe to cloudless.gr is responding again. Service is back 
+        online.
 
   # ── LED state machine ────────────────────────────────────────────────────────
-  - id: update_led
-    mode: restart
-    then:
+- id: update_led
+  mode: restart
+  then:
+  - if:
+      condition:
+        lambda: return !id(omv_up) && !id(omv_ha_up) && !id(aws_up);
+      then:
+      - light.turn_on:
+          id: status_led
+          effect: blink_magenta
+      else:
       - if:
           condition:
-            lambda: "return !id(omv_up) && !id(omv_ha_up) && !id(aws_up);"
+            lambda: return !id(omv_up) && !id(omv_ha_up);
           then:
-            - light.turn_on:
-                id:     status_led
-                effect: "blink_magenta"
+          - light.turn_on:
+              id: status_led
+              effect: blink_red_fast
           else:
-            - if:
-                condition:
-                  lambda: "return !id(omv_up) && !id(omv_ha_up);"
-                then:
+          - if:
+              condition:
+                lambda: return !id(aws_up) && (!id(omv_up) || !id(omv_ha_up));
+              then:
+              - light.turn_on:
+                  id: status_led
+                  effect: blink_deep_orange_fast
+              else:
+              - if:
+                  condition:
+                    lambda: return !id(aws_up);
+                  then:
                   - light.turn_on:
-                      id:     status_led
-                      effect: "blink_red_fast"
-                else:
+                      id: status_led
+                      effect: blink_orange
+                  else:
                   - if:
                       condition:
-                        lambda: "return !id(aws_up) && (!id(omv_up) || !id(omv_ha_up));"
+                        lambda: return !id(omv_up) || !id(omv_ha_up);
                       then:
-                        - light.turn_on:
-                            id:     status_led
-                            effect: "blink_deep_orange_fast"
+                      - light.turn_on:
+                          id: status_led
+                          effect: blink_yellow
                       else:
-                        - if:
-                            condition:
-                              lambda: "return !id(aws_up);"
-                            then:
-                              - light.turn_on:
-                                  id:     status_led
-                                  effect: "blink_orange"
-                            else:
-                              - if:
-                                  condition:
-                                    lambda: "return !id(omv_up) || !id(omv_ha_up);"
-                                  then:
-                                    - light.turn_on:
-                                        id:     status_led
-                                        effect: "blink_yellow"
-                                  else:
-                                    - light.turn_on:
-                                        id:         status_led
-                                        effect:     none
-                                        brightness: 40%
-                                        red:   0%
-                                        green: 100%
-                                        blue:  0%
+                      - light.turn_on:
+                          id: status_led
+                          effect: none
+                          brightness: 40%
+                          red: 0%
+                          green: 100%
+                          blue: 0%
 
 # ---------------------------------------------------------------------------
 # Extra sensors
 # ---------------------------------------------------------------------------
 sensor:
-  - platform:   wifi_signal
-    name:       "Wi-Fi Signal"
-    update_interval: 60s
-    entity_category: diagnostic
+- platform: wifi_signal
+  name: Wi-Fi Signal
+  update_interval: 60s
+  entity_category: diagnostic
 
-  - platform:   uptime
-    name:       "Uptime"
-    update_interval: 60s
-    entity_category: diagnostic
+- platform: uptime
+  name: Uptime
+  update_interval: 60s
+  entity_category: diagnostic
 
-  - platform:   internal_temperature
-    name:       "ESP32 Temperature"
-    update_interval: 30s
-    entity_category: diagnostic
+- platform: internal_temperature
+  name: ESP32 Temperature
+  update_interval: 30s
+  entity_category: diagnostic
 
   # ── Probe failure counters — useful for rate-based Prometheus rules ──────────
-  - platform: template
-    id:         omv_failures
-    name:       "omv probe failures"
-    lambda:     "return id(omv_fail_count);"
-    update_interval: 30s
-    unit_of_measurement: "failures"
-    accuracy_decimals: 0
-    entity_category: diagnostic
+- platform: template
+  id: omv_failures
+  name: omv probe failures
+  lambda: return id(omv_fail_count);
+  update_interval: 30s
+  unit_of_measurement: failures
+  accuracy_decimals: 0
+  entity_category: diagnostic
 
-  - platform: template
-    id:         omv_ha_failures
-    name:       "omv-ha probe failures"
-    lambda:     "return id(omv_ha_fail_count);"
-    update_interval: 30s
-    unit_of_measurement: "failures"
-    accuracy_decimals: 0
-    entity_category: diagnostic
+- platform: template
+  id: omv_ha_failures
+  name: omv-ha probe failures
+  lambda: return id(omv_ha_fail_count);
+  update_interval: 30s
+  unit_of_measurement: failures
+  accuracy_decimals: 0
+  entity_category: diagnostic
 
-  - platform: template
-    id:         aws_failures
-    name:       "cloudless.gr probe failures"
-    lambda:     "return id(aws_fail_count);"
-    update_interval: 30s
-    unit_of_measurement: "failures"
-    accuracy_decimals: 0
-    entity_category: diagnostic
+- platform: template
+  id: aws_failures
+  name: cloudless.gr probe failures
+  lambda: return id(aws_fail_count);
+  update_interval: 30s
+  unit_of_measurement: failures
+  accuracy_decimals: 0
+  entity_category: diagnostic
 
 text_sensor:
-  - platform:   wifi_info
-    ip_address:
-      name:     "IP Address"
-    ssid:
-      name:     "Connected SSID"
-    mac_address:
-      name:     "MAC Address"
+- platform: wifi_info
+  ip_address:
+    name: IP Address
+  ssid:
+    name: Connected SSID
+  mac_address:
+    name: MAC Address
 
 # ---------------------------------------------------------------------------
 # Hardware relay — drives omv power line (active-LOW; NC contact in series
@@ -697,11 +701,11 @@ text_sensor:
 # been unreachable for >= 3 minutes.
 # ---------------------------------------------------------------------------
 switch:
-  - platform: gpio
-    id:       pi_power_relay
-    name:     "omv Power Relay"
-    pin:
-      number: GPIO10
-      inverted: true    # relay is active-LOW (LOW = closed/power-on)
-    restore_mode: ALWAYS_ON
-    icon:     mdi:power-plug
+- platform: gpio
+  id: pi_power_relay
+  name: omv Power Relay
+  pin:
+    number: GPIO10
+    inverted: true       # relay is active-LOW (LOW = closed/power-on)
+  restore_mode: ALWAYS_ON
+  icon: mdi:power-plug
