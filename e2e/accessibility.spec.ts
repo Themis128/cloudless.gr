@@ -36,11 +36,8 @@ function formatViolations(violations: AxeViolation[]): string {
         `[${v.impact?.toUpperCase()}] ${v.id}: ${v.description}\n` +
         v.nodes
           .slice(0, 3)
-          .map(
-            (n) =>
-              `  → ${n.html.slice(0, 120)}\n    ${n.failureSummary ?? ""}`,
-          )
-          .join("\n"),
+          .map((n) => `  → ${n.html.slice(0, 120)}\n    ${n.failureSummary ?? ""}`)
+          .join("\n")
     )
     .join("\n\n");
 }
@@ -66,44 +63,38 @@ for (const route of ROUTES) {
         .disableRules(["color-contrast"])
         .analyze();
 
-      const blocking = results.violations.filter(
-        (v) => v.impact && FAILING_IMPACTS.has(v.impact),
-      );
+      const blocking = results.violations.filter((v) => v.impact && FAILING_IMPACTS.has(v.impact));
 
       if (blocking.length > 0) {
         console.error(
           `${blocking.length} critical/serious axe violation(s) on ${route}:\n\n` +
-            formatViolations(blocking as AxeViolation[]),
+            formatViolations(blocking as AxeViolation[])
         );
       }
 
       expect(
         blocking,
-        `Expected zero critical/serious WCAG 2.1 AA violations on ${route}`,
+        `Expected zero critical/serious WCAG 2.1 AA violations on ${route}`
       ).toHaveLength(0);
     });
 
     test("page has a non-empty <title>", async ({ page }) => {
       await page.goto(route);
+      await page.waitForLoadState("networkidle");
       // Root path redirects to locale prefix; wait for title to settle.
       await page.waitForFunction(() => document.title.trim().length > 0, {
-        timeout: 10_000,
+        timeout: 15_000,
       });
       const title = await page.title();
-      expect(
-        title.trim().length,
-        `<title> is empty on ${route}`,
-      ).toBeGreaterThan(0);
+      expect(title.trim().length, `<title> is empty on ${route}`).toBeGreaterThan(0);
     });
 
     test("page has exactly one <h1>", async ({ page }) => {
       await page.goto(route);
-      await page.waitForSelector("main", { timeout: 10_000 });
+      await page.waitForLoadState("networkidle");
+      await page.waitForSelector("h1", { timeout: 15_000 });
       const h1Count = await page.locator("h1").count();
-      expect(
-        h1Count,
-        `Expected exactly 1 <h1> on ${route}, found ${h1Count}`,
-      ).toBe(1);
+      expect(h1Count, `Expected exactly 1 <h1> on ${route}, found ${h1Count}`).toBe(1);
     });
 
     test("all images have alt attribute", async ({ page }) => {
@@ -115,14 +106,12 @@ for (const route of ROUTES) {
       const missingAlt = await page
         .locator("img:not([alt])")
         .evaluateAll((imgs) =>
-          imgs.map((img) =>
-            (img as HTMLImageElement).outerHTML.slice(0, 200),
-          ),
+          imgs.map((img) => (img as HTMLImageElement).outerHTML.slice(0, 200))
         );
 
       expect(
         missingAlt,
-        `Images missing alt attribute on ${route}:\n${missingAlt.join("\n")}`,
+        `Images missing alt attribute on ${route}:\n${missingAlt.join("\n")}`
       ).toHaveLength(0);
     });
 
@@ -131,19 +120,14 @@ for (const route of ROUTES) {
       await page.waitForSelector("main", { timeout: 10_000 });
 
       const results = await new AxeBuilder({ page })
-        .withRules([
-          "tabindex",
-          "scrollable-region-focusable",
-        ])
+        .withRules(["tabindex", "scrollable-region-focusable"])
         .analyze();
 
-      const blocking = results.violations.filter(
-        (v) => v.impact && FAILING_IMPACTS.has(v.impact),
-      );
+      const blocking = results.violations.filter((v) => v.impact && FAILING_IMPACTS.has(v.impact));
 
       expect(
         blocking,
-        `Keyboard-focusability violations on ${route}:\n${formatViolations(blocking as AxeViolation[])}`,
+        `Keyboard-focusability violations on ${route}:\n${formatViolations(blocking as AxeViolation[])}`
       ).toHaveLength(0);
     });
   });

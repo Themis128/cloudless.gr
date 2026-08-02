@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 
 // Chat AI endpoint supporting multiple providers for free tier coverage

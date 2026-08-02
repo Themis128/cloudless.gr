@@ -5,59 +5,10 @@ import {
   notionUpdateCalendarItem,
   notionDeleteCalendarItem,
 } from "@/lib/notion-calendar";
+import type { CalendarItem, CalendarItemType, CalendarPlatform } from "./calendar-shared";
 
-export type CalendarItemType =
-  "social_post" | "email_campaign" | "blog_post" | "consultation" | "ad_campaign";
-
-export type CalendarPlatform =
-  "meta" | "linkedin" | "tiktok" | "x" | "google" | "activecampaign" | "notion" | "google_calendar";
-
-export interface CalendarItem {
-  id: string;
-  title: string;
-  type: CalendarItemType;
-  platform: CalendarPlatform;
-  date: string;
-  endDate?: string;
-  status: "draft" | "scheduled" | "published" | "cancelled";
-  url?: string;
-  notes?: string;
-  /**
-   * Postiz post IDs returned when a `social_post` item is published. Stored so
-   * the postiz-sync cron and the webhook receiver can match upstream
-   * post.published / post.errored events back to the calendar row that
-   * created them. One ID per channel the item fanned out to.
-   */
-  postizPostIds?: string[];
-  /**
-   * Workspace id (multi-tenant). When set, queries that supply a workspace
-   * filter will only return items whose `workspaceId` matches. New items
-   * created via the calendar API are stamped with the active workspace
-   * (cookie-derived) when one is selected. Items without a workspaceId are
-   * treated as "org-wide" and remain visible regardless of which workspace
-   * is active — protecting all the legacy rows that pre-date this column.
-   */
-  workspaceId?: string;
-}
-
-export const CALENDAR_ITEM_COLORS: Record<CalendarItemType, string> = {
-  social_post: "#e879f9",
-  email_campaign: "#a855f7",
-  blog_post: "#22d3ee",
-  consultation: "#4ade80",
-  ad_campaign: "#fb923c",
-};
-
-export const PLATFORM_LABELS: Record<CalendarPlatform, string> = {
-  meta: "Meta",
-  linkedin: "LinkedIn",
-  tiktok: "TikTok",
-  x: "X",
-  google: "Google Ads",
-  activecampaign: "Email",
-  notion: "Blog",
-  google_calendar: "Calendar",
-};
+export type { CalendarItem, CalendarItemType, CalendarPlatform };
+export { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "./calendar-shared";
 
 // In-process fallback store. Used when NOTION_API_KEY / NOTION_CALENDAR_DB_ID
 // are not configured (typically local dev) so the calendar UI is exercisable

@@ -30,6 +30,10 @@ interface ContactRequestBody {
   attribution?: string;
 }
 
+export async function GET() {
+  return Response.json({ error: "POST only" }, { status: 405 });
+}
+
 export async function POST(request: Request) {
   // Rate limit: 5 contact submissions per IP per 10 minutes
   const ip = getClientIp(request);

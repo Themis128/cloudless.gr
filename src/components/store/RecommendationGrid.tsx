@@ -7,7 +7,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import HolographicCard from "@/components/HolographicCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import { trackFunnelEvent } from "@/lib/funnel-client";
-import type { StoreProduct } from "@/lib/store-products";
+import { defaultProducts, type StoreProduct } from "@/lib/store-products-client";
 
 interface RecommendationGridProps {
   type: "similar" | "trending";
@@ -21,6 +21,26 @@ type ExpState = {
   enabled: boolean;
   variant: "a" | "b";
 };
+
+function getFallbackRecommendations(
+  type: RecommendationGridProps["type"],
+  productIds: string[] | undefined,
+  limit: number
+): StoreProduct[] {
+  const products = [...defaultProducts];
+
+  if (type === "similar" && productIds && productIds.length > 0) {
+    const current = products.find((product) => productIds.includes(product.id));
+    const category = current?.category;
+    if (category) {
+      return products
+        .filter((product) => product.id !== current.id && product.category === category)
+        .slice(0, limit);
+    }
+  }
+
+  return products.sort((a, b) => b.price - a.price).slice(0, limit);
+}
 
 export default function RecommendationGrid({
   type,
@@ -68,12 +88,13 @@ export default function RecommendationGrid({
         }
 
         const res = await globalThis.fetch(`/api/recommendations?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch recommendations");
+        if (!res.ok) throw new Error(`Failed to fetch recommendations (${res.status})`);
 
         const data = (await res.json()) as StoreProduct[];
         if (!cancelled) setRecommendations(data);
       } catch (err) {
-        console.error("[RecommendationGrid] Error:", err);
+        if (!cancelled) setRecommendations(getFallbackRecommendations(type, productIds, limit));
+        console.warn("[RecommendationGrid] Falling back to local recommendations:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }

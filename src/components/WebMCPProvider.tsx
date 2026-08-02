@@ -4,8 +4,10 @@ import { useEffect } from "react";
 
 export default function WebMCPProvider() {
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).modelContext) {
-      (window as any).modelContext.provideContext({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    if (typeof window !== "undefined" && win.modelContext) {
+      win.modelContext.provideContext({
         tools: [
           {
             name: "book_consultation",
@@ -19,7 +21,7 @@ export default function WebMCPProvider() {
               },
               required: ["email", "date", "time"],
             },
-            execute: async (args: any) => {
+            execute: async (args: Record<string, unknown>) => {
               const res = await fetch("/api/calendar/book", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -38,14 +40,13 @@ export default function WebMCPProvider() {
               },
               required: ["date"],
             },
-            execute: async (args: any) => {
+            execute: async (args: Record<string, unknown>) => {
               const res = await fetch(`/api/calendar/availability?date=${args.date}`);
               return res.ok ? await res.json() : { error: await res.text() };
             },
           },
         ],
       });
-      console.log("WebMCP context provided");
     }
   }, []);
 

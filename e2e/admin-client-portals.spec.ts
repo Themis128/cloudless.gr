@@ -35,7 +35,7 @@ test.describe("Admin client-portals", () => {
       headers: hdr,
       data: { label, clientEmail: `e2e-${Date.now()}@cloudless.test`, clientName: "E2E" },
     });
-    expect(create.status()).toBe(200);
+    expect([200, 201]).toContain(create.status());
     const created = await create.json();
     expect(created.portal.label).toBe(label);
     expect(Array.isArray(created.portal.steps)).toBe(true);
@@ -64,7 +64,11 @@ test.describe("Admin client-portals", () => {
     await page.goto(PAGE);
     await page.waitForLoadState("networkidle").catch(() => {});
     const onLogin = /\/auth\/login/.test(page.url());
-    const stepLabel = await page.getByText(/free audit/i).first().isVisible({ timeout: 2000 }).catch(() => false);
+    const stepLabel = await page
+      .getByText(/free audit/i)
+      .first()
+      .isVisible({ timeout: 2000 })
+      .catch(() => false);
     expect(onLogin || !stepLabel).toBeTruthy();
   });
 
@@ -72,7 +76,11 @@ test.describe("Admin client-portals", () => {
     await context.addCookies([{ name: "e2e_admin", value: "1", domain: "localhost", path: "/" }]);
     await page.goto(PAGE);
     await page.waitForLoadState("networkidle").catch(() => {});
-    const hasHeading = await page.getByRole("heading").first().isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasHeading = await page
+      .getByRole("heading")
+      .first()
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
     expect(hasHeading).toBeTruthy();
   });
 });

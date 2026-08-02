@@ -11,47 +11,31 @@ import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
 
-const instrumentSans = (() => {
-  try {
-    return require("next/font/local").default({
-      variable: "--font-instrument-sans",
-      src: "./fonts/instrument-sans.woff2",
-      display: "swap",
-      fallback: ["system-ui", "Arial"],
-      adjustFontFallback: false,
-    });
-  } catch {
-    return { variable: "--font-instrument-sans" };
-  }
-})();
+import localFont from "next/font/local";
 
-const workSans = (() => {
-  try {
-    return require("next/font/local").default({
-      variable: "--font-work-sans",
-      src: "./fonts/work-sans.woff2",
-      display: "swap",
-      fallback: ["system-ui", "Arial"],
-      adjustFontFallback: false,
-    });
-  } catch {
-    return { variable: "--font-work-sans" };
-  }
-})();
+const instrumentSans = localFont({
+  variable: "--font-instrument-sans",
+  src: "./fonts/instrument-sans.woff2",
+  display: "swap",
+  fallback: ["system-ui", "Arial"],
+  adjustFontFallback: false,
+});
 
-const geistMono = (() => {
-  try {
-    return require("next/font/local").default({
-      variable: "--font-geist-mono",
-      src: "./fonts/geist-mono.woff2",
-      display: "swap",
-      fallback: ["system-ui", "monospace"],
-      adjustFontFallback: false,
-    });
-  } catch {
-    return { variable: "--font-geist-mono" };
-  }
-})();
+const workSans = localFont({
+  variable: "--font-work-sans",
+  src: "./fonts/work-sans.woff2",
+  display: "swap",
+  fallback: ["system-ui", "Arial"],
+  adjustFontFallback: false,
+});
+
+const geistMono = localFont({
+  variable: "--font-geist-mono",
+  src: "./fonts/geist-mono.woff2",
+  display: "swap",
+  fallback: ["system-ui", "monospace"],
+  adjustFontFallback: false,
+});
 
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
@@ -172,10 +156,10 @@ export default async function RootLayout({
             />
           </>
         ) : null}
-         {children}
-         <WebMCPProvider />
-         <PlausibleAnalytics />
-         <ClarityAnalytics />
+        {children}
+        <WebMCPProvider />
+        <PlausibleAnalytics />
+        <ClarityAnalytics />
       </body>
     </html>
   );

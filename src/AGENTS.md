@@ -1,3 +1,3 @@
-## Project Architecture
+# Project Architecture & Agent Guide
 
-This section is still a work in progress. Please refer to [ARCHITECTURE.MD](docs/ARCHITECTURE.MD) for the most up-to-date architecture documentation.
+This file has been consolidated. Please refer to the root [AGENTS.md](../AGENTS.md) for the most up-to-date architecture documentation and agent rules.

@@ -17,16 +17,14 @@ function uniqueIp() {
   return `203.0.113.${testCounter % 254}`;
 }
 
-async function postJson(
-  request: APIRequestContext,
-  url: string,
-  data: unknown
-) {
+async function postJson(request: APIRequestContext, url: string, data: unknown) {
+  const adminToken = "e2e-admin-token-do-not-use-in-prod";
   return request.post(url, {
     data,
     headers: {
       "Content-Type": "application/json",
       "x-forwarded-for": uniqueIp(),
+      Authorization: `Bearer ${adminToken}`,
     },
   });
 }

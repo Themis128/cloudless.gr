@@ -1,8 +1,8 @@
 "use client";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type { CalendarItem, CalendarItemType, CalendarPlatform } from "@/lib/content-calendar";
-import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/content-calendar";
+import type { CalendarItem, CalendarItemType, CalendarPlatform } from "@/lib/calendar-shared";
+import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/calendar-shared";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
