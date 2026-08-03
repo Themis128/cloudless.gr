@@ -1,16 +1,21 @@
-export default function robots() {
-  const robotsText = `User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /store/success
+import type { MetadataRoute } from "next";
 
-Sitemap: https://cloudless.gr/sitemap.xml
-Content-Signal: ai-train=no, search=yes, ai-input=no
-`;
-
-  return new Response(robotsText, {
-    headers: {
-      "Content-Type": "text/plain",
+/**
+ * robots.txt (Next.js 16 metadata convention).
+ *
+ * MUST return a `MetadataRoute.Robots` object — NOT a raw `Response`. The
+ * framework's internal wrapper reads `rules[].userAgent` from this object;
+ * returning a Response crashes prerendering with
+ * "Cannot read properties of undefined (reading 'userAgent')".
+ */
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/store/success"],
     },
-  });
+    sitemap: "https://cloudless.gr/sitemap.xml",
+    host: "https://cloudless.gr",
+  };
 }

@@ -171,4 +171,4 @@ export async function listWatchdogCronJobs(names: string[]): Promise<CronJobSumm
   // Sort in the requested order so the UI is stable.
   out.sort((a, b) => names.indexOf(a.name) - names.indexOf(b.name));
   return out;
-}
+  }

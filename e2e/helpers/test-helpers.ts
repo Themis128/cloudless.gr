@@ -31,7 +31,7 @@ export async function loginAsUser(
     .catch(async () => {
       await page.waitForLoadState("networkidle");
     });
-  // Wait for Cognito session to hydrate so isAdmin is resolved before test body runs
+  // Wait for D1 session to hydrate so isAdmin is resolved before test body runs
   await page.waitForLoadState("networkidle");
 }
 
@@ -173,13 +173,13 @@ export async function fillContactForm(
 }
 
 /**
- * Get JWT auth token from localStorage or Cognito session
+ * Get auth token from D1 session cookie/localStorage
  */
 export async function getAuthToken(page: Page): Promise<string | null> {
-  // Try to get from localStorage (Amplify storage)
+  // Try to get from localStorage (D1 auth session)
   const token = await page.evaluate(() => {
-    const auth = localStorage.getItem("amplify-token");
-    return auth ? JSON.parse(auth).idToken : null;
+    const auth = localStorage.getItem("session-token");
+    return auth || null;
   }).catch(() => null);
 
   return token;

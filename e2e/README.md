@@ -62,15 +62,19 @@ INFRA_SMOKE=1 pnpm playwright test e2e/fly-proxy.spec.ts
 
 ## Test Projects
 
-The Playwright config includes multiple projects:
+The Playwright config (`playwright.config.mts`) includes these projects:
 
-- **chromium** - Desktop Chrome (headless)
-- **firefox** - Desktop Firefox
-- **webkit** - Desktop Safari
-- **mobile-chrome** - Pixel 5 mobile viewport
-- **mobile-safari** - iPhone 12 mobile viewport
-- **chromium-user** - User-authenticated tests (depends on credentials in .env.e2e)
-- **chromium-admin** - Admin-authenticated tests (depends on credentials in .env.e2e)
+- **setup** - Auth setup project (runs once, produces storage state for authenticated tests)
+- **chromium** - Desktop Chrome (headless), depends on `setup`
+- **mobile-chrome** - Pixel 7 mobile viewport, depends on `setup`
+
+### Additional Configs
+
+| Config | Purpose | Projects |
+|--------|---------|----------|
+| `playwright.config.mts` | Local dev E2E | `setup`, `chromium`, `mobile-chrome` |
+| `playwright.k3s.config.mts` | Pi k3s standby tests | `chromium-desktop` |
+| `playwright.production.config.mts` | Production smoke tests | `cloudless-gr-desktop`, `cloudless-gr-mobile`, `pi-origin-desktop`, `pi-origin-mobile` |
 
 ## Environment Setup
 
@@ -90,3 +94,10 @@ COVERAGE=1 pnpm test:e2e
 ```
 
 Reports are saved to `coverage/playwright/`
+
+## Global Setup
+
+The `global-setup.mts` file runs a pre-flight health check before the suite:
+- Probes `/api/health` to verify API route handlers resolve
+- Probes `/en` to verify the proxy and next-intl are wired
+- Fails fast with a clear message if the dev server is stale/unhealthy

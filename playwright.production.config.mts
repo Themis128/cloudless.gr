@@ -16,6 +16,11 @@ const rootDir = import.meta.dirname ?? path.resolve();
  */
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
+  // Only pick up .spec.ts files — .test.ts files (e.g. auth-middleware.test.ts)
+  // import from next/server and belong in the Vitest unit suite, not Playwright.
+  testMatch: "**/*.spec.ts",
+  // Exclude k3s-specific tests (they have their own config) and helper files.
+  testIgnore: ["**/k3s/**", "**/*.test.ts", "**/_internal/**", "**/helpers/**", "**/fixtures/**", "**/coverage/**", "**/utils/**", "**/migrated/**"],
 
   // Skip tests that POST real data or require local dev setup
   grep: /^(?!.*@mutating)/,
@@ -42,10 +47,6 @@ export default defineConfig({
     // Real TLS issues are caught by pi-tls-cert-check.yml (openssl) — this just
     // prevents 189 spurious ERR_CERT_AUTHORITY_INVALID failures in cloud sessions.
     ignoreHTTPSErrors: true,
-  },
-
-  env: {
-    INFRA_SMOKE: "1",
   },
 
   projects: [

@@ -436,7 +436,7 @@ npx playwright test --project=webkit
 ```
 Run tests on all browsers simultaneously.
 Use Playwright all projects:
-npx playwright test --config=playwright-mcp.config.ts
+npx playwright test --config=playwright.config.mts
 ```
 
 ---
@@ -581,7 +581,7 @@ docker compose -f playwright-mcp-docker-compose.yml ps
 ### RUN TESTS
 
 ```bash
-npx playwright test --config=playwright-mcp.config.ts
+npx playwright test --config=playwright.config.mts
 npx playwright test --project=chromium
 npx playwright test --debug
 ```

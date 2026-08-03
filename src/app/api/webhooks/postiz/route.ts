@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPostizWebhookSignature, type PostizPost } from "@/lib/postiz";
+import { verifyPostizWebhookSignature } from "@/lib/postiz-webhook";
+import type { PostizPost } from "@/lib/postiz";
 import { getCalendarItems, updateCalendarItem } from "@/lib/content-calendar";
 import { notifyPostErrored, notifyPostPublished } from "@/lib/postiz-slack";
 

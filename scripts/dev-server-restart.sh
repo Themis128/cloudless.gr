@@ -25,15 +25,26 @@ fi
 
 # Verify .env.local exists with the critical vars
 if [ ! -f "${REPO}/.env.local" ]; then
-  echo "==> .env.local missing — recreating from SSM..."
-  AUTH_SECRET=$(aws ssm get-parameter \
-    --name "/cloudless/production/AUTH_SECRET" \
-    --with-decryption --output text --query Parameter.Value --region us-east-1)
-  cat > "${REPO}/.env.local" <<EOF
-AUTH_SECRET=${AUTH_SECRET}
-AUTH_TRUST_HOST=true
-AUTH_URL=http://localhost:${PORT}
-EOF
+  echo "==> .env.local missing — creating from .dev.vars.example..."
+  if [ -f "${REPO}/.dev.vars.example" ]; then
+    cp "${REPO}/.dev.vars.example" "${REPO}/.env.local"
+    # Ensure AUTH_URL points to the correct dev port
+    if ! grep -q "AUTH_URL" "${REPO}/.env.local" 2>/dev/null; then
+      echo "AUTH_URL=http://localhost:${PORT}" >> "${REPO}/.env.local"
+    fi
+    if ! grep -q "AUTH_TRUST_HOST" "${REPO}/.env.local" 2>/dev/null; then
+      echo "AUTH_TRUST_HOST=true" >> "${REPO}/.env.local"
+    fi
+    echo "    Created .env.local from .dev.vars.example"
+    echo "    Edit it to set AUTH_SECRET, SESSION_SECRET, and other secrets"
+  else
+    echo "    WARNING: No .env.local and no .dev.vars.example found"
+    echo "    Create .env.local with at least:"
+    echo "      AUTH_SECRET=<random-32-byte-string>"
+    echo "      AUTH_TRUST_HOST=true"
+    echo "      AUTH_URL=http://localhost:${PORT}"
+    echo "      SESSION_SECRET=<random-32-byte-string>"
+  fi
 fi
 
 echo "==> Memory check..."

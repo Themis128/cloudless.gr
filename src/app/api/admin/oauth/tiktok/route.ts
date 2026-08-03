@@ -9,7 +9,7 @@ function signState(nonce: string, secret: string): string {
   return createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
 }
 
-export function buildTikTokAuthUrl(appId: string, redirectUri: string, state: string): string {
+function buildTikTokAuthUrl(appId: string, redirectUri: string, state: string): string {
   const params = new URLSearchParams({
     app_id: appId,
     redirect_uri: redirectUri,

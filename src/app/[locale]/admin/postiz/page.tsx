@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import {
-  postIdentifier,
-  type PostizIntegration,
-  type PostizPost,
-  type CreatePostBody,
-} from "@/lib/postiz";
+import type { PostizIntegration, PostizPost, CreatePostBody } from "@/lib/postiz";
+
+/** Resolve the platform identifier from a Postiz post's embedded integration.
+ *  Inlined here (rather than importing from @/lib/postiz) so the client
+ *  bundle never pulls in `postiz.ts` — that module statically imports
+ *  `ssm-config.ts`, whose server-only D1/auth chain (auth-d1 → auth-db-local)
+ *  references `node:fs`/`node:path` and breaks the webpack client build with
+ *  UnhandledSchemeError. */
+function postIdentifier(post: Pick<PostizPost, "integration">): string {
+  return post.integration.providerIdentifier ?? post.integration.identifier ?? "";
+}
 
 /** Accept attribute for file picker — matches Postiz `/upload` MIME allowlist
  *  per docs.postiz.com (jpeg, png, gif, webp, avif, bmp, tiff, mp4).

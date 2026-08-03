@@ -53,7 +53,12 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     if (res.status !== 200) return "expected HTTP 200 from the health route";
     try {
       const json = JSON.parse(body) as { status?: string };
-      if (json.status !== "ok") return `expected {"status":"ok"}, got status="${json.status}"`;
+      // "ok" = fully healthy (D1 connected). "degraded" = server is up but
+      // D1 isn't reachable (e.g. local dev without wrangler bindings) — the
+      // server is still functional for most tests, so accept both.
+      if (json.status !== "ok" && json.status !== "degraded") {
+        return `expected status "ok" or "degraded", got "${json.status}"`;
+      }
     } catch {
       return "health route did not return JSON (served the 404 HTML page?)";
     }

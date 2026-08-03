@@ -27,7 +27,9 @@ export type CoalesceFlush = {
 };
 
 export type CoalesceResult =
-  { action: "passthrough" } | { action: "buffered" } | { action: "flush"; flush: CoalesceFlush };
+  | { action: "passthrough" }
+  | { action: "buffered" }
+  | { action: "flush"; flush: CoalesceFlush };
 
 type Batch = {
   status: "DOWN" | "UP";
@@ -139,6 +141,30 @@ export class KumaDnsCoalescer {
 
     this.onFlush(flush);
   }
+}
+
+/**
+ * Module-level singleton coalescer used by the Kuma webhook route.
+ *
+ * Kept in this lib (not in the route module) because Next.js 16 validates
+ * Route exports — a test-only helper exported from `route.ts` fails type
+ * checking with "is not a valid Route export field". Tests reset the
+ * singleton via {@link resetKumaDnsCoalescerForTests} instead.
+ */
+let singleton: KumaDnsCoalescer | null = null;
+
+export function getKumaDnsCoalescer(
+  onFlush: (flush: CoalesceFlush) => void = () => {}
+): KumaDnsCoalescer {
+  if (!singleton) {
+    singleton = new KumaDnsCoalescer(DEFAULT_WINDOW_MS, undefined, onFlush);
+  }
+  return singleton;
+}
+
+/** Test / dev helper — clears buffered state between test cases. */
+export function resetKumaDnsCoalescerForTests(): void {
+  getKumaDnsCoalescer().reset();
 }
 
 export function formatDnsFlapSlack(flush: CoalesceFlush): { title: string; text: string } {

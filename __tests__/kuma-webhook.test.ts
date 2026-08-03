@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetKumaDnsCoalescerForTests } from "@/lib/kuma-dns-coalesce";
 
 const mockGetConfig = vi.fn();
 const mockPost = vi.fn();
@@ -24,7 +25,9 @@ describe("POST /api/webhooks/kuma", () => {
     });
     mockPost.mockResolvedValue(true);
     const mod = await import("@/app/api/webhooks/kuma/route");
-    mod.__resetKumaDnsCoalescerForTests();
+    await import("@/lib/kuma-dns-coalesce");
+    resetKumaDnsCoalescerForTests();
+    void mod; // route module imported to ensure coalescer singleton is shared
   });
 
   it("returns 401 without token", async () => {

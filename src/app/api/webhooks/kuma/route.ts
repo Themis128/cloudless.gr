@@ -17,7 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
-import { formatDnsFlapSlack, KumaDnsCoalescer, type CoalesceFlush } from "@/lib/kuma-dns-coalesce";
+import { formatDnsFlapSlack, getKumaDnsCoalescer, type CoalesceFlush } from "@/lib/kuma-dns-coalesce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,14 +70,9 @@ async function flushDnsBatch(flush: CoalesceFlush): Promise<void> {
 }
 
 /** Process-local coalescer (Pi deploy is single-replica). */
-const coalescer = new KumaDnsCoalescer(90_000, undefined, (flush) => {
+const coalescer = getKumaDnsCoalescer((flush) => {
   flushDnsBatch(flush).catch(() => {});
 });
-
-/** Exposed for unit tests. */
-export function __resetKumaDnsCoalescerForTests(): void {
-  coalescer.reset();
-}
 
 export async function POST(request: NextRequest) {
   const cfg = await getConfig();

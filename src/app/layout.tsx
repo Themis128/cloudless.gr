@@ -15,7 +15,7 @@ import localFont from "next/font/local";
 
 const instrumentSans = localFont({
   variable: "--font-instrument-sans",
-  src: "./fonts/instrument-sans.woff2",
+  src: "../fonts/instrument-sans.woff2",
   display: "swap",
   fallback: ["system-ui", "Arial"],
   adjustFontFallback: false,
@@ -23,7 +23,7 @@ const instrumentSans = localFont({
 
 const workSans = localFont({
   variable: "--font-work-sans",
-  src: "./fonts/work-sans.woff2",
+  src: "../fonts/work-sans.woff2",
   display: "swap",
   fallback: ["system-ui", "Arial"],
   adjustFontFallback: false,
@@ -31,11 +31,12 @@ const workSans = localFont({
 
 const geistMono = localFont({
   variable: "--font-geist-mono",
-  src: "./fonts/geist-mono.woff2",
+  src: "../fonts/geist-mono.woff2",
   display: "swap",
   fallback: ["system-ui", "monospace"],
   adjustFontFallback: false,
 });
+
 
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",

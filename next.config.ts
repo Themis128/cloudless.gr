@@ -22,33 +22,9 @@ const COVERAGE =
   process.env.COVERAGE === "1" || process.env.NEXT_PUBLIC_COVERAGE === "1";
 
 const nextConfig: NextConfig = {
-  poweredBy: false,
-  reactStrictMode: true,
-  webpack: (config, options) => {
-    config.experiments = {
-      layers: true,
-      optimizePackageImports: false,
-    };
-    return config;
-  },
+    reactStrictMode: true,
   env: {
     NEXT_PUBLIC_API_KEY: process.env.NEXT_PUBLIC_API_KEY || '',
-  },
-  images: {
-    domains: ['localhost', 'example.com'],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-        path: '/',
-        width: 0,
-        height: 0,
-      },
-    ],
-  },
-  turbopack: {
-    root: resolve(import.meta.dirname),
-    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
   },
   // Compression of HTTP responses (gzip via the Next.js server). On Lambda
   // the compression is applied before CloudFront passes through; on the Pi
@@ -62,18 +38,43 @@ const nextConfig: NextConfig = {
   // can be remapped to src/. Only in coverage mode — production stays map-free
   // (source maps are uploaded to Sentry separately during the SST deploy).
   ...(COVERAGE ? { productionBrowserSourceMaps: true } : {}),
-  // Full external source maps for the `next dev --webpack` coverage server, so
-  // both server (NODE_V8_COVERAGE) and client (CDP) V8 coverage resolve to the
-  // original TS. Ignored under Turbopack (normal dev/build) — webpack() only
-  // runs in webpack mode — so this is a no-op outside coverage runs.
-  ...(COVERAGE
-    ? {
-        webpack: (config: { devtool?: string | false }) => {
-          config.devtool = "source-map";
-          return config;
+  // Webpack configuration — always present for `next dev --webpack` mode
+  // (both normal dev and coverage). In Turbopack mode this is a no-op.
+  //
+  // node: prefixed built-in modules (node:fs, node:path, node:sqlite, node:crypto)
+  // are used by auth-db-local.ts and other server-side utilities. Webpack
+  // (unlike Turbopack) does not recognise the `node:` URI scheme by default,
+  // which causes UnhandledSchemeError when these modules are transitively
+  // imported into browser bundles. We use NormalModuleReplacementPlugin to
+  // strip the `node:` prefix from the request string (e.g. `node:fs` → `fs`),
+  // then resolve.fallback stubs them as empty modules for the browser bundle.
+  // Server bundles resolve node built-ins natively (no fallback needed).
+  webpack: (config, { webpack }) => {
+    config.plugins = [
+      ...(config.plugins || []),
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:/,
+        (resource) => {
+          resource.request = resource.request.replace(/^node:/, "");
         },
-      }
-    : {}),
+      ),
+    ];
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      fs: false,
+      path: false,
+      sqlite: false,
+      crypto: false,
+    };
+    // External source maps for the coverage server — both server
+    // (NODE_V8_COVERAGE) and client (CDP) V8 coverage resolve to the
+    // original TS when remapped. Ignored outside coverage runs.
+    if (COVERAGE) {
+      config.devtool = "source-map";
+    }
+    return config;
+  },
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
@@ -83,6 +84,9 @@ const nextConfig: NextConfig = {
   // next-auth must NOT be in serverExternalPackages: it imports next/server
   // without the .js extension which fails when loaded as an external ESM
   // module. Use transpilePackages so Turbopack bundles it explicitly instead.
+  // node:module is externalized so createRequire() can be used at runtime to
+  // dynamically load Node-only D1 helpers without webpack trying to bundle them.
+  serverExternalPackages: ["node:module"],
   transpilePackages: ["next-auth"],
   // Drop traced copies of OG binaries from the OpenNext server function package.
   // See https://opennext.js.org/cloudflare/troubleshooting (Worker size limit).
@@ -102,10 +106,6 @@ const nextConfig: NextConfig = {
   // Without this, accessing the dev server via http://172.x.x.x:4000 blocks
   // the webpack-hmr endpoint with "Blocked cross-origin request".
   allowedDevOrigins: ["localhost", "127.0.0.1", "172.29.17.211", "10.255.255.254", "*.local"],
-  turbopack: {
-    root: resolve(import.meta.dirname),
-    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
-  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "files.stripe.com" },
@@ -142,7 +142,7 @@ const nextConfig: NextConfig = {
     // Set to true if you're having issues with type checking
     // check: false,
   },
-  // Additional Turbopack configuration
+  // Turbopack configuration (Next 16)
   turbopack: {
     root: resolve(import.meta.dirname),
     resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },

@@ -34,7 +34,9 @@ test.describe("API: /api/health", () => {
     const res = await page.request.get("/api/health");
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body.status).toBe("ok");
+    // "ok" = fully healthy (D1 connected). "degraded" = server is up but
+    // D1 isn't reachable (e.g. local dev without wrangler bindings).
+    expect(["ok", "degraded"]).toContain(body.status);
     expect(typeof body.timestamp).toBe("string");
     expect(typeof body.version).toBe("string");
   });

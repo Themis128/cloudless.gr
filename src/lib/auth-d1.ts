@@ -7,6 +7,11 @@
  * - Custom password reset flow
  * - JWT-like session tokens (stored server-side, referenced by cookie)
  */
+// Lazy-loaded Node-only modules (d1-http, auth-db-local). Using literal
+// require() strings lets webpack statically resolve these via tsconfig paths
+// at build time — a computed variable name would produce webpackEmptyContext
+// at runtime. The modules are only invoked on the server (never the edge /
+// client), so bundling them is safe.
 
 // Token expiry constants
 const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days (default)
@@ -516,11 +521,12 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   const db = fromEnv ?? fromGlobal ?? fromCf;
   if (db && typeof db.prepare === "function") return db;
 
-  // Pi / Node production: native Workers binding is absent — use D1 REST.
+  // Lazy-load Node-only modules using literal require() strings. Webpack
+  // statically resolves these at build time (via tsconfig paths for "@/"),
+  // which avoids webpackEmptyContext that computed strings produce. These
+  // are server-only modules — never bundled into client or edge bundles.
   try {
-    const { getHttpAuthDb } =
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- keep Workers bundle free of Node-only paths
-      require("@/lib/d1-http") as typeof import("@/lib/d1-http");
+    const { getHttpAuthDb } = require("@/lib/d1-http") as typeof import("@/lib/d1-http");
     const httpDb = getHttpAuthDb();
     if (httpDb) return httpDb;
   } catch {
@@ -528,11 +534,15 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   }
 
   if (process.env.NODE_ENV === "development") {
-    // Lazy require avoids pulling node:sqlite into Workers/edge bundles.
-    const { getLocalAuthDb } =
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- local next-dev D1 shim only
-      require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
-    return getLocalAuthDb();
+    // Local D1 sqlite shim — only used in `next dev`; pulls node:sqlite so
+    // it must NOT reach the edge bundle. The literal require() is safe here
+    // because webpack only includes server-side chunks.
+    try {
+      const { getLocalAuthDb } = require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+      return getLocalAuthDb();
+    } catch {
+      return null;
+    }
   }
   return null;
 }
