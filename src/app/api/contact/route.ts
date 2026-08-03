@@ -86,14 +86,22 @@ export async function POST(request: Request) {
       message,
     ].join("\n");
 
-    await sendEmail({
-      to: config.SES_TO_EMAIL,
-      subject,
-      html,
-      text,
-      replyTo: email,
-      fromLabel: "Cloudless Contact Form",
-    });
+    try {
+      await sendEmail({
+        to: config.SES_TO_EMAIL,
+        subject,
+        html,
+        text,
+        replyTo: email,
+        fromLabel: "Cloudless Contact Form",
+      });
+    } catch (emailErr) {
+      const emailMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+      if (emailMsg.toLowerCase().includes("not configured")) {
+        return Response.json({ error: "Email service not configured." }, { status: 503 });
+      }
+      throw emailErr;
+    }
 
     // Map form display strings to EspoCRM service_interest dropdown values
     const SERVICE_SLUG: Record<string, string> = {
@@ -248,7 +256,8 @@ export async function POST(request: Request) {
   } catch (error) {
     const _r = mapIntegrationError(error);
     if (_r) return _r;
-    console.error("SES send error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Contact error:", error);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
         .then(({ captureException, withScope }) =>
@@ -258,6 +267,9 @@ export async function POST(request: Request) {
           })
         )
         .catch(() => {});
+    }
+    if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("not configured")) {
+      return Response.json({ error: "Email service not configured." }, { status: 503 });
     }
     return Response.json({ error: "Failed to send email." }, { status: 500 });
   }

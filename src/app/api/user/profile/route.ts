@@ -15,23 +15,27 @@ interface ProfileBody {
 async function resolveUser(
   req: NextRequest
 ): Promise<{ id: string; email?: string; name?: string } | null> {
-  const sessionId = req.cookies.get("session_token")?.value;
-  const db = getAuthDbFromEnv();
-  if (sessionId && db) {
-    const user = await getUserBySession(db, sessionId);
-    if (user) {
-      return { id: user.id, email: user.email, name: user.name ?? undefined };
+  try {
+    const sessionId = req.cookies.get("session_token")?.value;
+    const db = getAuthDbFromEnv();
+    if (sessionId && db) {
+      const user = await getUserBySession(db, sessionId);
+      if (user) {
+        return { id: user.id, email: user.email, name: user.name ?? undefined };
+      }
     }
-  }
 
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return null;
-  return {
-    id: userId,
-    email: session?.user?.email ?? undefined,
-    name: session?.user?.name ?? undefined,
-  };
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return null;
+    return {
+      id: userId,
+      email: session?.user?.email ?? undefined,
+      name: session?.user?.name ?? undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**

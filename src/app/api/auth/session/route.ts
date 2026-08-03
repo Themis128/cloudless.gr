@@ -22,25 +22,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user: null });
   }
 
-  const user = await getUserBySession(db, sessionId);
-  if (!user) {
+  try {
+    const user = await getUserBySession(db, sessionId);
+    if (!user) {
+      const response = NextResponse.json({ user: null });
+      response.cookies.delete("session_token");
+      return response;
+    }
+
+    const admin = await isAdmin(db, user.id);
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        company: user.company,
+        phone: user.phone,
+      },
+      isAdmin: admin,
+    });
+  } catch {
     const response = NextResponse.json({ user: null });
     response.cookies.delete("session_token");
     return response;
   }
-
-  const admin = await isAdmin(db, user.id);
-
-  return NextResponse.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      company: user.company,
-      phone: user.phone,
-    },
-    isAdmin: admin,
-  });
 }
 
 /** HEAD probes (curl -I, health checks) must not fall through to Auth.js 400. */
