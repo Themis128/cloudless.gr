@@ -20,9 +20,9 @@ body:
     options:
     - label: Review `pnpm test:unit:coverage` thresholds in `vitest.config.mts`;
         ratchet up if coverage grew
-    - label: Confirm Cloudflare token still valid (`gh workflow run 
+    - label: Confirm Cloudflare token still valid (`gh workflow run
         verify-cloudflare-token.yml`)
-    - label: Confirm failover drill last monthly run was green 
+    - label: Confirm failover drill last monthly run was green
         (`.github/workflows/failover-drill.yml`)
     - label: Spot-check Kuma status page monitors still green
 - type: checkboxes
@@ -32,7 +32,7 @@ body:
     options:
     - label: Re-read `docs/optimal-architecture-assessment.md`
     - label: Re-read `docs/best-practices-audit-2026.md`
-    - label: Refresh `docs/current-source-of-truth-checklist.md` if any row 
+    - label: Refresh `docs/current-source-of-truth-checklist.md` if any row
         drifted
 - type: checkboxes
   id: annual
@@ -44,7 +44,7 @@ body:
     - label: Rotate `POSTIZ_API_KEY`
     - label: Rotate `GRAFANA_API_TOKEN`
     - label: Rotate `NTFY_TOKEN`
-    - label: Follow `skills/selfhosted-admin-bootstrap/SKILL.md` rotation 
+    - label: Follow `skills/selfhosted-admin-bootstrap/SKILL.md` rotation
         runbook
 - type: checkboxes
   id: continuous

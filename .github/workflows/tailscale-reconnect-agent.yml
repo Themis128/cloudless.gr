@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: Target service to reconnect (all, operator, proxies, 
+        description: Target service to reconnect (all, operator, proxies,
           subnet-router)
         required: false
         default: all

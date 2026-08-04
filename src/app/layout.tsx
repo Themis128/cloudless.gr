@@ -7,36 +7,10 @@ import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
+import { instrumentSans, workSans, geistMono } from "@/lib/fonts";
 import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
-
-import localFont from "next/font/local";
-
-const instrumentSans = localFont({
-  variable: "--font-instrument-sans",
-  src: "../fonts/instrument-sans.woff2",
-  display: "swap",
-  fallback: ["system-ui", "Arial"],
-  adjustFontFallback: false,
-});
-
-const workSans = localFont({
-  variable: "--font-work-sans",
-  src: "../fonts/work-sans.woff2",
-  display: "swap",
-  fallback: ["system-ui", "Arial"],
-  adjustFontFallback: false,
-});
-
-const geistMono = localFont({
-  variable: "--font-geist-mono",
-  src: "../fonts/geist-mono.woff2",
-  display: "swap",
-  fallback: ["system-ui", "monospace"],
-  adjustFontFallback: false,
-});
-
 
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",

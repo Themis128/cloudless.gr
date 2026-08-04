@@ -17,7 +17,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
-import { formatDnsFlapSlack, getKumaDnsCoalescer, type CoalesceFlush } from "@/lib/kuma-dns-coalesce";
+import {
+  formatDnsFlapSlack,
+  getKumaDnsCoalescer,
+  type CoalesceFlush,
+} from "@/lib/kuma-dns-coalesce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

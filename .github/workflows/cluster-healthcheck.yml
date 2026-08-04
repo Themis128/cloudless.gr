@@ -44,7 +44,7 @@ jobs:
 
     - name: Ping /start
       if: ${{ env.HC_URL != '' }}
-      run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null || 
+      run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null ||
         true
 
     - name: Check cluster reachability (port 6443)

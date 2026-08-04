@@ -38,9 +38,9 @@ export abstract class BaseAgent extends EventEmitter {
     }
   }
 
-  abstract processTask(taskData: Record<string, any>): Promise<void>;
+  abstract processTask(taskData: Record<string, unknown>): Promise<void>;
 
-  public async enqueueTask(taskId: string, taskPayload: Record<string, any>): Promise<boolean> {
+  public async enqueueTask(taskId: string, taskPayload: Record<string, unknown>): Promise<boolean> {
     const validatedPayload = this.validateTaskPayload(taskPayload);
     try {
       // atomic operation set insertions
@@ -56,7 +56,7 @@ export abstract class BaseAgent extends EventEmitter {
     }
   }
 
-  protected validateTaskPayload(payload: Record<string, any>): Record<string, any> {
+  protected validateTaskPayload(payload: Record<string, unknown>): Record<string, unknown> {
     return payload;
   }
 
@@ -87,7 +87,7 @@ export abstract class BaseAgent extends EventEmitter {
     return await this.client.sCard("task_queue");
   }
 
-  protected abstract receiveMessage(taskId: string): Promise<Record<string, any>>;
+  protected abstract receiveMessage(taskId: string): Promise<Record<string, unknown>>;
 
   public async cleanup(): Promise<void> {
     if (this.client.isOpen) {

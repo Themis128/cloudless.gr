@@ -8,7 +8,7 @@ export async function GET() {
         rel: {
           "service-desc": "https://cloudless.gr/api/docs/chat.json",
           "service-doc": "https://cloudless.gr/docs/api/chat",
-          "status": "https://cloudless.gr/api/health",
+          status: "https://cloudless.gr/api/health",
         },
       },
       {
@@ -16,7 +16,7 @@ export async function GET() {
         rel: {
           "service-desc": "https://cloudless.gr/api/docs/calendar.json",
           "service-doc": "https://cloudless.gr/docs/api/calendar",
-          "status": "https://cloudless.gr/api/health",
+          status: "https://cloudless.gr/api/health",
         },
       },
       {
@@ -24,7 +24,7 @@ export async function GET() {
         rel: {
           "service-desc": "https://cloudless.gr/api/docs/analytics.json",
           "service-doc": "https://cloudless.gr/docs/api/analytics",
-          "status": "https://cloudless.gr/api/health",
+          status: "https://cloudless.gr/api/health",
         },
       },
     ],

@@ -55,15 +55,13 @@ spec:
         - --max-connections=50
         env:
         - name: MARIADB_ROOT_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
-                mariadb-root-password}}
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-root-password}}
         - name: MARIADB_DATABASE
           value: espocrm
         - name: MARIADB_USER
           value: espocrm
         - name: MARIADB_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
-                mariadb-password}}
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-password}}
         ports:
         - {containerPort: 3306, name: mysql}
         resources:
@@ -132,8 +130,7 @@ spec:
         - {name: ESPOCRM_DATABASE_NAME, value: espocrm}
         - {name: ESPOCRM_DATABASE_USER, value: espocrm}
         - name: ESPOCRM_DATABASE_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
-                mariadb-password}}
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-password}}
         - name: ESPOCRM_ADMIN_USERNAME
           valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-username}}
         - name: ESPOCRM_ADMIN_PASSWORD

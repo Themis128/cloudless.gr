@@ -14,7 +14,7 @@ spec:
     - alert: DiskPressureHigh
       annotations:
         description: '{{ $value | humanize }}% used — free space before k3s crashes.'
-        summary: Disk usage > 85% on {{ $labels.instance }} ({{ 
+        summary: Disk usage > 85% on {{ $labels.instance }} ({{
           $labels.mountpoint }})
       expr: "(1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"\
         /boot.*|/srv/dev-disk-.*\"}\n   / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"\
@@ -26,7 +26,7 @@ spec:
       annotations:
         description: '{{ $value | humanize }}% used — k3s is likely to crash. Free
           space immediately.'
-        summary: Disk usage > 95% on {{ $labels.instance }} ({{ 
+        summary: Disk usage > 95% on {{ $labels.instance }} ({{
           $labels.mountpoint }})
       expr: "(1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"\
         /boot.*|/srv/dev-disk-.*\"}\n   / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"\

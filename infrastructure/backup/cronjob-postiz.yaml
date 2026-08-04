@@ -46,7 +46,7 @@ spec:
                   name: pvc-backup-r2
                   key: SECRET_ACCESS_KEY
             - name: R2_ENDPOINT
-              value: 
+              value:
                 https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
             - name: R2_BUCKET
               value: datalake-bucket

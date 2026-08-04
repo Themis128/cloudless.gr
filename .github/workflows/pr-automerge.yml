@@ -90,7 +90,7 @@ jobs:
 
     - name: Note bot synchronize (no update-branch)
       if: github.actor == 'github-actions[bot]'
-      run: echo "Skipping update-branch for github-actions[bot] push (avoids CI 
+      run: echo "Skipping update-branch for github-actions[bot] push (avoids CI
         action_required loop)"
 
     - name: Label + comment on merge conflicts
@@ -125,7 +125,7 @@ jobs:
         )"
 
     - name: Enable squash auto-merge
-      if: steps.update.outcome != 'failure' && steps.update.outputs.conflict != 
+      if: steps.update.outcome != 'failure' && steps.update.outputs.conflict !=
         'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}

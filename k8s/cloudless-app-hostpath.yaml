@@ -12,7 +12,9 @@ data:
   NEXT_PUBLIC_AUTH_PROVIDER: d1
   SENTRY_ENVIRONMENT: pi-standby
   ESPOCRM_BASE_URL: https://espocrm.cloudless.gr
-  POSTIZ_API_URL: https://postiz.cloudless.gr
+  # Public https://postiz.cloudless.gr is behind Cloudflare Access (302 → login),
+  # so server-side calls get a non-JSON redirect → 502. Pods must use in-cluster DNS.
+  POSTIZ_API_URL: http://postiz.postiz.svc.cluster.local:5000
   N8N_API_URL: https://n8n.cloudless.gr
   APPFLOWY_API_URL: https://appflowy.cloudless.gr
   MEILI_HOST: http://meilisearch.meilisearch.svc.cluster.local:7700

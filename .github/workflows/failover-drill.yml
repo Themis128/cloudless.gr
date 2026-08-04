@@ -19,7 +19,7 @@ jobs:
       env:
         PRIMARY_URL: https://cloudless.gr/api/health
         SECONDARY_URL: https://pi-origin.cloudless.gr/api/health
-        REQUIRE_SECONDARY_HEALTHY: ${{ 
+        REQUIRE_SECONDARY_HEALTHY: ${{
           github.event.inputs.require_secondary_healthy || 'true' }}
       run: |
         set -euo pipefail

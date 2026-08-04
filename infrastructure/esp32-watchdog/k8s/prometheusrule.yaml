@@ -81,7 +81,7 @@ spec:
         target: omv-ha
         probe: esp32-http
       annotations:
-        summary: omv-ha (192.168.1.130) UNREACHABLE from ESP32 external probe 
+        summary: omv-ha (192.168.1.130) UNREACHABLE from ESP32 external probe
           (1m+)
         description: |
           The ESP32 watchdog (off-cluster) has been unable to HTTP-probe
@@ -118,7 +118,7 @@ spec:
         target: k3s-cluster
         probe: esp32-http
       annotations:
-        summary: FULL CLUSTER OUTAGE — both omv and omv-ha unreachable (ESP32 
+        summary: FULL CLUSTER OUTAGE — both omv and omv-ha unreachable (ESP32
           probe, 1m+)
         description: |
           Both Pi nodes are unreachable from the ESP32 watchdog for 1m+.
@@ -150,7 +150,7 @@ spec:
         target: cloudless.gr
         probe: esp32-https
       annotations:
-        summary: cloudless.gr AWS app UNREACHABLE from ESP32 external probe 
+        summary: cloudless.gr AWS app UNREACHABLE from ESP32 external probe
           (2m+)
         description: |
           The ESP32 watchdog's HTTPS probe to https://cloudless.gr/api/health

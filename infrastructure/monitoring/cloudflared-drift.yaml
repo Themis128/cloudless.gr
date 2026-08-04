@@ -37,8 +37,7 @@ spec:
             securityContext: {privileged: true}
             env:
             - name: SLACK_BOT_TOKEN
-              valueFrom: {secretKeyRef: {name: cluster-alerts-secret, key: 
-                    SLACK_BOT_TOKEN}}
+              valueFrom: {secretKeyRef: {name: cluster-alerts-secret, key: SLACK_BOT_TOKEN}}
             - name: SLACK_CHANNEL_ID
               value: C09AF5W3X16                   # proven working per CLAUDE.md
             command:

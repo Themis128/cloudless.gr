@@ -45,7 +45,7 @@ rules:
 
   # GitHub Actions uses on: / off: as keys; allow common YAML 1.1 truthy forms.
   truthy:
-    allowed-values: ['true', 'false', on, off, yes, no]
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
     check-keys: false
 
   comments:

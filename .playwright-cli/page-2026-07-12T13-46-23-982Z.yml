@@ -29,8 +29,8 @@
     - generic [ref=e176]:
       - paragraph [ref=e177]: '[ STORE ]'
       - heading "Tools, templates & expert services." [level=1] [ref=e178]
-      - paragraph [ref=e179]: Everything you need to build, scale, and market 
-          your cloud-powered business. From self-serve digital products to 
+      - paragraph [ref=e179]: Everything you need to build, scale, and market
+          your cloud-powered business. From self-serve digital products to
           done-for-you services.
     - generic [ref=e181]:
       - generic [ref=e182]:
@@ -70,8 +70,8 @@
             - link [ref=e219]:
               - /url: /en/store/srv-cloud
               - heading "Cloud Architecture Audit" [level=3] [ref=e220]
-            - paragraph [ref=e221]: Comprehensive review of your cloud 
-                infrastructure with actionable optimization recommendations. 
+            - paragraph [ref=e221]: Comprehensive review of your cloud
+                infrastructure with actionable optimization recommendations.
                 Covers AWS, GCP, and Azure.
             - generic [ref=e222]:
               - generic [ref=e223]: €2,000
@@ -103,8 +103,8 @@
             - link [ref=e244]:
               - /url: /en/store/srv-serverless
               - heading "Serverless Starter Package" [level=3] [ref=e245]
-            - paragraph [ref=e246]: Get your first serverless application built 
-                and deployed. Includes CI/CD pipeline, monitoring, and 
+            - paragraph [ref=e246]: Get your first serverless application built
+                and deployed. Includes CI/CD pipeline, monitoring, and
                 documentation.
             - generic [ref=e247]:
               - generic [ref=e248]: €2,400
@@ -132,8 +132,8 @@
             - link [ref=e270]:
               - /url: /en/store/srv-analytics
               - heading "Data Analytics & Dashboards" [level=3] [ref=e271]
-            - paragraph [ref=e272]: Custom analytics dashboards and data 
-                pipelines to turn your raw data into actionable insights. 
+            - paragraph [ref=e272]: Custom analytics dashboards and data
+                pipelines to turn your raw data into actionable insights.
                 Includes ETL setup, BI reporting, and real-time monitoring.
             - generic [ref=e273]:
               - generic [ref=e274]: €2,400
@@ -163,8 +163,8 @@
             - link [ref=e302]:
               - /url: /en/store/srv-growth
               - heading "AI Growth Engine" [level=3] [ref=e303]
-            - paragraph [ref=e304]: Monthly AI-powered marketing retainer. SEO, 
-                content strategy, paid ads management, and performance 
+            - paragraph [ref=e304]: Monthly AI-powered marketing retainer. SEO,
+                content strategy, paid ads management, and performance
                 reporting.
             - generic [ref=e305]:
               - generic [ref=e306]:
@@ -202,8 +202,8 @@
             - link [ref=e328]:
               - /url: /en/store/dig-cloud-playbook
               - heading "Cloud Migration Playbook" [level=3] [ref=e329]
-            - paragraph [ref=e330]: 250-page step-by-step guide for migrating 
-                enterprise workloads to AWS. Includes battle-tested strategies 
+            - paragraph [ref=e330]: 250-page step-by-step guide for migrating
+                enterprise workloads to AWS. Includes battle-tested strategies
                 and checklists.
             - generic [ref=e331]:
               - generic [ref=e332]: €49
@@ -237,7 +237,7 @@
             - link [ref=e357]:
               - /url: /en/store/dig-analytics-templates
               - heading "Analytics Dashboard Templates" [level=3] [ref=e358]
-            - paragraph [ref=e359]: Production-ready analytics dashboard 
+            - paragraph [ref=e359]: Production-ready analytics dashboard
                 templates and KPI packs for modern SaaS and e-commerce teams.
             - generic [ref=e360]:
               - generic [ref=e361]: €59
@@ -273,7 +273,7 @@
             - link [ref=e384]:
               - /url: /en/store/dig-serverless-course
               - heading "Serverless Masterclass" [level=3] [ref=e385]
-            - paragraph [ref=e386]: Video course with hands-on labs. Learn full 
+            - paragraph [ref=e386]: Video course with hands-on labs. Learn full
                 serverless architecture patterns end-to-end.
             - generic [ref=e387]:
               - generic [ref=e388]: €149
@@ -302,7 +302,7 @@
             - link [ref=e405]:
               - /url: /en/store/phy-dev-kit
               - heading "Cloudless Developer Kit" [level=3] [ref=e406]
-            - paragraph [ref=e407]: Limited-edition desk kit with notebook, 
+            - paragraph [ref=e407]: Limited-edition desk kit with notebook,
                 sticker set, and architecture cheatsheet.
             - generic [ref=e408]:
               - generic [ref=e409]: €35
@@ -331,7 +331,7 @@
             - link [ref=e428]:
               - /url: /en/store/phy-tshirt
               - heading "Cloudless T-Shirt" [level=3] [ref=e429]
-            - paragraph [ref=e430]: Premium organic cotton t-shirt with 
+            - paragraph [ref=e430]: Premium organic cotton t-shirt with
                 embroidered Cloudless logo. Available in S, M, L, XL, XXL.
             - generic [ref=e431]:
               - generic [ref=e432]: €25
@@ -342,8 +342,8 @@
       - generic [ref=e444]:
         - generic [ref=e446]:
           - generic [ref=e447]: “
-          - paragraph [ref=e448]: The Cloud Architecture Audit saved us 40% on 
-              our monthly AWS bill. The recommendations were actionable and 
+          - paragraph [ref=e448]: The Cloud Architecture Audit saved us 40% on
+              our monthly AWS bill. The recommendations were actionable and
               well-documented.
           - generic [ref=e449]:
             - generic [ref=e450]: M
@@ -352,8 +352,8 @@
               - paragraph [ref=e453]: CTO, Fintech Startup
         - generic [ref=e455]:
           - generic [ref=e456]: “
-          - paragraph [ref=e457]: The Serverless Masterclass took me from zero 
-              to deploying production Lambda functions in under two weeks. Best 
+          - paragraph [ref=e457]: The Serverless Masterclass took me from zero
+              to deploying production Lambda functions in under two weeks. Best
               investment I have made.
           - generic [ref=e458]:
             - generic [ref=e459]: D
@@ -362,8 +362,8 @@
               - paragraph [ref=e462]: Full-Stack Developer
         - generic [ref=e464]:
           - generic [ref=e465]: “
-          - paragraph [ref=e466]: Their analytics dashboards gave us visibility 
-              we never had before. Revenue tracking, user funnels, churn 
+          - paragraph [ref=e466]: Their analytics dashboards gave us visibility
+              we never had before. Revenue tracking, user funnels, churn
               predictions, all in one place.
           - generic [ref=e467]:
             - generic [ref=e468]: E
@@ -395,7 +395,7 @@
             - generic [ref=e500]: Do you ship internationally?
             - generic [ref=e501]: +
         - group [ref=e503]:
-          - generic "Can I upgrade from a digital product to a full service? +" 
+          - generic "Can I upgrade from a digital product to a full service? +"
               [ref=e504]:
             - generic [ref=e505]: Can I upgrade from a digital product to a full
                 service?
@@ -447,7 +447,7 @@
             - textbox "your@email.com" [ref=e147]
             - button "Subscribe" [ref=e148]
           - paragraph [ref=e149]:
-            - text: By subscribing, you agree to receive our newsletter and 
+            - text: By subscribing, you agree to receive our newsletter and
                 accept our
             - link "Privacy Policy" [ref=e150]:
               - /url: /en/privacy
@@ -483,8 +483,8 @@
       - generic [ref=e522]:
         - heading "We value your privacy" [level=3] [ref=e523]
         - paragraph [ref=e524]:
-          - text: We use cookies to improve your experience, analyse traffic, 
-              and personalise content. You can accept all cookies, reject 
+          - text: We use cookies to improve your experience, analyse traffic,
+              and personalise content. You can accept all cookies, reject
               optional ones, or customise your preferences.
           - link "Learn more about cookies" [ref=e525]:
             - /url: /en/cookies

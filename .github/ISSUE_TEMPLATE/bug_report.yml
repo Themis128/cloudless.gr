@@ -92,6 +92,6 @@ body:
     options:
     - label: I searched existing issues and this hasn't been reported yet
       required: true
-    - label: This is not a security vulnerability (those go to private 
+    - label: This is not a security vulnerability (those go to private
         advisories)
       required: true

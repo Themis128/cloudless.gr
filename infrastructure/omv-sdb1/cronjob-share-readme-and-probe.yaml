@@ -82,7 +82,7 @@ spec:
             imagePullPolicy: IfNotPresent
             env:
             - name: README_URL
-              value: 
+              value:
                 https://raw.githubusercontent.com/Themis128/cloudless.gr/main/docs/google-to-omv-migration.md
             - name: MOUNT
               value: /sdb1

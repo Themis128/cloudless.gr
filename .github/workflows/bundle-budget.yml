@@ -52,7 +52,7 @@ jobs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
       with:
         path: .next/cache
-        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ 
+        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{
           hashFiles('src/**') }}
         restore-keys: |
           nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-

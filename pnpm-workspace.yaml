@@ -1,5 +1,6 @@
 packages:
 - workers/*
+- scripts/etl
 
 allowBuilds:
   '@parcel/watcher': true

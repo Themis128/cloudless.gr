@@ -51,7 +51,7 @@ jobs:
           # Default to pi-origin so GitHub Actions bypasses Cloudflare Bot Fight
           # Mode on the apex (GHA IPs get 403 interstitials). Override via
           # vars.AD_ANALYTICS_SITE_ORIGIN for preview deploys.
-        SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 
+        SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN ||
           'https://pi-origin.cloudless.gr' }}
       run: |
         set -euo pipefail

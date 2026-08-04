@@ -184,7 +184,7 @@ spec:
             - name: MAX_AGE_HOURS
               value: '2'
             - name: SNAPSHOT_DIR
-              value: 
+              value:
                 /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db
             command:
             - /bin/sh

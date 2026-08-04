@@ -55,7 +55,7 @@ jobs:
     - name: Rotate Slack app-config token and persist to repo secrets
       id: rotate
       env:
-        SLACK_APP_CONFIG_REFRESH_TOKEN: ${{ 
+        SLACK_APP_CONFIG_REFRESH_TOKEN: ${{
           secrets.SLACK_APP_CONFIG_REFRESH_TOKEN }}
         SECRETS_PAT: ${{ secrets.SCRIPTS_SECRETS_PAT }}
       run: |
@@ -65,7 +65,7 @@ jobs:
 
     - name: Validate manifest with Slack API
       id: validate
-      if: ${{ steps.rotate.outputs.skip != 'true' && 
+      if: ${{ steps.rotate.outputs.skip != 'true' &&
         steps.rotate.outputs.rotated == 'true' }}
       env:
         SLACK_TOKEN: ${{ steps.rotate.outputs.token }}

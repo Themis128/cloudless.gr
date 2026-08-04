@@ -35,15 +35,15 @@ spec:
               limits: {cpu: 500m, memory: 256Mi}
             env:
             - name: AWS_ACCESS_KEY_ID
-              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: 
+              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key:
                     AWS_ACCESS_KEY_ID}}
             - name: AWS_SECRET_ACCESS_KEY
-              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: 
+              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key:
                     AWS_SECRET_ACCESS_KEY}}
             - name: AWS_DEFAULT_REGION
               value: us-east-1
             - name: MARIADB_ROOT_PASSWORD
-              valueFrom: {secretKeyRef: {name: espocrm-secrets, key: 
+              valueFrom: {secretKeyRef: {name: espocrm-secrets, key:
                     mariadb-root-password}}
             command: [/bin/sh, -c]
             args:

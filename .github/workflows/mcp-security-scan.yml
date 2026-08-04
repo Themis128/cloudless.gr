@@ -68,6 +68,6 @@ jobs:
         # does not influence the per-job check conclusion that branch protection
         # reads.
       continue-on-error: true
-      run: npm run scan -- --path "../../src/**/*.{ts,tsx,js,jsx,py,md}" 
+      run: npm run scan -- --path "../../src/**/*.{ts,tsx,js,jsx,py,md}"
         --exit-zero
       working-directory: tools/mcp-security-scanner

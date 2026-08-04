@@ -49,9 +49,9 @@ export default function LakeExplorePage() {
       </div>
 
       <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-3 py-1.5">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-neon-cyan" />
-          <span className="font-mono text-xs text-neon-cyan">LAKE EXPLORE · DUCKDB-WASM</span>
+        <div className="border-neon-cyan/20 bg-neon-cyan/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
+          <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
+          <span className="text-neon-cyan font-mono text-xs">LAKE EXPLORE · DUCKDB-WASM</span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Explore bronze parquet</h1>
         <p className="mt-2 max-w-2xl font-mono text-xs text-slate-500">
@@ -60,15 +60,13 @@ export default function LakeExplorePage() {
         </p>
       </div>
 
-      {!duckOk && (
-        <ErrorMsg msg="DuckDB-Wasm needs a modern browser with WebAssembly Workers." />
-      )}
+      {!duckOk && <ErrorMsg msg="DuckDB-Wasm needs a modern browser with WebAssembly Workers." />}
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 font-mono text-xs text-slate-400">
           Dataset
           <select
-            className="min-h-11 rounded-lg border border-slate-700 bg-void-light px-3 text-sm text-white"
+            className="bg-void-light min-h-11 rounded-lg border border-slate-700 px-3 text-sm text-white"
             value={catalogId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => setCatalogId(event.target.value)}
           >
@@ -83,14 +81,14 @@ export default function LakeExplorePage() {
           type="button"
           onClick={run}
           disabled={pending || !duckOk}
-          className="min-h-11 rounded-lg border border-neon-cyan/40 bg-neon-cyan/10 px-4 font-mono text-xs text-neon-cyan hover:bg-neon-cyan/20 disabled:opacity-40"
+          className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-4 font-mono text-xs disabled:opacity-40"
         >
           {pending ? "Running…" : "Run"}
         </button>
       </div>
 
       <textarea
-        className="mb-4 min-h-30 w-full rounded-lg border border-slate-800 bg-void-light/80 p-3 font-mono text-xs text-slate-200"
+        className="bg-void-light/80 mb-4 min-h-30 w-full rounded-lg border border-slate-800 p-3 font-mono text-xs text-slate-200"
         value={sql}
         onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setSql(event.target.value)}
         spellCheck={false}
@@ -103,7 +101,7 @@ export default function LakeExplorePage() {
         <div className="overflow-x-auto rounded-xl border border-slate-800">
           <table className="w-full min-w-160 border-collapse font-mono text-xs">
             <thead>
-              <tr className="border-b border-slate-800 bg-void-light/50 text-left text-slate-500">
+              <tr className="bg-void-light/50 border-b border-slate-800 text-left text-slate-500">
                 {columns.map((column) => (
                   <th key={column} className="px-3 py-2 font-normal">
                     {column}

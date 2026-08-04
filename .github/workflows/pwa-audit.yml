@@ -40,5 +40,5 @@ jobs:
     - run: pnpm install --frozen-lockfile
       # See api-contract-audit.yml: dropping `--` so vitest sees the files as
       # filters rather than stray positional args that trigger a full run.
-    - run: pnpm test:ci __tests__/sw-runtime.test.ts 
+    - run: pnpm test:ci __tests__/sw-runtime.test.ts
         __tests__/service-worker.test.tsx

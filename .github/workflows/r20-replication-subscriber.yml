@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       apply:
-        description: When true, updates the Lambda. Package-only dry run 
+        description: When true, updates the Lambda. Package-only dry run
           otherwise.
         required: true
         default: 'false'

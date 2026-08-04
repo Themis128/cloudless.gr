@@ -14,7 +14,7 @@ type: Opaque
 stringData:
   # Encryption key for data at rest (64 hex chars)
   # Generate: openssl rand -hex 32
-  ENCRYPTION_KEY: 
+  ENCRYPTION_KEY:
     GENERATE_AND_STORE_IN_SSM_/cloudless/production/APPFLOWY_ENCRYPTION_KEY
 ---
 apiVersion: v1
@@ -98,7 +98,7 @@ spec:
         - containerPort: 5000
         env:
         - name: DATABASE_URL
-          value: 
+          value:
             postgres://postgres@postgres.database.svc.cluster.local:5432/cloudless
         - name: ENCRYPTION_KEY
           valueFrom:

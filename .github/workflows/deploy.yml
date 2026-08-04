@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       reason:
-        description: Why run legacy AWS SST deploy? (prefer Cloudflare Workers 
+        description: Why run legacy AWS SST deploy? (prefer Cloudflare Workers
           Deploy)
         required: false
         default: manual legacy SST deploy
@@ -39,7 +39,7 @@ jobs:
       # NEXT_PUBLIC_* vars must be in the workflow env (not just the deploy step)
       # so they're visible during `next build` invoked by `sst deploy`. Next.js
       # inlines NEXT_PUBLIC_* into the client bundle at build time — not runtime.
-      NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ 
+      NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{
         secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
       NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -61,7 +61,7 @@ jobs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
       with:
         path: .next/cache
-        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ 
+        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{
           hashFiles('src/**') }}
         restore-keys: |
           nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
@@ -80,7 +80,7 @@ jobs:
 
     - name: (Optional) Configure AWS credentials (OIDC)
       if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
-      uses: 
+      uses:
         aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b             # v6.2.0
       with:
         role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}

@@ -59,7 +59,7 @@ jobs:
         queries: security-extended
 
     - name: Autobuild
-      uses: 
+      uses:
         github/codeql-action/autobuild@7211b7c8077ea37d8641b6271f6a365a22a5fbfa             # v4
 
     - name: Perform CodeQL Analysis
@@ -67,7 +67,7 @@ jobs:
         # private repos with a GHAS licence. Without it the upload step returns a
         # 403 / "Code scanning is not enabled" error, so we mark it non-fatal and
         # still surface any findings in the log.
-      uses: 
+      uses:
         github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa             # v4
       continue-on-error: true
       with:

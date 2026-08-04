@@ -5,7 +5,8 @@ export async function GET() {
     serverInfo: {
       name: "Cloudless.gr Agent Server",
       version: "1.0.0",
-      description: "MCP server providing access to cloudless.gr services, including chat, calendar, and analytics.",
+      description:
+        "MCP server providing access to cloudless.gr services, including chat, calendar, and analytics.",
     },
     transport: {
       type: "sse",

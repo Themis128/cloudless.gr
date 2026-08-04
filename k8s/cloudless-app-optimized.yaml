@@ -76,7 +76,7 @@ spec:
       # Container Configuration
       containers:
       - name: app
-        image: 
+        image:
           278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest
         imagePullPolicy: Always
 

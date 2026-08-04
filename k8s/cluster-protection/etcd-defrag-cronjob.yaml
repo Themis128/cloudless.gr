@@ -73,6 +73,6 @@ spec:
             # If you move it back to default, update this path.
           - name: etcd-certs
             hostPath:
-              path: 
+              path:
                 /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/tls/etcd
               type: Directory

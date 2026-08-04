@@ -53,7 +53,7 @@ spec:
         component: vibe-agent
         probe: blackbox-http
       annotations:
-        summary: vLLM backend DOWN — /health failing for 3m+ (vibe-agent has no 
+        summary: vLLM backend DOWN — /health failing for 3m+ (vibe-agent has no
           model)
         description: |
           The blackbox probe of http://100.121.191.7:8080/health has been
@@ -91,7 +91,7 @@ spec:
         component: vibe-agent
         probe: blackbox-http
       annotations:
-        summary: vLLM backend probe flapping — intermittent /health failures 
+        summary: vLLM backend probe flapping — intermittent /health failures
           (early warning)
         description: |
           More than 3 of the last ~10 probes to

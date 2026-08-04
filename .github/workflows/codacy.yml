@@ -41,7 +41,7 @@ jobs:
 
     - name: Run Codacy Analysis CLI
       id: codacy
-      uses: 
+      uses:
         codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08
       continue-on-error: true         # exit 13 = OOM/timeout on runner; non-blocking
       with:

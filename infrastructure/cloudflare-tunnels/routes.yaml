@@ -143,7 +143,7 @@ routes:
   healthPath: /api/health
   node: cloudflare
   status: active
-  description: Workers fallback (static assets + auth endpoints) - activated 
+  description: Workers fallback (static assets + auth endpoints) - activated
     when Pi primary fails
 
 # Tunnel configuration

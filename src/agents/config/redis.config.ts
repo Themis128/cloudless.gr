@@ -11,9 +11,9 @@ export interface AgentConfigWithRedis extends AgentConfig {
 
 export function createRedisClient(config?: RedisConfig): RedisClientType {
   const url = config?.url || process.env.REDIS_URL || "redis://localhost:6379";
-  
+
   const client = createClient({ url });
-  
+
   client.on("error", (err: unknown) => {
     console.error("Redis Client Error:", err);
   });

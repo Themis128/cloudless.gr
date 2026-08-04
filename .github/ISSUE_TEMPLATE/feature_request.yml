@@ -21,7 +21,7 @@ body:
   attributes:
     label: Problem / motivation
     description: What existing pain point does this solve?
-    placeholder: Currently users can only pay by card. Greek SMBs often prefer 
+    placeholder: Currently users can only pay by card. Greek SMBs often prefer
       bank transfer.
   validations:
     required: true

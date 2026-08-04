@@ -14,7 +14,7 @@ groups:
     for: 2m
     annotations:
       summary: n8n workflow error detected
-      description: n8n container has recorded workflow errors in the last 5 
+      description: n8n container has recorded workflow errors in the last 5
         minutes
       runbook_url: https://docs.cloudless.gr/operations/n8n
     alerts:
@@ -72,7 +72,7 @@ groups:
     for: 5m
     annotations:
       summary: High error rate across applications
-      description: Detected >5 error log lines per minute across multiple 
+      description: Detected >5 error log lines per minute across multiple
         applications
       runbook_url: https://docs.cloudless.gr/operations/monitoring
     alerts:

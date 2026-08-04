@@ -81,7 +81,7 @@ jobs:
         echo "oauth=$RUN_OAUTH" >> "$GITHUB_OUTPUT"
 
     - name: Trigger postiz-sync
-      if: steps.targets.outputs.sync == 'true' && steps.secret.outputs.value != 
+      if: steps.targets.outputs.sync == 'true' && steps.secret.outputs.value !=
         ''
       run: |
         echo "Calling $BASE_URL/api/cron/postiz-sync"

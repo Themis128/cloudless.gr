@@ -29,9 +29,13 @@ jobs:
         node-version: 22
 
 
-    - name: Install dependencies
+    - name: Install dependencies (use pnpm, avoid npm ci on pnpm-managed repo)
       working-directory: scripts/etl
-      run: npm ci --omit=dev
+      run: |
+        # Ensure pnpm is available via corepack, then install production deps
+        corepack enable || true
+        corepack prepare pnpm@latest --activate || true
+        pnpm install --frozen-lockfile --prod
 
     - name: Run Clients-to-R2 sync
       working-directory: scripts/etl

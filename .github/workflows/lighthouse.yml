@@ -28,7 +28,7 @@ jobs:
   audit:
     name: Performance Audit
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_run' || 
+    if: ${{ github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' }}
     timeout-minutes: 15
 

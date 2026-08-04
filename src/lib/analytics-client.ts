@@ -26,7 +26,10 @@ type DuckdbWasmModule = {
   }>;
   ConsoleLogger: new (level?: number) => unknown;
   LogLevel: { WARNING: number };
-  AsyncDuckDB: new (logger: unknown, worker: Worker) => DuckRuntime & {
+  AsyncDuckDB: new (
+    logger: unknown,
+    worker: Worker
+  ) => DuckRuntime & {
     instantiate: (mainModule: string, pthreadWorker?: string | null) => Promise<void>;
   };
 };
@@ -52,9 +55,9 @@ async function getDuckDB(): Promise<DuckRuntime> {
 export function isDuckDBAvailable(): boolean {
   return Boolean(
     typeof window !== "undefined" &&
-      typeof Worker !== "undefined" &&
-      typeof crypto !== "undefined" &&
-      typeof crypto.subtle !== "undefined"
+    typeof Worker !== "undefined" &&
+    typeof crypto !== "undefined" &&
+    typeof crypto.subtle !== "undefined"
   );
 }
 

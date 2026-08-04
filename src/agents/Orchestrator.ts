@@ -41,7 +41,7 @@ export class Orchestrator extends EventEmitter {
   }
 
   // FIX: Completed the missing code block logic that got truncated by the LLM
-  public async delegateTask(taskId: string, payload: Record<string, any>): Promise<boolean> {
+  public async delegateTask(taskId: string, payload: Record<string, unknown>): Promise<boolean> {
     await this.initialize();
     try {
       const taskMeta = JSON.stringify({

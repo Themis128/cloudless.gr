@@ -19,11 +19,11 @@ on:
   workflow_dispatch:
     inputs:
       cloudflare_token:
-        description: Cloudflare API token (Zone:Read, LB:Edit, DNS:Edit for 
+        description: Cloudflare API token (Zone:Read, LB:Edit, DNS:Edit for
           cloudless.gr)
         required: true
       apply:
-        description: Also apply the HA load balancer after storing (true=apply, 
+        description: Also apply the HA load balancer after storing (true=apply,
           false=store only)
         type: boolean
         required: false
@@ -76,7 +76,7 @@ jobs:
 
     - name: Apply Cloudflare HA load balancer
       id: apply
-      if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored 
+      if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored
         == 'true' }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
@@ -89,7 +89,7 @@ jobs:
 
     - name: Report (store-only mode)
       id: report
-      if: ${{ github.event.inputs.apply != 'true' && steps.store.outputs.stored 
+      if: ${{ github.event.inputs.apply != 'true' && steps.store.outputs.stored
         == 'true' }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}

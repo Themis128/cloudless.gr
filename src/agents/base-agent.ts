@@ -1,8 +1,12 @@
 import { EventEmitter } from "node:events";
-import { z } from "zod";
 import { createClient, type RedisClientType } from "redis";
 
-import { AgentConfigSchema, type AgentConfig, type Task, type ExecutionResult } from "./models/agent.model";
+import {
+  AgentConfigSchema,
+  type AgentConfig,
+  type Task,
+  type ExecutionResult,
+} from "./models/agent.model";
 import type { IAgent } from "./interfaces/agent.interface";
 
 export class BaseAgent extends EventEmitter implements IAgent {
@@ -36,7 +40,11 @@ export class BaseAgent extends EventEmitter implements IAgent {
       await this.processTask(task.payload);
       return { success: true, taskId: task.id };
     } catch (error) {
-      return { success: false, taskId: task.id, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        taskId: task.id,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 

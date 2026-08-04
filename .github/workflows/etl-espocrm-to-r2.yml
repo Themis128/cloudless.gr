@@ -16,7 +16,7 @@ jobs:
     # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
     # Default MUST be a JSON array of labels. A comma-string becomes one label
     # and the job queues forever with no matching runner.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || 
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC ||
       '["self-hosted","omv","build"]') }}
     timeout-minutes: 20
 

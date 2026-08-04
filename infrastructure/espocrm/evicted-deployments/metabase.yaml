@@ -78,5 +78,4 @@ spec:
       - {name: logback-config, configMap: {name: metabase-logback}}
       - {name: data, persistentVolumeClaim: {claimName: metabase-data}}
       - {name: plugins, emptyDir: {}}
-      - {name: duckdb-data, persistentVolumeClaim: {claimName: duckdb-data, 
-            readOnly: true}}
+      - {name: duckdb-data, persistentVolumeClaim: {claimName: duckdb-data, readOnly: true}}

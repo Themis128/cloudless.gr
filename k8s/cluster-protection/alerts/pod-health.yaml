@@ -75,7 +75,7 @@ spec:
     rules:
     - alert: ContainerHighMemory
       annotations:
-        description: Using {{ $value | humanizePercentage }} — OOMKill risk. 
+        description: Using {{ $value | humanizePercentage }} — OOMKill risk.
           Current limit may be too low.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }}
           memory > 90% of limit'
@@ -99,7 +99,7 @@ spec:
         severity: warning
     - alert: ContainerThrottled
       annotations:
-        description: Container is heavily throttled. Raise cpu limit or reduce 
+        description: Container is heavily throttled. Raise cpu limit or reduce
           load.
         summary: '{{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }}
           CPU throttled > 50%'
@@ -112,9 +112,9 @@ spec:
     rules:
     - alert: HPAMaxedOut
       annotations:
-        description: Autoscaler cannot add more pods. Consider raising 
+        description: Autoscaler cannot add more pods. Consider raising
           maxReplicas or reducing load.
-        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler 
+        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler
           }} at max replicas for 15 m
       expr: "kube_horizontalpodautoscaler_status_current_replicas\n  == kube_horizontalpodautoscaler_spec_max_replicas\n"
       for: 15m
@@ -122,9 +122,9 @@ spec:
         severity: warning
     - alert: HPAScalingFailure
       annotations:
-        description: metrics-server may be unavailable or resource requests 
+        description: metrics-server may be unavailable or resource requests
           missing on the target deployment.
-        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler 
+        summary: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler
           }} scaling is inactive
       expr: "kube_horizontalpodautoscaler_status_condition{\n  condition=\"ScalingActive\"\
         , status=\"false\"\n} == 1\n"

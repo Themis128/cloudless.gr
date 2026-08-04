@@ -27,9 +27,7 @@ export type CoalesceFlush = {
 };
 
 export type CoalesceResult =
-  | { action: "passthrough" }
-  | { action: "buffered" }
-  | { action: "flush"; flush: CoalesceFlush };
+  { action: "passthrough" } | { action: "buffered" } | { action: "flush"; flush: CoalesceFlush };
 
 type Batch = {
   status: "DOWN" | "UP";

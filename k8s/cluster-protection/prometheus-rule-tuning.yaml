@@ -15,7 +15,7 @@ spec:
     rules:
     - alert: NodeDiskUsageHigh
       annotations:
-        description: Root filesystem on {{ $labels.instance }} is {{ printf 
+        description: Root filesystem on {{ $labels.instance }} is {{ printf
           "%.1f" $value }}% full. Free up space or expand storage.
         summary: Node {{ $labels.instance }} root disk usage above 80%
       expr: |
@@ -30,7 +30,7 @@ spec:
         severity: warning
     - alert: NodeDiskUsageCritical
       annotations:
-        description: Root filesystem on {{ $labels.instance }} is {{ printf 
+        description: Root filesystem on {{ $labels.instance }} is {{ printf
           "%.1f" $value }}% full. Immediate action required — cluster operations
           may be impacted.
         summary: Node {{ $labels.instance }} root disk usage CRITICAL (>90%)
@@ -50,7 +50,7 @@ spec:
           # turns critical.
       annotations:
         description: omv-main disk is {{ printf "%.1f" $value }}% full. omv-main
-          hosts etcd data and duckdb-data PVC — disk pressure risks cluster 
+          hosts etcd data and duckdb-data PVC — disk pressure risks cluster
           stability. Escalates to EtcdDiskSpaceLow (critical) at 88%.
         summary: omv-main root disk above 80% (etcd + PVC node)
       expr: |
@@ -69,7 +69,7 @@ spec:
     rules:
     - alert: NodeMemoryPressure
       annotations:
-        description: Available memory on {{ $labels.instance }} is below 10% of 
+        description: Available memory on {{ $labels.instance }} is below 10% of
           total ({{ printf "%.1f" $value }}%). Risk of OOMKill for running pods.
         summary: Node {{ $labels.instance }} available memory below 10%
       expr: |
@@ -82,7 +82,7 @@ spec:
         severity: warning
     - alert: NodeMemoryPressureCritical
       annotations:
-        description: Available memory on {{ $labels.instance }} is below 5% of 
+        description: Available memory on {{ $labels.instance }} is below 5% of
           total ({{ printf "%.1f" $value }}%). OOMKill imminent.
         summary: Node {{ $labels.instance }} available memory CRITICAL (<5%)
       expr: |
@@ -115,8 +115,8 @@ spec:
           # and 85% was firing on normal steady-state usage. The real read-only
           # threshold inside etcd is 95%, so 88% gives 7% headroom + early warning.
       annotations:
-        description: omv-main disk is {{ printf "%.1f" $value }}% full. etcd 
-          hard-blocks writes at 95%. Free up space NOW — clear journal logs, 
+        description: omv-main disk is {{ printf "%.1f" $value }}% full. etcd
+          hard-blocks writes at 95%. Free up space NOW — clear journal logs,
           prune old images, expand storage.
         summary: etcd node (omv-main) disk above 88% — cluster write risk
       expr: |

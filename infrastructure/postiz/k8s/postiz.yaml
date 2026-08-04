@@ -215,7 +215,7 @@ spec:
               name: postiz-secrets
               key: POSTGRES_PASSWORD
         - name: DATABASE_URL
-          value: 
+          value:
             postgresql://postiz:$(POSTGRES_PASSWORD)@postiz-postgres:5432/postiz
         - name: REDIS_URL
           value: redis://postiz-redis:6379

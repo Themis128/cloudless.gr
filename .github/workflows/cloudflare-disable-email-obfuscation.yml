@@ -44,7 +44,7 @@ jobs:
       # reads it from SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
     - name: Configure AWS credentials (OIDC)
       continue-on-error: true
-      uses: 
+      uses:
         aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a             # v4
       with:
         role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}

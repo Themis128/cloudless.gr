@@ -21,7 +21,7 @@ permissions:
 jobs:
   audit:
     name: Route-level Lighthouse
-    if: ${{ github.event_name == 'workflow_dispatch' || 
+    if: ${{ github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success' }}
     # Audit the Pi NodePort directly — GH-hosted runners get HTTP 403
     # challenge interstitials from Cloudflare (IP reputation), and even
@@ -51,7 +51,7 @@ jobs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ 
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{
           hashFiles('pnpm-lock.yaml') }}
     - name: Install Playwright Chromium
       if: steps.playwright-cache.outputs.cache-hit != 'true'

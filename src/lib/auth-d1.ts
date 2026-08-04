@@ -526,6 +526,7 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   // which avoids webpackEmptyContext that computed strings produce. These
   // are server-only modules — never bundled into client or edge bundles.
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getHttpAuthDb } = require("@/lib/d1-http") as typeof import("@/lib/d1-http");
     const httpDb = getHttpAuthDb();
     if (httpDb) return httpDb;
@@ -538,7 +539,9 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     // it must NOT reach the edge bundle. The literal require() is safe here
     // because webpack only includes server-side chunks.
     try {
-      const { getLocalAuthDb } = require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getLocalAuthDb } =
+        require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
       return getLocalAuthDb();
     } catch {
       return null;

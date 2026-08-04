@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/component: walg
     app.kubernetes.io/part-of: appflowy
 data:
-  AWS_ENDPOINT: 
+  AWS_ENDPOINT:
     https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
   AWS_REGION: auto
   AWS_S3_FORCE_PATH_STYLE: 'true'

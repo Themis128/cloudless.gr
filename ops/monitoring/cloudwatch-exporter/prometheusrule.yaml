@@ -13,11 +13,11 @@ spec:
     rules:
     - alert: CloudlessRevalidationQueueOldMessagesWarning
       annotations:
-        description: Oldest message age in 
+        description: Oldest message age in
           cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
           is {{ $value }} seconds.
         summary: Cloudless revalidation SQS messages are older than 5 minutes
-      expr: 
+      expr:
         aws_sqs_approximate_age_of_oldest_message_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
         >= 300
       for: 10m
@@ -27,11 +27,11 @@ spec:
         severity: warning
     - alert: CloudlessRevalidationQueueOldMessagesCritical
       annotations:
-        description: Oldest message age in 
+        description: Oldest message age in
           cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
           is {{ $value }} seconds.
         summary: Cloudless revalidation SQS messages are older than 15 minutes
-      expr: 
+      expr:
         aws_sqs_approximate_age_of_oldest_message_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
         >= 900
       for: 5m
@@ -41,11 +41,11 @@ spec:
         severity: critical
     - alert: CloudlessRevalidationQueueBacklogWarning
       annotations:
-        description: 
+        description:
           cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
           has {{ $value }} visible messages.
         summary: Cloudless revalidation SQS backlog is growing
-      expr: 
+      expr:
         aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
         >= 10
       for: 10m
@@ -55,11 +55,11 @@ spec:
         severity: warning
     - alert: CloudlessRevalidationQueueBacklogCritical
       annotations:
-        description: 
+        description:
           cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
           has {{ $value }} visible messages.
         summary: Cloudless revalidation SQS backlog is critical
-      expr: 
+      expr:
         aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
         >= 50
       for: 5m

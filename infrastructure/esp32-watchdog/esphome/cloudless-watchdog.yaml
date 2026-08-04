@@ -448,7 +448,7 @@ interval:
       # AWS alert removed 2026-06-21 — cluster-only scope.
   - if:
       condition:
-        lambda: return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() - 
+        lambda: return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() -
           id(omv_last_alerted)) >= 600000);
       then:
       - http_request.post:
@@ -463,7 +463,7 @@ interval:
       - lambda: id(omv_last_alerted) = millis();
   - if:
       condition:
-        lambda: return !id(omv_ha_up) && (id(omv_ha_last_alerted) == 0 || 
+        lambda: return !id(omv_ha_up) && (id(omv_ha_last_alerted) == 0 ||
           (millis() - id(omv_ha_last_alerted)) >= 600000);
       then:
       - http_request.post:
@@ -566,7 +566,7 @@ script:
             Title: 🔄 omv HARDWARE RESET (k3s wedged)
             Priority: max
             Tags: warning,electric_plug,arrows_counterclockwise
-          body: k3s API has been unreachable for 3 min while OS is responsive. 
+          body: k3s API has been unreachable for 3 min while OS is responsive.
             Pulsing power relay for 5 s. 5 min lockout before next reset.
       - switch.turn_off: pi_power_relay
       - delay: 5s
@@ -583,7 +583,7 @@ script:
         Title: ✅ cloudless.gr (AWS) RECOVERED
         Priority: default
         Tags: white_check_mark,cloud
-      body: HTTPS probe to cloudless.gr is responding again. Service is back 
+      body: HTTPS probe to cloudless.gr is responding again. Service is back
         online.
 
   # ── LED state machine ────────────────────────────────────────────────────────
