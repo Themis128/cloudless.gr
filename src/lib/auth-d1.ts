@@ -540,8 +540,7 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     // because webpack only includes server-side chunks.
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getLocalAuthDb } =
-        require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+      const { getLocalAuthDb } = require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
       return getLocalAuthDb();
     } catch {
       return null;

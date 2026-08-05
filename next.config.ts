@@ -52,12 +52,12 @@ const nextConfig: NextConfig = {
   webpack: (config, { webpack }) => {
     config.plugins = [
       ...(config.plugins || []),
-      new webpack.NormalModuleReplacementPlugin(
-        /^node:/,
-        (resource) => {
-          resource.request = resource.request.replace(/^node:/, "");
-        },
-      ),
+new webpack.NormalModuleReplacementPlugin(
+      /^node:/,
+      (resource: { request: string }) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      },
+    ),
     ];
     config.resolve = config.resolve || {};
     config.resolve.fallback = {
