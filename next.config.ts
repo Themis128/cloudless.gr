@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
       ...(config.plugins || []),
       new webpack.NormalModuleReplacementPlugin(
         /^node:/,
-        (resource) => {
+        (resource: { request: string }) => {
           resource.request = resource.request.replace(/^node:/, "");
         },
       ),
