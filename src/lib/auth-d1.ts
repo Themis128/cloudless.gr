@@ -529,8 +529,13 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getHttpAuthDb } = require("@/lib/d1-http") as typeof import("@/lib/d1-http");
     const httpDb = getHttpAuthDb();
-    if (httpDb) return httpDb;
-  } catch {
+    if (httpDb) {
+      // console.log("[auth-d1] HTTP D1 DB obtained via require");
+      return httpDb;
+    }
+    // console.log("[auth-d1] HTTP D1 DB was null");
+  } catch (err) {
+    // console.log("[auth-d1] Failed to require d1-http:", err);
     // Module unavailable or misconfigured — fall through.
   }
 
@@ -540,8 +545,7 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     // because webpack only includes server-side chunks.
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getLocalAuthDb } =
-        require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+      const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
       return getLocalAuthDb();
     } catch {
       return null;
