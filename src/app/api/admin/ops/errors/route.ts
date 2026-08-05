@@ -6,8 +6,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // In development, if Sentry is not configured, return empty data to avoid 503
-  if (process.env.NODE_ENV === "development" && !(await isSentryConfigured())) {
+  // In development, return empty data to avoid errors when services aren't configured
+  if (process.env.NODE_ENV === "development") {
     return NextResponse.json({ issues: [], total: 0, fetchedAt: new Date().toISOString() });
   }
 
