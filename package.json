@@ -173,10 +173,12 @@
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher",
+      "@playwright/browser-chromium",
+      "@playwright/browser-firefox",
+      "@playwright/browser-webkit",
       "@sentry/cli",
       "@swc/core",
-      "core-js-pure",
-      "esbuild",
+      "protobufjs",
       "workerd"
     ]
   }
