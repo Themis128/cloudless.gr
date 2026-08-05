@@ -125,6 +125,19 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     }
   }
 
+  const token = getTokenFromHeader(request);
+  if (token) {
+    const bearerResult = await authenticateBearer(request, token);
+    if (bearerResult) return bearerResult;
+  }
+
+  // Fall through to D1 session cookie auth. When NEXT_PUBLIC_E2E === "1"
+  // without E2E_ADMIN_TOKEN configured, we must still honour valid session
+  // cookies — otherwise admin APIs 401 even for authenticated admin users.
+  const d1User = await readD1SessionCookie(request);
+  if (d1User) return { ok: true, user: d1User };
+
+  // E2E mode without a matching token and without a session cookie — 401.
   if (process.env.NEXT_PUBLIC_E2E === "1") {
     return {
       ok: false,
@@ -134,15 +147,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       ),
     };
   }
-
-  const token = getTokenFromHeader(request);
-  if (token) {
-    const bearerResult = await authenticateBearer(request, token);
-    if (bearerResult) return bearerResult;
-  }
-
-  const d1User = await readD1SessionCookie(request);
-  if (d1User) return { ok: true, user: d1User };
 
   return {
     ok: false,
