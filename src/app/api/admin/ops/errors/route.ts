@@ -6,11 +6,16 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  // In development, if Sentry is not configured, return empty data to avoid 503
+  if (process.env.NODE_ENV === "development" && !(await isSentryConfigured())) {
+    return NextResponse.json({ issues: [], total: 0, fetchedAt: new Date().toISOString() });
+  }
+
   if (!(await isSentryConfigured())) {
     return NextResponse.json({ error: "Sentry not configured." }, { status: 503 });
   }
 
-  const result = await getUnresolvedIssues({ limit: 20, sort: "date" }); // NOSONAR
+  const result = await getUnresolvedIssues({ limit: 20, sort: "date" });
 
   if (!result) {
     const token = await verifySentryToken();
