@@ -1,0 +1,1 @@
+{"name":"ollama-mcp","version":"1.0.0","private":true,"type":"module","description":"MCP server: web search (DuckDuckGo), web fetch, and local Ollama bridge","scripts":{"dev":"tsx src/index.ts","build":"tsc"},"dependencies":{"@modelcontextprotocol/sdk":"^1.12.0","zod":"^3.25.0"},"devDependencies":{"@types/node":"^22.0.0","tsx":"^4.19.3","typescript":"^5.8.0"}}
