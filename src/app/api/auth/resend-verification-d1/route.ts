@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!email) return NextResponse.json({ ok: true });
 
   // Generate a fresh token + OTP
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET ?? "";
   const exp = Date.now() + 5 * 60 * 1000; // 5-minute window
   const nonce = crypto.randomUUID().replace(/-/g, "");
 

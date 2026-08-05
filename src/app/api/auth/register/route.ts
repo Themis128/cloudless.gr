@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET ?? "";
     const exp = Date.now() + 5 * 60 * 1000;
     const nonce = randomBytes(16).toString("hex");
     const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
