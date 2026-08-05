@@ -45,7 +45,7 @@ describe("d1-http", () => {
 
   it("prepare/bind/first round-trips via Cloudflare D1 REST", async () => {
     process.env.CLOUDFLARE_ACCOUNT_ID = "acct";
-    process.env.CLOUDFLARE_API_TOKEN = "tok";
+    process.env.CLOUDFLARE_API_TOKEN = "tok_abcd1234efgh5678ijkl9012mnop3456";
     process.env.CLOUDFLARE_D1_DATABASE_ID = "db-id";
     resetHttpAuthDbCache();
     const db = getHttpAuthDb();
@@ -59,14 +59,14 @@ describe("d1-http", () => {
       "https://api.cloudflare.com/client/v4/accounts/acct/d1/database/db-id/query",
       expect.objectContaining({
         method: "POST",
-        headers: expect.objectContaining({ Authorization: "Bearer tok" }),
+        headers: expect.objectContaining({ Authorization: "Bearer tok_abcd1234efgh5678ijkl9012mnop3456" }),
       })
     );
   });
 
   it("run returns meta.changes", async () => {
     process.env.CLOUDFLARE_ACCOUNT_ID = "acct";
-    process.env.CLOUDFLARE_API_TOKEN = "tok";
+    process.env.CLOUDFLARE_API_TOKEN = "tok_abcd1234efgh5678ijkl9012mnop3456";
     resetHttpAuthDbCache();
     vi.stubGlobal(
       "fetch",

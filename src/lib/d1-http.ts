@@ -37,7 +37,16 @@ function accountId(): string | undefined {
 }
 
 function apiToken(): string | undefined {
-  return process.env.CLOUDFLARE_API_TOKEN?.trim();
+  const raw = process.env.CLOUDFLARE_API_TOKEN;
+  const token = raw?.trim();
+  // Reject obviously malformed tokens (embedded whitespace, too short, or a
+  // shell-paste artifact like "... 2A7Ofk..."). A corrupted token must not
+  // hijack auth — getAuthDbFromEnv() falls through to a healthier backend
+  // (local D1 shim in dev, or the 503 "not configured" path in production).
+  if (!token) return undefined;
+  if (/\s/.test(raw ?? "")) return undefined;
+  if (token.length < 32) return undefined;
+  return token;
 }
 
 function databaseId(): string {

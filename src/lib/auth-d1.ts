@@ -525,6 +525,23 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   // statically resolves these at build time (via tsconfig paths for "@/"),
   // which avoids webpackEmptyContext that computed strings produce. These
   // are server-only modules — never bundled into client or edge bundles.
+  if (process.env.NODE_ENV === "development") {
+    // Local D1 sqlite shim — preferred over the remote D1 HTTP client in
+    // `next dev`. A malformed/expired CLOUDFLARE_API_TOKEN would otherwise
+    // make getHttpAuthDb() return a non-null client whose queries all 401,
+    // hijacking local auth. The shim pulls node:sqlite so it must NOT reach
+    // the edge bundle; the literal require() is safe here because webpack
+    // only includes server-side chunks.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getLocalAuthDb } = require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+      const localDb = getLocalAuthDb();
+      if (localDb) return localDb;
+    } catch {
+      // Local shim unavailable — fall through to the remote client.
+    }
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getHttpAuthDb } = require("@/lib/d1-http") as typeof import("@/lib/d1-http");
@@ -534,18 +551,6 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     // Module unavailable or misconfigured — fall through.
   }
 
-  if (process.env.NODE_ENV === "development") {
-    // Local D1 sqlite shim — only used in `next dev`; pulls node:sqlite so
-    // it must NOT reach the edge bundle. The literal require() is safe here
-    // because webpack only includes server-side chunks.
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getLocalAuthDb } = require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
-      return getLocalAuthDb();
-    } catch {
-      return null;
-    }
-  }
   return null;
 }
 

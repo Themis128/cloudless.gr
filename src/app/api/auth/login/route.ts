@@ -50,50 +50,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  // Check for account lockout
-  const lockoutCheck = await checkFailedAttempts(db, email);
-  if (lockoutCheck.locked) {
-    return NextResponse.json(
-      {
-        error:
-          "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.",
-      },
-      { status: 429 }
-    );
-  }
+  // All D1 operations below can throw (missing table, auth failure, network).
+  // Catch them so a DB outage returns a clean 503 instead of an uncaught 500.
+  let result: Awaited<ReturnType<typeof authenticateUser>>;
+  let userIsAdmin: boolean;
+  try {
+    // Check for account lockout
+    const lockoutCheck = await checkFailedAttempts(db, email);
+    if (lockoutCheck.locked) {
+      return NextResponse.json(
+        {
+          error:
+            "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.",
+        },
+        { status: 429 }
+      );
+    }
 
-  const result = await authenticateUser(db, email, password, rememberMe);
+    result = await authenticateUser(db, email, password, rememberMe);
 
-  if (result.error) {
-    // Log failed attempt for lockout tracking
+    if (result.error) {
+      // Log failed attempt for lockout tracking
+      await logSessionActivity(
+        db,
+        "failed-attempt",
+        "failed_attempt",
+        email,
+        getClientIp(req),
+        req.headers.get("user-agent") || undefined
+      ).catch(() => {});
+
+      return NextResponse.json({ error: result.error }, { status: 401 });
+    }
+
+    if (!result.session) {
+      return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
+    }
+
+    // Log successful login
     await logSessionActivity(
       db,
-      "failed-attempt",
-      "failed_attempt",
-      email,
+      result.session.id,
+      "login",
+      result.user!.email,
       getClientIp(req),
       req.headers.get("user-agent") || undefined
     ).catch(() => {});
 
-    return NextResponse.json({ error: result.error }, { status: 401 });
+    // Check admin status
+    userIsAdmin = await isAdmin(db, result.user!.id);
+  } catch (err) {
+    console.error("[auth/login] D1 error during authentication:", err);
+    return NextResponse.json(
+      { error: "Authentication service unavailable. Please try again later." },
+      { status: 503 }
+    );
   }
-
-  if (!result.session) {
-    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
-  }
-
-  // Log successful login
-  await logSessionActivity(
-    db,
-    result.session.id,
-    "login",
-    result.user!.email,
-    getClientIp(req),
-    req.headers.get("user-agent") || undefined
-  ).catch(() => {});
-
-  // Check admin status
-  const userIsAdmin = await isAdmin(db, result.user!.id);
 
   // Calculate cookie maxAge based on session expiry
   const cookieMaxAge = rememberMe
