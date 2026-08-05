@@ -1,0 +1,57 @@
+name: Verify Production Admin
+
+# Uses CLOUDFLARE_API_TOKEN from GitHub secrets to query the production
+# user-auth-db D1 database and verify the admin user + password hash.
+# GitHub secret values are write-only, so this runs in CI.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Query production D1 for admin user
+      run: |
+        set -euo pipefail
+        npx wrangler d1 execute user-auth-db --remote --config wrangler.jsonc \
+          --command "SELECT u.id, u.email, u.name, u.password_hash, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin' WHERE u.email = 'tbaltzakis@cloudless.gr';"
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+    - name: Verify password hash against production SESSION_SECRET
+      run: |
+        set -euo pipefail
+        node <<'NODE'
+        const PROD_HASH = "zcWuXICZJNoaMdyEO/+JvA==:79d99f782b4175cb3787f54797f3c8e498cde03e2b385e1106d286c21d10f442";
+        const PASSWORD = "TH!123789th!";
+        const SESSION_SECRET = "IhwMRaxLqrJUlzsPVl6+Yz7+w6FCiTiWmL+x7nlLC48=";
+        function encodeHex(uint8) { return Buffer.from(uint8).toString("hex"); }
+        async function verifyPassword(password, storedHash) {
+          const [salt, hash] = storedHash.split(":");
+          if (!salt || !hash) {
+            const data = new TextEncoder().encode(password + SESSION_SECRET);
+            const digest = await crypto.subtle.digest("SHA-256", data);
+            return encodeHex(new Uint8Array(digest)) === storedHash;
+          }
+          const saltBytes = Uint8Array.from(Buffer.from(salt, "base64"));
+          const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(password + SESSION_SECRET), "PBKDF2", false, ["deriveBits"]);
+          const derivedBits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+          return `${salt}:${encodeHex(new Uint8Array(derivedBits))}` === storedHash;
+        }
+        const valid = await verifyPassword(PASSWORD, PROD_HASH);
+        console.log("Production hash matches TH!123789th! with production SESSION_SECRET:", valid ? "✅ YES" : "❌ NO");
+        if (!valid) process.exit(1);
+        NODE
