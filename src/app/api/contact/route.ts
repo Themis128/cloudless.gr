@@ -61,6 +61,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
+    // Reject whitespace-only message to avoid sending empty emails
+    if (!message.trim()) {
+      return Response.json({ error: "Message cannot be empty or whitespace only." }, { status: 400 });
+    }
+
     const config = await getConfig();
 
     const subject = `[Contact] ${String(service || "General inquiry").slice(0, 100)} — ${String(name).slice(0, 100)}`;
