@@ -84,13 +84,13 @@ async function ddgSearch(query: string, maxResults = 10): Promise<string> {
   const html = await res.text();
 
   // Parse result links — DuckDuckGo HTML results use class="result__a"
-  const linkRegex = /<a[^]*?class="result__a"[^]*?href="([^"]+)"[^]*?>([^<]*)<\/a>/g;
+  const linkRegex = /<a\s[^>]*?class\s*=\s*["']result__a["'][^>]*?href\s*=\s*["']([^"']*)["'][^>]*?>([\s\S]*?)<\/a>/gi;
   const results: Array<{ title: string; url: string }> = [];
   let match;
   while ((match = linkRegex.exec(html)) !== null && results.length < maxResults) {
     results.push({
       url: decodeURIComponent(match[1].replace(/.*\/\//, "").replace(/\/$/, "")),
-      title: match[2].replace(/<[^>]+>/g, "").trim(),
+      title: match[2].replace(/<\/?[^>]+(>|$)/g, "").trim(),
     });
   }
 
@@ -124,19 +124,19 @@ async function fetchUrlText(url: string, maxChars = 8000): Promise<string> {
   let text = await res.text();
 
   // Strip script/style blocks
-  text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
 
   // Extract title
   const titleMatch = text.match(/<title[^>]*>([^<]*)<\/title>/i);
   const title = titleMatch ? titleMatch[1].trim() : "";
 
   // Extract meta description
-  const descMatch = text.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i);
+  const descMatch = text.match(/<meta\b[^>]*?name\s*=\s*["']description["'][^>]*?content\s*=\s*["']([^"']*)["']/i);
   const description = descMatch ? descMatch[1].trim() : "";
 
   // Strip all HTML tags
-  text = text.replace(/<[^>]+>/g, " ");
+  text = text.replace(/<\/?[^>]+(>|$)/g, " ");
 
   // Clean whitespace
   text = text.replace(/\s+/g, " ").trim();
