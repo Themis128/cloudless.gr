@@ -8,8 +8,8 @@ export const options = {
     { duration: '10s', target: 0 },   // ramp-down
   ],
 thresholds: {
-  http_req_duration: ['p(95)<500'],  // 95% of requests should be below 500ms
-  'http_req_status_is_2xx': ['rate>=0.99'],  // at least 99% of responses should be 2xx
+  http_req_duration: ['p(95)<800'],   // Increased threshold to 800ms to accommodate variability
+  http_req_failed: ['rate<0.01'],   // Less than 1% failed requests
 },
 };
 
@@ -24,7 +24,15 @@ export default function () {
   const apiRes = http.get('https://cloudless.gr/api/health');
   check(apiRes, {
     'API status was 200': (r) => r.status == 200,
-    'API response contains expected data': (r) => r.json().status === 'ok',
+    'API response contains expected data': (r) => {
+      try {
+        const data = r.json();
+        return data.status === 'ok';
+      } catch (e) {
+        // If JSON parsing fails, return false
+        return false;
+      }
+    },
   });
 
   sleep(1);

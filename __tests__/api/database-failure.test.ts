@@ -1,16 +1,15 @@
-import { test, expect, describe, beforeEach, afterEach, vi } from "vitest";
+import { test, expect, describe, beforeAll, afterEach, vi } from "vitest";
 import { MockD1Database } from '../mocks/db';
-import { setupTestEnv } from '../setup';
-import { registerUser } from '../../src/lib/auth-d1';
+import { createUser } from '../../src/lib/auth-d1';
+import { getAuthDbFromEnv } from '../../src/lib/auth-d1';
 
 describe('Database Failure Tests', () => {
   let mockDb: MockD1Database;
 
-  beforeAll(async () => {
-    await setupTestEnv();
+  beforeAll(() => {
     mockDb = new MockD1Database();
     // Replace the actual D1 binding with our mock
-    globalThis.D1_DB = mockDb;
+    globalThis.__AUTH_DB__ = mockDb;
   });
 
   afterEach(() => {
@@ -19,16 +18,12 @@ describe('Database Failure Tests', () => {
 
   test('should handle database connection failure during registration', async () => {
     mockDb.configureFailure({
+      failOnQuery: 'INSERT INTO user',
       failWithError: new Error('Connection failed')
     });
 
-    await expect(
-      registerUser({
-        email: 'test@example.com',
-        password: 'secure123',
-        name: 'Test User'
-      })
-    ).rejects.toThrow('Connection failed');
+    const result = await createUser(mockDb, 'test@example.com', 'secure123', 'Test User');
+    expect(result).toEqual({ error: "Failed to create user" });
   });
 
   test('should handle query timeout during login', async () => {

@@ -1,1 +1,66 @@
-dummy
+name: Deploy Tailscale Operator
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+    - name: Check required secrets
+      run: |
+        # Fallback support for TAILSCALE_OAUTH_* or TS_*
+        CLIENT_ID="${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
+        if [ -z "$CLIENT_ID" ]; then
+          CLIENT_ID="${{ secrets.TS_CLIENT_ID }}"
+        fi
+        CLIENT_SECRET="${{ secrets.TAILSCALE_OAUTH_SECRET }}"
+        if [ -z "$CLIENT_SECRET" ]; then
+          CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}"
+        fi
+        if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+          echo "::error::Missing Tailscale OAuth credentials"
+          echo "Set either TAILSCALE_OAUTH_CLIENT_ID/TAILSCALE_OAUTH_SECRET or TS_CLIENT_ID/TS_CLIENT_SECRET"
+          exit 1
+        fi
+        echo "Using client ID: ${CLIENT_ID:0:4}..."
+        echo "TS_CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+        echo "TS_CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+
+    - name: Setup kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+        kubectl cluster-info || echo "Warning: Could not reach cluster, but continuing"
+
+    - name: Deploy Tailscale Operator (Helm)
+      run: |
+        echo "=== Deploying Tailscale Operator ==="
+        helm repo add tailscale https://pkgs.tailscale.com/helmcharts || true
+        helm repo update
+        # Check if cluster reachable
+        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+          echo "::warning::k3s API (100.74.191.58:6443) not reachable"
+          echo "Deployment will be attempted but may fail if cluster offline"
+        fi
+        helm upgrade --install tailscale-operator tailscale/tailscale-operator \
+          --namespace tailscale-operator \
+          --create-namespace \
+          --set-string oauth.clientID="${{ env.TS_CLIENT_ID }}" \
+          --set-string oauth.clientSecret="${{ env.TS_CLIENT_SECRET }}" \
+          --set operatorLogLevel=info \
+          --timeout 300s --wait=false
+
+    - name: Verify deployment
+      if: always()
+      run: |
+        echo "=== Verifying Tailscale Operator deployment ==="
+        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"

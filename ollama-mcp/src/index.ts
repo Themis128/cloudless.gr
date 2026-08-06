@@ -124,8 +124,8 @@ async function fetchUrlText(url: string, maxChars = 8000): Promise<string> {
   let text = await res.text();
 
   // Strip script/style blocks
-  text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-  text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+  text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
 
   // Extract title
   const titleMatch = text.match(/<title[^>]*>([^<]*)<\/title>/i);
@@ -136,7 +136,7 @@ async function fetchUrlText(url: string, maxChars = 8000): Promise<string> {
   const description = descMatch ? descMatch[1].trim() : "";
 
   // Strip all HTML tags
-  text = text.replace(/<\/?[^>]+(>|$)/g, " ");
+  text = text.replace(/<\/?[^>]*>/g, " ");
 
   // Clean whitespace
   text = text.replace(/\s+/g, " ").trim();

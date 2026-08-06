@@ -31,7 +31,7 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
 
     - name: Bundle subscriber
       working-directory: infrastructure/r20-replication
@@ -39,7 +39,7 @@ jobs:
         set -euo pipefail
         npm init -y >/dev/null
         npm install --omit=dev @aws-sdk/client-dynamodb @aws-sdk/util-dynamodb esbuild
-        npx esbuild subscriber.ts --bundle --platform=node --target=node20 --outfile=dist/index.js
+        npx esbuild subscriber.ts --bundle --platform=node --target=node22 --outfile=dist/index.js
         (cd dist && zip -q ../subscriber.zip index.js)
         ls -la subscriber.zip
 
@@ -66,7 +66,7 @@ jobs:
           fi
           aws lambda create-function \
             --function-name "$FUNCTION_NAME" \
-            --runtime nodejs20.x \
+            --runtime nodejs22.x \
             --handler index.handler \
             --role "$ROLE_ARN" \
             --zip-file fileb://subscriber.zip \
