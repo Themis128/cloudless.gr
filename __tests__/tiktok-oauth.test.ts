@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { buildTikTokAuthUrl } from "@/app/api/admin/oauth/tiktok/route";
+import { buildTikTokAuthUrl } from "@/lib/tiktok-oauth";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

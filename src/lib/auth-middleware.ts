@@ -11,14 +11,30 @@ import type { AuthResult, DecodedToken } from "@/lib/api-auth";
 
 export type { AuthResult, DecodedToken };
 
-export async function requireAuth(request: NextRequest): Promise<AuthResult> {
+export async function requireAuth(request: NextRequest): Promise<NextResponse> {
   const { requireAuth } = await import("@/lib/api-auth");
-  return requireAuth(request);
+  const result = await requireAuth(request);
+  if (result.ok) {
+    // Return a successful response with user data
+    return new NextResponse(JSON.stringify({ user: result.user }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return result.response;
 }
 
-export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
+export async function requireAdmin(request: NextRequest): Promise<NextResponse> {
   const { requireAdmin } = await import("@/lib/api-auth");
-  return requireAdmin(request);
+  const result = await requireAdmin(request);
+  if (result.ok) {
+    // Return a successful response with user data
+    return new NextResponse(JSON.stringify({ user: result.user }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return result.response;
 }
 
 /**
@@ -26,9 +42,17 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
  * throwing. This is intentionally permissive because many routes can degrade
  * gracefully when there is no session.
  */
-export async function optionalAuth(request: NextRequest): Promise<AuthResult> {
+export async function optionalAuth(request: NextRequest): Promise<NextResponse> {
   const { requireAuth } = await import("@/lib/api-auth");
-  return requireAuth(request);
+  const result = await requireAuth(request);
+  if (result.ok) {
+    // Return a successful response with user data
+    return new NextResponse(JSON.stringify({ user: result.user }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return result.response;
 }
 
 /**

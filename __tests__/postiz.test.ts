@@ -38,9 +38,9 @@ import {
   updatePostReleaseId,
   uploadFile,
   uploadFromUrl,
-  verifyPostizWebhookSignature,
   type PostizIntegration,
 } from "@/lib/postiz";
+import { verifyPostizWebhookSignature } from "@/lib/postiz-webhook";
 
 const CONFIGURED = {
   POSTIZ_API_URL: "https://postiz.cloudless.gr/",
