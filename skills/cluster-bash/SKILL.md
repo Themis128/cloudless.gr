@@ -16,7 +16,7 @@ The cloudless.gr cluster is two Pis:
 | Node       | Hardware            | Role                                    | LAN IP        | Tailnet IP        |
 |------------|---------------------|-----------------------------------------|---------------|-------------------|
 | `omv-main` | Pi 5, SATA SSD      | k3s control plane, primary runner host  | 192.168.1.128 | 100.74.191.58    |
-| `omv-ha`   | Pi 4                | k3s agent, keepalived VIP 192.168.1.200 | 192.168.1.130 | 100.111.222.92    |
+| `omv-ha`   | Pi 4                | k3s agent, keepalived VIP 192.168.1.200 | 192.168.1.130 | 100.95.117.84    |
 
 Both run a GitHub Actions self-hosted runner stack
 (`omv` / `omv-build` on main; `omv-2-build` on ha). The cluster is reached

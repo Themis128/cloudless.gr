@@ -56,7 +56,7 @@ export const TOPOLOGY: Record<NodeName, NodeInfo> = {
       process.env.OMV_SSH_HA_HOST ??
       process.env.OMV_SSH_HA_HOST_TAILSCALE ??
       "192.168.1.130",
-    tailscaleIp: "100.111.222.92",
+    tailscaleIp: "100.95.117.84",
     roles: ["k3s-agent", "keepalived-vip", "github-runner-omv-2-build"],
     description: "Pi 4 — k3s agent, keepalived VIP 192.168.1.200",
   },

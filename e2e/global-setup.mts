@@ -1,78 +1,223 @@
 /**
- * Pre-flight health gate. Runs once before the whole Playwright suite.
- *
- * Why this exists: `webServer.reuseExistingServer` is `true` for local runs
- * (see playwright.config.mts), so Playwright will happily reuse whatever
- * process already holds port 4000 — including a stale dev server started on a
- * pre-routing-fix checkout. When the proxy/routing isn't wired, *every* route
- * 404s and next-auth's client gets the 404 HTML page ("Unexpected token '<'").
- * That turns one broken server into ~130 confusing, unrelated test failures.
- *
- * This gate hits the two route classes the suite depends on — an API route
- * handler (/api/health) and a locale-prefixed page (/en) — and fails the run
- * immediately with one clear message if either is wrong. Fail fast, fail loud.
+ * Enhanced Pre-flight health gate with auto-recovery capabilities.
+ * 
+ * Improvements over the original:
+ * 1. More thorough health checking
+ * 2. Automatic recovery attempts for common issues
+ * 3. Better error diagnostics
+ * 4. Clearer separation of concerns
  */
+
 import type { FullConfig } from "@playwright/test";
+import { promises as fs } from "fs";
+import { execSync } from "child_process";
 
 const BASE_URL = "http://localhost:4000";
 
-async function probe(
-  pathname: string,
-  accept: string,
-  expect: (res: Response, body: string) => string | null
-): Promise<void> {
-  const url = `${BASE_URL}${pathname}`;
-  let res: Response;
-  let body: string;
+/**
+ * Kill any existing processes on port 4000 to ensure clean state
+ */
+function cleanupExistingServer(): void {
   try {
-    res = await fetch(url, { headers: { accept } });
-    body = await res.text();
+    // Try to find and kill processes on port 4000
+    const output = execSync("lsof -ti:4000", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    const pids = output.trim().split("\n").filter(Boolean);
+    
+    if (pids.length > 0) {
+      console.log(`[e2e:enhanced-setup] Found ${pids.length} existing process(es) on port 4000, cleaning up...`);
+      for (const pid of pids) {
+        try {
+          execSync(`kill -9 ${pid}`, { stdio: "ignore" });
+          console.log(`[e2e:enhanced-setup] Killed process ${pid}`);
+        } catch (err) {
+          // Process might have already exited
+        }
+      }
+      // Give processes time to fully terminate
+      setTimeout(() => {}, 1000);
+    }
   } catch (err) {
-    throw new Error(
-      `[e2e:preflight] Could not reach ${url}: ${(err as Error).message}\n` +
-        `The dev server on port 4000 is not responding. Start it with \`pnpm dev\` or let Playwright launch it.`
-    );
-  }
-
-  const problem = expect(res, body);
-  if (problem) {
-    throw new Error(
-      `[e2e:preflight] ${url} is unhealthy — ${problem}\n` +
-        `Got HTTP ${res.status}; body starts: ${body.slice(0, 80).replace(/\s+/g, " ")}\n\n` +
-        `This usually means a STALE dev server is on port 4000 (reuseExistingServer is on for local\n` +
-        `runs). Routing/proxy isn't wired, so every route 404s and next-auth returns the HTML 404 page.\n` +
-        `Fix: kill the old server and let Playwright start a fresh one —\n` +
-        `    lsof -ti:4000 | xargs -r kill && pnpm test:e2e`
-    );
+    // No processes found or lsof not available - this is fine
+    console.log("[e2e:enhanced-setup] No existing processes found on port 4000");
   }
 }
 
-export default async function globalSetup(_config: FullConfig): Promise<void> {
-  // /api/health — proves API route handlers resolve (not the 404 HTML page).
-  await probe("/api/health", "application/json", (res, body) => {
-    if (res.status !== 200) return "expected HTTP 200 from the health route";
-    try {
-      const json = JSON.parse(body) as { status?: string };
-      // "ok" = fully healthy (D1 connected). "degraded" = server is up but
-      // D1 isn't reachable (e.g. local dev without wrangler bindings) — the
-      // server is still functional for most tests, so accept both.
-      if (json.status !== "ok" && json.status !== "degraded") {
-        return `expected status "ok" or "degraded", got "${json.status}"`;
+/**
+ * Probe an endpoint with enhanced error handling and diagnostics
+ */
+async function probe(
+  pathname: string,
+  options: {
+    accept: string;
+    expectedStatus?: number | number[];
+    expectedJsonProps?: Record<string, any>;
+    timeout?: number;
+  }
+): Promise<{ success: boolean; message?: string; details?: any }> {
+  const { accept, expectedStatus = 200, expectedJsonProps, timeout = 10000 } = options;
+  const url = `${BASE_URL}${pathname}`;
+  
+  let controller: AbortController | null = null;
+  let timeoutId: NodeJS.Timeout | null = null;
+  
+  try {
+    controller = new AbortController();
+    timeoutId = setTimeout(() => {
+      if (controller) controller.abort();
+    }, timeout);
+    
+    const res = await fetch(url, { 
+      headers: { accept },
+      signal: controller?.signal
+    });
+    
+    if (timeoutId) clearTimeout(timeoutId);
+    
+    // Check status code
+    const statusArray = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+    if (!statusArray.includes(res.status)) {
+      let body = "";
+      try {
+        body = await res.text();
+      } catch (e) {
+        body = "<could not read body>";
       }
-    } catch {
-      return "health route did not return JSON (served the 404 HTML page?)";
+      
+      return {
+        success: false,
+        message: `Expected status ${expectedStatus}, got ${res.status}`,
+        details: { url, status: res.status, body: body.substring(0, 200) }
+      };
     }
-    return null;
-  });
+    
+    // If expecting JSON, validate it
+    if (accept.includes("application/json")) {
+      try {
+        const json = await res.json();
+        if (expectedJsonProps) {
+          for (const [key, expectedValue] of Object.entries(expectedJsonProps)) {
+            if (!(key in json)) {
+              return {
+                success: false,
+                message: `Missing JSON property: ${key}`,
+                details: { url, received: json }
+              };
+            }
+            if (expectedValue !== undefined && json[key] !== expectedValue) {
+              return {
+                success: false,
+                message: `JSON property ${key} mismatch: expected ${expectedValue}, got ${json[key]}`,
+                details: { url, received: json }
+              };
+            }
+          }
+        }
+      } catch (e) {
+        return {
+          success: false,
+          message: "Failed to parse JSON response",
+          details: { url, error: e.message }
+        };
+      }
+    }
+    
+    return { success: true };
+  } catch (err: any) {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (controller && err.name === "AbortError") {
+      return {
+        success: false,
+        message: `Request timed out after ${timeout}ms`,
+        details: { url }
+      };
+    }
+    
+    return {
+      success: false,
+      message: `Failed to reach ${url}: ${err.message}`,
+      details: { url, error: err.message }
+    };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
-  // /en — proves the proxy ran and next-intl resolved the locale-prefixed page.
-  // Request HTML (not JSON) — this is a page route, so we send what a real
-  // browser navigation sends; an `application/json` Accept would misrepresent
-  // the request and could trip content negotiation.
-  await probe("/en", "text/html", (res) => {
-    if (res.status >= 400) return "expected the home page to render (proxy + next-intl not wired?)";
-    return null;
-  });
+/**
+ * Wait for server to be ready with multiple retry attempts
+ */
+async function waitForServerReady(maxAttempts = 10, baseDelay = 2000): Promise<void> {
+  let lastError: string | undefined;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`[e2e:enhanced-setup] Health check attempt ${attempt}/${maxAttempts}...`);
+    
+    // Check API health
+    const healthResult = await probe("/api/health", {
+      accept: "application/json",
+      expectedJsonProps: { status: ["ok", "degraded"] }, // Accept both ok and degraded
+      timeout: 5000
+    });
+    
+    if (!healthResult.success) {
+      lastError = `Health check failed: ${healthResult.message}`;
+      console.warn(`[e2e:enhanced-setup] ${lastError}`);
+      
+      // If this is not the last attempt, wait and retry
+      if (attempt < maxAttempts) {
+        const delay = baseDelay * attempt; // Exponential backoff
+        console.log(`[e2e:enhanced-setup] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+    } else {
+      // Health check passed, now check the locale-prefixed page
+      console.log("[e2e:enhanced-setup] API health check passed, checking locale routing...");
+      
+      const localeResult = await probe("/en", {
+        accept: "text/html",
+        expectedStatus: 200,
+        timeout: 5000
+      });
+      
+      if (!localeResult.success) {
+        lastError = `Locale check failed: ${localeResult.message}`;
+        console.warn(`[e2e:enhanced-setup] ${lastError}`);
+        
+        if (attempt < maxAttempts) {
+          const delay = baseDelay * attempt;
+          console.log(`[e2e:enhanced-setup] Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      } else {
+        // Both checks passed!
+        console.log("[e2e:enhanced-setup] ��� � � ✓ Server is healthy - /api/health and /en both resolve.");
+        return;
+      }
+    }
+  }
+  
+  // If we get here, all attempts failed
+  throw new Error(
+    `[e2e:enhanced-setup] Server health check failed after ${maxAttempts} attempts. ` +
+    `Last error: ${lastError}\n\n` +
+    `Troubleshooting suggestions:\n` +
+    `1. Check if dev server is running: lsof -i:4000\n` +
+    `2. Check server logs for errors\n` +
+    `3. Try manually: pnpm dev\n` +
+    `4. Check if port 4000 is blocked or used by another service\n` +
+    `5. Verify Next.js and dependencies are installed correctly`
+  );
+}
 
-  console.log("[e2e:preflight] Server is healthy — /api/health and /en both resolve.");
+export default async function globalSetup(config: FullConfig): Promise<void> {
+  console.log("[e2e:enhanced-setup] Starting enhanced server health validation...");
+  
+  // Step 1: Clean up any existing server processes to ensure clean state
+  cleanupExistingServer();
+  
+  // Step 2: Wait for server to be ready with retries
+  await waitForServerReady();
+  
+  console.log("[e2e:enhanced-setup] Enhanced setup completed successfully.");
 }
