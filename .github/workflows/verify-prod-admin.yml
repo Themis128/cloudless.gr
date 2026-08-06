@@ -28,6 +28,7 @@ jobs:
         npx wrangler d1 execute user-auth-db --remote --config wrangler.jsonc \
           --command "SELECT u.id, u.email, u.name, u.password_hash, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin' WHERE u.email = 'tbaltzakis@cloudless.gr';"
       env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 

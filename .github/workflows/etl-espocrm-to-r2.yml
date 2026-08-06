@@ -40,6 +40,7 @@ jobs:
     - name: Run EspoCRM-to-R2 sync
       working-directory: scripts/etl
       env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
           # Bypass Cloudflare bot challenge — runner is on omv (NodePort 30700).
         ESPOCRM_BASE_URL: http://127.0.0.1:30700
         ESPOCRM_API_KEY: ${{ secrets.ESPOCRM_API_KEY }}
@@ -52,6 +53,7 @@ jobs:
       if: always() && github.event_name != 'push'
       uses: actions/github-script@v9.0.0
       env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         KUMA_PUSH_URL: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -64,6 +66,7 @@ jobs:
       if: failure()
       uses: actions/github-script@v9.0.0
       env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

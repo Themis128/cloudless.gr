@@ -24,6 +24,7 @@ jobs:
         ports:
         - 4566:4566
         env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
           SERVICES: ssm,dynamodb,ses
           DEBUG: '0'
           AWS_DEFAULT_REGION: us-east-1
@@ -36,6 +37,7 @@ jobs:
           --health-retries 20
 
     env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       # AWS SDK v3 reads AWS_ENDPOINT_URL_* per-service or AWS_ENDPOINT_URL globally.
       AWS_ENDPOINT_URL: http://localhost:4566
       AWS_REGION: us-east-1
