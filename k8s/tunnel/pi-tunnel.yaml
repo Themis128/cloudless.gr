@@ -33,12 +33,8 @@ spec:
         args:
         - tunnel
         - --no-autoupdate
-        - --hostname
-        - pi-origin.cloudless.gr
-        - --url
-        - http://cloudless-app.cloudless.svc.cluster.local:80
         - run
-        - --credentials-file
+        - --token
         - /etc/cloudflared/creds/token
         env:
         - name: TZ
