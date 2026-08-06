@@ -12,12 +12,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: e2e-full-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     name: Playwright full coverage (local dev)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       NEXT_PUBLIC_E2E: '1'
       E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
       CI: 'true'
