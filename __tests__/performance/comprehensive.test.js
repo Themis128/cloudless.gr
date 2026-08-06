@@ -8,12 +8,12 @@ export const options = {
     { duration: '60s', target: 20 },  // steady state
     { duration: '10s', target: 0 },   // ramp-down
   ],
-  thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1000'],
-    'http_req_status_is_200': ['rate>=0.99'],
-    'http_req_status_is_4xx': ['rate<0.01'],
-    'http_req_status_is_5xx': ['rate==0'],
-  },
+thresholds: {
+  http_req_duration: ['p(95)<500', 'p(99)<1000'],
+  'http_req_status_is_2xx': ['rate>=0.99'],
+  'http_req_status_is_4xx': ['rate<0.01'],
+  'http_req_status_is_5xx': ['rate==0'],
+},
   maxRedirects: 5,
 };
 
