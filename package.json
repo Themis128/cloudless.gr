@@ -131,6 +131,7 @@
     "jest": "^30.4.2",
     "jiti": "^2.7.0",
     "jsdom": "^30.0.1",
+    "k6.git": "github:grafana/k6",
     "markdownlint-cli2": "^0.23.2",
     "monocart-coverage-reports": "^2.12.12",
     "monocart-reporter": "^2.12.4",

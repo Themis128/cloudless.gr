@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { MockD1Database } from '../mocks/db';
-import { setupTestEnv } from '../utils/setup';
+import { setupTestEnv } from '../setup';
 import { registerUser } from '../../src/lib/auth-d1';
 
 test.describe('Database Failure Tests', () => {

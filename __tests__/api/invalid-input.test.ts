@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupTestEnv } from '../utils/setup';
+import { setupTestEnv } from '../setup';
 
 test.describe('API Invalid Input Tests', () => {
   test.beforeAll(async () => {
