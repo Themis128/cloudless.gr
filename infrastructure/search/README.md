@@ -30,12 +30,8 @@ kubectl create namespace search
 kubectl -n search create secret generic meilisearch-master-key \
   --from-literal=MEILI_MASTER_KEY="$(openssl rand -hex 32)"
 
-# Optional: store in SSM for backup
-aws ssm put-parameter \
-  --name /cloudless/production/MEILI_MASTER_KEY \
-  --value "<key>" \
-  --type SecureString \
-  --overwrite
+# Optional: store in Cloudflare Secrets for backup (D1 config)
+# wrangler secret put MEILI_MASTER_KEY <key>
 ```
 
 ## Apply to Cluster

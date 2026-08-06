@@ -6,7 +6,7 @@ Cloudflare Access with Service Tokens for zero-trust authentication.
 ## Prerequisites
 
 - Cloudflare API token with Zone.Zone (read) + Account.Access: Apps (edit) scopes
-- CLOUDFLARE_API_TOKEN in SSM
+- CLOUDFLARE_API_TOKEN stored in Cloudflare Secrets (wrangler secret)
 
 ## Architecture
 
@@ -45,12 +45,21 @@ Allow programmatic access without interactive login (for Slack integrations, aut
 
 ## Secret storage (post-deployment)
 
-After creating Service Tokens via Cloudflare dashboard, store in SSM:
+After creating Service Tokens via Cloudflare dashboard, store in wrangler secrets:
 
 ```bash
-aws ssm put-parameter --name /cloudless/production/CLOUDFLARE_ACCESS_CLIENT_ID_GRAFANA --value <token_id>
-aws ssm put-parameter --name /cloudless/production/CLOUDFLARE_ACCESS_CLIENT_SECRET_GRAFANA --value <token_secret>
+wrangler secret put CLOUDFLARE_ACCESS_CLIENT_ID_GRAFANA
+wrangler secret put CLOUDFLARE_ACCESS_CLIENT_SECRET_GRAFANA
 ```
+
+For multiple apps, use a naming convention and store as secrets:
+
+```bash
+# Example for grafana access token pair
+wrangler secret put CLOUDFLARE_ACCESS_TOKENS
+```
+
+Or create a D1 binding for token storage if using multiple tokens.
 
 ## Tunnel configuration
 

@@ -4,23 +4,45 @@
 
 **Analysis Date:** 2026-07-19
 
-### Current Status Summary
+### Current Status Summary (as of 2026-08-06)
 
 ✅ **All Tailscale operator components are healthy and online**
 
 | Component | Pod Name | Status | Tailnet IPs |
 |-----------|----------|--------|-------------|
-| ProxyGroup | monitoring-proxies-0 | Running | 100.109.23.1, fd7a:115c:a1e0::3f39:1702 |
-| Connector | k3s-subnet-router-1 | Running | 100.84.93.105, fd7a:115c:a1e0::8e39:5d6a |
-| Operator | operator-6c984c5f6f-t249s | Running | - |
+| ProxyGroup | ingress-0 | Running | 100.98.121.44 (office-1), office-2 OFFLINE |
+| Connector | ts-k3s-cidrs-0 | Running | Dynamic (replicated) |
+| Connector | ts-k3s-cidrs-1 | Running | Dynamic (replicated) |
+| Operator | operator-7fbdc4bddb-8wckw | Running | - |
+| Proxy | kube-0 | Running | Dynamic |
+| Proxy | ingress-1 | Running | Dynamic |
 
-### Root Cause
+### Active Devices
 
-The device `100.123.189.49` is a **stale/orphaned device** from a previous deployment. This device is no longer active because:
+**Operator-owned devices (keep per KEEP_RE regex):**
 
-1. ✅ The current Tailscale operator pods are using different IPs (100.109.23.1 and 100.84.93.105)
-2. Initial tag permission errors (`tag:k3s-proxies`, `tag:k3s-subnet-router`) occurred but were resolved
-3. The stale device was never cleaned up in the Tailscale admin console
+| Device | Role | Status |
+|--------|------|--------|
+| `office` | Admin WSL | Online |
+| `office-1` | Admin WSL | Online |
+| `office-2` | Admin WSL | OFFLINE |
+| `office-3` | Admin WSL | Online |
+| `github-omv` | k3s, GH runners | Online |
+| `omv-ha` | k3s worker | Online |
+| `k3s-subnet-router-*` | Connector replicas | Online |
+| `ingress-*` | ProxyGroup ingress | Online |
+| `kube-*` | ProxyGroup kube-apiserver | Online |
+
+### Root Cause Analysis
+
+The device cleanup logic in `scripts/tailscale-admin-api.sh` has been fixed to:
+1. Match all office variants via updated `KEEP_RE` regex: `^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$`
+2. Detect offline devices by checking `offline` flag and `lastSeen` timestamp (>24h threshold)
+3. Report offline devices separately for attention before deletion
+
+**Common stale device patterns:**
+- `monitoring-proxies-*`, `ts-n8n-*`, `appflowy`, `grafana`, `meilisearch` (pre-annotation era)
+- Old per-service proxies from before shared `proxy-group` annotations
 
 ### Resolution Steps
 

@@ -17,24 +17,22 @@ two app-side automations wired in PR R2:
 3. Open the imported workflow, click the **Webhook** node, copy the
    **production URL** (`https://n8n.cloudless.gr/webhook/<path>`).
 4. Click the canvas → **Activate** toggle (top-right) → ON.
-5. Copy the workflow's **ID** from the URL (it's a UUID in
-   `https://n8n.cloudless.gr/workflow/<UUID>`).
-6. Write the ID to SSM so `/api/webhooks/n8n/trigger` can find it:
+5. Find the workflow's **ID** in the URL (it's a UUID).
 
-   ```bash
-   aws ssm put-parameter \
-     --name /cloudless/production/N8N_WORKFLOW_LEAD_ENRICH_ID \
-     --type String --value '<UUID>' --overwrite
-   aws ssm put-parameter \
-     --name /cloudless/production/N8N_WORKFLOW_NEWSLETTER_NURTURE_ID \
-     --type String --value '<UUID>' --overwrite
-   ```
+### Configuration
 
-7. (Optional) refresh the SSM cache in the Next.js Lambda:
+Configure these secrets in the n8n **Settings → Environment Variables** or via the `cloudless.db` table:
 
-   ```bash
-   kubectl -n cloudless rollout restart deploy/cloudless
-   ```
+| Variable | Description |
+|----------|-------------|
+| `N8N_WORKFLOW_LEAD_ENRICH_ID` | Lead enrichment workflow ID |
+| `N8N_WORKFLOW_NEWSLETTER_NURTURE_ID` | Newsletter nurture workflow ID |
+| `NOTION_WEBHOOK_SECRET` | Secret for webhook verification |
+
+**Note:** SSM is no longer used. Secrets are now managed through:
+- D1 database (`cloudless.db` table)
+- n8n environment variables
+- Cloudflare Secrets (for Workers)
 
 _(Apollo enrich was previously documented here but was dropped 2026-06-21 — data
 coverage is thin for Greek SMBs + lead volume is too low to justify the cost.
@@ -50,17 +48,12 @@ Easiest path — use the canned probe script:
 bash scripts/probe-lead-enrich.sh
 ```
 
-It reads `NOTION_WEBHOOK_SECRET` from SSM, POSTs a synthetic Lead, and
-prints HTTP + body. It also tails the most recent n8n execution if
-`N8N_API_KEY` is set.
-
 Or by hand:
 
 ```bash
 # Should respond 200 with the workflow's webhook output
 curl -sk -X POST \
   -H 'Content-Type: application/json' \
-  -H "x-n8n-trigger-secret: $(aws ssm get-parameter --name /cloudless/production/NOTION_WEBHOOK_SECRET --with-decryption --query Parameter.Value --output text)" \
   -d '{"name":"lead-enrich","payload":{"entity":"Lead","action":"create","record":{"firstName":"Test","lastName":"Lead","emailAddress":"test@example.com"}}}' \
   https://cloudless.gr/api/webhooks/n8n/trigger
 ```

@@ -42,7 +42,7 @@
 
 - **Search API** (`/api/search`) - Meilisearch integration complete
 - **Store** - Stripe checkout, product catalog working
-- **Auth** - AWS Cognito + next-auth v5 working
+- **Auth** - D1 (Cloudflare) + next-auth v5 working (email/password, no Cognito)
 - **Dashboard** - User portal complete
 - **Admin** - Admin panel complete with CRM, analytics, orders, users
 

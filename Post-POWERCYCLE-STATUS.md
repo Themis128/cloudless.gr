@@ -2,15 +2,21 @@
 
 # Generated: 2026-07-19 20:22 UTC
 
-## Current Status
+## Current Status (as of 2026-08-06)
 
 ### Tailscale Network Status
 
 ```
-100.121.191.7   cloudless-k3s-operator  ✅ Active (this machine)
-100.74.191.58   github-omv              ❌ Offline (last seen 10h ago)
-100.123.189.49  tailscale-operator      ❌ Offline (last seen 6d ago)
+office-1        main admin workstation     ✅ Online
+office-2        backup admin workstation   ⚠️ OFFLINE (needs reconnection)
+office-3        tertiary admin workstation   ✅ Online
+github-omv      k3s control-plane          ✅ Online
+omv-ha          k3s worker standby         ✅ Online
+operator pods   tailscale-operator         ✅ Running
+connector pods  ts-k3s-cidrs              ✅ Running
 ```
+
+**Note:** Device names follow the pattern `office`, `office-1`, `office-2`, `office-3` - the KEEP_RE regex in cleanup scripts matches all variants.
 
 ### GitHub Actions Workflow Run
 

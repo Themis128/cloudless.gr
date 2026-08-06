@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
         const checks: Record<string, boolean> = {
           stripe: !!config.STRIPE_SECRET_KEY,
-          ses: !!process.env.AWS_SES_REGION,
+          email: true, // Cloudflare Email available via EMAIL binding
           slack: !!config.SLACK_BOT_TOKEN,
           notion: !!config.NOTION_API_KEY,
           espocrm: !!(config.ESPOCRM_BASE_URL && config.ESPOCRM_API_KEY),

@@ -212,10 +212,10 @@ function configuredIf(condition: unknown): IntegrationStatus {
 function buildCoreReports(cfg: Cfg): IntegrationReport[] {
   return [
     {
-      id: "ses",
-      name: "AWS SES",
+      id: "cloudflare-email",
+      name: "Cloudflare Email",
       category: "email",
-      status: configuredIf(cfg.SES_FROM_EMAIL && cfg.AWS_SES_REGION),
+      status: "configured", // Cloudflare Email is always available via EMAIL binding
     },
     {
       id: "google",

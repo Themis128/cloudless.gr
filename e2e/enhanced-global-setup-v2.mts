@@ -2,6 +2,15 @@ import type { FullConfig } from "@playwright/test";
 
 const BASE_URL = "http://localhost:4000";
 
+async function cleanupExistingServer() {
+  try {
+    const { default: kill } = await import('kill-port');
+    await kill(4000);
+  } catch (err) {
+    // Ignore errors if port is not in use
+  }
+}
+
 async function probe(
   pathname: string,
   accept: string,
@@ -35,6 +44,9 @@ async function probe(
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
   console.log("[e2e:enhanced-setup] Starting enhanced server health validation with retries...");
+  
+  // Clean up any existing server on port 4000 to avoid conflicts
+  await cleanupExistingServer();
   
   // Retry logic for health checks
   const maxAttempts = 5;
