@@ -13,7 +13,7 @@ const config = {
     placement: "regional" as const,
   },
   middleware: {
-    external: false as const,
+    external: true as const,
   },
 };
 
