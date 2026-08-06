@@ -53,13 +53,17 @@ export async function generateMetadata({
   const meta = (safeMessages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
 
+  const title = meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing";
+  const description =
+    meta?.home?.description ??
+    "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.";
+
   return {
     title: {
-      absolute: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      template: "%s | Cloudless",
+      default: title,
     },
-    description:
-      meta?.home?.description ??
-      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+    description,
     alternates: {
       canonical,
       languages: {

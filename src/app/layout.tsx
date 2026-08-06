@@ -83,10 +83,18 @@ export default async function RootLayout({
   const pathname = requestHeaders.get("x-pathname") ?? "/";
   const nonce = requestHeaders.get("x-nonce") ?? "";
   const theme = themeForRoute(pathname);
-  const _seg = pathname.split("/")[1];
-  const locale = (routing.locales as readonly string[]).includes(_seg)
-    ? _seg
-    : routing.defaultLocale;
+  
+  // Safely extract locale from pathname
+  let locale = routing.defaultLocale; // Default to English
+  if (pathname) {
+    const pathnameParts = pathname.split("/").filter(Boolean); // Remove empty parts
+    if (pathnameParts.length > 0) {
+      const firstPart = pathnameParts[0];
+      if (routing.locales.includes(firstPart as Locale)) {
+        locale = firstPart as Locale;
+      }
+    }
+  }
 
   return (
     <html

@@ -1,0 +1,406 @@
+{
+  "generatedAt": "2026-08-06T08:22:26.049Z",
+  "base": "https://cloudless.gr",
+  "results": [
+    {
+      "route": "/",
+      "url": "https://cloudless.gr/",
+      "error": null,
+      "violations": [
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en",
+      "url": "https://cloudless.gr/en",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/services",
+      "url": "https://cloudless.gr/en/services",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/contact",
+      "url": "https://cloudless.gr/en/contact",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/store",
+      "url": "https://cloudless.gr/en/store",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/blog",
+      "url": "https://cloudless.gr/en/blog",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/case-studies",
+      "url": "https://cloudless.gr/en/case-studies",
+      "error": null,
+      "violations": [
+        {
+          "id": "document-title",
+          "impact": "serious",
+          "help": "Documents must have <title> element to aid in navigation",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/document-title?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "html-has-lang",
+          "impact": "serious",
+          "help": "<html> element must have a lang attribute",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/html-has-lang?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "help": "Document should have one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/page-has-heading-one?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "html",
+              "html": "<html><head></head><body></body></html>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

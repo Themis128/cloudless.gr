@@ -1,0 +1,243 @@
+{
+  "generatedAt": "2026-08-06T08:31:24.013Z",
+  "base": "http://localhost:4000",
+  "results": [
+    {
+      "route": "/",
+      "url": "http://localhost:4000/",
+      "error": null,
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".text-lg.text-white",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.flex-1",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en",
+      "url": "http://localhost:4000/en",
+      "error": null,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".delay-300.mt-8.sm\\:flex-row > .btn-v2-primary.px-8.py-3\\.5",
+              "html": "<a class=\"btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono font-semibold\" href=\"/en/contact\">Get a Free Audit</a>"
+            },
+            {
+              "target": "div:nth-child(2) > div:nth-child(2) > span:nth-child(1)",
+              "html": "<span style=\"display:inline-flex;align-items:center;gap:6px;font-size:10px;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid #2a3550;border-radius:4px;color:#8895ac;font-family:var(--"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".text-lg.text-white",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.flex-1",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/services",
+      "url": "http://localhost:4000/en/services",
+      "error": null,
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".justify-between.border-neon-cyan\\/10.border-b > .text-lg",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.flex-1.px-6",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/contact",
+      "url": "http://localhost:4000/en/contact",
+      "error": null,
+      "violations": [
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "help": "Heading levels should only increase by one",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/heading-order?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": ".reveal-visible > .neon-border.p-8.bg-void-light\\/50 > h3",
+              "html": "<h3 class=\"font-heading text-lg font-bold text-white\">What happens next?</h3>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": "h2",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.flex-1",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/store",
+      "url": "http://localhost:4000/en/store",
+      "error": null,
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".border-b.py-4.border-neon-cyan\\/10 > h2",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.flex-1",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/blog",
+      "url": "http://localhost:4000/en/blog",
+      "error": null,
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".border-b.py-4.border-neon-cyan\\/10 > .text-lg",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.flex-1",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/en/case-studies",
+      "url": "http://localhost:4000/en/case-studies",
+      "error": null,
+      "violations": [
+        {
+          "id": "landmark-main-is-top-level",
+          "impact": "moderate",
+          "help": "Main landmark should not be contained in another landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-main-is-top-level?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": ".min-h-screen",
+              "html": "<main class=\"min-h-screen bg-[#0a0a0f] text-white\">"
+            }
+          ]
+        },
+        {
+          "id": "landmark-no-duplicate-main",
+          "impact": "moderate",
+          "help": "Document should not have more than one main landmark",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-no-duplicate-main?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "#main-content",
+              "html": "<main id=\"main-content\" class=\"flex-1\">"
+            }
+          ]
+        },
+        {
+          "id": "landmark-unique",
+          "impact": "moderate",
+          "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-unique?application=playwright",
+          "nodes": 1,
+          "targets": [
+            {
+              "target": "#main-content",
+              "html": "<main id=\"main-content\" class=\"flex-1\">"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=playwright",
+          "nodes": 2,
+          "targets": [
+            {
+              "target": ".border-b.py-4.border-neon-cyan\\/10 > .text-lg",
+              "html": "<h2 class=\"font-mono text-lg font-bold text-white\">Cart (0)</h2>"
+            },
+            {
+              "target": ".overflow-y-auto.py-4.px-6",
+              "html": "<div class=\"flex-1 overflow-y-auto px-6 py-4\"><div class=\"py-12 text-center\"><div class=\"text-neon-cyan/40 mb-4 font-mono text-4xl\">[ ]</div><p class=\"font-mono text-sm text-slate-400\">Your cart is em"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
