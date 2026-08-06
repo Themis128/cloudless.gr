@@ -2,11 +2,11 @@ name: e2e-full-coverage
 on:
   pull_request:
     paths:
-    - src/**
-    - e2e/**
-    - playwright.config.mts
-    - package.json
-    - .github/workflows/e2e-full-coverage.yml
+      - src/**
+      - e2e/**
+      - playwright.config.mts
+      - package.json
+      - .github/workflows/e2e-full-coverage.yml
   workflow_dispatch:
 
 permissions:
@@ -21,49 +21,93 @@ jobs:
       NEXT_PUBLIC_E2E: '1'
       E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
       CI: 'true'
+      E2E_USER_EMAIL: testuser@cloudless.gr
+      E2E_USER_PASSWORD: TestPass123!
+      E2E_ADMIN_EMAIL: testadmin@cloudless.gr
+      E2E_ADMIN_PASSWORD: AdminPass123!
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: actions/setup-node@v4
-      with:
-        node-version: 22
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-    - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
 
-    - name: Cache pnpm store
-      uses: actions/cache@v4
-      with:
-        path: ~/.local/share/pnpm/store
-        key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
-    - name: Install deps
-      run: pnpm install --frozen-lockfile
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
 
-    - name: Install Playwright browsers
-      run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
 
-    - name: Run Playwright migrated + sweeps + journeys
-      run: |
-        pnpm exec playwright test \
-          --project=chromium \
-          --reporter=line \
-          --workers=2 \
-          e2e/migrated/ \
-          e2e/admin-api-sweep.spec.ts \
-          e2e/public-api-sweep.spec.ts \
-          e2e/journey-blog-nav.spec.ts \
-          e2e/journey-contact-lead.spec.ts \
-          e2e/journey-store-checkout.spec.ts \
-          e2e/journey-theme-locale.spec.ts \
-          e2e/journey-admin-tour.spec.ts \
-          e2e/admin-pages-sweep.spec.ts
+      - name: Setup test database
+        run: |
+          echo "Setting up test database..."
+          # Start dev server temporarily to seed database
+          setsid pnpm dev -p 4000 < /dev/null > /tmp/dev-server.log 2>&1 &
+          DEV_PID=$!
+          
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -sf -m 2 http://localhost:4000 > /dev/null 2>&1; then
+              echo "Dev server ready"
+              break
+            fi
+            sleep 2
+          done
+          
+          # Seed admin user
+          echo "Seeding admin user..."
+          curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
+            -H "Content-Type: application/json" \
+            -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' || echo "Admin user may already exist"
+          
+          # Promote to admin
+          echo "Promoting test admin..."
+          curl -sf -X POST http://localhost:4000/api/admin/users/promote \
+            -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"testadmin@cloudless.gr"}' || echo "Promotion may have failed"
+          
+          # Seed regular user
+          echo "Seeding test user..."
+          curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
+            -H "Content-Type: application/json" \
+            -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' || echo "Test user may already exist"
+          
+          # Kill dev server
+          kill $DEV_PID 2>/dev/null || true
+          sleep 2
+          echo "Database seeding complete"
 
-    - name: Upload Playwright report on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: playwright-report
-        path: |
-          playwright-report/
-          test-results/
-        retention-days: 7
+      - name: Run Playwright migrated + sweeps + journeys
+        run: |
+          pnpm exec playwright test \
+            --project=chromium \
+            --reporter=line \
+            --workers=2 \
+            e2e/migrated/ \
+            e2e/admin-api-sweep.spec.ts \
+            e2e/public-api-sweep.spec.ts \
+            e2e/journey-blog-nav.spec.ts \
+            e2e/journey-contact-lead.spec.ts \
+            e2e/journey-store-checkout.spec.ts \
+            e2e/journey-theme-locale.spec.ts \
+            e2e/journey-admin-tour.spec.ts \
+            e2e/admin-pages-sweep.spec.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
