@@ -35,9 +35,9 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: Override target (e.g. https://cloudless.gr)
+        description: Override target (e.g. https://pi-origin.cloudless.gr)
         required: false
-        default: https://cloudless.gr
+        default: https://pi-origin.cloudless.gr
 
 permissions:
   contents: read
@@ -81,7 +81,7 @@ jobs:
         # build. Up to 3min of polling covers the K3s rolling update window.
       run: |
         set -euo pipefail
-        BASE="${BASE_URL:-https://cloudless.gr}"
+        BASE="${BASE_URL:-https://pi-origin.cloudless.gr}"
         deadline=$(( $(date +%s) + 180 ))
         attempt=0
         while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -98,7 +98,7 @@ jobs:
           fi
           code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "${BASE}${chunk}")
           if [ "$code" = "200" ]; then
-            echo "  ✓ Pi is self-consistent (HTML and chunk ${chunk##*/chunks/} both 200) after ${attempt} attempt(s)"
+            echo "  � ✓ Pi is self-consistent (HTML and chunk ${chunk##*/chunks/} both 200) after ${attempt} attempt(s)"
             exit 0
           fi
           echo "  [$attempt] chunk ${chunk##*/chunks/} returned ${code}; Pi still rolling out"
