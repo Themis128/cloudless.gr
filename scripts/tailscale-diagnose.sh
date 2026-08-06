@@ -104,7 +104,7 @@ echo ""
 echo "# Check Tailscale control plane connectivity:"
 echo "kubectl exec -n tailscale-operator deploy/tailscale-operator -- wget -qO- http://localhost:8080/healthz"
 echo ""
-
+echo ""
 echo "=== Diagnostic Complete ==="
 echo ""
 echo "If nodes are offline in Tailscale admin:"

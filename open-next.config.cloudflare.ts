@@ -17,24 +17,9 @@ export default defineCloudflareConfig({
     tagCache: d1TagCache,
     queue: MemoryQueue,
   },
-
-  // Middleware is placed on "server" (not "edge") because:
-  // 1. Cloudflare Workers don't have a separate edge runtime tier — the
-  //    middleware runs in the same workerd isolate as the server function.
-  // 2. With placement: "edge", OpenNext calls generateEdgeBundle() which
-  //    bundles the middleware as a standalone edge function. Then
-  //    copyTracedFiles() in the default function's generateBundle() still
-  //    tries to process middleware.js.nft.json and throws
-  //    "middleware cannot use the edge runtime" because the nft.json stub
-  //    was "{}" (no files array).
-  // 3. With placement: "server", OpenNext calls generateBundle() for the
-  //    middleware, which correctly bundles it as part of the server function.
-  //    The middleware.js.nft.json now has a proper {"files":["middleware.js"]}
-  //    format (see scripts/opennext-middleware-fix.mjs), so processNftFile()
-  //    succeeds.
   functions: {
     middleware: {
-      placement: "server",
+      placement: "edge",
       routes: ["middleware"],
     },
   },
