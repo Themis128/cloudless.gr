@@ -15,7 +15,9 @@ case "${DRY_RUN}" in
 esac
 
 # Hostnames / prefixes to keep even if tagged k8s
-KEEP_RE='^(office|github-omv|omv-ha|cloudless-k3s-operator)$'
+# Updated to handle office, office-1, office-2, office-3 naming
+# Regex matches: office, office-1, office-2, office-3, github-omv, omv-ha, cloudless-k3s-operator
+KEEP_RE='^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$'
 
 # Stale patterns from Jul rebuild / per-service proxies
 STALE_RE='^(monitoring-proxies-[0-9]+|monitoring-proxy-[0-9]+|appflowy|cloudless-app|cloudless-manager|grafana|meilisearch|n8n|postgres|redis|sync-webhook|k3s-subnet-router(-[0-9]+)?|tailscale-operator(-[0-9]+)?)$'
@@ -193,17 +195,34 @@ keep = re.compile(keep_re)
 data = json.load(open(path))
 devices = data.get("devices") or data.get("Devices") or []
 to_delete = []
+offline_devices = []
 for d in devices:
     name = d.get("hostname") or d.get("name") or ""
     short = name.split(".")[0]
     tags = d.get("tags") or []
     last = d.get("lastSeen") or ""
+    # Check if device is offline (lastSeen more than 1 day ago or explicitly marked offline)
+    is_offline = d.get("offline", False) or d.get("expired", False)
+    if not is_offline and last:
+        try:
+            from datetime import datetime, timezone
+            last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+            age_hours = (now - last_dt).total_seconds() / 3600
+            is_offline = age_hours > 24  # Offline if no seen in 24h
+        except:
+            pass
+    
     if keep.match(short):
         print(f"KEEP  {short}  tags={tags}")
+        # Report if offline but kept
+        if is_offline:
+            print(f"      WARNING: Device {short} is offline! Reconnect before removing from keep list.")
         continue
     if stale.match(short):
         to_delete.append(d)
-        print(f"STALE {short}  id={d.get('id')}  tags={tags}  lastSeen={last}")
+        offline_status = " (OFFLINE)" if is_offline else ""
+        print(f"STALE {short}  id={d.get('id')}  tags={tags}  lastSeen={last}{offline_status}")
         continue
     if any(t == "tag:k8s" for t in tags) and short not in (
         "ingress-0", "ingress-1", "kube-0", "kube-1",
@@ -228,7 +247,29 @@ for d in devices:
             to_delete.append(d)
             print(f"STALE {short}  id={d.get('id')}  (tag:k8s leftover)")
 
-print(f"\nWill delete {len(to_delete)} device(s)")
+# Report offline devices separately for attention
+for d in devices:
+    name = d.get("hostname") or d.get("name") or ""
+    short = name.split(".")[0]
+    is_offline = d.get("offline", False) or d.get("expired", False)
+    if not is_offline and d.get("lastSeen"):
+        try:
+            from datetime import datetime, timezone
+            last_dt = datetime.fromisoformat(d.get("lastSeen").replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+            age_hours = (now - last_dt).total_seconds() / 3600
+            is_offline = age_hours > 24
+        except:
+            pass
+    if is_offline and keep.match(short):
+        offline_devices.append((short, d.get("id")))
+
+if offline_devices:
+    print(f"\n!!! OFFLINE DEVICES (may need reconnection):")
+    for short, dev_id in offline_devices:
+        print(f"    - {short} ({dev_id})")
+
+print(f"\nWill delete {len(to_delete)} stale device(s)")
 if dry == "1":
     print("DRY_RUN=1 — skipping DELETE")
     sys.exit(0)

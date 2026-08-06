@@ -96,8 +96,11 @@ grants). Prefer LAN `sshd` as break-glass. See fabric doc §4b.
 
 ## Machines hygiene
 
-**Keep online:** `github-omv`, `omv-ha`, `office`, Connector / ProxyGroup
+**Keep online:** `github-omv`, `omv-ha`, `office`, `office-1`, `office-2`, `office-3`, Connector / ProxyGroup
 devices owned by the operator (`k3s-subnet-router-*`, `ingress-*`, `kube-*`).
+
+> **Note:** `office-2` is currently OFFLINE. Check `tailscale status` and the
+> Tailscale admin console for device status before assuming connectivity.
 
 **Safe to delete when offline forever:** old per-app proxies
 (`monitoring-proxies-*`, `ts-n8n-*`, `appflowy`, `grafana`, …) from before

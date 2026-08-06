@@ -118,7 +118,10 @@ flowchart LR
 |---------------------|------|-----|----------------|----------|
 | `github-omv` | k3s control-plane, GH runners, app NodePort | `192.168.1.128` | `100.74.191.58` | `github-omv.tail4ecae1.ts.net` |
 | `omv-ha` | worker (often `NoSchedule` standby) | `192.168.1.130` | `100.95.117.84` | `omv-ha.tail4ecae1.ts.net` |
-| `office` | Admin WSL | — | `100.98.121.44` | `office.…` |
+| `office` | Admin WSL | — | DYNAMIC | `office.tail4ecae1.ts.net` |
+| `office-1` | Admin WSL | — | DYNAMIC | `office-1.tail4ecae1.ts.net` |
+| `office-2` | Admin WSL (OFFLINE - needs reconnection) | — | DYNAMIC | `office-2.tail4ecae1.ts.net` |
+| `office-3` | Admin WSL | — | DYNAMIC | `office-3.tail4ecae1.ts.net` |
 
 > **IP caveat:** Tailscale CGNAT addresses **rotate** after reimage / re-auth.
 > Prefer **MagicDNS** (`github-omv.tail4ecae1.ts.net`) in new scripts.
@@ -159,6 +162,7 @@ flowchart TB
 | **L3 Subnet** | `Connector/k3s-cidrs` + `ProxyClass/pi-fabric` | Laptop → ClusterIP / pod IP | Requires `--accept-routes` on client; ACL `autoApprovers.routes` |
 | **L7 Serve** | `ProxyGroup/ingress` + Ingresses in `ingresses.yaml` | Admins → Grafana, Meilisearch | **No Funnel**; private HTTPS certs need HTTPS Certificates enabled |
 | **API proxy** | `ProxyGroup/kube` | Off-LAN kubectl | Preferred over raw `:6443` from WSL userspace |
+| **Operator** | Default namespace is `tailscale` (configurable via `TS_OPERATOR_NS`) | Deploy scripts use `--namespace $NS` | All pods + CRDs in same namespace |
 
 Manifest map:
 
@@ -539,7 +543,24 @@ Offline / orphaned devices: [`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastr
 
 ---
 
-## 11. Glossary
+## 11. Version compatibility
+
+**CLI version mismatch:** Client (1.98.10) and server pods (v1.98.9) may show warnings. This is acceptable for most operations but consider updating the operator deployment to match the CLI version:
+
+```bash
+# Check current versions
+tailscale version
+kubectl get deployment -n tailscale operator -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+# Update to match (optional)
+kubectl set image deployment/operator tailscale=tailscale/k8s-operator:v1.98.10 -n tailscale-operator
+```
+
+**Best practice:** Keep operator and CLI versions within 1 minor version for optimal compatibility.
+
+---
+
+## 12. Glossary
 
 | Term | Meaning here |
 |------|----------------|
