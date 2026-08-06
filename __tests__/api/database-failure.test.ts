@@ -1,19 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, describe, beforeEach, afterEach, vi } from "vitest";
 import { MockD1Database } from '../mocks/db';
 import { setupTestEnv } from '../setup';
 import { registerUser } from '../../src/lib/auth-d1';
 
-test.describe('Database Failure Tests', () => {
+describe('Database Failure Tests', () => {
   let mockDb: MockD1Database;
 
-  test.beforeAll(async () => {
+  beforeAll(async () => {
     await setupTestEnv();
     mockDb = new MockD1Database();
     // Replace the actual D1 binding with our mock
     globalThis.D1_DB = mockDb;
   });
 
-  test.afterEach(() => {
+  afterEach(() => {
     mockDb.reset();
   });
 
