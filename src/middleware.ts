@@ -342,7 +342,7 @@ async function handlePageRoute(
   }
 
   request.headers.set("x-pathname", pathname);
-  const response = intlMiddleware(request);
+  const response = await intlMiddleware(request);
   addSecurityHeaders(response, nonce);
 
   if (isHomepagePath(pathname)) {
@@ -399,4 +399,5 @@ export const config = {
   matcher: [
     "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
   ],
+  runtime: 'experimental-edge',
 };
