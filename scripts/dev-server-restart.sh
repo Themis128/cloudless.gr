@@ -2,14 +2,23 @@
 # Clean dev server restart — handles port conflicts, stale Turbopack cache,
 # missing .env.local, and waits for the server to actually be ready.
 #
-# Usage: bash scripts/dev-server-restart.sh [--clean]
-#   --clean: also delete .next/ and tmp/ before restart
+# Usage: bash scripts/dev-server-restart.sh [--clean] [--webpack]
+#   --clean:   also delete .next/ and tmp/ before restart
+#   --webpack: use webpack instead of Turbopack (default)
 
 set -euo pipefail
 
 REPO="/home/tbaltzakis/cloudless.gr"
 PORT=4000
-CLEAN=${1:-}
+CLEAN=""
+BUNDLER="turbopack"
+
+for arg in "$@"; do
+  case "$arg" in
+    --clean) CLEAN="--clean" ;;
+    --webpack) BUNDLER="webpack" ;;
+  esac
+done
 
 cd "$REPO"
 
@@ -54,8 +63,12 @@ if [ "$AVAIL" -lt 1500 ]; then
   echo "    WARN: < 1.5 GB available. Consider stopping Tabby/other heavy processes."
 fi
 
-echo "==> Starting dev server..."
-nohup pnpm dev > /tmp/dev-server.log 2>&1 &
+echo "==> Starting dev server (${BUNDLER})..."
+if [ "$BUNDLER" = "webpack" ]; then
+  nohup pnpm dev:webpack > /tmp/dev-server.log 2>&1 &
+else
+  nohup pnpm dev > /tmp/dev-server.log 2>&1 &
+fi
 DEV_PID=$!
 echo "    PID: ${DEV_PID}"
 echo "    Logs: tail -f /tmp/dev-server.log"

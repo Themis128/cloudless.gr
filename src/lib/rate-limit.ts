@@ -8,6 +8,9 @@
  * are per-instance. This is intentional — it provides basic abuse protection
  * without requiring Redis, and is sufficient for low-traffic contact/subscribe
  * forms where the primary concern is accidental or casual abuse.
+ *
+ * In development (NODE_ENV=development), limits are multiplied by 100 so
+ * testing forms/APIs doesn't hit 429s.
  */
 
 interface RateLimitStore {
@@ -15,6 +18,9 @@ interface RateLimitStore {
 }
 
 const store = new Map<string, RateLimitStore>();
+
+// In dev, multiply limits by 100 so testing forms/APIs isn't frustrating.
+const DEV_MULTIPLIER = process.env.NODE_ENV === "development" ? 100 : 1;
 
 // Prune expired entries periodically to avoid memory growth.
 // Only runs when rate limiter is actually called.
@@ -60,7 +66,10 @@ export function rateLimit(
   const entry = store.get(key) ?? { timestamps: [] };
   const valid = entry.timestamps.filter((t) => now - t < windowMs);
 
-  if (valid.length >= limit) {
+  // In dev, allow 100x the production limit.
+  const effectiveLimit = limit * DEV_MULTIPLIER;
+
+  if (valid.length >= effectiveLimit) {
     store.set(key, { timestamps: valid });
     return {
       ok: false,
@@ -70,7 +79,7 @@ export function rateLimit(
           status: 429,
           headers: {
             "Retry-After": String(Math.ceil(windowMs / 1000)),
-            "X-RateLimit-Limit": String(limit),
+            "X-RateLimit-Limit": String(effectiveLimit),
             "X-RateLimit-Remaining": "0",
           },
         }
@@ -80,7 +89,7 @@ export function rateLimit(
 
   valid.push(now);
   store.set(key, { timestamps: valid });
-  return { ok: true, remaining: limit - valid.length };
+  return { ok: true, remaining: effectiveLimit - valid.length };
 }
 
 /**

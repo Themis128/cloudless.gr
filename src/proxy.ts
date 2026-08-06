@@ -37,15 +37,18 @@ function stripAllLocalePrefixes(pathname: string): string {
 }
 
 // Rate limiting constants (copied from middleware)
+// In development, limits are relaxed so testing forms/APIs isn't frustrating.
+const IS_DEV = process.env.NODE_ENV === "development";
+
 const RATE_LIMITS = {
   // Global IP-based rate limiting
   ip: {
-    limit: 5, // max 5 requests
+    limit: IS_DEV ? 1000 : 5, // max 5 requests (1000 in dev)
     window: 10, // per 10 seconds
   },
   // Authenticated user rate limiting
   auth: {
-    limit: 10, // max 10 requests
+    limit: IS_DEV ? 2000 : 10, // max 10 requests (2000 in dev)
     window: 10, // per 10 seconds
   },
 };
@@ -53,11 +56,11 @@ const RATE_LIMITS = {
 // Admin-specific rate limits (stricter)
 const ADMIN_RATE_LIMIT = {
   ip: {
-    limit: 3,
+    limit: IS_DEV ? 1000 : 3,
     window: 10,
   },
   auth: {
-    limit: 5,
+    limit: IS_DEV ? 2000 : 5,
     window: 10,
   },
 };
@@ -201,7 +204,7 @@ async function handleApiRoute(
   // Apply rate limiting for API routes
   const ip = request.headers.get("x-forwarded-for") ?? 
              request.headers.get("x-real-ip") ?? 
-             request.ip ?? "";
+             "";
   const authToken = readAuthToken(request);
   
   // Determine rate limit based on path and auth
@@ -246,7 +249,7 @@ async function handlePageRoute(
   // Apply rate limiting for page routes (more lenient)
   const ip = request.headers.get("x-forwarded-for") ?? 
              request.headers.get("x-real-ip") ?? 
-             request.ip ?? "";
+             "";
   const identifier = ip;
   
   if (isRateLimited(identifier, RATE_LIMITS.ip.limit, RATE_LIMITS.ip.window, ipRequestMap)) {
