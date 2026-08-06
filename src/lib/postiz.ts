@@ -28,6 +28,22 @@ import type { CalendarPlatform } from "@/lib/content-calendar";
  * Both share the same `postizFetch` / `getPostizConfig` plumbing.
  */
 
+// Helper function to extract client ID from JWT token for Cloudflare Access
+function extractClientIdFromToken(token: string): string {
+  try {
+    // Split the JWT and decode the payload (second part)
+    const payloadBase64 = token.split('.')[1];
+    // Replace URL-safe characters and add padding if needed
+    const payloadJson = Buffer.from(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
+    const payload = JSON.parse(payloadJson);
+    // Service Tokens typically have 'aud' (audience) claim
+    return payload.aud || token.substring(0, 8); // fallback to first 8 chars
+  } catch (e) {
+    // If we can't parse the JWT, use a substring as client ID
+    return token.substring(0, 8);
+  }
+}
+
 async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
   const cfg = await getConfig();
   if (!cfg.POSTIZ_API_URL || !cfg.POSTIZ_API_KEY) throw new PostizNotConfiguredError();
@@ -43,13 +59,24 @@ async function postizFetch(
 ): Promise<Response> {
   const { baseUrl, apiKey } = await getPostizConfig();
   const { timeoutMs, ...init } = options;
+  
+  // Build headers
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    Authorization: apiKey,
+    ...init.headers,
+  });
+
+  // Add Service Token for Cloudflare Access if configured
+  const serviceToken = process.env.POSTIZ_SERVICE_TOKEN;
+  if (serviceToken) {
+    headers.set("Cf-Access-Client-Id", extractClientIdFromToken(serviceToken));
+    headers.set("Cf-Access-Client-Secret", serviceToken);
+  }
+
   return fetch(`${baseUrl}/api/public/v1${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: apiKey,
-      ...init.headers,
-    },
+    headers,
     signal: AbortSignal.timeout(timeoutMs ?? 10_000),
   });
 }

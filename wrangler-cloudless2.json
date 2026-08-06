@@ -94,7 +94,8 @@
         "required": [
           "SESSION_SECRET",
           "CRON_SECRET",
-          "CLOUDFLARE_API_TOKEN"
+          "CLOUDFLARE_API_TOKEN",
+          "POSTIZ_SERVICE_TOKEN"
         ]
       },
       "analytics_engine_datasets": [
@@ -159,6 +160,11 @@
         "ENVIRONMENT": "staging",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
+      },
+      "secrets": {
+        "required": [
+          "POSTIZ_SERVICE_TOKEN"
+        ]
       },
       "r2_buckets": [
         {
