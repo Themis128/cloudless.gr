@@ -164,6 +164,11 @@ h6 {
   background: var(--accent-hover);
 }
 
+/* Ensure sufficient color contrast - increase text weight if needed */
+.btn-v2-primary {
+  font-weight: 600;
+}
+
 /* v2 ghost button */
 .btn-v2-ghost {
   background: transparent;

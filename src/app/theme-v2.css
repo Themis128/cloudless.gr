@@ -479,8 +479,18 @@
 }
 
 /* Hero badge (status pill) — bg-neon-cyan/10 with text-neon-cyan reads
-    as a glowing pill on dark. On light, retarget to the v2 pill styling. */
+   as a glowing pill on dark. On light, retarget to the v2 pill styling. */
 [data-theme="light"] div.bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan {
+  background-color: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+/* Category badges on blog — fix contrast on light background */
+[data-theme="light"] .bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan,
+[data-theme="light"] .bg-neon-green\/10.border-neon-green\/20.text-neon-green,
+[data-theme="light"] .bg-neon-magenta\/10.border-neon-magenta\/20.text-neon-magenta,
+[data-theme="light"] .bg-neon-blue\/10.border-neon-blue\/20.text-neon-blue {
   background-color: var(--accent-soft);
   border-color: transparent;
   color: var(--accent);

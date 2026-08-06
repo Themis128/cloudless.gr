@@ -286,7 +286,7 @@ export default function ContactFormSection() {
           <div className="space-y-8 lg:col-span-2">
             <ScrollReveal>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
-                <h3 className="font-heading text-lg font-bold text-white">What happens next?</h3>
+                <h2 className="font-heading text-lg font-bold text-white">What happens next?</h2>
                 <ol className="mt-4 space-y-4 text-sm text-slate-400">
                   {[
                     "We review your message and get back within 24 hours.",

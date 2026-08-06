@@ -272,18 +272,18 @@ function TimeSeries() {
   );
 }
 
-const chip: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  fontSize: 10,
-  padding: "3px 8px",
-  background: "rgba(255,255,255,0.04)",
-  border: `1px solid ${T.border}`,
-  borderRadius: 4,
-  color: T.textDim,
-  fontFamily: "var(--font-mono, monospace)",
-};
+  const chip: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 10,
+    padding: "3px 8px",
+    background: "rgba(255,255,255,0.08)",
+    border: `1px solid ${T.border}`,
+    borderRadius: 4,
+    color: T.text,
+    fontFamily: "var(--font-mono, monospace)",
+  };
 
 export default function CloudCockpit() {
   return (

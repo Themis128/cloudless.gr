@@ -100,7 +100,7 @@ export default async function CaseStudiesPage() {
   const caseStudies = await loadCaseStudies();
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
       {/* Hero */}
       <section className="px-4 pt-24 pb-16 text-center">
         <ScrollReveal>
@@ -150,6 +150,6 @@ export default async function CaseStudiesPage() {
           </Link>
         </ScrollReveal>
       </section>
-    </main>
+    </div>
   );
 }
