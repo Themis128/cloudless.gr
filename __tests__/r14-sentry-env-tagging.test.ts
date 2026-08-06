@@ -25,6 +25,6 @@ describe("R14 Sentry environment tagging", () => {
     // deploy-pi.yml / build-pi-image.yml were removed (hostpath standalone).
     // Pi standby env is baked into the k8s ConfigMap instead.
     const hostpath = read("k8s/cloudless-app-hostpath.yaml");
-    expect(hostpath).toContain('SENTRY_ENVIRONMENT: "pi-standby"');
+    expect(hostpath).toContain("SENTRY_ENVIRONMENT: pi-standby");
   });
 });
