@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-08-06T09:08:05.493Z",
+  "base": "http://localhost:4001",
+  "results": [
+    {
+      "route": "/",
+      "url": "http://localhost:4001/",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/\nCall log:\n  - navigating to \"http://localhost:4001/\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en",
+      "url": "http://localhost:4001/en",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en\nCall log:\n  - navigating to \"http://localhost:4001/en\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en/services",
+      "url": "http://localhost:4001/en/services",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en/services\nCall log:\n  - navigating to \"http://localhost:4001/en/services\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en/contact",
+      "url": "http://localhost:4001/en/contact",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en/contact\nCall log:\n  - navigating to \"http://localhost:4001/en/contact\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en/store",
+      "url": "http://localhost:4001/en/store",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en/store\nCall log:\n  - navigating to \"http://localhost:4001/en/store\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en/blog",
+      "url": "http://localhost:4001/en/blog",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en/blog\nCall log:\n  - navigating to \"http://localhost:4001/en/blog\", waiting until \"networkidle\"\n",
+      "violations": []
+    },
+    {
+      "route": "/en/case-studies",
+      "url": "http://localhost:4001/en/case-studies",
+      "error": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at http://localhost:4001/en/case-studies\nCall log:\n  - navigating to \"http://localhost:4001/en/case-studies\", waiting until \"networkidle\"\n",
+      "violations": []
+    }
+  ]
+}

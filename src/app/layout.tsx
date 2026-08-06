@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
+import type { Locale } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";

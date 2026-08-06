@@ -1,6 +1,6 @@
 ## ♿ A11y Live Audit
 
-Base: `https://cloudless.gr` · generated 2026-08-06T08:22:26.049Z
+Base: `https://cloudless.gr` · generated 2026-08-06T09:00:49.921Z
 
 | Route | Total | Critical | Serious | Moderate | Minor | Status |
 |-------|-------|----------|---------|----------|-------|--------|

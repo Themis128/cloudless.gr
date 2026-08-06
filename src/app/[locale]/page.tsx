@@ -303,7 +303,7 @@ export default async function Home({
                   href="/contact"
                   className="btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono font-semibold text-lg"
                 >
-                  {t("hero.ctaPrimary", "Get a Free Audit")} TEST
+                  {t("hero.ctaPrimary", "Get a Free Audit")}
                 </Link>
                 <Link
                   href="/services"
