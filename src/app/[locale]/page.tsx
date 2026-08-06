@@ -49,8 +49,8 @@ export async function generateMetadata({
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
-  const messages = getMessages(safeLocale);
-  const meta = (messages as Record<string, unknown>).meta as
+  const safeMessages = getMessages(safeLocale);
+  const meta = (safeMessages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
 
   return {

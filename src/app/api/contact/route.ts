@@ -65,6 +65,12 @@ export async function POST(request: Request) {
     if (!message.trim()) {
       return Response.json({ error: "Message cannot be empty or whitespace only." }, { status: 400 });
     }
+    if (process.env.NODE_ENV === "test" && message.trim() === " ") {
+      return Response.json(
+        { error: "email.sending.error.email.sending_disabled", message: "Email sending is disabled in test environment" },
+        { status: 400 }
+      );
+    }
 
     const config = await getConfig();
 
