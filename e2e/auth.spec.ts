@@ -32,9 +32,11 @@ test.describe("Authentication", () => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
     // Click forgot password link
-    const forgotLink = page.getByRole("link", { name: /forgot/i });
+    const forgotLink = page.getByTestId("forgot-password-link");
     await expect(forgotLink).toBeVisible({ timeout: 5_000 });
-    await forgotLink.click();
-    await expect(page).toHaveURL(/\/auth\/forgot-password/, { timeout: 10_000 });
+    await Promise.all([
+      page.waitForURL(/\/auth\/forgot-password/),
+      forgotLink.click(),
+    ]);
   });
 });

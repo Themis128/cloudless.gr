@@ -145,6 +145,7 @@ function LoginContent() {
             <p className="text-right">
               <Link
                 href="/auth/forgot-password"
+                data-testid="forgot-password-link"
                 className="hover:text-neon-cyan font-mono text-xs text-slate-500"
               >
                 {t("auth.forgotPassword", "Forgot Password?")}

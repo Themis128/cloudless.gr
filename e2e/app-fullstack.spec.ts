@@ -27,9 +27,9 @@ test.describe("cloudless.gr - Full Application Coverage", () => {
   });
 
   test("root page redirects to locale", async ({ page }) => {
-    const response = await page.goto("/");
+    await page.goto("/");
     // Should redirect to /en
-    expect(page.url()).toContain("/en");
+    await expect(page).toHaveURL(/.*\/en(\/|$)/);
   });
 
   test("sitemap.xml is accessible", async ({ request }) => {

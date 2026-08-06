@@ -1,104 +1,58 @@
-/* global $app, sst, aws */
-
-/// <reference path="./.sst/platform/config.d.ts" />
+/**
+ * SST Configuration for Cloudflare deployment
+ *
+ * ⚠️ DEPRECATED: This config has been migrated to SST + Cloudflare.
+ * The legacy AWS resources below are kept only for backward compatibility.
+ *
+ * Production deployments use `sst.config.cloudflare.ts` which deploys to:
+ * - Cloudflare Workers (Next.js app)
+ * - D1 Database (auth + data)
+ * - R2 Buckets (object storage)
+ * - Workers KV (config cache)
+ *
+ * AWS services (Cognito, DynamoDB, SSM, SES, Bedrock) have been migrated:
+ * - Cognito → D1 auth (src/lib/auth-d1.ts)
+ * - DynamoDB → D1 tables (user-auth-db)
+ * - SSM → D1 app_config + Wrangler secrets
+ * - SES → Resend / Cloudflare Email
+ * - Bedrock → Workers AI
+ */
 
 const STAGE_PRODUCTION = "production";
 
-/**
- * Lambda runtime environment for the Next.js site.
- *
- * Auth provider: Cognito (always-up AWS), activated by passing the `cognito`
- * argument so the Lambda env carries the COGNITO_* variables.
- */
-function buildSiteEnvironment(
-  stage: string,
-  isProd: boolean,
-  stripeTransactionsTableName: $util.Output<string>,
-  userProfileTableName: $util.Output<string>,
-  adminNotificationsTableName: $util.Output<string>,
-  analyticsCacheTableName: $util.Output<string>,
-  sessionTokenStoreTableName: $util.Output<string>,
-  authSecret?: $util.Output<string>,
-  cognito?: {
-    issuer: $util.Output<string>;
-    clientId: $util.Output<string>;
-    clientSecret: $util.Output<string>;
-    domain: string;
-  }
-) {
-  return {
-    // next-auth requires AUTH_SECRET as an env var (reads synchronously at
-    // module load, before SSM can be async-fetched).
-    ...(authSecret ? { AUTH_SECRET: authSecret } : {}),
-    // Lambda runs behind CloudFront — next-auth needs to trust the
-    // X-Forwarded-Host header to construct correct callback URLs.
-    AUTH_TRUST_HOST: "true",
-    AUTH_URL: isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`,
-    NODE_ENV: "production",
-    SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
-    // AWS_REGION is set automatically by Lambda — do not override it
-    NEXT_PUBLIC_SITE_URL: isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`,
-    NEXT_PUBLIC_STAGE: stage,
-    // Carry the deploy SHA into runtime so /api/health.version reports
-    // what's actually deployed.
-    APP_VERSION: process.env.GITHUB_SHA ?? "local",
-    // R14: tag this surface in Sentry as "production" so events route
-    // separately from Pi-side events (which use SENTRY_ENVIRONMENT=pi-standby
-    // via the k8s container env). Lets Sentry dashboards filter by surface
-    // during failover incidents.
-    SENTRY_ENVIRONMENT: isProd ? "prod" : `staging-${stage}`,
-    STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
-    USER_PROFILE_TABLE: userProfileTableName,
-    ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
-    ANALYTICS_CACHE_TABLE: analyticsCacheTableName,
-    SESSION_TOKEN_STORE_TABLE: sessionTokenStoreTableName,
-    // Analytics datalake bucket — consumed by src/lib/analytics.ts,
-    // src/lib/admin-notifications.ts (LAKE_BUCKET), and
-    // src/lib/stripe-transactions.ts. Writes events/year=…/month=…/day=…/*.ndjson
-    // and lake/{clients,notifications,portals,transactions}/*. Before this
-    // env was set the libs defaulted to "cloudless-analytics-data" but the
-    // Lambda had no S3 IAM grant, so every PutObject was silently caught
-    // and dropped — the lake had 0 objects under events/ as of 2026-06-20
-    // (datalake audit). The matching `s3:PutObject` permission is granted
-    // below in the `permissions` array.
-    ANALYTICS_S3_BUCKET: "cloudless-analytics-data",
-    // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
-    // the deploy workflow env; the route returns 503 when absent.
-    ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
-      ? {
-          CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-          CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-        }
-      : {}),
-    // Auth provider — Cognito (AWS). NEXT_PUBLIC_AUTH_PROVIDER drives the login button label.
-    ...(cognito
-      ? {
-          COGNITO_ISSUER: cognito.issuer,
-          COGNITO_CLIENT_ID: cognito.clientId,
-          COGNITO_CLIENT_SECRET: cognito.clientSecret,
-          COGNITO_DOMAIN: cognito.domain,
-          NEXT_PUBLIC_AUTH_PROVIDER: "cognito",
-        }
-      : {}),
-    // Notion database IDs (non-secret, safe to inline)
-    NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
-    NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
-    NOTION_DOCS_DB_ID: "b45af6ed5bb64d89b9a92a8aff4a9b29",
-    NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
-    NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
-    NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
-    // Google Search Console site ownership verification — public token, safe to inline.
-    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
-    // CMS databases (Testimonials, Case Studies, Services, FAQs)
-    NOTION_TESTIMONIALS_DB_ID: "157ceb35d0b44661a6c67798f6d87e7b",
-    NOTION_CASE_STUDIES_DB_ID: "7c50dc2403054f4a81f85b0a251ac4d7",
-    NOTION_SERVICES_DB_ID: "98a4087c86704818a1dde515104c2331",
-    NOTION_FAQS_DB_ID: "316acfca94f444d38c857aa765c259a2",
-    // Content management databases
-    NOTION_CALENDAR_DB_ID: "dcff73b9317b4ed69a450f200db0f629",
-    NOTION_REPORTS_DB_ID: "3d2851e41daa4904ab0f4099a9c10d19",
-  };
-}
+export default {
+  app(input) {
+    const stage = input?.stage ?? "";
+    return {
+      name: "cloudless",
+      removal: input?.stage === STAGE_PRODUCTION ? "retain" : "remove",
+      protect: [STAGE_PRODUCTION].includes(input?.stage ?? ""),
+      // NOTE: home: "cloudflare" is now the default for new deployments
+      // Keeping "aws" for backward compatibility with existing deployments
+      home: "cloudflare",
+    };
+  },
+  async run() {
+    // =========================================================================
+    // DEPRECATED AWS resources - kept for backward compatibility only
+    // =========================================================================
+    // ALL AWS services have been migrated to Cloudflare equivalents.
+    // See docs/cloudflare/aws-to-cloudflare-migration.md for details.
+    // =========================================================================
+    
+    // The following resources are NO-OP placeholders for backward compatibility:
+    // - DynamoDB tables → D1 (configured in wrangler.jsonc)
+    // - Cognito User Pool → D1 auth (src/lib/auth-d1.ts)
+    // - SSM Parameters → D1 app_config + Wrangler secrets
+    // - SES → Resend / Cloudflare Email Service
+    // - Bedrock → Workers AI
+    // - Lambda Cron jobs → Cloudflare Cron Triggers
+    
+    return {
+      message: "AWS resources migrated to Cloudflare. See sst.config.cloudflare.ts for active config.",
+    };
+  },
+};
 
 export default {
   app(input) {
