@@ -18,6 +18,8 @@ name: k3s standby E2E
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  NEXT_PUBLIC_E2E: '1'
+  E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
 
 on:
   # Only fire after the HA sync orchestrator has confirmed (or just
@@ -111,7 +113,7 @@ jobs:
     - name: run k3s suite
       env:
         CI: '1'
-        K3S_BASE_URL: ${{ inputs.base_url || 'https://cloudless.gr' }}
+        K3S_BASE_URL: ${{ inputs.base_url || 'https://pi-origin.cloudless.gr' }}
       run: pnpm exec playwright test --config=playwright.k3s.config.mts
 
     - name: upload report on failure
