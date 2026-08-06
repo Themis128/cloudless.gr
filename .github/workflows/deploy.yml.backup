@@ -39,7 +39,8 @@ jobs:
       # NEXT_PUBLIC_* vars must be in the workflow env (not just the deploy step)
       # so they're visible during `next build` invoked by `sst deploy`. Next.js
       # inlines NEXT_PUBLIC_* into the client bundle at build time — not runtime.
-      NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
+      NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{
+        secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
       NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -78,7 +79,7 @@ jobs:
         grep "CACHE_VERSION" public/sw.js
 
     - name: (Optional) Configure AWS credentials (OIDC)
-      if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != "" }}
+      if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
       uses:
         aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b             # v6.2.0
       with:
