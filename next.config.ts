@@ -21,6 +21,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const COVERAGE =
   process.env.COVERAGE === "1" || process.env.NEXT_PUBLIC_COVERAGE === "1";
 
+// Development optimizations - make dev server more adjustable to changes
+const DEV_OPTIMIZATIONS = process.env.NEXT_DEV_OPTIMIZATIONS !== "false";
+
 const nextConfig: NextConfig = {
     reactStrictMode: true,
   env: {
@@ -49,7 +52,8 @@ const nextConfig: NextConfig = {
   // strip the `node:` prefix from the request string (e.g. `node:fs` → `fs`),
   // then resolve.fallback stubs them as empty modules for the browser bundle.
   // Server bundles resolve node built-ins natively (no fallback needed).
-  webpack: (config, { webpack }) => {
+  webpack: (config, { webpack, isServer, dev }) => {
+    // Handle node: protocol imports for browser compatibility
     config.plugins = [
       ...(config.plugins || []),
       new webpack.NormalModuleReplacementPlugin(
@@ -59,6 +63,7 @@ const nextConfig: NextConfig = {
         },
       ),
     ];
+
     config.resolve = config.resolve || {};
     config.resolve.fallback = {
       ...(config.resolve.fallback || {}),
@@ -67,12 +72,36 @@ const nextConfig: NextConfig = {
       sqlite: false,
       crypto: false,
     };
-    // External source maps for the coverage server — both server
-    // (NODE_V8_COVERAGE) and client (CDP) V8 coverage resolve to the
-    // original TS when remapped. Ignored outside coverage runs.
-    if (COVERAGE) {
+
+    // Improve module resolution for monorepo/yarn workspaces
+    config.resolve.modules = [
+      ...(config.resolve.modules || []),
+      resolve(__dirname, "node_modules"),
+      resolve(__dirname, "src"),
+    ];
+
+    // External source maps for coverage - both server and client V8 coverage
+    if (COVERAGE && dev) {
       config.devtool = "source-map";
+      // Enable inline module eval for better performance in dev when not in coverage mode
+    } else if (dev && !COVERAGE) {
+      // Faster devtool for regular development
+      config.devtool = dev ? "eval-cheap-module-source-map" : false;
     }
+
+    // Cache configuration for faster rebuilds
+    if (dev) {
+      config.cache = {
+        type: "filesystem",
+        buildDependencies: {
+          config: [__filename],
+        },
+        store: "pack",
+        idleTimeout: 1000, // ms
+        idleTimeoutAfterLargeChanges: 1000 * 60 * 5, // 5 minutes
+      };
+    }
+
     return config;
   },
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
@@ -105,7 +134,14 @@ const nextConfig: NextConfig = {
   // Allow WSL2 LAN-side IP to access the dev server (cross-origin HMR).
   // Without this, accessing the dev server via http://172.x.x.x:4000 blocks
   // the webpack-hmr endpoint with "Blocked cross-origin request".
-  allowedDevOrigins: ["localhost", "127.0.0.1", "172.29.17.211", "10.255.255.254", "*.local"],
+  // Make this configurable via environment variable for different network setups
+  allowedDevOrigins: [
+    "localhost", 
+    "127.0.0.1", 
+    process.env.NEXT_ALLOWED_DEV_ORIGIN_1 || "172.29.17.211",
+    process.env.NEXT_ALLOWED_DEV_ORIGIN_2 || "10.255.255.254", 
+    "*.local"
+  ].filter(Boolean),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "files.stripe.com" },
@@ -145,7 +181,21 @@ const nextConfig: NextConfig = {
   // Turbopack configuration (Next 16)
   turbopack: {
     root: resolve(import.meta.dirname),
-    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
+    resolveAlias: { 
+      "next-intl/config": "./src/i18n/request.ts",
+      // Add more aliases for common paths to improve resolve speed
+      "@/": "./src/",
+      "@/components": "./src/components",
+      "@/lib": "./src/lib",
+      "@/context": "./src/context",
+    },
+    // Enable experimental features for better dev experience
+    ...(DEV_OPTIMIZATIONS ? {
+      // Enable server components for faster rendering
+      serverComponents: true,
+      // Enable CSS optimization
+      css: true,
+    } : {}),
   },
 };
 
