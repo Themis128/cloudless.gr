@@ -87,7 +87,7 @@ jobs:
       if: steps.skip.outputs.already != 'true'
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '24'
 
     - name: Install dependencies
       if: steps.skip.outputs.already != 'true'

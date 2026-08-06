@@ -374,10 +374,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const forwardedProto = request.headers.get("x-forwarded-proto");
+  const isLocalhost = host === "localhost" || host.startsWith("127.") || host === "::1";
   if (
     process.env.NODE_ENV === "production" &&
     forwardedProto === "http" &&
-    !pathname.startsWith("/api/")
+    !pathname.startsWith("/api/") &&
+    !isLocalhost
   ) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
