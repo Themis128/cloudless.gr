@@ -17,10 +17,4 @@ export default defineCloudflareConfig({
     tagCache: d1TagCache,
     queue: MemoryQueue,
   },
-  functions: {
-    middleware: {
-      placement: "edge",
-      routes: ["middleware"],
-    },
-  },
 } as any);
