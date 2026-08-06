@@ -83,7 +83,7 @@ jobs:
         sleep 10
 
         # Check if we can now reach Pi on tailnet
-        if ping -c 1 100.113.41.119 2>/dev/null; then
+        if ping -c 1 100.74.191.58 2>/dev/null; then
           echo "✅ Pi is now reachable on Tailscale"
         else
           echo "⚠️ Pi still unreachable on Tailscale (may need power cycle)"

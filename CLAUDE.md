@@ -154,14 +154,14 @@ Set these in **Claude Code web UI → Session → Environment → Secrets**. The
 
 **Generate Tailscale key:** tailscale.com/admin/settings/keys — ephemeral, pre-authorized.
 
-The `cloudless-infra` MCP server connects to `omv-main` via SSH. Once `TAILSCALE_AUTH_KEY` and `OMV_SSH_KEY_CONTENTS` are set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all `mcp__cloudless-infra__*` tools are available. The Tailscale IP `100.113.41.119` is baked into `mcp.json`.
+The `cloudless-infra` MCP server connects to `omv-main` via SSH. Once `TAILSCALE_AUTH_KEY` and `OMV_SSH_KEY_CONTENTS` are set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all `mcp__cloudless-infra__*` tools are available. The Tailscale IP `100.74.191.58` is baked into `mcp.json`.
 
-Once set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all other `mcp__cloudless-infra__*` tools become available in every cloud session. The Tailscale IP `100.113.41.119` is already baked into `mcp.json` so no host configuration is needed.
+Once set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all other `mcp__cloudless-infra__*` tools become available in every cloud session. The Tailscale IP `100.74.191.58` is already baked into `mcp.json` so no host configuration is needed.
 
 ## Cluster Incident Response (no kubectl/ssh/aws in the session)
 
 When `OMV_SSH_KEY_CONTENTS` is NOT set (the infra MCP is unavailable), you still
-have **no** `kubectl`/`ssh`/`aws`, and the tailnet API (`100.113.41.119:6443`) is
+have **no** `kubectl`/`ssh`/`aws`, and the tailnet API (`100.74.191.58:6443`) is
 blocked by the network policy. Drive the cluster through **GitHub Actions**
 instead — see the **`cluster-incident-response`** skill for the full playbook.
 
@@ -313,7 +313,7 @@ D1 `roles` table, surfaced as `groups: ["admin"]` and checked by `api-auth.ts`
 
 - **Job 1 `build-and-push`** (`[self-hosted, omv, pi, build]`): builds `linux/arm64` Docker image **natively on a Pi runner** (no real QEMU work — the host is already arm64; the `setup-qemu-action` step is left in for portability but is a no-op here). Pushes SHA-only tag to ECR (`278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`). ECR repo has **immutable tags** — never push `:latest` from CI.
   - **Immutable-tag race (FIXED, PR #799, 2026-06-11):** `deploy-pi.yml` and `build-pi-image.yml` both build+push the _same_ SHA tag on every push to `main`. They race; whichever pushes second hits `tag invalid: ... already exists ... immutable`. The `Push to ECR` step now treats that specific error as success (the image IS in ECR) and sets `image_exists=true` so the rollout still runs — mirroring the pattern `build-pi-image.yml` already used. Any _other_ push error still fails. So a "tag already exists" line in this job's log is expected, not a failure.
-- **Job 2 `rollout`** (`${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}` — GH-hosted by default, joins tailnet via `KUBECONFIG_B64`; failover to `[self-hosted, omv, build]` via `toggle-runner.sh pi`): runs `kubectl set image` + `kubectl rollout status` against the k3s API over Tailscale (`100.113.41.119:6443`). Gated by `if: ... build-and-push.result == 'success' || build-and-push.outputs.image_exists == 'true'`.
+- **Job 2 `rollout`** (`${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}` — GH-hosted by default, joins tailnet via `KUBECONFIG_B64`; failover to `[self-hosted, omv, build]` via `toggle-runner.sh pi`): runs `kubectl set image` + `kubectl rollout status` against the k3s API over Tailscale (`100.74.191.58:6443`). Gated by `if: ... build-and-push.result == 'success' || build-and-push.outputs.image_exists == 'true'`.
 - **Runner labels:** Both jobs require `[self-hosted, omv, pi]` (PR #167, merged 2026-05-17). The `pi` label gates them to the 3 Pi runners (`omv`, `omv-2`, `omv-3`) so an added non-Pi `omv` runner (e.g. `legion` in WSL2) can't accidentally take a cluster-bound job it can't perform. Cross-compile via QEMU on `ubuntu-latest` was tried and abandoned — `pnpm install` alone exceeded 60 min under emulation.
 - **Auth:** OIDC via `AWS_DEPLOY_ROLE_ARN` secret — no static AWS keys.
 - **`NEXT_PUBLIC_*` vars** are baked into the Next.js client bundle at Docker build time as `--build-arg`. They are NOT available as runtime env vars — changes require a full image rebuild.

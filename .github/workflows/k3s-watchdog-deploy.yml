@@ -10,7 +10,7 @@ name: k3s-watchdog-deploy — install Restart=always systemd override on Pi
 #   - Push to main touching this file or the install script
 #   - Manually via workflow_dispatch
 #
-# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.113.41.119.
+# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.74.191.58.
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: 100.113.41.119
+      PI_HOST: 100.74.191.58
       PI_USER: tbaltzakis
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
@@ -42,7 +42,7 @@ jobs:
           echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
           echo "  GitHub → Settings → Secrets → Actions → New repository secret"
           echo "  Name: OMV_SSH_KEY"
-          echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
+          echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.74.191.58)"
           exit 1
         fi
         echo "OMV_SSH_KEY is set — proceeding"

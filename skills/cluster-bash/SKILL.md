@@ -15,7 +15,7 @@ The cloudless.gr cluster is two Pis:
 
 | Node       | Hardware            | Role                                    | LAN IP        | Tailnet IP        |
 |------------|---------------------|-----------------------------------------|---------------|-------------------|
-| `omv-main` | Pi 5, SATA SSD      | k3s control plane, primary runner host  | 192.168.1.128 | 100.113.41.119    |
+| `omv-main` | Pi 5, SATA SSD      | k3s control plane, primary runner host  | 192.168.1.128 | 100.74.191.58    |
 | `omv-ha`   | Pi 4                | k3s agent, keepalived VIP 192.168.1.200 | 192.168.1.130 | 100.111.222.92    |
 
 Both run a GitHub Actions self-hosted runner stack
@@ -120,7 +120,7 @@ Session-start hook reads three secrets from the Claude session config:
 
 | Secret                  | Used for                                                                |
 |-------------------------|-------------------------------------------------------------------------|
-| `TAILSCALE_AUTH_KEY`    | Joins the sandbox to the tailnet so it can reach `100.113.41.119`       |
+| `TAILSCALE_AUTH_KEY`    | Joins the sandbox to the tailnet so it can reach `100.74.191.58`       |
 | `OMV_SSH_KEY_CONTENTS`  | base64'd `~/.ssh/id_ed25519` for `tbaltzakis@omv-main` and `@omv-ha`    |
 | `GITHUB_PAT`            | Unrelated to SSH but the same hook sets it; needed by `gh_*` tools     |
 

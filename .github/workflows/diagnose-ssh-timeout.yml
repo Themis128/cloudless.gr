@@ -85,8 +85,8 @@ jobs:
         echo "--- Pinging $PI_TAILSCALE_IP (Tailscale IP) ---" | tee -a ssh-timeout-diagnostics.log
         tailscale ping --c=3 "$PI_TAILSCALE_IP" 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "ping failed"
         echo "" | tee -a ssh-timeout-diagnostics.log
-        echo "--- Pinging 100.113.41.119 (alternate Tailscale IP) ---" | tee -a ssh-timeout-diagnostics.log
-        tailscale ping --c=3 100.113.41.119 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "ping failed"
+        echo "--- Pinging 100.74.191.58 (alternate Tailscale IP) ---" | tee -a ssh-timeout-diagnostics.log
+        tailscale ping --c=3 100.74.191.58 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "ping failed"
         echo '```' | tee -a ssh-timeout-diagnostics.log
         echo "" | tee -a ssh-timeout-diagnostics.log
 

@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: 100.113.41.119
+      PI_HOST: 100.74.191.58
       PI_USER: tbaltzakis
     steps:
     - name: Connect to tailnet

@@ -1,0 +1,78 @@
+============================================================
+PLAYWRIGHT TEST FAILURE ANALYTICS REPORT
+============================================================
+Generated: 2026-08-06T20:30:57.628865
+
+SUMMARY
+--------------------
+Total failures analyzed: 40
+Unique test files with failures: 15
+Unique failure types: 6
+
+TOP FAILURE PATTERNS BY TEST FILE
+----------------------------------------
+e2e/github-agentic-workflows.spec.ts: 8 failures
+e2e/campaigns-shop-online.spec.ts: 6 failures
+e2e/components.spec.ts: 4 failures
+e2e/fullstack-frontend-backend.spec.ts: 3 failures
+e2e/cloudflare-infrastructure.spec.ts: 2 failures
+e2e/coverage.spec.ts: 2 failures
+e2e/chat.spec.ts: 2 failures
+e2e/auth.spec.ts: 2 failures
+e2e/integrations-contracts.spec.ts: 2 failures
+e2e/auth-security.spec.ts: 2 failures
+
+TOP FAILURE TYPES
+--------------------
+OTHER_ERROR: 12 failures
+TIMEOUT_ERROR: 8 failures
+CONTENT_MISSING_ERROR: 8 failures
+MISSING_FILE_ERROR: 4 failures
+FILE_NOT_FOUND: 4 failures
+AUTHENTICATION_ERROR: 4 failures
+
+ACTIONABLE INSIGHTS
+--------------------
+• [PRIORITY_FILES] Top 3 test files with most failures: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)
+  Recommendation: Focus on stabilizing these test files first as they contribute most to test instability.
+
+• [PRIORITY_FAILURE_TYPES] Top 3 failure types: OTHER_ERROR (12), TIMEOUT_ERROR (8), CONTENT_MISSING_ERROR (8)
+  Recommendation: Address these failure types systematically as they represent systemic issues.
+
+• [SPECIFIC_FIX] Found 4 authentication-related failures (expected 400, got 401)
+  Recommendation: Check API authentication middleware - likely returning 401 instead of 400 for invalid requests. Fix the auth logic to return appropriate status codes.
+
+• [SPECIFIC_FIX] Found 8 timeout-related failures
+  Recommendation: Increase timeouts for slow operations, optimize slow tests, or investigate performance bottlenecks.
+
+• [SPECIFIC_FIX] Found 8 file-related failures
+  Recommendation: Check if referenced files (like GitHub workflows) exist in the repository. Ensure test setup creates required files or adjust test expectations.
+
+• [CLUSTERING_INSIGHT] Found 24 distinct failure clusters, largest cluster has 2 similar failures
+  Recommendation: Look for patterns in the largest clusters - these may be good candidates for parameterized tests or shared fix approaches.
+
+• [TEMPORAL_INSIGHT] Average time between failures: 0.0 hours
+  Recommendation: If failures are bursts, look for external triggers (deployments, cron jobs). If steady, look for chronic issues.
+
+
+PRIORITY ACTIONS
+------------------
+[HIGH] Check API authentication middleware - likely returning 401 instead of 400 for invalid requests. Fix the auth logic to return appropriate status codes.
+  Rationale: Found 4 authentication-related failures (expected 400, got 401)
+  Impact: HIGH
+
+[HIGH] Increase timeouts for slow operations, optimize slow tests, or investigate performance bottlenecks.
+  Rationale: Found 8 timeout-related failures
+  Impact: HIGH
+
+[HIGH] Check if referenced files (like GitHub workflows) exist in the repository. Ensure test setup creates required files or adjust test expectations.
+  Rationale: Found 8 file-related failures
+  Impact: HIGH
+
+[HIGH] Focus test stabilization efforts on: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)
+  Rationale: Top 3 test files with most failures: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)
+  Impact: HIGH
+
+[MEDIUM] Address these failure types: OTHER_ERROR (12), TIMEOUT_ERROR (8), CONTENT_MISSING_ERROR (8)
+  Rationale: Top 3 failure types: OTHER_ERROR (12), TIMEOUT_ERROR (8), CONTENT_MISSING_ERROR (8)
+  Impact: MEDIUM

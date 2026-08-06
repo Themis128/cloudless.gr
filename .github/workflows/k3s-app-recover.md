@@ -52,7 +52,7 @@ Clear stuck pods and thrashing CronJobs when k3s has recovery issues.
 1. Checkout repository
 2. Connect to Tailscale using `tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3` # v3.2.4
 3. Decode and configure kubectl
-4. Poll k3s API at 100.113.41.119:6443 until accessible (up to 10 min)
+4. Poll k3s API at 100.74.191.58:6443 until accessible (up to 10 min)
 5. Find and delete ecr-heal pods in CrashLoopBackOff state
 6. Find and force-delete cloudless pods stuck in ContainerCreating >30min
 7. Post action summary

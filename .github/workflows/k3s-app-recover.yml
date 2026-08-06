@@ -48,7 +48,7 @@ jobs:
 
     - name: Wait for k3s API (up to 10 min)
       run: |
-        echo "=== waiting for k3s API 100.113.41.119:6443 ==="
+        echo "=== waiting for k3s API 100.74.191.58:6443 ==="
         for i in $(seq 1 60); do
           if kubectl get ns cloudless --request-timeout=5s >/dev/null 2>&1; then
             echo "k3s API is accessible (attempt $i)"

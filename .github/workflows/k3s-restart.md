@@ -47,7 +47,7 @@ Restart the k3s cluster on the Pi node when the API server is unresponsive.
 
 - SSH key from `OMV_SSH_KEY` secret
 - Tailscale auth key from `TS_AUTHKEY` secret
-- PI_HOST: 100.113.41.119
+- PI_HOST: 100.74.191.58
 - PI_USER: tbaltzakis
 
 ## Workflow

@@ -1,0 +1,183 @@
+{
+  "analysis_timestamp": "2026-08-06T20:27:46.095069",
+  "summary": {
+    "total_failures_analyzed": 38,
+    "unique_test_files": 14,
+    "unique_failure_types": 6
+  },
+  "patterns": {
+    "failure_by_file": {
+      "e2e/github-agentic-workflows.spec.ts": 8,
+      "e2e/campaigns-shop-online.spec.ts": 6,
+      "e2e/components.spec.ts": 4,
+      "e2e/fullstack-frontend-backend.spec.ts": 3,
+      "e2e/cloudflare-infrastructure.spec.ts": 2,
+      "e2e/chat.spec.ts": 2,
+      "e2e/auth.spec.ts": 2,
+      "e2e/integrations-contracts.spec.ts": 2,
+      "e2e/auth-security.spec.ts": 2,
+      "e2e/form-submission-flows.spec.ts": 2,
+      "e2e/notion-cms.spec.ts": 2,
+      "e2e/contact-integrations.spec.ts": 1,
+      "e2e/journey-theme-locale.spec.ts": 1,
+      "e2e/migrated/validation-branches.spec.ts": 1
+    },
+    "failure_by_type": {
+      "OTHER_ERROR": 12,
+      "CONTENT_MISSING_ERROR": 8,
+      "TIMEOUT_ERROR": 6,
+      "MISSING_FILE_ERROR": 4,
+      "FILE_NOT_FOUND": 4,
+      "AUTHENTICATION_ERROR": 4
+    },
+    "failure_clusters": {
+      "bc169f53": 2,
+      "d59f1aec": 2,
+      "987e6266": 2,
+      "9bfa4e02": 2,
+      "f93609e7": 2,
+      "9574b2ea": 2,
+      "f53b485e": 2,
+      "6e71efc5": 2,
+      "2e7aa92f": 2,
+      "b22894f0": 2,
+      "b935a41e": 2,
+      "7fa2bdf4": 2,
+      "411e3a4c": 2,
+      "1c9546c6": 2,
+      "6057b628": 2,
+      "d354bb34": 2,
+      "657d7074": 1,
+      "d779e772": 1,
+      "6a587263": 1,
+      "615fcfee": 1,
+      "f9285a11": 1,
+      "51083c4e": 1
+    },
+    "temporal_analysis": {
+      "average_time_between_failures_seconds": 14.271466918918918,
+      "median_time_between_failures_seconds": 5.239998,
+      "failure_rate_per_second": 0.07196366238046296,
+      "has_timestamps": true,
+      "time_range_hours": 0.14667896555555554
+    },
+    "failure_matrix": {
+      "e2e/fullstack-frontend-backend.spec.ts": {
+        "OTHER_ERROR": 1,
+        "CONTENT_MISSING_ERROR": 2
+      },
+      "e2e/github-agentic-workflows.spec.ts": {
+        "MISSING_FILE_ERROR": 4,
+        "FILE_NOT_FOUND": 4
+      },
+      "e2e/cloudflare-infrastructure.spec.ts": {
+        "OTHER_ERROR": 2
+      },
+      "e2e/contact-integrations.spec.ts": {
+        "TIMEOUT_ERROR": 1
+      },
+      "e2e/chat.spec.ts": {
+        "CONTENT_MISSING_ERROR": 2
+      },
+      "e2e/journey-theme-locale.spec.ts": {
+        "OTHER_ERROR": 1
+      },
+      "e2e/campaigns-shop-online.spec.ts": {
+        "CONTENT_MISSING_ERROR": 2,
+        "AUTHENTICATION_ERROR": 4
+      },
+      "e2e/components.spec.ts": {
+        "OTHER_ERROR": 4
+      },
+      "e2e/auth.spec.ts": {
+        "TIMEOUT_ERROR": 2
+      },
+      "e2e/integrations-contracts.spec.ts": {
+        "CONTENT_MISSING_ERROR": 2
+      },
+      "e2e/auth-security.spec.ts": {
+        "OTHER_ERROR": 2
+      },
+      "e2e/form-submission-flows.spec.ts": {
+        "TIMEOUT_ERROR": 2
+      },
+      "e2e/notion-cms.spec.ts": {
+        "TIMEOUT_ERROR": 1,
+        "OTHER_ERROR": 1
+      },
+      "e2e/migrated/validation-branches.spec.ts": {
+        "OTHER_ERROR": 1
+      }
+    },
+    "total_failures": 38
+  },
+  "insights": [
+    {
+      "type": "PRIORITY_FILES",
+      "message": "Top 3 test files with most failures: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)",
+      "recommendation": "Focus on stabilizing these test files first as they contribute most to test instability."
+    },
+    {
+      "type": "PRIORITY_FAILURE_TYPES",
+      "message": "Top 3 failure types: OTHER_ERROR (12), CONTENT_MISSING_ERROR (8), TIMEOUT_ERROR (6)",
+      "recommendation": "Address these failure types systematically as they represent systemic issues."
+    },
+    {
+      "type": "SPECIFIC_FIX",
+      "message": "Found 4 authentication-related failures (expected 400, got 401)",
+      "recommendation": "Check API authentication middleware - likely returning 401 instead of 400 for invalid requests. Fix the auth logic to return appropriate status codes."
+    },
+    {
+      "type": "SPECIFIC_FIX",
+      "message": "Found 6 timeout-related failures",
+      "recommendation": "Increase timeouts for slow operations, optimize slow tests, or investigate performance bottlenecks."
+    },
+    {
+      "type": "SPECIFIC_FIX",
+      "message": "Found 8 file-related failures",
+      "recommendation": "Check if referenced files (like GitHub workflows) exist in the repository. Ensure test setup creates required files or adjust test expectations."
+    },
+    {
+      "type": "CLUSTERING_INSIGHT",
+      "message": "Found 22 distinct failure clusters, largest cluster has 2 similar failures",
+      "recommendation": "Look for patterns in the largest clusters - these may be good candidates for parameterized tests or shared fix approaches."
+    },
+    {
+      "type": "TEMPORAL_INSIGHT",
+      "message": "Average time between failures: 0.0 hours",
+      "recommendation": "If failures are bursts, look for external triggers (deployments, cron jobs). If steady, look for chronic issues."
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "HIGH",
+      "action": "Check API authentication middleware - likely returning 401 instead of 400 for invalid requests. Fix the auth logic to return appropriate status codes.",
+      "rationale": "Found 4 authentication-related failures (expected 400, got 401)",
+      "estimated_impact": "HIGH"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Increase timeouts for slow operations, optimize slow tests, or investigate performance bottlenecks.",
+      "rationale": "Found 6 timeout-related failures",
+      "estimated_impact": "HIGH"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Check if referenced files (like GitHub workflows) exist in the repository. Ensure test setup creates required files or adjust test expectations.",
+      "rationale": "Found 8 file-related failures",
+      "estimated_impact": "HIGH"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Focus test stabilization efforts on: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)",
+      "rationale": "Top 3 test files with most failures: e2e/github-agentic-workflows.spec.ts (8), e2e/campaigns-shop-online.spec.ts (6), e2e/components.spec.ts (4)",
+      "estimated_impact": "HIGH"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Address these failure types: OTHER_ERROR (12), CONTENT_MISSING_ERROR (8), TIMEOUT_ERROR (6)",
+      "rationale": "Top 3 failure types: OTHER_ERROR (12), CONTENT_MISSING_ERROR (8), TIMEOUT_ERROR (6)",
+      "estimated_impact": "MEDIUM"
+    }
+  ]
+}

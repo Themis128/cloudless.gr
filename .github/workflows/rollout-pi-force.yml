@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      PI_HOST: 100.113.41.119
+      PI_HOST: 100.74.191.58
       PI_USER: tbaltzakis
 
     steps:
@@ -56,9 +56,9 @@ jobs:
     - name: Verify Tailscale path to omv-main
       continue-on-error: true
       run: |
-        tailscale ping -c 3 --timeout=15s 100.113.41.119 \
+        tailscale ping -c 3 --timeout=15s 100.74.191.58 \
           || echo "Note: Tailscale using DERP relay — will try SSH anyway"
-        nc -zv -w 10 100.113.41.119 6443 \
+        nc -zv -w 10 100.74.191.58 6443 \
           && echo "Port 6443 directly reachable" \
           || echo "Port 6443 via nc failed"
 

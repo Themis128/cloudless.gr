@@ -47,7 +47,7 @@ export const TOPOLOGY: Record<NodeName, NodeInfo> = {
       process.env.OMV_SSH_HOST ??
       process.env.OMV_SSH_HOST_TAILSCALE ??
       "192.168.1.128",
-    tailscaleIp: "100.113.41.119",
+    tailscaleIp: "100.74.191.58",
     roles: ["control-plane", "k3s-server", "github-runner-omv", "github-runner-omv-build"],
     description: "Pi 5 — k3s control plane, dedicated SATA SSD for k3s data",
   },

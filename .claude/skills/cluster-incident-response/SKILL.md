@@ -8,7 +8,7 @@ argument-hint: "what's broken, e.g. 'Metabase OOM', 'ntfy crash', 'PrometheusRul
 
 Recover the omv k3s cluster when you're in a **cloud session with no direct
 cluster access** — no `kubectl`, `ssh`, `aws`, no `OMV_SSH_KEY_CONTENTS`, and the
-tailnet API (`100.113.41.119:6443`) is blocked by the network policy. You drive
+tailnet API (`100.74.191.58:6443`) is blocked by the network policy. You drive
 the cluster entirely through **GitHub Actions workflows** that run on a hosted
 runner, reach k3s over Tailscale, and **report back into GitHub issue #382**.
 
@@ -101,7 +101,7 @@ offline during cluster incidents and the job queues forever).
 
 | Error | What it means |
 |---|---|
-| `dial tcp 100.113.41.119:6443: connect: connection refused` | Pi host reachable (TCP RST), k3s process stopped |
+| `dial tcp 100.74.191.58:6443: connect: connection refused` | Pi host reachable (TCP RST), k3s process stopped |
 | `Error from server (ServiceUnavailable)` | k3s listening but overloaded / starting up — may self-recover |
 | `connection timed out` / no response | Pi host unreachable — Tailscale down, power loss |
 
@@ -111,7 +111,7 @@ offline during cluster incidents and the job queues forever).
 
 1. GitHub → Settings → Secrets → Actions → New repository secret
 2. Name: `OMV_SSH_KEY`
-3. Value: `cat ~/.ssh/id_ed25519` on the Pi (`omv@100.113.41.119`)
+3. Value: `cat ~/.ssh/id_ed25519` on the Pi (`omv@100.74.191.58`)
 
 **Trigger:** edit `.github/workflows/k3s-ssh-restart.yml` → PR → squash-merge.
 
@@ -137,7 +137,7 @@ Comments are chronological; newest snapshot/log is the last page.
 
 ## Reference
 
-- Pi control-plane: `omv` / `192.168.1.128` / Tailscale `100.113.41.119`. kubeconfig: `/etc/rancher/k3s/k3s.yaml`.
+- Pi control-plane: `omv` / `192.168.1.128` / Tailscale `100.74.191.58`. kubeconfig: `/etc/rancher/k3s/k3s.yaml`.
 - Analytics: ns `analytics` — `metabase` (400Mi→600Mi), `duckdb-api` (1500Mi).
 - Monitoring: ns `monitoring` — prometheus (700Mi), grafana (256Mi), loki (400Mi), alertmanager (128Mi).
 - App services: ntfy (96Mi→128Mi), n8n (256Mi), cloudless (standby).

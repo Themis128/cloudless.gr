@@ -7,12 +7,12 @@
  *
  * Node topology
  * ─────────────
- *   omv-main  (Pi 5)   192.168.1.128 / Tailscale 100.113.41.119
+ *   omv-main  (Pi 5)   192.168.1.128 / Tailscale 100.74.191.58
  *     • k3s control-plane (kubectl / helm / aws / gh / cloudflared / docker)
  *     • Runners: omv, omv-build
  *     • All cluster management commands run here
  *
- *   omv-ha    (Pi 4)   192.168.1.130 / Tailscale 100.111.222.92
+ *   omv-ha    (Pi 4)   192.168.1.130 / Tailscale 100.95.117.84
  *     • k3s agent node
  *     • keepalived VRRP VIP 192.168.1.200
  *     • Runner: omv-2-build

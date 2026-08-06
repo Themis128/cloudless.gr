@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 5
     env:
       HC_URL: ${{ secrets.HEALTHCHECKS_CLUSTER_URL }}
-      PI_HOST: 100.113.41.119
+      PI_HOST: 100.74.191.58
     steps:
     - name: Skip if secret not configured
       if: ${{ env.HC_URL == '' }}

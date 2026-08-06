@@ -36,18 +36,18 @@ jobs:
         chmod 600 ~/.ssh/omv_key
         # Wait until the Pi is reachable over the tailnet before attempting SSH
         for i in $(seq 1 18); do
-          if nc -zv -w3 100.113.41.119 22 2>/dev/null; then
+          if nc -zv -w3 100.74.191.58 22 2>/dev/null; then
             echo "tailnet ready after ${i}×2s"
             break
           fi
           echo "waiting for tailnet... ($i/18)"
           sleep 2
         done
-        ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
+        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
 
     - name: Fix log file + crontab on omv
       run: |
-        ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.113.41.119 bash -s << 'ENDSSH'
+        ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.74.191.58 bash -s << 'ENDSSH'
         set -euo pipefail
 
         LOG=/var/log/health-check-cloudless.log

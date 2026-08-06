@@ -39,12 +39,12 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
+        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
 
     - name: List and restart inactive runner services
       run: |
         set -euo pipefail
-        SSH="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.113.41.119"
+        SSH="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.74.191.58"
 
         echo "=== Runner service status (before) ==="
         $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true
@@ -75,5 +75,5 @@ jobs:
           echo ""
           echo "**Job:** ${{ job.status }}"
           echo ""
-          echo "SSH to omv (100.113.41.119) via Tailscale to list/restart inactive \`actions.runner.*\` services."
+          echo "SSH to omv (100.74.191.58) via Tailscale to list/restart inactive \`actions.runner.*\` services."
         } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

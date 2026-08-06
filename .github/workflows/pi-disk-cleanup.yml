@@ -44,10 +44,10 @@ jobs:
 
         scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
           scripts/pi-disk-cleanup.sh \
-          omv@100.113.41.119:/tmp/pi-disk-cleanup.sh
+          omv@100.74.191.58:/tmp/pi-disk-cleanup.sh
 
         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-          omv@100.113.41.119 \
+          omv@100.74.191.58 \
           "sudo bash /tmp/pi-disk-cleanup.sh" 2>&1 | tee cleanup-output.md
 
         rm -f "$SSH_KEY"

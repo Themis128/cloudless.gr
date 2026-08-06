@@ -40,7 +40,7 @@ aws iam delete-access-key --user-name omv-main-cli \
 
 ```bash
 # Path: maintenance/aws-creds is the one s3-to-duckdb-sync mounts
-ssh tbaltzakis@100.113.41.119 "
+ssh tbaltzakis@100.74.191.58 "
   kubectl -n maintenance create secret generic aws-creds \
     --from-literal=AWS_ACCESS_KEY_ID='$NEW_ID' \
     --from-literal=AWS_SECRET_ACCESS_KEY='$NEW_SECRET' \
@@ -57,7 +57,7 @@ their owner-user (verify before patching):
 Confirm with:
 
 ```bash
-ssh tbaltzakis@100.113.41.119 \
+ssh tbaltzakis@100.74.191.58 \
   "kubectl -n monitoring get secret aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d"
 ```
 
@@ -66,7 +66,7 @@ If it returns the OLD `AKIAUBXIAELU5SADA3XL`, repeat 1c for that namespace too.
 ### 1d. Un-suspend `s3-to-duckdb-sync`
 
 ```bash
-ssh tbaltzakis@100.113.41.119 "
+ssh tbaltzakis@100.74.191.58 "
   kubectl -n analytics patch cronjob s3-to-duckdb-sync \
     -p '{\"spec\":{\"suspend\":false}}'
 "
@@ -112,7 +112,7 @@ BACKUP_SECRET=$(echo "$BACKUP_KEY" | jq -r '.AccessKey.SecretAccessKey')
 ### Update k3s config and restart
 
 ```bash
-ssh tbaltzakis@100.113.41.119 "
+ssh tbaltzakis@100.74.191.58 "
   sudo sed -i.bak \
     -e 's|^etcd-s3-access-key:.*|etcd-s3-access-key: $BACKUP_ID|' \
     -e 's|^etcd-s3-secret-key:.*|etcd-s3-secret-key: $BACKUP_SECRET|' \
@@ -129,7 +129,7 @@ ssh tbaltzakis@100.113.41.119 "
 ### Trigger a fresh snapshot and verify
 
 ```bash
-ssh tbaltzakis@100.113.41.119 "
+ssh tbaltzakis@100.74.191.58 "
   sudo k3s etcd-snapshot save \
     --etcd-s3 --etcd-s3-bucket cloudless-etcd-snapshots
   sleep 5
@@ -146,7 +146,7 @@ The newest file in `aws s3 ls` should be from <2 min ago.
 The `AKIAUBXIAELUVFKKEHQJ` key on `cloudless-ops` was being used for **SES SMTP** (the omv-main alerts). When you rotate, also make sure `/etc/msmtprc` on omv-main is updated with the new key, otherwise alert emails (including the daily heartbeat) will start failing silently.
 
 ```bash
-ssh tbaltzakis@100.113.41.119 "sudo cat /etc/msmtprc | grep -E 'user|password'"
+ssh tbaltzakis@100.74.191.58 "sudo cat /etc/msmtprc | grep -E 'user|password'"
 ```
 
 If `user=AKIAUBXIAELUVFKKEHQJ`, that's the key you're rotating. Generate a
@@ -161,7 +161,7 @@ SMTP password from the new key:
 Then update `/etc/msmtprc` with the new SMTP username/password and test:
 
 ```bash
-ssh tbaltzakis@100.113.41.119 \
+ssh tbaltzakis@100.74.191.58 \
   "sudo /usr/local/bin/omv-main-alert 'test after rotation' 'body'"
 ```
 
@@ -180,7 +180,7 @@ After all three steps:
 If anything goes wrong in step 2:
 
 ```bash
-ssh tbaltzakis@100.113.41.119 "
+ssh tbaltzakis@100.74.191.58 "
   sudo cp /etc/rancher/k3s/config.yaml.bak /etc/rancher/k3s/config.yaml
   sudo systemctl restart k3s
 "
