@@ -1,0 +1,22 @@
+// proxy.ts — standalone middleware implementation for tests and documentation
+// Re-exports from middleware.ts to provide the full implementation
+export {
+  proxy,
+  config,
+  generateNonce,
+  addSecurityHeaders,
+  handleApiRoute,
+  handlePageRoute,
+  readAuthToken,
+  isRateLimited,
+  cleanupStaleEntries,
+  buildCSP,
+  getLocaleFromPath,
+  stripLocale,
+  isHomepagePath,
+  readD1SessionCookie,
+  readNextAuthJwt,
+} from "./middleware";
+
+// Export constants needed by tests
+export { RATE_LIMITS, ADMIN_RATE_LIMIT, LOCALES, DEFAULT_LOCALE } from "./middleware";

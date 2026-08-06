@@ -1,21 +1,37 @@
 # Migration Progress Report
 
-## ✅ Completed High-Priority Tasks
+## ✅ Completed Tailscale Migration Fixes
 
-- [x] MCP configuration fixes implemented
-- [x] DevDocs storage path verified
-- [x] Fast-markdown-mcp server stabilized
-- [x] Tailscale configuration completed
-- [x] Cluster resource optimization finished
-- [x] Postiz deployment verified
-- [x] AppFlowy stack completed
-- [x] n8n workflow automation configured
-- [x] Security hardening implemented
-- [x] TLS/SSL certificates verified
-- [x] Cloudflare tunnel operational
-- [x] All 11 services running (grafana, kuma, n8n, ntfy, espocrm, meili, postiz, appflowy, docs, omv)
-- [x] SST hybrid architecture configured
-- [x] Cron jobs ready (analytics rollup, calendar digest, report cleanup, voice brief)
+- [x] Fixed device name inconsistency in `scripts/tailscale-admin-api.sh` - KEEP_RE regex now matches `office`, `office-1`, `office-2`, `office-3`
+- [x] Added offline device detection logic (24-hour threshold) in cleanup script
+- [x] Updated device names in documentation to match actual cluster state
+- [x] Added version compatibility section for CLI/server mismatch
+- [x] Updated TAILSCALE-FABR.md with current device inventory
+- [x] Updated kubectl-tailscale.md with offline device handling notes
+- [x] Rewrote OFFLINE-DEVICE-TROUBLESHOOTING.md with current state
+
+### Code Fixes
+- [x] `scripts/tailscale-admin-api.sh` - KEEP_RE regex: `^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$`
+- [x] Added offline device detection via `offline` flag and `lastSeen` timestamp check
+- [x] Reports offline devices separately before any deletion
+
+### Documentation Updates
+- [x] `infrastructure/DEPLOYMENT_PLAYBOOK.md` - Auth reference fixed (D1, not Cognito)
+- [x] `infrastructure/cloudflare-access/README.md` - Cloudflare secrets
+- [x] `infrastructure/search/README.md` - Removed SSM references
+- [x] `infrastructure/smtp/README.md` - Cloudflare Email migration documented
+- [x] `infrastructure/n8n/workflows/README.md` - Cloudflare secrets
+- [x] `Post-POWERCYCLE-STATUS.md` - Current device inventory
+
+### Integration Status Updates
+- [x] `src/app/api/admin/integrations/status/route.ts` - SES → Cloudflare Email
+- [x] `src/app/api/admin/ops/route.ts` - Updated health check
+
+### Cluster Status: ✅ HEALTHY
+- Operator: Running (1/1 pods)
+- Connector: Advertising `10.42.0.0/16`, `10.43.0.0/16`
+- ProxyGroups: ingress, kube-apiserver ready
+- **Note**: `office-2` device is OFFLINE and needs reconnection
 
 ## ⏳ Pending High-Priority Actions
 
@@ -51,23 +67,30 @@
 
 ## 📊 Analytics Stack Verification
 
-- [ ] Verify analytics-client.ts connects to `/api/analytics/r2`
-- [ ] Generate parquet files from R2 analytics data
+- [x] Verified analytics-client.ts connects to `/api/admin/analytics/lake-parquet`
+- [x] R2 analytics bucket configured in `wrangler.jsonc` (binding: ANALYTICS_BUCKET)
+- [x] Datalake bucket configured (binding: DATALAKE_BUCKET)
+- [ ] Generate parquet files from R2 analytics data (cron job)
 - [ ] Create DuckDB views for funnel metrics (`v_funnel_metrics`)
 - [ ] Set up daily rollup cron for analytics data
 - [ ] Configure Metabase connection to DuckDB
 - [ ] Create dashboards: Lead Sources, Deal Velocity, CLV Cohorts
 - [ ] Set up Metabase queries for R2 parquet analysis
-- [ ] Verify analytics-engine-datasets binding in `wrangler.jsonc`
 - [ ] Set up analytics ingestion for Workers AI calls
 
 ## 🛡️ Security Audit Tasks
 
-- [ ] Run `pnpm mcp-security-scan` on API routes (completed - no findings)
-- [ ] Remove unused API keys from `.env` (AWS credentials deferred)
-- [ ] Clean up deprecated SSM parameters
-- [ ] Verify POSTMAN API testing collection works with updated endpoints
-- [ ] Verify all secret management workflows are documented
+- [x] Run security scan on API routes - no findings
+- [x] Remove unused API keys from `.env` - AWS credentials removed, using Cloudflare secrets
+- [x] Attrated SSM parameters - Migration to Cloudflare Secrets complete (docs updated)
+- [x] Verify POSTMAN API testing collection works with updated endpoints
+- [x] Verify all secret management workflows are documented
+
+### Security Notes:
+- Email now uses Cloudflare Email binding (previously SES)
+- Auth uses D1 database (previously Cognito)
+- SSM has been replaced with D1 app_config + Wrangler secrets
+- CORS and security headers verified working
 
 ## 📝 Documentation Updates
 
