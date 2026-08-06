@@ -8,6 +8,7 @@ import {
   getAuthDbFromEnv,
   validatePasswordStrength,
   validateSessionSecret,
+  AuthDatabase,
 } from "@/lib/auth-d1";
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendActivationEmail, notifyTeam } from "@/lib/email";

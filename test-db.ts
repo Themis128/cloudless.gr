@@ -14,7 +14,7 @@ async function test() {
     const result = await db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user'")
       .all();
-    console.log("User table exists:", results.length > 0);
+    console.log("User table exists:", result.results.length > 0);
   } catch (e) {
     console.error("Error checking user table:", e);
   }
@@ -24,7 +24,7 @@ async function test() {
     const result = await db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_role'")
       .all();
-    console.log("User role table exists:", results.length > 0);
+    console.log("User role table exists:", result.results.length > 0);
   } catch (e) {
     console.error("Error checking user_role table:", e);
   }

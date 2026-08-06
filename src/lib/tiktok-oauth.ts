@@ -1,5 +1,3 @@
-import { encodeURIComponent } from 'node:querystring';
-
 /**
  * Builds a TikTok Business Portal OAuth URL
  * @param appId - Your TikTok Business Portal app ID
