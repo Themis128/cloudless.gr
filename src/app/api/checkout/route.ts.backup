@@ -70,6 +70,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
   const slug = request.nextUrl.searchParams.get("campaign");
   const tier = request.nextUrl.searchParams.get("tier");
   if (!slug || !tier) {
@@ -107,13 +112,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(contactUrl, 302);
   }
 
-  // Stripe unwired branch: stub redirect to thanks page
-  const thanksUrl = new URL(`/${locale}/campaigns/${campaign.slug}/thanks`, origin);
-  thanksUrl.searchParams.set("tier", tier);
-  thanksUrl.searchParams.set("order", "cs_test_" + Math.random().toString(36).substr(2, 9));
+  const tierData = campaign.tiers.find((t) => t.id === tier)!;
+
+  // Redirect to contact page with context instead of Stripe Checkout
+  const contactUrl = new URL(`/${locale}/contact`, origin);
+  contactUrl.searchParams.set("topic", "purchase");
+  contactUrl.searchParams.set("campaign", campaign.slug);
+  contactUrl.searchParams.set("tier", tierData.name.en);
+  if (tierData.oneOff) contactUrl.searchParams.set("price", tierData.oneOff);
   for (const [k, v] of Object.entries(utm)) {
-    if (v) thanksUrl.searchParams.set(k, v);
+    if (v) contactUrl.searchParams.set(k, v);
   }
 
-  return NextResponse.redirect(thanksUrl, 302);
+  return NextResponse.redirect(contactUrl, 302);
 }

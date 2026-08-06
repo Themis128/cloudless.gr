@@ -144,7 +144,7 @@ function LoginContent() {
             </div>
             <p className="text-right">
               <Link
-                href="/auth/reset-password"
+                href="/auth/forgot-password"
                 className="hover:text-neon-cyan font-mono text-xs text-slate-500"
               >
                 {t("auth.forgotPassword", "Forgot Password?")}
