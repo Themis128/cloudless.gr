@@ -96,7 +96,7 @@
 - [ ] Add Cloudflare Cache Rules for `/api/analytics/*`
 - [ ] Pre‑warm Workers cache after deployments
 - [ ] Run `ANALYZE=true next build` and audit bundle sizes
-- [ ] Remove unused AWS SDK imports
+- [x] **Remove unused AWS SDK imports** — All `@aws-sdk/*` packages removed from package.json and source code
 - [ ] Consider dropping `langchain`, `aws-sdk` if not used
 - [ ] Reduce cloudless‑app replicas from 5 → 3 (if traffic permits)
 - [ ] Lower PostgreSQL request from 1 Gi → 512 Mi (if usage low)

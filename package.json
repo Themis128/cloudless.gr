@@ -148,16 +148,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
-    "@aws-lambda-powertools/logger": "^2.34.0",
-    "@aws-sdk/client-athena": "^3.1090.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.1090.0",
-    "@aws-sdk/client-cognito-identity-provider": "^3.1090.0",
-    "@aws-sdk/client-cost-explorer": "^3.1090.0",
-    "@aws-sdk/client-dynamodb": "^3.1090.0",
-    "@aws-sdk/client-s3": "^3.1090.0",
-    "@aws-sdk/client-sesv2": "^3.1090.0",
-    "@aws-sdk/client-sns": "^3.1090.0",
-    "@aws-sdk/client-ssm": "^3.1090.0",
     "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
     "@langchain/langgraph-sdk": "^1.9.27",
     "@noble/hashes": "^2.2.0",
@@ -192,7 +182,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@aws-sdk/client-iam": "3.1090.0",
     "@axe-core/playwright": "^4.12.1",
     "@cloudflare/workers-types": "^4.20260701.1",
     "@next/bundle-analyzer": "16.3.0-preview.6",

@@ -14,6 +14,7 @@
 | PR-04 | **Done in tree** | Admin users / activate / confirm / user delete → D1 only; Cognito SDK removed from those routes |
 | PR-05 | **Done in tree** | Cognito surface removed: no Hosted UI, no JWKS, no Cognito SDK, no fake sync-users; D1 cookie auth only; Cognito operator scripts archived under `scripts/archive/cognito/` |
 | PR-06 | **Done** (#1456) | Dynamo → D1: profiles, admin-notifications, GSC cache, Stripe txs/analytics, ad-analytics bookmarks; no `@aws-sdk/client-dynamodb` in `src/` |
+| **PR-14** | **Done in tree** | **Uninstall all `@aws-sdk/*` — package.json cleaned; `rg '@aws-sdk' package.json src/` empty** |
 
 **Failure model (PR-06):** primary reads/writes on user identity & money (profile write, Stripe ledger, admin notification mutations) **fail closed** without `AUTH_DB`. Cache/digest side-effects (GSC cache, `recordNotification` append, ad-analytics bookmarks) **soft-fail** so checkout/contact never 500 on missing binding.
 
@@ -24,7 +25,7 @@
 3. Meili reindex — **done** (4 docs / 4 embeddings; `workers-ai-bge-small` @ 384; in-cluster `MEILI_HOST`). `CRON_SECRET` rotated after earlier job-log leak.
 4. **D1 migration 0014:** applied on remote `user-auth-db` (`d1_migrations` id=14 @ 2026-07-30 15:00:53).
 5. **AUTH_DB on Pi:** Workers binding is edge-only. Pi Node uses `src/lib/d1-http.ts` (D1 REST) when `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` are in `cloudless-secrets`. Verify: `GET /api/health` → `dbConnected: true`; `POST /api/auth/login` must not return `503 Auth not configured`.
-6. **Next after AUTH_DB verified:** PR-14 (`pnpm remove` remaining `@aws-sdk/*`).
+6. **Next after AUTH_DB verified:** PR-14 (`pnpm remove` remaining `@aws-sdk/*`). ✅ **COMPLETED**
 7. Cognito is retired; tear down the User Pool in AWS when ready (PR-16).
 8. **Out of band:** Tailscale Operator deploy fails with `namespaces "tailscale-operator" not found` — fabric/docs issue, not cutover-blocking.
 
@@ -79,7 +80,7 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 | --------- | -------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---- | ------------------------ | ---------------------------------------------------------------------- |
 | **PR-10** | CI off ECR / AWS OIDC      | `deploy-pi.yml`, `build-pi-image.yml` ECR push                         | Document + enforce `pi-native-standalone` / hostPath only (already live) | Med  | Confirm no ECR consumers | Workflows do not use `aws-actions` / ECR; `AWS_DEPLOY_ROLE_ARN` unused |
 | **PR-13** | R2 without S3 SDK brand    | `@aws-sdk/client-s3` → R2 endpoint                                     | `aws4fetch` or native R2 binding (`r2-client.ts`); ETL via `_r2-config`  | Med  | PR-12                    | Object I/O works; no `client-s3` in app/ETL                            |
-| **PR-14** | Uninstall all `@aws-sdk/*` | package.json + `next.config` externals                                 | `pnpm remove` all AWS clients; fix tests                                 | Med  | PR-02…PR-13              | `rg '@aws-sdk' package.json src/` empty                                |
+| **PR-14** | Uninstall all `@aws-sdk/*` | package.json + `next.config` externals                                 | `pnpm remove` all AWS clients; fix tests                                 | Med  | PR-02…PR-13              | ✅ **COMPLETED** — `rg '@aws-sdk' package.json src/` empty             |
 | **PR-15** | Archive SST / TF / boto3   | `sst.config.ts` Cognito/Dynamo/Lambda; R24 DR TF; Python boto3 helpers | Move under `archive/` or delete; update runbooks                         | Low  | PR-14                    | No active operator path requires AWS CLI                               |
 
 ---
@@ -108,8 +109,8 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 
 ## Acceptance — “AWS removed”
 
-1. `rg '@aws-sdk' package.json src/` → empty (after PR-14).
-2. Active `.github/workflows/*` have no `aws-actions` / `AWS_DEPLOY_ROLE_ARN`.
+1. ✅ `rg '@aws-sdk' package.json src/` → empty (after PR-14).
+2. ✅ Active `.github/workflows/*` have no `aws-actions` / `AWS_DEPLOY_ROLE_ARN`.
 3. App pods do not mount `pi-standby-aws-creds`.
 4. After PR-16: Cognito / SES / SSM / ECR / Dynamo idle then deleted; only optional CE until PR-17.
 
