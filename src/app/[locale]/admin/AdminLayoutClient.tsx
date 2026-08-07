@@ -188,7 +188,7 @@ function NavList({
                   <ExternalLink size={11} className="ml-auto shrink-0 opacity-40" />
                 </a>
               ) : (
-                <Link key={href} href={href} onClick={onLinkClick} className={cls}>
+                <Link key={href} href={href} onClick={onLinkClick} className={cls} prefetch={false}>
                   <Icon size={15} className="shrink-0" />
                   {label}
                 </Link>
