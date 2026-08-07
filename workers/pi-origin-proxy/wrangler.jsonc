@@ -10,6 +10,13 @@
     { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
     { "pattern": "manage.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
   ],
+  // Explicit empty crons array clears any Cron Triggers previously attached
+  // to this Worker. The proxy has no scheduled() handler; every fire from
+  // an orphan cron becomes a wasted invocation and a 5xx error. Do NOT add
+  // cron entries here — this Worker is fetch-only.
+  "triggers": {
+    "crons": []
+  },
   "vars": {
     "PI_ORIGIN_HOST": "pi-origin.cloudless.gr",
     "PI_TIMEOUT_MS": "30000"
