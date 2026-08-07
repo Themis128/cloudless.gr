@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../helpers/page-helpers";
+import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../../helpers/page-helpers";
 
 /**
  * Dashboard Page Test Suite
@@ -17,7 +17,7 @@ test.describe("Dashboard Page", () => {
     responsivePage = createResponsivePage(browserPage);
     authPage = createAuthenticatedPage(browserPage);
     
-    # Login before each test
+    // Login before each test
     await authPage.loginViaApi("test@example.com", "password123");
     
     await page.navigate("/dashboard");
@@ -26,13 +26,13 @@ test.describe("Dashboard Page", () => {
   test("should load successfully", async ({ page: browserPage }) => {
     await expect(browserPage).toHaveTitle(/dashboard|cloudless/i);
     
-    # Check for main heading
+    // Check for main heading
     const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
     await expect(heading).toBeVisible();
   });
 
   test("should show user information", async ({ page: browserPage }) => {
-    # Check for user info or avatar
+    // Check for user info or avatar
     const userInfo = browserPage.locator('.user-info, [data-testid="user-info"], .avatar, text=/hello, test/i');
     await expect(userInfo).toBeVisible({ timeout: 5000 });
   });
@@ -42,7 +42,7 @@ test.describe("Dashboard Page", () => {
     await expect(sidebar).toBeVisible({ timeout: 5000 }).catch(() => {});
     
     if (await sidebar.isVisible()) {
-      # Check for navigation links in sidebar
+      // Check for navigation links in sidebar
       const navLinks = sidebar.locator('a, .nav-link');
       await expect(navLinks.first()).toBeVisible({ timeout: 5000 }).catch(() => {});
     }
@@ -58,14 +58,14 @@ test.describe("Dashboard Page", () => {
     await expect(widgets.first()).toBeVisible({ timeout: 5000 }).catch(() => {});
     
     if (await widgets.count() > 0) {
-      # Check first widget for basic structure
+      // Check first widget for basic structure
       const firstWidget = widgets.first();
       
-      # Check for widget title
+      // Check for widget title
       const title = firstWidget.locator('.widget-title, h2, h3, [data-testid="widget-title"]');
       await expect(title).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for widget content
+      // Check for widget content
       const content = firstWidget.locator('.widget-content, .card-body, p, [data-testid="widget-content"]');
       await expect(content).toBeVisible({ timeout: 5000 }).catch(() => {});
     }
@@ -76,13 +76,13 @@ test.describe("Dashboard Page", () => {
     await expect(activitySection).toBeVisible({ timeout: 5000 }).catch(() => {});
     
     if (await activitySection.isVisible()) {
-      # Check for section title
+      // Check for section title
       const title = activitySection.locator('.section-title, h2, h3, [data-testid="section-title"]');
       await expect(title).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for activity items
+      // Check for activity items
       const items = activitySection.locator('.activity-item, .order-row, tr, [data-testid="activity-item"]');
-      # Items might be empty initially
+      // Items might be empty initially
     }
   });
 
@@ -150,13 +150,13 @@ test.describe("Dashboard Page", () => {
 
   test.describe("Authentication", () => {
     test("should redirect to login if not authenticated", async ({ page: browserPage }) => {
-      # Logout first
+      // Logout first
       await authPage.logout();
       
-      # Try to access dashboard
+      // Try to access dashboard
       await page.navigate("/dashboard");
       
-      # Should redirect to login page
+      // Should redirect to login page
       await expect(browserPage).toHaveURL(/\/auth\/login|\/login/, { timeout: 5000 });
     });
   });
@@ -166,26 +166,26 @@ test.describe("Dashboard Page", () => {
       await responsivePage.setMobileViewport();
       await responsivePage.navigate("/dashboard");
       
-      # Check that essential elements are still visible
+      // Check that essential elements are still visible
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check for user info
+      // Check for user info
       const userInfo = browserPage.locator('.user-info, [data-testid="user-info"], .avatar');
       await expect(userInfo).toBeVisible({ timeout: 5000 });
       
-      # On mobile, sidebar might be hidden behind a toggle
+      // On mobile, sidebar might be hidden behind a toggle
       const sidebarToggle = browserPage.locator('button[aria-label*="menu" i], .sidebar-toggle, .hamburger, [data-testid="sidebar-toggle"]');
       const sidebar = browserPage.locator('.sidebar, [data-testid="sidebar"], nav.sidebar');
       
-      # Either sidebar is visible or there's a toggle
+      // Either sidebar is visible or there's a toggle
       const isSidebarVisible = await sidebar.isVisible();
       const hasToggle = await sidebarToggle.isVisible();
       
       expect(isSidebarVisible || hasToggle).toBeTruthy();
       
       if (hasToggle) {
-        # Test that toggle opens the sidebar
+        // Test that toggle opens the sidebar
         await sidebarToggle.click();
         await expect(sidebar).toBeVisible({ timeout: 3000 });
       }
@@ -195,15 +195,15 @@ test.describe("Dashboard Page", () => {
       await responsivePage.setTabletViewport();
       await responsivePage.navigate("/dashboard");
       
-      # Check that layout adapts appropriately
+      // Check that layout adapts appropriately
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check for user info
+      // Check for user info
       const userInfo = browserPage.locator('.user-info, [data-testid="user-info"], .avatar');
       await expect(userInfo).toBeVisible({ timeout: 5000 });
       
-      # Check that main content is visible
+      // Check that main content is visible
       const mainContent = browserPage.locator('main, [data-testid="main-content"], .dashboard-content');
       await expect(mainContent).toBeVisible();
     });
@@ -212,23 +212,23 @@ test.describe("Dashboard Page", () => {
       await responsivePage.setDesktopViewport();
       await responsivePage.navigate("/dashboard");
       
-      # Check that full layout is visible
+      // Check that full layout is visible
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check for user info
+      // Check for user info
       const userInfo = browserPage.locator('.user-info, [data-testid="user-info"], .avatar');
       await expect(userInfo).toBeVisible({ timeout: 5000 });
       
-      # Check that sidebar is visible
+      // Check that sidebar is visible
       const sidebar = browserPage.locator('.sidebar, [data-testid="sidebar"], nav.sidebar');
       await expect(sidebar).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check that main content is visible
+      // Check that main content is visible
       const mainContent = browserPage.locator('main, [data-testid="main-content"], .dashboard-content');
       await expect(mainContent).toBeVisible();
       
-      # Check that we can see multiple widgets/content sections
+      // Check that we can see multiple widgets/content sections
       const widgets = browserPage.locator('.widget, .card, [data-testid="widget"], .overview-card');
       if (await widgets.count() > 0) {
         await expect(widgets.first()).toBeVisible();
@@ -244,38 +244,38 @@ test.describe("Dashboard Page", () => {
     });
     
     test("should have proper heading structure", async ({ page: browserPage }) => {
-      # Check for h1
+      // Check for h1
       const h1 = browserPage.locator('h1');
       await expect(h1).toBeVisible();
       
-      # Check that we don't have multiple h1s (best practice)
+      // Check that we don't have multiple h1s (best practice)
       const h1Count = await h1.count();
       expect(h1Count).toBeLessThan(3);
       
-      # Check for proper heading hierarchy
+      // Check for proper heading hierarchy
       const h2 = browserPage.locator('h2');
       const h3 = browserPage.locator('h3');
       
-      # At least some h2 or h3 should be present for dashboard sections
+      // At least some h2 or h3 should be present for dashboard sections
       const headingCount = await h2.count() + await h3.count();
       expect(headingCount).toBeGreaterThan(0);
     });
     
     test("should have accessible navigation", async ({ page: browserPage }) => {
-      # Check main navigation
+      // Check main navigation
       const mainNav = browserPage.locator('nav, [data-testid="main-nav"], .main-navigation');
       if (await mainNav.isVisible()) {
         const navLinks = mainNav.locator('a');
         const count = await navLinks.count();
         
-        # Check a sample of nav links for accessibility
+        // Check a sample of nav links for accessibility
         const sampleSize = Math.min(3, count);
         for (let i = 0; i < sampleSize; i++) {
           const link = navLinks.nth(i);
           await expect(link).toBeVisible();
           await expect(link).toBeEnabled();
           
-          # Check for accessible name (text content or aria-label)
+          // Check for accessible name (text content or aria-label)
           const textContent = await link.textContent();
           const ariaLabel = await link.getAttribute('aria-label');
           
@@ -283,27 +283,27 @@ test.describe("Dashboard Page", () => {
         }
       }
       
-      # Check sidebar navigation if present
+      // Check sidebar navigation if present
       const sidebar = browserPage.locator('.sidebar, [data-testid="sidebar"], nav.sidebar');
       if (await sidebar.isVisible()) {
-        # Check for ARIA label or role
+        // Check for ARIA label or role
         const ariaLabel = await sidebar.getAttribute('aria-label');
         const role = await sidebar.getAttribute('role');
         
         expect(ariaLabel || role === 'navigation').toBeTruthy();
         
-        # Check sidebar links
+        // Check sidebar links
         const sidebarLinks = sidebar.locator('a');
         const count = await sidebarLinks.count();
         
-        # Check a sample of sidebar links for accessibility
+        // Check a sample of sidebar links for accessibility
         const sampleSize = Math.min(3, count);
         for (let i = 0; i < sampleSize; i++) {
           const link = sidebarLinks.nth(i);
           await expect(link).toBeVisible();
           await expect(link).toBeEnabled();
           
-          # Check for accessible name (text content or aria-label)
+          // Check for accessible name (text content or aria-label)
           const textContent = await link.textContent();
           const ariaLabel = await link.getAttribute('aria-label');
           
@@ -317,39 +317,39 @@ test.describe("Dashboard Page", () => {
       const count = await widgets.count();
       
       if (count > 0) {
-        # Check a sample of widgets for accessibility
+        // Check a sample of widgets for accessibility
         const sampleSize = Math.min(3, count);
         for (let i = 0; i < sampleSize; i++) {
           const widget = widgets.nth(i);
           
           await expect(widget).toBeVisible();
           
-          # Check for accessible title/heading
+          // Check for accessible title/heading
           const title = widget.locator('.widget-title, h2, h3, [data-testid="widget-title"]');
           if (await title.isVisible()) {
-            # Check for accessible name (text content or aria-label)
+            // Check for accessible name (text content or aria-label)
             const textContent = await title.textContent();
             const ariaLabel = await title.getAttribute('aria-label');
             
             expect(textContent?.trim() || ariaLabel).toBeDefined();
           }
           
-          # Check for accessible content
+          // Check for accessible content
           const content = widget.locator('.widget-content, .card-body, p, [data-testid="widget-content"]');
           if (await content.isVisible()) {
-            # Check that content is readable
+            // Check that content is readable
             const textContent = await content.textContent();
             expect(textContent?.length).toBeGreaterThan(0);
           }
           
-          # Check for accessible actions if present
+          // Check for accessible actions if present
           const actions = widget.locator('a, button, [role="button"]');
           if (await actions.count() > 0) {
             const firstAction = actions.first();
             await expect(firstAction).toBeVisible();
             await expect(firstAction).toBeEnabled();
             
-            # Check for accessible name (text content or aria-label)
+            // Check for accessible name (text content or aria-label)
             const textContent = await firstAction.textContent();
             const ariaLabel = await firstAction.getAttribute('aria-label');
             
@@ -367,7 +367,7 @@ test.describe("Dashboard Page", () => {
       const endTime = Date.now();
       
       const loadTime = endTime - startTime;
-      expect(loadTime).toBeLessThan(8000); # Dashboard might take longer to load with data
+      expect(loadTime).toBeLessThan(8000); // Dashboard might take longer to load with data
     });
   });
 });

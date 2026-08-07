@@ -1,414 +1,161 @@
-// Page Object Helper Utilities for Comprehensive UI Testing
-import { Page, Locator, expect } from "@playwright/test";
+import { type Page, type Locator, expect } from "@playwright/test";
 
 /**
- * Base page object class with common utilities
+ * Page Object Model helpers for E2E tests
+ * Provides reusable page abstractions and common utilities
  */
+
+// Base page with common navigation and utility methods
 export class BasePage {
-  protected page: Page;
-  protected baseURL: string;
+  constructor(protected page: Page) {}
 
-  constructor(page: Page, baseURL: string = "") {
-    this.page = page;
-    this.baseURL = baseURL;
+  async navigate(path: string) {
+    await this.page.goto(path);
+    await this.page.waitForLoadState("networkidle");
   }
 
-  /**
-   * Navigate to a page
-   */
-  async navigate(path: string = ""): Promise<void> {
-    const url = this.baseURL + path;
-    await this.page.goto(url);
-    await this.waitForPageLoad();
+  async waitForMainContent() {
+    await this.page.waitForSelector("main", { timeout: 10_000 });
   }
 
-  /**
-   * Wait for page to be fully loaded
-   */
-  async waitForPageLoad(timeout: number = 5000): Promise<void> {
-    await this.page.waitForLoadState('networkidle', { timeout });
-    // Wait for any potential hydration to complete
-    await this.page.waitForTimeout(500);
+  getHeading() {
+    return this.page.locator("h1, .hero-heading, [data-testid='hero-heading']");
   }
 
-  /**
-   * Wait for an element to be visible
-   */
-  async waitForVisible(
-    selector: string | Locator,
-    timeout: number = 5000
-  ): Promise<void> {
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    await locator.waitFor({ state: 'visible', timeout });
+  getNavigation() {
+    return this.page.locator("nav, [data-testid='main-nav'], .main-navigation");
   }
 
-  /**
-   * Wait for an element to be hidden
-   */
-  async waitForHidden(
-    selector: string | Locator,
-    timeout: number = 5000
-  ): Promise<void> {
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    await locator.waitFor({ state: 'hidden', timeout });
-  }
-
-  /**
-   * Click an element and wait for navigation
-   */
-  async clickAndNavigate(
-    selector: string | Locator,
-    options: {
-      waitUntil?: 'load' | 'domcontentloaded' | 'networkidle';
-      timeout?: number;
-    } = {}
-  ): Promise<void> {
-    const { waitUntil = 'networkidle', timeout = 5000 } = options;
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    
-    // Wait for navigation triggered by the click
-    const [response] = await Promise.all([
-      this.page.waitForNavigation({ waitUntil, timeout }),
-      locator.click()
-    ]);
-    
-    if (!response?.ok()) {
-      throw new Error(`Navigation failed with status ${response?.status()}`);
-    }
-  }
-
-  /**
-   * Fill a form field
-   */
-  async fillField(
-    selector: string | Locator,
-    value: string,
-    options: {
-      clearFirst?: boolean;
-      timeout?: number;
-    } = {}
-  ): Promise<void> {
-    const { clearFirst = true, timeout = 5000 } = options;
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    
-    await locator.waitFor({ state: 'visible', timeout });
-    if (clearFirst) {
-      await locator.fill('');
-    }
-    await locator.fill(value);
-  }
-
-  /**
-   * Select an option from a dropdown
-   */
-  async selectOption(
-    selector: string | Locator,
-    value: string,
-    options: {
-      timeout?: number;
-    } = {}
-  ): Promise<void> {
-    const { timeout = 5000 } = options;
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    
-    await locator.waitFor({ state: 'visible', timeout });
-    await locator.selectOption({ value });
-  }
-
-  /**
-   * Check if an element exists
-   */
-  async elementExists(
-    selector: string | Locator,
-    timeout: number = 1000
-  ): Promise<boolean> {
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    try {
-      await locator.waitFor({ state: 'attached', timeout });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get text content of an element
-   */
-  async getText(
-    selector: string | Locator,
-    options: {
-      timeout?: number;
-    } = {}
-  ): Promise<string> {
-    const { timeout = 5000 } = options;
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    
-    await locator.waitFor({ state: 'visible', timeout });
-    return locator.textContent() ?? '';
-  }
-
-  /**
-   * Get attribute value of an element
-   */
-  async getAttribute(
-    selector: string | Locator,
-    attributeName: string,
-    options: {
-      timeout?: number;
-    } = {}
-  ): Promise<string | null> {
-    const { timeout = 5000 } = options;
-    const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
-    
-    await locator.waitFor({ state: 'visible', timeout });
-    return locator.getAttribute(attributeName);
-  }
-
-  /**
-   * Take a screenshot with a descriptive name
-   */
-  async takeScreenshot(name: string, options: {
-    fullPage?: boolean;
-    clip?: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
-  } = {}): Promise<Buffer> {
-    const { fullPage = false, clip } = options;
-    return this.page.screenshot({
-      path: `test-results/screenshots/${name}-${Date.now()}.png`,
-      fullPage,
-      clip
-    });
-  }
-
-  /**
-   * Wait for a specific network request
-   */
-  async waitForRequest(
-    url: string | RegExp,
-    options: {
-      timeout?: number;
-    } = {}
-  ): Promise<void> {
-    const { timeout = 5000 } = options;
-    await this.page.waitForRequest(url, { timeout });
-  }
-
-  /**
-   * Wait for a specific network response
-   */
-  async waitForResponse(
-    url: string | RegExp,
-    options: {
-      timeout?: number;
-      status?: number;
-    } = {}
-  ): Promise<void> {
-    const { timeout = 5000, status } = options;
-    await this.page.waitForResponse(url, { timeout, status });
-  }
-
-  /**
-   * Check if the current URL matches a pattern
-   */
-  async urlMatches(
-    pattern: string | RegExp,
-    options: {
-      timeout?: number;
-    } = {}
-  ): Promise<boolean> {
-    const { timeout = 5000 } = options;
-    try {
-      await this.page.waitForURL(pattern, { timeout });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get the current URL
-   */
-  getCurrentURL(): Promise<string> {
-    return this.page.url();
-  }
-
-  /**
-   * Go back in history
-   */
-  async goBack(): Promise<void> {
-    await this.page.goBack();
-    await this.waitForPageLoad();
-  }
-
-  /**
-   * Go forward in history
-   */
-  async goForward(): Promise<void> {
-    await this.page.goForward();
-    await this.waitForPageLoad();
-  }
-
-  /**
-   * Refresh the page
-   */
-  async refresh(): Promise<void> {
-    await this.page.reload();
-    await this.waitForPageLoad();
+  getFooter() {
+    return this.page.locator("footer, [data-testid='footer'], .footer");
   }
 }
 
-/**
- * Specialized page object for authenticated pages
- */
-export class AuthenticatedPage extends BasePage {
-  constructor(page: Page, baseURL: string = "") {
-    super(page, baseURL);
+// Responsive page helpers for viewport testing
+export class ResponsivePage {
+  constructor(protected page: Page) {}
+
+  async setMobileViewport() {
+    await this.page.setViewportSize({ width: 375, height: 667 });
   }
 
-  /**
-   * Check if user is authenticated
-   */
-  async isAuthenticated(): Promise<boolean> {
-    // This would typically check for auth indicators in the UI
-    // Implementation depends on your auth system
+  async setTabletViewport() {
+    await this.page.setViewportSize({ width: 768, height: 1024 });
+  }
+
+  async setDesktopViewport() {
+    await this.page.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  async navigate(path: string) {
+    await this.page.goto(path);
+    await this.page.waitForLoadState("networkidle");
+  }
+}
+
+// Authenticated page helpers for login/logout flows
+export class AuthenticatedPage {
+  constructor(protected page: Page) {}
+
+  async loginViaApi(email: string, password: string) {
+    // Try API-based login first (faster and more reliable)
     try {
-      // Example: check for user avatar or logout button
-      const userAvatar = this.page.locator('[data-testid="user-avatar"], .user-avatar, [href*="/logout"]');
-      return await this.elementExists(userAvatar, 1000);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get user profile information from UI
-   */
-  async getUserProfile(): Promise<{
-    name?: string;
-    email?: string;
-    avatarUrl?: string;
-  }> {
-    const profile: {
-      name?: string;
-      email?: string;
-      avatarUrl?: string;
-    } = {};
-    
-    try {
-      // Try to get user name
-      const nameElement = this.page.locator('[data-testid="user-name"], .user-name, .user-fullname');
-      if (await this.elementExists(nameElement, 1000)) {
-        profile.name = await this.getText(nameElement);
-      }
+      const response = await this.page.request.post("/api/auth/login", {
+        data: { email, password },
+      });
       
-      // Try to get user email
-      const emailElement = this.page.locator('[data-testid="user-email"], .user-email');
-      if (await this.elementExists(emailElement, 1000)) {
-        profile.email = await this.getText(emailElement);
-      }
-      
-      // Try to get avatar URL
-      const avatarElement = this.page.locator('[data-testid="user-avatar"] img, .user-avatar img');
-      if (await this.elementExists(avatarElement, 1000)) {
-        profile.avatarUrl = await this.getAttribute(avatarElement, 'src');
-      }
-    } catch (e) {
-      // Silently fail - not all profiles will have all fields
-    }
-    
-    return profile;
-  }
-
-  /**
-   * Log out the user
-   */
-  async logout(): Promise<void> {
-    // Try common logout selectors
-    const logoutSelectors = [
-      '[data-testid="logout"]',
-      '.logout-btn',
-      'a[href*="logout"]',
-      'button:has-text("Logout")',
-      'a:has-text("Logout")'
-    ];
-    
-    for (const selector of logoutSelectors) {
-      if (await this.elementExists(selector, 1000)) {
-        await this.clickAndNavigate(selector);
+      if (response.ok()) {
+        // API login succeeded, cookies should be set
         return;
       }
+    } catch (error) {
+      // API login failed, fall back to UI login
+      console.warn("API login failed, falling back to UI login:", error);
     }
+
+    // Fallback: UI-based login
+    await this.page.goto("/auth/login");
+    await this.page.waitForSelector("form", { timeout: 5_000 });
     
-    throw new Error('Could not find logout button');
-  }
-}
+    const emailInput = this.page.locator('input[name="email"], input[name="username"], input[type="email"]').first();
+    const passwordInput = this.page.locator('input[name="password"], input[type="password"]').first();
+    const submitButton = this.page.locator('button:has-text("Login"), button:has-text("Sign in"), button:has-text("Submit")').first();
 
-/**
- * Specialized page object for responsive testing
- */
-export class ResponsivePage extends BasePage {
-  constructor(page: Page, baseURL: string = "") {
-    super(page, baseURL);
-  }
-
-  /**
-   * Set viewport to mobile dimensions
-   */
-  async setMobileViewport(): Promise<void> {
-    await this.page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+    await submitButton.click();
+    
+    // Wait for navigation after login
+    await this.page.waitForTimeout(2000);
   }
 
-  /**
-   * Set viewport to tablet dimensions
-   */
-  async setTabletViewport(): Promise<void> {
-    await this.page.setViewportSize({ width: 768, height: 1024 }); // iPad
-  }
-
-  /**
-   * Set viewport to desktop dimensions
-   */
-  async setDesktopViewport(): Promise<void> {
-    await this.page.setViewportSize({ width: 1920, height: 1080 }); // Full HD
-  }
-
-  /**
-   * Test responsive breakpoints
-   */
-  async testBreakpoints(
-    breakpoints: Array<{
-      name: string;
-      width: number;
-      height: number;
-      callback: (page: Page) => Promise<void>;
-    }>
-  ): Promise<void> {
-    for (const breakpoint of breakpoints) {
-      await this.page.setViewportSize({ 
-        width: breakpoint.width, 
-        height: breakpoint.height 
-      });
-      await this.waitForPageLoad(1000);
-      await breakpoint.callback(this.page);
+  async logout() {
+    // Try to find and click logout button/link
+    const logoutButton = this.page.locator('button:has-text("Logout"), a:has-text("Logout"), button:has-text("Sign out"), a:has-text("Sign out")').first();
+    
+    if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await logoutButton.click();
+      await this.page.waitForTimeout(1000);
     }
   }
 }
 
-/**
- * Factory functions for creating page objects
- */
-export function createBasePage(page: Page, baseURL: string = ""): BasePage {
-  return new BasePage(page, baseURL);
+// Factory functions for creating page objects
+export function createBasePage(page: Page): BasePage {
+  return new BasePage(page);
 }
 
-export function createAuthenticatedPage(page: Page, baseURL: string = ""): AuthenticatedPage {
-  return new AuthenticatedPage(page, baseURL);
+export function createResponsivePage(page: Page): ResponsivePage {
+  return new ResponsivePage(page);
 }
 
-export function createResponsivePage(page: Page, baseURL: string = ""): ResponsivePage {
-  return new ResponsivePage(page, baseURL);
+export function createAuthenticatedPage(page: Page): AuthenticatedPage {
+  return new AuthenticatedPage(page);
 }
+
+// Utility functions for common test assertions
+export async function assertPageHasTitle(page: Page, expectedTitlePattern: string | RegExp) {
+  await expect(page).toHaveTitle(expectedTitlePattern);
+}
+
+export async function assertElementVisible(page: Page, selector: string, timeout = 5000) {
+  const element = page.locator(selector);
+  await expect(element).toBeVisible({ timeout });
+}
+
+export async function assertElementContainsText(page: Page, selector: string, text: string | RegExp) {
+  const element = page.locator(selector);
+  await expect(element).toContainText(text);
+}
+
+export async function waitForElement(page: Page, selector: string, timeout = 5000) {
+  await page.waitForSelector(selector, { timeout });
+}
+
+// Common selectors used across tests
+export const SELECTORS = {
+  // Navigation
+  NAV: "nav, [data-testid='main-nav'], .main-navigation",
+  FOOTER: "footer, [data-testid='footer'], .footer",
+  
+  // Common elements
+  HEADING: "h1, h2, h3",
+  HERO_HEADING: "h1, .hero-heading, [data-testid='hero-heading']",
+  CTA_BUTTON: "a[href*='/services'], a[href*='/store'], .btn-primary, .cta-button",
+  
+  // Forms
+  FORM: "form",
+  EMAIL_INPUT: 'input[name="email"], input[name="your-email"], input[type="email"]',
+  PASSWORD_INPUT: 'input[name="password"], input[type="password"]',
+  SUBMIT_BUTTON: 'button:has-text("Submit"), button:has-text("Send"), button:has-text("Login"), button:has-text("Sign in")',
+  
+  // Feedback messages
+  SUCCESS_MESSAGE: ".success, .confirmation, text=Thanks, text=Subscribed, text=Message sent",
+  ERROR_MESSAGE: ".error, .alert, .invalid, text=Error, text=Invalid",
+  
+  // Loading states
+  LOADING_SPINNER: ".spinner, .loading, [data-testid='loading']",
+} as const;
+
+// Re-export types
+export type { Page, Locator };

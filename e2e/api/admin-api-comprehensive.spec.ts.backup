@@ -184,19 +184,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/analytics/web"
     ];
     
-    analyticsEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(analyticsEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -269,19 +267,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/crm/tickets"
     ];
     
-    crmEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(crmEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -295,19 +291,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/email/stats"
     ];
     
-    emailEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(emailEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
     
     test("should accept email campaign creation", async ({ request }) => {
@@ -375,19 +369,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/notion/tasks"
     ];
     
-    notionEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(notionEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -398,19 +390,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/ops/monitor"
     ];
     
-    opsEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(opsEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
     
     test("should accept error reporting", async ({ request }) => {
@@ -452,19 +442,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/pipeline/stats"
     ];
     
-    pipelineEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(pipelineEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
     
     test("should accept pipeline card creation", async ({ request }) => {
@@ -507,19 +495,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/reports/generate"
     ];
     
-    reportEndpoints.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(reportEndpoints)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
     
     test("should accept report generation request", async ({ request }) => {
@@ -636,22 +622,20 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/analytics/workspaces/[id]"
     ];
     
-    analyticsSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        const testEndpoint = endpoint.replace("[id]", "test-id");
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(analyticsSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      const testEndpoint = endpoint.replace("[id]", "test-id");
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -672,19 +656,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/appflowy/testimonials"
     ];
     
-    appflowySubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(appflowySubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -704,19 +686,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/campaigns/x/insights"
     ];
     
-    campaignsSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(campaignsSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -728,22 +708,20 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/calendar/create"
     ];
     
-    calendarSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        const testEndpoint = endpoint.replace("[id]", "test-id");
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(calendarSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      const testEndpoint = endpoint.replace("[id]", "test-id");
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -755,19 +733,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/cluster/watchdogs"
     ];
     
-    clusterSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(clusterSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -793,19 +769,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/esp32/notion-sync"
     ];
     
-    esp32Submodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(esp32Submodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -818,19 +792,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/grafana/prometheus"
     ];
     
-    grafanaSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(grafanaSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -892,22 +864,20 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/n8n/workflows/[id]/trigger"
     ];
     
-    n8nSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        const testEndpoint = endpoint.replace("[id]", "test-id");
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(n8nSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      const testEndpoint = endpoint.replace("[id]", "test-id");
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -918,19 +888,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/notifications/test"
     ];
     
-    notificationsSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(notificationsSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -953,19 +921,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/notion/testimonials"
     ];
     
-    notionSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(notionSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -976,19 +942,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/oauth/tiktok/callback"
     ];
     
-    oauthSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(oauthSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -998,22 +962,20 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/ops/errors/[id]"
     ];
     
-    opsSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        const testEndpoint = endpoint.replace("[id]", "test-id");
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(opsSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      const testEndpoint = endpoint.replace("[id]", "test-id");
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -1041,25 +1003,23 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/postiz/upload-file"
     ];
     
-    postizSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        let testEndpoint = endpoint;
-        if (endpoint.includes("[id]")) {
-          testEndpoint = endpoint.replace("[id]", "test-id");
-        }
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(postizSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      let testEndpoint = endpoint;
+      if (endpoint.includes("[id]")) {
+        testEndpoint = endpoint.replace("[id]", "test-id");
+      }
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -1072,25 +1032,23 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/reports/generate"
     ];
     
-    reportsSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        // Handle parameterized routes
-        let testEndpoint = endpoint;
-        if (endpoint.includes("[id]")) {
-          testEndpoint = endpoint.replace("[id]", "test-id");
-        }
-        
-        const response = await apiHelper.get(testEndpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(reportsSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      // Handle parameterized routes
+      let testEndpoint = endpoint;
+      if (endpoint.includes("[id]")) {
+        testEndpoint = endpoint.replace("[id]", "test-id");
+      }
+      
+      const response = await apiHelper.get(testEndpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 
@@ -1100,19 +1058,17 @@ test.describe("Admin API - Comprehensive Testing", () => {
       "/api/admin/search/reindex"
     ];
     
-    searchSubmodules.forEach(endpoint => {
-      test(`should return data for ${endpoint}`, async ({ request }) => {
-        const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN
-        });
-        
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+    test.each(searchSubmodules)("should return data for %s", async ({ request }, endpoint) => {
+      const response = await apiHelper.get(endpoint, {
+        authToken: ADMIN_TOKEN
       });
+      
+      expect(response.status()).toBeLessThan(500);
+      
+      if (response.status() < 400) {
+        const json = await response.json();
+        expect(json).toBeDefined();
+      }
     });
   });
 

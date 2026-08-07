@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../helpers/page-helpers";
+import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../../helpers/page-helpers";
 
 /**
  * Header Component Test Suite
@@ -167,19 +167,19 @@ test.describe("Header Component", () => {
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
       
-      # Check for user avatar or initials
+      // Check for user avatar or initials
       const userAvatar = header.locator('.user-avatar, .avatar, [data-testid="user-avatar"], img[alt*="user"]');
       await expect(userAvatar).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for user name or email
+      // Check for user name or email
       const userName = header.locator('.user-name, [data-testid="user-name"], text=/test@example.com/i');
       await expect(userName).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for logout button/link
+      // Check for logout button/link
       const logoutLink = header.locator('a[href*="/auth/logout"], a[href*="/logout"], .logout-link, [data-testid="logout-link"]');
       await expect(logoutLink).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for dashboard or profile link
+      // Check for dashboard or profile link
       const dashboardLink = header.locator('a[href*="/dashboard"], a[href*="/profile"], .dashboard-link, [data-testid="dashboard-link"]');
       await expect(dashboardLink).toBeVisible({ timeout: 5000 }).catch(() => {});
     });
@@ -193,22 +193,22 @@ test.describe("Header Component", () => {
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
       
-      # On mobile, navigation might be hidden behind a hamburger menu
+      // On mobile, navigation might be hidden behind a hamburger menu
       const navToggle = header.locator('button[aria-label*="menu" i], .nav-toggle, .hamburger, [data-testid="nav-toggle"]');
       const navMenu = header.locator('nav, [data-testid="nav"], .nav-menu');
       
-      # Either the nav is visible directly or there's a toggle button
+      // Either the nav is visible directly or there's a toggle button
       const isNavVisible = await navMenu.isVisible();
       const hasToggle = await navToggle.isVisible();
       
       expect(isNavVisible || hasToggle).toBeTruthy();
       
       if (hasToggle) {
-        # Test that toggle opens the navigation
+        // Test that toggle opens the navigation
         await navToggle.click();
         await expect(navMenu).toBeVisible({ timeout: 3000 });
         
-        # Test that toggle closes the navigation
+        // Test that toggle closes the navigation
         await navToggle.click();
         await expect(navMenu).toBeHidden({ timeout: 3000 });
       }
@@ -221,15 +221,15 @@ test.describe("Header Component", () => {
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
       
-      # Check that logo is visible
+      // Check that logo is visible
       const logo = header.locator('.logo, [data-testid="logo"], a[href="/"] img, .brand');
       await expect(logo).toBeVisible();
       
-      # Check that navigation is visible
+      // Check that navigation is visible
       const nav = header.locator('nav, [data-testid="nav"], .nav-menu');
       await expect(nav).toBeVisible();
       
-      # Check that nav links are visible
+      // Check that nav links are visible
       const navLinks = nav.locator('a');
       await expect(navLinks.first()).toBeVisible();
     });
@@ -241,15 +241,15 @@ test.describe("Header Component", () => {
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
       
-      # Check that logo is visible
+      // Check that logo is visible
       const logo = header.locator('.logo, [data-testid="logo"], a[href="/"] img, .brand');
       await expect(logo).toBeVisible();
       
-      # Check that navigation is visible
+      // Check that navigation is visible
       const nav = header.locator('nav, [data-testid="nav"], .nav-menu');
       await expect(nav).toBeVisible();
       
-      # Check that we can see multiple nav links
+      // Check that we can see multiple nav links
       const navLinks = nav.locator('a');
       const count = await navLinks.count();
       expect(count).toBeGreaterThan(1);
@@ -261,14 +261,14 @@ test.describe("Header Component", () => {
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
       
-      # Check for ARIA label or role on header
+      // Check for ARIA label or role on header
       const headerRole = await header.getAttribute('role');
       const headerLabel = await header.getAttribute('aria-label');
       
-      # Header might have banner role or aria-label
+      // Header might have banner role or aria-label
       expect(headerRole === 'banner' || headerLabel).toBeTruthy();
       
-      # Check for ARIA label or role on navigation
+      // Check for ARIA label or role on navigation
       const nav = header.locator('nav, [data-testid="nav"], .nav-menu');
       await expect(nav).toBeVisible();
       
@@ -286,18 +286,18 @@ test.describe("Header Component", () => {
       const logoLink = header.locator('.logo a[href="/"], [data-testid="logo"] a[href="/"], a[href="/"]');
       await expect(logoLink).toBeVisible();
       
-      # Check for accessible name (text content, aria-label, or aria-labelledby)
+      // Check for accessible name (text content, aria-label, or aria-labelledby)
       const textContent = await logoLink.textContent();
       const ariaLabel = await logoLink.getAttribute('aria-label');
       const ariaLabelledby = await logoLink.getAttribute('aria-labelledby');
       
-      # Logo might be an image, so check for img alt text
+      // Logo might be an image, so check for img alt text
       const logoImg = header.locator('.logo img, [data-testid="logo"] img');
       if (await logoImg.isVisible()) {
         const altText = await logoImg.getAttribute('alt');
         expect(altText).toBeDefined();
       } else {
-        # If logo is text or SVG, check for text content or aria-label
+        // If logo is text or SVG, check for text content or aria-label
         expect(textContent?.trim() || ariaLabel || ariaLabelledby).toBeDefined();
       }
     });
@@ -312,19 +312,19 @@ test.describe("Header Component", () => {
       const navLinks = nav.locator('a');
       const count = await navLinks.count();
       
-      # Check a sample of nav links for accessibility
+      // Check a sample of nav links for accessibility
       const sampleSize = Math.min(3, count);
       for (let i = 0; i < sampleSize; i++) {
         const link = navLinks.nth(i);
         await expect(link).toBeVisible();
         
-        # Check for accessible name (text content or aria-label)
+        // Check for accessible name (text content or aria-label)
         const textContent = await link.textContent();
         const ariaLabel = await link.getAttribute('aria-label');
         
         expect(textContent?.trim() || ariaLabel).toBeDefined();
         
-        # Check that link is keyboard accessible
+        // Check that link is keyboard accessible
         await expect(link).toBeFocusable();
       }
     });
@@ -332,7 +332,7 @@ test.describe("Header Component", () => {
 
   test.describe("Performance", () => {
     test("should not cause layout shifts", async ({ page: browserPage }) => {
-      # Measure Cumulative Layout Shift (CLS) - basic check
+      // Measure Cumulative Layout Shift (CLS) - basic check
       clsValue = await browserPage.evaluate(() => {
         if (window.PerformanceObserver) {
           return new Promise((resolve) => {
@@ -347,7 +347,7 @@ test.describe("Header Component", () => {
             });
             observer.observe({ entryTypes: ['layout-shift'] });
             
-            # Wait a bit to collect layout shift data
+            // Wait a bit to collect layout shift data
             setTimeout(() => {
               observer.disconnect();
               resolve(cls);
@@ -357,7 +357,7 @@ test.describe("Header Component", () => {
         return 0;
       });
       
-      # CLS should be less than 0.1 for good performance
+      // CLS should be less than 0.1 for good performance
       expect(clsValue).toBeLessThan(0.1);
     });
   });

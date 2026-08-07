@@ -166,7 +166,7 @@ test.describe("Page Load Times", () => {
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
-    expect(loadTime).toBeLessThan(8000); # Store might take longer due to products
+    expect(loadTime).toBeLessThan(8000); // Store might take longer due to products
   });
   
   test("blog page should load within reasonable time", async ({ page }) => {
@@ -188,7 +188,7 @@ test.describe("Page Load Times", () => {
   });
   
   test("dashboard page should load within reasonable time", async ({ page }) => {
-    # Login first
+    // Login first
     await page.context().addCookies([
       {
         name: "session_token",
@@ -206,11 +206,11 @@ test.describe("Page Load Times", () => {
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
-    expect(loadTime).toBeLessThan(8000); # Dashboard might take longer with data
+    expect(loadTime).toBeLessThan(8000); // Dashboard might take longer with data
   });
   
   test("admin page should load within reasonable time", async ({ page }) => {
-    # Login as admin first
+    // Login as admin first
     await page.context().addCookies([
       {
         name: "session_token",
@@ -228,7 +228,7 @@ test.describe("Page Load Times", () => {
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
-    expect(loadTime).toBeLessThan(8000); # Admin might take longer with data
+    expect(loadTime).toBeLessThan(8000); // Admin might take longer with data
   });
 });
 
@@ -245,20 +245,20 @@ test.describe("Resource Optimization", () => {
         if (img.offsetParent !== null) { // Visible image
           totalCount++;
           
-          # Check for lazy loading
+          // Check for lazy loading
           const loading = img.getAttribute('loading');
           const hasLazyLoad = loading === 'lazy';
           
-          # Check for width and height attributes (helps prevent layout shift)
+          // Check for width and height attributes (helps prevent layout shift)
           const width = img.getAttribute('width');
           const height = img.getAttribute('height');
           const hasDimensions = !!width && !!height;
           
-          # Check for modern image formats in srcset
+          // Check for modern image formats in srcset
           const srcset = img.getAttribute('srcset');
           const hasSrcset = !!srcset && srcset.includes('webp') || srcset.includes('avif');
           
-          # Check if using picture element with modern formats
+          // Check if using picture element with modern formats
           const parentPicture = img.parentElement.tagName.toLowerCase() === 'picture';
           const hasWebpInPicture = parentPicture && 
             img.parentElement.innerHTML.includes('type="image/webp"');
@@ -272,8 +272,8 @@ test.describe("Resource Optimization", () => {
       return { optimizedCount, totalCount };
     });
     
-    # At least some images should be optimized
-    # Note: This is a basic check - real optimization checking is more complex
+    // At least some images should be optimized
+    // Note: This is a basic check - real optimization checking is more complex
     expect(imageOptimization.optimizedCount).toBeGreaterThan(0);
   });
   
@@ -286,14 +286,14 @@ test.describe("Resource Optimization", () => {
       
       let renderBlockingCount = 0;
       
-      # Check CSS links
+      // Check CSS links
       links.forEach(link => {
-        # In a real implementation, we'd check if they're critical or not
-        # For now, just count them
+        // In a real implementation, we'd check if they're critical or not
+        // For now, just count them
         renderBlockingCount++;
       });
       
-      # Check scripts without async/defer
+      // Check scripts without async/defer
       scripts.forEach(script => {
         renderBlockingCount++;
       });
@@ -301,36 +301,36 @@ test.describe("Resource Optimization", () => {
       return { renderBlockingCount };
     });
     
-    # Just verify we can measure this
+    // Just verify we can measure this
     expect(renderBlocking).toBeDefined();
   });
   
   test("should use browser caching", async ({ page }) => {
     await page.goto("/");
     
-    # Reload to check cache headers
+    // Reload to check cache headers
     await page.reload();
     
-    # Check if we got 304 responses (not modified) indicating caching
-    # This is more complex to measure directly in Playwright
-    # For now, just verify the test runs
+    // Check if we got 304 responses (not modified) indicating caching
+    // This is more complex to measure directly in Playwright
+    // For now, just verify the test runs
     expect(true).toBe(true);
   });
 });
 
 test.describe("Mobile Performance", () => {
   test("should perform well on mobile devices", async ({ page }) => {
-    # Set mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 }); # iPhone SE
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
     
     const startTime = Date.now();
     await page.goto("/", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
-    expect(loadTime).toBeLessThan(8000); # Mobile might be slower
+    expect(loadTime).toBeLessThan(8000); // Mobile might be slower
     
-    # Check mobile-specific metrics
+    // Check mobile-specific metrics
     const mobileMetrics = await page.evaluate(() => {
       return {
         viewportWidth: window.innerWidth,
@@ -344,7 +344,7 @@ test.describe("Mobile Performance", () => {
   });
   
   test("should have appropriate tap targets on mobile", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 }); # iPhone SE
+    await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
     await page.goto("/");
     
     const tapTargets = await page.evaluate(() => {
@@ -353,11 +353,11 @@ test.describe("Mobile Performance", () => {
       let totalTargets = 0;
       
       interactiveElements.forEach(el => {
-        if (el.offsetParent !== null) { # Visible element
+        if (el.offsetParent !== null) { // Visible element
           totalTargets++;
           const rect = el.getBoundingClientRect();
           
-          # WCAG recommends minimum 44x48px tap targets
+          // WCAG recommends minimum 44x48px tap targets
           const width = rect.width;
           const height = rect.height;
           
@@ -370,8 +370,8 @@ test.describe("Mobile Performance", () => {
       return { adequateTargets, totalTargets };
     });
     
-    # At least some tap targets should be adequate
-    # Note: This might fail if the site has many small tap targets
+    // At least some tap targets should be adequate
+    // Note: This might fail if the site has many small tap targets
     expect(tapTargets.adequateTargets).toBeGreaterThanOrEqual(0);
   });
 });
@@ -391,8 +391,8 @@ test.describe("Performance Budgets", () => {
       return totalSize;
     });
     
-    # Should be under 1MB for initial load (reasonable budget)
-    expect(totalSize).toBeLessThan(1024 * 1024); # 1MB in bytes
+    // Should be under 1MB for initial load (reasonable budget)
+    expect(totalSize).toBeLessThan(1024 * 1024); // 1MB in bytes
   });
   
   test("should keep number of requests under budget", async ({ page }) => {
@@ -402,8 +402,8 @@ test.describe("Performance Budgets", () => {
       return performance.getEntriesByType('resource').length;
     });
     
-    # Should have reasonable number of requests
-    # This depends on the site complexity - 50 is a reasonable upper limit
+    // Should have reasonable number of requests
+    // This depends on the site complexity - 50 is a reasonable upper limit
     expect(requestCount).toBeLessThan(50);
   });
   
@@ -424,8 +424,8 @@ test.describe("Performance Budgets", () => {
       return totalSize;
     });
     
-    # Should be under 100KB for CSS
-    expect(cssSize).toBeLessThan(100 * 1024); # 100KB in bytes
+    // Should be under 100KB for CSS
+    expect(cssSize).toBeLessThan(100 * 1024); // 100KB in bytes
   });
   
   test("should keep JavaScript size under budget", async ({ page }) => {
@@ -445,7 +445,7 @@ test.describe("Performance Budgets", () => {
       return totalSize;
     });
     
-    # Should be under 500KB for JavaScript
-    expect(jsSize).toBeLessThan(500 * 1024); # 500KB in bytes
+    // Should be under 500KB for JavaScript
+    expect(jsSize).toBeLessThan(500 * 1024); // 500KB in bytes
   });
 });

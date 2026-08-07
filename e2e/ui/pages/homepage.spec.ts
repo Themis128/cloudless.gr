@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createBasePage, createResponsivePage } from "../helpers/page-helpers";
+import { createBasePage, createResponsivePage } from "../../helpers/page-helpers";
 
 /**
  * Homepage Test Suite
@@ -101,7 +101,7 @@ test.describe("Homepage", () => {
     await firstLink.focus();
     await expect(firstLink).toBeFocused();
     
-    await browserPage.keyboard press("Tab");
+    await browserPage.keyboard.press("Tab");
     const secondLink = navLinks.nth(1);
     await expect(secondLink).toBeFocused();
   });

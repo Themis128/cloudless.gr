@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../helpers/page-helpers";
+import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../../helpers/page-helpers";
 
 /**
  * Contact Page Test Suite
@@ -176,16 +176,16 @@ test.describe("Contact Page", () => {
       const userInfo = browserPage.locator('.user-info, [data-testid="user-info"], text=/hello, test/i');
       await expect(userInfo).toBeVisible({ timeout: 5000 }).catch(() => {});
       
-      # Check for pre-filled form with user data
+      // Check for pre-filled form with user data
       const nameInput = browserPage.locator('input[name*="name" i], [data-testid="name-input"]');
       const emailInput = browserPage.locator('input[name*="email" i], [data-testid="email-input"]');
       
       const nameValue = await nameInput.inputValue();
       const emailValue = await emailInput.inputValue();
       
-      # Form might be pre-filled with user data
-      # expect(nameValue).toContain("Test");
-      # expect(emailValue).toBe("test@example.com");
+      // Form might be pre-filled with user data
+      // expect(nameValue).toContain("Test");
+      // expect(emailValue).toBe("test@example.com");
     });
   });
 
@@ -194,15 +194,15 @@ test.describe("Contact Page", () => {
       await responsivePage.setMobileViewport();
       await responsivePage.navigate("/contact");
       
-      # Check that essential elements are still visible
+      // Check that essential elements are still visible
       const heading = browserPage.locator('h1, .contact-heading, [data-testid="contact-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check that contact form is visible
+      // Check that contact form is visible
       const contactForm = browserPage.locator('form, [data-testid="contact-form"], .contact-form');
       await expect(contactForm).toBeVisible();
       
-      # Check that form fields are visible and stacked appropriately
+      // Check that form fields are visible and stacked appropriately
       const nameInput = contactForm.locator('input[name*="name" i], [data-testid="name-input"]');
       const emailInput = contactForm.locator('input[name*="email" i], [data-testid="email-input"]');
       const messageInput = contactForm.locator('textarea[name*="message" i], [data-testid="message-input"]');
@@ -216,11 +216,11 @@ test.describe("Contact Page", () => {
       await responsivePage.setTabletViewport();
       await responsivePage.navigate("/contact");
       
-      # Check that layout adapts appropriately
+      // Check that layout adapts appropriately
       const heading = browserPage.locator('h1, .contact-heading, [data-testid="contact-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check that contact form is visible
+      // Check that contact form is visible
       const contactForm = browserPage.locator('form, [data-testid="contact-form"], .contact-form');
       await expect(contactForm).toBeVisible();
     });
@@ -229,16 +229,16 @@ test.describe("Contact Page", () => {
       await responsivePage.setDesktopViewport();
       await responsivePage.navigate("/contact");
       
-      # Check that full layout is visible
+      // Check that full layout is visible
       const heading = browserPage.locator('h1, .contact-heading, [data-testid="contact-heading"]');
       await expect(heading).toBeVisible();
       
-      # Check that we can see both form and contact info side by side
+      // Check that we can see both form and contact info side by side
       const contactForm = browserPage.locator('form, [data-testid="contact-form"], .contact-form');
       const contactInfo = browserPage.locator('.contact-info, [data-testid="contact-info"], .info-section');
       
       await expect(contactForm).toBeVisible();
-      await expect(contactInfo).toBeVisible({ timeout: 5000 }).catch(() => {}); # Info section might not be present
+      await expect(contactInfo).toBeVisible({ timeout: 5000 }).catch(() => {}); // Info section might not be present
     });
   });
 
@@ -284,12 +284,12 @@ test.describe("Contact Page", () => {
     });
     
     test("should have accessible form labels", async ({ page: browserPage }) => {
-      # Check that form fields have associated labels
+      // Check that form fields have associated labels
       const nameInput = browserPage.locator('input[name*="name" i], [data-testid="name-input"]');
       const emailInput = browserPage.locator('input[name*="email" i], [data-testid="email-input"]');
       const messageInput = browserPage.locator('textarea[name*="message" i], [data-testid="message-input"]');
       
-      # Check for label elements or aria-label/aria-labelledby
+      // Check for label elements or aria-label/aria-labelledby
       if (await nameInput.isVisible()) {
         const nameLabel = browserPage.locator(`label[for="${await nameInput.getAttribute('id')}"]`);
         const nameAriaLabel = await nameInput.getAttribute('aria-label');
@@ -316,17 +316,17 @@ test.describe("Contact Page", () => {
     });
     
     test("should have accessible buttons", async ({ page: browserPage }) => {
-      # Check that buttons have accessible names
+      // Check that buttons have accessible names
       const buttons = browserPage.locator('button, .btn, [role="button"]');
       const count = await buttons.count();
       
-      # Check a sample of buttons for accessibility
+      // Check a sample of buttons for accessibility
       const sampleSize = Math.min(5, count);
       for (let i = 0; i < sampleSize; i++) {
         const button = buttons.nth(i);
         await expect(button).toBeEnabled();
         
-        # Check for aria-label, text content, or aria-labelledby
+        // Check for aria-label, text content, or aria-labelledby
         const ariaLabel = await button.getAttribute('aria-label');
         const textContent = await button.textContent();
         const ariaLabelledby = await button.getAttribute('aria-labelledby');
@@ -336,17 +336,17 @@ test.describe("Contact Page", () => {
     });
     
     test("should have sufficient color contrast for form elements", async ({ page: browserPage }) => {
-      # This is a basic check - for full accessibility testing, use axe-core
+      // This is a basic check - for full accessibility testing, use axe-core
       const formElements = browserPage.locator('form input, form textarea, form button');
       const count = await formElements.count();
       
-      # Check a sample of form elements for visible boundaries
+      // Check a sample of form elements for visible boundaries
       const sampleSize = Math.min(5, count);
       for (let i = 0; i < sampleSize; i++) {
         const element = formElements.nth(i);
         const isVisible = await element.isVisible();
         if (isVisible) {
-          # Just verify we can interact with the element
+          // Just verify we can interact with the element
           await expect(element).toBeEnabled();
         }
       }
@@ -360,7 +360,7 @@ test.describe("Contact Page", () => {
       const endTime = Date.now();
       
       const loadTime = endTime - startTime;
-      expect(loadTime).toBeLessThan(5000); # Should load within 5 seconds
+      expect(loadTime).toBeLessThan(5000); // Should load within 5 seconds
     });
   });
 });

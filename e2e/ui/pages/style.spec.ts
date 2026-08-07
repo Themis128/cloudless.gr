@@ -65,7 +65,7 @@ test.describe("Style System", () => {
    * Convert hex color to rgb object
    */
   function hexToRgb(hex: string): { r: number; g: number; b: number } {
-    // Remove # if present
+    // Remove // if present
     const cleanHex = hex.replace("#", "");
     // Handle 3-digit hex
     if (cleanHex.length === 3) {

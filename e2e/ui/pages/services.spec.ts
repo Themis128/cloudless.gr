@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../helpers/page-helpers";
+import { createBasePage, createResponsivePage, createAuthenticatedPage } from "../../helpers/page-helpers";
 
 /**
  * Services Page Test Suite
