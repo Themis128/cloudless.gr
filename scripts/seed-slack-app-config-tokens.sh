@@ -17,21 +17,16 @@
 #        - "Refresh Token"  (xoxe-...)       — long-lived
 #   5. Run this script. It will prompt for both (input hidden).
 #
-# Both values are written as SecureString to:
-#   /cloudless/production/SLACK_APP_CONFIG_TOKEN
-#   /cloudless/production/SLACK_APP_CONFIG_REFRESH_TOKEN
+# Both values are written as:
+#   - Wrangler secrets: SLACK_APP_CONFIG_TOKEN, SLACK_APP_CONFIG_REFRESH_TOKEN
+#   - D1 app_config:    slack_app_config_token, slack_app_config_refresh_token
 
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
-PREFIX="${SSM_PREFIX:-/cloudless/production}"
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
-if ! command -v aws >/dev/null; then
-  echo "ERROR: aws CLI not found." >&2; exit 1
-fi
-if ! aws sts get-caller-identity >/dev/null 2>&1; then
-  echo "ERROR: AWS credentials not configured. Run 'aws configure' first." >&2; exit 1
-fi
+# --- Verify Cloudflare auth ---
+cf_verify_auth || exit 1
 
 if [ -t 0 ]; then
   read -r -s -p "Paste Slack ACCESS token (xoxe.xoxp-...): " ACCESS
@@ -51,7 +46,7 @@ case "$ACCESS" in xoxe.xoxp-*) : ;; *) echo "WARN: access token prefix is not xo
 case "$REFRESH" in xoxe-*) : ;; *) echo "WARN: refresh token prefix is not xoxe- — continuing anyway." >&2 ;; esac
 
 # --- Verify the access token works ---
-echo -n "Verifying access token against Slack apps.manifest.validate ... "
+echo -n "Verifying access token against Slack auth.test ... "
 HTTP=$(curl -s -o /tmp/.slack-probe.json -w "%{http_code}" \
   -X POST https://slack.com/api/auth.test \
   -H "Authorization: Bearer $ACCESS")
@@ -64,18 +59,14 @@ rm -f /tmp/.slack-probe.json
 if [ "$OK" != "true" ]; then echo "FAILED (Slack: $(jq -r .error 2>/dev/null))"; exit 1; fi
 echo "ok (team: $TEAM)"
 
-# --- Write both to SSM ---
-echo -n "Writing $PREFIX/SLACK_APP_CONFIG_REFRESH_TOKEN ... "
-aws ssm put-parameter --region "$REGION" \
-  --name "$PREFIX/SLACK_APP_CONFIG_REFRESH_TOKEN" \
-  --type SecureString --value "$REFRESH" --overwrite >/dev/null
-echo "ok"
+# --- Write both to Cloudflare ---
+echo -n "Writing SLACK_APP_CONFIG_REFRESH_TOKEN... "
+cf_secret_set "SLACK_APP_CONFIG_REFRESH_TOKEN" "$REFRESH" && echo -n "Wrangler ok " || echo -n "Wrangler failed "
+cf_config_set "SLACK_APP_CONFIG_REFRESH_TOKEN" "$REFRESH" && echo "D1 ok" || echo "D1 failed"
 
-echo -n "Writing $PREFIX/SLACK_APP_CONFIG_TOKEN ... "
-aws ssm put-parameter --region "$REGION" \
-  --name "$PREFIX/SLACK_APP_CONFIG_TOKEN" \
-  --type SecureString --value "$ACCESS" --overwrite >/dev/null
-echo "ok"
+echo -n "Writing SLACK_APP_CONFIG_TOKEN... "
+cf_secret_set "SLACK_APP_CONFIG_TOKEN" "$ACCESS" && echo -n "Wrangler ok " || echo -n "Wrangler failed "
+cf_config_set "SLACK_APP_CONFIG_TOKEN" "$ACCESS" && echo "D1 ok" || echo "D1 failed"
 
 echo
 echo "Done. Next run of slack-manifest-apply.yml will auto-rotate the access"

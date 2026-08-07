@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #
-# One-shot helper to store a GitHub PAT into SSM as both
-#   /cloudless/production/GITHUB_DISPATCH_TOKEN  (new, primary)
-#   /cloudless/production/GITHUB_TOKEN           (refresh — the existing
-#                                                 entry is an expired gho_
-#                                                 OAuth token returning 401)
+# One-shot helper to store a GitHub PAT into Cloudflare (Wrangler secret + D1 config)
+#   - Wrangler secret: GITHUB_DISPATCH_TOKEN (primary) + GITHUB_TOKEN (legacy compat)
+#   - D1 app_config:   github_dispatch_token + github_token
 #
-# How to mint the PAT (open in any browser — handler defaults shown):
+# How to mint the PAT:
 #
 #   https://github.com/settings/personal-access-tokens/new
 #
@@ -15,28 +13,26 @@
 #   - Repository access : Only select repositories → cloudless.gr
 #   - Expiration        : 90 days (or your preference)
 #   - Repository perms  : Actions = Read and write
-#                         Contents = Read-only           (needed by gh CLI parts)
-#                         Metadata = Read-only           (automatically added)
+#                         Contents = Read-only
+#                         Metadata = Read-only
 #
 # Copy the token (starts with `github_pat_...`), then run:
 #
 #   bash scripts/store-github-dispatch-token.sh
 #
 # This script reads the token from stdin once (no echo), verifies it against
-# the GitHub /user endpoint, then writes both SSM parameters as SecureString.
-# Nothing is logged to disk or stdout — pipe-from-clipboard works fine.
+# the GitHub /user endpoint, then writes both Cloudflare secrets and D1 config.
 
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
-PREFIX="/cloudless/production"
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
-if ! command -v aws >/dev/null; then
-  echo "ERROR: aws CLI not found." >&2; exit 1
+if ! command -v jq >/dev/null; then
+  echo "ERROR: jq not found." >&2; exit 1
 fi
-if ! aws sts get-caller-identity >/dev/null 2>&1; then
-  echo "ERROR: AWS credentials not configured. Run 'aws configure' first." >&2; exit 1
-fi
+
+# --- Verify Cloudflare auth ---
+cf_verify_auth || exit 1
 
 # --- Read the token ---
 if [ -t 0 ]; then
@@ -82,26 +78,14 @@ if [ "$HTTP" != "200" ]; then
 fi
 echo "ok"
 
-# --- Write to SSM ---
+# --- Write to Cloudflare (Wrangler secrets + D1 config) ---
 for NAME in GITHUB_DISPATCH_TOKEN GITHUB_TOKEN; do
-  echo -n "Writing $PREFIX/$NAME ... "
-  aws ssm put-parameter \
-    --region "$REGION" \
-    --name "$PREFIX/$NAME" \
-    --type SecureString \
-    --value "$TOKEN" \
-    --overwrite >/dev/null
-  echo "ok"
-done
-
-# --- Confirm what landed (length + last-modified, never the value) ---
-echo "Final SSM state:"
-for NAME in GITHUB_DISPATCH_TOKEN GITHUB_TOKEN; do
-  aws ssm get-parameter --region "$REGION" --name "$PREFIX/$NAME" --with-decryption \
-    --output json | jq -r "\"  \(.Parameter.Name)  length=\(.Parameter.Value | length)  modified=\(.Parameter.LastModifiedDate)\""
+  echo -n "Writing $NAME to Cloudflare... "
+  cf_secret_set "$NAME" "$TOKEN" && echo -n "Wrangler ok " || echo -n "Wrangler failed "
+  cf_config_set "$NAME" "$TOKEN" && echo "D1 ok" || echo "D1 failed"
 done
 
 echo
-echo "Done. The Lambda picks up SSM at module load (5-min cache); a redeploy"
-echo "or 5-minute wait makes the new token effective. Manual test once active:"
+echo "Done. The Worker picks up secrets at deploy; D1 config is live immediately."
+echo "Manual test once active:"
 echo "   /cloudless-draft rerun     (in any Slack channel where the bot is)"
