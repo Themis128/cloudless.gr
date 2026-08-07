@@ -24,11 +24,13 @@
 # exact plan. MODE=apply (CONFIRM=1) creates/updates the resources and performs
 # the apex/www DNS cutover (replacing the existing proxied record with the LB).
 #
-# Auth: CLOUDFLARE_API_TOKEN env, else SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
-#   Token scopes required: Zone:Read, Load Balancing\:Monitors and Pools\:Edit,
-#   Load Balancing\:Load Balancers\:Edit, DNS\:Edit (for the cutover).
+# Auth: CLOUDFLARE_API_TOKEN env, else Cloudflare secret/D1 config.
+#   Token scopes required: Zone:Read, Load Balancing:Monitors and Pools:Edit,
+#   Load Balancing:Load Balancers:Edit, DNS:Edit (for the cutover).
 #
 set -uo pipefail
+
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
 DOMAIN="${DOMAIN:-cloudless.gr}"
 MODE="${MODE:-report}"                 # report | apply
@@ -64,11 +66,10 @@ log "== Cloudflare LB setup for ${DOMAIN} — mode=${MODE} =="
 
 # ---- token -----------------------------------------------------------------
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
-if [ -z "$CF_TOKEN" ] && command -v aws >/dev/null 2>&1; then
-  CF_TOKEN="$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-              --with-decryption --query Parameter.Value --output text 2>/dev/null || true)"
+if [ -z "$CF_TOKEN" ]; then
+  CF_TOKEN=$(cf_config_get CLOUDFLARE_API_TOKEN)
 fi
-[ -n "$CF_TOKEN" ] || block "no CLOUDFLARE_API_TOKEN — add a repo secret (or SSM /cloudless/production/CLOUDFLARE_API_TOKEN) with scopes: Zone:Read, Load Balancing Monitors/Pools:Edit, Load Balancing Load Balancers:Edit, DNS:Edit (zone cloudless.gr)."
+[ -n "$CF_TOKEN" ] || block "no CLOUDFLARE_API_TOKEN — add to Cloudflare secrets (or env CLOUDFLARE_API_TOKEN) with scopes: Zone:Read, Load Balancing Monitors/Pools:Edit, Load Balancing Load Balancers:Edit, DNS:Edit (zone cloudless.gr)."
 
 API="https://api.cloudflare.com/client/v4"
 # cf METHOD URL [json-body] -> prints raw response; sets CF_OK / CF_ERR

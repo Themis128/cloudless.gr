@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap the DEDICATED Newsletter Slack app secrets into SSM + GH.
+# Bootstrap the DEDICATED Newsletter Slack app secrets into Cloudflare (Wrangler + D1) + GH.
 #
 # Run AFTER installing the app at https://api.slack.com/apps from
 # slack-newsletter-app.manifest.json. Copy the bot token + signing secret
@@ -12,8 +12,7 @@
 #
 # What it does:
 #   1. Stores NEWSLETTER_SLACK_BOT_TOKEN, NEWSLETTER_SLACK_SIGNING_SECRET,
-#      and NEWSLETTER_SLACK_CHANNEL_ID into AWS SSM at
-#      /cloudless/production/NEWSLETTER_SLACK_*
+#      and NEWSLETTER_SLACK_CHANNEL_ID into Cloudflare (Wrangler secrets + D1 config)
 #   2. Calls auth.test to verify the bot token + prints granted scopes
 #   3. Smoke-tests the signing secret by signing a request and posting it
 #      to the live /api/newsletter-slack/commands endpoint
@@ -21,10 +20,12 @@
 #      the new bot's avatar appear
 #
 # This script is idempotent — re-running it after a token rotation will
-# overwrite the SSM values cleanly.
+# overwrite the Cloudflare values cleanly.
 #
 # See companion: scripts/slack-app-doctor.sh (re-checkable health probe).
 set -u
+
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
 BOT_TOKEN=""
 SIGNING_SECRET=""
@@ -48,8 +49,6 @@ if [[ -z "$BOT_TOKEN" || -z "$SIGNING_SECRET" || -z "$CHANNEL" ]]; then
   exit 2
 fi
 
-REGION="${AWS_REGION:-us-east-1}"
-
 # ---------------------------------------------------------------------------
 # 1. Verify the bot token works (auth.test)
 # ---------------------------------------------------------------------------
@@ -68,24 +67,22 @@ BOT_USER=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin
 echo "  ✓ team=$TEAM  bot_user=$BOT_USER"
 
 # ---------------------------------------------------------------------------
-# 2. Store secrets in SSM
+# 2. Store secrets in Cloudflare (Wrangler + D1)
 # ---------------------------------------------------------------------------
 echo
-echo "=== 2. Storing secrets in SSM (region $REGION) ==="
+echo "=== 2. Storing secrets in Cloudflare ==="
+cf_verify_auth || exit 1
+
 for pair in \
-  "NEWSLETTER_SLACK_BOT_TOKEN:$BOT_TOKEN:SecureString" \
-  "NEWSLETTER_SLACK_SIGNING_SECRET:$SIGNING_SECRET:SecureString" \
-  "NEWSLETTER_SLACK_CHANNEL_ID:$CHANNEL:String"
+  "NEWSLETTER_SLACK_BOT_TOKEN:$BOT_TOKEN" \
+  "NEWSLETTER_SLACK_SIGNING_SECRET:$SIGNING_SECRET" \
+  "NEWSLETTER_SLACK_CHANNEL_ID:$CHANNEL"
 do
   NAME="${pair%%:*}"
-  REST="${pair#*:}"
-  VALUE="${REST%:*}"
-  TYPE="${REST##*:}"
-  SSM_PATH="/cloudless/production/$NAME"
-  aws ssm put-parameter --region "$REGION" \
-    --name "$SSM_PATH" --type "$TYPE" --value "$VALUE" --overwrite \
-    >/dev/null
-  echo "  ✓ $SSM_PATH ($TYPE)"
+  VALUE="${pair#*:}"
+  echo -n "  $NAME: "
+  cf_secret_set "$NAME" "$VALUE" && echo -n "Wrangler ok " || echo -n "Wrangler failed "
+  cf_config_set "$NAME" "$VALUE" && echo "D1 ok" || echo "D1 failed"
 done
 
 # ---------------------------------------------------------------------------
@@ -104,11 +101,11 @@ CODE=$(curl -sS -o /tmp/setup-newsletter-resp.json -w '%{http_code}' \
   -H "x-slack-signature: $SIG" \
   --data "$BODY")
 if [[ "$CODE" == "200" ]]; then
-  echo "  ✓ HTTP 200 — endpoint verified signature using the SSM-stored secret"
+  echo "  ✓ HTTP 200 — endpoint verified signature using the Cloudflare-stored secret"
 elif [[ "$CODE" == "401" ]]; then
   echo "  ⚠ HTTP 401 — endpoint rejected signature."
-  echo "    Reason: the Lambda may be reading a cached old secret. Wait ~5 min"
-  echo "    for the SSM cache to expire OR redeploy the app to force a re-read."
+  echo "    Reason: the Worker may be reading a cached old secret. Wait ~5 min"
+  echo "    for the cache to expire OR redeploy the app to force a re-read."
 else
   echo "  ⚠ HTTP $CODE — unexpected"
   head -c 400 /tmp/setup-newsletter-resp.json

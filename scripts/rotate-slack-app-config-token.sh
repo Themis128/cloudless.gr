@@ -5,11 +5,13 @@
 # pre-step so the manifest API call always has a fresh ~12h access token.
 #
 # Reads:
-#   SSM /cloudless/production/SLACK_APP_CONFIG_REFRESH_TOKEN  (SecureString)
+#   D1 app_config: slack_app_config_refresh_token
 #
 # Writes (atomic — on Slack API success):
-#   SSM /cloudless/production/SLACK_APP_CONFIG_TOKEN          (SecureString)
-#   SSM /cloudless/production/SLACK_APP_CONFIG_REFRESH_TOKEN  (SecureString)
+#   Wrangler secret: SLACK_APP_CONFIG_TOKEN
+#   D1 app_config:   slack_app_config_token
+#   Wrangler secret: SLACK_APP_CONFIG_REFRESH_TOKEN
+#   D1 app_config:   slack_app_config_refresh_token
 #
 # Outputs to GITHUB_OUTPUT (when run in a workflow):
 #   token=<new_access_token>      — masked, available to subsequent steps
@@ -26,11 +28,10 @@
 
 set -uo pipefail
 
-REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
-PREFIX="${SSM_PREFIX:-/cloudless/production}"
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
-REFRESH_PARAM="$PREFIX/SLACK_APP_CONFIG_REFRESH_TOKEN"
-ACCESS_PARAM="$PREFIX/SLACK_APP_CONFIG_TOKEN"
+REFRESH_CONFIG_KEY="slack_app_config_refresh_token"
+ACCESS_CONFIG_KEY="slack_app_config_token"
 
 emit_output() {
   local key="$1" value="$2"
@@ -46,16 +47,11 @@ mask() {
   fi
 }
 
-# --- Fetch refresh token ---
-REFRESH=$(aws ssm get-parameter \
-  --region "$REGION" \
-  --name "$REFRESH_PARAM" \
-  --with-decryption \
-  --query Parameter.Value \
-  --output text 2>/dev/null || true)
+# --- Fetch refresh token from D1 ---
+REFRESH=$(cf_config_get SLACK_APP_CONFIG_REFRESH_TOKEN)
 
-if [ -z "$REFRESH" ] || [ "$REFRESH" = "None" ]; then
-  echo "::warning::No refresh token in $REFRESH_PARAM — skipping rotation."
+if [ -z "$REFRESH" ] || [ "$REFRESH" = "null" ]; then
+  echo "::warning::No refresh token in D1 config ($REFRESH_CONFIG_KEY) — skipping rotation."
   echo "  Bootstrap with: bash scripts/seed-slack-app-config-tokens.sh"
   emit_output "rotated" "false"
   exit 0
@@ -94,22 +90,18 @@ fi
 mask "$NEW_ACCESS"
 mask "$NEW_REFRESH"
 
-# --- Persist back to SSM (write refresh FIRST — if the workflow dies
+# --- Persist back to Cloudflare (write refresh FIRST — if the workflow dies
 # between the two writes, the next run can still recover, because the
-# refresh token in SSM matches what Slack now expects).
-aws ssm put-parameter \
-  --region "$REGION" \
-  --name "$REFRESH_PARAM" \
-  --type SecureString \
-  --value "$NEW_REFRESH" \
-  --overwrite >/dev/null
+# refresh token in D1 matches what Slack now expects).
+cf_verify_auth || exit 1
 
-aws ssm put-parameter \
-  --region "$REGION" \
-  --name "$ACCESS_PARAM" \
-  --type SecureString \
-  --value "$NEW_ACCESS" \
-  --overwrite >/dev/null
+echo -n "Writing new refresh token... "
+cf_config_set "SLACK_APP_CONFIG_REFRESH_TOKEN" "$NEW_REFRESH" && echo -n "D1 ok " || echo -n "D1 failed "
+cf_secret_set "SLACK_APP_CONFIG_REFRESH_TOKEN" "$NEW_REFRESH" && echo "Wrangler ok" || echo "Wrangler failed"
+
+echo -n "Writing new access token... "
+cf_config_set "SLACK_APP_CONFIG_TOKEN" "$NEW_ACCESS" && echo -n "D1 ok " || echo -n "D1 failed "
+cf_secret_set "SLACK_APP_CONFIG_TOKEN" "$NEW_ACCESS" && echo "Wrangler ok" || echo "Wrangler failed"
 
 echo "✓ Slack app-config token rotated. New access token good for ~12h."
 

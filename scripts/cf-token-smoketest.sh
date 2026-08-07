@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke-test a Cloudflare API token against the scopes the cloudless.gr
 # infra MCP expects. Reads the token from $CLOUDFLARE_API_TOKEN if set,
-# otherwise from AWS SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
+# otherwise from Cloudflare secret / D1 config.
 #
 # Exit code: 0 if all checks pass, non-zero if any scope is missing or
 # the token verify call fails outright.
@@ -16,6 +16,8 @@
 #   ZONE_ID=... ACCOUNT_ID=... bash scripts/cf-token-smoketest.sh
 set -uo pipefail
 
+source "$(dirname "$0")/lib/cf-secrets.sh"
+
 # ── Config ────────────────────────────────────────────────────────────────────
 ZONE_NAME="${ZONE_NAME:-cloudless.gr}"
 ZONE_ID="${ZONE_ID:-}"
@@ -23,18 +25,11 @@ ACCOUNT_ID="${ACCOUNT_ID:-}"
 CF="${CLOUDFLARE_API_TOKEN:-}"
 
 if [ -z "$CF" ]; then
-  echo "→ Resolving token from SSM /cloudless/production/CLOUDFLARE_API_TOKEN"
-  CF="$(aws ssm get-parameter \
-    --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-    --with-decryption \
-    --query Parameter.Value \
-    --output text 2>/dev/null)" || {
-      echo "ERR: cannot read token from SSM and \$CLOUDFLARE_API_TOKEN is unset" >&2
-      exit 2
-    }
+  echo "→ Resolving token from Cloudflare/D1"
+  CF=$(cf_config_get CLOUDFLARE_API_TOKEN)
 fi
-if [ -z "$CF" ] || [ "$CF" = "None" ]; then
-  echo "ERR: token is empty" >&2
+if [ -z "$CF" ] || [ "$CF" = "null" ]; then
+  echo "ERR: token is empty — set CLOUDFLARE_API_TOKEN env or add to Cloudflare secrets" >&2
   exit 2
 fi
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Monthly major dependency version audit for cloudless.gr — posts to Slack."""
+"""Monthly major dependency version audit for cloudless.gr — posts to Slack.
+
+Reads secrets from Cloudflare D1 config via /api/config endpoint
+(falls back to environment variables).
+"""
 
 import datetime
 import json
@@ -7,33 +11,30 @@ import re
 import subprocess
 import urllib.parse
 import urllib.request
+import os
+import sys
 
 
-def ssm(key):
-    r = subprocess.run(
-        [
-            "aws",
-            "ssm",
-            "get-parameter",
-            "--name",
-            f"/cloudless/production/{key}",
-            "--with-decryption",
-            "--query",
-            "Parameter.Value",
-            "--output",
-            "text",
-            "--region",
-            "us-east-1",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    if r.returncode != 0:
-        raise RuntimeError(f"SSM lookup failed for {key!r}: {r.stderr.strip()}")
-    value = r.stdout.strip()
-    if not value:
-        raise RuntimeError(f"SSM returned empty value for {key!r}")
-    return value
+CONFIG_URL = os.environ.get("CONFIG_URL", "http://localhost:8787/api/config")
+
+
+def config_get(key):
+    """Get a value from D1 app_config via /api/config endpoint."""
+    config_key = key.lower()
+    try:
+        req = urllib.request.Request(
+            f"{CONFIG_URL}?key={urllib.parse.quote(config_key)}",
+            headers={"Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        if data.get("value"):
+            return data["value"]
+    except Exception:
+        pass
+    # Fallback to environment variable
+    env_key = key.upper().replace("-", "_")
+    return os.environ.get(env_key)
 
 
 def slack_post(token, channel, text):
@@ -49,9 +50,21 @@ def slack_post(token, channel, text):
         raise RuntimeError(f"Slack API error: {resp.get('error', 'unknown')}")
 
 
-token = ssm("SLACK_BOT_TOKEN")
-channel = ssm("SLACK_DEFAULT_CHANNEL")
-gh_token = ssm("GITHUB_TOKEN")
+# Get secrets from Cloudflare/D1
+token = config_get("slack_bot_token")
+channel = config_get("slack_default_channel")
+gh_token = config_get("github_token")
+
+if not token:
+    print("ERROR: SLACK_BOT_TOKEN not found in Cloudflare/D1 config", file=sys.stderr)
+    sys.exit(1)
+if not channel:
+    print("ERROR: SLACK_DEFAULT_CHANNEL not found in Cloudflare/D1 config", file=sys.stderr)
+    sys.exit(1)
+if not gh_token:
+    print("ERROR: GITHUB_TOKEN not found in Cloudflare/D1 config", file=sys.stderr)
+    sys.exit(1)
+
 today = datetime.date.today().isoformat()
 
 # Fetch package.json from main branch
@@ -70,7 +83,7 @@ KEY_PKGS = [
     "@sentry/nextjs",
     "stripe",
     "aws-amplify",
-    "@aws-sdk/client-ses",
+    "resend",  # Replaced @aws-sdk/client-ses
     "next-intl",
     "@playwright/test",
     "tailwindcss",

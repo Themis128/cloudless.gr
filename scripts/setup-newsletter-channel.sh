@@ -8,7 +8,7 @@
 #   2. Invites the @cloudless_bot to it
 #   3. Sets a topic + purpose
 #   4. Posts a welcome card
-#   5. Writes the channel ID to AWS SSM as /cloudless/production/NEWSLETTER_SLACK_CHANNEL_ID
+#   5. Writes the channel ID to D1 app_config as newsletter_slack_channel_id
 #   6. Writes it as a GitHub Actions repository secret so the weekly
 #      cron scripts pick it up
 #
@@ -34,18 +34,12 @@
 
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
-PREFIX="${SSM_PREFIX:-/cloudless/production}"
+source "$(dirname "$0")/lib/cf-secrets.sh"
+
 CHANNEL_NAME="newsletter"
 
-if ! command -v aws >/dev/null; then
-  echo "ERROR: aws CLI not found." >&2; exit 1
-fi
 if ! command -v gh >/dev/null; then
   echo "ERROR: gh CLI not found — needed to write the GH Actions secret." >&2; exit 1
-fi
-if ! aws sts get-caller-identity >/dev/null 2>&1; then
-  echo "ERROR: AWS credentials not configured. Run 'aws configure' first." >&2; exit 1
 fi
 if ! gh auth status >/dev/null 2>&1; then
   echo "ERROR: gh CLI not authenticated. Run 'gh auth login' first." >&2; exit 1
@@ -76,9 +70,11 @@ USER=$(echo "$WHOAMI" | jq -r .user)
 echo "ok (team=$TEAM, user=$USER)"
 
 # --- Get bot's user id from the bot token (for invite step) ---
-BOT_TOKEN=$(aws ssm get-parameter --region "$REGION" \
-  --name "$PREFIX/SLACK_BOT_TOKEN" --with-decryption --output json \
-  | jq -r .Parameter.Value)
+BOT_TOKEN=$(cf_config_get SLACK_BOT_TOKEN)
+if [ -z "$BOT_TOKEN" ] || [ "$BOT_TOKEN" = "null" ]; then
+  echo "ERROR: SLACK_BOT_TOKEN not found in Cloudflare/D1. Run activate-integration.sh set SLACK_BOT_TOKEN <token> first."
+  exit 1
+fi
 BOT_INFO=$(curl -sS https://slack.com/api/auth.test -H "Authorization: Bearer $BOT_TOKEN")
 BOT_USER_ID=$(echo "$BOT_INFO" | jq -r .user_id)
 BOT_NAME=$(echo "$BOT_INFO" | jq -r .user)
@@ -155,13 +151,16 @@ curl -sS -X POST https://slack.com/api/chat.postMessage \
   -d "$(jq -n --arg ch "$CH_ID" --argjson blocks "$BLOCKS" '{channel:$ch, text:"Newsletter Operations channel", blocks:$blocks}')" \
   | jq -r '"welcome card: ok=\(.ok), ts=\(.ts // \"\"), error=\(.error // \"none\")"'
 
-# --- Persist the channel ID ---
+# --- Persist the channel ID to Cloudflare ---
 echo ""
 echo "=== Persisting NEWSLETTER_SLACK_CHANNEL_ID ==="
-aws ssm put-parameter --region "$REGION" \
-  --name "$PREFIX/NEWSLETTER_SLACK_CHANNEL_ID" \
-  --type String --value "$CH_ID" --overwrite >/dev/null
-echo "SSM:   $PREFIX/NEWSLETTER_SLACK_CHANNEL_ID = $CH_ID"
+cf_verify_auth || exit 1
+
+echo -n "Writing newsletter_slack_channel_id to D1... "
+cf_config_set "NEWSLETTER_SLACK_CHANNEL_ID" "$CH_ID" && echo "D1 ok" || echo "D1 failed"
+
+echo -n "Writing NEWSLETTER_SLACK_CHANNEL_ID to Wrangler... "
+cf_secret_set "NEWSLETTER_SLACK_CHANNEL_ID" "$CH_ID" && echo "Wrangler ok" || echo "Wrangler failed"
 
 if echo "$CH_ID" | gh secret set NEWSLETTER_SLACK_CHANNEL_ID --body - >/dev/null 2>&1; then
   echo "gh:    repo secret NEWSLETTER_SLACK_CHANNEL_ID set"

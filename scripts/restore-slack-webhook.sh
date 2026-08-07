@@ -33,25 +33,17 @@
 #   5. Run this script and paste at the prompt.
 #
 # After the script:
-#   • SLACK_WEBHOOK_URL is stored in SSM (SecureString) and as a GH
-#     repo secret. Cron immediately starts posting to it again.
+#   • SLACK_WEBHOOK_URL is stored in D1 app_config and Wrangler secret. Cron immediately starts posting to it again.
 #   • The bot now has channels:manage / channels:read, so
 #     scripts/setup-newsletter-channel.sh can run without a user
 #     OAuth token — the bot can create #newsletter itself.
 
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
-PREFIX="${SSM_PREFIX:-/cloudless/production}"
+source "$(dirname "$0")/lib/cf-secrets.sh"
 
-if ! command -v aws >/dev/null; then
-  echo "ERROR: aws CLI not found." >&2; exit 1
-fi
 if ! command -v gh >/dev/null; then
   echo "ERROR: gh CLI not found." >&2; exit 1
-fi
-if ! aws sts get-caller-identity >/dev/null 2>&1; then
-  echo "ERROR: AWS credentials not configured. Run 'aws configure' first." >&2; exit 1
 fi
 if ! gh auth status >/dev/null 2>&1; then
   echo "ERROR: gh CLI not authenticated. Run 'gh auth login' first." >&2; exit 1
@@ -86,12 +78,14 @@ fi
 rm -f /tmp/.wh-test
 echo "ok (Slack accepted the post)"
 
-# --- Persist to SSM ---
-echo -n "Writing $PREFIX/SLACK_WEBHOOK_URL ... "
-aws ssm put-parameter --region "$REGION" \
-  --name "$PREFIX/SLACK_WEBHOOK_URL" \
-  --type SecureString --value "$URL" --overwrite >/dev/null
-echo "ok"
+# --- Persist to Cloudflare ---
+cf_verify_auth || exit 1
+
+echo -n "Writing SLACK_WEBHOOK_URL to D1... "
+cf_config_set "SLACK_WEBHOOK_URL" "$URL" && echo "D1 ok" || echo "D1 failed"
+
+echo -n "Writing SLACK_WEBHOOK_URL to Wrangler... "
+cf_secret_set "SLACK_WEBHOOK_URL" "$URL" && echo "Wrangler ok" || echo "Wrangler failed"
 
 # --- Persist as GH Actions repo secret (cron uses this) ---
 echo -n "Setting GH Actions repo secret SLACK_WEBHOOK_URL ... "
