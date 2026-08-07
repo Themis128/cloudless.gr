@@ -13,23 +13,21 @@
  * blog/case-studies index is stale. This script is the canonical way to
  * audit "what does Notion currently let us read."
  *
- * Reads from AWS SSM Parameter Store at /cloudless/production/* using
- * AWS_PROFILE / standard SDK credential chain — same surface as
- * src/lib/integrations.ts. No placeholders, no fabricated IDs — if an
- * env var is missing, that DB row reports "not configured".
+ * Reads Notion database IDs and API key from D1 app_config via /api/config
+ * endpoint (Cloudflare-first) with env var fallback.
+ * No placeholders, no fabricated IDs — if a config is missing, that DB
+ * row reports "not configured".
  *
  * Exit codes:
  *   0  every configured DB returned 200
  *   1  one or more configured DBs returned 404 (re-share action required)
  *   2  Notion API key missing or auth failed
- *   3  SSM fetch error
+ *   3  Config fetch error
  */
-import { SSMClient, GetParametersByPathCommand } from "@aws-sdk/client-ssm";
 
-const REGION = process.env.AWS_REGION ?? "us-east-1";
-const SSM_PATH = "/cloudless/production/";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
+const CONFIG_URL = process.env.CONFIG_URL || "http://localhost:8787/api/config";
 
 const DB_KEYS = [
   ["NOTION_BLOG_DB_ID", "Blog posts"],
@@ -44,26 +42,45 @@ const DB_KEYS = [
   ["NOTION_FAQS_DB_ID", "FAQs"],
 ];
 
-async function loadSsm() {
-  const client = new SSMClient({ region: REGION });
-  const params = {};
-  let nextToken;
-  do {
-    const res = await client.send(
-      new GetParametersByPathCommand({
-        Path: SSM_PATH,
-        Recursive: false,
-        WithDecryption: true,
-        NextToken: nextToken,
-      })
-    );
-    for (const p of res.Parameters ?? []) {
-      const key = p.Name.replace(SSM_PATH, "");
-      params[key] = p.Value;
+// Map config keys to D1 app_config keys
+const CONFIG_KEY_MAP = {
+  "NOTION_BLOG_DB_ID": "notion_blog_db_id",
+  "NOTION_DOCS_DB_ID": "notion_docs_db_id",
+  "NOTION_PROJECTS_DB_ID": "notion_projects_db_id",
+  "NOTION_TASKS_DB_ID": "notion_tasks_db_id",
+  "NOTION_CALENDAR_DB_ID": "notion_calendar_db_id",
+  "NOTION_SUBMISSIONS_DB_ID": "notion_submissions_db_id",
+  "NOTION_TESTIMONIALS_DB_ID": "notion_testimonials_db_id",
+  "NOTION_CASE_STUDIES_DB_ID": "notion_case_studies_db_id",
+  "NOTION_SERVICES_DB_ID": "notion_services_db_id",
+  "NOTION_FAQS_DB_ID": "notion_faqs_db_id",
+  "NOTION_API_KEY": "notion_api_key",
+};
+
+async function loadConfig() {
+  const config = {};
+  
+  // Try to fetch from D1 config endpoint
+  for (const [envKey, configKey] of Object.entries(CONFIG_KEY_MAP)) {
+    try {
+      const res = await fetch(`${CONFIG_URL}?key=${encodeURIComponent(configKey)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.value) {
+          config[envKey] = json.value;
+        }
+      }
+    } catch (err) {
+      // Ignore fetch errors, fall back to env vars
     }
-    nextToken = res.NextToken;
-  } while (nextToken);
-  return params;
+    
+    // Fallback to environment variable
+    if (!config[envKey] && process.env[envKey]) {
+      config[envKey] = process.env[envKey];
+    }
+  }
+  
+  return config;
 }
 
 async function probeDb(id, apiKey) {
@@ -92,18 +109,18 @@ function pad(s, n) {
 }
 
 async function main() {
-  let ssm;
+  let config;
   try {
-    ssm = await loadSsm();
+    config = await loadConfig();
   } catch (err) {
-    console.error(`SSM fetch failed: ${err.message}`);
+    console.error(`Config fetch failed: ${err.message}`);
     process.exit(3);
   }
 
-  const apiKey = ssm.NOTION_API_KEY ?? process.env.NOTION_API_KEY;
+  const apiKey = config.NOTION_API_KEY;
   if (!apiKey) {
     console.error(
-      "NOTION_API_KEY missing from both SSM (/cloudless/production/NOTION_API_KEY) and env."
+      "NOTION_API_KEY missing from both D1 config (notion_api_key) and env."
     );
     process.exit(2);
   }
@@ -117,7 +134,7 @@ async function main() {
   const failed = [];
 
   for (const [key, label] of DB_KEYS) {
-    const id = ssm[key] ?? process.env[key];
+    const id = config[key];
     if (!id) {
       unconfigured++;
       console.log(pad(label, 30), pad("⚪ skip", 10), pad("not configured", 20), key);

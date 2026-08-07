@@ -6,26 +6,25 @@
  * SQL file for `wrangler d1 execute` upserts into `aws_cost_daily`.
  *
  * Replaces scripts/etl/aws-cost-to-lake.mjs (S3 + Athena path).
+ * Uses aws4fetch for signed requests (no @aws-sdk/client-cost-explorer).
  */
 
-import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { BUCKET, r2Put } from "./_r2-config.mjs";
+import { BUCKET, r2Put, getR2Client } from "./_r2-config.mjs";
 import { shapeResults } from "./aws-cost-to-lake.mjs";
 
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
 
-const ce = new CostExplorerClient({ region: "us-east-1" });
+// Cost Explorer endpoint (global service, us-east-1)
+const CE_ENDPOINT = "https://ce.us-east-1.amazonaws.com/";
 
-const schema = new ParquetSchema({
-	cost_date: { type: "UTF8" },
-	service: { type: "UTF8" },
-	amount_usd: { type: "DOUBLE" },
-	currency: { type: "UTF8" },
-});
+// Get credentials for aws4fetch signing
+const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID || process.env.COST_EXPLORER_ACCESS_KEY_ID;
+const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY || process.env.COST_EXPLORER_SECRET_ACCESS_KEY;
+const AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
 function isoDate(d) {
 	return d.toISOString().slice(0, 10);
@@ -54,18 +53,45 @@ function buildD1Sql(rows, syncedAt) {
 }
 
 async function fetchDailyCost() {
+	if (!ACCESS_KEY_ID || !SECRET_ACCESS_KEY) {
+		throw new Error("AWS credentials required for Cost Explorer API (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)");
+	}
+
+	const { AwsClient } = await import("aws4fetch");
+	const client = new AwsClient({
+		accessKeyId: ACCESS_KEY_ID,
+		secretAccessKey: SECRET_ACCESS_KEY,
+		service: "ce",
+		region: AWS_REGION,
+	});
+
 	const end = new Date();
 	const start = new Date();
 	start.setUTCDate(start.getUTCDate() - LOOKBACK_DAYS);
-	const out = await ce.send(
-		new GetCostAndUsageCommand({
-			TimePeriod: { Start: isoDate(start), End: isoDate(end) },
-			Granularity: "DAILY",
-			Metrics: ["UnblendedCost"],
-			GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
-		})
-	);
-	return out.ResultsByTime || [];
+
+	const payload = {
+		TimePeriod: { Start: isoDate(start), End: isoDate(end) },
+		Granularity: "DAILY",
+		Metrics: ["UnblendedCost"],
+		GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }],
+	};
+
+	const res = await client.fetch(CE_ENDPOINT, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-amz-json-1.1",
+			"X-Amz-Target": "AWSInsightsIndexService.GetCostAndUsage",
+		},
+		body: JSON.stringify(payload),
+	});
+
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`Cost Explorer API ${res.status}: ${text.slice(0, 500)}`);
+	}
+
+	const data = await res.json();
+	return data.ResultsByTime || [];
 }
 
 async function main() {

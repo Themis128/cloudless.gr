@@ -1,14 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * DEPRECATED — AWS Cost Explorer data collection.
+ * DEPRECATED — AWS Cost Explorer data collection (legacy S3 + Athena path).
  *
  * This script depends on AWS Cost Explorer API (an AWS-specific service).
  * Since the cloudless.gr infrastructure has migrated fully to Cloudflare,
  * this script is retained for historical reference only.
  *
- * No direct R2 replacement exists; Cloudflare does not provide cost APIs.
- * Consider removing this script and associated Grafana dashboard if AWS
- * cost monitoring is no longer required.
+ * Use `aws-cost-to-r2.mjs` instead (Cloudflare-first: R2 + D1, uses aws4fetch).
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ETL: AWS Cost Explorer → S3 Data Lake (Parquet)
