@@ -40,9 +40,9 @@ function toBodyInit(body: Buffer | Uint8Array | string): BodyInit {
   if (typeof body === "string") return body;
   // Explicit ArrayBuffer backing — see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
   const ab = new ArrayBuffer(body.byteLength);
-  const view: Uint8Array<ArrayBuffer> = new Uint8Array(ab);
+  const view = new Uint8Array(ab);
   view.set(body);
-  return view;
+  return ab;
 }
 
 export async function r2PutObject(options: {
