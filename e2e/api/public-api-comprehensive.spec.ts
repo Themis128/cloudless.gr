@@ -730,6 +730,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -744,6 +745,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -752,6 +754,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
   });
@@ -763,6 +766,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -771,6 +775,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
   });
@@ -782,6 +787,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -793,6 +799,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
   });
@@ -824,6 +831,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 402, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -842,6 +850,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 402, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
   });
@@ -853,6 +862,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
     
@@ -861,6 +871,7 @@ test.describe("Public API - Comprehensive Testing", () => {
         expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
       });
       
+      // Accept any status that indicates the endpoint exists and is working
       expect(response.status()).toBeLessThan(500);
     });
   });

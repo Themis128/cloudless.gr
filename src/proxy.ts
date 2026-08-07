@@ -186,7 +186,7 @@ function readNextAuthJwt(request: NextRequest): string | null {
   // Check for authjs.session-token (used by next-auth in latest versions)
   const token = request.cookies.get("authjs.session-token")?.value ?? 
                 request.cookies.get("next-auth.session-token")?.value;
-  return token;
+  return token ?? null;
 }
 
 /**
@@ -354,6 +354,14 @@ async function handlePageRoute(
       }
     } else {
       // No session cookie - redirect to login
+      // For post-login route, just go to login without redirect param
+      if (isPostLoginRoute) {
+        const basePath = pathname.split("/")[1] || "";
+        const isLocalized = LOCALES.includes(basePath);
+        const loginPath = isLocalized ? `/${basePath}/auth/login` : "/auth/login";
+        return NextResponse.redirect(new URL(loginPath, request.nextUrl.origin), 307);
+      }
+      
       const basePath = pathname.split("/")[1] || "";
       const isLocalized = LOCALES.includes(basePath);
       const redirectPath = isLocalized
