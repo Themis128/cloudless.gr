@@ -1,0 +1,120 @@
+name: Pi auth logs v2 (D1 login/register triage)
+
+# One-shot diagnostic for the /api/auth/login → 500 empty-body issue.
+# Reads the cloudless-app pod logs and greps for auth / D1 / next-auth
+# errors, then posts the captured output as a comment on tracking issue #382.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tail_lines:
+        description: How many log lines per pod to fetch
+        required: false
+        default: '400'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAIL: ${{ inputs.tail_lines || '400' }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Connect to tailnet (ephemeral node)
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TS_AUTHKEY }}
+        version: latest
+        tags: tag:ci
+
+    - name: Configure kubectl (system:admin via KUBECONFIG_B64)
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+        kubectl version --client -o yaml | head -5
+
+    - name: Snapshot cluster state (cloudless namespace)
+      id: state
+      run: |
+        {
+          echo "## Cluster snapshot ($(date -u '+%F %T')Z)"
+          echo
+          echo '### Pods'
+          echo '```'
+          kubectl get pods -n cloudless -o wide 2>&1 | head -40
+          echo '```'
+          echo
+          echo '### Services'
+          echo '```'
+          kubectl get svc -n cloudless -o wide 2>&1 | head -20
+          echo '```'
+          echo
+          echo '### Deployment env for cloudless-app (secret names only, no values)'
+          echo '```'
+          kubectl get deploy cloudless-app -n cloudless -o json 2>&1 \
+            | jq -r '.spec.template.spec.containers[]?.env[]? | "\(.name)=\(.valueFrom.secretKeyRef.name // "<literal>"):\(.valueFrom.secretKeyRef.key // "n/a")"' \
+            | sort -u | head -60
+          echo '```'
+          echo
+          echo '### Referenced Secrets (existence check)'
+          echo '```'
+          for s in pi-standby-aws-creds cloudless-app-env auth-secrets; do
+            kubectl get secret "$s" -n cloudless -o jsonpath='{.metadata.name}: {range .data.*}\n  {@}{end}' 2>&1 || echo "  (missing: $s)"
+          done
+          echo '```'
+        } > snapshot.md
+        cat snapshot.md
+
+    - name: Fetch app logs (last $TAIL lines, ALL cloudless-app pods)
+      run: |
+        {
+          echo "## cloudless-app logs — last $TAIL lines"
+          for pod in $(kubectl get pods -n cloudless -l app=cloudless-app -o name 2>/dev/null); do
+            echo
+            echo "### $pod"
+            echo '```'
+            kubectl logs -n cloudless "$pod" --tail="$TAIL" 2>&1 | tail -200
+            echo '```'
+          done
+        } > applogs.md
+        wc -l applogs.md
+
+    - name: Grep for auth / D1 / login errors
+      run: |
+        {
+          echo "## Auth-related log matches (case-insensitive, last 30 min)"
+          echo '```'
+          for pod in $(kubectl get pods -n cloudless -l app=cloudless-app -o name 2>/dev/null); do
+            echo "--- $pod ---"
+            kubectl logs -n cloudless "$pod" --since=30m 2>&1 \
+              | grep -Ei 'auth|login|register|d1|session|cloudflare.*api|10000|6003|6111|401|500|unauthorized|forbidden|throw|exception|Error:' \
+              | tail -80 || echo '(no matches)'
+          done
+          echo '```'
+        } > authgrep.md
+
+    - name: Post to tracking issue 382
+      if: always()
+      run: |
+        {
+          echo "# Pi auth logs v2 — $(date -u '+%F %T')Z"
+          echo
+          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+          echo
+          cat snapshot.md 2>/dev/null || echo '(no snapshot)'
+          echo
+          cat authgrep.md 2>/dev/null || echo '(no grep)'
+          echo
+          echo '<details><summary>Raw applogs (last '"$TAIL"' lines each)</summary>'
+          echo
+          cat applogs.md 2>/dev/null || echo '(no applogs)'
+          echo
+          echo '</details>'
+        } > comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
