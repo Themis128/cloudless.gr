@@ -554,6 +554,8 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   return null;
 }
 
+export { verifyPassword, hashPassword, readPreferenceFlag };
+
 export async function getUserById(db: AuthDatabase, userId: string): Promise<D1User | null> {
   return db
     .prepare(
