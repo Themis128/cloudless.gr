@@ -100,7 +100,7 @@ function getHttpAuthDbFallback(): AuthDatabase | null {
         if (!allResult.results.length) return null;
         const row = allResult.results[0];
         if (col) {
-          return (row as any)[col] ?? null;
+          return (row as unknown as Record<string, unknown>)[col] ?? null;
         }
         return row as T;
       },

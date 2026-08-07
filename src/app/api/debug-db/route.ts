@@ -24,8 +24,8 @@ export async function GET() {
         errorMessage = `Query failed: result.ok = ${result?.ok ?? 'undefined'}`;
       }
     }
-  } catch (err: any) {
-    errorMessage = `Exception: ${err.message}`;
+  } catch (err) {
+    errorMessage = `Exception: ${(err as Error).message}`;
   }
 
   // Also try to get some environment info for debugging
