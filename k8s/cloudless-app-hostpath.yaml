@@ -11,9 +11,6 @@ data:
   NEXT_PUBLIC_SITE_URL: https://cloudless.gr
   NEXT_PUBLIC_AUTH_PROVIDER: d1
   SENTRY_ENVIRONMENT: pi-standby
-# TikTok OAuth configuration
-TIKTOK_APP_ID: "your_app_id_here"
-TIKTOK_REDIRECT_URI: "https://cloudless.gr/api/tiktok/callback"
   ESPOCRM_BASE_URL: https://espocrm.cloudless.gr
   # Public https://postiz.cloudless.gr is behind Cloudflare Access (302 → login),
   # so server-side calls get a non-JSON redirect → 502. Pods must use in-cluster DNS.
