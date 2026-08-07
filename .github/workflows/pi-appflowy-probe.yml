@@ -1,0 +1,112 @@
+name: Pi AppFlowy probe (actual auth call from the pod)
+
+# The /api/blog/posts route still returns x-cms-source: notion even though
+# APPFLOWY_API_URL / EMAIL / PASSWORD / JWT_SECRET are all present in the
+# pod and blog-source.ts prefers AppFlowy when isAppFlowyConfigured(). That
+# means getAppFlowyPosts() is either throwing or returning zero *published*
+# posts. This workflow reproduces the exact GoTrue password grant + one
+# workspace/collab-view read from inside the pod (Node's native fetch) and
+# prints the concrete status codes + response bodies so we can pinpoint
+# the failure.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Connect to tailnet
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TS_AUTHKEY }}
+        version: latest
+        tags: tag:ci
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Copy probe script into pod + run
+      run: |
+        set -euo pipefail
+        POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+        echo "pod: $POD"
+
+        cat > /tmp/probe.mjs <<'JS'
+        const url = (process.env.APPFLOWY_API_URL || "").replace(/\/$/, "");
+        const email = process.env.APPFLOWY_EMAIL || "";
+        const password = process.env.APPFLOWY_PASSWORD || "";
+        const jwtSecret = process.env.APPFLOWY_JWT_SECRET || "";
+
+        console.log(`APPFLOWY_API_URL: ${url}`);
+        console.log(`has email/password: ${email && password ? "yes" : "no"}`);
+        console.log(`has jwt secret: ${jwtSecret ? "yes" : "no"}`);
+        console.log();
+
+        // Health check first
+        try {
+          const h = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+          console.log(`--- health: ${h.status} ---`);
+          console.log((await h.text()).slice(0, 200));
+        } catch (e) {
+          console.log(`--- health FAILED: ${e.message} ---`);
+        }
+        console.log();
+
+        // GoTrue password grant (this is what appflowy.ts does under the hood)
+        try {
+          const t = await fetch(`${url}/gotrue/token?grant_type=password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+            signal: AbortSignal.timeout(10000),
+          });
+          console.log(`--- gotrue/token: ${t.status} ---`);
+          const body = await t.text();
+          console.log(body.slice(0, 600));
+          console.log();
+
+          if (t.ok) {
+            const { access_token } = JSON.parse(body);
+            // Try listing workspaces
+            const w = await fetch(`${url}/api/workspace`, {
+              headers: { Authorization: `Bearer ${access_token}` },
+              signal: AbortSignal.timeout(10000),
+            });
+            console.log(`--- /api/workspace: ${w.status} ---`);
+            console.log((await w.text()).slice(0, 800));
+          }
+        } catch (e) {
+          console.log(`--- gotrue FAILED: ${e.message} ---`);
+        }
+        JS
+
+        kubectl cp /tmp/probe.mjs ${POD#pod/}:/tmp/probe.mjs -n cloudless
+        {
+          echo "## AppFlowy auth probe from inside cloudless-app pod"
+          echo '```'
+          kubectl exec -n cloudless "$POD" -- node /tmp/probe.mjs 2>&1 || echo "(node exited non-zero)"
+          echo '```'
+        } > probe.md
+        cat probe.md
+
+    - name: Post to tracking issue 382
+      if: always()
+      run: |
+        {
+          echo "# Pi AppFlowy probe — $(date -u '+%F %T')Z"
+          echo
+          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+          echo
+          cat probe.md 2>/dev/null || echo "(no probe output)"
+        } > comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
