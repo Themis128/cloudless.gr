@@ -1,6 +1,6 @@
 packages:
-- workers/*
-- scripts/etl
+  - workers/*
+  - scripts/etl
 
 allowBuilds:
   '@parcel/watcher': true
@@ -9,6 +9,8 @@ allowBuilds:
   workerd: true
   sharp: false
   unrs-resolver: false
+  core-js-pure: true
+  esbuild: true
 
 overrides:
   esbuild: '>=0.28.1'

@@ -184,6 +184,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-email": "^6.9.0",
+    "resend": "^6.18.1",
     "stripe": "^22.3.2",
     "undici": "8.7.0",
     "workers-ai-provider": "^3.3.1",
