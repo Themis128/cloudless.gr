@@ -415,6 +415,36 @@ npx wrangler deploy
 | Routes | `/api/analytics/export`, `/api/analytics/query`, `/api/analytics/rollup` |
 | Bindings | `ANALYTICS` (Analytics Engine dataset), `DATALAKE_BUCKET` (R2), `ANALYTICS_BUCKET` (R2) |
 
+### Deployment inventory (single source of truth)
+
+The Cloudflare account currently holds **exactly two** deployed Workers:
+
+| Live script name | Source config | Deployed by | Notes |
+|------------------|--------------|-------------|-------|
+| `cloudless2` | [`workers/pi-origin-proxy/wrangler.jsonc`](../../workers/pi-origin-proxy/wrangler.jsonc) | [`.github/workflows/cloudflare-deploy.yml`](../../.github/workflows/cloudflare-deploy.yml) | The Free-tier pi-origin proxy described above. |
+| `cloudless-monorepo-production-analyticsworkerscript` | Analytics Engine worker (see Worker 3) | Monorepo pipeline | Serves `/api/analytics/*`. |
+
+Verify with `mcp__cloudflare-observability__workers_list` or
+`npx wrangler deployments list --config workers/pi-origin-proxy/wrangler.jsonc`.
+
+#### Alternate configs present in the repo but **not currently deployed**
+
+Two additional wrangler configs describe a *hypothetical* full Next.js
+deployment on Workers (static assets from `./out`, Durable Objects
+`CounterAgent`/`EchoAgent`/`CodingAgent`, D1 `AUTH_DB`, R2 buckets, AI, cron
+triggers). They exist for the AWS→Cloudflare migration explorations and are
+not part of the current production edge:
+
+| File | Would deploy as | Triggered by | Status |
+|------|-----------------|--------------|--------|
+| [`wrangler-cloudflare-free.json`](../../wrangler-cloudflare-free.json) | `cloudless-gr-free` (custom domain on `cloudless.gr` + `www.cloudless.gr`) | [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml) | Experimental. If deployed, its `custom_domain: true` routes on `cloudless.gr` / `www.cloudless.gr` would collide with `cloudless2`. Do not run without first removing the `cloudless2` routes. |
+| ~~`wrangler-cloudless2.json`~~ | (deleted 2026-08-07) | — | Was a footgun: also named itself `cloudless2` but with entirely different bindings. Removed alongside `scripts/store_cloudflare_token.sh` which referenced it. |
+
+The historical `cloudless-failover` Paid-tier Worker described earlier in this
+document is **not deployed** — the CloudFront-primary/Pi-standby failover
+plan was superseded by the direct Pi proxy. Treat that section as design
+history until the Worker is re-created.
+
 ---
 
 ## Security & DDoS Protection
@@ -891,9 +921,10 @@ dig omv.cloudless.gr +short
 | 2026-07-20 | Cline | Fixed tunnel credentials permissions (400 → 644), updated tunnel ID |
 | 2026-07-26 | Cline | Updated DNS records with all active services, added Worker architecture |
 | 2026-07-31 | Cline | Comprehensive update: corrected tunnel ID, added missing DNS records, documented both Workers, updated token storage to GitHub Secrets |
+| 2026-08-07 | Claude | Added Deployment Inventory section; flagged `cloudless-gr-free` as unused; noted `cloudless-failover` is documented but not deployed; removed orphan `wrangler-cloudless2.json` and dead `scripts/store_cloudflare_token.sh` |
 
 ---
 
 **Status:** ✅ Production Ready  
-**Last Reviewed:** 2026-07-31  
-**Next Review:** 2026-08-31 (monthly)
+**Last Reviewed:** 2026-08-07  
+**Next Review:** 2026-09-07 (monthly)
