@@ -96,8 +96,25 @@ All ETL scripts have been migrated:
 
 ## Remaining Tasks
 
-- ⏳ `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 app_config
-- ⏳ `scripts/etl/portals-to-lake.mjs` - Migrate SSM → D1 app_config
+- ✅ `scripts/etl/clients-to-lake.mjs` - Migrated SSM → D1 app_config (uses `/api/config` endpoint)
+- ✅ `scripts/etl/portals-to-lake.mjs` - Migrated SSM → D1 app_config (uses `/api/config` endpoint)
+
+## Package.json Cleanup (2026-08-08)
+
+All `@aws-sdk/*` packages removed from dependencies and devDependencies:
+- @aws-sdk/client-bedrock-runtime
+- @aws-sdk/client-cost-explorer
+- @aws-sdk/client-dynamodb
+- @aws-sdk/client-sesv2
+- @aws-sdk/client-ssm
+- @aws-sdk/client-athena
+- @aws-sdk/client-s3
+- @aws-sdk/client-sns
+- @aws-sdk/client-cognito-identity-provider
+- @aws-sdk/client-iam (devDependency)
+- @aws-lambda-powertools/logger
+
+Verified with: `rg '@aws-sdk' package.json src/` → empty
 
 ## Notes
 

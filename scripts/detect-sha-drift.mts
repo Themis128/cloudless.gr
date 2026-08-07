@@ -17,6 +17,10 @@
  *   1 — drift detected outside the grace window
  *   2 — could not read SSM (no AWS creds, network, etc.)
  *
+ * Mode:
+ *   Default: Cloudflare-only (no AWS SSM required) — compares /api/health version
+ *   Legacy:  Set CLOUDFLARE_ONLY=false to use AWS SSM as source of truth
+ *
  * NOTE on duplication
  * -------------------
  * The `shaEquivalent` + `evaluateDrift` logic below is intentionally
@@ -109,6 +113,10 @@ const HEALTH_URLS = {
 } as const;
 const SSM_CLOUD = "/cloudless/production/cloud-sha";
 const SSM_PI = "/cloudless/production/pi-sha";
+// Default to Cloudflare-only mode (no AWS SSM required)
+// Override with CLOUDFLARE_ONLY=false to use SSM (legacy)
+const CLOUDFLARE_ONLY = process.env.CLOUDFLARE_ONLY !== "false";
+
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
@@ -185,7 +193,7 @@ async function snapshotCloudflareOnly(): Promise<DriftSnapshot> {
 }
 
 async function snapshot(): Promise<DriftSnapshot | null> {
-  if (process.env.CLOUDFLARE_ONLY === "true") {
+  if (CLOUDFLARE_ONLY) {
     return snapshotCloudflareOnly();
   }
   const { SSMClient } = await import("@aws-sdk/client-ssm");
@@ -223,7 +231,7 @@ async function main(): Promise<void> {
   // Bot Fight Mode (Free) returns HTML challenges to GHA — both surfaces null.
   // That is not SHA drift; page the operator to disable BFM instead.
   if (
-    process.env.CLOUDFLARE_ONLY === "true" &&
+    CLOUDFLARE_ONLY &&
     report.surfaces.every((s) => s.actual === null)
   ) {
     const out = {
