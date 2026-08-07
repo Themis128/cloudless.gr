@@ -72,14 +72,14 @@ const RATE_LIMITS = {
   },
 };
 
-// Admin-specific rate limits (stricter)
+// Admin-specific rate limits (stricter but reasonable for dashboard loads)
 const ADMIN_RATE_LIMIT = {
   ip: {
-    limit: IS_DEV ? 1000 : 3,
+    limit: IS_DEV ? 1000 : 10,
     window: 10,
   },
   auth: {
-    limit: IS_DEV ? 2000 : 5,
+    limit: IS_DEV ? 2000 : 30,
     window: 10,
   },
 };
@@ -156,7 +156,7 @@ function buildCSP(nonce: string): string {
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: http: 'unsafe-inline' 'unsafe-eval';
-    style-src 'self' 'nonce-${nonce}' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
     img-src 'self' data: https: blob:;
     font-src 'self';
     connect-src 'self' https: wss:;
