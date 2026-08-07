@@ -8,7 +8,7 @@
  * Docs: POST /accounts/{account_id}/d1/database/{database_id}/query
  */
 
-import type { AuthDatabase } from "@/lib/auth-d1";
+import type { AuthDatabase } from "./auth-d1";
 
 /** Production user-auth-db — must match wrangler.jsonc `database_id`. */
 export const DEFAULT_AUTH_D1_DATABASE_ID = "7ca74513-23c3-412a-b9ca-b0c55835973d";

@@ -16,11 +16,10 @@
  *   }
  */
 
-import { DynamoDBClient, PutItemCommand, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
-import { marshall } from "@aws-sdk/util-dynamodb";
+import { getHttpAuthDb } from "../../src/lib/d1-http";
 
-const ddb = new DynamoDBClient({});
-const TABLE = process.env.R20_DDB_TABLE || "cloudless-ReplicationMirror-production";
+const db = getHttpAuthDb();
+const TABLE = process.env.R20_D1_TABLE || "replication_mirror";
 
 export interface ReplicationColumn {
   name: string;
@@ -62,6 +61,10 @@ export async function handleReplicationEvent(event: ReplicationEvent): Promise<{
   deleted: number;
   skipped: number;
 }> {
+  if (!db) {
+    throw new Error("D1 database connection not available");
+  }
+
   const changes = event.changes ?? [];
   let written = 0;
   let deleted = 0;
@@ -74,38 +77,47 @@ export async function handleReplicationEvent(event: ReplicationEvent): Promise<{
     }
 
     const pk = primaryKey(change);
-    const itemKey = {
-      pk: `${change.schema ?? "public"}#${change.table}`,
-      sk: String(pk.id ?? JSON.stringify(pk)),
-    };
+    const partitionKey = `${change.schema ?? "public"}#${change.table}`;
+    const sortKey = String(pk.id ?? JSON.stringify(pk));
 
     if (change.kind === "delete") {
-      await ddb.send(
-        new DeleteItemCommand({
-          TableName: TABLE,
-          Key: marshall(itemKey),
-        })
-      );
+      await db
+        .prepare(
+          `DELETE FROM ${TABLE} WHERE pk = ? AND sk = ?`
+        )
+        .bind(partitionKey, sortKey)
+        .run();
       deleted += 1;
       continue;
     }
 
     const payload = {
-      ...itemKey,
+      pk: partitionKey,
+      sk: sortKey,
       kind: change.kind,
       table: change.table,
       schema: change.schema ?? "public",
-      row: colsToRecord(change.columns),
+      row: JSON.stringify(colsToRecord(change.columns)),
       source: event.source ?? "appflowy",
       updatedAt: event.receivedAt ?? new Date().toISOString(),
     };
 
-    await ddb.send(
-      new PutItemCommand({
-        TableName: TABLE,
-        Item: marshall(payload, { removeUndefinedValues: true }),
-      })
-    );
+    await db
+      .prepare(
+        `INSERT OR REPLACE INTO ${TABLE} (pk, sk, kind, table, schema, row, source, updatedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        payload.pk,
+        payload.sk,
+        payload.kind,
+        payload.table,
+        payload.schema,
+        payload.row,
+        payload.source,
+        payload.updatedAt
+      )
+      .run();
     written += 1;
   }
 

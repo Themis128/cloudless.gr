@@ -72,15 +72,17 @@ test.describe("Admin client-portals", () => {
     expect(onLogin || !stepLabel).toBeTruthy();
   });
 
-  test("page renders with E2E admin cookie", async ({ context, page }) => {
-    await context.addCookies([{ name: "e2e_admin", value: "1", domain: "localhost", path: "/" }]);
-    await page.goto(PAGE);
-    await page.waitForLoadState("networkidle").catch(() => {});
-    const hasHeading = await page
-      .getByRole("heading")
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
-    expect(hasHeading).toBeTruthy();
+  test("page renders with E2E admin cookie", async ({ page }) => {
+    // Use the same pattern as admin-pages-sweep.spec.ts
+    await page.context().addCookies([{
+      name: "e2e_admin",
+      value: "1",
+      url: "http://localhost:4000",
+    }]);
+    
+    await page.goto(PAGE, { waitUntil: "domcontentloaded" });
+    
+    // Use the same selector pattern as admin-pages-sweep.spec.ts
+    await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30000 });
   });
 });

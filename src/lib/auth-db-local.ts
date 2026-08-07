@@ -8,7 +8,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { AuthDatabase } from "@/lib/auth-d1";
+import type { AuthDatabase } from "./auth-d1";
 
 const D1_OBJECT_DIR = join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
 

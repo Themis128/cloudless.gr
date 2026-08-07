@@ -83,11 +83,6 @@
     "cf:upload": "opennextjs-cloudflare upload"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1104.0",
-    "@aws-sdk/client-cost-explorer": "^3.1104.0",
-    "@aws-sdk/client-dynamodb": "^3.1104.0",
-    "@aws-sdk/client-sesv2": "^3.1104.0",
-    "@aws-sdk/client-ssm": "^3.1104.0",
     "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
     "@langchain/langgraph-sdk": "^1.9.28",
     "@opennextjs/cloudflare": "^1.20.2",
@@ -115,7 +110,6 @@
     "workers-ai-provider": "^4.0.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-iam": "3.1104.0",
     "@axe-core/playwright": "^4.11.3",
     "@executeautomation/playwright-mcp-server": "^1.0.12",
     "@next/bundle-analyzer": "16.3.0",

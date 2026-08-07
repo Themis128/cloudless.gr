@@ -1,21 +1,18 @@
-// Sync secrets from AWS SSM Parameter Store to Wrangler secrets
+// Sync secrets from D1 app_config to Wrangler secrets
 // Usage: pnpm tsx scripts/sync-ssm-to-wrangler.ts --env=production
 //
-// This script extracts secrets from AWS SSM and prepares them for:
+// This script extracts secrets from D1 app_config table and prepares them for:
 // 1. Wrangler secrets (Cloudflare Workers)
 // 2. Fly.io secrets (--format=fly flag)
 
-import { SSMClient, GetParameterCommand, GetParametersByPathCommand } from "@aws-sdk/client-ssm";
+import { getHttpAuthDb } from "@/lib/d1-http";
 
 const ENV = process.argv.includes("--env=staging") ? "staging" : "production";
-const SSM_PREFIX = ENV === "production" ? "/cloudless/production" : "/cloudless/staging";
 const FORMAT = process.argv.includes("--format=fly") ? "fly" : "wrangler";
 
-const ssm = new SSMClient({ region: "us-east-1" });
-
-// Secrets that need to be synced from SSM to Wrangler/Fly.io
+// Secrets that need to be synced from D1 to Wrangler/Fly.io
 const SECRET_MAPPING: Record<string, string> = {
-  // SSM parameter name -> Secret binding name
+  // D1 config key -> Secret binding name
   // Auth & Security
   "AUTH_SECRET": "AUTH_SECRET",
   "SESSION_SECRET": "SESSION_SECRET",
@@ -24,7 +21,7 @@ const SECRET_MAPPING: Record<string, string> = {
   "STRIPE_SECRET_KEY": "STRIPE_SECRET_KEY",
   "STRIPE_PUBLISHABLE_KEY": "STRIPE_PUBLISHABLE_KEY",
   "STRIPE_WEBHOOK_SECRET": "STRIPE_WEBHOOK_SECRET",
-  // AI & Bedrock
+  // AI & Workers
   "ANTHROPIC_API_KEY": "ANTHROPIC_API_KEY",
   "ANTHROPIC_CHAT_MODEL": "ANTHROPIC_CHAT_MODEL",
   // Slack
@@ -49,35 +46,43 @@ const SECRET_MAPPING: Record<string, string> = {
   // Tokens
   "GITHUB_DISPATCH_TOKEN": "GITHUB_DISPATCH_TOKEN",
   "AGENT_AUTH_TOKEN": "AGENT_AUTH_TOKEN",
+  // Email
+  "CLOUDFLARE_EMAIL_API_TOKEN": "CLOUDFLARE_EMAIL_API_TOKEN",
 };
 
 // Cache for bulk fetch
 let cachedParams: Map<string, string> | null = null;
 
-async function getSecret(ssmName: string): Promise<string | undefined> {
+async function getSecret(d1Key: string): Promise<string | undefined> {
   try {
-    const cmd = new GetParameterCommand({
-      Name: `${SSM_PREFIX}/${ssmName}`,
-      WithDecryption: true,
-    });
-    const response = await ssm.send(cmd);
-    return response.Parameter?.Value;
+    const db = getHttpAuthDb();
+    if (!db) {
+      console.warn("  D1 database connection not available");
+      return undefined;
+    }
+    
+    const response = await db
+      .prepare(`SELECT value FROM app_config WHERE key = ?`)
+      .bind(d1Key)
+      .first<{ value: string }>();
+    
+    return response?.value;
   } catch (err) {
-    if (err instanceof Error && err.name !== "ParameterNotFound") {
-      console.error(`  Error fetching ${ssmName}: ${err.message}`);
+    if (err instanceof Error) {
+      console.error(`  Error fetching ${d1Key}: ${err.message}`);
     }
     return undefined;
   }
 }
 
 async function main() {
-  console.log(`Syncing secrets from SSM ${SSM_PREFIX} to Wrangler secrets...\n`);
+  console.log(`Syncing secrets from D1 app_config to Wrangler secrets...\n`);
 
-  for (const [ssmName, wranglerSecret] of Object.entries(SECRET_MAPPING)) {
-    const value = await getSecret(ssmName);
+  for (const [d1Key, wranglerSecret] of Object.entries(SECRET_MAPPING)) {
+    const value = await getSecret(d1Key);
 
     if (!value) {
-      console.log(`  ⚠️  ${wranglerSecret} - not found in SSM (skipping)`);
+      console.log(`  �� ⚠��️  ${wranglerSecret} - not found in D1 (skipping)`);
       continue;
     }
 
@@ -102,7 +107,7 @@ async function main() {
       proc.on("error", () => resolve());
     });
 
-    console.log(`  ✅ ${wranglerSecret} - synced`);
+    console.log(`  � ✅ ${wranglerSecret} - synced`);
   }
 
   console.log("\nDone! Secrets are now available in Wrangler.");

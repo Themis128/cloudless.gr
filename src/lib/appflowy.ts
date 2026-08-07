@@ -97,10 +97,10 @@ async function getUserAccessToken(cfg: AppFlowyConfig): Promise<string | null> {
     return cachedUserToken.token;
   }
 
-  const res = await fetch(`${cfg.baseUrl}/gotrue/token?grant_type=password`, {
+  const res = await fetch(`${cfg.baseUrl}/gotrue/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: cfg.email, password: cfg.password }),
+    body: JSON.stringify({ grant_type: "password", email: cfg.email, password: cfg.password }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {

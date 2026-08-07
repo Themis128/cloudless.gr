@@ -527,7 +527,7 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   // are server-only modules — never bundled into client or edge bundles.
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getHttpAuthDb } = require("@/lib/d1-http") as typeof import("@/lib/d1-http");
+    const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
     const httpDb = getHttpAuthDb();
     if (httpDb) {
       // console.log("[auth-d1] HTTP D1 DB obtained via require");

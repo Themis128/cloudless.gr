@@ -9,13 +9,13 @@ import AxeBuilder from "@axe-core/playwright";
 test.describe.configure({ mode: "serial" });
 
 test.describe("Homepage Accessibility", () => {
-	test("should pass axe accessibility tests", async ({ page }) => {
-		// Test the actual locale homepage instead of the root redirect
-		await page.goto("/en");
-		const results = await new AxeBuilder({ page }).analyze();
-		expect(results.violations).toEqual([]);
+		test("should pass axe accessibility tests", async ({ page }) => {
+			// Test the actual locale homepage instead of the root redirect
+			await page.goto("/en", { waitUntil: "networkidle" });
+			const results = await new AxeBuilder({ page }).analyze();
+			expect(results.violations).toEqual([]);
+		});
 	});
-});
 
 test.describe("Services Page Accessibility", () => {
 	test("should pass axe accessibility tests", async ({ page }) => {
