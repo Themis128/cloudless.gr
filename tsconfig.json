@@ -42,6 +42,7 @@
     "sst.config.*.ts",
     "playwright.config.mts",
     "playwright.production.config.mts",
+    "playwright.k3s.config.mts",
     "e2e",
     ".claude",
     "scripts",
@@ -56,6 +57,12 @@
     "infrastructure",
     "src/index.ts",
     "src/index-cloudflare-free.js",
-    "src/agents"
+    "src/agents",
+    "vitest.config.mts",
+    "vitest.config.ts",
+    "vitest.workspace.mts",
+    "vitest.workspace.ts",
+    "vitest.integration.config.mts",
+    "vitest.integration.config.ts"
   ]
 }
