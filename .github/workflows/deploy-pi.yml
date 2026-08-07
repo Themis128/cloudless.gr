@@ -179,7 +179,16 @@ jobs:
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        if ! curl -sS --max-time 5 http://127.0.0.1:30300/api/health | jq -e .version >/dev/null 2>&1; then
+        HEALTH_CHECK_FAILED=1
+        for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
+          if curl -sS --max-time 5 "$candidate" | jq -e .version >/dev/null 2>&1; then
+            HEALTH_CHECK_FAILED=0
+            echo "health check passed via $candidate"
+            break
+          fi
+          echo "health check failed for $candidate"
+        done
+        if [ $HEALTH_CHECK_FAILED -ne 0 ]; then
           echo "::error::Rollout verification failed - health endpoint not accessible or invalid response"
           exit 1
         fi
