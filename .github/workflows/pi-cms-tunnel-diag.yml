@@ -1,0 +1,118 @@
+name: Pi CMS + tunnel diag (AppFlowy env + tunnel pod)
+
+# Combined diagnostic for two things blocking migration progress:
+#   1. Why does every /api/{blog,docs,services,faqs} still report
+#      x-cms-source: notion? → Check if APPFLOWY_* env vars actually
+#      reach the pod (via cloudless-secrets or otherwise), and list
+#      the KEY NAMES in cloudless-secrets (values redacted).
+#   2. cloudflare-tunnel pod on omv-ha is in CrashLoopBackOff with
+#      420+ restarts → Fetch last 100 log lines to identify cause.
+# Posts everything to issue #382.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Connect to tailnet
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TS_AUTHKEY }}
+        version: latest
+        tags: tag:ci
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: AppFlowy env presence in cloudless-app pod
+      run: |
+        {
+          echo "## AppFlowy env — presence check inside pod"
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          echo "pod: $POD"
+          echo '```'
+          for v in APPFLOWY_API_URL APPFLOWY_BASE_URL APPFLOWY_EMAIL APPFLOWY_PASSWORD APPFLOWY_JWT_SECRET APPFLOWY_WEBHOOK_SECRET APPFLOWY_SUBMISSIONS_DB_ID APPFLOWY_GSC_REPORTS_FOLDER APPFLOWY_ANALYTICS; do
+            n=$(kubectl exec -n cloudless "$POD" -- printenv "$v" 2>/dev/null | wc -c)
+            echo "$v: $([ "$n" -gt 1 ] && echo "present ($((n-1)) chars)" || echo "MISSING")"
+          done
+          echo '```'
+          echo
+          echo "## NOTION_* env presence (for contrast)"
+          echo '```'
+          for v in NOTION_API_KEY NOTION_BLOG_DB_ID NOTION_DOCS_DB_ID NOTION_SERVICES_DB_ID NOTION_FAQS_DB_ID NOTION_CASE_STUDIES_DB_ID NOTION_TESTIMONIALS_DB_ID; do
+            n=$(kubectl exec -n cloudless "$POD" -- printenv "$v" 2>/dev/null | wc -c)
+            echo "$v: $([ "$n" -gt 1 ] && echo "present ($((n-1)) chars)" || echo "MISSING")"
+          done
+          echo '```'
+        } > appflowy.md
+        cat appflowy.md
+
+    - name: cloudless-secrets — list KEY NAMES only (values redacted)
+      run: |
+        {
+          echo "## cloudless-secrets — keys present"
+          echo '```'
+          kubectl get secret cloudless-secrets -n cloudless -o json 2>&1 \
+            | jq -r '.data | keys[]' 2>&1 | sort || echo '(cannot read)'
+          echo '```'
+        } > secretkeys.md
+        cat secretkeys.md
+
+    - name: cloudflare-tunnel pod diagnostics
+      run: |
+        {
+          echo "## cloudflare-tunnel pod (omv-ha)"
+          echo
+          echo "### Status"
+          echo '```'
+          kubectl get pod -A -l app=cloudflare-tunnel -o wide 2>&1
+          echo '```'
+          echo
+          echo "### describe (last-state / reason)"
+          echo '```'
+          POD=$(kubectl get pod -A -l app=cloudflare-tunnel -o name 2>/dev/null | head -1)
+          NS=$(kubectl get pods -A -l app=cloudflare-tunnel -o jsonpath='{.items[0].metadata.namespace}' 2>/dev/null)
+          if [ -n "$POD" ] && [ -n "$NS" ]; then
+            kubectl describe "$POD" -n "$NS" 2>&1 | grep -A 8 -E 'State:|Last State:|Reason:|Message:|Restart Count:' | head -40
+          fi
+          echo '```'
+          echo
+          echo "### last 80 log lines (current + previous)"
+          echo '```'
+          if [ -n "$POD" ] && [ -n "$NS" ]; then
+            echo "-- current --"
+            kubectl logs -n "$NS" "$POD" --tail=80 2>&1 | tail -80
+            echo
+            echo "-- previous crash --"
+            kubectl logs -n "$NS" "$POD" --previous --tail=80 2>&1 | tail -80
+          fi
+          echo '```'
+        } > tunnel.md
+        cat tunnel.md
+
+    - name: Post to tracking issue 382
+      if: always()
+      run: |
+        {
+          echo "# Pi CMS + tunnel diag — $(date -u '+%F %T')Z"
+          echo
+          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+          echo
+          cat appflowy.md   2>/dev/null || true
+          echo
+          cat secretkeys.md 2>/dev/null || true
+          echo
+          cat tunnel.md     2>/dev/null || true
+        } > comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
