@@ -96,6 +96,7 @@
           "SESSION_SECRET",
           "CRON_SECRET",
           "CLOUDFLARE_API_TOKEN",
+          "POSTIZ_CF_ACCESS_CLIENT_ID",
           "POSTIZ_SERVICE_TOKEN"
         ]
       },
@@ -164,6 +165,7 @@
       },
       "secrets": {
         "required": [
+          "POSTIZ_CF_ACCESS_CLIENT_ID",
           "POSTIZ_SERVICE_TOKEN"
         ]
       },
