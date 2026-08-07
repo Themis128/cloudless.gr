@@ -307,11 +307,64 @@ async function handlePageRoute(
     
     // For chunked cookies, also check for .0 suffix
     const sessionCookie = request.cookies.get("authjs.session-token")?.value;
-    const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
+    const chunkedCookie = request.cookies.get("authjs.session-cookie.0")?.value;
     
-    if (sessionToken || sessionCookie || chunkedCookie) {
-      // Import getToken dynamically to check session
-      // This allows the tests to mock it properly
+    // Also check for D1 session token
+    const d1SessionToken = request.cookies.get("session_token")?.value;
+    
+    // Determine if we have any session token
+    const hasSessionToken = sessionToken || sessionCookie || chunkedCookie || d1SessionToken;
+    
+    if (hasSessionToken) {
+      // Check if it's a D1 session (has session_token cookie but not next-auth)
+      if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
+        // D1 session - use the mock functions
+        try {
+          const { getUserBySession, isAdmin, getAuthDbFromEnv } = await import("@/lib/auth-d1");
+          const db = getAuthDbFromEnv();
+          
+          if (db) {
+            const user = await getUserBySession(db, d1SessionToken);
+            
+            if (!user) {
+              // Invalid session - redirect to login
+              const basePath = pathname.split("/")[1] || "";
+              const isLocalized = LOCALES.includes(basePath);
+              const redirectPath = isLocalized
+                ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
+                : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
+              return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+            }
+            
+            const isAdminUser = await isAdmin(db, user.id);
+            
+            // For post-login route, redirect based on role
+            if (isPostLoginRoute) {
+              if (isAdminUser) {
+                const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
+                return NextResponse.redirect(new URL(adminUrl, request.nextUrl.origin), 307);
+              } else {
+                const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
+                return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+              }
+            }
+            
+            // Check admin status for admin routes
+            if (isAdminRoute && !isAdminUser) {
+              // Non-admin trying to access admin area - redirect to dashboard
+              const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
+              return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+            }
+            
+            // For D1 session with valid user, allow access
+            return NextResponse.next();
+          }
+        } catch {
+          // If D1 auth fails, try next-auth fallback
+        }
+      }
+      
+      // Try next-auth JWT parsing
       try {
         const { getToken } = await import("next-auth/jwt");
         const session = await getToken({ req: request as unknown as Request });

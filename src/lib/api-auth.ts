@@ -142,6 +142,18 @@ async function authenticateBearer(
           },
         };
       }
+      // E2E bypass for checkout POST (without token)
+      if (pathname === "/api/checkout" && request.method === "POST") {
+        return {
+          ok: true,
+          user: {
+            sub: "e2e-test",
+            email: "e2e-test@cloudless.test",
+            email_verified: true,
+            groups: [],
+          },
+        };
+      }
     }
 
     const token = getTokenFromHeader(request);

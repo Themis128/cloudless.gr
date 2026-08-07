@@ -35,6 +35,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  console.log(`[Contact API] NODE_ENV: ${process.env.NODE_ENV}`);
   // Rate limit: 5 contact submissions per IP per 10 minutes
   const ip = getClientIp(request);
   const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);
@@ -98,16 +99,22 @@ export async function POST(request: Request) {
     ].join("\n");
 
     try {
-      await sendEmail({
-        to: config.SES_TO_EMAIL,
-        subject,
-        html,
-        text,
-        replyTo: email,
-        fromLabel: "Cloudless Contact Form",
-      });
+      // Skip email sending in test environment or when running E2E tests to avoid configuration issues
+      if (process.env.NODE_ENV !== "test" && process.env.NEXT_PUBLIC_E2E !== "1") {
+        await sendEmail({
+          to: config.SES_TO_EMAIL,
+          subject,
+          html,
+          text,
+          replyTo: email,
+          fromLabel: "Cloudless Contact Form",
+        });
+      } else {
+        console.log("[Contact API] Test/E2E environment detected, skipping email sending");
+      }
     } catch (emailErr) {
       const emailMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+      console.log(`[Contact API] Email sending failed: ${emailMsg}`);
       if (emailMsg.toLowerCase().includes("not configured")) {
         return Response.json({ error: "Email service not configured." }, { status: 503 });
       }

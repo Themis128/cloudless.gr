@@ -1,0 +1,11 @@
+import { proxy } from "./src/proxy";
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw.js|manifest.webmanifest|offline.html|sitemap.xml|robots.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
+  ],
+};
+
+export async function middleware(request: Request) {
+  return proxy(request);
+}
