@@ -23,8 +23,36 @@ TOKEN_DURATION="${TOKEN_DURATION:-8760h}"    # 1 year
 WORKER_PROD="${WORKER_PROD:-cloudless2}"
 WORKER_STAGING="${WORKER_STAGING:-cloudless-gr-staging}"
 
+# Auto-source .env.local then .env from the repo root when the token isn't
+# already exported. Values already in the environment win. Only variables
+# this script actually reads are pulled through; the rest are ignored so
+# unrelated .env noise never leaks into the shell.
+if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$0")")"
+  for candidate in "$REPO_ROOT/.env.local" "$REPO_ROOT/.env"; do
+    [ -f "$candidate" ] || continue
+    while IFS='=' read -r key value; do
+      case "$key" in
+        CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|APP_DOMAIN|TOKEN_NAME|TOKEN_DURATION|WORKER_PROD|WORKER_STAGING)
+          # trim quotes + surrounding whitespace, skip empties + placeholders
+          value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+          value="${value## }"; value="${value%% }"
+          [ -z "$value" ] && continue
+          case "$value" in your-*|xxx*|CHANGE*|TODO*|"<"*|"") continue ;; esac
+          if [ -z "$(eval echo "\${$key:-}")" ]; then
+            export "$key=$value"
+            echo "  ($(basename "$candidate")) picked up $key" >&2
+          fi
+          ;;
+      esac
+    done < <(grep -E '^[A-Z_][A-Z0-9_]*=' "$candidate")
+  done
+fi
+
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
   echo "❌ CLOUDFLARE_API_TOKEN not set — mint one at https://dash.cloudflare.com/profile/api-tokens" >&2
+  echo "   Then either:  export CLOUDFLARE_API_TOKEN=…" >&2
+  echo "   or add it to  .env.local  in the repo root and re-run this script." >&2
   exit 1
 fi
 
