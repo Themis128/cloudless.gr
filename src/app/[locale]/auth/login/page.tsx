@@ -162,7 +162,7 @@ function LoginContent() {
 
           <p className="mt-6 text-center font-mono text-sm text-slate-500">
             {t("auth.noAccount", "Don't have an account?")}{" "}
-            <Link href="/auth/signup" className="text-neon-cyan hover:underline">
+            <Link href="/auth/signup" className="text-neon-cyan underline hover:no-underline">
               {t("auth.signup", "Create Account")}
             </Link>
           </p>
