@@ -362,7 +362,7 @@ function SignUpForm() {
 
               <p className="mt-6 text-center font-mono text-sm text-slate-500">
                 {t("auth.hasAccount", "Already have an account?")}{" "}
-                <Link href="/auth/login" className="text-neon-cyan hover:underline">
+                <Link href="/auth/login" className="text-neon-cyan underline hover:no-underline">
                   {t("auth.login", "Sign In")}
                 </Link>
               </p>
