@@ -46,17 +46,24 @@ echo ""
 # Stage 2: Verify D1 Database
 echo "--- Stage 2: D1 Database ---"
 
-USER_COUNT=$(npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) as count FROM user" --format json 2>/dev/null | jq -r '.[0].count' || echo "0")
+# Helper to run D1 query and extract count
+d1_count() {
+    local sql="$1"
+    npx wrangler d1 execute user-auth-db --remote --command "$sql" 2>/dev/null | \
+        jq -r '.[0].results[0].count // 0' 2>/dev/null || echo "0"
+}
+
+USER_COUNT=$(d1_count "SELECT COUNT(*) as count FROM user")
 if [ "$USER_COUNT" != "0" ] && [ "$USER_COUNT" != "" ]; then
     pass "D1 user table populated ($USER_COUNT users)"
 else
     warn "D1 user table may be empty or inaccessible"
 fi
 
-TRANSACTION_COUNT=$(npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) as count FROM stripe_transaction" --format json 2>/dev/null | jq -r '.[0].count' || echo "0")
+TRANSACTION_COUNT=$(d1_count "SELECT COUNT(*) as count FROM stripe_transaction")
 pass "D1 transactions: $TRANSACTION_COUNT records"
 
-NOTIF_COUNT=$(npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) as count FROM admin_notification" --format json 2>/dev/null | jq -r '.[0].count' || echo "0")
+NOTIF_COUNT=$(d1_count "SELECT COUNT(*) as count FROM admin_notification")
 pass "D1 notifications: $NOTIF_COUNT records"
 
 echo ""
@@ -64,7 +71,7 @@ echo ""
 # Stage 3: Verify R2 Storage
 echo "--- Stage 3: R2 Storage ---"
 
-BUCKETS=$(npx wrangler r2 bucket list --remote 2>/dev/null | jq -r '.[].name' | wc -l)
+BUCKETS=$(npx wrangler r2 bucket list --remote 2>/dev/null | jq 'length' 2>/dev/null || echo "0")
 if [ "$BUCKETS" -ge 4 ]; then
     pass "R2 buckets configured ($BUCKETS total)"
 else
@@ -130,17 +137,20 @@ if command -v aws &>/dev/null; then
         pass "No cloudless S3 buckets found"
     fi
 else
-    warn "AWS CLI not available - skipping AWS resource check"
+    warn "AWS CLI not available - skipping AWS resource check (install with: pip install awscli or apt install awscli)"
 fi
 
 echo ""
 
 # Summary
 echo "=== Verification Summary ==="
-echo "Workers: ✅ Operational"
-echo "D1 Database: ✅ Active ($USER_COUNT users, $TRANSACTION_COUNT transactions)"
-echo "R2 Storage: ✅ Configured ($BUCKETS buckets)"
+echo "Workers: $(echo "$HEALTH" | jq -e '.dbConnected == true' >/dev/null 2>&1 && echo "✅ Operational" || echo "⚠️ Degraded (D1 connection issue)")"
+echo "D1 Database: $( [ "$USER_COUNT" != "0" ] && echo "✅ Active ($USER_COUNT users, $TRANSACTION_COUNT transactions)" || echo "⚠️ Check D1 binding" )"
+echo "R2 Storage: $( [ "$BUCKETS" -ge 4 ] && echo "✅ Configured ($BUCKETS buckets)" || echo "⚠️ Check R2 bindings" )"
 echo "DNS: ✅ Pointing to Cloudflare"
 echo "HA Failover: ✅ Configured"
 echo ""
-echo "Migration appears complete. Run './scripts/aws-cleanup.sh' to remove AWS resources."
+echo "Next steps:"
+echo "  1. If D1 connection fails: redeploy Worker with 'pnpm deploy' or 'pnpm cf:deploy'"
+echo "  2. Run './scripts/cleanup-migrated-aws-resources.sh' to remove AWS resources (requires AWS CLI)"
+echo "  3. Verify AWS cleanup with this script after"

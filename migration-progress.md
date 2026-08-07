@@ -33,6 +33,59 @@
 - ProxyGroups: ingress, kube-apiserver ready
 - **Note**: `office-2` device is OFFLINE and needs reconnection
 
+## ✅ AWS to Cloudflare Migration - COMPLETE (2026-08-07)
+
+### Core Application Migration
+- [x] **Authentication**: Fully migrated from AWS Cognito to Cloudflare D1 (`user-auth-db`)
+  - D1 database with 67 users, PBKDF2 password hashing, session management
+  - All auth routes (register, login, logout, reset-password) use D1 only
+  - Admin user management via D1 roles table
+- [x] **Email**: Fully migrated from AWS SES to Cloudflare Email Service
+  - `src/lib/email-sender.ts` uses Cloudflare Email binding + Resend fallback
+  - Suppression list in D1 `email_suppression` table
+  - Contact form, newsletter, transactional emails all working
+- [x] **AI/ML**: Fully migrated from AWS Bedrock to Cloudflare Workers AI
+  - `src/lib/bedrock-chat.ts` and `src/lib/bedrock-embeddings.ts` use Workers AI REST API
+  - Models: @cf/meta/llama-3.1-8b-instruct, @cf/baai/bge-small-en-v1.5
+- [x] **Configuration**: Fully migrated from AWS SSM Parameter Store to D1 app_config + Wrangler secrets
+  - `src/lib/ssm-config-d1.ts` reads from D1 `app_config` table
+  - All secrets in Wrangler (SESSION_SECRET, CRON_SECRET, CLOUDFLARE_API_TOKEN, etc.)
+- [x] **Object Storage**: Fully migrated from AWS S3 to Cloudflare R2
+  - `src/lib/r2-upload.ts`, `src/lib/analytics-r2.ts` use R2 bindings + aws4fetch
+  - 9 R2 buckets configured (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket, etc.)
+- [x] **Database**: Fully migrated from DynamoDB to D1
+  - User profiles, admin notifications, Stripe transactions, session tokens, analytics cache all in D1
+  - No DynamoDB client imports remain in `src/`
+- [x] **Analytics**: Athena → D1/DuckDB-Wasm on Pi
+  - `src/lib/athena-d1.ts` for D1-based analytics queries
+  - Cost Explorer ETL migrated to use aws4fetch for R2 (`scripts/etl/aws-cost-to-r2.mjs`)
+
+### Code Dependencies Cleanup
+- [x] **All @aws-sdk/* dependencies removed from package.json** (11 packages)
+  - @aws-sdk/client-bedrock-runtime, @aws-sdk/client-cost-explorer, @aws-sdk/client-dynamodb
+  - @aws-sdk/client-sesv2, @aws-sdk/client-ssm, @aws-sdk/client-iam, @aws-sdk/client-athena
+  - @aws-sdk/client-s3, @aws-sdk/client-sns, @aws-sdk/client-cognito-identity-provider
+  - @aws-lambda-powertools/logger
+- [x] `rg '@aws-sdk' package.json src/` returns empty
+- [x] Build passes: `pnpm build` ✅
+- [x] TypeCheck passes: `pnpm typecheck` ✅
+
+### Infrastructure Deployment
+- [x] **Cloudflare Worker deployed** with D1 binding (2026-08-07)
+  - `pnpm cf:deploy` completed successfully
+  - Worker health endpoint: `https://cloudless.gr/api/health` returns `{"status":"ok","dbConnected":true,"authProvider":"d1"}`
+  - D1 database binding: AUTH_DB → user-auth-db (7ca74513-23c3-412a-b9ca-b0c55835973d)
+  - R2 bucket bindings: 6 buckets bound
+  - Workers AI binding: AI (remote)
+  - Cloudflare Email binding: EMAIL
+- [x] **DNS** pointing to Cloudflare (104.21.67.68, 172.67.216.36)
+- [x] **Custom domains** configured: cloudless.gr, www.cloudless.gr
+
+### Operational Scripts Migration
+- [x] 10 operational scripts updated to use `cf-secrets.sh` (Wrangler + D1 instead of SSM)
+- [x] Python script `scripts/pi-routines/dep-major-audit.py` updated (SSM → D1 config)
+- [x] ETL scripts migrated to Cloudflare-native (aws4fetch for R2, D1 HTTP API for auth)
+
 ## ⏳ Pending High-Priority Actions
 
 - [ ] **Restart Cline/Claude desktop** to load MCP configuration changes (manual step)
@@ -82,7 +135,7 @@
 
 - [x] Run security scan on API routes - no findings
 - [x] Remove unused API keys from `.env` - AWS credentials removed, using Cloudflare secrets
-- [x] Attrated SSM parameters - Migration to Cloudflare Secrets complete (docs updated)
+- [x] Migrated SSM parameters - Migration to Cloudflare Secrets complete (docs updated)
 - [x] Verify POSTMAN API testing collection works with updated endpoints
 - [x] Verify all secret management workflows are documented
 
@@ -114,3 +167,21 @@
 4. Verify cron job execution
 5. Validate analytics data persistence
 6. Confirm all DNS records resolve correctly
+
+## ✅ AWS Decommission Ready (Wave D - PR-16, PR-17)
+
+The following AWS resources can now be safely decommissioned:
+- **DynamoDB tables**: UserProfile, SessionTokenStore, StripeTransactions, AdminNotifications, AnalyticsCache, RevalidationTable
+- **S3 buckets**: cloudless-production-assets, cloudless-production-analytics, cloudless-production-backups
+- **Athena workgroup**: cloudless-analytics-workgroup
+- **Cognito User Pool**: All users migrated to D1
+- **Bedrock IAM policy**: cloudless-bedrock-access
+- **SSM parameters**: /cloudless/production/* (DYNAMODB, ATHENA, COGNITO, BEDROCK, S3 related)
+- **CloudWatch alarms**: All cloudless-prefixed alarms
+- **Cost Explorer ETL**: Can be dropped after PR-16 (scripts/etl/aws-cost-to-r2.mjs)
+
+Run cleanup scripts on machine with AWS CLI:
+- `scripts/cleanup-migrated-aws-resources.sh` (interactive, preserves pi-proxy and SES-to-EspoCRM Lambdas)
+- `scripts/cleanup-monitoring.sh` (monitoring-specific cleanup)
+- `scripts/cleanup-aws-post-email.sh` (post-email validation cleanup)
+- Verify with: `./scripts/verify-aws-migration.sh`
