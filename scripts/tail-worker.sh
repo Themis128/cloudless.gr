@@ -16,7 +16,14 @@
 
 set -uo pipefail
 
+# Map --env to the actual deployed script name. wrangler's default of
+# `<top-level-name>-<env>` gives `cloudless2-production`, but the deployed
+# script on this account is just `cloudless2` (env.production has no `name`
+# override in wrangler.jsonc, yet the deploy tool writes to the base name).
+# Overriding here avoids error [10007] "Worker does not exist" from tail.
 ENV="${ENV:-production}"
+NAME_PROD="${NAME_PROD:-cloudless2}"
+NAME_STAGING="${NAME_STAGING:-cloudless-gr-staging}"
 FORMAT="${FORMAT:-pretty}"
 FILTER="${FILTER:-}"
 
@@ -54,10 +61,19 @@ fi
 REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
-# `wrangler tail --env <env>` targets the worker defined in wrangler.jsonc's
-# env.<env> block automatically — no --name needed. `wrangler logs` is not a
-# valid subcommand in wrangler 4.x; use `tail`.
-args=(tail --env "$ENV" --format "$FORMAT")
+# Pass the script name positionally instead of `--env` so wrangler doesn't
+# derive the wrong `<top-level>-<env>` script name. NAME override wins if set.
+case "$ENV" in
+  production) NAME="${NAME:-$NAME_PROD}" ;;
+  staging)    NAME="${NAME:-$NAME_STAGING}" ;;
+  *)          NAME="${NAME:-}" ;;
+esac
+if [ -z "$NAME" ]; then
+  echo "❌ Cannot resolve Worker script name for ENV=$ENV. Set NAME=<script-name>." >&2
+  exit 1
+fi
+
+args=(tail "$NAME" --format "$FORMAT")
 [ -n "$FILTER" ] && args+=(--search "$FILTER")
 
 echo "→ npx wrangler ${args[*]}"
