@@ -88,6 +88,23 @@ else
   CLIENT_ID=$(echo "$resp"    | jq -r '.result.client_id')
   CLIENT_SECRET=$(echo "$resp" | jq -r '.result.client_secret')
   echo "  minted client_id=${CLIENT_ID}"
+
+  # Persist the freshly-minted secret IMMEDIATELY to a mode-600 file so a
+  # later step failing doesn't leave the operator with an orphan token whose
+  # client_secret Cloudflare never re-exposes. The file is deleted after step
+  # 4 completes cleanly.
+  SECRET_FILE="${TMPDIR:-/tmp}/postiz-cf-secret-$$.env"
+  umask 077
+  {
+    echo "# Freshly-minted Cloudflare Access service token for ${TOKEN_NAME}."
+    echo "# Cloudflare only shows client_secret once — do not lose this file."
+    echo "POSTIZ_CF_ACCESS_CLIENT_ID=${CLIENT_ID}"
+    echo "POSTIZ_SERVICE_TOKEN=${CLIENT_SECRET}"
+  } > "$SECRET_FILE"
+  echo ""
+  echo "  🔐  client_secret saved to: ${SECRET_FILE}"
+  echo "      (permissions 0600 — deleted after step 4 succeeds)"
+  echo ""
 fi
 
 echo "─── 3/4  Attaching token to Access app '${APP_DOMAIN}' ─────────────"
@@ -98,11 +115,30 @@ app_uid=$(cf GET "/accounts/${ACCOUNT_ID}/access/apps?per_page=1000" \
       | .uid' | head -n1)
 
 if [ -z "$app_uid" ]; then
-  echo "❌ No Access application found for ${APP_DOMAIN}. Create one in the dashboard:"
-  echo "   Zero Trust → Access → Applications → Add → Self-hosted → ${APP_DOMAIN}"
-  exit 1
+  echo "  no Access application found for ${APP_DOMAIN} — creating one …"
+  # Self-hosted app, no identity providers, no launcher, 24h session.
+  # We'll bind our service-token policy in the next step.
+  create_body=$(jq -cn --arg d "$APP_DOMAIN" --arg n "Postiz" '{
+    name: $n,
+    domain: $d,
+    type: "self_hosted",
+    session_duration: "24h",
+    app_launcher_visible: false,
+    auto_redirect_to_identity: false,
+    allowed_idps: [],
+    tags: []
+  }')
+  app_uid=$(cf POST "/accounts/${ACCOUNT_ID}/access/apps" "$create_body" \
+    | jq -r '.result.uid // .result.id')
+  if [ -z "$app_uid" ] || [ "$app_uid" = "null" ]; then
+    echo "❌ Failed to create Access application. Create manually in dashboard:"
+    echo "   Zero Trust → Access → Applications → Add → Self-hosted → ${APP_DOMAIN}"
+    exit 1
+  fi
+  echo "  created app uid=${app_uid}"
+else
+  echo "  found existing app uid=${app_uid}"
 fi
-echo "  found app uid=${app_uid}"
 
 policies=$(cf GET "/accounts/${ACCOUNT_ID}/access/apps/${app_uid}/policies")
 already=$(echo "$policies" | jq -r --arg cid "$CLIENT_ID" '
@@ -151,6 +187,11 @@ if [ -n "$CLIENT_SECRET" ]; then
   echo " ⚠ Save these — Cloudflare will not show CLIENT_SECRET again:"
   echo "   POSTIZ_CF_ACCESS_CLIENT_ID = ${CLIENT_ID}"
   echo "   POSTIZ_SERVICE_TOKEN       = ${CLIENT_SECRET}"
+  # Now that both worker PUTs succeeded, the temp secret file can go away.
+  if [ -n "${SECRET_FILE:-}" ] && [ -f "$SECRET_FILE" ]; then
+    rm -f "$SECRET_FILE"
+    echo "   (temp file ${SECRET_FILE} removed)"
+  fi
 fi
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
