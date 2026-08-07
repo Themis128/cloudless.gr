@@ -183,7 +183,10 @@ function readD1SessionCookie(request: NextRequest): string | null {
 }
 
 function readNextAuthJwt(request: NextRequest): string | null {
-  return request.cookies.get("next-auth.session-token")?.value ?? null;
+  // Check for authjs.session-token (used by next-auth in latest versions)
+  const token = request.cookies.get("authjs.session-token")?.value ?? 
+                request.cookies.get("next-auth.session-token")?.value;
+  return token;
 }
 
 /**
@@ -292,17 +295,19 @@ async function handlePageRoute(
     cleanupStaleEntries(ipRequestMap);
   }
 
-  // Check authentication for protected routes
+  // Check authentication for protected routes and post-login resolver
   const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/en/admin");
   const isDashboardRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/en/dashboard");
+  const isPostLoginRoute = pathname.startsWith("/auth/post-login") || pathname === "/auth/post-login" ||
+                            pathname.startsWith("/en/auth/post-login");
   
-  if (isAdminRoute || isDashboardRoute) {
+  if (isAdminRoute || isDashboardRoute || isPostLoginRoute) {
     // Try to read session token from cookie (next-auth style)
     const sessionToken = readNextAuthJwt(request);
     
     // For chunked cookies, also check for .0 suffix
-    const sessionCookie = request.cookies.get("next-auth.session-token")?.value;
-    const chunkedCookie = request.cookies.get("next-auth.session-token.0")?.value;
+    const sessionCookie = request.cookies.get("authjs.session-token")?.value;
+    const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
     
     if (sessionToken || sessionCookie || chunkedCookie) {
       // Import getToken dynamically to check session
@@ -319,6 +324,17 @@ async function handlePageRoute(
             ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
             : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
           return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+        }
+        
+        // For post-login route, redirect based on role
+        if (isPostLoginRoute) {
+          if (isAdminFromSession(session)) {
+            const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
+            return NextResponse.redirect(new URL(adminUrl, request.nextUrl.origin), 307);
+          } else {
+            const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
+            return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+          }
         }
         
         // Check admin status for admin routes
