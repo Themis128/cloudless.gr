@@ -40,7 +40,7 @@ jobs:
     - name: Run Clients-to-R2 sync
       working-directory: scripts/etl
       env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
         CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
@@ -51,7 +51,7 @@ jobs:
       if: failure()
       uses: actions/github-script@v9.0.0
       env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}

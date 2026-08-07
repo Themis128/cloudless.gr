@@ -35,7 +35,7 @@ jobs:
 
     - name: Run GSC sync to AppFlowy
       env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
@@ -68,7 +68,7 @@ jobs:
 
     - name: Cleanup expired sessions from D1
       env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
         # Call admin endpoint to trigger cleanup
@@ -99,7 +99,7 @@ jobs:
 
     - name: Run full analytics sync to AppFlowy
       env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}

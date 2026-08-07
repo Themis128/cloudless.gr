@@ -24,7 +24,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       FUNCTION_NAME: cloudless-r20-subscriber
       AWS_REGION: us-east-1
     steps:
