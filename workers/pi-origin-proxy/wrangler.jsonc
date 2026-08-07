@@ -5,9 +5,14 @@
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "compatibility_date": "2026-08-07",
   "minify": true,
+  // Apex + www are bound as Cloudflare **Custom Domains** (wrangler asserts
+  // them via `custom_domain: true`); manage is a plain **Route**. Do not
+  // add duplicate route entries — they were deleted from the zone on
+  // 2026-08-07 and would silently reappear on the next deploy if listed
+  // as bare routes here.
   "routes": [
-    { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
-    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
+    { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
+    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
     { "pattern": "manage.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
   ],
   // Explicit empty crons array clears any Cron Triggers previously attached
