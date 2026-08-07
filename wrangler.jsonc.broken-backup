@@ -7,6 +7,10 @@
     "nodejs_compat"
   ],
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./out"
+  },
   "env": {
     "production": {
       "routes": [
@@ -21,9 +25,6 @@
           "custom_domain": true
         }
       ],
-      "assets": {
-        "directory": "./out"
-      },
       "triggers": {
         "crons": [
           "0 1 * * *",
@@ -200,5 +201,6 @@
         }
       ]
     }
-  }
+  },
+  "main": "src/index.ts"
 }
