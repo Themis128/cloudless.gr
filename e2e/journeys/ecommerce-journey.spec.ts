@@ -481,11 +481,18 @@ test.describe("E-commerce User Journey", () => {
     // This would require authentication
     // For now, test that the route exists and handles unauthenticated access
     
+    // Navigate to a blank page first to ensure we have a clean context
+    await page.goto("about:blank");
+    
     // Clear cookies and localStorage to ensure unauthenticated state
     await page.context().clearCookies();
     await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        // Ignore errors if we can't access storage (e.g., due to navigation)
+      }
     });
     
     // Navigate directly to dashboard page (with explicit locale)
