@@ -50,6 +50,10 @@ export async function generateMetadata({
   };
 
   return {
+    title: {
+      default: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      template: "%s | Cloudless",
+    },
     alternates: {
       languages: {
         en: `${BASE_URL}/en`,

@@ -59,10 +59,7 @@ export async function generateMetadata({
     "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.";
 
   return {
-    title: {
-      template: "%s | Cloudless",
-      default: title,
-    },
+    title: { absolute: title },
     description,
     alternates: {
       canonical,
