@@ -1,107 +1,92 @@
-# Postiz Service Token Setup for Worker-to-Postiz Communication
+# Postiz Service Token — Where it belongs
 
-## �� 🎯 Problem Solved
-Fixed the 502 errors in the GitHub Actions workflow (`postiz-crons.yml`) that occurred when the Workers cron job tried to communicate with the Postiz API protected by Cloudflare Access.
+## What this token is for
 
-## �� 🔧 Changes Made
+`POSTIZ_SERVICE_TOKEN` is a **Cloudflare Access Service Token** (JWT) that lets
+server-side code call the Postiz API (`postiz.cloudless.gr`) without hitting the
+Access login page. It is consumed in exactly one place:
 
-### 1. Modified `src/lib/postiz.ts`
-- Added `extractClientIdFromToken()` helper function to parse JWT Service Tokens
-- Updated `postizFetch()` function to include Cloudflare Access headers when `POSTIZ_SERVICE_TOKEN` is configured:
-  - `Cf-Access-Client-Id`: Extracted from the Service Token JWT
-  - `Cf-Access-Client-Secret`: The full Service Token JWT
+- [`src/lib/postiz.ts`](src/lib/postiz.ts) — `postizFetch()` reads
+  `process.env.POSTIZ_SERVICE_TOKEN` and sets `Cf-Access-Client-Id` +
+  `Cf-Access-Client-Secret` on every outbound request.
 
-### 2. Updated `wrangler-cloudless2.json`
-- Added `POSTIZ_SERVICE_TOKEN` to the `secrets.required` array for both production and staging environments
+That code runs in the **Next.js app on the Pi k3s cluster**, not in a
+Cloudflare Worker. The `cloudless2` Worker
+([`workers/pi-origin-proxy`](workers/pi-origin-proxy/)) is a <50 KiB Free-tier
+proxy that streams requests straight through to `pi-origin.cloudless.gr` — it
+holds no secrets and never sees Postiz.
 
-## �� 📋 Setup Instructions
+## Where the token goes
 
-### Step 1: Create Cloudflare Service Token
-1. Go to Cloudflare Dashboard → **Access** → **Service Tokens**
-2. Click **"Create Service Token"**
-3. Configure:
-   - **Name:** `postiz-cron-worker`
-   - **Description:** "Allows cloudless.gr Workers to access Postiz API"
-4. Click **"Create Service Token"**
-5. **IMPORTANT:** Copy the entire JWT token immediately (you won't see it again!)
+| Layer | Storage | Purpose |
+|-------|---------|---------|
+| Pi Next.js app (runtime) | k8s Secret `pi-standby-aws-creds` → hydrated by `getIntegrationsAsync()` from SSM `/cloudless/production/POSTIZ_SERVICE_TOKEN` | Server-side `postizFetch()` calls |
+| GitHub Actions cron (`postiz-crons.yml`) | Repo secret `POSTIZ_SERVICE_TOKEN` if the workflow calls Postiz directly, otherwise not needed (crons hit `pi-origin.cloudless.gr/api/cron/...` and the app forwards) | Bypass Cloudflare Access from CI |
+| Worker `cloudless2` | **nothing** — the proxy has no secrets | N/A |
 
-### Step 2: Configure Postiz Access Policy
-1. Go to Cloudflare Dashboard → **Access** → **Applications**
-2. Find your Postiz application (`postiz.cloudless.gr`)
-3. Edit the **Policy** tab
-4. Under "Identity Providers", click **"Add an exception"**
-5. Choose **"Service Token"** as the type
-6. Paste the Service Token JWT you saved
-7. Set action to **"Allow"**
-8. **Save the policy**
+## Setup
 
-### Step 3: Configure Worker Secret
+### 1. Create the Cloudflare Access Service Token
+
+1. Cloudflare Dashboard → **Zero Trust** → **Access** → **Service Auth** → **Service Tokens**
+2. **Create Service Token** — Name: `postiz-cron-worker`, Duration: 1 year (default)
+3. Copy the **Client Secret** JWT immediately (shown once).
+
+### 2. Add an Access Policy exception on the Postiz application
+
+1. Zero Trust → **Access** → **Applications** → open `postiz.cloudless.gr`
+2. Policies tab → edit the primary policy
+3. Add an **Include** rule → **Service Token** → select `postiz-cron-worker`
+4. Save.
+
+### 3. Store the token in SSM (Pi runtime)
+
 ```bash
-# For production environment:
-wrangler secret put POSTIZ_SERVICE_TOKEN --env production
-# When prompted, paste your Service Token JWT
-
-# For local development/testing:
-wrangler secret put POSTIZ_SERVICE_TOKEN
-# When prompted, paste your Service Token JWT
+aws ssm put-parameter \
+  --name /cloudless/production/POSTIZ_SERVICE_TOKEN \
+  --type SecureString \
+  --value "$(cat <<'EOF'
+<paste the JWT>
+EOF
+)" \
+  --overwrite
 ```
 
-### Step 4: Deploy Your Worker
-```bash
-# For production:
-wrangler deploy --env production
+Next Pi rollout (`deploy-pi.yml`) will pick it up via
+`pi-standby-aws-creds` and `getIntegrationsAsync()` — no code change needed.
 
-# Or if using the main wrangler config:
-wrangler deploy
+### 4. (Optional) Store in GitHub for direct CI callers
+
+Only needed if a workflow calls `postiz.cloudless.gr` directly instead of
+routing through the app:
+
+```bash
+gh secret set POSTIZ_SERVICE_TOKEN --repo Themis128/cloudless.gr
 ```
 
-## �� 🧪 Verification
+## Verify
 
-### Manual Test
-After deployment, test your cron endpoint:
+Local sanity check with the token in your shell env:
+
 ```bash
-curl -v -H "Authorization: Bearer f3ceb8055e34b18c12d4b71dc78bd7395ae835a8bd8dd96a060229d02adf6102" \
-  "https://pi-origin.cloudless.gr/api/cron/postiz-sync"
+POSTIZ_SERVICE_TOKEN=<jwt> node verify-postiz-token.js
 ```
 
-### Using Verification Script
+End-to-end check against the live Pi (uses the same code path as the crons):
+
 ```bash
-node verify-postiz-token.js
+curl -sS -H "Authorization: Bearer $CRON_SECRET" \
+  https://pi-origin.cloudless.gr/api/cron/postiz-sync | jq .
 ```
 
-### Check Cloudflare Access Logs
-1. Go to Cloudflare Dashboard → **Access** → **Audit Log**
-2. Filter for your Postiz application
-3. Look for successful service token authentications
+A successful response returns the sync-stats JSON. A `502` or Cloudflare Access
+HTML means the token isn't reaching Postiz — check the Access Audit Log in the
+Cloudflare Dashboard.
 
-## �� 🛡��️ Security Notes
+## Security notes
 
-- **Never commit Service Tokens to git** - always use secrets management
-- **Rotate tokens periodically** - consider refreshing every 90 days
-- **Monitor usage** - check Access logs regularly for unexpected usage
-- **The Service Token provides broad access** to your Postiz application via Cloudflare Access
-- Ensure your Postiz application's Access policy is appropriately scoped
-
-## �� 🔄 Troubleshooting
-
-If you still see 502 errors:
-
-1. **Double-check the token** - ensure you copied the entire JWT correctly
-2. **Verify Access policy** - confirm the Service Token exception is saved and active
-3. **Check worker logs** - look for any errors in your Worker deployment
-4. **Test token extraction** - the verification script helps validate JWT parsing
-5. **Confirm API reachability** - test direct access to Postiz API from a known location
-
-## �� 📝 Files Modified
-
-1. `src/lib/postiz.ts` - Added Service Token handling
-2. `wrangler-cloudless2.json` - Added POSTIZ_SERVICE_TOKEN to secrets
-3. `verify-postiz-token.js` - Verification helper script (optional)
-4. `SERVICE_TOKEN_SETUP.md` - This documentation
-
-## �� 🎉 Expected Outcome
-
-After completing these steps, your GitHub Actions workflow should:
-1. Successfully authenticate via CRON_SECRET (no more 401 errors)
-2. Successfully communicate with Postiz API via Service Token (no more 502 errors)
-3. Return successful JSON responses showing sync statistics
+- Never commit the JWT to git — SSM SecureString + `--type SecureString` only.
+- Rotate every ~90 days: create a new token, add it to the Access policy,
+  update SSM, wait for the next Pi rollout, then delete the old token.
+- The token grants full access to `postiz.cloudless.gr` — keep the Access
+  policy scoped tightly.
