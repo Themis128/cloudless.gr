@@ -1,0 +1,103 @@
+name: Pi fix — tunnel scale-down + CMS URL check
+
+# Two fixes/checks in one dispatch:
+#   1. Task #13 — scale the crashlooping cloudflare-tunnel Deployment to
+#      0 replicas. Primary tunnel is the systemd cloudflared unit on
+#      omv-main; this k8s replica has been crashing every 3s for 36h
+#      because it's invoked without the required tunnel ID/name. Safe
+#      to scale down; scale back up after fixing the args if HA needed.
+#   2. Show APPFLOWY_API_URL value (not a secret) and probe in-cluster
+#      + public reachability from the pod. If URL is the public
+#      https://appflowy.cloudless.gr, calls from the pod hit CF Access
+#      → 302 → silent fallback to Notion. Fix would be in-cluster DNS
+#      (same pattern the ConfigMap already uses for Postiz/Meili/NTFY).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Connect to tailnet
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TS_AUTHKEY }}
+        version: latest
+        tags: tag:ci
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Scale cloudflare-tunnel Deployment to 0
+      run: |
+        set -euo pipefail
+        NS=$(kubectl get deploy -A -l app=cloudflare-tunnel -o jsonpath='{.items[0].metadata.namespace}')
+        DEP=$(kubectl get deploy -A -l app=cloudflare-tunnel -o jsonpath='{.items[0].metadata.name}')
+        echo "Found: $NS/$DEP"
+        BEFORE=$(kubectl get deploy "$DEP" -n "$NS" -o jsonpath='{.spec.replicas}')
+        kubectl scale deploy "$DEP" -n "$NS" --replicas=0
+        AFTER=$(kubectl get deploy "$DEP" -n "$NS" -o jsonpath='{.spec.replicas}')
+        echo "Replicas: $BEFORE → $AFTER"
+        echo
+        echo "Pod termination status:"
+        kubectl get pods -n "$NS" -l app=cloudflare-tunnel -o wide 2>&1 || true
+
+    - name: Show APPFLOWY_API_URL + reachability from pod
+      run: |
+        POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+        {
+          echo "## APPFLOWY_API_URL from pod (non-secret — safe to print)"
+          echo '```'
+          kubectl exec -n cloudless "$POD" -- sh -c 'echo "value: $APPFLOWY_API_URL"; echo "length: ${#APPFLOWY_API_URL}"'
+          echo '```'
+          echo
+          echo "## Public URL reachability from pod (probably 302 = CF Access wall)"
+          echo '```'
+          kubectl exec -n cloudless "$POD" -- sh -c 'curl -sI --max-time 8 https://appflowy.cloudless.gr/api/health 2>&1 | head -5' || true
+          echo '```'
+          echo
+          echo "## In-cluster DNS candidates — do any resolve + respond 200?"
+          echo '```'
+          for host in \
+              appflowy.appflowy.svc.cluster.local \
+              appflowy-cloud.appflowy.svc.cluster.local \
+              appflowy-cloud-appflowy-cloud.appflowy.svc.cluster.local \
+              appflowyweb.appflowy.svc.cluster.local; do
+            for port in 80 8000 5000 8080; do
+              code=$(kubectl exec -n cloudless "$POD" -- sh -c "curl -so /dev/null -w '%{http_code}' --max-time 5 http://$host:$port/api/health" 2>/dev/null || echo "-")
+              [ "$code" != "-" ] && echo "  http://$host:$port/api/health → $code"
+            done
+          done
+          echo '```'
+          echo
+          echo "## Services in the appflowy namespace"
+          echo '```'
+          kubectl get svc -n appflowy 2>&1 || echo '(no appflowy namespace?)'
+          echo '```'
+        } > cms.md
+        cat cms.md
+
+    - name: Post to tracking issue 382
+      if: always()
+      run: |
+        {
+          echo "# Pi fix tunnel + CMS URL check — $(date -u '+%F %T')Z"
+          echo
+          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+          echo
+          echo "## Task #13 — cloudflare-tunnel scaled to 0"
+          echo "See job step 'Scale cloudflare-tunnel Deployment to 0' for before/after."
+          echo
+          cat cms.md 2>/dev/null || true
+        } > comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
