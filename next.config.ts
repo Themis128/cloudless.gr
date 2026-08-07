@@ -246,21 +246,29 @@ export default withBundleAnalyzer(configured);
 const isNextDevCli = !process.env.CI && process.argv.includes("dev");
 
 if (isNextDevCli) {
-  void import("@opennextjs/cloudflare").then(
-    ({ initOpenNextCloudflareForDev, getCloudflareContext }) => {
-      void initOpenNextCloudflareForDev().then(() => {
-        try {
-          const { env } = getCloudflareContext();
-          const authDb = (env as { AUTH_DB?: { prepare: (q: string) => unknown } }).AUTH_DB;
-          if (authDb && typeof authDb.prepare === "function") {
-            (globalThis as { __AUTH_DB__?: typeof authDb }).__AUTH_DB__ = authDb;
-            (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
+  // Only attempt remote Cloudflare bindings if CLOUDFLARE_API_TOKEN is available.
+  // Otherwise, fall back to local D1 sqlite shim (auth-db-local.ts) which works
+  // without any Cloudflare authentication.
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (apiToken) {
+    void import("@opennextjs/cloudflare").then(
+      ({ initOpenNextCloudflareForDev, getCloudflareContext }) => {
+        void initOpenNextCloudflareForDev().then(() => {
+          try {
+            const { env } = getCloudflareContext();
+            const authDb = (env as { AUTH_DB?: { prepare: (q: string) => unknown } }).AUTH_DB;
+            if (authDb && typeof authDb.prepare === "function") {
+              (globalThis as { __AUTH_DB__?: typeof authDb }).__AUTH_DB__ = authDb;
+              (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
+            }
+          } catch {
+            // Context not ready in this config-load process — request handlers still
+            // resolve AUTH_DB via Symbol.for("__cloudflare-context__") / auth-db-local.
           }
-        } catch {
-          // Context not ready in this config-load process — request handlers still
-          // resolve AUTH_DB via Symbol.for("__cloudflare-context__") / auth-db-local.
-        }
-      });
-    }
-  );
+        });
+      }
+    );
+  } else {
+    console.log("[next.config] Skipping remote Cloudflare bindings (no CLOUDFLARE_API_TOKEN) — using local D1 sqlite shim");
+  }
 }

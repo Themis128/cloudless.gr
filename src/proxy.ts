@@ -40,6 +40,25 @@ function stripAllLocalePrefixes(pathname: string): string {
 // In development, limits are relaxed so testing forms/APIs isn't frustrating.
 const IS_DEV = process.env.NODE_ENV === "development";
 
+/**
+ * Routes that require rate limiting protection
+ * These endpoints accept untrusted POST input and need throttling:
+ * - /api/contact: Contact form submissions
+ * - /api/subscribe: Newsletter subscription
+ * - /api/unsubscribe: Newsletter unsubscription
+ * - /api/checkout: Payment checkout flow
+ * - /api/calendar/book: Calendar booking
+ * - /api/crm/contact: CRM contact operations
+ */
+const RATE_LIMITED_ROUTES = [
+  "/api/contact",
+  "/api/subscribe",
+  "/api/unsubscribe",
+  "/api/checkout",
+  "/api/calendar/book",
+  "/api/crm/contact",
+];
+
 const RATE_LIMITS = {
   // Global IP-based rate limiting
   ip: {
@@ -160,11 +179,18 @@ function readAuthToken(request: NextRequest): string | null {
 }
 
 function readD1SessionCookie(request: NextRequest): string | null {
-  return request.cookies.get("__session")?.value ?? null;
+  return request.cookies.get("session_token")?.value ?? null;
 }
 
 function readNextAuthJwt(request: NextRequest): string | null {
   return request.cookies.get("next-auth.session-token")?.value ?? null;
+}
+
+/**
+ * Checks for admin group in session JWT (next-auth format)
+ */
+function isAdminFromSession(session: { groups?: string[] }): boolean {
+  return (session.groups ?? []).includes("admin");
 }
 
 // Main middleware logic
@@ -264,6 +290,62 @@ async function handlePageRoute(
   // Clean up stale entries periodically
   if (Math.random() < 0.01) { // 1% chance to cleanup
     cleanupStaleEntries(ipRequestMap);
+  }
+
+  // Check authentication for protected routes
+  const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/en/admin");
+  const isDashboardRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/en/dashboard");
+  
+  if (isAdminRoute || isDashboardRoute) {
+    // Try to read session token from cookie (next-auth style)
+    const sessionToken = readNextAuthJwt(request);
+    
+    // For chunked cookies, also check for .0 suffix
+    const sessionCookie = request.cookies.get("next-auth.session-token")?.value;
+    const chunkedCookie = request.cookies.get("next-auth.session-token.0")?.value;
+    
+    if (sessionToken || sessionCookie || chunkedCookie) {
+      // Import getToken dynamically to check session
+      // This allows the tests to mock it properly
+      try {
+        const { getToken } = await import("next-auth/jwt");
+        const session = await getToken({ req: request as unknown as Request });
+        
+        if (!session) {
+          // No valid session - redirect to login
+          const basePath = pathname.split("/")[1] || "";
+          const isLocalized = LOCALES.includes(basePath);
+          const redirectPath = isLocalized
+            ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
+            : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
+          return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+        }
+        
+        // Check admin status for admin routes
+        if (isAdminRoute && !isAdminFromSession(session)) {
+          // Non-admin trying to access admin area - redirect to dashboard
+          const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
+          return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+        }
+      } catch {
+        // If getToken fails, treat as unauthenticated
+        const basePath = pathname.split("/")[1] || "";
+        const isLocalized = LOCALES.includes(basePath);
+        const redirectPath = isLocalized
+          ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
+          : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
+        return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+      }
+    } else {
+      // No session cookie - redirect to login
+      const basePath = pathname.split("/")[1] || "";
+      const isLocalized = LOCALES.includes(basePath);
+      const redirectPath = isLocalized
+        ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
+        : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
+      
+      return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+    }
   }
 
   // Set security headers on response
