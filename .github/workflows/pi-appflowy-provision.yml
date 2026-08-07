@@ -1,0 +1,145 @@
+name: Pi AppFlowy provision (auto-create af_user via profile endpoint)
+
+# GoTrue password grant succeeds but /api/workspace fails with
+# "user with uuid=... not found in af_user" (see issue #382). Standard
+# AppFlowy Cloud behavior: the first successful sign-in via the web
+# client auto-provisions the af_user row. We can trigger the same
+# provision by hitting /api/user/profile with the fresh JWT.
+#
+# If that doesn't work, the fallback path is a direct INSERT into
+# af_user via `kubectl exec` on the postgres pod.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Connect to tailnet
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TS_AUTHKEY }}
+        version: latest
+        tags: tag:ci
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Try auto-provision via /api/user/profile
+      run: |
+        set -euo pipefail
+        POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+        cat > /tmp/provision.mjs <<'JS'
+        const url = (process.env.APPFLOWY_API_URL || "").replace(/\/$/, "");
+        const email = process.env.APPFLOWY_EMAIL || "";
+        const password = process.env.APPFLOWY_PASSWORD || "";
+
+        // 1. Get JWT
+        const t = await fetch(`${url}/gotrue/token?grant_type=password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!t.ok) { console.log("gotrue failed:", t.status, await t.text()); process.exit(1); }
+        const { access_token } = await t.json();
+        console.log("JWT obtained");
+
+        // 2. Try known auto-provision paths in order
+        const endpoints = [
+          "/api/user/profile",
+          "/api/user",
+          "/api/user/verify",
+          "/api/user/signin",
+          "/api/user/init",
+        ];
+        for (const ep of endpoints) {
+          for (const method of ["GET", "POST"]) {
+            const r = await fetch(`${url}${ep}`, {
+              method,
+              headers: {
+                Authorization: `Bearer ${access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: method === "POST" ? JSON.stringify({}) : undefined,
+              signal: AbortSignal.timeout(8000),
+            }).catch((e) => ({ status: 0, text: () => e.message }));
+            const body = (await r.text()).slice(0, 200).replace(/\n/g, " ");
+            console.log(`  ${method} ${ep} → ${r.status}  ${body}`);
+            if (r.ok && !body.includes("not found in af_user")) {
+              // Might have provisioned
+              const w = await fetch(`${url}/api/workspace`, {
+                headers: { Authorization: `Bearer ${access_token}` },
+                signal: AbortSignal.timeout(8000),
+              });
+              const wbody = (await w.text()).slice(0, 300);
+              console.log(`  ↳ workspace re-check: ${w.status}  ${wbody}`);
+              if (w.ok && !wbody.includes("not found in af_user")) {
+                console.log("PROVISIONED via " + method + " " + ep);
+                process.exit(0);
+              }
+            }
+          }
+        }
+        console.log("All auto-provision endpoints failed — needs DB INSERT or web client sign-in.");
+        process.exit(2);
+        JS
+
+        kubectl cp /tmp/provision.mjs ${POD#pod/}:/tmp/provision.mjs -n cloudless
+        {
+          echo "## AppFlowy provision attempt"
+          echo '```'
+          kubectl exec -n cloudless "$POD" -- node /tmp/provision.mjs 2>&1 || echo "(node exited non-zero)"
+          echo '```'
+        } > provision.md
+        cat provision.md
+
+    - name: Fallback — inspect af_user table via postgres pod
+      if: always()
+      run: |
+        PG_POD=$(kubectl get pod -n appflowy -l app=postgres -o name 2>/dev/null | head -1)
+        [ -z "$PG_POD" ] && PG_POD=$(kubectl get pod -n appflowy -o name | grep -i postgres | head -1)
+        {
+          echo "## Fallback — af_user table state"
+          echo "postgres pod: $PG_POD"
+          echo '```'
+          if [ -n "$PG_POD" ]; then
+            # Try common postgres user; DB name typically appflowy_cloud or postgres
+            kubectl exec -n appflowy "$PG_POD" -- sh -c 'psql -U postgres -d postgres -c "SELECT COUNT(*) AS af_user_count FROM af_user;" 2>&1 || psql -U postgres -d appflowy_cloud -c "SELECT COUNT(*) AS af_user_count FROM af_user;" 2>&1' | head -15
+          else
+            echo "(no postgres pod found)"
+          fi
+          echo '```'
+          echo
+          echo '### au_user schema (public schema)'
+          echo '```'
+          if [ -n "$PG_POD" ]; then
+            kubectl exec -n appflowy "$PG_POD" -- sh -c 'psql -U postgres -d postgres -c "\d public.af_user" 2>&1 || psql -U postgres -d appflowy_cloud -c "\d public.af_user" 2>&1' | head -25
+          fi
+          echo '```'
+        } > pg.md
+        cat pg.md
+
+    - name: Post to tracking issue 382
+      if: always()
+      run: |
+        {
+          echo "# Pi AppFlowy provision — $(date -u '+%F %T')Z"
+          echo
+          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+          echo
+          cat provision.md 2>/dev/null || true
+          echo
+          cat pg.md 2>/dev/null || true
+        } > comment.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
