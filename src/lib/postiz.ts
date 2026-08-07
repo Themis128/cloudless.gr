@@ -28,20 +28,19 @@ import type { CalendarPlatform } from "@/lib/content-calendar";
  * Both share the same `postizFetch` / `getPostizConfig` plumbing.
  */
 
-// Helper function to extract client ID from JWT token for Cloudflare Access
-function extractClientIdFromToken(token: string): string {
-  try {
-    // Split the JWT and decode the payload (second part)
-    const payloadBase64 = token.split('.')[1];
-    // Replace URL-safe characters and add padding if needed
-    const payloadJson = Buffer.from(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
-    const payload = JSON.parse(payloadJson);
-    // Service Tokens typically have 'aud' (audience) claim
-    return payload.aud || token.substring(0, 8); // fallback to first 8 chars
-  } catch (e) {
-    // If we can't parse the JWT, use a substring as client ID
-    return token.substring(0, 8);
-  }
+// Cloudflare Access service tokens are an opaque (id, secret) pair — not JWTs.
+// The pair can be provided one of two ways:
+//   - two env vars (POSTIZ_CF_ACCESS_CLIENT_ID + POSTIZ_SERVICE_TOKEN)
+//   - a single POSTIZ_SERVICE_TOKEN of the form "<client_id>:<client_secret>"
+// Returns null when neither is set — callers then skip the Access headers.
+function readCfAccessCreds(): { clientId: string; clientSecret: string } | null {
+  const raw = process.env.POSTIZ_SERVICE_TOKEN;
+  if (!raw) return null;
+  const explicitId = process.env.POSTIZ_CF_ACCESS_CLIENT_ID;
+  if (explicitId) return { clientId: explicitId, clientSecret: raw };
+  const colon = raw.indexOf(":");
+  if (colon > 0) return { clientId: raw.slice(0, colon), clientSecret: raw.slice(colon + 1) };
+  return null;
 }
 
 async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
@@ -67,11 +66,11 @@ async function postizFetch(
     ...init.headers,
   });
 
-  // Add Service Token for Cloudflare Access if configured
-  const serviceToken = process.env.POSTIZ_SERVICE_TOKEN;
-  if (serviceToken) {
-    headers.set("Cf-Access-Client-Id", extractClientIdFromToken(serviceToken));
-    headers.set("Cf-Access-Client-Secret", serviceToken);
+  // Add Cloudflare Access service-token headers if the credentials are configured.
+  const cfCreds = readCfAccessCreds();
+  if (cfCreds) {
+    headers.set("Cf-Access-Client-Id", cfCreds.clientId);
+    headers.set("Cf-Access-Client-Secret", cfCreds.clientSecret);
   }
 
   return fetch(`${baseUrl}/api/public/v1${path}`, {
