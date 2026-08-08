@@ -1,5 +1,7 @@
 import { routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
+import { EchoAgent } from "./agents/echo";
+import { CodingAgent } from "./agents/coding";
 
 // Extend the generated Env with bindings that wrangler doesn't generate types for
 // AGENT_AUTH_TOKEN is a secret, ASSETS is for static assets, CounterAgent is the DO namespace
@@ -34,6 +36,8 @@ interface Env {
   AGENT_AUTH_TOKEN: string;
   ASSETS: Fetcher;
   CounterAgent: DurableObjectNamespace<CounterAgent>;
+  EchoAgent: DurableObjectNamespace<EchoAgent>;
+  CodingAgent: DurableObjectNamespace<CodingAgent>;
   // OpenNext.js cache/queue bindings
   TAG_CACHE?: KVNamespace;
   REVALIDATION_QUEUE?: KVNamespace;
