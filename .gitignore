@@ -39,6 +39,10 @@ dist
 build
 *.tsbuildinfo
 
+# Lighthouse workflow artifacts (per-run outputs — never commit)
+lighthouse_report.json
+lighthouse-*.json
+
 # Environment variables
 .env
 .env.*
