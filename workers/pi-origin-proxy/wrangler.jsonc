@@ -5,11 +5,12 @@
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "compatibility_date": "2026-08-07",
   "minify": true,
-  // Apex + www are bound as Cloudflare **Custom Domains** (wrangler asserts
-  // them via `custom_domain: true`); manage is a plain **Route**. Do not
-  // add duplicate route entries — they were deleted from the zone on
-  // 2026-08-07 and would silently reappear on the next deploy if listed
-  // as bare routes here.
+  // apex + www are bound as Cloudflare Custom Domains (`custom_domain: true`).
+  // manage.cloudless.gr is intentionally NOT routed to this Worker — it is
+  // served directly by the Cloudflare Tunnel -> Pi cloudless-app (cron
+  // callers hit that host to dodge Bot Fight Mode). Do NOT add a manage
+  // route here: a bare route would silently reappear on the next
+  // `wrangler deploy` and steal manage traffic from the Tunnel.
   "routes": [
     {
       "pattern": "cloudless.gr",
