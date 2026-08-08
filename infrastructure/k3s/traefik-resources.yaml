@@ -1,0 +1,19 @@
+# k3s HelmChartConfig — overlays resource limits on the built-in traefik
+# HelmChart. Applied live 2026-08-08 (previous state: no limits at all,
+# actual usage 26Mi). k3s watches this file if placed under
+# /var/lib/rancher/k3s/server/manifests/, but here we keep it in the repo
+# for GitOps and apply manually with `kubectl apply -f`.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 300m
+        memory: 128Mi
