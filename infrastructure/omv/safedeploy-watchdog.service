@@ -1,0 +1,22 @@
+[Unit]
+Description=SafeDeploy watchdog — polls cloudless.gr health, notifies and auto-rolls-back on failure
+Documentation=file:///home/tbaltzakis/cloudless.gr/docs/SAFEDEPLOY.md
+After=network-online.target k3s.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Credentials populated at install time from the cloudless-secrets k8s Secret.
+# Values are never printed by the watchdog script.
+EnvironmentFile=-/etc/safedeploy-watchdog.env
+ExecStart=/usr/local/sbin/safedeploy-watchdog.sh
+# Bounded runtime — a stuck tick must not accumulate
+TimeoutStartSec=90
+# Hardening (script only reads state + posts alerts + flips one symlink)
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths=/var/lib/safedeploy-watchdog /home/tbaltzakis/cloudless-standalone
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
