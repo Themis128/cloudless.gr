@@ -4,7 +4,7 @@ import { createBasePage, createResponsivePage, createAuthenticatedPage } from ".
 /**
  * Admin Page Test Suite
  * Tests the admin panel for rendering, navigation, and functionality
- * Requires admin authentication
+ * Requires admin authentication (uses storageState from setup project)
  */
 
 test.describe("Admin Panel", () => {
@@ -16,10 +16,6 @@ test.describe("Admin Panel", () => {
     page = createBasePage(browserPage);
     responsivePage = createResponsivePage(browserPage);
     authPage = createAuthenticatedPage(browserPage);
-    
-    // Login as admin before each test
-    // Using admin credentials - in a real test, we'd have a way to create/promote an admin user
-    await authPage.loginViaApi("admin@example.com", "adminpassword123");
     
     await page.navigate("/admin");
   });
