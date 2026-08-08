@@ -1,5 +1,0 @@
-- [x] Identify all files with AWS SDK imports
-- [ ] Check each file for AWS SDK usage patterns
-- [ ] Replace AWS SDK usage with Cloudflare/R2 equivalents where applicable
-- [ ] Update import statements
-- [ ] Verify functionality after changes
