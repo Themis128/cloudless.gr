@@ -248,6 +248,20 @@ describe("pi-origin-proxy: isCacheable (request-side)", () => {
       expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(false);
     }
   });
+
+  it("rejects service workers even though they have a .js extension", () => {
+    // A 4h edge-cached /sw.js would silently freeze the PWA cache version
+    // for users; the browser only refreshes SWs when it sees a byte diff.
+    for (const path of ["/sw.js", "/service-worker.js"]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(false);
+    }
+  });
+
+  it("rejects workbox-* runtime companions", () => {
+    for (const path of ["/workbox-abc123.js", "/workbox-catch-handler.js"]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(false);
+    }
+  });
 });
 
 describe("pi-origin-proxy: isResponseCacheable (response-side)", () => {
