@@ -29,6 +29,23 @@ Idempotent methods (`GET`/`HEAD`/`OPTIONS`) retry once on network failure or
 upstream `502` (Tunnel flaps). Failures still return `502` with
 `x-served-by: pi-tunnel-proxy` or `pi-tunnel-proxy-error`.
 
+## Edge cache
+
+Static-asset `GET` requests (anonymous — no `Cookie`/`Authorization`) are
+looked up in `caches.default` before the tunnel hop and stored after a hit
+via `ctx.waitUntil(cache.put(...))`. Paths that qualify:
+
+- `/_next/static/*`, `/_next/image?...`, `/icons/*`, `/images/*`
+- `/favicon.ico`, `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`
+- any path ending in `.css` / `.js` / `.mjs` / `.map` / `.woff2` / image /
+  video / `.txt` / `.xml`
+
+Only 200 responses with an explicit `Cache-Control: max-age=N` (or
+`s-maxage=N`) and no `Set-Cookie` are stored. Everything else — including
+API routes, RSC prefetches (`?_rsc=…`), and pages with a session cookie —
+bypasses cache entirely. Cache hits carry `x-served-by: pi-tunnel-proxy-cache`
+so you can distinguish them from a fresh tunnel round-trip.
+
 ## GHA cron callers (Bot Fight bypass)
 
 GitHub Actions runners hitting `https://cloudless.gr/api/cron/*` often get a
