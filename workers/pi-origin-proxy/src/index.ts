@@ -13,7 +13,7 @@ interface Env {
   PI_TIMEOUT_MS?: string;
 }
 
-const HOP_BY_HOP = new Set([
+const REQUEST_HOP_BY_HOP = new Set([
   "connection",
   "keep-alive",
   "proxy-authenticate",
@@ -28,10 +28,82 @@ const HOP_BY_HOP = new Set([
   "cf-visitor",
 ]);
 
+const RESPONSE_HOP_BY_HOP = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailers",
+  "transfer-encoding",
+  "upgrade",
+]);
+
 const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isWebSocketUpgrade(request: Request): boolean {
+  return request.headers.get("Upgrade")?.toLowerCase() === "websocket";
+}
+
+function buildForwardHeaders(
+  request: Request,
+  url: URL,
+  host: string,
+  preserveUpgrade: boolean,
+): Headers {
+  const headers = new Headers();
+  for (const [k, v] of request.headers) {
+    const lower = k.toLowerCase();
+    if (REQUEST_HOP_BY_HOP.has(lower)) {
+      // Keep Upgrade + Connection for WebSocket handshakes.
+      if (preserveUpgrade && (lower === "upgrade" || lower === "connection")) {
+        headers.set(k, v);
+      }
+      continue;
+    }
+    headers.set(k, v);
+  }
+  headers.set("Host", host);
+  headers.set("X-Forwarded-Host", url.host);
+  headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""));
+
+  const clientIp = request.headers.get("cf-connecting-ip");
+  if (clientIp) {
+    const priorXff = request.headers.get("x-forwarded-for");
+    headers.set("X-Forwarded-For", priorXff ? `${priorXff}, ${clientIp}` : clientIp);
+    headers.set("X-Real-IP", clientIp);
+  }
+  return headers;
+}
+
+function buildResponseHeaders(upstream: Response, url: URL, host: string): Headers {
+  const out = new Headers();
+  for (const [k, v] of upstream.headers) {
+    if (!RESPONSE_HOP_BY_HOP.has(k.toLowerCase())) out.set(k, v);
+  }
+
+  // Rewrite Location headers on 3xx that point at the raw origin so the
+  // browser stays on the proxy hostname instead of landing on pi-origin.
+  if (upstream.status >= 300 && upstream.status < 400) {
+    const loc = out.get("Location");
+    if (loc) {
+      try {
+        const locUrl = new URL(loc, `https://${host}`);
+        if (locUrl.host === host) {
+          locUrl.protocol = url.protocol;
+          locUrl.host = url.host;
+          out.set("Location", locUrl.toString());
+        }
+      } catch {
+        // leave malformed Location untouched
+      }
+    }
+  }
+  return out;
 }
 
 async function fetchUpstream(
@@ -65,31 +137,55 @@ async function fetchWithTimeout(
   }
 }
 
+async function proxyWebSocket(
+  target: string,
+  request: Request,
+  headers: Headers,
+): Promise<Response> {
+  const upstream = await fetch(target, {
+    method: request.method,
+    headers,
+    // No timeout / no retry: WS handshakes must not be retried.
+  });
+  // Cloudflare's Response accepts `webSocket` in the init when the upstream
+  // returned a 101 with an attached socket. TS libs don't model it.
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: upstream.headers,
+    // deno-lint-ignore no-explicit-any
+    webSocket: (upstream as unknown as { webSocket?: WebSocket }).webSocket,
+  } as ResponseInit & { webSocket?: WebSocket });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const host = (env.PI_ORIGIN_HOST || "pi-origin.cloudless.gr").replace(/^https?:\/\//, "");
     const target = new URL(url.pathname + url.search, `https://${host}`);
+    const targetStr = target.toString();
 
-    const headers = new Headers();
-    for (const [k, v] of request.headers) {
-      if (!HOP_BY_HOP.has(k.toLowerCase())) headers.set(k, v);
+    if (isWebSocketUpgrade(request)) {
+      const wsHeaders = buildForwardHeaders(request, url, host, true);
+      try {
+        return await proxyWebSocket(targetStr, request, wsHeaders);
+      } catch (err) {
+        console.error("pi-tunnel-proxy: websocket upgrade failed", err);
+        return new Response("WebSocket origin unreachable", {
+          status: 502,
+          headers: {
+            "x-served-by": "pi-tunnel-proxy-error",
+            "content-type": "text/plain",
+          },
+        });
+      }
     }
-    headers.set("Host", host);
-    headers.set("X-Forwarded-Host", url.host);
-    headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""));
 
-    const clientIp = request.headers.get("cf-connecting-ip");
-    if (clientIp) {
-      const priorXff = request.headers.get("x-forwarded-for");
-      headers.set("X-Forwarded-For", priorXff ? `${priorXff}, ${clientIp}` : clientIp);
-      headers.set("X-Real-IP", clientIp);
-    }
+    const headers = buildForwardHeaders(request, url, host, false);
 
     const timeoutMs = Number.parseInt(env.PI_TIMEOUT_MS || "30000", 10);
     const deadline = Date.now() + (Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 30000);
     const idempotent = IDEMPOTENT.has(request.method.toUpperCase());
-    const targetStr = target.toString();
 
     try {
       let upstream: Response;
@@ -113,16 +209,16 @@ export default {
         }
       }
 
-      const out = new Response(upstream.body, {
+      const outHeaders = buildResponseHeaders(upstream, url, host);
+      outHeaders.set("x-served-by", "pi-tunnel-proxy");
+      if (upstream.status >= 500) {
+        outHeaders.set("x-pi-origin-status", String(upstream.status));
+      }
+      return new Response(upstream.body, {
         status: upstream.status,
         statusText: upstream.statusText,
-        headers: upstream.headers,
+        headers: outHeaders,
       });
-      out.headers.set("x-served-by", "pi-tunnel-proxy");
-      if (upstream.status >= 500) {
-        out.headers.set("x-pi-origin-status", String(upstream.status));
-      }
-      return out;
     } catch (err) {
       console.error("pi-tunnel-proxy: origin unreachable", err);
       return new Response("Pi origin unreachable", {
