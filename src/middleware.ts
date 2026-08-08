@@ -62,12 +62,12 @@ const RATE_LIMITED_ROUTES = [
 const RATE_LIMITS = {
   // Global IP-based rate limiting
   ip: {
-    limit: IS_DEV ? 1000 : 5, // max 5 requests (1000 in dev)
+    limit: IS_DEV ? 1000 : 100, // max 100 requests per window (1000 in dev)
     window: 10, // per 10 seconds
   },
   // Authenticated user rate limiting
   auth: {
-    limit: IS_DEV ? 2000 : 10, // max 10 requests (2000 in dev)
+    limit: IS_DEV ? 2000 : 200, // max 200 requests per window (2000 in dev)
     window: 10, // per 10 seconds
   },
 };
@@ -75,11 +75,11 @@ const RATE_LIMITS = {
 // Admin-specific rate limits (stricter but reasonable for dashboard loads)
 const ADMIN_RATE_LIMIT = {
   ip: {
-    limit: IS_DEV ? 1000 : 10,
+    limit: IS_DEV ? 1000 : 50,
     window: 10,
   },
   auth: {
-    limit: IS_DEV ? 2000 : 30,
+    limit: IS_DEV ? 2000 : 100,
     window: 10,
   },
 };
@@ -156,9 +156,9 @@ function buildCSP(nonce: string): string {
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: http: 'unsafe-inline' 'unsafe-eval';
-    style-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline' https:;
     img-src 'self' data: https: blob:;
-    font-src 'self';
+    font-src 'self' https: data:;
     connect-src 'self' https: wss:;
     media-src 'self' https:;
     object-src 'none';

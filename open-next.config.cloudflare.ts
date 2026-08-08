@@ -17,5 +17,5 @@ import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue
 export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
   tagCache: d1TagCache,
-  queue: MemoryQueue,
+  queue: new MemoryQueue(),
 });
