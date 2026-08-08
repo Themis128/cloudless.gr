@@ -62,7 +62,8 @@ test.describe("Admin workspaces", () => {
     
     await page.goto(PAGE, { waitUntil: "domcontentloaded" });
     
-    // Use the same selector pattern as admin-pages-sweep.spec.pt
+    // Check for h1 heading which indicates the page loaded correctly
+    // Use the same selector pattern as admin-pages-sweep.spec.ts
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30000 });
   });
 });
