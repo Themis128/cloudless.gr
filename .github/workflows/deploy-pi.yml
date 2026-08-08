@@ -172,6 +172,12 @@ jobs:
           -n "${{ env.K3S_NAMESPACE }}"
         $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \
           -n "${{ env.K3S_NAMESPACE }}" --timeout=600s
+        # Wait for pod to be fully ready and NodePort to propagate
+        sleep 15
+        echo "Checking pod status:"
+        $KUBECTL get pods -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app -o wide
+        echo "Checking service endpoints:"
+        $KUBECTL get endpoints -n "${{ env.K3S_NAMESPACE }}" cloudless-app
         curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
         echo
 
@@ -179,9 +185,14 @@ jobs:
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
+        # Extra wait for NodePort to be fully ready
+        sleep 10
         HEALTH_CHECK_FAILED=1
         for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
-          if curl -sS --max-time 5 "$candidate" | jq -e .version >/dev/null 2>&1; then
+          echo "Trying $candidate..."
+          RESPONSE=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
+          echo "Response: $RESPONSE"
+          if echo "$RESPONSE" | jq -e .version >/dev/null 2>&1; then
             HEALTH_CHECK_FAILED=0
             echo "health check passed via $candidate"
             break
@@ -190,6 +201,10 @@ jobs:
         done
         if [ $HEALTH_CHECK_FAILED -ne 0 ]; then
           echo "::error::Rollout verification failed - health endpoint not accessible or invalid response"
+          echo "Debugging info:"
+          $KUBECTL get pods -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app -o wide
+          $KUBECTL describe pod -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app
+          $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=50
           exit 1
         fi
         echo "Rollout verification successful"
