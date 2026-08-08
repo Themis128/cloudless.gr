@@ -13,7 +13,7 @@ interface Env {
   PI_TIMEOUT_MS?: string;
 }
 
-const REQUEST_HOP_BY_HOP = new Set([
+export const REQUEST_HOP_BY_HOP = new Set([
   "connection",
   "keep-alive",
   "proxy-authenticate",
@@ -28,7 +28,7 @@ const REQUEST_HOP_BY_HOP = new Set([
   "cf-visitor",
 ]);
 
-const RESPONSE_HOP_BY_HOP = new Set([
+export const RESPONSE_HOP_BY_HOP = new Set([
   "connection",
   "keep-alive",
   "proxy-authenticate",
@@ -39,17 +39,17 @@ const RESPONSE_HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
-const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
+export const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isWebSocketUpgrade(request: Request): boolean {
+export function isWebSocketUpgrade(request: Request): boolean {
   return request.headers.get("Upgrade")?.toLowerCase() === "websocket";
 }
 
-function buildForwardHeaders(
+export function buildForwardHeaders(
   request: Request,
   url: URL,
   host: string,
@@ -80,7 +80,7 @@ function buildForwardHeaders(
   return headers;
 }
 
-function buildResponseHeaders(upstream: Response, url: URL, host: string): Headers {
+export function buildResponseHeaders(upstream: Response, url: URL, host: string): Headers {
   const out = new Headers();
   for (const [k, v] of upstream.headers) {
     if (!RESPONSE_HOP_BY_HOP.has(k.toLowerCase())) out.set(k, v);
