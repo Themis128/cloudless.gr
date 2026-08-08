@@ -7,7 +7,7 @@ const isCoverage = process.env.COVERAGE === "1";
 
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
-  testMatch: "**/*.spec.ts",
+  testMatch: "**/*.spec.{ts,mts}",
   testIgnore: ["**/k3s/**"],
   fullyParallel: true,
   forbidOnly: isCi,
@@ -77,7 +77,7 @@ export default defineConfig({
   projects: [
     {
       name: "setup",
-      testMatch: "**/auth.setup.ts",
+      testMatch: "**/auth.setup.mts",
       use: { ...devices["Desktop Chrome"] },
     },
     {
