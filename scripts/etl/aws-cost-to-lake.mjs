@@ -35,16 +35,18 @@
 
 import { BUCKET, r2Put } from "./_r2-config.mjs";
 
-import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
+// NOTE: `@aws-sdk/client-cost-explorer` is imported lazily inside
+// `fetchDailyCost()` — not at module top-level — so the live Cloudflare-first
+// path (`aws-cost-to-r2.mjs`, which only imports the pure `shapeResults`
+// transform from here) does not require the AWS SDK. This module's own
+// `main()` is the deprecated S3+Athena path; the SDK is only pulled in when it
+// actually runs. Do not hoist this import back to the top.
+
 const REGION = process.env.AWS_REGION || "us-east-1";
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
-
-// Cost Explorer is a global service — but the SDK still requires *a* region.
-// us-east-1 is the canonical home (and matches our existing AWS_REGION).
-const ce = new CostExplorerClient({ region: "us-east-1" });
 
 const schema = new ParquetSchema({
   /** ISO date — YYYY-MM-DD, partition-friendly. */
@@ -87,6 +89,14 @@ export function shapeResults(results) {
 }
 
 async function fetchDailyCost() {
+  // Lazy import — keeps the AWS SDK out of the module graph for importers that
+  // only need `shapeResults` (see note at the top of this file).
+  const { CostExplorerClient, GetCostAndUsageCommand } = await import(
+    "@aws-sdk/client-cost-explorer"
+  );
+  // Cost Explorer is a global service but the SDK still requires *a* region.
+  const ce = new CostExplorerClient({ region: REGION });
+
   const end = new Date();
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - LOOKBACK_DAYS);
