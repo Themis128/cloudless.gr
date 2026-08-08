@@ -4,6 +4,7 @@
  */
 import d1TagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-cache";
 import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue";
+import assetResolver from "@opennextjs/cloudflare/overrides/asset-resolver";
 
 export default {
   default: {
@@ -35,13 +36,6 @@ export default {
       tagCache: "dummy",
       queue: "dummy",
     },
-    // Use a runtime dynamic import to avoid esbuild resolution issues
-    assetResolver: async () => {
-      const mod = await import(
-        /* webpackIgnore: true */
-        "@opennextjs/cloudflare/overrides/asset-resolver/index.js"
-      );
-      return mod.default;
-    },
+    assetResolver: () => assetResolver,
   },
 };
