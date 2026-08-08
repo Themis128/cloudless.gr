@@ -197,7 +197,7 @@ function isAdminFromSession(session: { groups?: string[] }): boolean {
 }
 
 // Main middleware logic
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Generate nonce for CSP
   const nonce = generateNonce();
 
@@ -430,12 +430,12 @@ async function handlePageRoute(
   return addSecurityHeaders(response, nonce);
 }
 
-// Export config for Next.js (proxy-appropriate config)
+// Export config for Next.js middleware
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
   ],
-  // Proxy middleware always runs on Node.js runtime
+  // Middleware runs on the Edge runtime (required for OpenNext Cloudflare)
 };
 
 // Re-export utilities for tests and compatibility

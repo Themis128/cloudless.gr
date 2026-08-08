@@ -4,10 +4,6 @@
  *
  * Used by `scripts/cf-build-wrapper.sh` via `--openNextConfigPath`.
  * AWS SST deploy uses `open-next.config.ts` (non-edge middleware).
- *
- * `defineCloudflareConfig()` internally builds the full OpenNext config
- * (default.override, edgeExternals, middleware, cloudflare flags) — it only
- * accepts the Cloudflare-specific overrides listed below.
  */
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
@@ -15,7 +11,10 @@ import d1TagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-c
 import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
 export default defineCloudflareConfig({
-  incrementalCache: r2IncrementalCache,
-  tagCache: d1TagCache,
-  queue: MemoryQueue,
-});
+  default: {
+    placement: "server",
+    incrementalCache: r2IncrementalCache,
+    tagCache: d1TagCache,
+    queue: MemoryQueue,
+  },
+} as any);
