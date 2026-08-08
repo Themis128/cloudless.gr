@@ -30,8 +30,8 @@ const APPS: AppDef[] = [
     name: "EspoCRM",
     description: "CRM · Leads · Contacts · Deals",
     icon: "◉",
-    authMode: "link",
-    detail: "Manage leads, contacts, and deal pipeline",
+    authMode: "auto",
+    detail: "Auto-login via API credentials",
   },
   {
     key: "appflowy",

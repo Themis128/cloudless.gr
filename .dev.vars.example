@@ -39,6 +39,17 @@ ANALYTICS_BUCKET=datalake-bucket
 # Get API key from https://ai.google.dev/
 GEMINI_API_KEY=your-gemini-api-key-here
 
+# ─── Self-hosted Apps (auto-login) ──────────────────────────────────────────
+# AppFlowy auto-login uses GoTrue password grant
+APPFLOWY_API_URL=https://appflowy.cloudless.gr
+APPFLOWY_EMAIL=your-appflowy-admin@example.com
+APPFLOWY_PASSWORD=your-appflowy-password
+
+# EspoCRM auto-login uses HTTP Basic Auth in the URL
+ESPOCRM_BASE_URL=https://espocrm.cloudless.gr
+ESPOCRM_API_USER=admin
+ESPOCRM_API_PASSWORD=your-esprocrm-password
+
 # ─── Optional: External Services ───────────────────────────────────────────
 # LOCAL_LLM_BASE_URL=http://localhost:11434
 # LANGGRAPH_URL=http://localhost:8123

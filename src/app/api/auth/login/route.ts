@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         ? rawEmail.toLowerCase().trim()
         : undefined;
       
-      password = typeof rawPassword === "string" && rawPassword.length > 0
+      password = typeof rawPassword === "string" && rawPassword.trim().length > 0
         ? rawPassword
         : undefined;
       

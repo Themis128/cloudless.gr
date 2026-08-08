@@ -1,13 +1,14 @@
 /**
- * Self-hosted admin auto-login bridge (R25)
+ * Self-hosted admin auto-login bridge (R25+)
  *
- * Knows how to produce a launch URL for each self-hosted app tile.
- * Only AppFlowy supports server-side token-based SSO (GoTrue password grant).
- * All other apps get a canonical admin URL (smart link, opens in new tab).
+ * Produces a launch URL for each self-hosted app tile.
+ * Apps that support token-based or credential-based auto-login get a
+ * server-side injected auth; all others get a canonical admin URL.
  *
  * Security notes:
- * - AppFlowy tokens are fetched server-side and short-lived (5 min max, set by GoTrue).
- * - Tokens are never logged — only the resulting redirect URL is returned.
+ * - Tokens/credentials are fetched server-side and never logged.
+ * - URLs containing secrets are never stored and are only returned to
+ *   authenticated admin callers.
  * - This module is server-only; never import it from client components.
  */
 import { getConfig } from "@/lib/ssm-config";
@@ -25,7 +26,7 @@ export const SELFHOSTED_APP_NAMES: Record<SelfhostedApp, string> = {
 
 export interface AutologinResult {
   url: string;
-  /** true = URL contains an injected token and should not be stored */
+  /** true = URL contains an injected token/credential and should not be stored */
   hasToken: boolean;
 }
 
@@ -92,30 +93,72 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
   return { url: redirectUrl, hasToken: true };
 }
 
-function buildEspoCrmUrl(base: string): AutologinResult {
-  // EspoCRM has no token-based SSO — direct to login page.
-  const b = base.replace(/\/$/, "");
-  return { url: `${b}/`, hasToken: false };
+/**
+ * EspoCRM: embed API user credentials via Basic Auth in the URL.
+ * EspoCRM supports HTTP Basic Auth natively; the browser will use these
+ * credentials for the session.
+ *
+ * Config: ESPOCRM_BASE_URL + ESPOCRM_API_USER + ESPOCRM_API_PASSWORD
+ */
+function buildEspoCrmUrl(cfg: {
+  baseUrl?: string;
+  apiUser?: string;
+  apiPassword?: string;
+}): AutologinResult {
+  const base = (cfg.baseUrl || "https://espocrm.cloudless.gr").replace(/\/$/, "");
+  const user = cfg.apiUser || "";
+  const password = cfg.apiPassword || "";
+
+  if (user && password) {
+    // URL-encode credentials to handle special chars safely
+    const encodedUser = encodeURIComponent(user);
+    const encodedPass = encodeURIComponent(password);
+    return {
+      url: `https://${encodedUser}:${encodedPass}@${base.replace(/^https?:\/\//, "")}/`,
+      hasToken: true,
+    };
+  }
+
+  // Fallback: direct link without credentials
+  return { url: `${base}/`, hasToken: false };
 }
 
+/**
+ * n8n: no native token-based SSO for the web UI.
+ * Supports API key auth for the REST API but the UI uses session cookies.
+ * Return the direct admin URL.
+ */
 function buildN8nUrl(base: string): AutologinResult {
   const b = base.replace(/\/$/, "");
   return { url: `${b}/signin`, hasToken: false };
 }
 
+/**
+ * Postiz: no native token-based SSO for the web UI.
+ * Uses API key for the REST API but the UI uses session cookies.
+ * Return the direct admin URL.
+ */
 function buildPostizUrl(base: string): AutologinResult {
   const b = base.replace(/\/$/, "");
   return { url: `${b}/`, hasToken: false };
 }
 
+/**
+ * Grafana: no URL-based token auth for the web UI.
+ * API tokens work for the REST API but UI login requires username/password.
+ * Return the direct admin URL.
+ */
 function buildGrafanaUrl(base: string): AutologinResult {
   const b = (base || "https://grafana.cloudless.gr").replace(/\/$/, "");
   return { url: `${b}/`, hasToken: false };
 }
 
+/**
+ * Kuma: public status page, no login required.
+ * Return the dashboard URL.
+ */
 function buildKumaUrl(base: string): AutologinResult {
   const b = (base || "https://kuma.cloudless.gr").replace(/\/$/, "");
-  // Kuma dashboard — no login required if running without auth mode.
   return { url: `${b}/dashboard`, hasToken: false };
 }
 
@@ -125,8 +168,8 @@ function buildKumaUrl(base: string): AutologinResult {
 
 /**
  * Returns a launch URL for the given self-hosted app.
- * For AppFlowy this involves a live GoTrue call; for all others it's a
- * synchronous URL build from SSM config.
+ * For AppFlowy and EspoCRM this involves server-side auth setup; for all
+ * others it's a synchronous URL build from SSM config.
  */
 export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResult> {
   const cfg = await getConfig();
@@ -136,7 +179,11 @@ export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResu
       return buildAppFlowyUrl();
 
     case "espocrm":
-      return buildEspoCrmUrl(cfg.ESPOCRM_BASE_URL || "https://espocrm.cloudless.gr");
+      return buildEspoCrmUrl({
+        baseUrl: cfg.ESPOCRM_BASE_URL || "https://espocrm.cloudless.gr",
+        apiUser: cfg.ESPOCRM_API_USER,
+        apiPassword: cfg.ESPOCRM_API_PASSWORD,
+      });
 
     case "n8n":
       return buildN8nUrl(cfg.N8N_API_URL || "https://n8n.cloudless.gr");
@@ -157,7 +204,10 @@ export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResu
   }
 }
 
-/** Returns true only for apps where we can inject a real token (currently just AppFlowy). */
+/**
+ * Returns true only for apps where we can inject a real token or credential.
+ * Currently: AppFlowy (GoTrue token), EspoCRM (Basic Auth in URL).
+ */
 export function supportsAutoLogin(app: SelfhostedApp): boolean {
-  return app === "appflowy";
+  return app === "appflowy" || app === "espocrm";
 }
