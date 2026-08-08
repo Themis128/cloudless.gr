@@ -359,3 +359,27 @@ async function handlePageRoute(
   const response = await NextResponse.next();
   return addSecurityHeaders(response, nonce);
 }
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
+  ],
+};
+
+export {
+  generateNonce,
+  addSecurityHeaders,
+  handleApiRoute,
+  handlePageRoute,
+  readAuthToken,
+  isRateLimited,
+  cleanupStaleEntries,
+  buildCSP,
+  getLocaleFromPath,
+  stripLocale,
+  isHomepagePath,
+  readD1SessionCookie,
+  readNextAuthJwt,
+};
+
+export { RATE_LIMITS, ADMIN_RATE_LIMIT, LOCALES, DEFAULT_LOCALE };

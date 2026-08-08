@@ -87,10 +87,6 @@ const nextConfig: NextConfig = {
     // at signIn time even when configure provably ran.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
-  // Matcher for proxy (middleware) - moved from proxy.ts
-  matcher: [
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
-  ],
 };
 
 // Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
