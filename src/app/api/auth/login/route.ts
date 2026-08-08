@@ -39,16 +39,36 @@ export async function POST(req: NextRequest) {
     let password: string | undefined;
     let rememberMe = false;
     try {
-      const body = (await req.json()) as { email?: string; password?: string; rememberMe?: boolean };
-      email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
-      password = body.password;
-      rememberMe = !!body.rememberMe;
+      const rawBody = await req.json();
+      // Defensive: ensure we have a plain object, not an array/null/primitive
+      const body = (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody))
+        ? rawBody as Record<string, unknown>
+        : {};
+
+      // Strict validation - only accept strings, reject empty strings
+      const rawEmail = body.email;
+      const rawPassword = body.password;
+      const rawRememberMe = body.rememberMe;
+      
+      email = typeof rawEmail === "string" && rawEmail.trim().length > 0
+        ? rawEmail.toLowerCase().trim()
+        : undefined;
+      
+      password = typeof rawPassword === "string" && rawPassword.length > 0
+        ? rawPassword
+        : undefined;
+      
+      rememberMe = Boolean(rawRememberMe);
     } catch {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+    // Explicit check with clear error message - prevents bypass via empty strings or missing fields
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+    if (!password) {
+      return NextResponse.json({ error: "Password is required" }, { status: 400 });
     }
 
     // Check for account lockout
