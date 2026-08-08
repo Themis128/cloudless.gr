@@ -6,11 +6,6 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "exports": {
-    "CounterAgent": { "type": "durable-object", "storage": "sqlite" },
-    "EchoAgent": { "type": "durable-object", "storage": "sqlite" },
-    "CodingAgent": { "type": "durable-object", "storage": "sqlite" }
-  },
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "assets": {
     "binding": "ASSETS",
@@ -31,22 +26,6 @@
         }
       ],
       "_note_account_id": "CLOUDFLARE_ACCOUNT_ID must be the account that owns user-auth-db D1 (fb7dc7…), matching top-level account_id. A mismatch makes D1 REST return 401 and breaks /api/auth/login.",
-      "durable_objects": {
-        "bindings": [
-          {
-            "name": "CounterAgent",
-            "class_name": "CounterAgent"
-          },
-          {
-            "name": "EchoAgent",
-            "class_name": "EchoAgent"
-          },
-          {
-            "name": "CodingAgent",
-            "class_name": "CodingAgent"
-          }
-        ]
-      },
       "observability": {
         "enabled": false,
         "head_sampling_rate": 1,
@@ -241,22 +220,6 @@
       "bucket_name": "cloudless-assets"
     }
   ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "CounterAgent",
-        "class_name": "CounterAgent"
-      },
-      {
-        "name": "EchoAgent",
-        "class_name": "EchoAgent"
-      },
-      {
-        "name": "CodingAgent",
-        "class_name": "CodingAgent"
-      }
-    ]
-  },
   "d1_databases": [
     {
       "binding": "AUTH_DB",
