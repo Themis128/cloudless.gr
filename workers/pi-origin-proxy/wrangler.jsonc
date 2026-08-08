@@ -6,14 +6,14 @@
   "compatibility_date": "2026-08-07",
   "minify": true,
   // Apex + www are bound as Cloudflare **Custom Domains** (wrangler asserts
-  // them via `custom_domain: true`); manage is a plain **Route**. Do not
-  // add duplicate route entries — they were deleted from the zone on
-  // 2026-08-07 and would silently reappear on the next deploy if listed
-  // as bare routes here.
+  // them via `custom_domain: true`). `manage.cloudless.gr` used to have a
+  // plain Route here but the DNS record for that hostname is a proxied
+  // CNAME to the shared Cloudflare Tunnel; the Route caused the Worker to
+  // intercept traffic and re-hop through pi-origin.cloudless.gr on the way
+  // to the same tunnel. Removed so `manage.*` flows tunnel-only.
   "routes": [
     { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
-    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
-    { "pattern": "manage.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
+    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true }
   ],
   // Explicit empty crons array clears any Cron Triggers previously attached
   // to this Worker. The proxy has no scheduled() handler; every fire from
