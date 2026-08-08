@@ -64,6 +64,14 @@ spec:
         - secretRef:
             name: cloudless-secrets
             optional: false
+        # Pin the Cloudflare account that owns user-auth-db D1. Explicit env
+        # overrides envFrom, so this wins over any stale CLOUDFLARE_ACCOUNT_ID
+        # in cloudless-secrets. A wrong account makes the D1 REST API return
+        # 401 → /api/auth/login 500. The account id is not a secret; the D1
+        # API token still comes from cloudless-secrets.
+        env:
+        - name: CLOUDFLARE_ACCOUNT_ID
+          value: fb7dc7b69b662480cd5961a4d1913c78
         volumeMounts:
         - name: standalone
           mountPath: /app

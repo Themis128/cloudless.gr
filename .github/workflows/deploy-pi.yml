@@ -203,7 +203,8 @@ jobs:
           "APP_VERSION=${FULL_SHA}" \
           "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}" \
           "NEXT_PUBLIC_AUTH_PROVIDER=d1" \
-          "SSM_DISABLED=1"
+          "SSM_DISABLED=1" \
+          "CLOUDFLARE_ACCOUNT_ID=fb7dc7b69b662480cd5961a4d1913c78"
         $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" \
           -n "${{ env.K3S_NAMESPACE }}"
         $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \

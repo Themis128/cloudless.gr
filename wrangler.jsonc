@@ -30,6 +30,7 @@
           "custom_domain": true
         }
       ],
+      "_note_account_id": "CLOUDFLARE_ACCOUNT_ID must be the account that owns user-auth-db D1 (fb7dc7…), matching top-level account_id. A mismatch makes D1 REST return 401 and breaks /api/auth/login.",
       "durable_objects": {
         "bindings": [
           {
@@ -65,7 +66,7 @@
         "ENVIRONMENT": "production",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-        "CLOUDFLARE_ACCOUNT_ID": "c6d6b805741159c062a3e0b0d7f9d89a"
+        "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
       },
       "secrets": {
         "required": [
@@ -190,7 +191,7 @@
     "ENVIRONMENT": "production",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-    "CLOUDFLARE_ACCOUNT_ID": "c6d6b805741159c062a3e0b0d7f9d89a"
+    "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
   },
   "secrets": {
     "required": [
