@@ -7,9 +7,12 @@ name: Deploy to Pi (hostPath standalone — no ECR)
 # Runner: exclusive [self-hosted, omv, build]. Do not put audits/CWV/ETL on
 # the `build` label — they starve this workflow (see docs/runners.md).
 #
-# Concurrency: serialize (cancel-in-progress: false + queue: max). Rapid main
-# merges used to abort mid-build ("Canceling since a higher priority waiting
-# request for deploy-pi exists") and leave hostPath on a stale SHA.
+# Concurrency: deploy the LATEST main SHA only. cancel-in-progress: true so a
+# newer push supersedes an older in-progress/queued build instead of stacking a
+# long serial queue behind it (every push otherwise builds in sequence, ~15min
+# each). Cancelling mid-build is safe: "Sync standalone → hostPath" runs only
+# after a successful build, so a cancelled build never touches hostPath and the
+# previously deployed SHA stays live.
 #
 # Caching: pnpm store + Next.js build cache on OMV-HA runner for speed.
 
@@ -30,13 +33,13 @@ on:
 permissions:
   contents: read
 
-# Serialize deploys: never cancel a build already in progress; a newer push
-# queues behind it (GitHub keeps only the newest *pending* run). This is what
-# the header comment above describes — the block was missing, which is why
-# rapid main merges cancelled builds mid-flight.
+# Deploy latest-only: a newer push cancels older in-progress/queued runs in
+# this group so builds don't pile up in a long serial queue. Safe to cancel
+# mid-build — the hostPath sync only runs after a successful build, so the live
+# SHA is never left partial (see the header note above).
 concurrency:
   group: deploy-pi
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
