@@ -1,0 +1,82 @@
+# Remaining Tasks Checklist
+
+## Infrastructure & Deployment
+- [ ] Restart Cline to load MCP configuration changes
+- [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
+  - Mount path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+- [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions) - REQUIRED for deployment workflow
+- [ ] Deploy postiz-liteLLM service for AI features (optional)
+- [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
+- [ ] Import analytics workflows from `infrastructure/n8n/workflows/`
+- [ ] Configure n8n credentials (SSH Key, Slack, R2 access)
+- [ ] Enable lead-enrichment webhook workflow
+- [ ] Activate hot-lead-alert workflow for notifications
+- [ ] Run `pnpm mcp-security-scan` on API routes
+- [ ] Remove unused API keys from .env (AWS credentials no longer needed)
+- [ ] Clean up SSM parameters (deprecated AWS resources)
+- [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
+- [ ] Create /api/pi-proxy route (Tailscale proxy)
+- [ ] Create /api/inbound-email route (Email Routing webhook)
+- [ ] Update cloudflare-tunnel config for pi-alert-api exposure
+- [ ] Test Tailscale connectivity through Workers tunnel
+
+## Security & Authentication
+- [ ] Run `pnpm mcp-security-scan` on API routes
+- [ ] Remove unused API keys from .env (AWS credentials no longer needed)
+- [ ] Clean up SSM parameters (deprecated AWS resources)
+- [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
+
+## Analytics Stack Completion
+- [ ] Generate parquet files from R2 analytics data
+- [ ] Verify analytics-client.ts connects to /api/analytics/r2
+- [ ] Create DuckDB views for funnel metrics (v_funnel_metrics)
+- [ ] Set up daily rollup cron for analytics data
+
+## Performance Optimizations
+- [ ] Run `ANALYZE=true next build` to check bundle sizes
+- [ ] Audit large dependencies in package.json (langchain, aws-sdk)
+- [ ] Consider removing unused AWS SDK imports
+- [ ] Optimize DuckDB-Wasm loading (lazy load)
+- [ ] Reduce cloudless-app replicas from 5 → 3 (if low traffic)
+- [ ] Lower PostgreSQL request from 1Gi → 512Mi (if usage is low)
+- [ ] Configure horizontal pod autoscaling for AppFlowy services
+
+## Data Migration Cleanup
+- [ ] Migrate remaining S3 assets to R2
+- [ ] Add retention policy for admin_notification (90 days → archive)
+
+## Development Workflow
+- [ ] Update GitHub Actions to use RUNNER_GENERIC failover (for ARM64 compatibility)
+- [ ] Add smoke test for Workers deployment
+- [ ] Configure preview deployments for PRs
+- [ ] Add Lighthouse audit step to deployment pipeline
+
+## Testing Gaps
+- [ ] Add E2E tests for D1 auth endpoints
+- [ ] Add unit tests for password reset flow
+- [ ] Test chat streaming fallback (Workers AI → Anthropic)
+- [ ] Verify all locale redirects work (next-intl middleware)
+
+## External Service Integrations
+- [ ] Google Ads API connection (OAuth2 tokens in SSM)
+- [ ] Meta/Facebook CAPI configured (send conversion events)
+- [ ] LinkedIn Ads API verification
+- [ ] TikTok Ads API tokens
+- [ ] X/Twitter Ads OAuth1 configuration
+- [ ] Verify Cloudflare Email service is active
+- [ ] Set up SPF/DKIM/DMARC for cloudless.gr
+- [ ] Test email deliverability to major providers
+- [ ] Configure email routing for admin domains
+- [ ] Verify SLACK_BOT_TOKEN in Wrangler secrets
+- [ ] Test /cloudless-status slash command
+- [ ] Configure workflow notifications (#alerts, #orders, #contacts)
+- [ ] Verify n8n Slack webhook integration
+
+## Documentation & Knowledge Base
+- [ ] Update CLUSTER-MAP.md with current pod statuses
+- [ ] Document Cloudflare Tunnel certificate renewal (cloudflare-tunnel-cert-renewal.md)
+- [ ] Add backup/restore procedures for D1 (d1-backup-restore.md)
+- [ ] Create failover playbook (Workers → Pi → Tailscale) (workers-failover-playbook.md)
+- [ ] Document DNS fix procedures (ACTIONS-REQUIRED.md)
+- [ ] Create tunnel status documentation (2026-07-20 fixes)
+- [ ] Verify all deprecation notices are addressed in codebase
