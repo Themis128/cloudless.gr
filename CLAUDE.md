@@ -1,5 +1,24 @@
 # Claude Code — Project Memory
 
+## ⚠️ Cluster Topology — SINGLE-NODE as of 2026-08-08 (supersedes older 2-node notes)
+
+The k3s cluster is now **single-node**: `omv` (Pi 5, 8GB, control-plane) only.
+`omv-ha` (Pi 4, 1GB) was **drained and removed from k3s** on 2026-08-08 and
+repurposed as a **dedicated mail host** (webmail.cloudless.gr). Any section below
+that describes a 2-node cluster, an `omv-ha` k3s worker, the AppFlowy-worker pin
+to omv-ha, warm-standby etcd on omv-ha, or omv-ha cleanup timers is **historical**.
+
+- **omv now runs a 4K-page kernel.** `/boot/firmware/config.txt` sets
+  `kernel=kernel8.img` (was the Pi-5 default 16K `kernel_2712`). This was done so
+  the **AppFlowy worker** (jemalloc built for 4K pages) can run on omv — it now
+  does, pinned `nodeSelector: kubernetes.io/hostname: omv`. Do NOT revert to the
+  16K kernel without first moving/rebuilding that worker.
+- **omv-ha**: OMV services disabled, k3s agent uninstalled, `/var/lib/rancher`
+  removed. It is SSH-reachable over Tailscale (`omv-ha`, 100.95.117.84) and hosts
+  postfix/dovecot/Roundcube (see `infrastructure/omv-ha/`).
+- All former omv-ha workloads (traefik, tailscale operator, postiz-redis, etc.)
+  now run on omv. `local-path` PVCs are omv-local.
+
 ## Working Style
 
 - **Never use placeholders.** No `<paste-output-here>`, no `TODO`, no `# TODO`, no `# fill in`, no `# replace this`, no `your-value-here`, no `xxx`, no `???`. If a value isn't known, fetch it, ask one direct question, or stop — do not write code/configs/docs that contain placeholders the user has to find and replace.
