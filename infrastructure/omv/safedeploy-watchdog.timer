@@ -1,0 +1,16 @@
+[Unit]
+Description=Run SafeDeploy watchdog every 2 minutes
+Documentation=file:///home/tbaltzakis/cloudless.gr/docs/SAFEDEPLOY.md
+
+[Timer]
+# Fire 30s after boot, then every 2 min. Small random delay avoids
+# lock-step alignment with cron/other timers.
+OnBootSec=30s
+OnUnitActiveSec=120s
+RandomizedDelaySec=15s
+AccuracySec=5s
+Persistent=false
+Unit=safedeploy-watchdog.service
+
+[Install]
+WantedBy=timers.target
