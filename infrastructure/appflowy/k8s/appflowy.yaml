@@ -190,7 +190,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: minio
-        image: minio/minio:latest
+        image: minio/minio:RELEASE.2025-05-24T17-08-30Z
         args: [server, /data, --console-address, ':9001']
         env:
         - name: MINIO_ROOT_USER
@@ -228,7 +228,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: gotrue
-        image: appflowyinc/gotrue:latest
+        image: appflowyinc/gotrue:0.17.4-arm64v8
         env:
             # POSTGRES_PASSWORD MUST come first — DATABASE_URL below uses $() expansion.
         - name: POSTGRES_PASSWORD
@@ -283,7 +283,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: appflowy-cloud
-        image: appflowyinc/appflowy_cloud:latest
+        image: appflowyinc/appflowy_cloud:0.17.4-arm64v8
         env:
         - name: POSTGRES_PASSWORD
           valueFrom: {secretKeyRef: {name: appflowy-secrets, key: POSTGRES_PASSWORD}}
@@ -339,7 +339,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: appflowy-worker
-        image: appflowyinc/appflowy_worker:latest
+        image: appflowyinc/appflowy_worker:0.17.4-arm64v8
         env:
         - name: POSTGRES_PASSWORD
           valueFrom: {secretKeyRef: {name: appflowy-secrets, key: POSTGRES_PASSWORD}}
@@ -373,7 +373,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: appflowy-web
-        image: appflowyinc/appflowy_web:latest
+        image: appflowyinc/appflowy_web:0.16.10-arm64v8
         env:
         - {name: APPFLOWY_BASE_URL, value: https://appflowy.cloudless.gr}
         - {name: APPFLOWY_GOTRUE_BASE_URL, value: https://appflowy.cloudless.gr/gotrue}
@@ -402,7 +402,7 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: admin-frontend
-        image: appflowyinc/admin_frontend:latest
+        image: appflowyinc/admin_frontend:0.17.4-arm64v8
         env:
         - {name: APPFLOWY_GOTRUE_BASE_URL, value: http://gotrue:9999}
         - {name: APPFLOWY_BASE_URL, value: http://appflowy-cloud:8000}
