@@ -1,5 +1,10 @@
 # AppFlowy Self-Host — Operator Runbook
 
+> **⚠️ Topology note (2026-08-08):** references to a 2-node cluster or `omv-ha`
+> as a k3s worker below are **historical**. The cluster is now single-node
+> (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from
+> k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
+> Topology" for current state.
 Phase 1 of replacing Notion as the operator-facing CMS for cloudless.gr. This
 runbook covers deploy, first-login, and the three known operational gotchas.
 Architecture decisions and per-pod env reference live in
@@ -11,13 +16,13 @@ Architecture decisions and per-pod env reference live in
 | --- | --- | --- | --- |
 | postgres | omv (Pi 5) | pgvector/pgvector:pg16 | Shared DB for cloud + worker + gotrue (auth schema) |
 | redis | omv | redis:7-alpine | Cache + outbox + collab streams |
-| minio | omv | minio/minio:latest | S3-compatible blob store for collab + uploads |
-| gotrue | omv | appflowyinc/gotrue:latest | Auth (issues JWT under `appflowy_admin` group) |
-| appflowy-cloud | omv | appflowyinc/appflowy_cloud:latest | REST/WebSocket API |
-| appflowy-web | omv | appflowyinc/appflowy_web:latest | Notion-like SPA UI |
-| admin-frontend | omv | appflowyinc/admin_frontend:latest | Workspace admin console at `/console` |
+| minio | omv | minio/minio:RELEASE.2025-05-24T17-08-30Z | S3-compatible blob store for collab + uploads |
+| gotrue | omv | appflowyinc/gotrue:0.17.4-arm64v8 | Auth (issues JWT under `appflowy_admin` group) |
+| appflowy-cloud | omv | appflowyinc/appflowy_cloud:0.17.4-arm64v8 | REST/WebSocket API |
+| appflowy-web | omv | appflowyinc/appflowy_web:0.16.10-arm64v8 | Notion-like SPA UI |
+| admin-frontend | omv | appflowyinc/admin_frontend:0.17.4-arm64v8 | Workspace admin console at `/console` |
 | nginx | omv | nginx:1.27-alpine | In-cluster path router (matches upstream `nginx/nginx.conf`) |
-| appflowy-worker | **omv-ha** (Pi 4) | appflowyinc/appflowy_worker:latest | Imports, snapshots, outbox publishers |
+| appflowy-worker | **omv-ha** (Pi 4) | appflowyinc/appflowy_worker:0.17.4-arm64v8 | Imports, snapshots, outbox publishers |
 
 The worker is pinned to **omv-ha** because the upstream worker image's jemalloc
 was built for 4 KiB pages. omv runs Raspberry Pi OS's `2712` kernel with 16 KiB

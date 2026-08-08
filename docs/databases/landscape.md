@@ -1,5 +1,10 @@
 # Database landscape
 
+> **⚠️ Topology note (2026-08-08):** references to a 2-node cluster or `omv-ha`
+> as a k3s worker below are **historical**. The cluster is now single-node
+> (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from
+> k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
+> Topology" for current state.
 Architect view of every durable and ephemeral store for cloudless.gr.
 Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](../cloudflare/README.md).
 

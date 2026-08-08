@@ -12,6 +12,13 @@ description: |
 
 # AppFlowy operator toolkit
 
+
+> **⚠️ Topology note (2026-08-08):** references to a 2-node cluster or `omv-ha`
+> as a k3s worker below are **historical**. The cluster is now single-node
+> (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from
+> k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
+> Topology" for current state.
+
 AppFlowy Cloud is the **self-hosted Notion replacement** for cloudless.gr.
 Phase 1 shipped 2026-06-21 (PR #1051) live at `https://appflowy.cloudless.gr`.
 

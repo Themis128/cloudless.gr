@@ -1,5 +1,10 @@
 # 2026 Best-Practice Audit — cloudless.gr
 
+> **⚠️ Topology note (2026-08-08):** references to a 2-node cluster or `omv-ha`
+> as a k3s worker below are **historical**. The cluster is now single-node
+> (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from
+> k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
+> Topology" for current state.
 External-research validation of the AWS-serverless + k3s-cluster stack
 against current (2026) best-practice standards for a "new-age
 data-analytics website + e-shop" run by a solo Greek SMB operator.
