@@ -1,16 +1,39 @@
 /**
  * OpenNext.js Cloudflare configuration for cloudless.gr
- * Uses defineCloudflareConfig from the package to properly configure all overrides.
+ * Manual config to satisfy the strict validator exactly.
  */
-import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-import d1TagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-cache";
 import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
-export default defineCloudflareConfig({
-  incrementalCache: "dummy",
-  tagCache: d1TagCache,
-  queue: new MemoryQueue(),
-  cachePurge: "dummy",
-  routePreloadingBehavior: "none",
-  enableCacheInterception: false,
-});
+const queue = new MemoryQueue();
+
+export default {
+  default: {
+    override: {
+      wrapper: "cloudflare-node",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
+      incrementalCache: "dummy",
+      tagCache: "dummy",
+      queue: () => queue,
+    },
+    routePreloadingBehavior: "none",
+  },
+  edgeExternals: ["node:crypto"],
+  cloudflare: {
+    useWorkerdCondition: true,
+  },
+  dangerous: {
+    enableCacheInterception: false,
+  },
+  middleware: {
+    external: true,
+    override: {
+      wrapper: "cloudflare-edge",
+      converter: "edge",
+      proxyExternalRequest: "fetch",
+      incrementalCache: "dummy",
+      tagCache: "dummy",
+      queue: "dummy",
+    },
+  },
+};
