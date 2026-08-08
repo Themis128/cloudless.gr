@@ -30,6 +30,14 @@ on:
 permissions:
   contents: read
 
+# Serialize deploys: never cancel a build already in progress; a newer push
+# queues behind it (GitHub keeps only the newest *pending* run). This is what
+# the header comment above describes — the block was missing, which is why
+# rapid main merges cancelled builds mid-flight.
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   K3S_NAMESPACE: cloudless
@@ -162,14 +170,26 @@ jobs:
       id: kubectl
       run: |
         set -euo pipefail
-        if command -v kubectl >/dev/null 2>&1 && kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
-          echo "bin=kubectl" >> "$GITHUB_OUTPUT"
-        elif sudo kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
-          echo "bin=sudo kubectl" >> "$GITHUB_OUTPUT"
-        else
-          echo "::error::kubectl cannot reach the cluster"
+        # The k3s API server on the control-plane Pi can be briefly unresponsive
+        # right after a build pegs CPU/IO, so probe with retries + a generous
+        # per-attempt timeout instead of failing on a single 5s miss (which
+        # threw away an already-successful build + hostPath sync).
+        BIN=""
+        for attempt in $(seq 1 6); do
+          if command -v kubectl >/dev/null 2>&1 && kubectl get --raw /readyz --request-timeout=15s >/dev/null 2>&1; then
+            BIN="kubectl"; break
+          elif sudo kubectl get --raw /readyz --request-timeout=15s >/dev/null 2>&1; then
+            BIN="sudo kubectl"; break
+          fi
+          echo "kubectl not ready (attempt ${attempt}/6) — waiting 10s…"
+          sleep 10
+        done
+        if [ -z "$BIN" ]; then
+          echo "::error::kubectl cannot reach the cluster after 6 attempts (~2min)"
           exit 1
         fi
+        echo "Using: ${BIN}"
+        echo "bin=${BIN}" >> "$GITHUB_OUTPUT"
 
     - name: Roll out cloudless-app
       if: steps.skip.outputs.already != 'true'
