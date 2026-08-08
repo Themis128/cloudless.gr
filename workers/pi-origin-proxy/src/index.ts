@@ -49,6 +49,22 @@ async function fetchUpstream(
   });
 }
 
+async function fetchWithTimeout(
+  target: string,
+  request: Request,
+  headers: Headers,
+  deadline: number,
+): Promise<Response> {
+  const remaining = Math.max(0, deadline - Date.now());
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), remaining);
+  try {
+    return await fetchUpstream(target, request, headers, controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -63,29 +79,37 @@ export default {
     headers.set("X-Forwarded-Host", url.host);
     headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""));
 
+    const clientIp = request.headers.get("cf-connecting-ip");
+    if (clientIp) {
+      const priorXff = request.headers.get("x-forwarded-for");
+      headers.set("X-Forwarded-For", priorXff ? `${priorXff}, ${clientIp}` : clientIp);
+      headers.set("X-Real-IP", clientIp);
+    }
+
     const timeoutMs = Number.parseInt(env.PI_TIMEOUT_MS || "30000", 10);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const deadline = Date.now() + (Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 30000);
     const idempotent = IDEMPOTENT.has(request.method.toUpperCase());
+    const targetStr = target.toString();
 
     try {
       let upstream: Response;
       try {
-        upstream = await fetchUpstream(target.toString(), request, headers, controller.signal);
+        upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       } catch (firstErr) {
-        if (!idempotent || controller.signal.aborted) throw firstErr;
+        if (!idempotent || Date.now() >= deadline) throw firstErr;
+        console.error("pi-tunnel-proxy: first attempt failed, retrying", firstErr);
         await sleep(200);
-        upstream = await fetchUpstream(target.toString(), request, headers, controller.signal);
+        upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       }
 
       // Tunnel flaps often return 502 HTML from Cloudflare on the pi-origin hop.
-      if (idempotent && upstream.status === 502 && !controller.signal.aborted) {
+      if (idempotent && upstream.status === 502 && Date.now() < deadline) {
         await sleep(200);
         try {
-          const retry = await fetchUpstream(target.toString(), request, headers, controller.signal);
+          const retry = await fetchWithTimeout(targetStr, request, headers, deadline);
           if (retry.status < 500) upstream = retry;
-        } catch {
-          // keep original 502
+        } catch (retryErr) {
+          console.error("pi-tunnel-proxy: 502 retry failed", retryErr);
         }
       }
 
@@ -99,7 +123,8 @@ export default {
         out.headers.set("x-pi-origin-status", String(upstream.status));
       }
       return out;
-    } catch {
+    } catch (err) {
+      console.error("pi-tunnel-proxy: origin unreachable", err);
       return new Response("Pi origin unreachable", {
         status: 502,
         headers: {
@@ -108,8 +133,6 @@ export default {
           "retry-after": "5",
         },
       });
-    } finally {
-      clearTimeout(timer);
     }
   },
 } satisfies ExportedHandler<Env>;
