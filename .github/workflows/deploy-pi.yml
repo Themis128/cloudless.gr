@@ -10,6 +10,8 @@ name: Deploy to Pi (hostPath standalone — no ECR)
 # Concurrency: serialize (cancel-in-progress: false + queue: max). Rapid main
 # merges used to abort mid-build ("Canceling since a higher priority waiting
 # request for deploy-pi exists") and leave hostPath on a stale SHA.
+#
+# Caching: pnpm store + Next.js build cache on OMV-HA runner for speed.
 
 on:
   push:
@@ -33,6 +35,9 @@ env:
   K3S_NAMESPACE: cloudless
   K3S_DEPLOYMENT: cloudless-app
   STANDALONE_HOSTPATH: /home/tbaltzakis/cloudless-standalone
+  # Cache paths on self-hosted runner (OMV-HA)
+  PNPM_STORE_PATH: /home/tbaltzakis/.pnpm-store
+  NEXT_CACHE_PATH: /home/tbaltzakis/.next-cache
 
 jobs:
   build-and-rollout:
@@ -43,6 +48,23 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Restore pnpm store cache
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        mkdir -p "${PNPM_STORE_PATH}"
+        pnpm config set store-dir "${PNPM_STORE_PATH}"
+
+    - name: Restore Next.js build cache
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        mkdir -p "${NEXT_CACHE_PATH}"
+        if [ -d "${NEXT_CACHE_PATH}/.next" ]; then
+          echo "Restoring Next.js cache..."
+          cp -r "${NEXT_CACHE_PATH}/.next" .next 2>/dev/null || true
+        fi
 
     - name: Skip if SHA already live
       id: skip
@@ -71,14 +93,22 @@ jobs:
           echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
         fi
 
-    - name: Clean stale build output
+    - name: Clean stale build output (keep cache)
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        if [ -d .next ]; then
-          echo "Removing stale .next/ from previous build..."
+        # Remove only the build output, preserve .next/cache for Turbopack
+        if [ -d .next ] && [ ! -d .next/cache ]; then
+          echo "Removing stale .next/ (no cache)..."
           rm -rf .next
-          echo "Cleaned .next/"
+        elif [ -d .next/cache ]; then
+          echo "Preserving .next/cache for incremental build..."
+          # Move cache aside, clean rest, restore
+          mv .next/cache /tmp/next-cache-backup
+          rm -rf .next
+          mkdir -p .next
+          mv /tmp/next-cache-backup .next/cache
+          echo "Cache preserved"
         else
           echo "No stale .next/ — clean workspace"
         fi
@@ -88,10 +118,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
 
     - name: Install dependencies
       if: steps.skip.outputs.already != 'true'
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile --prefer-offline
 
     - name: Build Next.js standalone
       if: steps.skip.outputs.already != 'true'
@@ -109,6 +141,16 @@ jobs:
         NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
         NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
       run: pnpm build
+
+    - name: Save Next.js build cache
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        if [ -d .next/cache ]; then
+          echo "Saving Next.js cache..."
+          rm -rf "${NEXT_CACHE_PATH}/.next"
+          cp -r .next "${NEXT_CACHE_PATH}/.next"
+        fi
 
     - name: Sync standalone → hostPath
       if: steps.skip.outputs.already != 'true'
