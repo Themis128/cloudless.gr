@@ -124,7 +124,17 @@ function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse
   );
   response.headers.set(
     "Permissions-Policy",
-    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=(), hid=(), midi=(), serial=(), xr-spatial-tracking=(), fullscreen=(self), gamepad=(), bluetooth=(), display-capture=(), clipboard-read=(), clipboard-write=(), window-management=(), local-fonts=()"
+  );
+  // HSTS header (only on HTTPS, but include for consistency)
+  response.headers.set(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains; preload"
+  );
+  // Report-To header for CSP reporting
+  response.headers.set(
+    "Report-To",
+    '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-report"}],"include_subdomains":true}'
   );
   return response;
 }
@@ -136,13 +146,15 @@ function buildCSP(nonce: string): string {
     style-src 'self' 'unsafe-inline' https:;
     img-src 'self' data: https: blob:;
     font-src 'self' https: data:;
-    connect-src 'self' https: wss:;
+    connect-src 'self' https: wss: https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://snap.licdn.com https://px.ads.linkedin.com;
     media-src 'self' https:;
     object-src 'none';
     base-uri 'self';
-    form-action 'self';
+    form-action 'self' https://www.facebook.com https://connect.facebook.net;
     frame-ancestors 'none';
     upgrade-insecure-requests;
+    report-uri /api/csp-report;
+    report-to csp-endpoint;
   `.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -230,7 +242,8 @@ async function handleApiRoute(
     cleanupStaleEntries(ipRequestMap);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  return addSecurityHeaders(response, nonce);
 }
 
 async function handlePageRoute(
