@@ -33,6 +33,25 @@ jobs:
         ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
         echo "SSH key configured for $PI_USER@$PI_HOST"
 
+    - name: Wait for SSH to become reachable
+      run: |
+        # The Tailscale route to omv can take a few seconds to propagate after
+        # the join, and the host may be mid-reboot (watchdog). Retry before
+        # giving up so a transient blip doesn't fail the whole run; if it stays
+        # unreachable, fail here with a clear message instead of deep in a step.
+        for attempt in $(seq 1 10); do
+          if ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+               -o ConnectTimeout=10 -o BatchMode=yes \
+               "$PI_USER@$PI_HOST" true 2>/dev/null; then
+            echo "SSH reachable (attempt ${attempt})"
+            exit 0
+          fi
+          echo "SSH not reachable yet (attempt ${attempt}/10) — waiting 15s…"
+          sleep 15
+        done
+        echo "::error::$PI_HOST is unreachable over SSH after 10 attempts (~2.5min) — host down or off the tailnet."
+        exit 1
+
     - name: Verify k3s API via SSH
       run: |
         echo "=== Testing SSH connectivity ==="

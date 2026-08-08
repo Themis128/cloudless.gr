@@ -29,7 +29,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, reason: "postiz_not_configured" }, { status: 503 });
   }
 
-  const integrations = await listIntegrations();
+  // Postiz is configured but its API can still be unreachable or erroring
+  // (pod down, upstream 5xx). Surface that as a structured 502 rather than an
+  // opaque unhandled 500, so the cron log says *what* failed.
+  let integrations;
+  try {
+    integrations = await listIntegrations();
+  } catch (e) {
+    console.error("[postiz-oauth-check] listIntegrations failed:", e);
+    return NextResponse.json(
+      { ok: false, reason: "postiz_unreachable", error: e instanceof Error ? e.message : String(e) },
+      { status: 502 }
+    );
+  }
+
   const disabled = integrations.filter((i) => i.disabled);
 
   await Promise.all(

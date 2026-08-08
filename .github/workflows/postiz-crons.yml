@@ -99,11 +99,23 @@ jobs:
         ''
       run: |
         echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
-        RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
+        CODE=$(curl -sS -o /tmp/postiz-oauth.json -w '%{http_code}' \
+          --retry 3 --retry-delay 5 --max-time 30 \
           -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-          "$BASE_URL/api/cron/postiz-oauth-check")
-        echo "Response: $RESPONSE"
-        echo "## Postiz OAuth check" >> "$GITHUB_STEP_SUMMARY"
-        echo '```json' >> "$GITHUB_STEP_SUMMARY"
-        echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
+          "$BASE_URL/api/cron/postiz-oauth-check" || echo "000")
+        BODY=$(cat /tmp/postiz-oauth.json 2>/dev/null || echo '{}')
+        echo "HTTP $CODE — $BODY"
+        {
+          echo "## Postiz OAuth check (HTTP $CODE)"
+          echo '```json'
+          echo "$BODY"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        # 503 = integration not configured on this environment → clean skip.
+        # 2xx = success. Anything else (incl. 502 = Postiz unreachable) is a
+        # real failure worth alerting on.
+        case "$CODE" in
+          2*)  echo "OK" ;;
+          503) echo "::notice::Postiz not configured on ${BASE_URL} — skipping (503)" ;;
+          *)   echo "::error::postiz-oauth-check returned HTTP $CODE"; exit 1 ;;
+        esac

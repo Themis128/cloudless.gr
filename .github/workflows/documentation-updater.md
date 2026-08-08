@@ -16,12 +16,12 @@ models:
     input: 0.15
     output: 0.60
 tools:
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   github:
     toolsets: [default]
   edit:
   bash: true
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 safe-outputs:
   report-failure-as-issue: false
   noop:
