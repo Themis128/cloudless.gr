@@ -91,6 +91,18 @@ const CACHEABLE_STATIC_EXT =
   /\.(css|js|mjs|map|woff2?|ttf|eot|jpg|jpeg|png|webp|avif|gif|svg|ico|mp4|webm|txt|xml)$/i;
 
 /**
+ * Paths that must NEVER be served from the edge cache.
+ *
+ * Service workers and their runtime companions must reach the browser fresh
+ * on every check: browsers only pick up a new SW when they see a byte-level
+ * diff of the script URL, so a 4h edge-cached /sw.js means CACHE_VERSION
+ * bumps stay invisible to users during that window and the PWA update
+ * contract silently breaks.
+ */
+const NEVER_CACHE_EXACT = new Set(["/sw.js", "/service-worker.js"]);
+const NEVER_CACHE_PREFIXES = ["/workbox-"]; // /workbox-<hash>.js companions
+
+/**
  * Cache candidates: GET requests for static assets from anonymous clients.
  * Anything with a Cookie/Authorization header is treated as personalized
  * (we do not want to leak one user's data to another via the edge cache).
@@ -100,6 +112,10 @@ export function isCacheable(request: Request): boolean {
   if (request.method !== "GET") return false;
   if (request.headers.has("cookie") || request.headers.has("authorization")) return false;
   const path = new URL(request.url).pathname;
+  if (NEVER_CACHE_EXACT.has(path)) return false;
+  for (const prefix of NEVER_CACHE_PREFIXES) {
+    if (path.startsWith(prefix)) return false;
+  }
   if (CACHEABLE_STATIC_EXACT.has(path)) return true;
   for (const prefix of CACHEABLE_STATIC_PREFIXES) {
     if (path.startsWith(prefix)) return true;
