@@ -137,36 +137,60 @@ jobs:
         NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
       run: pnpm build
 
-    - name: Sync standalone → hostPath
+    - name: Sync standalone → releases/ + flip symlink
+      # Atomic-symlink deploy. Writes the new bundle into a per-SHA release
+      # dir, then flips /home/tbaltzakis/cloudless-standalone (a symlink)
+      # to point at it — instant, reversible via scripts/rollback.sh.
+      # Old releases are kept (last 5) so any of them can be re-selected.
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        DEST="${{ env.STANDALONE_HOSTPATH }}"
-        STAGE="${DEST}.next-${GITHUB_SHA::12}"
+        CURRENT="${{ env.STANDALONE_HOSTPATH }}"           # the symlink k8s mounts
+        RELEASES="$(dirname "$CURRENT")/cloudless-releases"
+        SHA="${GITHUB_SHA::12}"
+        NEW_REL="$RELEASES/$SHA"
+        STAGE="$CURRENT.next-$SHA"                          # local build staging (rsync-safe on same fs)
         SRC=".next/standalone"
+
         if [ ! -f "${SRC}/server.js" ]; then
-          echo "::error::Standalone build output not found at ${SRC}/server.js. The 'Build Next.js standalone' step may have failed. Check the build logs above for errors."
+          echo "::error::Standalone build output not found at ${SRC}/server.js — 'Build Next.js standalone' step likely failed."
           exit 1
         fi
-        sudo rm -rf "${STAGE}"
-        sudo mkdir -p "${STAGE}"
-        sudo rsync -a "${SRC}/" "${STAGE}/"
-        if [ -d .next/static ]; then
-          sudo mkdir -p "${STAGE}/.next/static"
-          sudo rsync -a .next/static/ "${STAGE}/.next/static/"
-        fi
-        if [ -d public ]; then
-          sudo mkdir -p "${STAGE}/public"
-          sudo rsync -a public/ "${STAGE}/public/"
-        fi
-        sudo mkdir -p "${DEST}"
-        sudo rsync -a --delete "${STAGE}/" "${DEST}/"
-        sudo rm -rf "${STAGE}"
-        if [ ! -f "${DEST}/server.js" ]; then
-          echo "::error::Sync completed but ${DEST}/server.js does not exist — rsync failed silently."
-          exit 1
-        fi
-        echo "Synced standalone → ${DEST}"
+
+        # 1. Build the release in a staging dir on the same filesystem
+        sudo rm -rf "$STAGE"
+        sudo mkdir -p "$STAGE"
+        sudo rsync -a "$SRC/" "$STAGE/"
+        [ -d .next/static ] && { sudo mkdir -p "$STAGE/.next/static"; sudo rsync -a .next/static/ "$STAGE/.next/static/"; }
+        [ -d public ]       && { sudo mkdir -p "$STAGE/public";       sudo rsync -a public/ "$STAGE/public/"; }
+        [ -f "$STAGE/server.js" ] || { echo "::error::Staging built but $STAGE/server.js missing"; exit 1; }
+
+        # 2. Atomic promote: mv staging → releases/<sha>/ (same fs = atomic rename)
+        sudo mkdir -p "$RELEASES"
+        # If a release with this SHA already exists (retry/duplicate), replace it.
+        sudo rm -rf "$NEW_REL"
+        sudo mv "$STAGE" "$NEW_REL"
+        echo "Prepared release: $NEW_REL ($(sudo du -sh "$NEW_REL" | cut -f1))"
+
+        # 3. Remember the PREVIOUS symlink target for auto-rollback later
+        PREV="$(readlink "$CURRENT" 2>/dev/null || true)"
+        echo "previous_release=${PREV}" >> "$GITHUB_OUTPUT"
+        echo "new_release=cloudless-releases/$SHA"   >> "$GITHUB_OUTPUT"
+
+        # 4. Flip the symlink atomically (ln -sfn is atomic on POSIX)
+        sudo ln -sfn "cloudless-releases/$SHA" "$CURRENT"
+        sudo chown -h tbaltzakis:users "$CURRENT"
+        echo "Symlink now: $CURRENT → $(readlink "$CURRENT")"
+
+        # 5. Prune old releases — keep the newest 5 (mtime order)
+        cd "$RELEASES"
+        ls -1t | tail -n +6 | while read -r old; do
+          # never delete the one we're currently linked to (belt-and-braces)
+          [ "cloudless-releases/$old" = "$(readlink "$CURRENT")" ] && continue
+          echo "  pruning old release: $old"
+          sudo rm -rf "$old"
+        done
+      id: sync
 
     - name: Resolve kubectl
       if: steps.skip.outputs.already != 'true'
@@ -221,30 +245,61 @@ jobs:
         curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
         echo
 
-    - name: Verify rollout
+    - name: Verify rollout (auto-rollback on failure)
+      # Health-checks the new release; if unhealthy, atomically flips the
+      # symlink back to the previous release and restarts. This is the
+      # "SafeDeploy" auto-rollback: no bad release stays live.
       if: steps.skip.outputs.already != 'true'
+      env:
+        KUBECTL: ${{ steps.kubectl.outputs.bin }}
+        PREV_RELEASE: ${{ steps.sync.outputs.previous_release }}
+        CURRENT: ${{ env.STANDALONE_HOSTPATH }}
       run: |
         set -euo pipefail
-        # Extra wait for NodePort to be fully ready
-        sleep 10
-        HEALTH_CHECK_FAILED=1
-        for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
-          echo "Trying $candidate..."
-          RESPONSE=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
-          echo "Response: $RESPONSE"
-          if echo "$RESPONSE" | jq -e .version >/dev/null 2>&1; then
-            HEALTH_CHECK_FAILED=0
-            echo "health check passed via $candidate"
-            break
-          fi
-          echo "health check failed for $candidate"
+        sleep 10   # NodePort propagation
+
+        # Try 6 times over ~1 min so a briefly-slow start doesn't trigger rollback
+        HEALTH_OK=0
+        for attempt in 1 2 3 4 5 6; do
+          for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
+            RESPONSE=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
+            if echo "$RESPONSE" | jq -e .version >/dev/null 2>&1; then
+              HEALTH_OK=1
+              echo "✅ health OK via $candidate (attempt ${attempt}): $RESPONSE"
+              break 2
+            fi
+          done
+          echo "  health not ready (attempt ${attempt}/6) — waiting 10s…"; sleep 10
         done
-        if [ $HEALTH_CHECK_FAILED -ne 0 ]; then
-          echo "::error::Rollout verification failed - health endpoint not accessible or invalid response"
-          echo "Debugging info:"
+
+        if [ "$HEALTH_OK" = "1" ]; then
+          echo "Rollout verification successful."
+          exit 0
+        fi
+
+        # ─── AUTO-ROLLBACK ────────────────────────────────────────────────
+        echo "::warning::New release failed health checks — auto-rolling back to previous."
+        if [ -z "$PREV_RELEASE" ]; then
+          echo "::error::No previous release recorded (first-ever deploy?). Cannot auto-rollback."
           $KUBECTL get pods -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app -o wide
-          $KUBECTL describe pod -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app
-          $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=50
+          $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=80
           exit 1
         fi
-        echo "Rollout verification successful"
+        echo "  flipping symlink back → $PREV_RELEASE"
+        sudo ln -sfn "$PREV_RELEASE" "$CURRENT"
+        sudo chown -h tbaltzakis:users "$CURRENT"
+        $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" -n "${{ env.K3S_NAMESPACE }}"
+        $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" -n "${{ env.K3S_NAMESPACE }}" --timeout=180s
+
+        # Verify the rollback actually restored health
+        sleep 8
+        for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
+          RESP=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
+          if echo "$RESP" | jq -e .version >/dev/null 2>&1; then
+            echo "::error::Deploy failed; auto-rollback SUCCEEDED — site now on previous release ($PREV_RELEASE). Fix the build and redeploy."
+            exit 1
+          fi
+        done
+        echo "::error::Deploy failed AND auto-rollback health-check also failed. Investigate manually — try 'scripts/rollback.sh list'."
+        $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=80
+        exit 1
