@@ -72,11 +72,11 @@ const nextConfig: NextConfig = {
     // it (laptops cap at 2560, phones at ~1440), so removing it just
     // saves one generation per image without anyone noticing. The default
     // is [640, 750, 828, 1080, 1200, 1920, 2048, 3840].
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
-    // Cache optimized variants for 30 days at the edge.
-    minimumCacheTTL: 60 * 60 * 24 * 30,
-  },
-  experimental: {
+deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+  // Cache optimized variants for 30 days at the edge.
+  minimumCacheTTL: 60 * 60 * 24 * 30,
+},
+experimental: {
     // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
     // NOTE: aws-amplify is intentionally NOT in this list. Turbopack's
     // optimizePackageImports rewrites `import { Amplify } from "aws-amplify"`
@@ -87,10 +87,6 @@ const nextConfig: NextConfig = {
     // at signIn time even when configure provably ran.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
-  // Matcher for proxy (middleware) - moved from proxy.ts
-  matcher: [
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
-  ],
 };
 
 // Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
