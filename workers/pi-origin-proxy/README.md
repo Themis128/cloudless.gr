@@ -59,3 +59,50 @@ https://pi-origin.cloudless.gr/api/cron/...
 That path is Tunnel → Pi NodePort (this Worker is not on that hop). The app
 still enforces `CRON_SECRET`. See `platform-crons.yml`, `postiz-crons.yml`, and
 `linkedin-poll.yml` (`BASE_URL` / `SITE_ORIGIN` defaulting to pi-origin).
+
+## Current status
+
+`cloudless2` is a transparent reverse proxy in front of your k3s cluster via the
+Cloudflare Tunnel. It does not touch D1, KV, R2, AI, or any data store — the
+proxy only reads two `vars` (`PI_ORIGIN_HOST`, `PI_TIMEOUT_MS`) and forwards the
+request. Any Cloudflare dashboard banner about an unbound "Auth DB" / D1 binding
+is irrelevant to this Worker; **ignore it**.
+
+Verified live (HEAD `78acfd07`, deployed from `main`):
+
+| Component | Status |
+| --- | --- |
+| `cloudless2` Worker | ✅ Live, 0 errors, proxying `pi-origin.cloudless.gr` → Tunnel → k3s |
+| Code fixes | ✅ WebSocket pass-through, response hop-by-hop filtering, `Location` rewriting deployed |
+| `manage.cloudless.gr` route | ✅ Deleted — Tunnel-only, no double-hop (cron callers use the Tunnel host) |
+| Custom domains | ✅ `cloudless.gr` and `www.cloudless.gr` active (`x-served-by: pi-tunnel-proxy`) |
+| Auth DB binding | ✅ Not needed — proxy doesn't reference D1; ignore the dashboard banner |
+
+### Reproduction / verification
+
+```bash
+# Worker is serving apex + www
+curl -sI https://cloudless.gr      | grep -i x-served-by   # pi-tunnel-proxy
+curl -sI https://www.cloudless.gr  | grep -i x-served-by   # pi-tunnel-proxy
+
+# manage.cloudless.gr bypasses the Worker entirely (direct Tunnel → app)
+curl -sI https://manage.cloudless.gr; curl -sI https://manage.cloudless.gr | grep -i x-served-by   # (no output)
+
+# Unit tests for the header / Location / WebSocket helpers
+cd /home/tbaltzakis/cloudless.gr && npx vitest run __tests__/pi-origin-proxy.test.ts   # 18/18 pass
+```
+
+### Keeping your deploy in sync
+
+The Cloudflare-Dashboard AI worker export is a duplicate of this repo, so you do
+not need to upload it separately. The next `wrangler deploy` from `main` produces
+a bundle equivalent to what's live:
+
+```bash
+npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
+```
+
+> Note: a Dashboard-exported clone of this Worker was fetched during triage. It is
+> equivalent to `main`, but the one-off clone expires in ~36 hours — push any
+> code to your Git repo and merge to `main` so the committed config stays the
+> source of truth and the next deploy stays in sync with the live Worker.
