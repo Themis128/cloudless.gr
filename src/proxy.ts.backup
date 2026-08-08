@@ -1,5 +1,5 @@
-// proxy.ts — standalone middleware implementation for tests and documentation
-// Re-exports from middleware.ts to provide the full implementation
+// proxy.ts — standalone proxy implementation for tests and documentation
+// Re-exports from proxy.ts to provide the full implementation
 export {
   proxy,
   config,
@@ -16,7 +16,7 @@ export {
   isHomepagePath,
   readD1SessionCookie,
   readNextAuthJwt,
-} from "./middleware";
+} from "./proxy";
 
 // Export constants needed by tests
-export { RATE_LIMITS, ADMIN_RATE_LIMIT, LOCALES, DEFAULT_LOCALE } from "./middleware";
+export { RATE_LIMITS, ADMIN_RATE_LIMIT, LOCALES, DEFAULT_LOCALE } from "./proxy";
