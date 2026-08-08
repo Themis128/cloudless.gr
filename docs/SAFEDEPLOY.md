@@ -108,6 +108,10 @@ Verified 2026-08-08:
 
 ## Related
 
+- **[SafeDeploy Watchdog](SAFEDEPLOY-WATCHDOG.md)** — continuous post-deploy
+  monitor with alerts (ntfy + Slack + email) + auto-rollback at 16 min
+  unhealthy. SafeDeploy's built-in auto-rollback only fires during the ~1-min
+  deploy-verify window; the Watchdog covers everything after.
 - `scripts/rollback.sh` — the manual rollback command
 - `.github/workflows/deploy-pi.yml` — the deploy pipeline + auto-rollback
 - `k8s/cloudless-app-hostpath.yaml` — the Deployment that mounts the symlink

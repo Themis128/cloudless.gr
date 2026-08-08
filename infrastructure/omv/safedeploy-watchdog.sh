@@ -30,9 +30,9 @@ CURRENT=/home/tbaltzakis/cloudless-standalone
 RELEASES=/home/tbaltzakis/cloudless-releases
 NS=cloudless
 DEPLOY=cloudless-app
-HEALTH_URL_LOCAL=http://127.0.0.1:30300/api/health
-HEALTH_URL_LAN=http://192.168.1.128:30300/api/health
-HEALTH_URL_PUBLIC=https://cloudless.gr/api/health
+HEALTH_URL_LOCAL="${HEALTH_URL_LOCAL:-http://127.0.0.1:30300/api/health}"
+HEALTH_URL_LAN="${HEALTH_URL_LAN:-http://192.168.1.128:30300/api/health}"
+HEALTH_URL_PUBLIC="${HEALTH_URL_PUBLIC:-https://cloudless.gr/api/health}"
 NOTIFY_THRESHOLD=3        # consecutive failures to send first alert
 ROLLBACK_THRESHOLD=8      # consecutive failures to auto-rollback
 ROLLBACK_COOLDOWN=3600    # min seconds between auto-rollbacks
@@ -47,7 +47,7 @@ MIN_RELEASE_AGE=900       # skip rollback if symlink younger than this (seconds)
 
 # --- state helpers -----------------------------------------------------------
 mkdir -p "$STATE_DIR"
-_get() { cat "$STATE_DIR/$1" 2>/dev/null || echo "$2"; }
+_get() { local v; v=$(cat "$STATE_DIR/$1" 2>/dev/null); [ -n "$v" ] && printf '%s' "$v" || printf '%s' "$2"; }
 _set() { printf '%s\n' "$2" > "$STATE_DIR/$1"; }
 _now() { date -u +%s; }
 
