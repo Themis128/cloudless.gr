@@ -1,11 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cloudless2",
+  "name": "cloudless-web",
   "compatibility_date": "2026-07-20",
   "minify": true,
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "exports": {
+    "CounterAgent": { "type": "durable-object", "storage": "sqlite" },
+    "EchoAgent": { "type": "durable-object", "storage": "sqlite" },
+    "CodingAgent": { "type": "durable-object", "storage": "sqlite" }
+  },
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "assets": {
     "binding": "ASSETS",
@@ -23,35 +28,6 @@
           "pattern": "www.cloudless.gr",
           "zone_id": "7025298073d6a5c645a6ad9add0cbf0e",
           "custom_domain": true
-        }
-      ],
-      "triggers": {
-        "crons": [
-          "0 1 * * *",
-          "0 6 * * 1-5",
-          "0 * * * *",
-          "0 2 * * 7",
-          "0 5 * * 1"
-        ]
-      },
-      "migrations": [
-        {
-          "tag": "v1",
-          "new_sqlite_classes": [
-            "CounterAgent"
-          ]
-        },
-        {
-          "tag": "v2",
-          "new_sqlite_classes": [
-            "EchoAgent"
-          ]
-        },
-        {
-          "tag": "v3",
-          "new_sqlite_classes": [
-            "CodingAgent"
-          ]
         }
       ],
       "durable_objects": {
@@ -95,9 +71,7 @@
         "required": [
           "SESSION_SECRET",
           "CRON_SECRET",
-          "CLOUDFLARE_API_TOKEN",
-          "POSTIZ_CF_ACCESS_CLIENT_ID",
-          "POSTIZ_SERVICE_TOKEN"
+          "CLOUDFLARE_API_TOKEN"
         ]
       },
       "analytics_engine_datasets": [
@@ -146,6 +120,11 @@
           "binding": "AUTH_DB",
           "database_name": "user-auth-db",
           "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+        },
+        {
+          "binding": "NEXT_TAG_CACHE_D1",
+          "database_name": "user-auth-db",
+          "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
         }
       ]
     },
@@ -164,10 +143,7 @@
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
       },
       "secrets": {
-        "required": [
-          "POSTIZ_CF_ACCESS_CLIENT_ID",
-          "POSTIZ_SERVICE_TOKEN"
-        ]
+        "required": []
       },
       "r2_buckets": [
         {
@@ -200,6 +176,11 @@
           "binding": "AUTH_DB",
           "database_name": "user-auth-db",
           "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+        },
+        {
+          "binding": "NEXT_TAG_CACHE_D1",
+          "database_name": "user-auth-db",
+          "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
         }
       ]
     }
@@ -211,9 +192,78 @@
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
     "CLOUDFLARE_ACCOUNT_ID": "c6d6b805741159c062a3e0b0d7f9d89a"
   },
+  "secrets": {
+    "required": [
+      "SESSION_SECRET",
+      "CRON_SECRET",
+      "CLOUDFLARE_API_TOKEN"
+    ]
+  },
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "cloudless_analytics"
+    }
+  ],
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_BUCKET",
+      "bucket_name": "cloudless-assets"
+    },
+    {
+      "binding": "CACHE_BUCKET",
+      "bucket_name": "cloudless-assets"
+    },
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "app-media-bucket"
+    },
+    {
+      "binding": "ANALYTICS_BUCKET",
+      "bucket_name": "cloudless-analytics"
+    },
+    {
+      "binding": "DATALAKE_BUCKET",
+      "bucket_name": "datalake-bucket"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "cloudless-assets"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CounterAgent",
+        "class_name": "CounterAgent"
+      },
+      {
+        "name": "EchoAgent",
+        "class_name": "EchoAgent"
+      },
+      {
+        "name": "CodingAgent",
+        "class_name": "CodingAgent"
+      }
+    ]
+  },
   "d1_databases": [
     {
       "binding": "AUTH_DB",
+      "database_name": "user-auth-db",
+      "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+    },
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
       "database_name": "user-auth-db",
       "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
     }
