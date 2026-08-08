@@ -1,4 +1,5 @@
 // proxy.ts — Next.js 16+ proxy (replaces deprecated middleware)
+
 import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
@@ -346,39 +347,3 @@ async function handlePageRoute(
       }
       
       const basePath = pathname.split("/")[1] || "";
-      const isLocalized = LOCALES.includes(basePath);
-      const redirectPath = isLocalized
-        ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
-        : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-      
-      return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
-    }
-  }
-
-  const response = await NextResponse.next();
-  return addSecurityHeaders(response, nonce);
-}
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
-  ],
-};
-
-export {
-  generateNonce,
-  addSecurityHeaders,
-  handleApiRoute,
-  handlePageRoute,
-  readAuthToken,
-  isRateLimited,
-  cleanupStaleEntries,
-  buildCSP,
-  getLocaleFromPath,
-  stripLocale,
-  isHomepagePath,
-  readD1SessionCookie,
-  readNextAuthJwt,
-};
-
-export { RATE_LIMITS, ADMIN_RATE_LIMIT, LOCALES, DEFAULT_LOCALE };
