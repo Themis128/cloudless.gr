@@ -5,6 +5,9 @@
 # ─── Cloudflare Workers ───────────────────────────────────────────────
 # SESSION_SECRET is required for D1 password hashing
 SESSION_SECRET=your-random-secret-for-password-hashing
+# CRON_SECRET authorizes internal cron endpoints (Bearer token). Any random
+# value works locally; production sets it via `wrangler secret put CRON_SECRET`.
+CRON_SECRET=your-random-cron-secret
 
 # ─── Authentication (for local dev) ───────────────────────────────────
 AUTH_SECRET=your-next-auth-secret-here
