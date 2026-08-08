@@ -1,9 +1,8 @@
 // proxy.ts — Next.js 16+ proxy (replaces deprecated middleware)
 
-import { NextRequest, NextResponse } from "next/server";
-
 export const runtime = "edge";
 
+import { NextRequest, NextResponse } from "next/server";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
