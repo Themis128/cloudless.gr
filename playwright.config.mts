@@ -85,10 +85,20 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         // Reuse the storage state produced by the setup project so
-        // authenticated tests (dashboard, admin) have cookies ready.
+        // authenticated tests (dashboard) have cookies ready.
         storageState: path.join(rootDir, "e2e/.auth/user.json"),
       },
       dependencies: ["setup"],
+    },
+    {
+      name: "admin",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Use admin storage state for admin panel tests
+        storageState: path.join(rootDir, "e2e/.auth/admin.json"),
+      },
+      dependencies: ["setup"],
+      testMatch: "**/ui/pages/admin.spec.ts",
     },
     {
       name: "mobile-chrome",
