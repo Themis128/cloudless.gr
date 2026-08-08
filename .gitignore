@@ -39,6 +39,9 @@ dist
 build
 *.tsbuildinfo
 
+# SST-generated Python type stubs (regenerated on every `sst deploy`)
+sst.pyi
+
 # Lighthouse workflow artifacts (per-run outputs — never commit)
 lighthouse_report.json
 lighthouse-*.json
