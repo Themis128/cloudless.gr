@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   // Postiz is configured but its API can still be unreachable or erroring
   // (pod down, upstream 5xx). Surface that as a structured 502 rather than an
   // opaque unhandled 500, so the cron log says *what* failed.
-  let integrations;
+  let integrations: Awaited<ReturnType<typeof listIntegrations>>;
   try {
     integrations = await listIntegrations();
   } catch (e) {
