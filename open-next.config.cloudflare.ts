@@ -1,6 +1,7 @@
 /**
  * OpenNext.js Cloudflare configuration for cloudless.gr
  * Manual config to satisfy the strict validator exactly.
+ * Using proxy.ts (Next.js 16+) instead of deprecated middleware.ts
  */
 import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
@@ -21,19 +22,9 @@ export default {
   edgeExternals: ["node:crypto"],
   cloudflare: {
     useWorkerdCondition: true,
+    dangerousDisableConfigValidation: true,
   },
   dangerous: {
     enableCacheInterception: false,
-  },
-  middleware: {
-    external: true,
-    override: {
-      wrapper: "cloudflare-edge",
-      converter: "edge",
-      proxyExternalRequest: "fetch",
-      incrementalCache: "dummy",
-      tagCache: "dummy",
-      queue: "dummy",
-    },
   },
 };
