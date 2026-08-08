@@ -144,6 +144,12 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/esp32-manager", label: "ESP32 Mgr", Icon: Cpu },
       { href: "/admin/selfhosted", label: "Self-hosted Apps", Icon: Server },
       {
+        href: "https://webmail.cloudless.gr",
+        label: "Webmail",
+        Icon: Mail,
+        external: true,
+      },
+      {
         href: "https://grafana.cloudless.gr",
         label: "Grafana",
         Icon: BarChart2,
