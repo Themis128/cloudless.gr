@@ -231,9 +231,7 @@ async function handleApiRoute(
   nonce: string
 ): Promise<NextResponse> {
   // Apply rate limiting for API routes
-  const ip = request.headers.get("x-forwarded-for") ?? 
-             request.headers.get("x-real-ip") ?? 
-             "";
+  const ip = getSharedClientIp(request) || "unknown";
   const authToken = readAuthToken(request);
   
   // Determine rate limit based on path and auth
@@ -275,19 +273,22 @@ async function handlePageRoute(
   pathname: string,
   nonce: string
 ): Promise<NextResponse> {
-  // Apply rate limiting for page routes (more lenient)
-  const ip = request.headers.get("x-forwarded-for") ?? 
-             request.headers.get("x-real-ip") ?? 
-             "";
-  const identifier = ip;
-  
-  if (isRateLimited(identifier, RATE_LIMITS.ip.limit, RATE_LIMITS.ip.window, ipRequestMap)) {
-    return new NextResponse("Too Many Requests", {
-      status: 429,
-      headers: {
-        "Retry-After": String(RATE_LIMITS.ip.window),
-      },
-    });
+  // Apply rate limiting for page routes. Skip Next.js RSC prefetches —
+  // they are internal navigation payloads, not abuse traffic, and a
+  // single browsing session can burst dozens of them in short windows.
+  const isRscPrefetch = request.nextUrl.searchParams.has("_rsc");
+  if (!isRscPrefetch) {
+    const ip = getSharedClientIp(request);
+    const identifier = ip || "unknown";
+
+    if (isRateLimited(identifier, RATE_LIMITS.ip.limit, RATE_LIMITS.ip.window, ipRequestMap)) {
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: {
+          "Retry-After": String(RATE_LIMITS.ip.window),
+        },
+      });
+    }
   }
 
   // Clean up stale entries periodically
