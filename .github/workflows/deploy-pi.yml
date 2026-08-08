@@ -35,9 +35,8 @@ env:
   K3S_NAMESPACE: cloudless
   K3S_DEPLOYMENT: cloudless-app
   STANDALONE_HOSTPATH: /home/tbaltzakis/cloudless-standalone
-  # Cache paths on self-hosted runner (OMV-HA)
+  # Cache paths on self-hosted runner (OMV-HA) - pnpm store only
   PNPM_STORE_PATH: /home/tbaltzakis/.pnpm-store
-  NEXT_CACHE_PATH: /home/tbaltzakis/.next-cache
 
 jobs:
   build-and-rollout:
@@ -89,32 +88,19 @@ jobs:
         mkdir -p "${PNPM_STORE_PATH}"
         pnpm config set store-dir "${PNPM_STORE_PATH}"
 
-    - name: Restore Next.js build cache
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        mkdir -p "${NEXT_CACHE_PATH}"
-        if [ -d "${NEXT_CACHE_PATH}/.next" ]; then
-          echo "Restoring Next.js cache..."
-          cp -r "${NEXT_CACHE_PATH}/.next" .next 2>/dev/null || true
-        fi
+    # NOTE: Next.js build cache restore DISABLED to avoid stale proxy.ts config
+    # from previous builds (e.g., old `export const runtime = "edge";`).
+    # The cache would cause "Route segment config is not allowed in Proxy file" errors.
+    # First run after this change will be slower; subsequent runs can re-enable if stable.
 
-    - name: Clean stale build output (keep cache)
+    - name: Clean stale build output
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        # Remove only the build output, preserve .next/cache for Turbopack
-        if [ -d .next ] && [ ! -d .next/cache ]; then
-          echo "Removing stale .next/ (no cache)..."
+        if [ -d .next ]; then
+          echo "Removing stale .next/ for clean build..."
           rm -rf .next
-        elif [ -d .next/cache ]; then
-          echo "Preserving .next/cache for incremental build..."
-          # Move cache aside, clean rest, restore
-          mv .next/cache /tmp/next-cache-backup
-          rm -rf .next
-          mkdir -p .next
-          mv /tmp/next-cache-backup .next/cache
-          echo "Cache preserved"
+          echo "Cleaned .next/"
         else
           echo "No stale .next/ — clean workspace"
         fi
@@ -139,16 +125,6 @@ jobs:
         NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
         NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
       run: pnpm build
-
-    - name: Save Next.js build cache
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        if [ -d .next/cache ]; then
-          echo "Saving Next.js cache..."
-          rm -rf "${NEXT_CACHE_PATH}/.next"
-          cp -r .next "${NEXT_CACHE_PATH}/.next"
-        fi
 
     - name: Sync standalone → hostPath
       if: steps.skip.outputs.already != 'true'
