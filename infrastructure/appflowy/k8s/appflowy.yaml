@@ -330,10 +330,13 @@ spec:
   template:
     metadata: {labels: {app: appflowy-worker}}
     spec:
-      # Pinned to omv-ha (Pi 4, 4K page kernel) — the worker image's
-      # jemalloc was built for 4K pages and panics with "Unsupported
-      # system page size" on omv (Pi 5, 16K kernel `2712`).
-      nodeSelector: {kubernetes.io/hostname: omv-ha}
+      # Requires a 4K-page kernel — the worker image's jemalloc was built
+      # for 4K pages and panics "Unsupported system page size" on a 16K
+      # kernel. omv (Pi 5) was switched to the 4K `kernel8` kernel
+      # (/boot/firmware/config.txt: kernel=kernel8.img) on 2026-08-08, after
+      # omv-ha was decommissioned from k3s and repurposed as the mail host.
+      # The cluster is now single-node; do NOT move this to a 16K-page node.
+      nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: appflowy-worker
         image: appflowyinc/appflowy_worker:latest
