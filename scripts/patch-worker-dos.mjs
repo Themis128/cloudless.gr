@@ -1,8 +1,19 @@
 #!/usr/bin/env node
 /**
- * Patch OpenNext worker.js to export custom Durable Object classes (CounterAgent, EchoAgent, CodingAgent).
- * Copy agent source files to .open-next and export them from the worker.
- * Strip TypeScript syntax since Wrangler/esbuild compiles JS, not TS.
+ * Patch OpenNext worker.js to export custom Durable Object classes.
+ * 
+ * IMPORTANT: The Cloudflare Agents SDK (CounterAgent, EchoAgent, CodingAgent) 
+ * extends `Agent` from the `agents` package which requires the Cloudflare Agents 
+ * runtime. These CANNOT be bundled into the Next.js worker.js — they must be 
+ * deployed as standalone Durable Objects via wrangler.jsonc DO bindings.
+ * 
+ * This script now only exports the OpenNext built-in Durable Objects:
+ * - DOQueueHandler
+ * - DOShardedTagCache  
+ * - BucketCachePurge
+ * 
+ * The custom agents (CounterAgent, EchoAgent, CodingAgent) are available 
+ * automatically via the Durable Object bindings defined in wrangler.jsonc.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -15,67 +26,37 @@ if (!fs.existsSync(workerPath)) {
 
 let content = fs.readFileSync(workerPath, "utf8");
 
-// Check if already patched
-if (content.includes("export { CounterAgent }")) {
-  console.log("[patch-worker-dos] Already patched — skip");
+// Check if already patched with the correct exports
+if (content.includes("export { DOQueueHandler }") && content.includes("export { DOShardedTagCache }")) {
+  console.log("[patch-worker-dos] Already patched with OpenNext DO exports — skip");
   process.exit(0);
 }
 
-// Copy agent files to .open-next/.build/agents (where worker can import from)
-const agentsDestDir = path.resolve(".open-next/.build/agents");
-if (!fs.existsSync(agentsDestDir)) {
-  fs.mkdirSync(agentsDestDir, { recursive: true });
-}
+// Remove any existing agent imports/exports that may have been added incorrectly
+content = content.replace(/import\s+\{\s*CounterAgent\s*\}\s+from\s+[^;]+;/g, '');
+content = content.replace(/import\s+\{\s*EchoAgent\s*\}\s+from\s+[^;]+;/g, '');
+content = content.replace(/import\s+\{\s*CodingAgent\s*\}\s+from\s+[^;]+;/g, '');
+content = content.replace(/export\s+\{\s*CounterAgent\s*\}\s*;?/g, '');
+content = content.replace(/export\s+\{\s*EchoAgent\s*\}\s*;?/g, '');
+content = content.replace(/export\s+\{\s*CodingAgent\s*\}\s*;?/g, '');
 
-// Copy TypeScript source files as .js and strip TypeScript syntax
-const agentFiles = [
-  "src/agents/counter.ts",
-  "src/agents/echo.ts",
-  "src/agents/coding.ts"
-];
-
-function stripTypescript(content) {
-  // Remove type annotations: `type Env = ...` -> remove entirely
-  content = content.replace(/type\s+\w+\s*=\s*[^;]+;/g, '');
-  // Remove type imports
-  content = content.replace(/import\s+type\s+[^;]+;/g, '');
-  // Remove type annotations on variables: `: Type` 
-  content = content.replace(/:\s*\w+(?:<\w+(?:,\s*\w+)*>)?/g, '');
-  // Remove `implements` clause
-  content = content.replace(/implements\s+\w+(?:<\w+>)?\s*/g, '');
-  // Remove generic type parameters: `<...>`
-  content = content.replace(/<[^<>]+>/g, '');
-  // Remove interface/type declarations
-  content = content.replace(/(interface|type)\s+\w+\s*\{[^}]+\}/g, '');
-  return content;
-}
-
-for (const srcPath of agentFiles) {
-  const destPath = path.join(agentsDestDir, path.basename(srcPath).replace(".ts", ".js"));
-  if (fs.existsSync(srcPath)) {
-    let srcContent = fs.readFileSync(srcPath, "utf8");
-    // Strip TypeScript-specific syntax
-    srcContent = stripTypescript(srcContent);
-    fs.writeFileSync(destPath, srcContent);
-    console.log(`[patch-worker-dos] Copied and stripped ${srcPath} -> ${destPath}`);
-  } else {
-    console.log(`[patch-worker-dos] WARNING: ${srcPath} not found`);
-  }
-}
-
-// Import the agent classes from .open-next/.build/agents
+// Import the OpenNext built-in Durable Objects
 const patch = `
 // ==========================================
-// Custom Durable Object exports for Cloudflare Agents SDK
-// These must be exported from the Worker for DO bindings to work
+// OpenNext built-in Durable Object exports
+// These are required for OpenNext's internal queue, tag cache, and cache purge
 // ==========================================
-import { CounterAgent } from "./.build/agents/counter.js";
-import { EchoAgent } from "./.build/agents/echo.js";
-import { CodingAgent } from "./.build/agents/coding.js";
+//@ts-expect-error: Will be resolved by wrangler build
+export { DOQueueHandler } from "./.build/durable-objects/queue.js";
+//@ts-expect-error: Will be resolved by wrangler build
+export { DOShardedTagCache } from "./.build/durable-objects/sharded-tag-cache.js";
+//@ts-expect-error: Will be resolved by wrangler build
+export { BucketCachePurge } from "./.build/durable-objects/bucket-cache-purge.js";
 
-export { CounterAgent };
-export { EchoAgent };
-export { CodingAgent };
+// NOTE: CounterAgent, EchoAgent, CodingAgent are deployed as standalone
+// Durable Objects via wrangler.jsonc DO bindings. They use the Cloudflare
+// Agents SDK which requires its own runtime and CANNOT be bundled here.
+// They are available via the DO bindings: env.CounterAgent, env.EchoAgent, env.CodingAgent
 
 `;
 
@@ -91,4 +72,4 @@ if (lastImportIndex !== -1) {
 }
 
 fs.writeFileSync(workerPath, content);
-console.log("[patch-worker-dos] Added CounterAgent, EchoAgent, CodingAgent exports to worker.js");
+console.log("[patch-worker-dos] Added OpenNext DO exports to worker.js (CounterAgent/EchoAgent/CodingAgent are deployed via wrangler.jsonc bindings)");
