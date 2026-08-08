@@ -1,8 +1,12 @@
 # Self-Hosted Mail Server — cloudless.gr (on omv-ha)
 
-**Status (2026-08-08):** outbound + mailbox live; Roundcube webmail and inbound
-routing in progress. Host: **omv-ha** (Pi 4, dedicated mail host after it was
-removed from k3s — see the topology note in `CLAUDE.md`).
+**Status (2026-08-08):** ✅ **fully live** — outbound (postfix → Resend), mailbox
+(dovecot IMAP), and webmail (Roundcube at `https://webmail.cloudless.gr` via
+the Cloudflare tunnel) all working. Inbound is via Cloudflare Email Routing →
+forward to `themis.baltzakis@gmail.com` (Gmail as the reader). An admin
+dashboard **Webmail** tab under Infrastructure opens the Roundcube UI.
+Host: **omv-ha** (Pi 4, dedicated mail host after it was removed from k3s —
+see the topology note in `CLAUDE.md`).
 
 ## ⚠️ Why this is NOT a "direct" mail server (read first)
 
@@ -89,18 +93,72 @@ printf 'Subject: relay test\nFrom: tbaltzakis@cloudless.gr\nTo: you@example.com\
 sudo journalctl -t postfix/smtp -n 5 | grep status=
 ```
 
-## Remaining work
+## Roundcube webmail (LIVE)
 
-1. **Roundcube** webmail (nginx + php-fpm, sqlite) → IMAP `localhost:143`,
-   submit via `localhost:25`.
-2. **TLS + Cloudflare Tunnel** ingress for `webmail.cloudless.gr`.
-3. **Inbound**: enable Cloudflare Email Routing on `cloudless.gr`, add an Email
-   Worker that forwards the raw message over the tunnel to a small receiver on
-   omv-ha which injects it via `dovecot-lda`/LMTP into the Maildir.
-4. `_dmarc` TXT record once both directions verify.
+Installed on omv-ha alongside postfix/dovecot: **nginx + php-fpm 8.4 +
+Roundcube** (sqlite backend) at `https://webmail.cloudless.gr`. The nginx
+vhost proxies to php-fpm over `127.0.0.1:9000` (TCP, not the unix socket —
+see gotcha below); Roundcube points at IMAP `localhost:143` and submit
+`localhost:25` (postfix handles the relay to Resend for actual delivery).
+
+**Gotcha — stale k3s nftables:** after uninstalling the k3s agent from
+omv-ha the leftover `KUBE-FIREWALL`/`KUBE-ROUTER-INPUT`/`KUBE-NODEPORTS`
+nftables chains were still loaded and silently DROPPED loopback TCP —
+`cgi-fcgi` over the unix socket worked, but nginx→php-fpm and `curl :80`
+hung with no error logged. Fix: **reboot omv-ha once** (k3s is uninstalled,
+so those chains don't come back). Do not try to hand-edit nft rules;
+a reboot leaves a clean ruleset (tailscale + system only).
+
+## Cloudflare Tunnel ingress (LIVE)
+
+`webmail.cloudless.gr` → `192.168.1.130:80` in the shared tunnel
+(`e977a490-58c5-4fdb-9155-86832e3e636a`). **Important**: the tunnel is
+**remotely-managed** — cloudflared on the host ignores its local `config.yml`
+for ingress. Add/edit hostnames via the API (`.../cfd_tunnel/<uuid>/configurations`
+PUT) or Cloudflare Zero Trust dashboard, not by editing files on-box.
+
+DNS: `webmail.cloudless.gr` CNAME → `<tunnel-uuid>.cfargotunnel.com`
+(proxied). Added via API on 2026-08-08.
+
+## Inbound (Cloudflare Email Routing)
+
+Cloudflare Email Routing is **enabled** on `cloudless.gr` with:
+- `tbaltzakis@cloudless.gr` → forward to `themis.baltzakis@gmail.com`
+- catch-all → forward to `themis.baltzakis@gmail.com`
+
+So all mail *to* `@cloudless.gr` reaches Gmail. This deliberately does NOT
+land in the dovecot mailbox — building a CF Email Worker → tunnel → LMTP
+bridge would just duplicate mail into Roundcube for zero benefit (you'd
+read the same message twice). If you want inbound in Roundcube specifically,
+change/add a rule to run a Worker that POSTs to a small receiver on omv-ha.
+
+## DMARC status
+
+`_dmarc.cloudless.gr` = `v=DMARC1; p=none; rua=mailto:dmarc@cloudless.gr;
+pct=100; adkim=s; aspf=s`. `p=none` is the correct starting policy for a
+fresh sender. RUA aggregate reports flow to `dmarc@cloudless.gr` → via the
+catch-all → Gmail. **Escalation path:** after ~2 weeks of clean RUA reports
+(no legitimate mail failing DKIM/SPF), move to `p=quarantine`; after another
+2 weeks clean, `p=reject`.
+
+## Admin dashboard integration
+
+A **Webmail** link is added to the admin dashboard's Infrastructure group
+(`src/app/[locale]/admin/AdminLayoutClient.tsx`, PR #1538). External link,
+opens Roundcube in a new tab. Access is gated only by Roundcube's own login
+(not Cloudflare Access) since it's the entry point to the mailbox.
+
+## App sync
+
+`RESEND_API_KEY` is set in the k8s Secret `cloudless-secrets` (namespace
+`cloudless`), so the cloudless.gr app sends transactional email via Resend
+using the same relay. See `src/lib/email-resend.ts`.
 
 ## Reproduce / recover
 
 `infrastructure/omv-ha/setup-mail-server.sh` installs and configures the
 dovecot + postfix relay stack idempotently (reads `RESEND_API_KEY` and the
-mailbox password from the environment; never hard-codes secrets).
+mailbox password from the environment; never hard-codes secrets). Roundcube
++ nginx + php-fpm are apt packages and can be reinstalled by running the
+script's package list and re-applying the vhost / `config.inc.php` snippets
+above.
