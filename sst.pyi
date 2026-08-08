@@ -4,6 +4,18 @@
 from typing import Any
 
 class Resource:
+    class AnalyticsRollupHandler:
+        type: str
+    class AnalyticsWorker:
+        type: str
+        url: str
     class App:
         name: str
         stage: str
+    class CalendarDigestHandler:
+        type: str
+    class ReportCleanupHandler:
+        type: str
+    class VoiceBriefHandler:
+        type: str
+
