@@ -49,23 +49,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
 
-    - name: Restore pnpm store cache
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        mkdir -p "${PNPM_STORE_PATH}"
-        pnpm config set store-dir "${PNPM_STORE_PATH}"
-
-    - name: Restore Next.js build cache
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        mkdir -p "${NEXT_CACHE_PATH}"
-        if [ -d "${NEXT_CACHE_PATH}/.next" ]; then
-          echo "Restoring Next.js cache..."
-          cp -r "${NEXT_CACHE_PATH}/.next" .next 2>/dev/null || true
-        fi
-
     - name: Skip if SHA already live
       id: skip
       run: |
@@ -93,6 +76,31 @@ jobs:
           echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
         fi
 
+    - name: Setup Node
+      if: steps.skip.outputs.already != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Configure pnpm store
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        mkdir -p "${PNPM_STORE_PATH}"
+        pnpm config set store-dir "${PNPM_STORE_PATH}"
+
+    - name: Restore Next.js build cache
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        set -euo pipefail
+        mkdir -p "${NEXT_CACHE_PATH}"
+        if [ -d "${NEXT_CACHE_PATH}/.next" ]; then
+          echo "Restoring Next.js cache..."
+          cp -r "${NEXT_CACHE_PATH}/.next" .next 2>/dev/null || true
+        fi
+
     - name: Clean stale build output (keep cache)
       if: steps.skip.outputs.already != 'true'
       run: |
@@ -112,14 +120,6 @@ jobs:
         else
           echo "No stale .next/ — clean workspace"
         fi
-
-    - name: Setup Node
-      if: steps.skip.outputs.already != 'true'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24'
-        cache: 'pnpm'
-        cache-dependency-path: pnpm-lock.yaml
 
     - name: Install dependencies
       if: steps.skip.outputs.already != 'true'
