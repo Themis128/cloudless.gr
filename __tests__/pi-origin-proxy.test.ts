@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildForwardHeaders,
   buildResponseHeaders,
+  isCacheable,
+  isResponseCacheable,
   isWebSocketUpgrade,
   REQUEST_HOP_BY_HOP,
   RESPONSE_HOP_BY_HOP,
@@ -185,5 +187,109 @@ describe("pi-origin-proxy: buildResponseHeaders", () => {
 
     // Relative Location resolves against origin host → same-host → rewritten.
     expect(out.get("Location")).toBe("https://cloudless.gr/reset-password");
+  });
+});
+
+describe("pi-origin-proxy: isCacheable (request-side)", () => {
+  it("accepts GET on known static prefixes", () => {
+    for (const path of [
+      "/_next/static/chunks/main.js",
+      "/_next/image?url=%2Ffoo.png&w=640&q=75",
+      "/icons/logo.svg",
+      "/images/hero.webp",
+    ]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(true);
+    }
+  });
+
+  it("accepts GET on known static exact paths", () => {
+    for (const path of ["/favicon.ico", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest"]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(true);
+    }
+  });
+
+  it("accepts GET on known static file extensions", () => {
+    for (const path of [
+      "/some.css",
+      "/some.js",
+      "/some.mjs",
+      "/some.woff2",
+      "/some.png",
+      "/some.webp",
+    ]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(true);
+    }
+  });
+
+  it("rejects non-GET methods", () => {
+    expect(isCacheable(makeRequest("https://cloudless.gr/_next/static/x.js", {}, "POST"))).toBe(
+      false,
+    );
+    expect(isCacheable(makeRequest("https://cloudless.gr/_next/static/x.js", {}, "HEAD"))).toBe(
+      false,
+    );
+  });
+
+  it("rejects requests carrying Cookie or Authorization", () => {
+    expect(
+      isCacheable(
+        makeRequest("https://cloudless.gr/_next/static/x.js", { Cookie: "session=abc" }),
+      ),
+    ).toBe(false);
+    expect(
+      isCacheable(
+        makeRequest("https://cloudless.gr/_next/static/x.js", { Authorization: "Bearer t" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects dynamic paths that aren't static assets", () => {
+    for (const path of ["/", "/en", "/en/services", "/api/auth/login", "/dashboard"]) {
+      expect(isCacheable(makeRequest(`https://cloudless.gr${path}`))).toBe(false);
+    }
+  });
+});
+
+describe("pi-origin-proxy: isResponseCacheable (response-side)", () => {
+  const cacheableCC = "public, max-age=31536000, immutable";
+
+  it("accepts 200 + explicit max-age", () => {
+    const r = new Response(null, { status: 200, headers: { "cache-control": cacheableCC } });
+    expect(isResponseCacheable(r)).toBe(true);
+  });
+
+  it("accepts 200 + explicit s-maxage", () => {
+    const r = new Response(null, {
+      status: 200,
+      headers: { "cache-control": "public, s-maxage=600" },
+    });
+    expect(isResponseCacheable(r)).toBe(true);
+  });
+
+  it("rejects non-200 responses", () => {
+    for (const status of [204, 301, 302, 404, 500]) {
+      const r = new Response(null, { status, headers: { "cache-control": cacheableCC } });
+      expect(isResponseCacheable(r)).toBe(false);
+    }
+  });
+
+  it("rejects responses missing Cache-Control", () => {
+    const r = new Response(null, { status: 200 });
+    expect(isResponseCacheable(r)).toBe(false);
+  });
+
+  it("rejects responses whose Cache-Control opts out", () => {
+    for (const cc of ["no-store", "no-cache", "private, max-age=60", "no-store, max-age=60"]) {
+      const r = new Response(null, { status: 200, headers: { "cache-control": cc } });
+      expect(isResponseCacheable(r)).toBe(false);
+    }
+  });
+
+  it("rejects responses that carry Set-Cookie", () => {
+    const r = new Response(null, {
+      status: 200,
+      headers: { "cache-control": cacheableCC, "set-cookie": "id=abc; Path=/" },
+    });
+    expect(isResponseCacheable(r)).toBe(false);
   });
 });
