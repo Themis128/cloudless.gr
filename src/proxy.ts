@@ -1,7 +1,9 @@
 // proxy.ts — Next.js 16+ proxy (replaces deprecated middleware)
 
 import { NextRequest, NextResponse } from "next/server";
-import createIntlMiddleware from "next-intl/middleware";
+
+export const runtime = "edge";
+
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
@@ -359,12 +361,6 @@ async function handlePageRoute(
   const response = await NextResponse.next();
   return addSecurityHeaders(response, nonce);
 }
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
-  ],
-};
 
 export {
   generateNonce,

@@ -3,39 +3,13 @@
  * Manual config to satisfy the strict validator exactly.
  * Using proxy.ts (Next.js 16+) instead of deprecated middleware.ts
  */
+import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
+import d1TagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-cache";
 import { MemoryQueue } from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
-const queue = new MemoryQueue();
-
-export default {
-  default: {
-    override: {
-      wrapper: "cloudflare-node",
-      converter: "edge",
-      proxyExternalRequest: "fetch",
-      incrementalCache: "dummy",
-      tagCache: "dummy",
-      queue: () => queue,
-    },
-    routePreloadingBehavior: "none",
-  },
-  edgeExternals: ["node:crypto"],
-  cloudflare: {
-    useWorkerdCondition: true,
-    dangerousDisableConfigValidation: true,
-  },
-  dangerous: {
-    enableCacheInterception: false,
-  },
-  middleware: {
-    external: true,
-    override: {
-      wrapper: "cloudflare-edge",
-      converter: "edge",
-      proxyExternalRequest: "fetch",
-      incrementalCache: "dummy",
-      tagCache: "dummy",
-      queue: "dummy",
-    },
-  },
-};
+export default defineCloudflareConfig({
+  incrementalCache: r2IncrementalCache,
+  tagCache: d1TagCache,
+  queue: new MemoryQueue(),
+});
