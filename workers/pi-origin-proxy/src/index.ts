@@ -80,6 +80,48 @@ export function buildForwardHeaders(
   return headers;
 }
 
+const CACHEABLE_STATIC_PREFIXES = ["/_next/static/", "/_next/image", "/icons/", "/images/"];
+const CACHEABLE_STATIC_EXACT = new Set([
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/manifest.webmanifest",
+]);
+const CACHEABLE_STATIC_EXT =
+  /\.(css|js|mjs|map|woff2?|ttf|eot|jpg|jpeg|png|webp|avif|gif|svg|ico|mp4|webm|txt|xml)$/i;
+
+/**
+ * Cache candidates: GET requests for static assets from anonymous clients.
+ * Anything with a Cookie/Authorization header is treated as personalized
+ * (we do not want to leak one user's data to another via the edge cache).
+ * Query strings are part of the cache key, so /_next/image?url=... works.
+ */
+export function isCacheable(request: Request): boolean {
+  if (request.method !== "GET") return false;
+  if (request.headers.has("cookie") || request.headers.has("authorization")) return false;
+  const path = new URL(request.url).pathname;
+  if (CACHEABLE_STATIC_EXACT.has(path)) return true;
+  for (const prefix of CACHEABLE_STATIC_PREFIXES) {
+    if (path.startsWith(prefix)) return true;
+  }
+  return CACHEABLE_STATIC_EXT.test(path);
+}
+
+/**
+ * Whether an upstream response is safe to store in the edge cache.
+ * We only cache 200 OK, refuse anything with Set-Cookie (personalized),
+ * and require an explicit non-negative Cache-Control max-age / s-maxage.
+ * The absence of Cache-Control means the origin never opted in, so we skip.
+ */
+export function isResponseCacheable(response: Response): boolean {
+  if (response.status !== 200) return false;
+  if (response.headers.has("set-cookie")) return false;
+  const cc = (response.headers.get("cache-control") || "").toLowerCase();
+  if (!cc) return false;
+  if (/\bno-store\b|\bno-cache\b|\bprivate\b/.test(cc)) return false;
+  return /\bmax-age=\d+|\bs-maxage=\d+/.test(cc);
+}
+
 export function buildResponseHeaders(upstream: Response, url: URL, host: string): Headers {
   const out = new Headers();
   for (const [k, v] of upstream.headers) {
@@ -159,7 +201,7 @@ async function proxyWebSocket(
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const host = (env.PI_ORIGIN_HOST || "pi-origin.cloudless.gr").replace(/^https?:\/\//, "");
     const target = new URL(url.pathname + url.search, `https://${host}`);
@@ -178,6 +220,21 @@ export default {
             "content-type": "text/plain",
           },
         });
+      }
+    }
+
+    // Edge cache lookup for static assets. Cache key uses the original URL so
+    // apex + www share the same cached copy for identical paths (browsers
+    // don't distinguish those hosts for _next/static anyway).
+    const cache = caches.default;
+    const cacheable = isCacheable(request);
+    const cacheKey = cacheable ? new Request(request.url, { method: "GET" }) : null;
+    if (cacheKey) {
+      const hit = await cache.match(cacheKey);
+      if (hit) {
+        const cached = new Response(hit.body, hit);
+        cached.headers.set("x-served-by", "pi-tunnel-proxy-cache");
+        return cached;
       }
     }
 
@@ -214,11 +271,19 @@ export default {
       if (upstream.status >= 500) {
         outHeaders.set("x-pi-origin-status", String(upstream.status));
       }
-      return new Response(upstream.body, {
+      const proxied = new Response(upstream.body, {
         status: upstream.status,
         statusText: upstream.statusText,
         headers: outHeaders,
       });
+
+      // Populate the edge cache from the same response we're about to return.
+      // clone() must run BEFORE the response body is streamed to the client, so
+      // do it here and hand the clone off via waitUntil so we don't block.
+      if (cacheKey && isResponseCacheable(upstream)) {
+        ctx.waitUntil(cache.put(cacheKey, proxied.clone()));
+      }
+      return proxied;
     } catch (err) {
       console.error("pi-tunnel-proxy: origin unreachable", err);
       return new Response("Pi origin unreachable", {
