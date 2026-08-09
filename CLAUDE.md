@@ -524,6 +524,36 @@ warm-standby (hourly snapshot pull to omv-ha + dormant promotion
 script). When a 3rd Pi is added, follow the runbook on Notion:
 [🏗️ k3s Cluster Architecture, Tuning & Third-Pi Promotion Runbook](https://www.notion.so/3817d82c410a8143ab76e80e4bfdd013).
 
+
+## Prometheus tuning (2026-08-09)
+
+Grafana felt slow. Root cause was almost always deploy contention (a running
+`next-build` pegs the SSD → 79% iowait → Prometheus scrapes queue → dashboards
+stall). SafeDeploy Watchdog does NOT catch this because /api/health stays 200.
+
+**When Grafana feels slow, first run `uptime` on omv** — if load > 20 with
+high iowait, a deploy is the cause; cancel or wait. Grafana itself responds
+in <1ms when the SSD is quiet.
+
+Applied lasting tuning on 2026-08-09 (live via `kubectl patch`; NOT tracked
+in repo because kube-prometheus-stack is Helm-managed — a `helm upgrade`
+reverts these unless mirrored in the Helm values):
+
+- Prometheus CR `scrapeInterval` + `evaluationInterval`: **30s → 60s**
+  (halves scrape write rate + rule eval load on a home cluster that doesn't
+  need 30s granularity)
+- Deleted 3 heavy PrometheusRule objects (`kube-apiserver-{burnrate,
+  availability,slos}.rules`) — the same set `pnpm prometheus:tune` targets;
+  see `scripts/prometheus-tune.sh` header for why (multi-day rate() queries
+  over apiserver_request_total exceed rule-eval timeout on a Pi).
+
+Prometheus already had:
+- retention: 7d ✓
+- limit: 1200Mi (bumped earlier from 768Mi via CR patch — was at 74% and
+  at real OOM risk).
+
+Grafana image already pinned to `grafana:13.1.1` — no `:latest`.
+
 ## Terraform Doctor
 
 When a Terraform CI workflow fails, **invoke the `terraform-doctor` skill first**
