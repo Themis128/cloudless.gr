@@ -17,6 +17,24 @@ data "cloudflare_zone" "cloudless_gr" {
   name = "cloudless.gr"
 }
 
+# ----------------------------------------------------------------------------
+# One-time PIN (OTP) identity provider
+# Cloudflare Access requires an identity provider to generate and email the
+# verification code. Without an `onetimepin` IdP wired into the application's
+# `allowed_idps`, no OTP email is ever sent — the login page just sits at
+# "Enter your code" with nothing in the inbox.
+#
+# The PIN is emailed to the address entered at login, expires in 10 minutes,
+# and is single-use. The destination address must be verified under
+# Cloudflare Email Routing for delivery (see scripts/configure-email-routing.sh).
+# ----------------------------------------------------------------------------
+resource "cloudflare_zero_trust_access_identity_provider" "onetimepin" {
+  account_id = var.cloudflare_account_id
+  name       = "One-time PIN login"
+  type       = "onetimepin"
+  config     = {}
+}
+
 # Access Applications for admin hosts
 resource "cloudflare_access_application" "grafana" {
   zone_id          = data.cloudflare_zone.cloudless_gr.id
@@ -24,6 +42,8 @@ resource "cloudflare_access_application" "grafana" {
   domain           = "grafana.cloudless.gr"
   session_duration = "1h"
   auto_redirect    = true
+  # Allow login via the One-time PIN identity provider
+  allowed_idps     = [cloudflare_zero_trust_access_identity_provider.onetimepin.id]
 }
 
 resource "cloudflare_access_application" "kuma" {
@@ -32,6 +52,7 @@ resource "cloudflare_access_application" "kuma" {
   domain           = "kuma.cloudless.gr"
   session_duration = "1h"
   auto_redirect    = true
+  allowed_idps     = [cloudflare_zero_trust_access_identity_provider.onetimepin.id]
 }
 
 resource "cloudflare_access_application" "appflowy" {
@@ -40,6 +61,7 @@ resource "cloudflare_access_application" "appflowy" {
   domain           = "appflowy.cloudless.gr"
   session_duration = "1h"
   auto_redirect    = true
+  allowed_idps     = [cloudflare_zero_trust_access_identity_provider.onetimepin.id]
 }
 
 resource "cloudflare_access_application" "n8n" {
@@ -48,6 +70,7 @@ resource "cloudflare_access_application" "n8n" {
   domain           = "n8n.cloudless.gr"
   session_duration = "1h"
   auto_redirect    = true
+  allowed_idps     = [cloudflare_zero_trust_access_identity_provider.onetimepin.id]
 }
 
 # Access Policies - Allow unified admin only
@@ -141,4 +164,8 @@ output "service_tokens" {
     }
   }
   sensitive = true
+}
+
+output "onetimepin_idp_id" {
+  value = cloudflare_zero_trust_access_identity_provider.onetimepin.id
 }

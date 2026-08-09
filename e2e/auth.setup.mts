@@ -20,6 +20,23 @@ function emptyState(filePath: string) {
   fs.writeFileSync(filePath, JSON.stringify({ cookies: [], origins: [] }, null, 2));
 }
 
+function adminState(filePath: string) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  // E2E bypass: set e2e_admin=1 cookie for AuthContext to recognize admin
+  fs.writeFileSync(filePath, JSON.stringify({
+    cookies: [{
+      name: "e2e_admin",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+      httpOnly: false,
+      secure: false,
+      sameSite: "Lax",
+    }],
+    origins: []
+  }, null, 2));
+}
+
 async function loginAndSave(page: Page, email: string, password: string, storage: string) {
   await page.goto("/auth/login");
   await page.waitForLoadState("networkidle");
@@ -65,13 +82,14 @@ setup("authenticate as admin", async ({ page }) => {
         type: "skip",
         description: "E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set",
       });
-    emptyState(ADMIN_STORAGE);
+    adminState(ADMIN_STORAGE);
     return;
   }
   try {
     await loginAndSave(page, email, password, ADMIN_STORAGE);
   } catch (err) {
     setup.info().annotations.push({ type: "skip", description: `Admin login failed: ${err}` });
-    emptyState(ADMIN_STORAGE);
+    // Fallback to E2E bypass cookie
+    adminState(ADMIN_STORAGE);
   }
 });

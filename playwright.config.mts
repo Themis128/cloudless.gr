@@ -89,6 +89,7 @@ export default defineConfig({
         storageState: path.join(rootDir, "e2e/.auth/user.json"),
       },
       dependencies: ["setup"],
+      testIgnore: ["**/ui/pages/admin.spec.ts"],
     },
     {
       name: "admin",

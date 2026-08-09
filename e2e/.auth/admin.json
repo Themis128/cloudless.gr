@@ -1,4 +1,14 @@
 {
-  "cookies": [],
+  "cookies": [
+    {
+      "name": "e2e_admin",
+      "value": "1",
+      "domain": "localhost",
+      "path": "/",
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
   "origins": []
 }

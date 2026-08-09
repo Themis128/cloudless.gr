@@ -173,7 +173,7 @@ function NavList({
   onLinkClick?: () => void;
 }) {
   return (
-    <nav className="space-y-4">
+    <nav className="space-y-4" role="navigation" aria-label="Admin navigation">
       {adminGroups.map((group) => (
         <div key={group.label}>
           <p className="px-3 pb-1.5 font-mono text-[10px] tracking-widest text-slate-600 uppercase">
@@ -330,7 +330,7 @@ export default function AdminLayoutClient({ children }: { readonly children: Rea
               </div>
             </aside>
 
-            <main className="min-w-0 flex-1">{children}</main>
+            <div className="min-w-0 flex-1">{children}</div>
           </div>
         </div>
       </div>
