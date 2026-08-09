@@ -83,6 +83,42 @@ async function k8sGet<T = unknown>(path: string): Promise<T | null> {
   }
 }
 
+/**
+ * Authenticated POST against the in-cluster API server. Returns
+ * `{ ok: true, data }` on success or `{ ok: false, status, error }` on any
+ * non-2xx / network error — POST callers usually want the specific error to
+ * surface (unlike the graceful-degrade GET). Timeout 10s.
+ */
+export async function k8sPost<TReq = unknown, TRes = unknown>(
+  path: string,
+  body: TReq
+): Promise<{ ok: true; data: TRes } | { ok: false; status: number; error: string }> {
+  if (!isInCluster()) {
+    return { ok: false, status: 501, error: "not running in a k8s pod" };
+  }
+  try {
+    const init: RequestInit = {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      dispatcher: getAgent(),
+      signal: AbortSignal.timeout(10000),
+    };
+    const res = await undiciFetch(`${API_BASE}${path}`, init);
+    const text = await res.text();
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: text.slice(0, 400) };
+    }
+    return { ok: true, data: JSON.parse(text) as TRes };
+  } catch (e) {
+    return { ok: false, status: 502, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Domain types — minimal projection of what /admin/cluster surfaces
 // ---------------------------------------------------------------------------

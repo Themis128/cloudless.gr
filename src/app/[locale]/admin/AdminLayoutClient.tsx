@@ -155,12 +155,10 @@ const adminGroups: AdminGroup[] = [
         Icon: BarChart2,
         external: true,
       },
-      {
-        href: "https://manage.cloudless.gr",
-        label: "Cluster Manager",
-        Icon: LayoutGrid,
-        external: true,
-      },
+      // Was: external link to https://manage.cloudless.gr, but Headlamp requires
+      // a k8s SA token that expires in 24h — this internal page mints + copies
+      // it in one click and opens Headlamp in a new tab.
+      { href: "/admin/headlamp", label: "Cluster Manager", Icon: LayoutGrid },
     ],
   },
 ];
