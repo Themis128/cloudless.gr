@@ -28,6 +28,19 @@ data:
   KUMA_BASE_URL: http://uptime-kuma.uptime-kuma.svc.cluster.local:3001
   KUMA_STATUS_PAGE_SLUG: cloudless
 ---
+# PriorityClass — protect cloudless-app from being the first thing evicted
+# when the node is under memory/PID pressure. Value picked to sit well above
+# the default (0) but below k8s-owned system classes (system-cluster-critical
+# = 2000000000, system-node-critical = 2000001000). k3s built-ins are lower.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: cloudless-critical
+value: 900000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "cloudless.gr production app — evict last under node pressure."
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,13 +53,24 @@ spec:
   selector:
     matchLabels:
       app: cloudless-app
+  # RollingUpdate w/ maxSurge:1 + maxUnavailable:0 = zero-downtime deploys.
+  # Safe with hostPath: Next.js standalone reads all code into RAM at boot,
+  # so 2 pods can coexist briefly — each holds its own version in memory.
+  # Combined with SafeDeploy's atomic-symlink flip, the new pod boots
+  # against the flipped release while the old pod keeps serving from RAM.
+  # Once the new pod is ready, the old one is terminated (preStop + 30s
+  # grace covers in-flight requests). No downtime, no torn-in-half serving.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: cloudless-app
     spec:
+      priorityClassName: cloudless-critical
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
