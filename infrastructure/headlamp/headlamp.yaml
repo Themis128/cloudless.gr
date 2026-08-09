@@ -45,6 +45,36 @@ subjects:
   name: headlamp-admin
   namespace: headlamp
 ---
+# Kubeconfig that uses the pod's auto-mounted SA token file. Passed to
+# Headlamp via -kubeconfig so it authenticates as headlamp-admin without
+# ever prompting for a token. tokenFile is re-read as k8s rotates the SA
+# token (default ~1h validity, refreshed by kubelet).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: headlamp-kubeconfig
+  namespace: headlamp
+data:
+  config: |
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - name: in-cluster
+      cluster:
+        server: https://kubernetes.default.svc.cluster.local
+        certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    users:
+    - name: headlamp-admin
+      user:
+        tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    contexts:
+    - name: in-cluster
+      context:
+        cluster: in-cluster
+        user: headlamp-admin
+        namespace: default
+    current-context: in-cluster
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
