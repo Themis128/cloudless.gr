@@ -1,0 +1,109 @@
+# Headlamp — modern Kubernetes web UI (CNCF sandbox).
+#
+# Serves as the "Cluster Manager" behind manage.cloudless.gr (previously
+# a dead alias). Access model:
+#
+#   Internet
+#     │  https://manage.cloudless.gr
+#     ▼
+#   Cloudflare Tunnel      ← authenticated by CF Access (Admin allowlist,
+#     │  http://…:30460      3-email allowlist including
+#     ▼                     tbaltzakis@cloudless.gr — verified 2026-08-08)
+#   Headlamp pod (this)
+#     │  in-cluster
+#     ▼
+#   k8s apiserver via ServiceAccount `headlamp-admin`
+#     (ClusterRoleBinding → cluster-admin — solo operator, no multi-tenant)
+#
+# Runs with the `-in-cluster` flag so no login prompt is shown after passing
+# CF Access. This is safe because the front-door is CF Access; inside the
+# tunnel the operator gets full cluster-admin without pasting tokens.
+#
+# Resource footprint on omv: ~100Mi RAM, negligible CPU.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: headlamp
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: headlamp-admin
+  namespace: headlamp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headlamp-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: headlamp-admin
+  namespace: headlamp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headlamp
+  namespace: headlamp
+  labels: {app: headlamp}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: headlamp}}
+  strategy: {type: Recreate}   # 1 replica; simpler than RollingUpdate
+  template:
+    metadata: {labels: {app: headlamp}}
+    spec:
+      serviceAccountName: headlamp-admin
+      nodeSelector: {kubernetes.io/hostname: omv}
+      containers:
+      - name: headlamp
+        image: ghcr.io/headlamp-k8s/headlamp:v0.36.0
+        args: ["-in-cluster"]
+        ports:
+        - {containerPort: 4466, name: http}
+        env:
+        - {name: TZ, value: Europe/Athens}
+        resources:
+          requests: {cpu: 30m, memory: 96Mi}
+          limits:   {cpu: 500m, memory: 384Mi}
+        readinessProbe:
+          httpGet: {path: /, port: 4466}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet: {path: /, port: 4466}
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+        volumeMounts:
+        # Headlamp needs a writable /tmp and $HOME/.config (plugins dir).
+        # Keep readOnlyRootFilesystem=true; give it emptyDirs at just those
+        # paths — smaller attack surface than a fully writable rootfs.
+        - {name: tmp, mountPath: /tmp}
+        - {name: home-config, mountPath: /home/headlamp/.config}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 100
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: ["ALL"]}
+      volumes:
+      - {name: tmp, emptyDir: {}}
+      - {name: home-config, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  type: NodePort
+  selector: {app: headlamp}
+  ports:
+  - {name: http, port: 4466, targetPort: 4466, nodePort: 30460}
