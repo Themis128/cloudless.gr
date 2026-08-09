@@ -102,12 +102,9 @@ vi.mock("@/lib/integrations", () => ({
 const GSC_CONFIGURED_CONFIG = {
   SES_FROM_EMAIL: "test@cloudless.gr",
   SES_TO_EMAIL: "inbox@cloudless.gr",
-  AWS_SES_REGION: "us-east-1",
   STRIPE_SECRET_KEY: "sk_test_123",
   STRIPE_PUBLISHABLE_KEY: "",
   STRIPE_WEBHOOK_SECRET: "whsec_test",
-  COGNITO_USER_POOL_ID: "us-east-1_TestPool",
-  COGNITO_CLIENT_ID: "test-client-id",
   SLACK_WEBHOOK_URL: "",
   SLACK_BOT_TOKEN: "",
   SLACK_SIGNING_SECRET: "",
@@ -175,7 +172,7 @@ beforeEach(() => {
 
 // ---------------------------------------------------------------------------
 // Mock jose: replace jwtVerify with a decode-only version so tests can use
-// fake-signed tokens without hitting the real Cognito JWKS endpoint.
+// fake-signed tokens without hitting the real JWKS endpoint.
 // createRemoteJWKSet is kept but its result is never used (jwtVerify is mocked).
 // ---------------------------------------------------------------------------
 vi.mock("jose", async () => {
@@ -196,13 +193,13 @@ vi.mock("jose", async () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a mock admin JWT with Cognito-style claims. No real signature —
- *  verifyToken falls back to decode-only when COGNITO_ISSUER is unset. */
+/** Build a mock admin token with D1-style claims. No real signature —
+ *  verifyToken falls back to decode-only when D1_ISSUER is unset. */
 function makeAdminToken(): string {
   return "test-admin-session";
 }
 
-/** Build a mock non-admin JWT with Cognito-style claims. */
+/** Build a mock non-admin token with D1-style claims. */
 function makeUserToken(): string {
   return "test-user-session";
 }
@@ -225,31 +222,6 @@ function unauthRequest(url: string): NextRequest {
 // ---------------------------------------------------------------------------
 // Mocks — set up before any dynamic import
 // ---------------------------------------------------------------------------
-
-const mockCognitoSend = vi.fn(); // kept so references below don't break
-vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
-  CognitoIdentityProviderClient: class {
-    send = mockCognitoSend;
-  },
-  ListUsersCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminDisableUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminEnableUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminAddUserToGroupCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminRemoveUserFromGroupCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminListGroupsForUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-}));
 
 // Stripe
 const mockStripeCheckout = vi.fn();

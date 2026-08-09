@@ -23,10 +23,10 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
     ),
     description: t(
       "servicesSection.service1Desc",
-      "Design resilient, cost-optimised cloud infrastructure on AWS, GCP, or Azure. We handle architecture blueprints, zero-downtime migrations, and Infrastructure as Code — so your team ships faster with less risk."
+      "Design resilient, cost-optimised cloud infrastructure on Cloudflare, GCP, or Azure. We handle architecture blueprints, zero-downtime migrations, and Infrastructure as Code — so your team ships faster with less risk."
     ),
     features: [
-      "AWS / GCP / Azure architecture design",
+      "Cloudflare / GCP / Azure architecture design",
       "Zero-downtime migration planning",
       "Cost optimization & right-sizing",
       "Security & compliance review",
@@ -39,15 +39,14 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       { value: "IaC", label: "First Approach" },
     ],
     terminal: [
-      "$ cloudless infra plan --provider aws",
+      "$ cloudless infra plan --provider cloudflare",
       "  ✓ VPC + subnets designed",
-      "  ✓ ECS Fargate cluster configured",
-      "  ✓ RDS Multi-AZ provisioned",
-      "  ✓ CloudFront CDN attached",
+      "  ✓ Workers + D1 + R2 configured",
+      "  ✓ Cloudflare CDN attached",
       "  ✓ WAF rules applied",
       "  ---",
       "  status: ready to deploy",
-      "  estimated cost: €420/mo",
+      "  estimated cost: €180/mo",
     ],
   },
   {
@@ -68,11 +67,11 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
     ),
     description: t(
       "servicesSection.service2Desc",
-      "Build event-driven apps that scale to zero and explode to millions — without managing a single server. Lambda, API Gateway, DynamoDB, Step Functions — we wire it all together with CI/CD from day one."
+      "Build event-driven apps that scale to zero and explode to millions — without managing a single server. Workers, D1, R2, Durable Objects — we wire it all together with CI/CD from day one."
     ),
     features: [
       "Event-driven application design",
-      "AWS Lambda / API Gateway / DynamoDB",
+      "Cloudflare Workers / D1 / R2 / Durable Objects",
       "CI/CD pipeline setup",
       "Monitoring & alerting",
       "Pay-per-use cost modeling",
@@ -85,14 +84,14 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
     ],
     terminal: [
       "$ cloudless serverless deploy --stage prod",
-      "  ✓ 12 Lambda functions deployed",
-      "  ✓ API Gateway routes configured",
-      "  ✓ DynamoDB tables provisioned",
-      "  ✓ CloudWatch alarms set",
+      "  ✓ 12 Workers functions deployed",
+      "  ✓ D1 database provisioned",
+      "  ✓ R2 buckets configured",
+      "  ✓ Analytics Engine alerts set",
       "  ✓ GitHub Actions pipeline live",
       "  ---",
-      "  cold start: 42ms avg",
-      "  monthly estimate: €18.40",
+      "  cold start: 12ms avg",
+      "  monthly estimate: €8.40",
     ],
   },
   {
@@ -130,9 +129,9 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
     ],
     terminal: [
       "$ cloudless analytics init --stack modern",
-      "  ✓ S3 data lake configured",
-      "  ✓ Glue ETL jobs scheduled",
-      "  ✓ Athena queries optimised",
+      "  ✓ R2 data lake configured",
+      "  ✓ Workers ETL jobs scheduled",
+      "  ✓ D1 queries optimised",
       "  ✓ Grafana dashboards deployed",
       "  ✓ Alerting rules active",
       "  ---",
@@ -248,12 +247,12 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
     ),
     description: t(
       "servicesSection.service6Desc",
-      "Production hosting on AWS or Vercel with monitoring, backups, security patches, and on-call response baked in. Your site stays fast, secure, and online — without you ever opening a console."
+      "Production hosting on Cloudflare Workers with monitoring, backups, security patches, and on-call response baked in. Your site stays fast, secure, and online — without you ever opening a console."
     ),
     features: [
-      "AWS / Vercel managed hosting",
+      "Cloudflare Workers managed hosting",
       "24/7 uptime monitoring + alerts",
-      "Daily backups with one-click restore",
+      "Daily R2 backups with one-click restore",
       "Security patches + dependency updates",
       "Performance + cost optimization quarterly",
     ],
@@ -268,7 +267,7 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "  ✓ uptime (30d): 99.97%",
       "  ✓ last backup: 2h ago (verified)",
       "  ✓ ssl: valid 89 days",
-      "  ✓ cdn: active (12 edges)",
+      "  ✓ cdn: active (300+ edges)",
       "  ✓ security patches: up to date",
       "  ---",
       "  monthly cost: €99",

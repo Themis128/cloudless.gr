@@ -68,8 +68,8 @@
   },
   "credibility": {
     "builtBy": "Δημιουργήθηκε από τον Θεμιστοκλή Μπαλτζάκη",
-    "bio": "— AWS Certified Cloud Architect, πάνω από 8 χρόνια κατασκευής serverless υποδομών και συστημάτων ανάπτυξης. Δημιούργησα το cloudless.gr γιατί οι startups αξίζουν enterprise-grade cloud χωρίς τιμές enterprise ή γραφειοκρατία enterprise.",
-    "badgeAws": "AWS Certified",
+    "bio": "— Cloudflare Certified Cloud Architect, πάνω από 8 χρόνια κατασκευής serverless υποδομών και συστημάτων ανάπτυξης. Δημιούργησα το cloudless.gr γιατί οι startups αξίζουν enterprise-grade cloud χωρίς τιμές enterprise ή γραφειοκρατία enterprise.",
+    "badgeAws": "Cloudflare Certified",
     "badgeOss": "Open-Source Contributor",
     "badgeCapacity": "Δεχόμαστε 5 πελάτες για Q2 2026"
   },
@@ -80,11 +80,11 @@
     "subtitle": "Από υποδομή μέχρι marketing, καλύπτουμε ολόκληρο το stack σύγχρονης επιχειρηματικής ανάπτυξης.",
     "viewPricing": "Δείτε τιμές & λεπτομέρειες",
     "service1Title": "Αρχιτεκτονική Cloud & Μετάβαση",
-    "service1Desc": "Σχεδιάστε και μεταφέρετε την υποδομή σας σε AWS, GCP ή Azure χωρίς downtime. Κλιμακώσιμο, ασφαλές, βελτιστοποιημένο κόστος.",
+    "service1Desc": "Σχεδιάστε και μεταφέρετε την υποδομή σας σε Cloudflare, GCP ή Azure χωρίς downtime. Κλιμακώσιμο, ασφαλές, βελτιστοποιημένο κόστος.",
     "service1Tag": "CLOUD",
     "service1For": "Για ομάδες που πληρώνουν 500€+/μήνα για υποδομή που δεν μπορούν να εξηγήσουν.",
     "service2Title": "Ανάπτυξη Serverless",
-    "service2Desc": "Κατασκευάστε event-driven εφαρμογές που κλιμακώνουν αυτόματα και δεν κοστίζουν τίποτα σε αδράνεια. Lambda, API Gateway, DynamoDB.",
+    "service2Desc": "Κατασκευάστε event-driven εφαρμογές που κλιμακώνουν αυτόματα και δεν κοστίζουν τίποτα σε αδράνεια. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
     "service2For": "Για founders κουρασμένους να πληρώνουν servers που κάθονται idle το 90% του χρόνου.",
     "service3Title": "Ανάλυση Δεδομένων & Dashboards",
@@ -116,7 +116,7 @@
     "q5": "Τι περιλαμβάνει ο δωρεάν έλεγχος;",
     "a5": "Μια κλήση 30 λεπτών όπου εξετάζουμε την τρέχουσα υποδομή σας, το marketing setup, ή και τα δύο. Θα λάβετε ένα συγκεκριμένο πλάνο δράσης — χωρίς pitch, χωρίς πίεση. Οι περισσότεροι founders λένε ότι είναι τα πιο χρήσιμα 30 λεπτά που αφιέρωσαν στο tech stack τους.",
     "q6": "Μπορώ να εμπιστευτώ ένα νέο agency με την υποδομή μου;",
-    "a6": "Δίκαια ερώτηση. Έχουμε AWS πιστοποιήσεις (δείτε τα Credly badges μας), open-source contributions στο GitHub, και 8+ χρόνια πρακτικής εμπειρίας σε cloud αρχιτεκτονική. Ο δωρεάν έλεγχος είναι μηδενικού ρίσκου — θα δείτε τη σκέψη μας και θα αποφασίσετε. Προτιμάμε να χάσουμε μια δουλειά παρά να υποσχεθούμε παραπάνω."
+    "a6": "Δίκαια ερώτηση. Έχουμε Cloudflare πιστοποιήσεις (δείτε τα Credly badges μας), open-source contributions στο GitHub, και 8+ χρόνια πρακτικής εμπειρίας σε cloud αρχιτεκτονική. Ο δωρεάν έλεγχος είναι μηδενικού ρίσκου — θα δείτε τη σκέψη μας και θα αποφασίσετε. Προτιμάμε να χάσουμε μια δουλειά παρά να υποσχεθούμε παραπάνω."
   },
   "founder": {
     "label": "[ ΣΧΕΤΙΚΑ ]",
@@ -124,7 +124,7 @@
     "titleHighlight": "ιδρυτή",
     "name": "Θεμιστοκλής Μπαλτζάκης",
     "role": "Cloud Architect & Μηχανικός Ανάπτυξης",
-    "bio": "Πιστοποιημένος cloud architect με πρακτική εμπειρία σε AWS, serverless αρχιτεκτονικές, ανάλυση δεδομένων, και AI-powered marketing. Βοηθάω startups και SMBs να χτίσουν υποδομή που κλιμακώνει χωρίς το enterprise κόστος."
+    "bio": "Πιστοποιημένος cloud architect με πρακτική εμπειρία σε Cloudflare Workers, serverless αρχιτεκτονικές, ανάλυση δεδομένων, και AI-powered marketing. Βοηθάω startups και SMBs να χτίσουν υποδομή που κλιμακώνει χωρίς το enterprise κόστος."
   },
   "cta": {
     "title": "Έτοιμοι να γίνετε",
@@ -142,7 +142,7 @@
     "location": "Ελλάδα, ΕΕ",
     "copyright": "© {year} Cloudless.",
     "rightsReserved": "Με επιφύλαξη παντός δικαιώματος.",
-    "builtWith": "Κατασκευασμένο με Next.js & αναπτυγμένο στο AWS",
+    "builtWith": "Κατασκευασμένο με Next.js & αναπτυγμένο στο Cloudflare",
     "legal": "ΝΟΜΙΚΑ",
     "cookieSettings": "Ρυθμίσεις Cookies"
   },
@@ -301,7 +301,7 @@
     "dataUseTitle": "5. Πώς Χρησιμοποιούμε τα Δεδομένα",
     "dataUse": "Χρησιμοποιούμε τα δεδομένα σας για: απάντηση σε αιτήματα, επεξεργασία παραγγελιών, αποστολή newsletter, βελτίωση υπηρεσιών, νομική συμμόρφωση και ασφάλεια.",
     "dataSharingTitle": "6. Κοινοποίηση Δεδομένων",
-    "dataSharing": "Μοιραζόμαστε δεδομένα μόνο με: Stripe (πληρωμές), Amazon Web Services (φιλοξενία, email) και Cloudflare (αυθεντικοποίηση λογαριασμού D1 και edge παράδοση). Δεν πωλούμε τα δεδομένα σας.",
+    "dataSharing": "Μοιραζόμαστε δεδομένα μόνο με: Stripe (πληρωμές), Cloudflare (Workers, D1, R2, Email, περιοχή EU). Δεν πωλούμε τα δεδομένα σας.",
     "dataTransfersTitle": "7. Διεθνείς Μεταφορές Δεδομένων",
     "dataTransfers": "Ορισμένοι επεξεργαστές μας βρίσκονται στις ΗΠΑ. Οι μεταφορές προστατεύονται μέσω EU-US Data Privacy Framework και Τυπικών Συμβατικών Ρητρών.",
     "retentionTitle": "8. Διατήρηση Δεδομένων",

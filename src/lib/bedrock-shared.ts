@@ -5,7 +5,6 @@
  * Never constructs BedrockRuntimeClient; never imports @aws-sdk/client-bedrock*.
  */
 
-export const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
 export const BEDROCK_MODEL_ID =
   process.env.BEDROCK_MODEL_ID ??
   process.env.WORKERS_AI_CHAT_MODEL ??

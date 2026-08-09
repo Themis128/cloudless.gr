@@ -32,6 +32,7 @@ function adminState(filePath: string) {
       httpOnly: false,
       secure: false,
       sameSite: "Lax",
+      expires: Math.floor(Date.now() / 1000) + 86400, // 24 hours from now
     }],
     origins: []
   }, null, 2));

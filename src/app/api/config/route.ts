@@ -13,7 +13,6 @@ function buildConfig(): Record<string, string> {
   const keys = [
     "SES_FROM_EMAIL",
     "SES_TO_EMAIL",
-    "AWS_SES_REGION",
     "NEWSLETTER_SEND_SECRET",
     "STRIPE_SECRET_KEY",
     "STRIPE_PUBLISHABLE_KEY",

@@ -90,7 +90,7 @@ export default async function Home({
       title: t("servicesSection.service1Title", "Cloud Architecture & Migration"),
       description: t(
         "servicesSection.service1Desc",
-        "Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized."
+        "Design and migrate your infrastructure to Cloudflare, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized."
       ),
       tag: t("servicesSection.service1Tag", "CLOUD"),
       perfectFor: t(
@@ -103,7 +103,7 @@ export default async function Home({
       title: t("servicesSection.service2Title", "Serverless Development"),
       description: t(
         "servicesSection.service2Desc",
-        "Build event-driven applications that scale automatically and cost nothing when idle. Lambda, API Gateway, DynamoDB."
+        "Build event-driven applications that scale automatically and cost nothing when idle. Workers, D1, R2."
       ),
       tag: t("servicesSection.service2Tag", "SERVERLESS"),
       perfectFor: t(

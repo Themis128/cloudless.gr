@@ -63,8 +63,8 @@
   },
   "credibility": {
     "builtBy": "Créé par Thémistocle Baltais",
-    "bio": "— AWS Certified Cloud Architecte, 8+ ans d'expérience en infrastructure serverless et systèmes de croissance. J'ai fondé cloudless.gr parce que les startups méritent un cloud de qualité enterprise sans le prix enterprise ni les complications enterprise.",
-    "badgeAws": "AWS Certifié",
+    "bio": "— Cloudflare Certified Cloud Architecte, 8+ ans d'expérience en infrastructure serverless et systèmes de croissance. J'ai fondé cloudless.gr parce que les startups méritent un cloud de qualité enterprise sans le prix enterprise ni les complications enterprise.",
+    "badgeAws": "Cloudflare Certifié",
     "badgeOss": "Contributeur Open-Source",
     "badgeCapacity": "5 places disponibles pour Q2 2026"
   },
@@ -75,11 +75,11 @@
     "subtitle": "De l'infrastructure au marketing, nous couvrons l'ensemble de la stack de croissance moderne.",
     "viewPricing": "Voir les tarifs et détails",
     "service1Title": "Architecture Cloud & Migration",
-    "service1Desc": "Concevez et migrez votre infrastructure vers AWS, GCP ou Azure sans interruption. Évolutif, sécurisé, coûts optimisés.",
+    "service1Desc": "Concevez et migrez votre infrastructure vers Cloudflare, GCP ou Azure sans interruption. Évolutif, sécurisé, coûts optimisés.",
     "service1Tag": "CLOUD",
     "service1For": "Pour les équipes qui paient 500€+/mois pour une infrastructure qu'elles ne comprennent pas.",
     "service2Title": "Développement Serverless",
-    "service2Desc": "Créez des applications event-driven qui évoluent automatiquement et ne coûtent rien au repos. Lambda, API Gateway, DynamoDB.",
+    "service2Desc": "Créez des applications event-driven qui évoluent automatiquement et ne coûtent rien au repos. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
     "service2For": "Pour les fondateurs fatigués de payer des serveurs inactifs 90% du temps.",
     "service3Title": "Analyse de Données & Tableaux de Bord",
@@ -111,7 +111,7 @@
     "q5": "Que comprend l'audit gratuit ?",
     "a5": "Un appel de 30 minutes où nous examinons votre infrastructure actuelle, votre configuration marketing, ou les deux. Vous obtiendrez un plan d'action concret avec des recommandations spécifiques — sans argumentaire de vente, sans pression. La plupart des fondateurs disent que c'est la demi-heure la plus utile qu'ils aient consacrée à leur stack technique.",
     "q6": "Puis-je faire confiance à une nouvelle agence pour mon infrastructure ?",
-    "a6": "Question légitime. Nous avons des certifications AWS (consultez nos badges Credly), des contributions open-source sur GitHub, et 8+ ans d'expérience pratique en architecture cloud. L'audit gratuit est sans risque — vous verrez notre approche et déciderez si ça vaut le coup de continuer. Nous préférons perdre un contrat que de trop promettre."
+    "a6": "Question légitime. Nous avons des certifications Cloudflare (consultez nos badges Credly), des contributions open-source sur GitHub, et 8+ ans d'expérience pratique en architecture cloud. L'audit gratuit est sans risque — vous verrez notre approche et déciderez si ça vaut le coup de continuer. Nous préférons perdre un contrat que de trop promettre."
   },
   "founder": {
     "label": "[ À PROPOS ]",
@@ -119,7 +119,7 @@
     "titleHighlight": "fondateur",
     "name": "Thémistocle Baltais",
     "role": "Architecte Cloud & Ingénieur Croissance",
-    "bio": "Architecte cloud certifié avec une expérience pratique en AWS, architectures serverless, analyse de données et marketing propulsé par l'IA. J'aide les startups et PME à construire une infrastructure qui évolue sans les coûts enterprise."
+    "bio": "Architecte cloud certifié avec une expérience pratique en Cloudflare Workers, architectures serverless, analyse de données et marketing propulsé par l'IA. J'aide les startups et PME à construire une infrastructure qui évolue sans les coûts enterprise."
   },
   "cta": {
     "title": "Prêt à passer en mode",
@@ -137,7 +137,7 @@
     "location": "Grèce, UE",
     "copyright": "© {year} Cloudless.",
     "rightsReserved": "Tous droits réservés.",
-    "builtWith": "Développé avec Next.js & déployé sur AWS",
+    "builtWith": "Développé avec Next.js & déployé sur Cloudflare",
     "legal": "JURIDIQUE",
     "cookieSettings": "Paramètres Cookies"
   },
@@ -296,7 +296,7 @@
     "dataUseTitle": "5. Utilisation des Données",
     "dataUse": "Nous utilisons vos données pour : répondre à vos demandes, traiter les commandes, envoyer la newsletter, améliorer nos services, respecter la loi et assurer la sécurité.",
     "dataSharingTitle": "6. Partage des Données",
-    "dataSharing": "Nous partageons les données uniquement avec : Stripe (paiements), Amazon Web Services (hébergement, email) et Cloudflare (authentification de compte D1 et livraison edge). Nous ne vendons pas vos données.",
+    "dataSharing": "Nous partageons les données uniquement avec : Stripe (paiements), Cloudflare (Workers, D1, R2, Email, région UE). Nous ne vendons pas vos données.",
     "dataTransfersTitle": "7. Transferts Internationaux",
     "dataTransfers": "Certains sous-traitants sont aux États-Unis. Les transferts sont protégés par le EU-US Data Privacy Framework et les Clauses Contractuelles Types.",
     "retentionTitle": "8. Conservation des Données",

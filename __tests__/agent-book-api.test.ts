@@ -1,7 +1,7 @@
 /**
  * Tests for POST /api/agent/book (Phase 2b booking agent).
  *
- * Auth fallback: api-auth uses a decode-only path when COGNITO_USER_POOL_ID
+ * Auth fallback: api-auth uses a decode-only path when D1_ISSUER
  * is absent (jsdom default), so fake JWTs with a valid `exp` are accepted.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -160,8 +160,8 @@ describe("POST /api/agent/book", () => {
     vi.clearAllMocks();
     // Clear the auth issuer/pool so api-auth uses the dev decode-only fallback
     // (these fixtures use fake-signed tokens, so JWKS verification would 401).
-    delete process.env.COGNITO_USER_POOL_ID;
-    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    delete process.env.D1_ISSUER;
+    delete process.env.NEXT_PUBLIC_D1_ISSUER;
     mockIsAgentBookConfigured.mockResolvedValue(true);
     mockRateLimit.mockReturnValue({ ok: true, remaining: 10 });
     // Default the fire-and-forget side effects to resolved promises so the

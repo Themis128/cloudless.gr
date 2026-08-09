@@ -32,7 +32,7 @@ export default function HeadlampHelperPage() {
     try {
       const res = await fetchWithAuth("/api/admin/headlamp/token", { method: "POST" });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        const body = (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as TokenResponse;

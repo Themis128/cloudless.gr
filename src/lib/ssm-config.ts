@@ -1,17 +1,13 @@
-const DEFAULT_REGION = "us-east-1";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
-  AWS_SES_REGION: string;
   /** Shared secret authenticating the weekly newsletter send endpoint. */
   NEWSLETTER_SEND_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  COGNITO_USER_POOL_ID: string;
-  COGNITO_CLIENT_ID: string;
   // next-auth
   AUTH_SECRET: string;
   // Optional integrations
@@ -160,13 +156,10 @@ function buildConfigFromEnv(): AppConfig {
   return {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
-    AWS_SES_REGION: process.env.AWS_SES_REGION || DEFAULT_REGION,
     NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
-    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
-    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
     AUTH_SECRET: process.env.AUTH_SECRET || "",
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",

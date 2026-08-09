@@ -69,13 +69,10 @@ export async function setD1ConfigValue(
 interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
-  AWS_SES_REGION: string;
   NEWSLETTER_SEND_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  COGNITO_USER_POOL_ID: string;
-  COGNITO_CLIENT_ID: string;
   AUTH_SECRET: string;
   SLACK_WEBHOOK_URL: string;
   SLACK_BOT_TOKEN: string;
@@ -183,13 +180,10 @@ function buildConfigFromEnv(): AppConfig {
   return {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
-    AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
     NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
-    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
-    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
     AUTH_SECRET: process.env.AUTH_SECRET || "",
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",

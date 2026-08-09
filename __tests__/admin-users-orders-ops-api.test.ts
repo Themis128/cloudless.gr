@@ -60,16 +60,14 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
   };
 });
 // ---------------------------------------------------------------------------
-// Hoist mocks
+// Hoisted mocks
 // ---------------------------------------------------------------------------
 const {
-  cognitoSendMock,
   getStripeMock,
   isSentryConfiguredMock,
   getUnresolvedIssuesMock,
   verifySentryTokenMock,
 } = vi.hoisted(() => ({
-  cognitoSendMock: vi.fn(),
   getStripeMock: vi.fn(),
   isSentryConfiguredMock: vi.fn(),
   getUnresolvedIssuesMock: vi.fn(),
@@ -89,32 +87,6 @@ vi.mock("jose", async () => {
     },
   };
 });
-
-vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
-  CognitoIdentityProviderClient: class {
-    send(cmd: unknown) {
-      return cognitoSendMock(cmd);
-    }
-  },
-  ListUsersCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminDisableUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminEnableUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminAddUserToGroupCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminRemoveUserFromGroupCommand: class {
-    constructor(public input: unknown) {}
-  },
-  AdminListGroupsForUserCommand: class {
-    constructor(public input: unknown) {}
-  },
-}));
 
 vi.mock("@/lib/stripe", () => ({
   getStripe: getStripeMock,

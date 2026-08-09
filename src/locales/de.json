@@ -68,8 +68,8 @@
   },
   "credibility": {
     "builtBy": "Entwickelt von Themistokles Baltzakis",
-    "bio": "— AWS Certified Cloud Architect mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
-    "badgeAws": "AWS-zertifiziert",
+    "bio": "— Cloudflare Certified Cloud Architect mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
+    "badgeAws": "Cloudflare-zertifiziert",
     "badgeOss": "Open-Source-Contributor",
     "badgeCapacity": "Noch 5 Plätze frei für Q2 2026"
   },
@@ -80,11 +80,11 @@
     "subtitle": "Von Infrastruktur bis Marketing — wir decken den gesamten Stack modernen Unternehmenswachstums ab.",
     "viewPricing": "Preise & Details anzeigen",
     "service1Title": "Cloud-Architektur & Migration",
-    "service1Desc": "Ihre Infrastruktur zu AWS, GCP oder Azure migrieren — mit null Ausfallzeit. Skalierbar, sicher, kostenoptimiert.",
+    "service1Desc": "Ihre Infrastruktur zu Cloudflare, GCP oder Azure migrieren — mit null Ausfallzeit. Skalierbar, sicher, kostenoptimiert.",
     "service1Tag": "CLOUD",
     "service1For": "Für Teams, die €500+/Monat für Infrastruktur bezahlen, die sie nicht erklären können.",
     "service2Title": "Serverlose Entwicklung",
-    "service2Desc": "Ereignisgesteuerte Anwendungen, die automatisch skalieren und im Leerlauf nichts kosten. Lambda, API Gateway, DynamoDB.",
+    "service2Desc": "Ereignisgesteuerte Anwendungen, die automatisch skalieren und im Leerlauf nichts kosten. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
     "service2For": "Für Gründer, die es leid sind, für Server zu bezahlen, die 90 % der Zeit idle sind.",
     "service3Title": "Datenanalyse & Dashboards",
@@ -116,7 +116,7 @@
     "q5": "Was beinhaltet das kostenlose Audit?",
     "a5": "Ein 30-minütiges Gespräch, in dem wir Ihre aktuelle Infrastruktur, Ihr Marketing-Setup oder beides analysieren. Sie erhalten einen konkreten Aktionsplan mit spezifischen Empfehlungen — kein Pitch, kein Druck.",
     "q6": "Kann ich einer neuen Agentur meine Infrastruktur anvertrauen?",
-    "a6": "Berechtigt gefragt. Wir sind durch AWS-Zertifizierungen, Open-Source-Beiträge auf GitHub und über 8 Jahre praktische Cloud-Architektur-Erfahrung abgesichert. Das kostenlose Audit ist risikofrei."
+    "a6": "Berechtigt gefragt. Wir sind durch Cloudflare-Zertifizierungen, Open-Source-Beiträge auf GitHub und über 8 Jahre praktische Cloud-Architektur-Erfahrung abgesichert. Das kostenlose Audit ist risikofrei."
   },
   "founder": {
     "label": "[ ÜBER UNS ]",
@@ -124,7 +124,7 @@
     "titleHighlight": "Gründer kennen",
     "name": "Themistokles Baltzakis",
     "role": "Cloud-Architekt & Growth Engineer",
-    "bio": "Zertifizierter Cloud Architect mit praktischer Erfahrung in AWS, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
+    "bio": "Zertifizierter Cloud Architect mit praktischer Erfahrung in Cloudflare Workers, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
   },
   "cta": {
     "title": "Bereit,",
@@ -142,7 +142,7 @@
     "location": "Griechenland, EU",
     "copyright": "© {year} Cloudless.",
     "rightsReserved": "Alle Rechte vorbehalten.",
-    "builtWith": "Entwickelt mit Next.js & bereitgestellt auf AWS",
+    "builtWith": "Entwickelt mit Next.js & bereitgestellt auf Cloudflare",
     "legal": "RECHTLICHES",
     "cookieSettings": "Cookie-Einstellungen"
   },
@@ -301,7 +301,7 @@
     "dataUseTitle": "5. Verwendung Ihrer Daten",
     "dataUse": "Wir verwenden Ihre Daten für: Beantwortung von Kontaktanfragen, Auftragsabwicklung, Newsletter-Versand (nur mit Einwilligung), Verbesserung unserer Dienste, Einhaltung gesetzlicher Vorschriften und Betrugsprävention.",
     "dataSharingTitle": "6. Datenweitergabe & Dritte",
-    "dataSharing": "Wir teilen Daten nur mit notwendigen Verarbeitern: Stripe (Zahlungsabwicklung), Amazon Web Services (Hosting & E-Mail), Cloudflare (D1-Kontoauthentifizierung und Edge-Auslieferung). Wir verkaufen Ihre Daten nicht.",
+    "dataSharing": "Wir teilen Daten nur mit: Stripe (Zahlungsabwicklung), Cloudflare (Workers, D1, R2, Email, EU-Region). Wir verkaufen Ihre Daten nicht.",
     "dataTransfersTitle": "7. Internationale Datenübertragungen",
     "dataTransfers": "Einige Verarbeiter befinden sich in den USA. Übertragungen sind durch das EU-US-Datenschutzrahmenwerk oder SCCs geschützt.",
     "retentionTitle": "8. Datenspeicherung",

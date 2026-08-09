@@ -68,15 +68,6 @@ export function isCloudflareWorkers(): boolean {
   );
 }
 
-// Detect if running in AWS Lambda (current production)
-export function isLambda(): boolean {
-  return (
-    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-    Boolean(process.env._HANDLER) ||
-    Boolean(process.env.AWS_EXECUTION_ENV)
-  );
-}
-
 // Get configuration based on environment
 export function getCloudflareConfig() {
   if (!isCloudflareWorkers()) {

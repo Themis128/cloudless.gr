@@ -63,8 +63,8 @@
   },
   "credibility": {
     "builtBy": "Built by Themistoklis Baltzakis",
-    "bio": "— AWS Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS.",
-    "badgeAws": "AWS Certified",
+    "bio": "— Cloudflare Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS.",
+    "badgeAws": "Cloudflare Certified",
     "badgeOss": "Open-Source Contributor",
     "badgeCapacity": "Now accepting 5 clients for Q2 2026"
   },
@@ -75,11 +75,11 @@
     "subtitle": "From infrastructure to marketing, we cover the full stack of modern business growth.",
     "viewPricing": "See pricing & details",
     "service1Title": "Cloud Architecture & Migration",
-    "service1Desc": "Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
+    "service1Desc": "Design and migrate your infrastructure to Cloudflare, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
     "service1Tag": "CLOUD",
     "service1For": "For teams paying €500+/mo for infrastructure they can't explain.",
     "service2Title": "Serverless Development",
-    "service2Desc": "Build event-driven applications that scale automatically and cost nothing when idle. Lambda, API Gateway, DynamoDB.",
+    "service2Desc": "Build event-driven applications that scale automatically and cost nothing when idle. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
     "service2For": "For founders tired of paying for servers that sit idle 90% of the time.",
     "service3Title": "Data Analytics & Dashboards",
@@ -111,7 +111,7 @@
     "q5": "What does the free audit include?",
     "a5": "A 30-minute call where we review your current infrastructure, marketing setup, or both. You'll get a concrete action plan with specific recommendations — no pitch, no pressure. Most founders say it's the most useful 30 minutes they've spent on their tech stack.",
     "q6": "Can I trust a new agency with my infrastructure?",
-    "a6": "Fair question. We're backed by AWS certifications (check our Credly badges), open-source contributions to GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
+    "a6": "Fair question. We're backed by Cloudflare certifications (check our Credly badges), open-source contributions to GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
   },
   "founder": {
     "label": "[ ABOUT ]",
@@ -119,7 +119,7 @@
     "titleHighlight": "founder",
     "name": "Themistoklis Baltzakis",
     "role": "Cloud Architect & Growth Engineer",
-    "bio": "Certified cloud architect with hands-on experience in AWS, serverless architectures, data analytics, and AI-powered marketing. I help startups and SMBs build infrastructure that scales without the enterprise overhead."
+    "bio": "Certified cloud architect with hands-on experience in Cloudflare Workers, serverless architectures, data analytics, and AI-powered marketing. I help startups and SMBs build infrastructure that scales without the enterprise overhead."
   },
   "cta": {
     "title": "Ready to go",
@@ -137,7 +137,7 @@
     "location": "Greece, EU",
     "copyright": "© {year} Cloudless.",
     "rightsReserved": "All rights reserved.",
-    "builtWith": "Built with Next.js & deployed on AWS",
+    "builtWith": "Built with Next.js & deployed on Cloudflare",
     "legal": "LEGAL",
     "cookieSettings": "Cookie Settings"
   },
@@ -296,7 +296,7 @@
     "dataUseTitle": "5. How We Use Your Data",
     "dataUse": "We use your data to: respond to your contact form enquiries, process and fulfil orders, send newsletter updates (only with consent), improve our website and services, comply with legal obligations, prevent fraud and ensure security, and — with consent — personalise content and advertising.",
     "dataSharingTitle": "6. Data Sharing & Third Parties",
-    "dataSharing": "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), Amazon Web Services (hosting and email via SES, EU region), and Cloudflare (D1 account authentication and edge delivery). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions.",
+    "dataSharing": "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), Cloudflare (Workers, D1, R2, Email, EU region). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions.",
     "dataTransfersTitle": "7. International Data Transfers",
     "dataTransfers": "Some of our processors (e.g. Stripe) are based in the United States. These transfers are protected by the EU-US Data Privacy Framework, Standard Contractual Clauses (SCCs), or your explicit consent, in accordance with GDPR Chapter V.",
     "retentionTitle": "8. Data Retention",
