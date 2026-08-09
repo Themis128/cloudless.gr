@@ -1,0 +1,68 @@
+name: 'ETL: Materialize datalake snapshots'
+# Reads the per-source parquets from R2 (written by the other ETLs) and
+# rolls them up into lake/snapshots/admin-datalake.json — the JSON blob the
+# admin Datalake dashboard renders from. Also produces gsc-weekly.json.
+#
+# Runs on schedule so the dashboard stays fresh; workflow_dispatch is used
+# for on-demand refresh (and was how it was first bootstrapped 2026-08-09).
+
+on:
+  schedule:
+  - cron: 45 * * * *       # hourly at :45 — after the source ETLs (:20)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  materialize:
+    name: Materialize datalake snapshots
+    # Same runner shape as the source ETLs (self-hosted Pi, or generic per vars).
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC ||
+      '["self-hosted","omv","build"]') }}
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4.3.1
+
+    - name: Set up Node.js 22
+      uses: actions/setup-node@v4.4.0
+      with:
+        node-version: 22
+
+    - name: Install ETL dependencies
+      working-directory: scripts/etl
+      run: |
+        corepack enable || true
+        corepack prepare pnpm@latest --activate || true
+        pnpm install --frozen-lockfile --prod
+
+    - name: Materialize snapshots (parquets → JSON in R2)
+      working-directory: scripts/etl
+      env:
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+        CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+        ANALYTICS_BUCKET: datalake-bucket
+      run: node materialize-datalake-snapshots.mjs
+
+    - name: Notify Slack on failure
+      if: failure()
+      uses: actions/github-script@v9.0.0
+      env:
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          if (process.env.SLACK_WEBHOOK_URL) {
+            fetch(process.env.SLACK_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: `:x: ETL: Materialize datalake snapshots failed (run ${context.runId})`
+              })
+            }).catch(() => {});
+          }
