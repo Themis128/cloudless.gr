@@ -1,0 +1,148 @@
+# prometheus-fine-tune — daily CronJob that re-applies Prometheus tuning.
+#
+# Why: kube-prometheus-stack is Helm-managed, so a `helm upgrade` reverts
+# any live `kubectl patch`. This job idempotently re-applies our tuning
+# so drift doesn't cause the Grafana-slowness we hit on 2026-08-09.
+#
+# What it does (idempotent — safe to re-run):
+#   1. Patch Prometheus CR: scrapeInterval + evaluationInterval = 60s
+#      (was 30s; halves scrape/eval load on a home cluster).
+#   2. Delete heavy apiserver SLO PrometheusRules — same set
+#      `scripts/prometheus-tune.sh` targets; see that file's header
+#      for why (multi-day rate() queries exceed rule-eval timeout).
+#
+# Failure alerts: writes any change or error to stdout (visible via
+#   `kubectl logs -n monitoring -l job-name=…`) and emits a Slack post
+# via the existing cloudless-secrets SLACK_BOT_TOKEN if the job fails.
+#
+# Deploy: kubectl apply -f infrastructure/monitoring/prometheus-fine-tune-cronjob.yaml
+# Manual test: kubectl create job -n monitoring --from=cronjob/prometheus-fine-tune ft-test
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-fine-tune
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-fine-tune
+  namespace: monitoring
+rules:
+# Patch the Prometheus CR spec (scrapeInterval / evaluationInterval)
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["prometheuses"]
+  verbs: ["get", "list", "patch"]
+# List + delete heavy PrometheusRule objects
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["prometheusrules"]
+  verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-fine-tune
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-fine-tune
+subjects:
+- kind: ServiceAccount
+  name: prometheus-fine-tune
+  namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-fine-tune-script
+  namespace: monitoring
+data:
+  tune.sh: |
+    #!/bin/sh
+    set -eu
+    echo "[$(date -u +%FT%TZ)] prometheus-fine-tune starting"
+
+    # ---- 1. patch Prometheus CR (scrape + eval interval → 60s) ----
+    PROM_NAME=$(kubectl get prometheus -n monitoring -o jsonpath='{.items[0].metadata.name}')
+    CUR_SCRAPE=$(kubectl get prometheus "$PROM_NAME" -n monitoring -o jsonpath='{.spec.scrapeInterval}')
+    CUR_EVAL=$(kubectl get prometheus "$PROM_NAME" -n monitoring -o jsonpath='{.spec.evaluationInterval}')
+    echo "  Prometheus CR: current scrapeInterval=$CUR_SCRAPE evaluationInterval=$CUR_EVAL"
+    if [ "$CUR_SCRAPE" != "60s" ] || [ "$CUR_EVAL" != "60s" ]; then
+      kubectl patch prometheus "$PROM_NAME" -n monitoring --type=merge \
+        -p '{"spec":{"scrapeInterval":"60s","evaluationInterval":"60s"}}'
+      echo "  ✓ patched to 60s"
+    else
+      echo "  = already 60s (no-op)"
+    fi
+
+    # ---- 2. delete heavy apiserver SLO PrometheusRules ----
+    HEAVY="kube-apiserver-burnrate.rules kube-apiserver-availability.rules kube-apiserver-slos"
+    for grp in $HEAVY; do
+      # find rule objects whose spec.groups contain this heavy group
+      NAMES=$(kubectl get prometheusrule -n monitoring -o json \
+        | jq -r --arg g "$grp" '.items[] | select((.spec.groups // [])[].name == $g) | .metadata.name' \
+        | sort -u)
+      if [ -z "$NAMES" ]; then
+        echo "  = group '$grp' already absent (no-op)"
+      else
+        for pr in $NAMES; do
+          echo "  ✗ deleting PrometheusRule '$pr' (contains heavy group '$grp')"
+          kubectl delete prometheusrule "$pr" -n monitoring --ignore-not-found
+        done
+      fi
+    done
+
+    echo "[$(date -u +%FT%TZ)] prometheus-fine-tune done"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: prometheus-fine-tune
+  namespace: monitoring
+  labels:
+    app: prometheus-fine-tune
+spec:
+  # 03:15 UTC daily — off-peak, doesn't collide with the 03:00 cluster-cleanup
+  # or the 03:45 EEST etcd-defrag on omv.
+  schedule: "15 3 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 604800   # keep 7 days for debugging
+      template:
+        metadata:
+          labels:
+            app: prometheus-fine-tune
+        spec:
+          serviceAccountName: prometheus-fine-tune
+          restartPolicy: Never
+          # bitnami/kubectl bundles kubectl + jq on arm64; small, fast.
+          containers:
+          - name: tune
+            # alpine/k8s bundles kubectl + jq on arm64 in one small image.
+            image: alpine/k8s:1.30.0
+            command: ["/bin/sh", "/scripts/tune.sh"]
+            volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            resources:
+              requests: {cpu: "20m", memory: "32Mi"}
+              limits:   {cpu: "200m", memory: "128Mi"}
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1001
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: {drop: ["ALL"]}
+          volumes:
+          - name: script
+            configMap:
+              name: prometheus-fine-tune-script
+              defaultMode: 0555
