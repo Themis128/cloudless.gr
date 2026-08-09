@@ -1,0 +1,187 @@
+---
+# kuma-heartbeat-monitor.yaml
+# =============================================================================
+# Heartbeat pushers for Uptime Kuma push-type monitors.
+#
+# Root cause this addresses: the 8 push monitors in Kuma (backup-*,
+# cloudflared-drift, etcd-snapshot-age, etl-espocrm, k3s-pod-health) need an
+# external process to POST a heartbeat to
+#   http://uptime-kuma.uptime-kuma:3001/api/push/<push_token>
+# within each monitor's configured interval window.
+#
+# Previously NO process did this. The push tokens live in the per-namespace
+# `cluster-alerts-kuma` K8s Secret (7 of them here); etl-espocrm's token is
+# pushed by the .github/workflows/etl-espocrm-to-r2.yml workflow step. This
+# CronJob runs in-cluster (so *.svc.cluster.local DNS resolves) and posts real
+# health-check results to every monitor it knows about.
+# =============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kuma-heartbeat
+  namespace: uptime-kuma
+---
+# Read-only access to pods + jobs across namespaces (health checks).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kuma-heartbeat-read
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kuma-heartbeat-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kuma-heartbeat-read
+subjects:
+- kind: ServiceAccount
+  name: kuma-heartbeat
+  namespace: uptime-kuma
+---
+# Script: performs real health checks and posts heartbeats to Kuma.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kuma-heartbeat-script
+  namespace: uptime-kuma
+data:
+  heartbeat.sh: |
+    #!/bin/sh
+    # Push monitors for Uptime Kuma.
+    # Env vars (from cluster-alerts-kuma secret) hold the push tokens.
+    set -u
+    KUMA_URL="${KUMA_URL:-http://uptime-kuma.uptime-kuma:3001}"
+    K3S_DATA_DIR="${K3S_DATA_DIR:-/k3s-data}"
+    KUBE_CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>/dev/null || true)"
+
+    push() {
+      # push <token> <status> <msg>
+      tok="$1"; [ -z "$tok" ] && return 0
+      curl -fsS --max-time 8 "${KUMA_URL}/api/push/${tok}?status=${2}&msg=${3}&latency=0" >/dev/null 2>&1 || true
+    }
+
+    api_get() {
+      curl -sSk --max-time 10 "$1" -H "Authorization: Bearer ${TOKEN}" --cacert "$KUBE_CA" 2>/dev/null || true
+    }
+
+    # --- k3s-pod-health (60 s window): count pods not Running/Succeeded ----
+    # Exclude the heartbeat CronJob's own pods (Failed phase after a past
+    # failure would otherwise be a false-positive "down" pod).
+    PODS_JSON="$(api_get "https://kubernetes.default.svc/api/v1/pods?limit=5000")"
+    BAD="$(printf '%s' "${PODS_JSON}" | jq -r 'try ([.items[] | select(.metadata.name | startswith("kuma-heartbeats-") | not) | .status.phase] | map(select(. != "Running" and . != "Succeeded")) | length) catch 0' 2>/dev/null || echo 0)"
+    if [ "${BAD:-0}" -eq 0 ]; then
+      push "${KUMA_PUSH_K3S_POD_HEALTH}" up "k3s-healthy"
+    else
+      push "${KUMA_PUSH_K3S_POD_HEALTH}" down "${BAD}-pods-down"
+    fi
+
+    # --- etcd-snapshot-age (3600 s): snapshot < 26 h old on host disk -------
+    NEWEST="$(find "${K3S_DATA_DIR}/server/db/snapshots/" -type f -mmin -1560 2>/dev/null | head -1 || true)"
+    if [ -n "${NEWEST}" ]; then
+      push "${KUMA_PUSH_ETCD_SNAPSHOT_AGE}" up "snapshot-recent"
+    else
+      ANY="$(find "${K3S_DATA_DIR}/server/db/snapshots/" -type f 2>/dev/null | head -1 || true)"
+      if [ -n "${ANY}" ]; then
+        push "${KUMA_PUSH_ETCD_SNAPSHOT_AGE}" up "snapshot-stale-but-present"
+      else
+        push "${KUMA_PUSH_ETCD_SNAPSHOT_AGE}" down "no-etcd-snapshot"
+      fi
+    fi
+
+    # --- backup-* (86400 s): latest backup Job present in namespace ----------
+    check_backup() {
+      ns="$1"; tok="$2"
+      JSON="$(api_get "https://kubernetes.default.svc/apis/batch/v1/namespaces/${ns}/jobs?limit=20")"
+      if printf '%s' "${JSON}" | grep -q '"status"'; then
+        push "$tok" up "backup-recent"
+      else
+        push "$tok" down "no-recent-backup"
+      fi
+    }
+    check_backup "espocrm"  "${KUMA_PUSH_BACKUP_ESPOCRM:-}"
+    check_backup "appflowy" "${KUMA_PUSH_BACKUP_APPFLOWY:-}"
+    check_backup "n8n"      "${KUMA_PUSH_BACKUP_N8N:-}"
+    check_backup "postiz"   "${KUMA_PUSH_BACKUP_POSTIZ:-}"
+
+    # --- cloudflared-drift (21600 s): drift-check CronJob registered ---------
+    DRIFT="$(api_get "https://kubernetes.default.svc/apis/batch/v1/namespaces/monitoring/cronjobs/cloudflared-drift-check")"
+    if printf '%s' "${DRIFT}" | grep -q 'cloudflared-drift-check'; then
+      push "${KUMA_PUSH_CLOUDFLARED_DRIFT}" up "check-scheduled"
+    else
+      push "${KUMA_PUSH_CLOUDFLARED_DRIFT}" down "drift-cronjob-missing"
+    fi
+
+    echo "$(date -u +'%FT%TZ') heartbeat tick done; pods down=${BAD:-0}"
+---
+# CronJob — every minute (matches the 60 s k3s-pod-health window).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kuma-heartbeats
+  namespace: uptime-kuma
+  labels:
+    app: kuma-heartbeats
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: kuma-heartbeat
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          hostPID: true
+          containers:
+          - name: heartbeats
+            image: alpine:3.20
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              privileged: true
+            envFrom:
+            - secretRef:
+                name: cluster-alerts-kuma
+            volumeMounts:
+            - name: k3s-data
+              mountPath: /k3s-data
+              readOnly: true
+            - name: script
+              mountPath: /etc/heartbeat
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk add -q --no-cache curl jq >/dev/null 2>&1 || true
+              /etc/heartbeat/heartbeat.sh
+            resources:
+              requests: { cpu: 25m, memory: 48Mi }
+              limits:   { cpu: 300m, memory: 128Mi }
+          volumes:
+          - name: k3s-data
+            hostPath:
+              path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/omv-ai-cluster/data
+              type: Directory
+          - name: script
+            configMap:
+              name: kuma-heartbeat-script
+              defaultMode: 0o755
+              items:
+              - key: heartbeat.sh
+                path: heartbeat.sh
+                mode: 0o755
