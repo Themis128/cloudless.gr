@@ -29,6 +29,7 @@ metadata:
     app.kubernetes.io/part-of: appflowy
 spec:
   schedule: 30 2 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3

@@ -72,6 +72,11 @@ spec:
         env:
         - name: CLOUDFLARE_ACCOUNT_ID
           value: fb7dc7b69b662480cd5961a4d1913c78
+        # Local time = Athens (server-side timestamps in logs/api responses).
+        # The host node already runs Europe/Athens; this exports it into the
+        # Node.js container which otherwise defaults to UTC.
+        - name: TZ
+          value: Europe/Athens
         volumeMounts:
         - name: standalone
           mountPath: /app

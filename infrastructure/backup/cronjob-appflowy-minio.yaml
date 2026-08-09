@@ -10,6 +10,7 @@ metadata:
     backup.cloudless.gr/target: appflowy-minio
 spec:
   schedule: 30 4 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7

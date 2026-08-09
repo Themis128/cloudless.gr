@@ -49,6 +49,7 @@ metadata:
     backup.cloudless.gr/rpo: 1h
 spec:
   schedule: 0 * * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 7
   successfulJobsHistoryLimit: 3

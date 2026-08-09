@@ -104,9 +104,10 @@ metadata:
   labels:
     app: prometheus-fine-tune
 spec:
-  # 03:15 UTC daily — off-peak, doesn't collide with the 03:00 cluster-cleanup
+  # 03:15 EEST daily — off-peak, doesn't collide with the 03:00 cluster-cleanup
   # or the 03:45 EEST etcd-defrag on omv.
   schedule: "15 3 * * *"
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 300
   successfulJobsHistoryLimit: 3
