@@ -9,6 +9,7 @@ metadata:
     backup.cloudless.gr/target: appflowy-postgres
 spec:
   schedule: 30 3 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7

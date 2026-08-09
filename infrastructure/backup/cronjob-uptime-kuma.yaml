@@ -10,6 +10,7 @@ metadata:
     backup.cloudless.gr/target: uptime-kuma-sqlite
 spec:
   schedule: 45 4 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7

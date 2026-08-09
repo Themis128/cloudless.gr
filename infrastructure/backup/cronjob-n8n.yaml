@@ -8,6 +8,7 @@ metadata:
     backup.cloudless.gr/target: n8n-sqlite
 spec:
   schedule: 15 4 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7

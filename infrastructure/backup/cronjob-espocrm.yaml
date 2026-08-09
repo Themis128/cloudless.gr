@@ -8,6 +8,7 @@ metadata:
     backup.cloudless.gr/target: espocrm-mariadb
 spec:
   schedule: 45 3 * * *
+  timeZone: Europe/Athens
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 7
