@@ -38,6 +38,11 @@ rules:
 - apiGroups: ["monitoring.coreos.com"]
   resources: ["prometheusrules"]
   verbs: ["get", "list", "delete"]
+# Patch Grafana Deployment env (TZ + GF_DATE_FORMATS_DEFAULT_TIMEZONE)
+# — Helm-managed, so `helm upgrade` drops the env we set; we re-apply.
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -93,6 +98,17 @@ data:
         done
       fi
     done
+
+    # ---- 3. enforce Europe/Athens TZ on Grafana (Helm-managed → drifts on upgrade) ----
+    GRAFANA_ENV=$(kubectl get deploy kube-prom-grafana -n monitoring -o json 2>/dev/null \
+      | jq -r '.spec.template.spec.containers[] | select(.name=="grafana") | .env // [] | map("\(.name)=\(.value // "")") | join(",")')
+    if echo "$GRAFANA_ENV" | grep -q "TZ=Europe/Athens" && echo "$GRAFANA_ENV" | grep -q "GF_DATE_FORMATS_DEFAULT_TIMEZONE=Europe/Athens"; then
+      echo "  = Grafana TZ already Europe/Athens (no-op)"
+    else
+      echo "  ✓ setting Grafana TZ + GF_DATE_FORMATS_DEFAULT_TIMEZONE → Europe/Athens"
+      kubectl set env deployment/kube-prom-grafana -n monitoring -c grafana \
+        TZ=Europe/Athens GF_DATE_FORMATS_DEFAULT_TIMEZONE=Europe/Athens >/dev/null
+    fi
 
     echo "[$(date -u +%FT%TZ)] prometheus-fine-tune done"
 ---
