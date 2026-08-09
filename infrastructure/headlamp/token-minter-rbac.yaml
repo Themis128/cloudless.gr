@@ -1,0 +1,36 @@
+# Lets the cloudless-app pod (running as `default` SA in `cloudless` ns)
+# mint short-lived JWTs for the `headlamp-admin` ServiceAccount via the
+# k8s TokenRequest API. Used by /api/admin/headlamp/token so the admin
+# dashboard can 1-click get a fresh Headlamp login token every 24h.
+#
+# Scope is deliberately narrow:
+#   - resource `serviceaccounts/token` with resourceName `headlamp-admin`
+#   - verb `create` only
+# → the cloudless-app SA cannot list/get/patch anything else in this ns,
+#   cannot mint tokens for any other SA, cannot see the tokens it minted
+#   for anyone else.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloudless-app-headlamp-token-minter
+  namespace: headlamp
+rules:
+- apiGroups: [""]
+  resources: ["serviceaccounts/token"]
+  resourceNames: ["headlamp-admin"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloudless-app-headlamp-token-minter
+  namespace: headlamp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cloudless-app-headlamp-token-minter
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: cloudless
