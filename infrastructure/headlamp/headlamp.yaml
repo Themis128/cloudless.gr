@@ -10,14 +10,18 @@
 #     │  http://…:30460      3-email allowlist including
 #     ▼                     tbaltzakis@cloudless.gr — verified 2026-08-08)
 #   Headlamp pod (this)
-#     │  in-cluster
+#     │  kubeconfig w/ tokenFile (auto-rotated SA token)
 #     ▼
 #   k8s apiserver via ServiceAccount `headlamp-admin`
 #     (ClusterRoleBinding → cluster-admin — solo operator, no multi-tenant)
 #
-# Runs with the `-in-cluster` flag so no login prompt is shown after passing
-# CF Access. This is safe because the front-door is CF Access; inside the
-# tunnel the operator gets full cluster-admin without pasting tokens.
+# Runs with `-kubeconfig=/etc/headlamp/kubeconfig/config`, a pod-mounted
+# kubeconfig that authenticates via the auto-mounted SA token file
+# (/var/run/secrets/kubernetes.io/serviceaccount/token). tokenFile is
+# re-read by client-go on every request, so no login prompt and no restart
+# needed when kubelet rotates the token (~1h default). Safe because the
+# front-door is CF Access (3-email allowlist); inside the tunnel the
+# operator gets full cluster-admin without pasting tokens.
 #
 # Resource footprint on omv: ~100Mi RAM, negligible CPU.
 ---
@@ -58,8 +62,12 @@ data:
   config: |
     apiVersion: v1
     kind: Config
+    # Context named "main" to match Headlamp's default cluster name
+    # (the -in-cluster flag registers the cluster as "main"). Without
+    # this, Headlamp's backend logs periodic "failed to get context"
+    # / "key not found" errors looking for a cluster named "main".
     clusters:
-    - name: in-cluster
+    - name: main
       cluster:
         server: https://kubernetes.default.svc.cluster.local
         certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -68,12 +76,12 @@ data:
       user:
         tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     contexts:
-    - name: in-cluster
+    - name: main
       context:
-        cluster: in-cluster
+        cluster: main
         user: headlamp-admin
         namespace: default
-    current-context: in-cluster
+    current-context: main
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -93,7 +101,12 @@ spec:
       containers:
       - name: headlamp
         image: ghcr.io/headlamp-k8s/headlamp:v0.36.0
-        args: ["-in-cluster"]
+        # Use the pod-mounted kubeconfig (ConfigMap headlamp-kubeconfig),
+        # which authenticates via the auto-rotated SA token file
+        # (/var/run/secrets/kubernetes.io/serviceaccount/token).
+        # tokenFile is re-read by client-go on every API request, so no
+        # restart is needed when kubelet rotates the token (~1h default).
+        args: ["-kubeconfig=/etc/headlamp/kubeconfig/config"]
         ports:
         - {containerPort: 4466, name: http}
         env:
@@ -117,6 +130,7 @@ spec:
         # paths — smaller attack surface than a fully writable rootfs.
         - {name: tmp, mountPath: /tmp}
         - {name: home-config, mountPath: /home/headlamp/.config}
+        - {name: headlamp-kubeconfig, mountPath: /etc/headlamp/kubeconfig, readOnly: true}
         securityContext:
           runAsNonRoot: true
           runAsUser: 100
@@ -126,6 +140,14 @@ spec:
       volumes:
       - {name: tmp, emptyDir: {}}
       - {name: home-config, emptyDir: {}}
+      # 0444: container runs as non-root (UID 100); the kubeconfig itself
+      # contains no secrets — it merely points at the auto-mounted SA token
+      # file path. The token file's own perms (0440, root:root) are fine
+      # because it's mounted by kubelet, not via this ConfigMap.
+      - name: headlamp-kubeconfig
+        configMap:
+          name: headlamp-kubeconfig
+          defaultMode: 0444
 ---
 apiVersion: v1
 kind: Service
