@@ -99,22 +99,30 @@ jobs:
         mkdir -p "${PNPM_STORE_PATH}"
         pnpm config set store-dir "${PNPM_STORE_PATH}"
 
-    # NOTE: Next.js build cache restore DISABLED to avoid stale proxy.ts config
-    # from previous builds (e.g., old `export const runtime = "edge";`).
-    # The cache would cause "Route segment config is not allowed in Proxy file" errors.
-    # First run after this change will be slower; subsequent runs can re-enable if stable.
-
-    - name: Clean stale build output
+    # Preserve `.next/cache/` between runs — it holds the Turbopack persistent
+    # build cache (enabled 2026-08-09 via next.config.ts
+    # `experimental.turbopackFileSystemCacheForBuild: true`, Next.js 16.3+).
+    # Once warm this cuts the `next build` step roughly in half on the Pi 5.
+    # Stale build ARTIFACTS (`server/`, `static/`, `standalone/`, etc.) are
+    # still purged — Turbopack's file-level dependency tracker invalidates
+    # cache entries whose source files changed, so keeping the cache does
+    # NOT resurrect old `proxy.ts` config (the original reason this step
+    # used to `rm -rf .next` wholesale).
+    - name: Clean stale build output (keep cache)
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        if [ -d .next ]; then
-          echo "Removing stale .next/ for clean build..."
-          rm -rf .next
-          echo "Cleaned .next/"
-        else
-          echo "No stale .next/ — clean workspace"
+        if [ ! -d .next ]; then
+          echo "No prior .next/ — clean workspace"
+          exit 0
         fi
+        # size of the cache we're preserving (informational only)
+        cache_size=$(du -sh .next/cache 2>/dev/null | cut -f1 || echo "0")
+        echo "Preserving .next/cache/ (size: ${cache_size})"
+        # remove everything else — keep only .next/cache/
+        find .next -mindepth 1 -maxdepth 1 -not -name cache -exec rm -rf {} +
+        echo "Cleaned .next/ (kept cache):"
+        ls -la .next
 
     - name: Install dependencies
       if: steps.skip.outputs.already != 'true'

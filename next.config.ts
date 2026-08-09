@@ -86,6 +86,13 @@ experimental: {
     // helpers loaded via the second — surfacing "Auth UserPool not configured"
     // at signIn time even when configure provably ran.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+    // Next.js 16.3+ experimental persistent Turbopack cache for `next build`.
+    // The cache lives in `.next/cache/` and lets subsequent builds reuse
+    // module compilation output. On the Pi 5 this cuts build wall-time
+    // ~50%+ once warm. deploy-pi.yml now preserves `.next/cache/` between
+    // runs; if you ever need a full clean rebuild, delete the whole `.next`
+    // directory locally or push a new-SHA branch.
+    turbopackFileSystemCacheForBuild: true,
   },
 };
 
