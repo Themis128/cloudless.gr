@@ -126,11 +126,17 @@ function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse
     "Permissions-Policy",
     "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=(), hid=(), midi=(), serial=(), xr-spatial-tracking=(), fullscreen=(self), gamepad=(), bluetooth=(), display-capture=(), clipboard-read=(), clipboard-write=(), window-management=(), local-fonts=()"
   );
-  // HSTS header (only on HTTPS, but include for consistency)
-  response.headers.set(
-    "Strict-Transport-Security",
-    "max-age=63072000; includeSubDomains; preload"
-  );
+  // HSTS — production only. On localhost dev, this + upgrade-insecure-requests
+  // in the CSP made Chrome upgrade http://localhost:4000 to https://, which
+  // then fails (no TLS) and shows an ERR_ADDRESS_INVALID page. Two-year
+  // max-age also poisons the browser's HSTS cache for `localhost` long after
+  // dev is over.
+  if (!IS_DEV) {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
   // Report-To header for CSP reporting
   response.headers.set(
     "Report-To",
@@ -152,7 +158,7 @@ function buildCSP(nonce: string): string {
     base-uri 'self';
     form-action 'self' https://www.facebook.com https://connect.facebook.net;
     frame-ancestors 'none';
-    upgrade-insecure-requests;
+    ${IS_DEV ? "" : "upgrade-insecure-requests;"}
     report-uri /api/csp-report;
     report-to csp-endpoint;
   `.replace(/\s{2,}/g, " ").trim();
