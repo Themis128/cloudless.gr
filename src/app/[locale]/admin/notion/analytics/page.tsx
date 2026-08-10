@@ -2,46 +2,51 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
+import type { AnalyticsEventType } from "@/lib/appflowy-analytics";
 
 interface AnalyticsSummary {
   totalEvents: number;
-  byType: Record<string, number>;
+  byType: Record<AnalyticsEventType, number>;
   topPages: { page: string; count: number }[];
   topSources: { source: string; count: number }[];
-  recentEvents: AnalyticsEvent[];
+  recentEvents: Array<{
+    id: string;
+    event: string;
+    type: AnalyticsEventType;
+    page: string;
+    date: string;
+  }>;
 }
 
-interface AnalyticsEvent {
-  id: string;
-  event: string;
-  type: string;
-  page: string;
-  source: string;
-  count: number;
-  date: string;
-  country: string;
-  metadata: string;
-}
-
-const TYPE_COLORS: Record<string, string> = {
+const TYPE_COLORS: Record<AnalyticsEventType | "weekly_rollup", string> = {
   page_view: "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/30",
-  form_submit: "bg-neon-green/10 text-neon-green border-neon-green/30",
   blog_view: "bg-neon-blue/10 text-neon-blue border-neon-blue/30",
   doc_view: "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/30",
-  signup: "bg-green-500/10 text-green-400 border-green-500/30",
-  order: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
-  error: "bg-red-500/10 text-red-400 border-red-500/30",
+  service_view: "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/30",
+  case_study_view: "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/30",
+  faq_view: "bg-neon-blue/10 text-neon-blue border-neon-blue/30",
+  contact_submit: "bg-neon-green/10 text-neon-green border-neon-green/30",
+  newsletter_signup: "bg-green-500/10 text-green-400 border-green-500/30",
+  checkout_start: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  checkout_complete: "bg-green-500/10 text-green-400 border-green-500/30",
+  button_click: "bg-slate-700/40 text-slate-400 border-slate-600/30",
+  search_query: "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/30",
   weekly_rollup: "bg-slate-700/40 text-slate-400 border-slate-600/30",
 };
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<AnalyticsEventType | "weekly_rollup", string> = {
   page_view: "Page Views",
-  form_submit: "Form Submissions",
   blog_view: "Blog Views",
   doc_view: "Doc Views",
-  signup: "Signups",
-  order: "Orders",
-  error: "Errors",
+  service_view: "Service Views",
+  case_study_view: "Case Study Views",
+  faq_view: "FAQ Views",
+  contact_submit: "Contact Submissions",
+  newsletter_signup: "Newsletter Signups",
+  checkout_start: "Checkout Started",
+  checkout_complete: "Orders Completed",
+  button_click: "Button Clicks",
+  search_query: "Search Queries",
   weekly_rollup: "Weekly Rollups",
 };
 
@@ -69,7 +74,7 @@ export default function AnalyticsDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`/api/admin/notion/analytics?days=${days}`);
+      const res = await fetchWithAuth(`/api/admin/appflowy/analytics?days=${days}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as AnalyticsSummary;
       setSummary(data);
@@ -102,11 +107,11 @@ export default function AnalyticsDashboardPage() {
         <div>
           <div className="bg-neon-green/10 border-neon-green/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-green font-mono text-xs">NOTION_ANALYTICS</span>
+            <span className="text-neon-green font-mono text-xs">APPFLOWY_ANALYTICS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Site Analytics</h1>
           <p className="font-body mt-1 text-slate-400">
-            Event tracking and visitor insights from your Notion analytics database.
+            Event tracking and visitor insights from your AppFlowy analytics database.
           </p>
         </div>
         <div className="flex gap-2">
@@ -182,21 +187,21 @@ export default function AnalyticsDashboardPage() {
               </p>
             </div>
             <div className="border-neon-magenta/20 bg-void-light/50 rounded-xl border p-5">
-              <p className="font-mono text-xs text-slate-500">Form Submissions</p>
+              <p className="font-mono text-xs text-slate-500">Contact Submissions</p>
               <p className="font-heading text-neon-magenta mt-1 text-3xl font-bold">
-                {(summary.byType.form_submit ?? 0).toLocaleString()}
+                {(summary.byType.contact_submit ?? 0).toLocaleString()}
               </p>
               <p className="mt-1 font-mono text-xs text-slate-600">Conversion events</p>
             </div>
             <div className="bg-void-light/50 rounded-xl border border-yellow-500/20 p-5">
               <p className="font-mono text-xs text-slate-500">Errors</p>
               <p
-                className={`font-heading mt-1 text-3xl font-bold ${(summary.byType.error ?? 0) > 0 ? "text-red-400" : "text-neon-green"}`}
+                className={`font-heading mt-1 text-3xl font-bold ${(summary.byType.button_click ?? 0) > 0 ? "text-red-400" : "text-neon-green"}`}
               >
-                {(summary.byType.error ?? 0).toLocaleString()}
+                {(summary.byType.button_click ?? 0).toLocaleString()}
               </p>
               <p className="mt-1 font-mono text-xs text-slate-600">
-                {(summary.byType.error ?? 0) === 0 ? "All clear" : "Needs attention"}
+                {(summary.byType.button_click ?? 0) === 0 ? "All clear" : "Needs attention"}
               </p>
             </div>
           </div>
