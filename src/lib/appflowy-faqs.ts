@@ -6,6 +6,8 @@
  *   **Answer**: ...
  *   **Category**: general|pricing|technical|process
  *   **Locale**: en, el, fr
+ *   **Published**: true/false
+ *   **Order**: number
  */
 
 import {
@@ -20,6 +22,7 @@ import { staticFaqs } from "./notion-faqs";
 
 // Re-export types from Notion adapter (single source of truth)
 export { type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
+
 function stripPrefix(name: string): string {
   return name.replace(/^\[FAQ\]\s*/i, "").trim();
 }
@@ -43,6 +46,30 @@ async function getPrimaryWorkspaceId(): Promise<string | null> {
   }
 }
 
+function mapMarkdownToFaq(viewId: string, markdown: string, lastEdited: string): Faq & { published: boolean; order?: number } {
+  const localesRaw = parseField(markdown, "Locale");
+  const publishedRaw = parseField(markdown, "Published").toLowerCase();
+  const orderRaw = parseField(markdown, "Order");
+  const locales = localesRaw
+    ? localesRaw
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean)
+    : [];
+  const published = publishedRaw === "true" || publishedRaw === "yes" || publishedRaw === "✅";
+  const order = orderRaw ? parseInt(orderRaw, 10) : undefined;
+  const faq: Faq & { published: boolean; order?: number } = {
+    id: viewId,
+    question: stripPrefix(view.name),
+    answer: parseField(markdown, "Answer") || markdown || "",
+    category: (parseField(markdown, "Category") || "general") as FaqCategory,
+    locales,
+    published,
+    order,
+  };
+  return faq;
+}
+
 export async function getFaqs(locale?: string): Promise<Faq[]> {
   if (!(await isAppFlowyConfigured())) return [];
 
@@ -63,28 +90,24 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
         markdown = "";
       }
 
-      const localesRaw = parseField(markdown, "Locale");
-      const locales = localesRaw
-        ? localesRaw
-            .split(",")
-            .map((l) => l.trim())
-            .filter(Boolean)
-        : [];
-      const faq: Faq = {
-        id: view.view_id,
-        question: stripPrefix(view.name),
-        answer: parseField(markdown, "Answer") || markdown || "",
-        category: (parseField(markdown, "Category") || "general") as FaqCategory,
-        locales,
-      };
-
-      if (locale && faq.locales.length > 0 && !faq.locales.includes(locale)) {
+      const mapped = mapMarkdownToFaq(view.view_id, markdown, view.last_edited_time);
+      
+      // Filter by published status for public API
+      if (!mapped.published) continue;
+      
+      if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
         continue;
       }
-      faqs.push(faq);
+      faqs.push(mapped);
     }
 
-    return faqs;
+    // Sort by order, then by last edited time
+    return faqs.sort((a, b) => {
+      const orderA = (a as any).order ?? 999999;
+      const orderB = (b as any).order ?? 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
   } catch {
     return [];
   }
@@ -96,7 +119,7 @@ export async function getFaqsByCategory(category: FaqCategory, locale?: string):
 }
 
 /**
- * List ALL FAQs for the admin panel (no locale filtering).
+ * List ALL FAQs for the admin panel (published + unpublished, no locale filtering).
  * Mirrors the Notion getAllFaqsAdmin function.
  */
 export async function getAllFaqsAdmin(): Promise<Faq[]> {
@@ -119,26 +142,18 @@ export async function getAllFaqsAdmin(): Promise<Faq[]> {
         markdown = "";
       }
 
-      const localesRaw = parseField(markdown, "Locale");
-      const locales = localesRaw
-        ? localesRaw
-            .split(",")
-            .map((l) => l.trim())
-            .filter(Boolean)
-        : [];
-      const faq: Faq = {
-        id: view.view_id,
-        question: stripPrefix(view.name),
-        answer: parseField(markdown, "Answer") || markdown || "",
-        category: (parseField(markdown, "Category") || "general") as FaqCategory,
-        locales,
-      };
-
-      // Admin version: no locale filtering
-      faqs.push(faq);
+      const mapped = mapMarkdownToFaq(view.view_id, markdown, view.last_edited_time);
+      // Admin version: no filtering by published or locale
+      faqs.push(mapped);
     }
 
-    return faqs;
+    // Sort by order, then by last edited time
+    return faqs.sort((a, b) => {
+      const orderA = (a as any).order ?? 999999;
+      const orderB = (b as any).order ?? 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
   } catch {
     return staticFaqs;
   }
