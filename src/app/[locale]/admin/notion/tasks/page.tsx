@@ -1,26 +1,6 @@
-"use client";
-
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
-
-interface Task {
-  id: string;
-  task: string;
-  status: string;
-  priority: string;
-  assignee: string;
-  project: string;
-  dueDate: string;
-  estimate: string;
-  type: string;
-  description: string;
-  labels: string[];
-  sprint?: string;
-  url: string;
-}
-
-type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
-type TaskPriority = "Urgent" | "High" | "Medium" | "Low";
+import type { Task, TaskStatus, TaskPriority } from "@/lib/appflowy-projects";
 
 const COLUMNS: TaskStatus[] = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
 
@@ -113,7 +93,7 @@ export default function TasksKanbanPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks");
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { tasks: Task[] };
       setTasks(data.tasks ?? []);

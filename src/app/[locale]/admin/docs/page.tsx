@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type { DocRecord } from "@/lib/notion-docs";
+import type { AppFlowyDoc } from "@/lib/appflowy-docs";
 
 export default function AdminDocsPage() {
   const [docs, setDocs] = useState<DocRecord[]>([]);
@@ -14,7 +14,7 @@ export default function AdminDocsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/docs");
+      const res = await fetchWithAuth("/api/admin/appflowy/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { docs: DocRecord[] };
       setDocs(data.docs ?? []);

@@ -1,26 +1,6 @@
-"use client";
-
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
-
-interface Project {
-  id: string;
-  name: string;
-  status: string;
-  priority: string;
-  type: string;
-  owner: string;
-  startDate: string;
-  dueDate: string;
-  description: string;
-  budget: number | null;
-  progress: number;
-  tags: string[];
-  url: string;
-}
-
-type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
-type ProjectPriority = "Critical" | "High" | "Medium" | "Low";
+import type { Project, ProjectStatus, ProjectPriority } from "@/lib/appflowy-projects";
 
 const STATUS_STYLES: Record<string, string> = {
   Planning: "bg-neon-blue/10 text-neon-blue border-neon-blue/30",
@@ -126,8 +106,8 @@ export default function ProjectsPage() {
     try {
       const url =
         filterStatus === "all"
-          ? "/api/admin/notion/projects"
-          : `/api/admin/notion/projects?status=${encodeURIComponent(filterStatus)}`;
+          ? "/api/admin/appflowy/projects"
+          : `/api/admin/appflowy/projects?status=${encodeURIComponent(filterStatus)}`;
       const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { projects: Project[] };
@@ -147,7 +127,7 @@ export default function ProjectsPage() {
   const updateStatus = async (pageId: string, status: ProjectStatus) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, status }),
@@ -164,7 +144,7 @@ export default function ProjectsPage() {
   const updateProgress = async (pageId: string, progress: number) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, progress }),
@@ -182,7 +162,7 @@ export default function ProjectsPage() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

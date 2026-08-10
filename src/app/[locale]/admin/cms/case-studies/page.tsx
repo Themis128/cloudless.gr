@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
-import type { CaseStudy, CaseStudyInput, CaseStudyMetric } from "@/lib/notion-case-studies";
+import type { CaseStudy, CaseStudyInput, CaseStudyMetric } from "@/lib/appflowy-case-studies";
 
 const EMPTY_FORM: CaseStudyInput & {
   metricsText?: string;
@@ -54,7 +54,7 @@ export default function AdminCaseStudiesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/case-studies");
+      const res = await fetchWithAuth("/api/admin/appflowy/case-studies");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { caseStudies: CaseStudy[] };
       setItems(data.caseStudies ?? []);
@@ -120,7 +120,7 @@ export default function AdminCaseStudiesPage() {
         .filter(Boolean);
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/notion/case-studies", {
+      const res = await fetchWithAuth("/api/admin/appflowy/case-studies", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -143,7 +143,7 @@ export default function AdminCaseStudiesPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/notion/case-studies?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/appflowy/case-studies?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
-import type { Faq, FaqInput, FaqCategory } from "@/lib/notion-faqs";
+import type { Faq, FaqInput, FaqCategory } from "@/lib/appflowy-faqs";
 
 const FAQ_CATEGORIES: FaqCategory[] = ["general", "pricing", "technical", "process"];
 
@@ -30,7 +30,7 @@ export default function AdminFaqsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/faqs");
+      const res = await fetchWithAuth("/api/admin/appflowy/faqs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { faqs: Faq[] };
       setItems(data.faqs ?? []);
@@ -74,7 +74,7 @@ export default function AdminFaqsPage() {
       const { pageId, ...input } = form;
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/notion/faqs", {
+      const res = await fetchWithAuth("/api/admin/appflowy/faqs", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -97,7 +97,7 @@ export default function AdminFaqsPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/notion/faqs?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/appflowy/faqs?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
