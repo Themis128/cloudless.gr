@@ -15,9 +15,11 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import type { Faq, FaqCategory } from "../types/faqs";
-import { staticFaqs } from "../types/faqs";
+import type { Faq, FaqCategory, FaqInput } from "./notion-faqs";
+import { staticFaqs } from "./notion-faqs";
 
+// Re-export types from Notion adapter (single source of truth)
+export { type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
 function stripPrefix(name: string): string {
   return name.replace(/^\[FAQ\]\s*/i, "").trim();
 }
@@ -141,3 +143,5 @@ export async function getAllFaqsAdmin(): Promise<Faq[]> {
     return staticFaqs;
   }
 }
+
+export { staticFaqs };
