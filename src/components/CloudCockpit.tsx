@@ -110,10 +110,9 @@ function TimeSeries() {
   const active = useAnimationActive(hostRef);
   useEffect(() => {
     if (!active) return;
-    // Bumped from 380ms to 1000ms — the cursor still feels live but the
-    // main thread gets ~2.6× more idle time. Combined with the off-screen
-    // pause above, the home-page Lighthouse TBT improves meaningfully.
-    const id = setInterval(() => setCursor((c) => (c + 1) % n), 1000);
+    // Increased from 1000ms to 3000ms to further reduce main thread work
+    // while keeping the cursor animation reasonably smooth
+    const id = setInterval(() => setCursor((c) => (c + 1) % n), 3000);
     return () => clearInterval(id);
   }, [n, active]);
   const cx = xFor(cursor);

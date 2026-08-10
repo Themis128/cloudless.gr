@@ -144,6 +144,33 @@ jobs:
         NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
         NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
       run: pnpm build
+    - name: Install Syft for SBOM generation
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+    - name: Generate SBOM
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        syft packages:pnpm-lock.yaml -o syft-json > sbom.json
+        syft . -o syft-json >> sbom.json
+    - name: Upload SBOM artifact
+      if: steps.skip.outputs.already != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom
+        path: sbom.json
+        retention-days: 30
+    - name: Scan licenses with pnpm licenses
+      if: steps.skip.outputs.already != 'true'
+      run: |
+        pnpm licenses ls --json > licenses.json
+    - name: Upload licenses artifact
+      if: steps.skip.outputs.already != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: licenses
+        path: licenses.json
+        retention-days: 30
 
     - name: Sync standalone → releases/ + flip symlink
       # Atomic-symlink deploy. Writes the new bundle into a per-SHA release

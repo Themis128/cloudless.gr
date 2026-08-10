@@ -110,36 +110,36 @@ export default async function RootLayout({
           Skip to content
         </a>
         <ChunkReloadGuard />
-        {GA_ID ? (
-          <>
-            {/* Modern Google Analytics initialization */}
-            <Script
-              id="gtag-consent-init"
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-              strategy="beforeInteractive"
-              nonce={nonce}
-            />
-            <Script
-              id="gtag-config"
-              strategy="beforeInteractive"
-              nonce={nonce}
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_ID}', {
-                    // Modern initialization with consent mode
-                    consent_mode: 'default',
-                    analytics_storage: 'denied',
-                    ad_storage: 'denied',
-                    wait_for_update: 500
-                  });
-                `,
-              }}
-            />
-          </>
-        ) : null}
+  {GA_ID ? (
+    <>
+      {/* Modern Google Analytics initialization */}
+      <Script
+        id="gtag-consent-init"
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        strategy="afterInteractive"
+        nonce={nonce}
+      />
+      <Script
+        id="gtag-config"
+        strategy="afterInteractive"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}', {
+              // Modern initialization with consent mode
+              consent_mode: 'default',
+              analytics_storage: 'denied',
+              ad_storage: 'denied',
+              wait_for_update: 500
+            });
+          `,
+        }}
+      />
+    </>
+  ) : null}
         {children}
         <WebMCPProvider />
         <PlausibleAnalytics />

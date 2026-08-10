@@ -37,11 +37,11 @@ describe("proxy.ts HSTS header — preload eligibility", () => {
   });
 
   it("includes 'includeSubDomains'", () => {
-    expect(hsts).toContain("includeSubDomains");
+    expect(hsts).toMatch(/includeSubDomains/);
   });
 
   it("includes 'preload'", () => {
-    expect(hsts).toContain("preload");
+    expect(hsts).toMatch(/preload/);
   });
 });
 

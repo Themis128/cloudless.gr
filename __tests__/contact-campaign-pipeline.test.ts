@@ -108,6 +108,8 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     const subject = emailInput.subject;
     expect(subject).toContain("shop-online — E-shop Launch");
     expect(subject).toContain("Γιώργος");
+    expect(emailInput.body).toContain("E-shop Launch");
+    expect(emailInput.body).toContain("€1.800");
   });
 
   it("sends Slack notification with campaign tier in service field", async () => {
@@ -166,6 +168,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
         dealstage: "qualifiedtobuy",
         lead_source: "contact_form",
         description: expect.stringContaining("E-shop Launch"),
+        amount: "1800",
       })
     );
   });
@@ -200,6 +203,8 @@ describe("POST /api/contact — campaign tier pipeline", () => {
         service: "shop-online — E-shop Launch",
         message: expect.stringContaining("Campaign: shop-online"),
         source: "contact",
+        tier: "E-shop Launch",
+        price: "€1.800",
       })
     );
   });

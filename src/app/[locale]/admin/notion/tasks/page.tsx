@@ -1,3 +1,5 @@
+"use client";
+
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority } from "@/lib/appflowy-projects";

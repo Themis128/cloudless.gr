@@ -1,0 +1,51 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm build
+      - name: Install cosign for artifact signing
+        run: |
+          curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
+      - name: Generate temporary keypair for signing
+        run: |
+          cosign generate-key-pair
+          mv cosign.key cosign.key.pem
+          mv cosign.pub cosign.pub.pem
+      - name: Sign build artifacts
+        run: |
+          # Sign the .next directory (built Next.js app)
+          find .next -type f -exec cosign sign-blob --key cosign.key.pem {} \;
+          # Also sign the package.json and pnpm-lock.yaml for dependency verification
+          cosign sign-blob --key cosign.key.pem package.json
+          cosign sign-blob --key cosign.key.pem pnpm-lock.yaml
+      - name: Upload signatures as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signatures
+          path: |
+            *.sig
+            *.pem
+          retention-days: 30
+      - name: Deploy to Cloudflare
+        run: pnpm deploy
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_PROJECT: cloudless-gr
+          SENTRY_ORG: cloudless

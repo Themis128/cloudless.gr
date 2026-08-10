@@ -181,6 +181,112 @@ jobs:
           nextjs-${{ runner.os }}-
     - run: pnpm install --frozen-lockfile --prefer-offline
     - run: pnpm build
+    - name: Install Syft for SBOM generation
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+    - name: Generate SBOM
+      run: |
+        syft packages:pnpm-lock.yaml -o syft-json > sbom.json
+        syft . -o syft-json >> sbom.json
+    - name: Generate SLSA provenance
+      run: |
+        # Create SLSA Level 1 provenance attestation
+        cat > provenance.json << EOF
+        {
+          "_type": "https://in-toto.io/Statement/v0.1",
+          "subject": [
+            {
+              "name": ".next",
+              "digest": {
+                "sha256": "$(find .next -type f -exec sha256sum {} + | sha256sum | cut -d' ' -f1)"
+              }
+            },
+            {
+              "name": "package.json",
+              "digest": {
+                "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
+              }
+            },
+            {
+              "name": "pnpm-lock.yaml",
+              "digest": {
+                "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
+              }
+            }
+          ],
+          "predicateType": "https://slsa.dev/provenance/v0.1",
+          "predicate": {
+            "builder": {
+              "id": "https://github.com/cloudless-gr/ci-workflow"
+            },
+            "buildType": "https://github.com/cloudless-gr/nextjs-build",
+            "invocation": {
+              "configSource": {
+                "uri": "https://github.com/cloudless-gr/cloudless.gr",
+                "digest": {
+                  "sha256": "$(git rev-parse HEAD)"
+                }
+              },
+              "entryPoint": "pnpm build",
+              "arguments": [
+                "--frozen-lockfile",
+                "--prefer-offline"
+              ]
+            },
+            "materials": [
+              {
+                "uri": "git+https://github.com/cloudless-gr/cloudless.gr",
+                "digest": {
+                  "sha256": "$(git rev-parse HEAD)"
+                }
+              },
+              {
+                "uri": "file://package.json",
+                "digest": {
+                  "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
+                }
+              },
+              {
+                "uri": "file://pnpm-lock.yaml",
+                "digest": {
+                  "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
+                }
+              }
+            ]
+          }
+        }
+        EOF
+    - name: Upload provenance artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: provenance
+        path: provenance.json
+        retention-days: 30
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom
+        path: sbom.json
+        retention-days: 30
+    - name: Supply chain monitoring (Endpoint SCPM or similar)
+      # This step is a placeholder for integrating Endor SCPM or similar supply chain monitoring tools
+      # To enable: uncomment and configure the appropriate tool
+      # Example for Endor SCPM:
+      #   - uses: endorlabs/scp-action@v1
+      #     with:
+      #       api-key: ${{ secrets.ENDOR_API_KEY }}
+      run: |
+        echo "Supply chain monitoring step - to be implemented with Endor SCPM or similar"
+        echo "For now, this documents where supply chain monitoring would be integrated"
+    - name: Scan licenses with pnpm licenses
+      run: |
+        pnpm licenses ls --json > licenses.json
+    - name: Upload licenses artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: licenses
+        path: licenses.json
+        retention-days: 30
 
   test:
     name: Unit Tests

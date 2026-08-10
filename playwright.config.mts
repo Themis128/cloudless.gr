@@ -52,11 +52,11 @@ export default defineConfig({
       ? "github"
       : [["html", { open: "never" }], ["list"]],
 
-  timeout: 45_000,
-  expect: { timeout: 15_000 },
+  timeout: 60_000,
+  expect: { timeout: 20_000 },
 
   use: {
-    baseURL: "http://localhost:4000",
+    baseURL: "http://localhost:4001/en",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

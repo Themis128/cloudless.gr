@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 interface TypingTextProps {
   texts: string[];
@@ -33,6 +33,38 @@ function useReducedMotion(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
+/** Returns true when the given ref's element is visible in the viewport
+ *  AND the user hasn't requested reduced motion. Used to pause all the
+ *  typing animation when the text is off screen or reduced motion is requested.
+ */
+function useTypingActive(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [visible, setVisible] = useState(true);
+  const [allowed, setAllowed] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      // Start animating slightly before scroll lands on the widget so
+      // the first frame the user sees is already up-to-date.
+      rootMargin: "100px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setAllowed(!mq.matches);
+    apply();
+    mq.addEventListener?.("change", apply);
+    return () => mq.removeEventListener?.("change", apply);
+  }, []);
+
+  return visible && allowed;
+}
+
 export default function TypingText({
   texts,
   initialText,
@@ -48,9 +80,11 @@ export default function TypingText({
   const [charIndex, setCharIndex] = useState(firstText.length);
   const [isDeleting, setIsDeleting] = useState(false);
   const reducedMotion = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
+  const active = useTypingActive(ref);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (reducedMotion || !active) return;
     const current = texts[textIndex];
 
     if (!isDeleting && charIndex < current.length) {
@@ -90,10 +124,15 @@ export default function TypingText({
     deletingSpeed,
     pauseDuration,
     reducedMotion,
+    active,
   ]);
 
   return (
-    <span className={className} suppressHydrationWarning>
+    <span
+      ref={ref}
+      className={className}
+      suppressHydrationWarning
+    >
       {displayed}
       {!reducedMotion && <span className="typing-cursor" />}
     </span>
