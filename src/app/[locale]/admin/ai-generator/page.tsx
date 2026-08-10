@@ -52,41 +52,6 @@ export default function AiGeneratorPage() {
       setResult(data.result ?? "");
       setUsage(data.usage ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function copyToClipboard() {
-    if (!result) return;
-    await navigator.clipboard.writeText(result).catch(() => {});
-    setCopied(true);
-  }
-
-  if (notConfigured) {
-    return (
-      <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
-        <p className="font-mono text-sm text-yellow-400">
-          Cloudflare Workers AI is not configured. Set{" "}
-          <code className="text-yellow-300">CLOUDFLARE_ACCOUNT_ID</code> and{" "}
-          <code className="text-yellow-300">CLOUDFLARE_API_TOKEN</code> in the deploy environment
-          (see <code className="text-yellow-300">docs/WORKERS_AI_SETUP.md</code>).
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-          <span className="font-mono text-xs text-amber-400">CLOUDFLARE WORKERS AI</span>
-        </div>
-        <h1 className="font-heading text-2xl font-bold text-white">AI Generator</h1>
-      </div>
-
       <form onSubmit={generate} className="space-y-4">
         <div>
           <label htmlFor="prompt" className="mb-2 block font-mono text-xs text-slate-400">
