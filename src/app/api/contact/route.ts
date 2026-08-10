@@ -10,8 +10,8 @@ import {
   associateDealWithContact,
   createContactNote,
 } from "@/lib/espocrm";
-import { saveSubmission } from "@/lib/notion-forms";
-import { trackEvent } from "@/lib/notion-analytics";
+import { saveSubmission } from "@/lib/appflowy-forms";
+import { trackEvent } from "@/lib/appflowy-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
@@ -223,7 +223,7 @@ export async function POST(request: Request) {
       }),
     ])
       .then((results) => {
-        const labels = ["slack", "espocrm", "notion", "activecampaign"];
+        const labels = ["slack", "espocrm", "appflowy", "activecampaign"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);

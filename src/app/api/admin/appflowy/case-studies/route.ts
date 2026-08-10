@@ -1,44 +1,80 @@
-/**
- * /api/admin/appflowy/case-studies — backed by AppFlowy
- */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { listAllWorkspaces, listWorkspaceViews, AppFlowyNotConfiguredError } from "@/lib/appflowy";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { getCaseStudies } from "@/lib/appflowy-case-studies";
+import type { CaseStudyInput } from "@/lib/notion-case-studies";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  if (!(await isAppFlowyConfigured())) {
+    return NextResponse.json({ error: "AppFlowy Case Studies not configured" }, { status: 503 });
+  }
+
   try {
-    const workspaceId = (await listAllWorkspaces())[0]?.workspace_id;
-    if (!workspaceId) {
-      return NextResponse.json({ caseStudies: [], count: 0 });
-    }
-
-    const views = await listWorkspaceViews(workspaceId);
-    const caseStudies = views.map((v) => ({
-      id: v.view_id,
-      title: v.name,
-      url: `/appflowy/view/${v.view_id}`,
-    }));
-
+    const caseStudies = await getCaseStudies();
     return NextResponse.json({ caseStudies, count: caseStudies.length });
   } catch (err) {
-    if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ caseStudies: [], count: 0 });
-    }
+    console.error("[Admin AppFlowy Case Studies] GET failed:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Failed to list case studies" }, { status: 500 });
   }
 }
 
-export async function POST() {
-  return NextResponse.json({ error: "Create via AppFlowy UI" }, { status: 501 });
+export async function POST(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  if (!(await isAppFlowyConfigured())) {
+    return NextResponse.json({ error: "AppFlowy Case Studies not configured" }, { status: 503 });
+  }
+
+  let body: CaseStudyInput;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.title?.trim()) {
+    return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+
+  // AppFlowy write API not yet implemented
+  console.log("[Admin AppFlowy Case Studies] Would create case study:", body.title);
+  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
 }
 
-export async function PATCH() {
-  return NextResponse.json({ ok: true });
+export async function PATCH(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  let body: { pageId: string } & Partial<CaseStudyInput>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.pageId) {
+    return NextResponse.json({ error: "pageId is required" }, { status: 400 });
+  }
+
+  // AppFlowy write API not yet implemented
+  console.log("[Admin AppFlowy Case Studies] Would update case study:", body.pageId);
+  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
 }
 
-export async function DELETE() {
-  return NextResponse.json({ error: "Delete via AppFlowy UI" }, { status: 501 });
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  const pageId = new URL(request.url).searchParams.get("pageId");
+  if (!pageId) {
+    return NextResponse.json({ error: "pageId query parameter is required" }, { status: 400 });
+  }
+
+  // AppFlowy write API not yet implemented
+  console.log("[Admin AppFlowy Case Studies] Would delete case study:", pageId);
+  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
 }
