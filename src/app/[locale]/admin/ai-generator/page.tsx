@@ -52,6 +52,30 @@ export default function AiGeneratorPage() {
       setResult(data.result ?? "");
       setUsage(data.usage ?? null);
     } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyToClipboard() {
+    if (!result) return;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      setCopied(false);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+    } catch (err) {
+      console.warn("Clipboard write failed:", err);
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-4.5rem)] p-6">
       <form onSubmit={generate} className="space-y-4">
         <div>
           <label htmlFor="prompt" className="mb-2 block font-mono text-xs text-slate-400">
@@ -118,7 +142,7 @@ export default function AiGeneratorPage() {
             onClick={copyToClipboard}
             className="text-neon-cyan mt-3 font-mono text-xs hover:underline"
           >
-            {copied ? "Copied ✓" : "Copy"}
+            {copied ? "Copied � ✓" : "Copy"}
           </button>
         </div>
       )}
