@@ -33,12 +33,16 @@ const DB_ICONS: Record<string, string> = {
 };
 
 const DB_LINKS: Record<string, string> = {
-  Blog: "/admin/notion",
-  Docs: "/docs",
-  Projects: "/admin/notion/projects",
-  Tasks: "/admin/notion/tasks",
-  Submissions: "/admin/notion",
-  Analytics: "/admin/notion/analytics",
+  Blog: "/admin/appflowy/blog",
+  Docs: "/admin/docs",
+  Projects: "/admin/appflowy/projects",
+  Tasks: "/admin/appflowy/tasks",
+  Submissions: "/admin/appflowy/submissions",
+  Analytics: "/admin/appflowy/analytics",
+  "Case Studies": "/admin/appflowy/case-studies",
+  FAQs: "/admin/appflowy/faqs",
+  Services: "/admin/appflowy/services",
+  Testimonials: "/admin/appflowy/testimonials",
 };
 
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
@@ -215,7 +219,7 @@ export default function NotionStatusPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/status");
+      const res = await fetchWithAuth("/api/admin/appflowy/status");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: StatusResponse = await res.json();
       setData(json);

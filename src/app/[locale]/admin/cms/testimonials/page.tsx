@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
-import type { Testimonial, TestimonialInput } from "@/lib/notion-testimonials";
+import type { Testimonial, TestimonialInput } from "@/lib/appflowy-testimonials";
 
 const EMPTY_FORM: TestimonialInput = {
   name: "",
@@ -32,7 +32,7 @@ export default function AdminTestimonialsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/testimonials");
+      const res = await fetchWithAuth("/api/admin/appflowy/testimonials");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { testimonials: Testimonial[] };
       setItems(data.testimonials ?? []);
