@@ -167,7 +167,7 @@ export default async function ServicesPage() {
               className="group relative flex flex-1 flex-col items-center text-center"
               aria-label="Choose Your Scope: Services or bundle"
             >
-              <div className="border-neon-magenta bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/25 group-hover:bg-neon-magenta/25 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-2 transition-all duration-200">
+              <div className="border-neon-magenta bg-neon-magenta/10 text-neon-magenta ring-neon-magenta/25 group-hover:bg-neon-magenta/25 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-2 transition-all duration-200">
                 02
               </div>
               <span className="text-neon-magenta font-mono text-xs font-semibold">

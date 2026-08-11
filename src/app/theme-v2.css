@@ -320,6 +320,15 @@
   background-color: color-mix(in sRGB, var(--surface-subtle) 50%, transparent);
 }
 
+/* Blog page specific overrides for light mode */
+[data-theme="light"] .text-slate-400 {
+  color: var(--ink-body);
+}
+
+[data-theme="light"] .placeholder-slate-600::placeholder {
+  color: var(--ink-muted);
+}
+
 /* Borders */
 [data-theme="light"] .border-slate-700,
 [data-theme="light"] .border-slate-800 {
