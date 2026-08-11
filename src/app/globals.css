@@ -1,3 +1,4 @@
+------- REPLACE
 @import "tailwindcss";
 @import "./theme-v2.css";
 
@@ -6,7 +7,6 @@
  * resolved values now come from the v2 ("Calm Cloud") palette in theme-v2.css.
  * This bridge lets every existing utility (bg-void, text-neon-cyan, etc.)
  * pick up the new palette without touching component code.
- *
  * Phase 2 ships the dark variant of v2 only — marketing pages remain dark
  * to avoid breaking text-white-on-dark contrasts. Phase 3 introduces light
  * mode page by page.
@@ -273,7 +273,7 @@ h6 {
   transform: translateY(0);
 }
 
-/* ── Hero entrance ── */
+/* ── Hero entrance ─ */
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -497,9 +497,4 @@ select:focus {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }
