@@ -307,3 +307,20 @@ jobs:
         cache: pnpm
     - run: pnpm install --frozen-lockfile --prefer-offline
     - run: pnpm test:ci
+
+  agent-tests:
+    name: Agent Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405         # v6.2.0
+      with:
+        python-version: '3.12'
+    - name: Install Python dependencies
+      run: |
+        python3 -m venv .venv
+        .venv/bin/pip install -r agents/requirements.txt
+    - name: Run agent tests
+      run: |
+        .venv/bin/python agents/test_memory.py

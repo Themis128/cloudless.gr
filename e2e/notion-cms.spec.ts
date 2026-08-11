@@ -31,35 +31,46 @@ import {
 const FIRST_STATIC_POST_SLUG = staticPosts[0]?.slug;
 const FIRST_STATIC_CASE_SLUG = staticCaseStudies[0]?.slug;
 
+// API base URL without locale prefix (API routes are at /api/... not /:locale/api/...)
+const API_BASE = "http://localhost:4000";
+
+// Helper to match locale-prefixed blog URLs (e.g., /en/blog/, /el/blog/, etc.)
+function getBlogPostLinks(page: any) {
+  return page.locator('a[href*="/blog/"]').filter({
+    hasNot: page.locator('a[href$="/blog"]'),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Blog
 // ---------------------------------------------------------------------------
 
 test.describe("AppFlowy CMS — /blog", () => {
   test("renders the blog header and search input", async ({ page }) => {
-    await page.goto("/blog");
-    await expect(
-      page.getByRole("heading", { level: 1, name: /insights/i })
-    ).toBeVisible();
-    await expect(page.getByPlaceholder(/search posts/i)).toBeVisible();
+    await page.goto("/en/blog");
+    // Heading: "Insights & practical guides" — & may be & in DOM
+    await expect(page.getByRole("heading", { level: 1, name: /insights.*practical/i })).toBeVisible();
+    // Search input placeholder "Search posts…" (with ellipsis)
+    await expect(page.getByPlaceholder(/search posts.*/i)).toBeVisible();
   });
 
   test("lists at least one post card linking to /blog/[slug]", async ({ page }) => {
-    await page.goto("/blog");
-    const postLinks = page.locator('a[href^="/blog/"], a[href*="/blog/"]').filter({
-      hasNot: page.locator('a[href$="/blog"]'),
-    });
+    await page.goto("/en/blog");
+    // Links include locale prefix (e.g., /en/blog/slug)
+    const postLinks = getBlogPostLinks(page);
+    // Should have at least the 7 static posts
     expect(await postLinks.count()).toBeGreaterThan(0);
     await expect(postLinks.first()).toBeVisible();
   });
 
   test("search query is preserved in the input", async ({ page }) => {
-    await page.goto("/blog?q=cloud");
-    await expect(page.getByPlaceholder(/search posts/i)).toHaveValue("cloud");
+    await page.goto("/en/blog?q=cloud");
+    await expect(page.getByPlaceholder(/search posts.*/i)).toHaveValue("cloud");
   });
 
   test("nonexistent search yields empty-state message", async ({ page }) => {
-    await page.goto("/blog?q=zzz_no_such_post_xyz");
+    await page.goto("/en/blog?q=zzz_no_such_post_xyz");
+    // With static fallback, empty search renders "No posts found." message
     await expect(page.getByText(/no posts found/i)).toBeVisible();
   });
 });
@@ -68,13 +79,13 @@ test.describe("AppFlowy CMS — /blog/[slug]", () => {
   test.skip(!FIRST_STATIC_POST_SLUG, "no static posts configured");
 
   test("static fallback post renders an article heading", async ({ page }) => {
-    await page.goto(`/blog/${FIRST_STATIC_POST_SLUG}`);
-    await expect(page).toHaveURL(new RegExp(`/blog/${FIRST_STATIC_POST_SLUG}`));
+    await page.goto(`/en/blog/${FIRST_STATIC_POST_SLUG}`);
+    await expect(page).toHaveURL(new RegExp(`/en/blog/${FIRST_STATIC_POST_SLUG}`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("nonexistent slug renders the 404 page", async ({ page }) => {
-    await page.goto("/blog/this-slug-does-not-exist");
+    await page.goto("/en/blog/this-slug-does-not-exist");
     await expect(
       page.getByRole("heading", { level: 1, name: /page not found|introuvable|δεν βρέθηκε/i })
     ).toBeVisible();
@@ -83,7 +94,7 @@ test.describe("AppFlowy CMS — /blog/[slug]", () => {
 
 test.describe("AppFlowy CMS — /api/blog/posts contract", () => {
   test("returns a non-empty array of posts with required fields", async ({ request }) => {
-    const res = await request.get("/api/blog/posts");
+    const res = await request.get(`${API_BASE}/api/blog/posts`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     // API wraps posts in { posts: [...] } when Notion is configured or in static fallback
@@ -102,7 +113,7 @@ test.describe("AppFlowy CMS — /api/blog/posts contract", () => {
 
 test.describe("AppFlowy CMS — /docs", () => {
   test("renders the docs header and search input", async ({ page }) => {
-    await page.goto("/docs");
+    await page.goto("/en/docs");
     await page.waitForLoadState("networkidle");
     await expect(
       page.getByRole("heading", { level: 1, name: /documentation/i })
@@ -111,14 +122,14 @@ test.describe("AppFlowy CMS — /docs", () => {
   });
 
   test("renders either category headings or the empty state", async ({ page }) => {
-    await page.goto("/docs");
+    await page.goto("/en/docs");
     const categoryHeading = page.getByRole("heading", { level: 2 });
     const emptyState = page.getByText(/no documentation published yet|no docs match/i);
     await expect(categoryHeading.or(emptyState).first()).toBeVisible();
   });
 
   test("filtering with no matches shows the no-results state", async ({ page }) => {
-    await page.goto("/docs?q=zzz_no_such_doc_xyz");
+    await page.goto("/en/docs?q=zzz_no_such_doc_xyz");
     await page.waitForLoadState("networkidle");
     await expect(
       page.getByText(/no docs match your filters|no documentation published yet/i)
@@ -128,7 +139,7 @@ test.describe("AppFlowy CMS — /docs", () => {
 
 test.describe("AppFlowy CMS — /api/docs contract", () => {
   test("returns an array (empty or populated) with required fields", async ({ request }) => {
-    const res = await request.get("/api/docs");
+    const res = await request.get(`${API_BASE}/api/docs`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     // API wraps docs in { docs: [...] } or returns a raw array
@@ -148,7 +159,7 @@ test.describe("AppFlowy CMS — /api/docs contract", () => {
 
 test.describe("AppFlowy CMS — /api/testimonials contract", () => {
   test("returns an array with required fields", async ({ request }) => {
-    const res = await request.get("/api/testimonials");
+    const res = await request.get(`${API_BASE}/api/testimonials`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.testimonials;
@@ -165,7 +176,7 @@ test.describe("AppFlowy CMS — /api/testimonials contract", () => {
   });
 
   test("featured endpoint returns only featured items", async ({ request }) => {
-    const res = await request.get("/api/testimonials?featured=true");
+    const res = await request.get(`${API_BASE}/api/testimonials?featured=true`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.testimonials;
@@ -178,7 +189,7 @@ test.describe("AppFlowy CMS — /api/testimonials contract", () => {
 
 test.describe("AppFlowy CMS — testimonials on homepage", () => {
   test("homepage renders at least one testimonial quote", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("networkidle");
     // Testimonials are rendered as blockquotes or elements with the quote text
     const firstQuote = staticTestimonials[0].quote.slice(0, 20);
@@ -196,7 +207,7 @@ test.describe("AppFlowy CMS — testimonials on homepage", () => {
 
 test.describe("AppFlowy CMS — /services page", () => {
   test("renders the services heading", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     await page.waitForLoadState("networkidle");
     await expect(
       page.getByRole("heading", { level: 1 })
@@ -204,7 +215,7 @@ test.describe("AppFlowy CMS — /services page", () => {
   });
 
   test("lists service cards on the services page", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     await page.waitForLoadState("networkidle");
     // When Notion is unreachable, the page renders static fallback data.
     // Assert the page has rendered service-related content.
@@ -218,7 +229,7 @@ test.describe("AppFlowy CMS — /services page", () => {
 
 test.describe("AppFlowy CMS — /api/services contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
-    const res = await request.get("/api/services");
+    const res = await request.get(`${API_BASE}/api/services`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.services;
@@ -233,7 +244,7 @@ test.describe("AppFlowy CMS — /api/services contract", () => {
   });
 
   test("category filter returns only matching services", async ({ request }) => {
-    const res = await request.get("/api/services?category=audit");
+    const res = await request.get(`${API_BASE}/api/services?category=audit`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.services;
@@ -250,7 +261,7 @@ test.describe("AppFlowy CMS — /api/services contract", () => {
 
 test.describe("AppFlowy CMS — /api/faqs contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
-    const res = await request.get("/api/faqs");
+    const res = await request.get(`${API_BASE}/api/faqs`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.faqs;
@@ -264,7 +275,7 @@ test.describe("AppFlowy CMS — /api/faqs contract", () => {
   });
 
   test("category filter returns only matching faqs", async ({ request }) => {
-    const res = await request.get("/api/faqs?category=general");
+    const res = await request.get(`${API_BASE}/api/faqs?category=general`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.faqs;
@@ -274,7 +285,7 @@ test.describe("AppFlowy CMS — /api/faqs contract", () => {
   });
 
   test("locale filter returns faqs for that locale or global ones", async ({ request }) => {
-    const res = await request.get("/api/faqs?locale=en");
+    const res = await request.get(`${API_BASE}/api/faqs?locale=en`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.faqs;
@@ -289,13 +300,13 @@ test.describe("AppFlowy CMS — /api/faqs contract", () => {
 
 test.describe("AppFlowy CMS — /case-studies page", () => {
   test("renders the case studies heading", async ({ page }) => {
-    await page.goto("/case-studies");
+    await page.goto("/en/case-studies");
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
   });
 
   test("lists case studies on the case-studies page", async ({ page }) => {
-    await page.goto("/case-studies");
+    await page.goto("/en/case-studies");
     await page.waitForLoadState("networkidle");
     // When Notion is unreachable, the page may show static fallback or
     // an empty state. Assert the page has rendered without crashing.
@@ -308,13 +319,13 @@ test.describe("AppFlowy CMS — /case-studies/[slug]", () => {
   test.skip(!FIRST_STATIC_CASE_SLUG, "no static case studies configured");
 
   test("static fallback case study renders an article heading", async ({ page }) => {
-    await page.goto(`/case-studies/${FIRST_STATIC_CASE_SLUG}`);
-    await expect(page).toHaveURL(new RegExp(`/case-studies/${FIRST_STATIC_CASE_SLUG}`));
+    await page.goto(`/en/case-studies/${FIRST_STATIC_CASE_SLUG}`);
+    await expect(page).toHaveURL(new RegExp(`/en/case-studies/${FIRST_STATIC_CASE_SLUG}`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
   });
 
   test("nonexistent slug renders the 404 page", async ({ page }) => {
-    await page.goto("/case-studies/this-slug-does-not-exist");
+    await page.goto("/en/case-studies/this-slug-does-not-exist");
     await expect(
       page.getByRole("heading", { level: 1, name: /page not found|introuvable|δεν βρέθηκε/i })
     ).toBeVisible();
@@ -323,7 +334,7 @@ test.describe("AppFlowy CMS — /case-studies/[slug]", () => {
 
 test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   test("returns an array with required fields", async ({ request }) => {
-    const res = await request.get("/api/case-studies");
+    const res = await request.get(`${API_BASE}/api/case-studies`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.caseStudies;
@@ -340,7 +351,7 @@ test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   });
 
   test("featured filter returns only featured case studies", async ({ request }) => {
-    const res = await request.get("/api/case-studies?featured=true");
+    const res = await request.get(`${API_BASE}/api/case-studies?featured=true`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.caseStudies;
@@ -351,7 +362,7 @@ test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   });
 
   test("slug endpoint returns a case study or 404 when not found", async ({ request }) => {
-    const res = await request.get(`/api/case-studies/${FIRST_STATIC_CASE_SLUG}`);
+    const res = await request.get(`${API_BASE}/api/case-studies/${FIRST_STATIC_CASE_SLUG}`);
     // When Notion is configured but unreachable, the endpoint may return 404.
     // When static fallback is available, returns 200 with content.
     if (res.status() === 200) {
@@ -365,7 +376,7 @@ test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   });
 
   test("unknown slug returns 404", async ({ request }) => {
-    const res = await request.get("/api/case-studies/no-such-case-study-xyz");
+    const res = await request.get(`${API_BASE}/api/case-studies/no-such-case-study-xyz`);
     expect(res.status()).toBe(404);
   });
 });

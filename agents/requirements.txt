@@ -1,0 +1,22 @@
+# Cloudless.gr Agentic Workflows Dependencies
+# Install with: .venv/bin/pip install -r agents/requirements.txt
+
+# Core dependencies for Deep Agents
+deepagents>=0.2.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
+langchain-huggingface>=0.1.0
+langchain-chroma>=0.2.0
+sentence-transformers>=2.2.0
+
+# Environment and utilities
+python-dotenv>=1.0.0
+tavily-python>=0.5.0
+requests>=2.31.0
+
+# Type checking
+mypy>=2.1.0
+types-requests>=2.31.0
+
+# Linting
+ruff>=0.15.0

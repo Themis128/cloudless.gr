@@ -14,7 +14,7 @@ fi
 
 # Step 2: Install Python dependencies
 echo "Installing Python dependencies..."
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r agents/requirements.txt
 
 # Step 3: Create .agent-memory directory if needed
 mkdir -p .agent-memory/memories

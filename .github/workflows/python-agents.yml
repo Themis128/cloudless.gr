@@ -1,0 +1,79 @@
+name: Python Agentic Workflows
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  push:
+    paths:
+      - agents/**
+      - setup-agents.sh
+      - .github/workflows/python-agents.yml
+
+jobs:
+  agent-tests:
+    name: Agent Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Install Python dependencies
+      run: |
+        python3 -m venv .venv
+        .venv/bin/pip install -r agents/requirements.txt
+    - name: Run agent tests
+      run: |
+        .venv/bin/python agents/test_memory.py
+
+  research-agent:
+    name: Research Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    env:
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LOCAL_MODEL_NAME: ${{ secrets.LOCAL_MODEL_NAME }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Install Python dependencies
+      run: |
+        python3 -m venv .venv
+        .venv/bin/pip install -r agents/requirements.txt
+    - name: Run research agent
+      if: env.TAVILY_API_KEY != ''
+      run: |
+        .venv/bin/python agents/run_cloudless_agent.py "Latest Cloudflare Workers features 2026"
+      env:
+        PYTHONPATH: .
+
+  docs-research-agent:
+    name: LangChain Docs Research Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    env:
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LOCAL_MODEL_NAME: ${{ secrets.LOCAL_MODEL_NAME }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Install Python dependencies
+      run: |
+        python3 -m venv .venv
+        .venv/bin/pip install -r agents/requirements.txt
+    - name: Run docs research agent
+      run: |
+        .venv/bin/python agents/run_langchain_docs_research.py "Deep Agents memory system"
+      env:
+        PYTHONPATH: .

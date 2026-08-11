@@ -56,7 +56,7 @@ export default defineConfig({
   expect: { timeout: 20_000 },
 
   use: {
-    baseURL: "http://localhost:4000/en",
+    baseURL: "http://localhost:4000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

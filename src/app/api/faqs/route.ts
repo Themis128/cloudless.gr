@@ -6,6 +6,7 @@ import {
 import {
   getFaqs as getNotionFaqs,
   getFaqsByCategory as getNotionFaqsByCategory,
+  staticFaqs,
 } from "../../../lib/notion-faqs";
 import type { FaqCategory } from "../../../lib/notion-faqs";
 import {
@@ -23,8 +24,9 @@ export async function GET(request: Request) {
   const notionConfigured = await isNotionCmsConfigured("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
-    let data = [];
+    let data = staticFaqs;
     if (category) data = data.filter((f) => f.category === category);
+    if (locale) data = data.filter((f) => f.locales.length === 0 || f.locales.includes(locale));
     return NextResponse.json(data, { headers: cmsSourceHeaders("static") });
   }
 
@@ -54,6 +56,9 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("[API /faqs] Fetch error:", err);
-    return NextResponse.json([], { headers: cmsSourceHeaders("static") });
+    let data = staticFaqs;
+    if (category) data = data.filter((f) => f.category === category);
+    if (locale) data = data.filter((f) => f.locales.length === 0 || f.locales.includes(locale));
+    return NextResponse.json(data, { headers: cmsSourceHeaders("static") });
   }
 }
