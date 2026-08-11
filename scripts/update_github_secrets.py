@@ -8,8 +8,6 @@ REPO_NAME = "cloudless.gr"
 
 # AWS SSM secrets
 AWS_SSM_SECRETS = {
-    "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID"),
-    "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY"),
     "GOOGLE_CLIENT_EMAIL": os.environ.get("GOOGLE_CLIENT_EMAIL"),
     "GOOGLE_PRIVATE_KEY": os.environ.get("GOOGLE_PRIVATE_KEY"),
     "GOOGLE_CALENDAR_ID": os.environ.get("GOOGLE_CALENDAR_ID")
