@@ -257,6 +257,22 @@ jobs:
           mkdir -p "$OUT/public"
           rsync -a public/ "$OUT/public/"
         fi
+
+        # SafeDeploy / hostPath boot needs BUILD_ID under standalone/.next.
+        # Turbopack standalone tracing sometimes omits it; copy from the build root.
+        if [ ! -s "$OUT/standalone/.next/BUILD_ID" ]; then
+          if [ -s .next/BUILD_ID ]; then
+            mkdir -p "$OUT/standalone/.next"
+            cp -a .next/BUILD_ID "$OUT/standalone/.next/BUILD_ID"
+            echo "Copied .next/BUILD_ID into standalone pack"
+          else
+            echo "::error::Missing .next/BUILD_ID after build — refusing to pack"
+            exit 1
+          fi
+        fi
+        test -s "$OUT/standalone/.next/BUILD_ID"
+        echo "standalone BUILD_ID=$(cat "$OUT/standalone/.next/BUILD_ID")"
+
         echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
         echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
 
