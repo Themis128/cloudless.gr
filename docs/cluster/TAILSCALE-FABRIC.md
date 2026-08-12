@@ -199,15 +199,26 @@ Day-2 detail also lives in
 Connector hosts use `--accept-dns=false` so MagicDNS is not the system
 resolver on the Pi (CoreDNS / LAN DNS stay authoritative).
 
-### Grants + Tailscale SSH (hardened 2026-07-30)
+### Grants + Tailscale SSH (hardened 2026-08-12)
 
 | Src | Dst | Allow |
 |-----|-----|-------|
-| admin | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` | `*` |
+| admin | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` / `tag:pi` | `*` |
+| member | `tag:pi` | `tcp:22` (classic OpenSSH) |
 | member | `tag:k8s` | `tcp:80`, `tcp:443` |
 | member | `tag:app-connector` | DNS `53` only |
-| admin SSH | self + tagged fabric | `accept` |
-| member SSH | self | `check` |
+| admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self | `accept` (no check-mode) |
+
+**Device tags (canonical — `scripts/tailscale-retag-fleet.sh`):**
+
+| Hostname pattern | Tags |
+|------------------|------|
+| `github-omv` | `tag:pi` + `tag:app-connector` |
+| `omv-ha` | `tag:pi` |
+| `ingress-*`, `kube-*`, `k3s-subnet-router*`, `k3s-cidrs-*` | `tag:k8s` |
+| `tailscale-operator*` | `tag:k8s-operator` |
+| `cloudless-fly-proxy*` | `tag:app-connector` |
+| `office`, `office-*` | *(untagged — user devices)* |
 
 Apply via CI with **`acl_only=true`** (skips dangerous Machine cleanup):
 
@@ -224,9 +235,11 @@ gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
 
 ### Apps (app connectors)
 
-Live connector: **`github-omv`** with `tag:app-connector`, advertising SaaS
-CIDRs. Presets + custom domains are in `acl-policy.example.json` `nodeAttrs`.
-Do **not** put `*.cloudless.gr` or Serve VIP hosts into Apps.
+Live connector: **`github-omv`** carries **`tag:app-connector`** *and*
+**`tag:pi`** (SSH). Fly proxies (`cloudless-fly-proxy-*`) are also
+`tag:app-connector`. Presets + custom domains are in
+`acl-policy.example.json` `nodeAttrs`. Do **not** put `*.cloudless.gr` or
+Serve VIP hosts into Apps.
 
 ---
 
