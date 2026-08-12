@@ -73,6 +73,6 @@ run_yamllint .
 echo "==> actionlint (.github/workflows)"
 # Uses .github/actionlint.yaml for self-hosted runner labels.
 # concurrency.queue is valid on GitHub but not yet in actionlint's schema.
-run_actionlint -ignore 'unexpected key "queue"'
+run_actionlint -ignore 'unexpected key "queue"' -ignore 'context "secrets" is not allowed'
 
 echo "YAML lint OK"

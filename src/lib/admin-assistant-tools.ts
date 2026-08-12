@@ -1,5 +1,6 @@
 import { listRecentCheckoutSessions } from "@/lib/stripe";
 import { notifyTeam } from "@/lib/email";
+import { searchPages } from "@/lib/notion-search";
 
 export interface AnthropicTool {
   name: string;

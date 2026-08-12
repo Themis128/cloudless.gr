@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "project": {
+      "command": "node",
+      "args": [
+        "./node_modules/.bin/project-mcp"
+      ],
+      "description": "Provides project-wide symbol and documentation lookup."
+    },
+    "mcp-tool-shop": {
+      "command": "node",
+      "args": [
+        "./node_modules/.bin/mcp-tool-shop"
+      ],
+      "description": "Utility toolbox for various MCP helpers."
+    },
+    "notion": {
+      "module": "@notionhq/notion-mcp-server",
+      "arguments": {
+        "token": "{{ .Env.NOTION_TOKEN }}",
+        "spaceId": "default"
+      },
+      "description": "Direct access to the project's Notion workspace."
+    },
+    "cloudflare-worker": {
+      "command": "wrangler",
+      "args": [
+        "dev",
+        "--local",
+        "--no-remote"
+      ],
+      "description": "Runs a local Cloudflare Workers dev server for testing routes, secrets, and bindings."
+    },
+    "cloudflare-publish": {
+      "command": "wrangler",
+      "args": [
+        "publish",
+        "--env production"
+      ],
+      "description": "Publishes the current Worker project to Cloudflare."
+    }
+  }
+}

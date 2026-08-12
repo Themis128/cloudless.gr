@@ -54,10 +54,7 @@ export async function POST(request: NextRequest) {
   const token = result.data.status?.token;
   const expiresAt = result.data.status?.expirationTimestamp;
   if (!token) {
-    return NextResponse.json(
-      { error: "TokenRequest returned no token" },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: "TokenRequest returned no token" }, { status: 502 });
   }
 
   return NextResponse.json({ token, expirationTimestamp: expiresAt });

@@ -180,8 +180,8 @@ spec:
           - name: script
             configMap:
               name: kuma-heartbeat-script
-              defaultMode: 0o755
+              defaultMode: 493
               items:
               - key: heartbeat.sh
                 path: heartbeat.sh
-                mode: 0o755
+                mode: 493

@@ -218,9 +218,9 @@ export default function AnalyticsDashboardPage() {
                     return (
                       <div key={type} className="flex items-center gap-3">
                         <span
-                          className={`w-28 shrink-0 rounded-full border px-2 py-0.5 text-center font-mono text-[10px] ${TYPE_COLORS[type] ?? TYPE_COLORS.page_view}`}
+                          className={`w-28 shrink-0 rounded-full border px-2 py-0.5 text-center font-mono text-[10px] ${TYPE_COLORS[type as keyof typeof TYPE_COLORS] ?? TYPE_COLORS.page_view}`}
                         >
-                          {TYPE_LABELS[type] ?? type}
+                          {TYPE_LABELS[type as keyof typeof TYPE_LABELS] ?? type}
                         </span>
                         <Bar value={count} max={max} color="bg-neon-cyan" />
                         <span className="w-10 text-right font-mono text-xs text-slate-400">

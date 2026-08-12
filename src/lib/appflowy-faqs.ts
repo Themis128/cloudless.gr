@@ -17,12 +17,7 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import {
-  staticFaqs,
-  type Faq,
-  type FaqCategory,
-  type FaqInput,
-} from "./notion-faqs";
+import { staticFaqs, type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
 
 // Re-export types from Notion adapter (single source of truth)
 export { type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
@@ -130,7 +125,10 @@ export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   }
 }
 
-export async function getFaqsByCategory(category: FaqCategory, locale?: string): Promise<AppFlowyFaq[]> {
+export async function getFaqsByCategory(
+  category: FaqCategory,
+  locale?: string
+): Promise<AppFlowyFaq[]> {
   const faqs = await getFaqs(locale);
   return faqs.filter((f) => f.category === category);
 }
