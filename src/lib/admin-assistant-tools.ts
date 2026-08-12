@@ -1,4 +1,3 @@
-import { searchPages } from "@/lib/notion-search";
 import { listRecentCheckoutSessions } from "@/lib/stripe";
 import { notifyTeam } from "@/lib/email";
 

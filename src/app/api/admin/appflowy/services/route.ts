@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { getServices } from "@/lib/appflowy-services";
-import type { ServiceInput } from "@/lib/notion-services";
+import type { ServiceInput } from "@/lib/notion-types";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
