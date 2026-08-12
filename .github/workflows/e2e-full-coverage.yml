@@ -86,8 +86,14 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' || echo "Test user may already exist"
           
-          # Kill dev server
+          # Kill seed server and free port 4000 (setsid can leave orphans)
           kill $DEV_PID 2>/dev/null || true
+          pkill -f "next dev -p 4000" 2>/dev/null || true
+          if command -v fuser >/dev/null 2>&1; then
+            fuser -k 4000/tcp 2>/dev/null || true
+          else
+            lsof -ti:4000 | xargs -r kill -9 2>/dev/null || true
+          fi
           sleep 2
           echo "Database seeding complete"
 

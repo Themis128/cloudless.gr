@@ -67,7 +67,7 @@ export default defineConfig({
     command: "pnpm dev",
     url: "http://localhost:4000",
     timeout: 120_000,
-    reuseExistingServer: !isCi,
+    reuseExistingServer: !isCi || process.env.E2E_REUSE_SERVER === "1",
     env: {
       NEXT_PUBLIC_E2E: "1",
       E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
