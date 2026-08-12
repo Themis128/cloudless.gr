@@ -147,6 +147,7 @@ jobs:
 
     - name: Install Syft for SBOM generation
       if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       run: |
         set -euo pipefail
         mkdir -p "$HOME/.local/bin"
@@ -155,30 +156,42 @@ jobs:
 
     - name: Generate SBOM
       if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       run: |
-        syft packages:pnpm-lock.yaml -o syft-json > sbom.json
-        syft . -o syft-json >> sbom.json
+        set -euo pipefail
+        if ! command -v syft >/dev/null 2>&1; then
+          echo "syft not installed — skipping SBOM"
+          exit 0
+        fi
+        # Match ci.yml: new Syft no longer accepts packages:pnpm-lock.yaml.
+        syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
+        test -s sbom.json
 
     - name: Upload SBOM artifact
       if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: sbom
         path: sbom.json
         retention-days: 30
+        if-no-files-found: ignore
 
     - name: Scan licenses with pnpm licenses
       if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       run: |
         pnpm licenses ls --json > licenses.json
 
     - name: Upload licenses artifact
       if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: licenses
         path: licenses.json
         retention-days: 30
+        if-no-files-found: ignore
 
     - name: Pack standalone artifact
       id: pack
