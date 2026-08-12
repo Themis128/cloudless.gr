@@ -4,6 +4,20 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// Initialize OpenNext Cloudflare for local dev — sets up wrangler/miniflare
+// bindings (D1, R2, etc.) so `getCloudflareContext()` resolves locally instead
+// of attempting a remote proxy session to api.cloudflare.com.
+// Must be called in the Next.js config file (not instrumentation.ts).
+if (process.env.NODE_ENV === "development") {
+  import("@opennextjs/cloudflare")
+    .then(({ initOpenNextCloudflareForDev }) =>
+      initOpenNextCloudflareForDev()
+    )
+    .catch((err) =>
+      console.warn("[next.config] initOpenNextCloudflareForDev failed:", err)
+    );
+}
+
 const nextConfig: NextConfig = {
   // Compression of HTTP responses (gzip via the Next.js server). On Lambda
   // the compression is applied before CloudFront passes through; on the Pi

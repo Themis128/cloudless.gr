@@ -13,10 +13,20 @@ export async function register() {
         (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
         console.warn("[Instrumentation] AUTH_DB bound for local D1 auth");
       } else {
-        console.warn("[Instrumentation] AUTH_DB missing from Cloudflare context");
+        console.warn("[Instrumentation] AUTH_DB missing from Cloudflare context — falling back to local D1 sqlite");
       }
     } catch (err) {
-      console.warn("[Instrumentation] Local AUTH_DB bind failed:", err);
+      // Common in offline/WSL dev: getCloudflareContext tries to reach
+      // api.cloudflare.com for a remote proxy session, which fails with
+      // EAI_AGAIN when DNS can't resolve. This is NOT fatal —
+      // getAuthDbFromEnv() in auth-d1.ts will fall back to the local
+      // wrangler D1 sqlite shim (auth-db-local.ts) at request time.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("EAI_AGAIN") || msg.includes("fetch failed") || msg.includes("api.cloudflare.com")) {
+        console.warn("[Instrumentation] Cloudflare remote context unavailable (offline?) — auth will use local D1 sqlite fallback");
+      } else {
+        console.warn("[Instrumentation] Local AUTH_DB bind failed:", msg);
+      }
     }
     return;
   }
