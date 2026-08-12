@@ -20,7 +20,13 @@ const nextConfig: NextConfig = {
   // omit @swc/helpers; the Pi node:22 runtime then crashes on boot with
   // MODULE_NOT_FOUND for @swc/helpers/_/_interop_require_default.
   outputFileTracingIncludes: {
-    "/*": ["./node_modules/@swc/helpers/**/*"],
+    "/*": [
+      "./node_modules/@swc/helpers/**/*",
+      "./node_modules/@next/env/**/*",
+      "./node_modules/styled-jsx/**/*",
+      "./node_modules/client-only/**/*",
+      "./node_modules/server-only/**/*",
+    ],
   },
   // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
   // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
