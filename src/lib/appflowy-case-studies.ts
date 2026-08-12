@@ -13,7 +13,12 @@ import {
   markdownToHtml,
   isAppFlowyConfigured,
 } from "./appflowy";
-import { staticCaseStudies } from "./notion-case-studies";
+import {
+  staticCaseStudies,
+  type CaseStudy,
+  type CaseStudyMetric,
+  type CaseStudyWithContent,
+} from "./notion-case-studies";
 
 // Re-export types from Notion adapter (single source of truth)
 export {

@@ -43,7 +43,7 @@ async function getPrimaryWorkspaceId(): Promise<string | null> {
   }
 }
 
-function parseBlogFields(text: string): Partial<AppFlowyBlogDraft> {
+function parseBlogFields(text: string): AppFlowyBlogDraft {
   const fields: Record<string, string> = {};
   const lines = text.split("\n");
   for (const line of lines) {
@@ -53,12 +53,14 @@ function parseBlogFields(text: string): Partial<AppFlowyBlogDraft> {
     }
   }
   return {
+    id: "",
     title: fields["Name"] || "",
     slug: fields["Slug"] || "",
     status: (fields["Status"] || "") as AppFlowyBlogStatus | "",
     category: fields["Category"] || "Cloud",
     readTime: fields["ReadTime"] || "5 min read",
     createdAt: fields["Date"] || new Date().toISOString(),
+    url: "",
   };
 }
 

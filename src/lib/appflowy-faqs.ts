@@ -17,11 +17,23 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import type { Faq, FaqCategory, FaqInput } from "./notion-faqs";
-import { staticFaqs } from "./notion-faqs";
+import {
+  staticFaqs,
+  type Faq,
+  type FaqCategory,
+  type FaqInput,
+} from "./notion-faqs";
 
 // Re-export types from Notion adapter (single source of truth)
 export { type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
+
+/** AppFlowy FAQ entry — Notion `Faq` plus AppFlowy-specific editorial fields. */
+interface AppFlowyFaq extends Faq {
+  published: boolean;
+  order?: number;
+  /** ISO timestamp of the AppFlowy view's last edit — used for stable ordering. */
+  date: string;
+}
 
 function stripPrefix(name: string): string {
   return name.replace(/^\[FAQ\]\s*/i, "").trim();
@@ -46,7 +58,12 @@ async function getPrimaryWorkspaceId(): Promise<string | null> {
   }
 }
 
-function mapMarkdownToFaq(viewId: string, markdown: string, lastEdited: string): Faq & { published: boolean; order?: number } {
+function mapMarkdownToFaq(
+  viewId: string,
+  viewName: string,
+  markdown: string,
+  lastEdited: string
+): AppFlowyFaq {
   const localesRaw = parseField(markdown, "Locale");
   const publishedRaw = parseField(markdown, "Published").toLowerCase();
   const orderRaw = parseField(markdown, "Order");
@@ -58,16 +75,16 @@ function mapMarkdownToFaq(viewId: string, markdown: string, lastEdited: string):
     : [];
   const published = publishedRaw === "true" || publishedRaw === "yes" || publishedRaw === "✅";
   const order = orderRaw ? parseInt(orderRaw, 10) : undefined;
-  const faq: Faq & { published: boolean; order?: number } = {
+  return {
     id: viewId,
-    question: stripPrefix(view.name),
+    question: stripPrefix(viewName),
     answer: parseField(markdown, "Answer") || markdown || "",
     category: (parseField(markdown, "Category") || "general") as FaqCategory,
     locales,
     published,
     order,
+    date: lastEdited,
   };
-  return faq;
 }
 
 export async function getFaqs(locale?: string): Promise<Faq[]> {
@@ -79,7 +96,7 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: Faq[] = [];
+    const faqs: AppFlowyFaq[] = [];
 
     for (const view of faqViews) {
       let markdown = "";
@@ -90,11 +107,11 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
         markdown = "";
       }
 
-      const mapped = mapMarkdownToFaq(view.view_id, markdown, view.last_edited_time);
-      
+      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
+
       // Filter by published status for public API
       if (!mapped.published) continue;
-      
+
       if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
         continue;
       }
@@ -103,8 +120,8 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
 
     // Sort by order, then by last edited time
     return faqs.sort((a, b) => {
-      const orderA = (a as any).order ?? 999999;
-      const orderB = (b as any).order ?? 999999;
+      const orderA = a.order ?? 999999;
+      const orderB = b.order ?? 999999;
       if (orderA !== orderB) return orderA - orderB;
       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     });
@@ -131,7 +148,7 @@ export async function getAllFaqsAdmin(): Promise<Faq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: Faq[] = [];
+    const faqs: AppFlowyFaq[] = [];
 
     for (const view of faqViews) {
       let markdown = "";
@@ -142,15 +159,15 @@ export async function getAllFaqsAdmin(): Promise<Faq[]> {
         markdown = "";
       }
 
-      const mapped = mapMarkdownToFaq(view.view_id, markdown, view.last_edited_time);
+      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
       // Admin version: no filtering by published or locale
       faqs.push(mapped);
     }
 
     // Sort by order, then by last edited time
     return faqs.sort((a, b) => {
-      const orderA = (a as any).order ?? 999999;
-      const orderB = (b as any).order ?? 999999;
+      const orderA = a.order ?? 999999;
+      const orderB = b.order ?? 999999;
       if (orderA !== orderB) return orderA - orderB;
       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     });
