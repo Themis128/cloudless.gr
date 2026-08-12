@@ -250,30 +250,15 @@ jobs:
         AUTH=( -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" )
         RUNS_JSON=$(curl -fsSL "${AUTH[@]}" \
           "${API}/actions/workflows/deploy-pi.yml/runs?branch=main&status=completed&per_page=30")
-        RUN_ID=$(python3 -c '
-import json,os,sys
-want=os.environ["WANT_SHA"]
-runs=json.load(sys.stdin).get("workflow_runs") or []
-for r in runs:
-  if r.get("head_sha")==want:
-    print(r["id"]); raise SystemExit(0)
-raise SystemExit("no run")
-' <<<"$RUNS_JSON" 2>/dev/null || true)
+        # Keep python one-liners indented — unindented lines terminate YAML `|` blocks.
+        RUN_ID=$(printf '%s' "$RUNS_JSON" | WANT_SHA="$WANT_SHA" python3 -c "import json,os,sys; want=os.environ['WANT_SHA']; runs=json.load(sys.stdin).get('workflow_runs') or []; ids=[r['id'] for r in runs if r.get('head_sha')==want]; print(ids[0] if ids else '')")
         if [ -z "${RUN_ID:-}" ]; then
           echo "::error::No completed deploy-pi run found for SHA ${WANT_SHA}"
           exit 1
         fi
         echo "Found run ${RUN_ID} for ${WANT_SHA}"
         ARTS_JSON=$(curl -fsSL "${AUTH[@]}" "${API}/actions/runs/${RUN_ID}/artifacts?per_page=50")
-        ART_ID=$(python3 -c '
-import json,os,sys
-name=os.environ["ARTIFACT_NAME"]
-arts=json.load(sys.stdin).get("artifacts") or []
-for a in arts:
-  if a.get("name")==name and not a.get("expired"):
-    print(a["id"]); raise SystemExit(0)
-raise SystemExit("no artifact")
-' <<<"$ARTS_JSON" 2>/dev/null || true)
+        ART_ID=$(printf '%s' "$ARTS_JSON" | ARTIFACT_NAME="$ARTIFACT_NAME" python3 -c "import json,os,sys; name=os.environ['ARTIFACT_NAME']; arts=json.load(sys.stdin).get('artifacts') or []; ids=[a['id'] for a in arts if a.get('name')==name and not a.get('expired')]; print(ids[0] if ids else '')")
         if [ -z "${ART_ID:-}" ]; then
           echo "::error::Artifact ${ARTIFACT_NAME} not found (or expired) on run ${RUN_ID}"
           exit 1
