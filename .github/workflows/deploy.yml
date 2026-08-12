@@ -43,6 +43,8 @@ jobs:
         secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
       NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Map secret → env so step `if:` can gate without secrets context (actionlint).
+      AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
 
     steps:
     - name: Checkout
@@ -79,11 +81,11 @@ jobs:
         grep "CACHE_VERSION" public/sw.js
 
     - name: (Optional) Configure AWS credentials (OIDC)
-      if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+      if: env.AWS_DEPLOY_ROLE_ARN != ''
       uses:
         aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b             # v6.2.0
       with:
-        role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
         aws-region: us-east-1
 
     - name: Notify Slack — deploy started
@@ -125,13 +127,13 @@ jobs:
         NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         SENTRY_ENVIRONMENT: prod
         NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
-          # Cloudflare Workers AI - reads SSM (source of truth, GH secret is stale).
+        # Cloudflare Workers AI — account id is public; token from repo secret.
         CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
         CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
         NODE_OPTIONS: --max-old-space-size=3072
 
     - name: Publish cloud SHA to SSM (source of truth for sha-drift-detector)
-      if: success()
+      if: success() && env.AWS_DEPLOY_ROLE_ARN != ''
       continue-on-error: true
       run: |
         set -euo pipefail
