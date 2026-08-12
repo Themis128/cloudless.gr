@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
+  // Hosted arm64 `next build` (deploy-pi) traces a lean standalone that can
+  // omit @swc/helpers; the Pi node:22 runtime then crashes on boot with
+  // MODULE_NOT_FOUND for @swc/helpers/_/_interop_require_default.
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/@swc/helpers/**/*"],
+  },
   // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
   // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
   // clients so Next uses Node's native resolver instead of bundling them.
