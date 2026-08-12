@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "pi-deploy-orchestrator",
+  "main": "src/index.ts",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "compatibility_date": "2026-08-07",
+  "minify": true,
+  "workers_dev": true,
+  "vars": {
+    "HEALTH_URL": "https://pi-origin.cloudless.gr/api/health",
+    "HEALTH_URL_FALLBACK": "https://cloudless.gr/api/health",
+    "R2_ARTIFACT_PREFIX": "releases"
+  },
+  "r2_buckets": [
+    {
+      "binding": "RELEASES",
+      "bucket_name": "cloudless-pi-releases"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "pi-deploy",
+      "binding": "PI_DEPLOY",
+      "class_name": "PiDeployWorkflow"
+    }
+  ]
+}

@@ -1,18 +1,15 @@
-name: Deploy to Pi (hostPath standalone — no ECR)
+name: Deploy to Pi (R2 + Cloudflare Workflows pull)
 
-# Cloudflare-first: build Next standalone on GitHub-hosted native ARM64
-# (ubuntu-24.04-arm), upload artifact, then roll out from omv-ha (deploy proxy)
-# via rsync + kubectl over SSH/Tailscale.
-#
-# omv never runs `pnpm build` — compiling on the Pi 5 control plane pegs the
-# USB SSD and trips the hardware watchdog (~5m into Turbopack).
+# Build Next standalone on GitHub-hosted ARM64, upload to R2, trigger a
+# Cloudflare Workflow. omv pulls when load is low — Actions never rsync/SSH
+# to the Pi (avoids pegging USB SSD / zombie self-hosted runners).
 #
 # Jobs:
-#   build   — ubuntu-24.04-arm          (heavy compile; free for public repos)
-#   rollout — [self-hosted, omv-ha, deploy] (rsync SafeDeploy + kubectl)
+#   build   — ubuntu-24.04-arm: compile + pack + R2 put
+#   publish — ubuntu-latest: POST orchestrator /trigger (durable health wait)
 #
-# Concurrency: deploy the LATEST main SHA only. cancel-in-progress: true so a
-# newer push supersedes an older in-progress/queued run.
+# Tracking: sha, artifactKey, workflowInstanceId, githubRunId → step summary,
+# Slack/ntfy (orchestrator), agent journal on omv, issue #382 comment.
 
 on:
   push:
@@ -26,17 +23,20 @@ on:
     - next.config.ts
     - patches/**
     - scripts/pi-rollout-from-artifact.sh
+    - workers/pi-deploy-orchestrator/**
+    - infrastructure/omv/pi-release-pull*
     - .github/workflows/deploy-pi.yml
   workflow_dispatch:
     inputs:
-      rollout_only:
-        description: Skip build; re-rollout using the standalone artifact for this SHA (must already exist)
+      trigger_only:
+        description: Skip build; re-trigger Workflow for this SHA (artifact must already be in R2)
         type: boolean
         default: false
 
 permissions:
   contents: read
   actions: write
+  issues: write
 
 concurrency:
   group: deploy-pi
@@ -44,20 +44,19 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  K3S_NAMESPACE: cloudless
-  K3S_DEPLOYMENT: cloudless-app
-  STANDALONE_HOSTPATH: /home/tbaltzakis/cloudless-standalone
-  OMV_SSH_HOST: 192.168.1.128
+  R2_BUCKET: cloudless-pi-releases
+  PI_DEPLOY_ORCHESTRATOR_URL: ${{ vars.PI_DEPLOY_ORCHESTRATOR_URL }}
 
 jobs:
   build:
     name: Build standalone artifact
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollout_only) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.trigger_only) }}
     outputs:
       already: ${{ steps.skip.outputs.already }}
       artifact: ${{ steps.pack.outputs.artifact }}
+      artifact_key: ${{ steps.r2.outputs.artifact_key }}
 
     steps:
     - name: Checkout
@@ -320,106 +319,125 @@ jobs:
         echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
         echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
 
-    - name: Upload standalone artifact
+    - name: Tar + upload to R2
+      id: r2
       if: steps.skip.outputs.already != 'true'
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: auto
+        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        OUT: ${{ steps.pack.outputs.artifact }}
+      run: |
+        set -euo pipefail
+        KEY="releases/${{ github.sha }}.tar.zst"
+        TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends zstd awscli
+        tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
+        echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
+        ENDPOINT="https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com"
+        aws s3 cp "$TAR" "s3://${R2_BUCKET}/${KEY}" --endpoint-url "$ENDPOINT"
+        echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
+        {
+          echo "## R2 upload"
+          echo ""
+          echo "| Field | Value |"
+          echo "| --- | --- |"
+          echo "| sha | \`${{ github.sha }}\` |"
+          echo "| artifactKey | \`$KEY\` |"
+          echo "| githubRunId | \`${{ github.run_id }}\` |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload standalone artifact (debug fallback)
+      if: steps.skip.outputs.already != 'true'
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: standalone-${{ github.sha }}
         path: ${{ steps.pack.outputs.artifact }}
         retention-days: 2
         if-no-files-found: error
-        # Required: standalone embeds `.next/` (BUILD_ID + server traces).
-        # v4 omits hidden files/dirs by default → 269MB pack becomes ~30MB
-        # and rollout fails "missing .next/BUILD_ID".
         include-hidden-files: true
 
-  rollout:
-    name: Roll out via omv-ha proxy
+  publish:
+    name: Trigger CF Workflow (durable health wait)
     needs: [build]
-    # Run when build finished and did not skip; OR when rollout_only dispatch
-    # (build job is skipped entirely — needs succeeds with skipped build only
-    # if we use if: always() carefully). For rollout_only, build is skipped
-    # via job-level if, and needs: build would fail — use:
     if: |
       always() && (
         (needs.build.result == 'success' && needs.build.outputs.already != 'true') ||
-        (github.event_name == 'workflow_dispatch' && inputs.rollout_only && needs.build.result == 'skipped')
+        (github.event_name == 'workflow_dispatch' && inputs.trigger_only)
       )
-    runs-on: [self-hosted, omv-ha, deploy]
-    timeout-minutes: 15
-
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 10
     steps:
-    - name: Checkout (rollout script)
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
-      with:
-        sparse-checkout: |
-          scripts/pi-rollout-from-artifact.sh
-        sparse-checkout-cone-mode: false
+    - name: Resolve artifact key
+      id: key
+      run: |
+        set -euo pipefail
+        if [ -n "${{ needs.build.outputs.artifact_key }}" ]; then
+          echo "artifact_key=${{ needs.build.outputs.artifact_key }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "artifact_key=releases/${{ github.sha }}.tar.zst" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Download standalone artifact (this run)
-      if: needs.build.result == 'success'
-      uses: actions/download-artifact@v4
-      with:
-        name: standalone-${{ github.sha }}
-        path: ${{ runner.temp }}/standalone-artifact
+    - name: POST /trigger
+      id: trigger
+      env:
+        ORCH_URL: ${{ env.PI_DEPLOY_ORCHESTRATOR_URL }}
+        ORCH_TOKEN: ${{ secrets.DEPLOY_ORCHESTRATOR_TOKEN }}
+        ARTIFACT_KEY: ${{ steps.key.outputs.artifact_key }}
+      run: |
+        set -euo pipefail
+        if [ -z "${ORCH_URL:-}" ]; then
+          echo "::error::Set repo variable PI_DEPLOY_ORCHESTRATOR_URL"
+          exit 1
+        fi
+        if [ -z "${ORCH_TOKEN:-}" ]; then
+          echo "::error::Missing secret DEPLOY_ORCHESTRATOR_TOKEN"
+          exit 1
+        fi
+        RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        RESP=$(curl -fsS --max-time 60 \
+          -H "Authorization: Bearer ${ORCH_TOKEN}" \
+          -H "content-type: application/json" \
+          -d "$(jq -n \
+            --arg sha "${{ github.sha }}" \
+            --arg key "$ARTIFACT_KEY" \
+            --arg rid "${{ github.run_id }}" \
+            --arg rurl "$RUN_URL" \
+            '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl}')" \
+          "${ORCH_URL%/}/trigger")
+        echo "$RESP" | tee /tmp/trigger.json
+        INSTANCE=$(echo "$RESP" | jq -r .workflowInstanceId)
+        echo "workflow_instance_id=$INSTANCE" >> "$GITHUB_OUTPUT"
+        {
+          echo "## CF Workflow triggered"
+          echo ""
+          echo "| Field | Value |"
+          echo "| --- | --- |"
+          echo "| sha | \`${{ github.sha }}\` |"
+          echo "| artifactKey | \`$ARTIFACT_KEY\` |"
+          echo "| workflowInstanceId | \`$INSTANCE\` |"
+          echo "| githubRunId | \`${{ github.run_id }}\` |"
+        } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Download standalone artifact (prior run — rollout_only)
-      if: github.event_name == 'workflow_dispatch' && inputs.rollout_only
+    - name: Comment tracking issue #382
+      if: always()
       env:
         GH_TOKEN: ${{ github.token }}
-        WANT_SHA: ${{ github.sha }}
-        ARTIFACT_NAME: standalone-${{ github.sha }}
-        OUT: ${{ runner.temp }}/standalone-artifact
-        REPO: ${{ github.repository }}
       run: |
         set -euo pipefail
-        mkdir -p "$OUT"
-        # No `gh` on omv-ha — use the GitHub REST API + curl.
-        API="https://api.github.com/repos/${REPO}"
-        AUTH=( -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" )
-        RUNS_JSON=$(curl -fsSL "${AUTH[@]}" \
-          "${API}/actions/workflows/deploy-pi.yml/runs?branch=main&status=completed&per_page=30")
-        # Keep python one-liners indented — unindented lines terminate YAML `|` blocks.
-        RUN_ID=$(printf '%s' "$RUNS_JSON" | WANT_SHA="$WANT_SHA" python3 -c "import json,os,sys; want=os.environ['WANT_SHA']; runs=json.load(sys.stdin).get('workflow_runs') or []; ids=[r['id'] for r in runs if r.get('head_sha')==want]; print(ids[0] if ids else '')")
-        if [ -z "${RUN_ID:-}" ]; then
-          echo "::error::No completed deploy-pi run found for SHA ${WANT_SHA}"
-          exit 1
-        fi
-        echo "Found run ${RUN_ID} for ${WANT_SHA}"
-        ARTS_JSON=$(curl -fsSL "${AUTH[@]}" "${API}/actions/runs/${RUN_ID}/artifacts?per_page=50")
-        ART_ID=$(printf '%s' "$ARTS_JSON" | ARTIFACT_NAME="$ARTIFACT_NAME" python3 -c "import json,os,sys; name=os.environ['ARTIFACT_NAME']; arts=json.load(sys.stdin).get('artifacts') or []; ids=[a['id'] for a in arts if a.get('name')==name and not a.get('expired')]; print(ids[0] if ids else '')")
-        if [ -z "${ART_ID:-}" ]; then
-          echo "::error::Artifact ${ARTIFACT_NAME} not found (or expired) on run ${RUN_ID}"
-          exit 1
-        fi
-        echo "Downloading artifact id=${ART_ID} → ${OUT}"
-        ZIP="${RUNNER_TEMP}/standalone-artifact.zip"
-        curl -fsSL "${AUTH[@]}" -L \
-          "${API}/actions/artifacts/${ART_ID}/zip" -o "$ZIP"
-        python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "$ZIP" "$OUT"
-        rm -f "$ZIP"
-        ls -la "$OUT" | head -20
-
-    - name: Roll out (rsync + kubectl over SSH)
-      env:
-        ARTIFACT_DIR: ${{ runner.temp }}/standalone-artifact
-        APP_VERSION: ${{ github.sha }}
-        OMV_SSH_HOST: ${{ env.OMV_SSH_HOST }}
-        STANDALONE_HOSTPATH: ${{ env.STANDALONE_HOSTPATH }}
-        K3S_NAMESPACE: ${{ env.K3S_NAMESPACE }}
-        K3S_DEPLOYMENT: ${{ env.K3S_DEPLOYMENT }}
-      run: |
-        set -euo pipefail
-        chmod +x scripts/pi-rollout-from-artifact.sh
-        # download-artifact / gh run download may nest an extra directory —
-        # normalize to …/standalone/server.js
-        ROOT="${ARTIFACT_DIR}"
-        if [ ! -f "${ROOT}/standalone/server.js" ]; then
-          CAND=$(find "$ROOT" -type f -path '*/standalone/server.js' 2>/dev/null | head -1 || true)
-          if [ -n "$CAND" ]; then
-            ROOT=$(dirname "$(dirname "$CAND")")
-            echo "Normalized ARTIFACT_DIR → $ROOT"
-            export ARTIFACT_DIR="$ROOT"
-          fi
-        fi
-        scripts/pi-rollout-from-artifact.sh
+        INSTANCE="${{ steps.trigger.outputs.workflow_instance_id || 'n/a' }}"
+        KEY="${{ steps.key.outputs.artifact_key || 'n/a' }}"
+        {
+          echo "### deploy-pi pull-path — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "| Field | Value |"
+          echo "| --- | --- |"
+          echo "| job | \`${{ job.status }}\` |"
+          echo "| sha | \`${{ github.sha }}\` |"
+          echo "| artifactKey | \`$KEY\` |"
+          echo "| workflowInstanceId | \`$INSTANCE\` |"
+          echo "| run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
+        } | gh issue comment 382 --repo "${{ github.repository }}" --body-file -

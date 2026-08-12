@@ -1,0 +1,13 @@
+{
+  "name": "pi-deploy-orchestrator",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "wrangler": "^4.28.0"
+  }
+}
