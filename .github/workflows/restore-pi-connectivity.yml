@@ -1,0 +1,190 @@
+name: Restore Pi connectivity (SSH + Tailscale)
+
+# Operator remedy when omv / omv-ha SSH or Tailscale breaks.
+# Runs on ubuntu-latest (does not need Pi runners). Joins the tailnet, SSHes
+# to both Pis (Tailscale IP then LAN), runs on-box heal, forces
+# `tailscale set --ssh=false`, restarts sshd + GHA runners.
+#
+#   gh workflow run restore-pi-connectivity.yml
+#
+# Local equivalent (when you still have LAN or partial TS):
+#   bash scripts/restore-pi-connectivity.sh
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which Pi(s) to restore
+        type: choice
+        options:
+        - both
+        - omv
+        - omv-ha
+        default: both
+      restart_tailscaled:
+        description: Restart tailscaled on each host (heavier)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: restore-pi-connectivity
+  cancel-in-progress: true
+
+jobs:
+  restore:
+    name: Restore connectivity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+
+    - name: Set up SSH key
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        for h in 100.74.191.58 100.95.117.84 192.168.1.128 192.168.1.130; do
+          ssh-keyscan -H -T 5 "$h" >> ~/.ssh/known_hosts 2>/dev/null || true
+        done
+
+    - name: Restore Pis
+      env:
+        TARGET: ${{ inputs.target }}
+        RESTART_TS: ${{ inputs.restart_tailscaled }}
+      run: |
+        set -euo pipefail
+        SSH=(ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new
+          -o ConnectTimeout=15 -o ServerAliveInterval=10)
+
+        try_host() {
+          local label="$1" ts="$2" lan="$3"
+          echo "::group::Probe $label" >&2
+          if "${SSH[@]}" "tbaltzakis@${ts}" true 2>/dev/null; then
+            echo "path=$ts (tailscale)" >&2
+            echo "::endgroup::" >&2
+            echo "$ts"
+            return 0
+          fi
+          if "${SSH[@]}" "tbaltzakis@${lan}" true 2>/dev/null; then
+            echo "path=$lan (lan)" >&2
+            echo "::endgroup::" >&2
+            echo "$lan"
+            return 0
+          fi
+          echo "::warning::$label unreachable on $ts and $lan" >&2
+          echo "::endgroup::" >&2
+          return 1
+        }
+
+        restore_one() {
+          local label="$1" addr="$2"
+          echo "::group::Restore $label via $addr"
+          "${SSH[@]}" "tbaltzakis@${addr}" bash -s <<EOS
+        set -euo pipefail
+        echo "host=\$(hostname) restart_ts=${RESTART_TS}"
+        if [ "${RESTART_TS}" = "true" ]; then
+          sudo systemctl restart tailscaled || true
+          sleep 5
+        fi
+        # CRITICAL: classic OpenSSH only — never --ssh / --accept-ssh
+        sudo tailscale set --ssh=false || true
+        if [ -x /usr/local/sbin/pi-connectivity-heal.sh ]; then
+          sudo /usr/local/sbin/pi-connectivity-heal.sh --boot || \\
+            sudo /usr/local/sbin/pi-connectivity-heal.sh --check || true
+        else
+          sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd 2>/dev/null || true
+        fi
+        sudo tailscale set --ssh=false || true
+        if [ -x /usr/local/sbin/gha-runner-heal.sh ]; then
+          sudo /usr/local/sbin/gha-runner-heal.sh --boot || true
+        else
+          for u in \$(systemctl list-units --type=service --all --no-legend 'actions.runner.*' 2>/dev/null | awk '{print \$1}'); do
+            sudo systemctl restart "\$u" || true
+          done
+        fi
+        echo "---"
+        systemctl is-active ssh sshd tailscaled 2>/dev/null || true
+        tailscale ip -4 2>/dev/null || true
+        tailscale debug prefs 2>/dev/null | grep RunSSH || true
+        ss -ltn | grep ':22 ' || true
+        EOS
+          echo "::endgroup::"
+        }
+
+        FAILED=0
+        if [ "$TARGET" = "both" ] || [ "$TARGET" = "omv-ha" ]; then
+          if ADDR=$(try_host omv-ha 100.95.117.84 192.168.1.130); then
+            restore_one omv-ha "$ADDR" || FAILED=1
+          else
+            FAILED=1
+          fi
+        fi
+        if [ "$TARGET" = "both" ] || [ "$TARGET" = "omv" ]; then
+          if ADDR=$(try_host omv 100.74.191.58 192.168.1.128); then
+            restore_one omv "$ADDR" || FAILED=1
+          else
+            # Jump via ha if possible
+            if HA=$(try_host omv-ha 100.95.117.84 192.168.1.130); then
+              echo "::group::Restore omv via omv-ha jump"
+              if ! "${SSH[@]}" "tbaltzakis@${HA}" bash -s <<'JUMP'
+set -euo pipefail
+KEY=""
+[ -f "$HOME/.ssh/omv_ha" ] && KEY="-i $HOME/.ssh/omv_ha"
+# shellcheck disable=SC2086
+ssh $KEY -o BatchMode=yes -o ConnectTimeout=25 tbaltzakis@192.168.1.128 '
+  sudo tailscale set --ssh=false || true
+  if [ -x /usr/local/sbin/pi-connectivity-heal.sh ]; then sudo /usr/local/sbin/pi-connectivity-heal.sh --boot || true; fi
+  sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd 2>/dev/null || true
+  if [ -x /usr/local/sbin/gha-runner-heal.sh ]; then sudo /usr/local/sbin/gha-runner-heal.sh --boot || true; fi
+  hostname; tailscale ip -4
+'
+JUMP
+              then
+                FAILED=1
+              fi
+              echo "::endgroup::"
+            else
+              FAILED=1
+            fi
+          fi
+        fi
+
+        echo "::group::Final probes"
+        for pair in "omv:100.74.191.58" "omv-ha:100.95.117.84"; do
+          name=${pair%%:*}; ip=${pair##*:}
+          if "${SSH[@]}" "tbaltzakis@${ip}" "hostname; tailscale debug prefs 2>/dev/null | grep RunSSH" ; then
+            echo "OK $name TS $ip"
+          else
+            echo "FAIL $name TS $ip"
+            FAILED=1
+          fi
+        done
+        echo "::endgroup::"
+        exit "$FAILED"
+
+    - name: Post result to issue 382
+      if: always()
+      run: |
+        {
+          echo "# restore-pi-connectivity — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "**Job:** ${{ job.status }} · target=\`${{ inputs.target }}\` · restart_tailscaled=\`${{ inputs.restart_tailscaled }}\`"
+          echo ""
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "Local remedy: \`bash scripts/restore-pi-connectivity.sh\`"
+        } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file - || true

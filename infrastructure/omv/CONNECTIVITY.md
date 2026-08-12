@@ -1,5 +1,30 @@
 # Pi connectivity (SSH + Tailscale)
 
+## Remedy when connectivity breaks
+
+**Automatic (already on both Pis):** `pi-connectivity-heal.timer` every 2 minutes
++ on boot — restarts `tailscaled`/`sshd`, forces `tailscale set --ssh=false`,
+heals ghost-busy GHA runners.
+
+**Manual — from your laptop (LAN or partial Tailscale still works):**
+
+```bash
+bash scripts/restore-pi-connectivity.sh
+```
+
+**Manual — from anywhere (GitHub Actions, no Pi runners needed):**
+
+```bash
+gh workflow run restore-pi-connectivity.yml
+# optional: -f target=omv|omv-ha|both  -f restart_tailscaled=true
+```
+
+That workflow joins the tailnet with OAuth, SSHes with `OMV_SSH_KEY`, tries
+Tailscale IP then LAN for each Pi, jumps `omv-ha → omv` if needed, and comments
+on issue #382.
+
+---
+
 Classic **OpenSSH** over the Tailscale mesh — **not** Tailscale SSH.
 
 ## Why Tailscale SSH was disabled
@@ -39,16 +64,15 @@ sudo bash infrastructure/omv/configure-pi-firewall.sh
 
 ### Tailscale ACL (`infrastructure/tailscale/acl-policy.example.json`)
 
-- **`tag:pi`** — github-omv + omv-ha (not `tag:app-connector`; that tag only grants members DNS)
-- **grants:** members → `tag:pi` `tcp:22` (+ icmp); admins → `tag:pi` `*`
-- **`ssh` block:** `action: accept` only (no check-mode) so BatchMode never needs a browser if RunSSH is ever re-enabled
-- Pis still run `tailscale set --ssh=false` (classic OpenSSH)
+- **`tag:pi`** — github-omv + omv-ha
+- **grants:** members → `tag:pi` `tcp:22`; admins → `tag:pi` `*`
+- **`ssh` block:** `action: accept` only (no check-mode)
+- Pis still run `tailscale set --ssh=false`
 
-Apply:
+Apply / retag fleet:
 
 ```bash
 gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
-# workflow also runs scripts/tailscale-retag-pi-hosts.sh
 ```
 
 ## Client SSH config

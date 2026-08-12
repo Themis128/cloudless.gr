@@ -69,9 +69,10 @@ jobs:
         ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
 
         # Try LAN SSH (Pi may be online locally but off tailnet)
+        # Classic OpenSSH only — do NOT pass --accept-ssh / --ssh (breaks BatchMode).
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           tbaltzakis@192.168.1.128 \
-          "sudo systemctl restart tailscaled && sudo tailscale up --accept-routes --accept-dns --accept-ssh && echo 'tailscaled restarted on Pi host'" 2>&1 || {
+          "sudo systemctl restart tailscaled && sleep 4 && sudo tailscale set --ssh=false && echo 'tailscaled restarted on Pi host (RunSSH=false)'" 2>&1 || {
           echo "::warning::LAN SSH failed - Pi may be powered off or network unavailable"
           echo "Will continue with operator redeployment when cluster is online"
         }
