@@ -40,8 +40,22 @@ describe("getNewsletterSlackConfigAsync", () => {
     expect(cfg.NEWSLETTER_SLACK_BOT_TOKEN).toBe("");
     expect(cfg.NEWSLETTER_SLACK_SIGNING_SECRET).toBe("");
     expect(cfg.NEWSLETTER_SLACK_CHANNEL_ID).toBe("");
-    // Should have warned about the missing signing secret
+    // Should have warned about the missing signing secret (runtime / tests)
     expect(warn).toHaveBeenCalled();
+  });
+
+  it("does not warn about missing secret during next production build", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    process.env.NEXT_PHASE = "phase-production-build";
+    try {
+      const cfg = await getNewsletterSlackConfigAsync();
+      expect(cfg.NEWSLETTER_SLACK_SIGNING_SECRET).toBe("");
+      expect(warn).not.toHaveBeenCalledWith(
+        expect.stringContaining("NEWSLETTER_SLACK_SIGNING_SECRET not set")
+      );
+    } finally {
+      delete process.env.NEXT_PHASE;
+    }
   });
 
   it("caches results — second call does not re-read env", async () => {

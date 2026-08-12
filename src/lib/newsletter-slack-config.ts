@@ -20,6 +20,11 @@ export interface NewsletterSlackConfig {
 
 let cached: NewsletterSlackConfig | null = null;
 
+/** True while `next build` collects page data / generates static pages. */
+function isProductionBuildPhase(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackConfig> {
   if (cached) return cached;
 
@@ -35,11 +40,16 @@ export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackCo
       if (!signingSecret) signingSecret = ssm.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
       if (!channel) channel = ssm.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
     } catch (err) {
-      console.warn("[NewsletterSlack] SSM fallback failed:", err);
+      if (!isProductionBuildPhase()) {
+        console.warn("[NewsletterSlack] SSM fallback failed:", err);
+      }
     }
   }
 
-  if (!signingSecret) {
+  // Secrets are not available during `next build` on hosted runners — do not
+  // spam "unauthorized" into deploy logs. Runtime requests still reject when
+  // the secret is missing (see verifyNewsletterSlackRequest).
+  if (!signingSecret && !isProductionBuildPhase()) {
     console.warn(
       "[NewsletterSlack] NEWSLETTER_SLACK_SIGNING_SECRET not set — " +
         "every request will be rejected as unauthorized."
