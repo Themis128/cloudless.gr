@@ -1,0 +1,7 @@
+[Unit]
+Description=Periodic GitHub Actions runner heal (wedged listener)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/gha-runner-heal.sh --check

@@ -1,13 +1,36 @@
 # omv-ha host scripts
 
 Tracked-in-git copies of the system-level scripts running on the
-`omv-ha` **mail host**, so they're versioned + auditable instead of
-"installed once and forgotten."
+`omv-ha` **mail host + deploy-pi rollout proxy**, so they're versioned +
+auditable instead of "installed once and forgotten."
 
 **Role (as of 2026-08-08):** omv-ha is a **dedicated mail host** — Pi 4,
-1GB, SSH-reachable over Tailscale (`omv-ha`, 100.95.117.84). It was
-drained + removed from k3s that day and is no longer a cluster node.
-See `CLAUDE.md` "Cluster Topology" note.
+1GB, SSH-reachable over Tailscale (`omv-ha`, 100.95.117.84) and LAN
+(`192.168.1.130`). It was drained + removed from k3s that day and is no
+longer a cluster node. See `CLAUDE.md` "Cluster Topology" note.
+
+**Role (as of 2026-08-12):** omv-ha also runs the **`omv-ha-deploy`**
+GitHub Actions runner (`labels: self-hosted, omv-ha, deploy`). It does
+**not** build Next.js (1GB RAM will OOM) — it only rsyncs the standalone
+artifact to omv and runs `kubectl` over SSH. See `docs/deploy/runners.md`
+and `scripts/pi-rollout-from-artifact.sh`.
+
+## Deploy runner + GHA heal
+
+```bash
+# Register (once) — get token from:
+#   gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq .token
+scp .github/scripts/register-deploy-runner.sh tbaltzakis@192.168.1.130:~/
+ssh tbaltzakis@192.168.1.130 "bash ~/register-deploy-runner.sh <REG_TOKEN>"
+
+# Install runner heal (boot + every 5 min) — clears ghost-busy after power cycle
+scp infrastructure/omv-ha/gha-runner-heal* infrastructure/omv-ha/install-gha-runner-heal.sh \
+  tbaltzakis@192.168.1.130:/tmp/gha-heal/
+ssh tbaltzakis@192.168.1.130 "sudo bash /tmp/gha-heal/install-gha-runner-heal.sh"
+```
+
+SSH from omv-ha → omv for rollout uses `~/.ssh/omv_ha` → `tbaltzakis@192.168.1.128`
+(passwordless sudo on omv required for hostPath + kubectl).
 
 ## `setup-mail-server.sh`
 

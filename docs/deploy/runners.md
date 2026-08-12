@@ -61,7 +61,7 @@ flipping. New runs pick up the new value immediately.
 These read `vars.RUNNER_GENERIC` and fail over automatically:
 
 - `ci.yml` (lint, typecheck, format, build, test)
-- `deploy-pi.yml` (the `rollout` job — `build-and-push` stays pinned to `[self-hosted, omv, pi]`)
+- `deploy-pi.yml` (`build` stays on `[self-hosted, omv, build]`; `rollout` on `[self-hosted, omv-ha, deploy]` — not `RUNNER_GENERIC`)
 - `ha-sync-orchestrator.yml`
 - `labeler.yml`
 - `links-audit.yml`
@@ -117,6 +117,67 @@ time on ARM:
 
 When billing is broken, these stay red until billing is fixed.
 
+## deploy-pi topology (build on omv, rollout from omv-ha)
+
+`deploy-pi.yml` is **two jobs** so an omv power-cycle mid-rollout does not
+throw away a finished build:
+
+| Job | `runs-on` | Role |
+| --- | --------- | ---- |
+| `build` | `[self-hosted, omv, build]` | Next standalone compile on Pi 5 (8GB); upload `standalone-<sha>` artifact (2-day retention) |
+| `rollout` | `[self-hosted, omv-ha, deploy]` | Download artifact → `scripts/pi-rollout-from-artifact.sh` (rsync SafeDeploy releases/symlink on omv + `kubectl` over SSH) |
+
+- **Never** put the Next build on omv-ha (Pi 4 ~1GB — OOM).
+- Concurrency group `deploy-pi` with `cancel-in-progress: true`.
+- Job timeouts: build 60m, rollout 15m.
+- `workflow_dispatch` input `rollout_only=true` re-downloads the artifact for
+  `github.sha` from a prior completed run (use when build succeeded but
+  rollout failed / omv was down).
+- Fallback if omv-ha is offline: register a temporary runner with the same
+  `omv-ha,deploy` labels on another host that can SSH to omv, or re-run
+  rollout after ha recovers (artifact retained 2 days).
+
+Register the deploy runner on omv-ha:
+
+```bash
+TOKEN=$(gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq .token)
+scp .github/scripts/register-deploy-runner.sh tbaltzakis@192.168.1.130:~/
+ssh tbaltzakis@192.168.1.130 "bash ~/register-deploy-runner.sh $TOKEN"
+```
+
+## Runner auto-heal after reboot (ghost-busy)
+
+After a power-cycle or sleep, GitHub often shows runners **offline + busy**
+while systemd still says `active` — the queue stays blocked until restart
+([actions/runner#4312](https://github.com/actions/runner/issues/4312)).
+
+Install on **both** omv and omv-ha:
+
+```bash
+# From a machine with the repo checkout:
+for host in 192.168.1.128 192.168.1.130; do
+  scp infrastructure/omv/gha-runner-heal.sh \
+      infrastructure/omv/gha-runner-heal.service \
+      infrastructure/omv/gha-runner-heal-check.service \
+      infrastructure/omv/gha-runner-heal.timer \
+      infrastructure/omv/install-gha-runner-heal.sh \
+      tbaltzakis@$host:/tmp/gha-heal/
+  ssh tbaltzakis@$host "sudo bash /tmp/gha-heal/install-gha-runner-heal.sh"
+done
+```
+
+- **Boot:** `gha-runner-heal.service` restarts every `actions.runner.*` unit.
+- **Every 5 min:** timer runs `--check` and restarts units that are active
+  but have no `Runner.Listener` process.
+
+Manual recovery:
+
+```bash
+sudo systemctl restart 'actions.runner.*'
+# or
+sudo /usr/local/sbin/gha-runner-heal.sh --boot
+```
+
 ## Setting up the second runner profile on each Pi host
 
 The existing runner (`~/actions-runner`, labels `omv,pi`) stays put. We add a
@@ -150,28 +211,30 @@ On each Pi host (`omv` = omv-main Pi 5, `omv-ha` = secondary):
      --jq '.runners[] | {name, status, labels: [.labels[].name]}'
    ```
 
-Current active fleet (as of 2026-05-23):
+Current active fleet (as of 2026-08-12):
 
-| Host     | IP              | Runner name   | Labels                                  | Status  |
-| -------- | --------------- | ------------- | --------------------------------------- | ------- |
-| omv-main | 192.168.1.128   | `omv`         | `self-hosted, Linux, ARM64, omv, pi`    | online  |
-| omv-main | 192.168.1.128   | `omv-build`   | `self-hosted, Linux, ARM64, omv, build` | online  |
-| omv-ha   | 192.168.1.130   | `omv-2-build` | `self-hosted, Linux, ARM64, omv, build` | online  |
+| Host     | IP / Tailscale              | Runner name      | Labels                                         | Status / role |
+| -------- | --------------------------- | ---------------- | ---------------------------------------------- | ------------- |
+| omv-main | 192.168.1.128 / 100.74.191.58 | `omv`          | `self-hosted, Linux, ARM64, omv, pi`           | cluster jobs |
+| omv-main | 192.168.1.128               | `omv-build`      | `self-hosted, Linux, ARM64, omv, pi, build`    | **Next build** (`deploy-pi` build job) |
+| omv-ha   | 192.168.1.130 / 100.95.117.84 | `omv-ha-deploy` | `self-hosted, Linux, ARM64, omv-ha, deploy`   | **deploy proxy** (`deploy-pi` rollout) |
+| omv-ha   | 192.168.1.130               | `omv-2-build`    | `self-hosted, Linux, ARM64, omv, build`        | optional spare — **do not** rely on for Next builds (1GB RAM) |
 
 The `pi` label is for cluster-local jobs (NodePort audits, kubectl, CWV).
-The `build` label is **exclusive** for heavy compile / hostPath sync:
+The `build` label is **exclusive** for heavy compile on omv (Pi 5):
 
 | Labels | Purpose | Workflows |
 | ------ | ------- | --------- |
-| `self-hosted, omv, build` | Next standalone build + hostPath sync; emergency ECR image build | `deploy-pi.yml`, `build-pi-image.yml` |
+| `self-hosted, omv, build` | Next standalone **build** + artifact upload | `deploy-pi.yml` (build), `build-pi-image.yml` |
+| `self-hosted, omv-ha, deploy` | rsync SafeDeploy + kubectl over SSH to omv | `deploy-pi.yml` (rollout) |
 | `self-hosted, omv, pi` | Cluster reachability, NodePort Lighthouse, alert-api import | `core-web-vitals-audit.yml`, `cluster-status-audit.yml`, `deploy-alert-api.yml` |
 
 Do **not** put CWV, cluster-status, or ETL on exclusive `build` — one busy
 Lighthouse run previously queued `deploy-pi` for tens of minutes.
 
-`deploy-pi` concurrency uses `cancel-in-progress: false` + `queue: max` so
-rapid main merges **serialize** instead of aborting mid-build. A skip step
-no-ops when `/api/health` already reports `version == github.sha`.
+`deploy-pi` concurrency uses `cancel-in-progress: true` so rapid main merges
+supersede older in-progress runs. A skip step no-ops when `/api/health`
+already reports `version == github.sha`.
 
 ## Caveat: Pi runners share resources with production
 
