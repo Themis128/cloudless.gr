@@ -6,6 +6,7 @@ import {
 import {
   getDocBySlug as getNotionDocBySlug,
   getDocContent as getNotionDocContent,
+} from "@/lib/notion-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 

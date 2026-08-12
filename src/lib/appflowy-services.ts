@@ -20,7 +20,7 @@ import {
   isAppFlowyConfigured,
 } from "./appflowy";
 import type { CloudlessService, ServiceCategory } from "./notion-types";
-import { staticServices } from "./notion-types";
+import { staticServices } from "./notion-services";
 
 function slugify(name: string): string {
   return name
