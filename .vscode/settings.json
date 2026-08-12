@@ -12,6 +12,11 @@
   "r2.forcePathStyle": true,
 
   "npm.packageManager": "pnpm",
+  // Built-in npm script/task scanner mis-reports "failed to parse package.json"
+  // on this pnpm workspace (nested package.json under tools/, .sst/, .venv/).
+  // Explicit pnpm tasks live in .vscode/tasks.json — keep autoDetect off.
+  "npm.autoDetect": "off",
+  "npm.exclude": "**/node_modules/**,**/.venv/**,**/.sst/**,**/tools/**,**/workers/**,**/scripts/**,**/services/**",
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.preferences.importModuleSpecifier": "shortest",
