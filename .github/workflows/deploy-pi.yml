@@ -390,8 +390,9 @@ jobs:
       run: |
         set -euo pipefail
         if [ -z "${ORCH_URL:-}" ]; then
-          echo "::error::Set repo variable PI_DEPLOY_ORCHESTRATOR_URL"
-          exit 1
+          echo "::warning::PI_DEPLOY_ORCHESTRATOR_URL not set — R2 upload done; skip Workflow trigger until orchestrator is deployed"
+          echo "workflow_instance_id=skipped-no-orch-url" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
         if [ -z "${ORCH_TOKEN:-}" ]; then
           echo "::error::Missing secret DEPLOY_ORCHESTRATOR_TOKEN"
