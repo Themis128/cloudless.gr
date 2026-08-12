@@ -12,7 +12,13 @@
  *   **Icon**: 🔍
  */
 
-import { listAllWorkspaces, listAllViewsDeep, getDocument, extractDocText, isAppFlowyConfigured } from "./appflowy";
+import {
+  listAllWorkspaces,
+  listAllViewsDeep,
+  getDocument,
+  extractDocText,
+  isAppFlowyConfigured,
+} from "./appflowy";
 import type { CloudlessService, ServiceCategory } from "./notion-services";
 import { staticServices } from "./notion-services";
 

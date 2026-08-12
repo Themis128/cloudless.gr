@@ -1,0 +1,13 @@
+---
+description: Always rebase onto main and merge into main — never leave feature work stranded
+alwaysApply: true
+---
+
+# Git — main is the only durable branch
+
+- **Rebase onto `main` before push/PR.** Keep the feature branch current:
+  `git fetch origin && git rebase origin/main`. Resolve conflicts on the branch, then continue.
+- **Always land on `main`.** After push, open/update the PR and merge into `main` (squash unless the user asks otherwise). Do not leave PRs draft/open waiting on CI unless the user explicitly says wait.
+- **Never commit or push directly to `main`.** Work on `claude/...` (or the active feature branch), rebase, push, merge.
+- **After merge:** switch back to `main`, pull, and delete the local feature branch when done.
+- If `main` moved while you were working, rebase again — do not merge `main` into the feature branch unless the user asks for a merge commit.

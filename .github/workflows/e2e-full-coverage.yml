@@ -57,7 +57,7 @@ jobs:
           # Start dev server temporarily to seed database
           setsid pnpm dev -p 4000 < /dev/null > /tmp/dev-server.log 2>&1 &
           DEV_PID=$!
-          
+
           # Wait for server to be ready
           for i in $(seq 1 30); do
             if curl -sf -m 2 http://localhost:4000 > /dev/null 2>&1; then
@@ -66,34 +66,40 @@ jobs:
             fi
             sleep 2
           done
-          
+
           # Seed admin user
           echo "Seeding admin user..."
           curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
             -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' || echo "Admin user may already exist"
-          
+
           # Promote to admin
           echo "Promoting test admin..."
           curl -sf -X POST http://localhost:4000/api/admin/users/promote \
             -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
             -H "Content-Type: application/json" \
             -d '{"email":"testadmin@cloudless.gr"}' || echo "Promotion may have failed"
-          
+
           # Seed regular user
           echo "Seeding test user..."
           curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
             -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' || echo "Test user may already exist"
-          
-          # Kill dev server
+
+          # Kill seed server and free port 4000 (setsid can leave orphans)
           kill $DEV_PID 2>/dev/null || true
+          pkill -f "next dev -p 4000" 2>/dev/null || true
+          if command -v fuser >/dev/null 2>&1; then
+            fuser -k 4000/tcp 2>/dev/null || true
+          else
+            lsof -ti:4000 | xargs -r kill -9 2>/dev/null || true
+          fi
           sleep 2
           echo "Database seeding complete"
 
       - name: Run Playwright migrated + sweeps + journeys
         run: |
-          pnpm exec playwright test --config=playwright-improved.config.mts \
+          pnpm exec playwright test --config=playwright.config.mts \
             --project=chromium \
             --reporter=line \
             --workers=2 \

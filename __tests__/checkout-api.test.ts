@@ -48,7 +48,7 @@ describe("GET /api/checkout (campaign tier)", () => {
     expect(location).toContain("utm_content=A_EN");
   });
 
-  it("redirects paid tier to /contact with topic=purchase and tier name", async () => {
+  it("redirects paid tier to campaign thanks (Stripe checkout path)", async () => {
     const url =
       "http://localhost/api/checkout?campaign=shop-online&tier=starter" +
       "&utm_source=linkedin&utm_medium=cpc";
@@ -60,9 +60,8 @@ describe("GET /api/checkout (campaign tier)", () => {
     const response = await GET(request);
     expect(response.status).toBe(302);
     const location = response.headers.get("location") ?? "";
-    expect(location).toContain("/en/contact");
-    expect(location).toContain("topic=purchase");
-    expect(location).toContain("campaign=shop-online");
+    expect(location).toContain("/en/campaigns/shop-online/thanks");
+    expect(location).toContain("tier=starter");
     expect(location).toContain("utm_source=linkedin");
   });
 

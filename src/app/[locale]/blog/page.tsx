@@ -314,7 +314,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                               </span>
                             )}
                           </div>
-                          <span className="text-slate-700 inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
+                          <span className="inline-flex items-center gap-1 font-mono text-sm font-semibold text-slate-700 transition-all group-hover:gap-2">
                             {t("blog.readMore", "Read more")}
                             <svg
                               width="14"

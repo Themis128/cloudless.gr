@@ -162,4 +162,4 @@ spec:
           - name: script
             configMap:
               name: prometheus-fine-tune-script
-              defaultMode: 0555
+              defaultMode: 365

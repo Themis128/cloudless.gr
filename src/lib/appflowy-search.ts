@@ -85,7 +85,9 @@ export async function searchDatabases(query: string, limit = 20): Promise<Search
     if (!workspaceId) return [];
 
     const views = await listAllViewsDeep(workspaceId);
-    const folderViews = views.filter((v) => v.type === "folder" && v.name.toLowerCase().includes(trimmed));
+    const folderViews = views.filter(
+      (v) => v.type === "folder" && v.name.toLowerCase().includes(trimmed)
+    );
 
     return folderViews.slice(0, limit).map((v) => ({
       id: v.view_id,

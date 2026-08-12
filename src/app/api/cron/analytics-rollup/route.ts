@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
+import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
 
 export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) {

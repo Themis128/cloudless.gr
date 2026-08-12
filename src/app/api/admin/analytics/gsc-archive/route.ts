@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-
-import { IntegrationNotConfiguredError } from "@/lib/integrations";
+import { getGscReports } from "@/lib/notion-gsc-reports";
 
 /**
- * Persisted weekly GSC archive (written by scripts/weekly-gsc-sync.ts into the
- * NOTION_GSC_REPORTS_DB_ID database). Distinct from /api/admin/analytics/history,
- * which queries the GSC API live — this serves the durable Notion-backed record.
+ * Persisted weekly GSC archive (R2 snapshot at lake/snapshots/gsc-weekly.json,
+ * written by scripts/etl/materialize-datalake-snapshots.mjs). Distinct from
+ * /api/admin/analytics/history, which queries the GSC API live.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -23,23 +22,21 @@ export async function GET(request: NextRequest) {
     const reports = await getGscReports(limit);
     if (reports === null) {
       return NextResponse.json(
-        { error: "Failed to read the GSC archive from Notion." },
-        { status: 502 }
+        {
+          error:
+            "GSC archive unavailable — DATALAKE_BUCKET unbound or lake/snapshots/gsc-weekly.json missing.",
+          reports: [],
+        },
+        { status: 503 }
       );
     }
     return NextResponse.json({
       reports,
       count: reports.length,
       fetchedAt: new Date().toISOString(),
-      source: "notion",
+      source: "r2-datalake",
     });
   } catch (err) {
-    if (err instanceof IntegrationNotConfiguredError) {
-      return NextResponse.json(
-        { error: "GSC archive not configured (NOTION_GSC_REPORTS_DB_ID).", reports: [] },
-        { status: 503 }
-      );
-    }
     console.error("[GSC archive] Error:", err);
     return NextResponse.json({ error: "Failed to fetch GSC archive." }, { status: 500 });
   }

@@ -78,7 +78,9 @@ describe("listPostizIntegrations", () => {
     await listPostizIntegrations();
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe("https://postiz.cloudless.gr/api/public/v1/integrations");
-    expect(init.headers.Authorization).toBe("pk_test_123");
+    // postizFetch builds a Headers instance (CF Access can append via .set).
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect(init.headers.get("Authorization")).toBe("pk_test_123");
   });
 
   it("supports both array and wrapped response shapes", async () => {

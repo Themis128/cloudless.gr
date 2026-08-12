@@ -93,7 +93,7 @@ export async function listEditorialPosts(): Promise<AppFlowyBlogDraft[]> {
         const doc = await getDocument(workspaceId, view.view_id);
         const text = await extractDocText(doc);
         const fields = parseBlogFields(text);
-        const status = getStatusFromName(view.name) || (fields.status || "");
+        const status = getStatusFromName(view.name) || fields.status || "";
         drafts.push({
           id: view.view_id,
           title: fields.title || stripPrefix(view.name),
@@ -110,9 +110,7 @@ export async function listEditorialPosts(): Promise<AppFlowyBlogDraft[]> {
     }
 
     // Sort newest first
-    return drafts.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return drafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (err) {
     console.error("[appflowy-blog-admin] listEditorialPosts error:", err);
     return [];
@@ -162,7 +160,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
         id: view.view_id,
         title: fields.title || stripPrefix(view.name),
         slug: fields.slug || slugify(stripPrefix(view.name)),
-        status: getStatusFromName(view.name) || (fields.status || ""),
+        status: getStatusFromName(view.name) || fields.status || "",
         category: fields.category || "Cloud",
         readTime: fields.readTime || "5 min read",
         createdAt: fields.createdAt || view.last_edited_time,
@@ -171,9 +169,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
     }
 
     // Slug lookup
-    view = views.find(
-      (v) => isEditorialPage(v.name) && slugify(stripPrefix(v.name)) === trimmed
-    );
+    view = views.find((v) => isEditorialPage(v.name) && slugify(stripPrefix(v.name)) === trimmed);
     if (view) {
       const doc = await getDocument(workspaceId, view.view_id);
       const text = await extractDocText(doc);
@@ -182,7 +178,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
         id: view.view_id,
         title: fields.title || stripPrefix(view.name),
         slug: fields.slug || slugify(stripPrefix(view.name)),
-        status: getStatusFromName(view.name) || (fields.status || ""),
+        status: getStatusFromName(view.name) || fields.status || "",
         category: fields.category || "Cloud",
         readTime: fields.readTime || "5 min read",
         createdAt: fields.createdAt || view.last_edited_time,

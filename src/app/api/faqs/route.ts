@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import {
   getFaqs as getAppFlowyFaqs,
   getFaqsByCategory as getAppFlowyFaqsByCategory,
-} from "../../../lib/appflowy-faqs";
+  staticFaqs,
+} from "@/lib/appflowy-faqs";
 import {
   getFaqs as getNotionFaqs,
   getFaqsByCategory as getNotionFaqsByCategory,
-} from "../../../lib/notion-faqs";
-import type { FaqCategory } from "../../../lib/notion-faqs";
+} from "@/lib/notion-faqs";
+import type { FaqCategory } from "@/lib/notion-faqs";
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,
   cmsSourceHeaders,
-} from "../../../lib/cms-provider";
+} from "@/lib/cms-provider";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -23,7 +24,9 @@ export async function GET(request: Request) {
   const notionConfigured = await isNotionCmsConfigured("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
-    let data = [];
+    let data = locale
+      ? staticFaqs.filter((f) => f.locales.length === 0 || f.locales.includes(locale))
+      : staticFaqs;
     if (category) data = data.filter((f) => f.category === category);
     return NextResponse.json(data, { headers: cmsSourceHeaders("static") });
   }
@@ -54,6 +57,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("[API /faqs] Fetch error:", err);
-    return NextResponse.json([], { headers: cmsSourceHeaders("static") });
+    return NextResponse.json(staticFaqs, { headers: cmsSourceHeaders("static") });
   }
 }

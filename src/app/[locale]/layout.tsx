@@ -95,16 +95,16 @@ export default async function LocaleLayout({ children, params }: Props) {
             {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
             <AttributionCapture />
             <JsonLd data={getOrganizationSchema()} />
-          <Navbar />
-          <main id="main-content" className="flex-1">
-            {children}
-            <ClientCartSlideOver />
-          </main>
-          <Footer />
-          <ServiceWorkerRegistration />
-          <ClientDecorators />
-          <CookieConsent />
-          <ClientChatWidget />
+            <Navbar />
+            <main id="main-content" className="flex-1">
+              {children}
+              <ClientCartSlideOver />
+            </main>
+            <Footer />
+            <ServiceWorkerRegistration />
+            <ClientDecorators />
+            <CookieConsent />
+            <ClientChatWidget />
           </CookieConsentProvider>
         </CartProvider>
       </AuthProvider>

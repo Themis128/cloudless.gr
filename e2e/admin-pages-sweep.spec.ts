@@ -267,63 +267,63 @@ test.describe("Admin page sweep (cookie-authenticated)", () => {
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion/analytics loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy/analytics loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion/analytics", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy/analytics", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion/projects loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy/projects loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion/projects", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy/projects", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion/status loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy/status loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion/status", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy/status", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion/submissions loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy/submissions loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion/submissions", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy/submissions", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/notion/tasks loads with h1/h2 and no console errors", async ({ page }) => {
+  test("/en/admin/appflowy/tasks loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
     page.on("console", m => {
       if (m.type() === "error") errors.push(m.text());
     });
-    const r = await page.goto("/en/admin/notion/tasks", { waitUntil: "domcontentloaded" });
+    const r = await page.goto("/en/admin/appflowy/tasks", { waitUntil: "domcontentloaded" });
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });

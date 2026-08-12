@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDocBySlug as getAppFlowyDocBySlug, getDocContentWithToc as getAppFlowyDocContentWithToc } from "@/lib/appflowy-docs";
-import { getDocBySlug as getNotionDocBySlug, getDocContent as getNotionDocContent } from "@/lib/notion-docs";
+import {
+  getDocBySlug as getAppFlowyDocBySlug,
+  getDocContentWithToc as getAppFlowyDocContentWithToc,
+} from "@/lib/appflowy-docs";
+import {
+  getDocBySlug as getNotionDocBySlug,
+  getDocContent as getNotionDocContent,
+} from "@/lib/notion-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
