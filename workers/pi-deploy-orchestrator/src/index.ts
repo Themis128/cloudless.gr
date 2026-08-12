@@ -342,10 +342,40 @@ export default {
       return Response.json({ ok: true });
     }
 
+    // Authenticated artifact download so omv needs no R2 S3 keys
+    if (url.pathname === "/artifact" && request.method === "GET") {
+      if (!requireToken(request, env)) return unauthorized();
+      const key = url.searchParams.get("key") || "";
+      if (!key || key.includes("..") || key.startsWith("/")) {
+        return Response.json({ error: "invalid key" }, { status: 400 });
+      }
+      const obj = await env.RELEASES.get(key);
+      if (!obj) {
+        return Response.json({ error: "artifact not found" }, { status: 404 });
+      }
+      const headers = new Headers();
+      headers.set(
+        "content-type",
+        obj.httpMetadata?.contentType || "application/octet-stream",
+      );
+      if (obj.size != null) headers.set("content-length", String(obj.size));
+      headers.set(
+        "content-disposition",
+        `attachment; filename="${key.split("/").pop() || "release.tar.zst"}"`,
+      );
+      return new Response(obj.body, { headers });
+    }
+
     return Response.json(
       {
         service: "pi-deploy-orchestrator",
-        routes: ["GET /health", "GET /desired", "POST /trigger", "POST /agent-event"],
+        routes: [
+          "GET /health",
+          "GET /desired",
+          "GET /artifact?key=",
+          "POST /trigger",
+          "POST /agent-event",
+        ],
       },
       { status: 404 },
     );

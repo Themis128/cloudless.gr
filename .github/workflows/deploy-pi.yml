@@ -395,8 +395,9 @@ jobs:
           exit 0
         fi
         if [ -z "${ORCH_TOKEN:-}" ]; then
-          echo "::error::Missing secret DEPLOY_ORCHESTRATOR_TOKEN"
-          exit 1
+          echo "::warning::DEPLOY_ORCHESTRATOR_TOKEN not set — skip Workflow trigger"
+          echo "workflow_instance_id=skipped-no-orch-token" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
         RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         RESP=$(curl -fsS --max-time 60 \
@@ -423,7 +424,7 @@ jobs:
           echo "| githubRunId | \`${{ github.run_id }}\` |"
         } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Comment tracking issue #382
+    - name: Comment tracking on issue 382
       if: always()
       env:
         GH_TOKEN: ${{ github.token }}

@@ -7,12 +7,10 @@
 # Env file: /etc/cloudless/pi-release-pull.env (mode 600)
 #   DEPLOY_ORCHESTRATOR_URL   e.g. https://pi-deploy-orchestrator.<acct>.workers.dev
 #   DEPLOY_ORCHESTRATOR_TOKEN
-#   CF_ACCOUNT_ID
-#   CF_R2_ACCESS_KEY_ID
-#   CF_R2_SECRET_ACCESS_KEY
-#   R2_BUCKET                 default cloudless-pi-releases
 #   LOAD1_MAX                 default 6
 #   IOWAIT_MAX_PCT            default 40 (0 disables iowait check)
+# Optional S3 fallback (only if orchestrator /artifact is unavailable):
+#   CF_ACCOUNT_ID CF_R2_ACCESS_KEY_ID CF_R2_SECRET_ACCESS_KEY R2_BUCKET
 #
 # Tracking: every line is key=value; also POST /agent-event when URL is set.
 set -euo pipefail
@@ -30,7 +28,7 @@ DEP="${K3S_DEPLOYMENT:-cloudless-app}"
 BUCKET="${R2_BUCKET:-cloudless-pi-releases}"
 LOAD1_MAX="${LOAD1_MAX:-6}"
 IOWAIT_MAX_PCT="${IOWAIT_MAX_PCT:-40}"
-ENDPOINT="${R2_ENDPOINT:-https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com}"
+ENDPOINT="${R2_ENDPOINT:-https://${CF_ACCOUNT_ID:-}.r2.cloudflarestorage.com}"
 
 log() {
   local msg="$*"
@@ -66,9 +64,6 @@ need() {
 
 need DEPLOY_ORCHESTRATOR_URL
 need DEPLOY_ORCHESTRATOR_TOKEN
-need CF_ACCOUNT_ID
-need CF_R2_ACCESS_KEY_ID
-need CF_R2_SECRET_ACCESS_KEY
 
 load1="$(cut -d' ' -f1 /proc/loadavg)"
 iowait_pct="0"
@@ -82,9 +77,19 @@ fi
 load_high="$(awk -v l="$load1" -v m="$LOAD1_MAX" 'BEGIN{print (l+0 > m+0) ? 1 : 0}')"
 io_high="$(awk -v i="$iowait_pct" -v m="$IOWAIT_MAX_PCT" 'BEGIN{print (m+0>0 && i+0 > m+0) ? 1 : 0}')"
 
-DESIRED_JSON="$(curl -fsS --max-time 15 \
+DESIRED_HTTP="$(curl -sS -o /tmp/pi-desired.json -w '%{http_code}' --max-time 15 \
   -H "Authorization: Bearer ${DEPLOY_ORCHESTRATOR_TOKEN}" \
-  "${DEPLOY_ORCHESTRATOR_URL%/}/desired")"
+  "${DEPLOY_ORCHESTRATOR_URL%/}/desired" || true)"
+if [[ "$DESIRED_HTTP" == "404" ]]; then
+  track event=noop_no_desired
+  exit 0
+fi
+if [[ "$DESIRED_HTTP" != "200" ]]; then
+  track event=error reason=desired_http http="$DESIRED_HTTP"
+  exit 1
+fi
+DESIRED_JSON="$(cat /tmp/pi-desired.json)"
+rm -f /tmp/pi-desired.json
 
 SHA="$(printf '%s' "$DESIRED_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))")"
 ARTIFACT_KEY="$(printf '%s' "$DESIRED_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('artifactKey',''))")"
@@ -114,19 +119,28 @@ TAR="$TMP/release.tar.zst"
 rm -rf "$TMP"
 mkdir -p "$TMP"
 
-export AWS_ACCESS_KEY_ID="$CF_R2_ACCESS_KEY_ID"
-export AWS_SECRET_ACCESS_KEY="$CF_R2_SECRET_ACCESS_KEY"
-export AWS_DEFAULT_REGION="auto"
-
-# Prefer aws CLI; fall back to rclone-style curl is not signed — require aws.
-if ! command -v aws >/dev/null 2>&1; then
-  track event=error reason=aws_cli_missing sha12="$SHA12"
+# Prefer authenticated orchestrator download (no R2 keys on omv).
+if curl -fsS --max-time 600 \
+  -H "Authorization: Bearer ${DEPLOY_ORCHESTRATOR_TOKEN}" \
+  -o "$TAR" \
+  "${DEPLOY_ORCHESTRATOR_URL%/}/artifact?key=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe='/'))" "$ARTIFACT_KEY")"; then
+  track event=download_via_orchestrator sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
+elif [[ -n "${CF_R2_ACCESS_KEY_ID:-}" && -n "${CF_R2_SECRET_ACCESS_KEY:-}" && -n "${CF_ACCOUNT_ID:-}" ]]; then
+  if ! command -v aws >/dev/null 2>&1; then
+    track event=error reason=aws_cli_missing sha12="$SHA12"
+    exit 1
+  fi
+  export AWS_ACCESS_KEY_ID="$CF_R2_ACCESS_KEY_ID"
+  export AWS_SECRET_ACCESS_KEY="$CF_R2_SECRET_ACCESS_KEY"
+  export AWS_DEFAULT_REGION="auto"
+  nice -n 10 ionice -c2 -n7 aws s3 cp \
+    "s3://${BUCKET}/${ARTIFACT_KEY}" "$TAR" \
+    --endpoint-url "$ENDPOINT"
+  track event=download_via_r2_s3 sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
+else
+  track event=error reason=download_failed sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
   exit 1
 fi
-
-nice -n 10 ionice -c2 -n7 aws s3 cp \
-  "s3://${BUCKET}/${ARTIFACT_KEY}" "$TAR" \
-  --endpoint-url "$ENDPOINT"
 
 NEW_REL="$RELEASES/$SHA12"
 PREV="$(readlink "$STANDALONE" 2>/dev/null || true)"
