@@ -78,19 +78,40 @@ if [[ -d "${ARTIFACT_DIR}/public" ]]; then
   remote "mkdir -p '${USER_STAGE}/public'"
   rsync_to "${ARTIFACT_DIR}/public/" "${USER_STAGE}/public/"
 fi
+# Non-hidden BUILD_ID failsafe from pack root (survives upload-artifact v4 defaults)
+if [[ -s "${ARTIFACT_DIR}/BUILD_ID" ]]; then
+  rsync_to "${ARTIFACT_DIR}/BUILD_ID" "${USER_STAGE}/BUILD_ID"
+fi
 remote "test -f '${USER_STAGE}/server.js'"
 remote bash -s <<REMOTE
 set -euo pipefail
 USER_STAGE='$USER_STAGE'
-# Refuse incomplete packs before touching the live symlink (reboot mid-rsync
-# previously left a release without .next/BUILD_ID → CrashLoop).
 test -f "\${USER_STAGE}/server.js"
+# Restore BUILD_ID if upload-artifact stripped standalone/.next (legacy packs)
+# or if only the non-hidden backup survived.
 if [ ! -s "\${USER_STAGE}/.next/BUILD_ID" ]; then
-  echo "::error::Staged release missing .next/BUILD_ID (pack/build incomplete)" >&2
+  for cand in "\${USER_STAGE}/BUILD_ID"; do
+    if [ -s "\$cand" ]; then
+      mkdir -p "\${USER_STAGE}/.next"
+      cp -a "\$cand" "\${USER_STAGE}/.next/BUILD_ID"
+      echo "Restored .next/BUILD_ID from \$cand"
+      break
+    fi
+  done
+fi
+if [ ! -s "\${USER_STAGE}/.next/BUILD_ID" ]; then
+  echo "::error::Staged release missing .next/BUILD_ID (pack/upload incomplete — check include-hidden-files on upload-artifact)" >&2
+  echo "stage size: \$(du -sh "\$USER_STAGE" | cut -f1)"
   ls -la "\${USER_STAGE}/.next" 2>/dev/null || true
+  ls -la "\${USER_STAGE}" | head -20
   exit 1
 fi
-echo "stage BUILD_ID=\$(cat "\${USER_STAGE}/.next/BUILD_ID")"
+NEXT_FILES=\$(find "\${USER_STAGE}/.next" -type f | wc -l)
+echo "stage BUILD_ID=\$(cat "\${USER_STAGE}/.next/BUILD_ID") .next_files=\${NEXT_FILES}"
+if [ "\$NEXT_FILES" -lt 10 ]; then
+  echo "::error::standalone/.next looks empty (\${NEXT_FILES} files) — artifact likely dropped hidden paths" >&2
+  exit 1
+fi
 REMOTE
 
 echo "==> Promote → releases/${RELEASE_SHA12} + flip symlink"

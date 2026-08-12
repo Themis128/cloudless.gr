@@ -272,6 +272,11 @@ jobs:
         fi
         test -s "$OUT/standalone/.next/BUILD_ID"
         echo "standalone BUILD_ID=$(cat "$OUT/standalone/.next/BUILD_ID")"
+        # Non-hidden backup: upload-artifact@v4 drops dotdirs unless
+        # include-hidden-files is set — keep a plain-file copy as failsafe.
+        cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/standalone/BUILD_ID"
+        cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/BUILD_ID"
+        echo "standalone/.next file count=$(find "$OUT/standalone/.next" -type f | wc -l)"
 
         echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
         echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
@@ -284,6 +289,10 @@ jobs:
         path: ${{ steps.pack.outputs.artifact }}
         retention-days: 2
         if-no-files-found: error
+        # Required: standalone embeds `.next/` (BUILD_ID + server traces).
+        # v4 omits hidden files/dirs by default → 269MB pack becomes ~30MB
+        # and rollout fails "missing .next/BUILD_ID".
+        include-hidden-files: true
 
   rollout:
     name: Roll out via omv-ha proxy
