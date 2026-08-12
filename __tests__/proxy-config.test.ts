@@ -35,7 +35,7 @@ describe("proxy config matcher", () => {
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const proxySrc = readFileSync(resolve(process.cwd(), "src/proxy.ts"), "utf-8");
+const proxySrc = readFileSync(resolve(process.cwd(), "src/lib/proxy-logic.ts"), "utf-8");
 
 describe("proxy RATE_LIMITS", () => {
   it("covers /api/contact", () => {

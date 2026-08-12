@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServices as getAppFlowyServices, staticServices } from "@/lib/appflowy-services";
 import { getServices as getNotionServices } from "@/lib/notion-services";
+
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,

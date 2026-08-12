@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { getAllFaqsAdmin } from "../../../../../lib/appflowy-faqs";
-import type { FaqInput } from "@/lib/notion-faqs";
+import type { FaqInput } from "@/lib/notion-types";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy FAQs] Would create FAQ:", body.question);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }
 
 export async function PATCH(request: NextRequest) {
@@ -62,7 +65,10 @@ export async function PATCH(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy FAQs] Would update FAQ:", body.pageId);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }
 
 export async function DELETE(request: NextRequest) {
@@ -76,5 +82,8 @@ export async function DELETE(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy FAQs] Would delete FAQ:", pageId);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }

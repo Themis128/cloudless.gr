@@ -7,7 +7,7 @@
  *
  * Prerequisites:
  *   - NOTION_API_KEY
- *   - APPFLOWY_API_URL, APPFLOWY_EMAIL, APPFLOWY_PASSWORD
+ *   - APPFLOWY_API_URL, APPFLOWY_EMAIL, APPFLOWY_PASSWORD (only required for non-dry-run)
  *
  * Usage:
  *   node scripts/migrate-notion-to-appflowy.mjs [--dry-run]
@@ -97,7 +97,7 @@ function propertyToString(key, prop) {
     case "select":     return `**${key}**: ${prop.select?.name ?? ""}`;
     case "multi_select": return `**${key}**: ${(prop.multi_select ?? []).map((s) => s.name).join(", ")}`;
     case "date":       return `**${key}**: ${prop.date?.start ?? ""}${prop.date?.end ? ` → ${prop.date.end}` : ""}`;
-    case "checkbox":   return `**${key}**: ${prop.checkbox ? "✅" : "☐"}`;
+    case "checkbox":   return `**${key}**: ${prop.checkbox ? "��✅" : "�☐"}`;
     case "url":        return `**${key}**: ${prop.url ?? ""}`;
     case "email":      return `**${key}**: ${prop.email ?? ""}`;
     case "phone_number": return `**${key}**: ${prop.phone_number ?? ""}`;
@@ -167,33 +167,37 @@ async function queryDatabaseAll(dbId, notionToken) {
 
 async function main() {
   const notionToken = process.env.NOTION_API_KEY;
-  const appflowyBase = (process.env.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
-  const appflowyEmail = process.env.APPFLOWY_EMAIL ?? "";
-  const appflowyPassword = process.env.APPFLOWY_PASSWORD ?? "";
-
   if (!notionToken) { console.error("NOTION_API_KEY not set"); process.exit(1); }
-  if (!appflowyBase || !appflowyEmail || !appflowyPassword) {
-    console.error("APPFLOWY_API_URL, APPFLOWY_EMAIL, and APPFLOWY_PASSWORD required");
-    process.exit(1);
-  }
 
   console.log(`Mode: ${DRY_RUN ? "DRY RUN" : "LIVE"}`);
 
-  // 1. Login to AppFlowy and get workspace
-  const appflowyToken = await getAppFlowyToken(appflowyBase, appflowyEmail, appflowyPassword);
-  const wsData = await appflowyGet("/workspace", appflowyToken, appflowyBase);
-  const workspaceId = wsData.data?.[0]?.workspace_id;
-  if (!workspaceId) { console.error("No AppFlowy workspace found"); process.exit(1); }
-  console.log(`AppFlowy workspace: ${workspaceId}`);
+  let appflowyBase, appflowyEmail, appflowyPassword, workspaceId, rootViewId, appflowyToken;
+  if (!DRY_RUN) {
+    // These are only required for non-dry-run
+    appflowyBase = (process.env.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
+    appflowyEmail = process.env.APPFLOWY_EMAIL ?? "";
+    appflowyPassword = process.env.APPFLOWY_PASSWORD ?? "";
+    if (!appflowyBase || !appflowyEmail || !appflowyPassword) {
+      console.error("APPFLOWY_API_URL, APPFLOWY_EMAIL, and APPFLOWY_PASSWORD required");
+      process.exit(1);
+    }
 
-  // 2. Get root view id (workspace root = workspaceId itself)
-  const folderData = await appflowyGet(
-    `/workspace/${workspaceId}/folder?depth=1`, appflowyToken, appflowyBase
-  );
-  const rootViewId = folderData.data?.view_id ?? workspaceId;
-  console.log(`Root view: ${rootViewId}`);
+    // 2. Login to AppFlowy and get workspace
+    appflowyToken = await getAppFlowyToken(appflowyBase, appflowyEmail, appflowyPassword);
+    const wsData = await appflowyGet("/workspace", appflowyToken, appflowyBase);
+    workspaceId = wsData.data?.[0]?.workspace_id;
+    if (!workspaceId) { console.error("No AppFlowy workspace found"); process.exit(1); }
+    console.log(`AppFlowy workspace: ${workspaceId}`);
 
-  // 3. Search Notion for all databases
+    // 3. Get root view id (workspace root = workspaceId itself)
+    const folderData = await appflowyGet(
+      `/workspace/${workspaceId}/folder?depth=1`, appflowyToken, appflowyBase
+    );
+    rootViewId = folderData.data?.view_id ?? workspaceId;
+    console.log(`Root view: ${rootViewId}`);
+  }
+
+  // 1. Search Notion for all databases
   let searchCursor;
   const databases = [];
   do {
@@ -225,6 +229,7 @@ async function main() {
         console.log(`  Created folder page: ${dbViewId}`);
       } catch (err) {
         console.error(`  Failed to create folder page: ${err.message}`);
+        summary.push({ db: dbTitle, migrated: 0, error: err.message });
         continue;
       }
     } else {

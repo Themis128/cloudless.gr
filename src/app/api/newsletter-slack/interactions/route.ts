@@ -18,8 +18,8 @@ import {
   unauthorizedNewsletterSlack,
 } from "@/lib/newsletter-slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
-import { findEditorialPost, setEditorialStatus } from "@/lib/notion-blog-admin";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
+import { findEditorialPost, setEditorialStatus } from "@/lib/notion-blog-admin";
 
 interface ButtonAction {
   action_id: string;

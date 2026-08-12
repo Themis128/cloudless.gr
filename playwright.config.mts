@@ -56,7 +56,7 @@ export default defineConfig({
   expect: { timeout: 20_000 },
 
   use: {
-    baseURL: "http://localhost:4001/en",
+    baseURL: "http://localhost:4000/en",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -67,10 +67,11 @@ export default defineConfig({
     command: "pnpm dev",
     url: "http://localhost:4000",
     timeout: 120_000,
-    reuseExistingServer: !isCi,
+    reuseExistingServer: !isCi || process.env.E2E_REUSE_SERVER === "1",
     env: {
       NEXT_PUBLIC_E2E: "1",
       E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
+      PATH: `${process.env.PATH}:/home/tbaltzakis/.local/share/pnpm/bin`
     },
   },
 

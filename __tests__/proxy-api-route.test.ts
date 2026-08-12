@@ -38,7 +38,7 @@ describe("proxy /api/* route handling", () => {
     const res = await proxy(makeApiRequest("/api/health", { origin: "https://cloudless.gr" }));
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://cloudless.gr");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("OPTIONS");
-    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("stripe-signature");
+    expect(res.headers.get("Access-Control-Allow-Headers").toLowerCase()).toContain("stripe-signature");
   });
 
   it("does NOT attach CORS headers for an unknown origin", async () => {

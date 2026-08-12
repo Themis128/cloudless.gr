@@ -84,7 +84,7 @@ export function getLocalAuthDb(): AuthDatabase | null {
       prepare: (query: string) => new LocalPreparedStatement(db, query),
     };
     cached = adapter;
-    console.warn(`[auth-db-local] Using local D1 sqlite: ${path}`);
+    console.warn("[auth-db-local] Using local D1 sqlite");
     return adapter;
   } catch (err) {
     console.warn("[auth-db-local] Failed to open local D1 sqlite:", err);

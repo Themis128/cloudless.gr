@@ -9,7 +9,6 @@
 import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
 import { listContacts, isEspoCRMConfigured } from "@/lib/espocrm";
 import { getTopErrors, isSentryConfigured } from "@/lib/sentry";
-import { invalidateCache } from "@/lib/notion-cache";
 import { listNewsletterSubscribers } from "@/lib/espocrm";
 
 // ---------------------------------------------------------------------------
@@ -27,7 +26,10 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
       return [
         {
           type: "section",
-          text: { type: "mrkdwn", text: ":warning: GSC not configured or no data available." },
+          text: {
+            type: "mrkdwn",
+            text: ":warning: GSC not configured or no data available.",
+          },
         },
       ];
     }
@@ -42,20 +44,50 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
     return [
       {
         type: "header",
-        text: { type: "plain_text", text: ":mag: SEO — Google Search Console", emoji: true },
+        text: {
+          type: "plain_text",
+          text: ":mag: SEO — Google Search Console",
+          emoji: true,
+        },
       },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Clicks (28d)*\n${snapshot.clicks.toLocaleString()}` },
-          { type: "mrkdwn", text: `*Impressions (28d)*\n${snapshot.impressions.toLocaleString()}` },
-          { type: "mrkdwn", text: `*Avg CTR*\n${snapshot.ctr.toFixed(2)}%` },
-          { type: "mrkdwn", text: `*Avg Position*\n${snapshot.avgPosition.toFixed(1)}` },
+          {
+            type: "mrkdwn",
+            text: `*Clicks (28d)*\n${snapshot.clicks.toLocaleString()}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Impressions (28d)*\n${snapshot.impressions.toLocaleString()}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Avg CTR*\n${snapshot.ctr.toFixed(2)}%`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Avg Position*\n${snapshot.avgPosition.toFixed(1)}`,
+          },
         ],
       },
       { type: "divider" },
-      { type: "section", text: { type: "mrkdwn", text: `*Top 10 Keywords*\n${keywordRows}` } },
-      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Top 10 Keywords*\n${keywordRows}`,
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Requested by <@${userId}>`,
+          },
+        ],
+      },
     ];
   } catch (err) {
     return [
@@ -87,17 +119,30 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
         },
       ];
     }
+
     const contacts = await listContacts(10);
     const results = contacts as Array<{ properties?: Record<string, string> }>;
+
     if (!results.length) {
       return [
         {
           type: "header",
-          text: { type: "plain_text", text: ":busts_in_silhouette: Leads", emoji: true },
+          text: {
+            type: "plain_text",
+            text: ":busts_in_silhouette: Leads",
+            emoji: true,
+          },
         },
-        { type: "section", text: { type: "mrkdwn", text: "No contacts found in EspoCRM." } },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "No contacts found in EspoCRM.",
+          },
+        },
       ];
     }
+
     const rows = results.slice(0, 10).map((c) => {
       const p = c.properties ?? {};
       const name = [p.firstname, p.lastname].filter(Boolean).join(" ") || "—";
@@ -107,6 +152,7 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
         : "";
       return `• *${name}* — ${email} ${created}`;
     });
+
     return [
       {
         type: "header",
@@ -118,9 +164,20 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
       },
       {
         type: "section",
-        text: { type: "mrkdwn", text: `*${results.length}* contacts\n\n${rows.join("\n")}` },
+        text: {
+          type: "mrkdwn",
+          text: `*${results.length}* contacts\n\n${rows.join("\n")}`,
+        },
       },
-      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Requested by <@${userId}>`,
+          },
+        ],
+      },
     ];
   } catch (err) {
     return [
@@ -152,6 +209,7 @@ export async function buildErrorsBlocks(userId: string): Promise<unknown[]> {
         },
       ];
     }
+
     const issues = await getTopErrors(5);
     if (!issues.length) {
       return [
@@ -165,10 +223,14 @@ export async function buildErrorsBlocks(userId: string): Promise<unknown[]> {
         },
         {
           type: "section",
-          text: { type: "mrkdwn", text: "All clear! No unresolved Sentry issues." },
+          text: {
+            type: "mrkdwn",
+            text: "All clear! No unresolved Sentry issues.",
+          },
         },
       ];
     }
+
     const rows = issues.map((issue, i) => {
       const level =
         issue.level === "error"
@@ -176,27 +238,50 @@ export async function buildErrorsBlocks(userId: string): Promise<unknown[]> {
           : issue.level === "warning"
             ? ":large_orange_circle:"
             : ":white_circle:";
-      return `${i + 1}. ${level} *${issue.title?.slice(0, 60)}*\n    ${issue.count ?? "?"} events · last seen ${issue.lastSeen ? `<!date^${Math.floor(new Date(issue.lastSeen).getTime() / 1000)}^{date_short_pretty} {time}|${issue.lastSeen}>` : "?"}`;
+      return `${i + 1}. ${level} *${issue.title?.slice(0, 60)}*\n ${issue.count ?? "?"} events · last seen ${issue.lastSeen ? `<!date^${Math.floor(new Date(issue.lastSeen).getTime() / 1000)}^{date_short_pretty} {time}|${issue.lastSeen}>` : "?"}`;
     });
+
     return [
       {
         type: "header",
-        text: { type: "plain_text", text: ":rotating_light: Top Unresolved Errors", emoji: true },
+        text: {
+          type: "plain_text",
+          text: ":rotating_light: Top Unresolved Errors",
+          emoji: true,
+        },
       },
-      { type: "section", text: { type: "mrkdwn", text: rows.join("\n\n") } },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: rows.join("\n\n"),
+        },
+      },
       {
         type: "actions",
         elements: [
           {
             type: "button",
-            text: { type: "plain_text", text: "Open Sentry", emoji: true },
+            text: {
+              type: "plain_text",
+              text: "Open Sentry",
+              emoji: true,
+            },
             url: "https://sentry.io/issues/",
             action_id: "open_sentry",
             style: "primary",
           },
         ],
       },
-      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Requested by <@${userId}>`,
+          },
+        ],
+      },
     ];
   } catch (err) {
     return [
@@ -245,9 +330,30 @@ export async function buildUptimeBlocks(userId: string): Promise<unknown[]> {
   const header = allUp ? ":white_check_mark: All Systems Operational" : ":warning: Issues Detected";
 
   return [
-    { type: "header", text: { type: "plain_text", text: header, emoji: true } },
-    { type: "section", text: { type: "mrkdwn", text: rows.join("\n") } },
-    { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: header,
+        emoji: true,
+      },
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: rows.join("\n"),
+      },
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `Requested by <@${userId}>`,
+        },
+      ],
+    },
   ];
 }
 
@@ -259,12 +365,20 @@ export async function buildSubscribersBlocks(userId: string): Promise<unknown[]>
   try {
     if (!(await isEspoCRMConfigured())) {
       return [
-        { type: "section", text: { type: "mrkdwn", text: ":warning: EspoCRM not configured." } },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: ":warning: EspoCRM not configured.",
+          },
+        },
       ];
     }
+
     const subs = await listNewsletterSubscribers();
     const total = subs.length;
     const recent = subs.slice(0, 5);
+
     const rows = recent.map((s) => {
       const p = (s as { properties?: Record<string, string> }).properties ?? {};
       const email = p.email || "—";
@@ -273,21 +387,43 @@ export async function buildSubscribersBlocks(userId: string): Promise<unknown[]>
         : "";
       return `• ${email} ${date}`;
     });
+
     return [
       {
         type: "header",
-        text: { type: "plain_text", text: ":envelope: Newsletter Subscribers", emoji: true },
+        text: {
+          type: "plain_text",
+          text: ":envelope: Newsletter Subscribers",
+          emoji: true,
+        },
       },
-      { type: "section", text: { type: "mrkdwn", text: `*Total subscribers:* ${total}` } },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Total subscribers:* ${total}`,
+        },
+      },
       ...(rows.length
         ? [
             {
               type: "section",
-              text: { type: "mrkdwn", text: `*Recent signups:*\n${rows.join("\n")}` },
+              text: {
+                type: "mrkdwn",
+                text: `*Recent signups:*\n${rows.join("\n")}`,
+              },
             },
           ]
         : []),
-      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Requested by <@${userId}>`,
+          },
+        ],
+      },
     ];
   } catch (err) {
     return [
@@ -307,16 +443,46 @@ export async function buildSubscribersBlocks(userId: string): Promise<unknown[]>
 // ---------------------------------------------------------------------------
 
 export async function buildCacheFlushBlocks(userId: string, prefix?: string): Promise<unknown[]> {
-  const cleared = invalidateCache(prefix || undefined);
-  return [
-    { type: "header", text: { type: "plain_text", text: ":broom: Cache Flushed", emoji: true } },
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `Cleared *${cleared}* cached entries${prefix ? ` matching \`${prefix}\`` : ""}.`,
+  try {
+    const { invalidateCache } = await import("@/lib/notion-cache");
+    const flushed = invalidateCache(prefix);
+    return [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":broom: Cache Flushed",
+          emoji: true,
+        },
       },
-    },
-    { type: "context", elements: [{ type: "mrkdwn", text: `Flushed by <@${userId}>` }] },
-  ];
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: prefix
+            ? `Flushed cache keys matching \`${prefix}\`.`
+            : "Flushed all Notion cache keys.",
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Requested by <@${userId}>`,
+          },
+        ],
+      },
+    ];
+  } catch (err) {
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:warning: Cache flush failed: \`${(err as Error).message?.slice(0, 100)}\``,
+        },
+      },
+    ];
+  }
 }

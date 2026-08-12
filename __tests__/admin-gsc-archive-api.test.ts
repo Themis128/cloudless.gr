@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { IntegrationNotConfiguredError } from "@/lib/integrations";
 
 const requireAdminMock = vi.fn();
 const getGscReportsMock = vi.fn();
@@ -39,7 +38,7 @@ describe("GET /api/admin/analytics/gsc-archive", () => {
     expect(getGscReportsMock).not.toHaveBeenCalled();
   });
 
-  it("returns the archive rows with source=notion", async () => {
+  it("returns the archive rows with source=r2-datalake", async () => {
     getGscReportsMock.mockResolvedValueOnce([
       { id: "p1", week: "Week of 2026-06-08", date: "2026-06-08", clicks: 100 },
     ]);
@@ -49,7 +48,7 @@ describe("GET /api/admin/analytics/gsc-archive", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.source).toBe("notion");
+    expect(body.source).toBe("r2-datalake");
     expect(body.count).toBe(1);
     expect(body.reports[0].week).toBe("Week of 2026-06-08");
   });
@@ -63,10 +62,8 @@ describe("GET /api/admin/analytics/gsc-archive", () => {
     expect(getGscReportsMock).toHaveBeenCalledWith(100);
   });
 
-  it("returns 503 when the integration is not configured", async () => {
-    getGscReportsMock.mockRejectedValueOnce(
-      new IntegrationNotConfiguredError(["NOTION_GSC_REPORTS_DB_ID"])
-    );
+  it("returns 503 when the R2 snapshot is missing or unbound", async () => {
+    getGscReportsMock.mockResolvedValueOnce(null);
 
     const { GET } = await import("@/app/api/admin/analytics/gsc-archive/route");
     const res = await GET(makeGet("/api/admin/analytics/gsc-archive"));
@@ -74,14 +71,15 @@ describe("GET /api/admin/analytics/gsc-archive", () => {
 
     expect(res.status).toBe(503);
     expect(body.reports).toEqual([]);
+    expect(body.error).toMatch(/DATALAKE_BUCKET|gsc-weekly/i);
   });
 
-  it("returns 502 when the lib returns null (Notion read error)", async () => {
-    getGscReportsMock.mockResolvedValueOnce(null);
+  it("returns 500 when the lib throws", async () => {
+    getGscReportsMock.mockRejectedValueOnce(new Error("boom"));
 
     const { GET } = await import("@/app/api/admin/analytics/gsc-archive/route");
     const res = await GET(makeGet("/api/admin/analytics/gsc-archive"));
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(500);
   });
 });

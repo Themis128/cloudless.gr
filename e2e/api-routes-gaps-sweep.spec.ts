@@ -28,10 +28,10 @@
  *     /api/admin/campaigns/meta/insights
  *     /api/admin/email/campaigns/[id]        (sample id)
  *     /api/admin/leads
- *     /api/admin/notion/case-studies
- *     /api/admin/notion/faqs
- *     /api/admin/notion/services
- *     /api/admin/notion/testimonials
+ *     /api/admin/appflowy/case-studies
+ *     /api/admin/appflowy/faqs
+ *     /api/admin/appflowy/services
+ *     /api/admin/appflowy/testimonials
  *     /api/admin/ops/errors/[id]             (sample id)
  *     /api/admin/postiz
  *     /api/admin/postiz/integrations
@@ -94,10 +94,10 @@ test.describe("Admin API gap sweep (authenticated GETs)", () => {
     "/api/admin/campaigns/meta/insights",
     `/api/admin/email/campaigns/${SENTINEL_ID}`,
     "/api/admin/leads",
-    "/api/admin/notion/case-studies",
-    "/api/admin/notion/faqs",
-    "/api/admin/notion/services",
-    "/api/admin/notion/testimonials",
+    "/api/admin/appflowy/case-studies",
+    "/api/admin/appflowy/faqs",
+    "/api/admin/appflowy/services",
+    "/api/admin/appflowy/testimonials",
     `/api/admin/ops/errors/${SENTINEL_ID}`,
     "/api/admin/postiz",
     "/api/admin/postiz/integrations",

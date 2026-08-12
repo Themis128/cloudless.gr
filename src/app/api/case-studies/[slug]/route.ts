@@ -4,6 +4,7 @@ import {
   staticCaseStudies,
 } from "@/lib/appflowy-case-studies";
 import { getCaseStudyBySlug as getNotionCaseStudyBySlug } from "@/lib/notion-case-studies";
+
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,

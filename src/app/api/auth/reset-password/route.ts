@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPasswordResetToken, getAuthDbFromEnv } from "@/lib/auth-d1";
+import { createPasswordResetToken, getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendPasswordResetEmail } from "@/lib/email";
 

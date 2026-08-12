@@ -145,23 +145,24 @@ export async function POST(req: NextRequest) {
     try {
       const rawBody = await req.json();
       // Defensive: ensure we have a plain object, not an array/null/primitive
-      const body = (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody))
-        ? rawBody as Record<string, unknown>
-        : {};
+      const body =
+        rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
+          ? (rawBody as Record<string, unknown>)
+          : {};
 
       // Strict validation - only accept strings, reject empty strings
       const rawEmail = body.email;
       const rawPassword = body.password;
       const rawRememberMe = body.rememberMe;
-      
-      email = typeof rawEmail === "string" && rawEmail.trim().length > 0
-        ? rawEmail.toLowerCase().trim()
-        : undefined;
-      
-      password = typeof rawPassword === "string" && rawPassword.trim().length > 0
-        ? rawPassword
-        : undefined;
-      
+
+      email =
+        typeof rawEmail === "string" && rawEmail.trim().length > 0
+          ? rawEmail.toLowerCase().trim()
+          : undefined;
+
+      password =
+        typeof rawPassword === "string" && rawPassword.trim().length > 0 ? rawPassword : undefined;
+
       rememberMe = Boolean(rawRememberMe);
     } catch {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
@@ -252,10 +253,7 @@ export async function POST(req: NextRequest) {
     // client sees a structured 500 instead of an unhandled crash, and the
     // real cause is surfaced in Workers/Lambda logs.
     console.error("[auth/login] unhandled error", err);
-    return NextResponse.json(
-      { error: "Login temporarily unavailable" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Login temporarily unavailable" }, { status: 500 });
   }
 }
 

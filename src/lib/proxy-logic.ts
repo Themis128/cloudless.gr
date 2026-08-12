@@ -1,6 +1,5 @@
 // proxy.ts — Next.js 16+ proxy (replaces deprecated middleware)
 
-
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
@@ -96,9 +95,7 @@ function isRateLimited(
   return false;
 }
 
-function cleanupStaleEntries(
-  store: Map<string, { count: number; resetTime: number }>
-): void {
+function cleanupStaleEntries(store: Map<string, { count: number; resetTime: number }>): void {
   const now = Date.now();
   for (const [key, record] of store.entries()) {
     if (now > record.resetTime) {
@@ -112,16 +109,10 @@ function generateNonce(): string {
 }
 
 function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse {
-  response.headers.set(
-    "Content-Security-Policy",
-    buildCSP(nonce)
-  );
+  response.headers.set("Content-Security-Policy", buildCSP(nonce));
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set(
-    "Referrer-Policy",
-    "strict-origin-when-cross-origin"
-  );
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
     "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=(), hid=(), midi=(), serial=(), xr-spatial-tracking=(), fullscreen=(self), gamepad=(), bluetooth=(), display-capture=(), clipboard-read=(), clipboard-write=(), window-management=(), local-fonts=()"
@@ -161,7 +152,9 @@ function buildCSP(nonce: string): string {
     ${IS_DEV ? "" : "upgrade-insecure-requests;"}
     report-uri /api/csp-report;
     report-to csp-endpoint;
-  `.replace(/\s{2,}/g, " ").trim();
+  `
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function readAuthToken(request: NextRequest): string | null {
@@ -177,13 +170,40 @@ function readD1SessionCookie(request: NextRequest): string | null {
 }
 
 function readNextAuthJwt(request: NextRequest): string | null {
-  const token = request.cookies.get("authjs.session-token")?.value ?? 
-                request.cookies.get("next-auth.session-token")?.value;
+  const token =
+    request.cookies.get("authjs.session-token")?.value ??
+    request.cookies.get("next-auth.session-token")?.value;
   return token ?? null;
 }
 
 function isAdminFromSession(session: { groups?: string[] }): boolean {
   return (session.groups ?? []).includes("admin");
+}
+
+const ALLOWED_ORIGINS = ["https://cloudless.gr", "https://www.cloudless.gr"];
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  const origin = request.headers.get("origin");
+  if (origin && isAllowedOrigin(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, Stripe-Signature, stripe-signature, X-Requested-With"
+    );
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Max-Age", "86400");
+  }
+  return response;
+}
+
+function handleOptionsRequest(request: NextRequest, nonce: string): NextResponse {
+  const response = new NextResponse(null, { status: 204 });
+  return addCorsHeaders(addSecurityHeaders(response, nonce), request);
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -205,6 +225,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
+    return NextResponse.redirect(httpsUrl, 308);
   }
 
   if (pathname.startsWith("/api/")) {
@@ -219,9 +240,14 @@ async function handleApiRoute(
   pathname: string,
   nonce: string
 ): Promise<NextResponse> {
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return handleOptionsRequest(request, nonce);
+  }
+
   const ip = getSharedClientIp(request) || "unknown";
   const authToken = readAuthToken(request);
-  
+
   let limitConfig = RATE_LIMITS.ip;
   if (pathname.startsWith("/api/admin/")) {
     limitConfig = ADMIN_RATE_LIMIT.ip;
@@ -233,14 +259,23 @@ async function handleApiRoute(
   }
 
   const identifier = authToken || ip;
-  if (isRateLimited(identifier, limitConfig.limit, limitConfig.window, 
-                   authToken ? authRequestMap : ipRequestMap)) {
-    return new NextResponse("Too Many Requests", {
+  if (
+    isRateLimited(
+      identifier,
+      limitConfig.limit,
+      limitConfig.window,
+      authToken ? authRequestMap : ipRequestMap
+    )
+  ) {
+    const response = new NextResponse("Too Many Requests", {
       status: 429,
       headers: {
         "Retry-After": String(limitConfig.window),
+        "X-RateLimit-Limit": String(limitConfig.limit),
+        "X-RateLimit-Remaining": "0",
       },
     });
+    return addCorsHeaders(addSecurityHeaders(response, nonce), request);
   }
 
   if (Math.random() < 0.01) {
@@ -248,8 +283,15 @@ async function handleApiRoute(
     cleanupStaleEntries(ipRequestMap);
   }
 
+  // Calculate remaining for rate-limit headers
+  const store = authToken ? authRequestMap : ipRequestMap;
+  const record = store.get(identifier);
+  const remaining = record ? Math.max(0, limitConfig.limit - record.count) : limitConfig.limit - 1;
+
   const response = NextResponse.next();
-  return addSecurityHeaders(response, nonce);
+  response.headers.set("X-RateLimit-Limit", String(limitConfig.limit));
+  response.headers.set("X-RateLimit-Remaining", String(remaining));
+  return addCorsHeaders(addSecurityHeaders(response, nonce), request);
 }
 
 async function handlePageRoute(
@@ -261,7 +303,7 @@ async function handlePageRoute(
   if (!isRscPrefetch) {
     const ip = getSharedClientIp(request);
     const identifier = ip || "unknown";
-    
+
     if (isRateLimited(identifier, RATE_LIMITS.ip.limit, RATE_LIMITS.ip.window, ipRequestMap)) {
       return new NextResponse("Too Many Requests", {
         status: 429,
@@ -277,13 +319,16 @@ async function handlePageRoute(
   }
 
   const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/en/admin");
-  const isDashboardRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/en/dashboard");
-  const isPostLoginRoute = pathname.startsWith("/auth/post-login") || pathname === "/auth/post-login" ||
-                            pathname.startsWith("/en/auth/post-login");
-  
+  const isDashboardRoute =
+    pathname.startsWith("/dashboard") || pathname.startsWith("/en/dashboard");
+  const isPostLoginRoute =
+    pathname.startsWith("/auth/post-login") ||
+    pathname === "/auth/post-login" ||
+    pathname.startsWith("/en/auth/post-login");
+
   // Check for E2E admin bypass cookie
   const e2eAdminCookie = request.cookies.get("e2e_admin")?.value === "1";
-  
+
   if (isAdminRoute || isDashboardRoute || isPostLoginRoute) {
     // E2E bypass: if e2e_admin cookie is set, allow access to admin routes
     if (e2eAdminCookie && isAdminRoute) {
@@ -291,20 +336,20 @@ async function handlePageRoute(
     }
     const sessionToken = readNextAuthJwt(request);
     const sessionCookie = request.cookies.get("authjs.session-token")?.value;
-    const chunkedCookie = request.cookies.get("authjs.session-cookie.0")?.value;
+    const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
     const d1SessionToken = request.cookies.get("session_token")?.value;
-    
+
     const hasSessionToken = sessionToken || sessionCookie || chunkedCookie || d1SessionToken;
-    
+
     if (hasSessionToken) {
       if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
         try {
           const { getUserBySession, isAdmin, getAuthDbFromEnv } = await import("@/lib/auth-d1");
           const db = getAuthDbFromEnv();
-          
+
           if (db) {
             const user = await getUserBySession(db, d1SessionToken);
-            
+
             if (!user) {
               const basePath = pathname.split("/")[1] || "";
               const isLocalized = LOCALES.includes(basePath);
@@ -313,9 +358,9 @@ async function handlePageRoute(
                 : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
               return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
             }
-            
+
             const isAdminUser = await isAdmin(db, user.id);
-            
+
             if (isPostLoginRoute) {
               if (isAdminUser) {
                 const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
@@ -325,22 +370,21 @@ async function handlePageRoute(
                 return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
               }
             }
-            
+
             if (isAdminRoute && !isAdminUser) {
               const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
               return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
             }
-            
+
             return NextResponse.next();
           }
-        } catch {
-        }
+        } catch {}
       }
-      
+
       try {
         const { getToken } = await import("next-auth/jwt");
         const session = await getToken({ req: request as unknown as Request });
-        
+
         if (!session) {
           const basePath = pathname.split("/")[1] || "";
           const isLocalized = LOCALES.includes(basePath);
@@ -349,7 +393,7 @@ async function handlePageRoute(
             : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
           return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
         }
-        
+
         if (isPostLoginRoute) {
           if (isAdminFromSession(session)) {
             const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
@@ -359,7 +403,7 @@ async function handlePageRoute(
             return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
           }
         }
-        
+
         if (isAdminRoute && !isAdminFromSession(session)) {
           const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
           return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
@@ -379,13 +423,13 @@ async function handlePageRoute(
         const loginPath = isLocalized ? `/${basePath}/auth/login` : "/auth/login";
         return NextResponse.redirect(new URL(loginPath, request.nextUrl.origin), 307);
       }
-      
+
       const basePath = pathname.split("/")[1] || "";
       const isLocalized = LOCALES.includes(basePath);
       const redirectPath = isLocalized
         ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
         : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-      
+
       return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
     }
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { getAuthDbFromEnv, markEmailVerified } from "@/lib/auth-d1";
+import { getAuthDbFromEnv, markEmailVerified, type AuthDatabase } from "@/lib/auth-d1";
 import { verifyActivationOtp, verifyActivationToken } from "@/lib/auth-activation";
 
 /**

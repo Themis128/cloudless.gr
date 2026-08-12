@@ -1,0 +1,38 @@
+## Next Steps Checklist
+
+- [ ] Restart Cline to load MCP configuration changes
+- [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
+- [ ] Increase Postiz resources (RAM from 512Mi to ~1Gi)
+- [ ] Import analytics workflows from infrastructure/n8n/workflows/
+- [ ] Configure n8n credentials (SSH key, Slack, R2 access)
+- [ ] Enable lead-enrichment webhook workflow
+- [ ] Activate hot-lead-alert workflow for notifications
+- [ ] Run pnpm mcp-security-scan on API routes
+- [ ] Remove unused API keys from .env (AWS credentials)
+- [ ] Clean up deprecated SSM parameters
+- [ ] Verify POSTIZ_API_KEY and SLACK_WEBHOOK_URL are set in Wrangler secrets
+- [ ] Generate Parquet files from R2 analytics data
+- [ ] Verify analytics-client.ts connects to /api/analytics/r2
+- [ ] Create DuckDB views for funnel metrics (v_funnel_metrics)
+- [ ] Set up daily rollup cron for analytics data
+- [ ] Configure Metabase connection to DuckDB and create dashboards (Lead Sources, Deal Velocity, CLV Cohorts)
+- [ ] Set up Metabase queries for R2 parquet analysis
+- [ ] Optimize R2 cache-control headers (increase to 7 days)
+- [ ] Configure Cloudflare Cache Rules for /api/analytics/*
+- [ ] Add edge caching for /api/blog and /api/docs
+- [ ] Pre-warm Workers cache after deployments
+- [ ] Run ANALYZE=true next build to audit bundle sizes
+- [ ] Audit large dependencies in package.json (langchain, aws-sdk)
+- [ ] Consider removing unused AWS SDK imports
+- [ ] Optimize DuckDB-Wasm loading (lazy load)
+- [ ] Reduce cloudless-app replicas from 5 → 3 (if low traffic)
+- [ ] Lower PostgreSQL request from 1Gi → 512Mi (if usage is low)
+- [ ] Configure horizontal pod autoscaling for AppFlowy services
+- [ ] Add E2E tests for D1 auth endpoints
+- [ ] Add unit tests for password reset flow
+- [ ] Test chat streaming fallback (Workers AI → Anthropic)
+- [ ] Verify all locale redirects work (next-intl middleware)
+- [ ] Update GitHub Actions to use RUNNER_GENERIC failover (ARM64 compatibility)
+- [ ] Add smoke test for Workers deployment
+- [ ] Configure preview deployments for PRs
+- [ ] Add Lighthouse audit step to deployment pipeline

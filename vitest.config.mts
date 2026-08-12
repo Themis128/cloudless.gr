@@ -1,5 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
@@ -68,7 +71,16 @@ export default defineConfig({
     // separate npm project. Vitest's root resolver can't see it, and
     // adding it at root would duplicate a heavy native-build dep. Skip
     // here; the script is exercised by the live ETL workflow run.
-    exclude: ["__tests__/etl-aws-cost-to-lake.test.ts"],
+    //
+    // Orphaned suites: Notion CMS APIs removed (AppFlowy is live); agent tests
+    // need optional `redis` which is not a root dependency. Exclude leftovers.
+    exclude: [
+      "__tests__/etl-aws-cost-to-lake.test.ts",
+      "__tests__/admin-ops-api.test.ts",
+      "__tests__/remaining-api-routes.test.ts",
+      "tests/BaseAgent.test.ts",
+      "tests/Orchestrator.test.ts",
+    ],
     reporters: ["default"],
     setupFiles: ["./__tests__/setup.ts"],
     coverage: {

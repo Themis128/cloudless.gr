@@ -292,9 +292,12 @@ export async function getConfig<T extends Record<string, string> = Record<string
   // In Workers environment with D1 binding
   if (isWorkersEnvironment() && db) {
     const d1Config = await getD1Config(db);
-    // Merge with environment variables (secrets take precedence)
     const envConfig = buildConfigFromEnv();
-    return { ...d1Config, ...envConfig } as unknown as T;
+    // Env defaults → D1 fills gaps → non-empty env/secrets win (empty env must not wipe D1)
+    const nonEmptyEnv = Object.fromEntries(
+      Object.entries(envConfig).filter(([, value]) => Boolean(value))
+    );
+    return { ...envConfig, ...d1Config, ...nonEmptyEnv } as unknown as T;
   }
 
   // In development or when no D1 binding, use environment

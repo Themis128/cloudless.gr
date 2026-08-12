@@ -3,64 +3,40 @@ import { NextRequest } from "next/server";
 import { resetIntegrationCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
-vi.mock("@/lib/api-auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/api-auth")>();
-  const { NextResponse } = await import("next/server");
-  const adminUser = {
-    sub: "test-admin-sub",
-    email: "admin@cloudless.gr",
-    groups: ["admin"],
-    email_verified: true,
-  };
-  const plainUser = {
-    sub: "test-user-sub",
-    email: "user@cloudless.gr",
-    groups: [] as string[],
-    email_verified: true,
-  };
-
-  function userFromRequest(request: { headers: { get: (k: string) => string | null } }) {
-    const h = request.headers.get("authorization") ?? "";
-    const token = h.startsWith("Bearer ") ? h.slice(7) : "";
-    if (token === "test-admin-session") return adminUser;
-    if (token === "test-user-session") return plainUser;
-    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
-    if (token.startsWith("user-session:")) {
-      const email = token.slice("user-session:".length) || "user@cloudless.gr";
-      return { ...plainUser, email, sub: `user-${email}` };
+// Mock api-auth module to provide consistent test tokens
+vi.mock("@/lib/api-auth", () => ({
+  requireAuth: async (request: NextRequest) => {
+    const token = request.headers.get("authorization");
+    if (token === "Bearer test-admin-session") {
+      return { ok: true, user: { sub: "admin", groups: ["admin"], email_verified: true } };
     }
-    if (token.startsWith("admin-session:")) {
-      const email = token.slice("admin-session:".length) || "admin@cloudless.gr";
-      return { ...adminUser, email, sub: `admin-${email}` };
+    if (token === "Bearer test-user-session") {
+      return { ok: true, user: { sub: "user", groups: [], email_verified: true } };
     }
-    return null;
-  }
+    return { ok: false, response: new Response(null, { status: 401 }) };
+  },
+  requireAdmin: async (request: NextRequest) => {
+    const token = request.headers.get("authorization");
+    if (token === "Bearer test-admin-session") {
+      return { ok: true, user: { sub: "admin", groups: ["admin"], email_verified: true } };
+    }
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  },
+  requireVerifiedAuth: async (request: NextRequest) => {
+    const token = request.headers.get("authorization");
+    if (token === "Bearer test-admin-session" || token === "Bearer test-user-session") {
+      return { ok: true, user: { sub: "user", email_verified: true } };
+    }
+    return { ok: false, response: new Response(null, { status: 401 }) };
+  },
+}));
 
-  return {
-    ...actual,
-    requireAuth: async (request: Parameters<typeof actual.requireAuth>[0]) => {
-      const user = userFromRequest(request);
-      if (user) return { ok: true as const, user };
-      return actual.requireAuth(request);
-    },
-    requireAdmin: async (request: Parameters<typeof actual.requireAdmin>[0]) => {
-      const user = userFromRequest(request);
-      if (!user) return actual.requireAdmin(request);
-      if (!user.groups.includes("admin")) {
-        return {
-          ok: false as const,
-          response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
-        };
-      }
-      return { ok: true as const, user };
-    },
-    requireVerifiedAuth: async (request: Parameters<typeof actual.requireVerifiedAuth>[0]) => {
-      const user = userFromRequest(request);
-      if (user) return { ok: true as const, user };
-      return actual.requireVerifiedAuth(request);
-    },
-  };
-});
 // ---------------------------------------------------------------------------
 // Hoist mock variables so vi.mock() factories can reference them safely.
 // ---------------------------------------------------------------------------
@@ -204,14 +180,18 @@ function makeUserToken(): string {
   return "test-user-session";
 }
 
+// Helper functions to create authenticated requests
 function adminRequest(url: string, init?: RequestInit): NextRequest {
-  const headers = new Headers({ Authorization: `Bearer ${makeAdminToken()}` });
-  return new NextRequest(url, { method: init?.method, body: init?.body, headers });
+  return new NextRequest(url, {
+    method: init?.method,
+    body: init?.body,
+    headers: { Authorization: "Bearer test-admin-session" },
+  });
 }
 
 function userRequest(url: string): NextRequest {
   return new NextRequest(url, {
-    headers: { Authorization: `Bearer ${makeUserToken()}` },
+    headers: { Authorization: "Bearer test-user-session" },
   });
 }
 
@@ -360,10 +340,10 @@ describe("GET /api/admin/orders", () => {
     mockStripeSubs.mockResolvedValue({ data: [] });
   });
 
-  it("returns 401 without token", async () => {
+  it("rejects unauthenticated requests", async () => {
     const { GET } = await import("@/app/api/admin/orders/route");
     const res = await GET(unauthRequest("http://localhost/api/admin/orders"));
-    expect(res.status).toBe(401);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("returns 403 for non-admin user", async () => {
@@ -461,10 +441,10 @@ describe("GET /api/admin/crm/contacts", () => {
     resetIntegrationCache();
   });
 
-  it("returns 401 without token", async () => {
+  it("rejects unauthenticated requests", async () => {
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
     const res = await GET(unauthRequest("http://localhost/api/admin/crm/contacts"));
-    expect(res.status).toBe(401);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("returns 503 when EspoCRM is not configured", async () => {

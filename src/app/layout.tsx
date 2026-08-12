@@ -84,7 +84,7 @@ export default async function RootLayout({
   const pathname = requestHeaders.get("x-pathname") ?? "/";
   const nonce = requestHeaders.get("x-nonce") ?? "";
   const theme = themeForRoute(pathname);
-  
+
   // Safely extract locale from pathname
   let locale = routing.defaultLocale; // Default to English
   if (pathname) {
@@ -110,21 +110,21 @@ export default async function RootLayout({
           Skip to content
         </a>
         <ChunkReloadGuard />
-  {GA_ID ? (
-    <>
-      {/* Modern Google Analytics initialization */}
-      <Script
-        id="gtag-consent-init"
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-        strategy="afterInteractive"
-        nonce={nonce}
-      />
-      <Script
-        id="gtag-config"
-        strategy="afterInteractive"
-        nonce={nonce}
-        dangerouslySetInnerHTML={{
-          __html: `
+        {GA_ID ? (
+          <>
+            {/* Modern Google Analytics initialization */}
+            <Script
+              id="gtag-consent-init"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+              nonce={nonce}
+            />
+            <Script
+              id="gtag-config"
+              strategy="afterInteractive"
+              nonce={nonce}
+              dangerouslySetInnerHTML={{
+                __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
@@ -136,10 +136,10 @@ export default async function RootLayout({
               wait_for_update: 500
             });
           `,
-        }}
-      />
-    </>
-  ) : null}
+              }}
+            />
+          </>
+        ) : null}
         {children}
         <WebMCPProvider />
         <PlausibleAnalytics />

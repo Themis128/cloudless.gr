@@ -7,13 +7,11 @@ Reads secrets from Cloudflare D1 config via /api/config endpoint
 
 import datetime
 import json
+import os
 import re
-import subprocess
+import sys
 import urllib.parse
 import urllib.request
-import os
-import sys
-
 
 CONFIG_URL = os.environ.get("CONFIG_URL", "http://localhost:8787/api/config")
 

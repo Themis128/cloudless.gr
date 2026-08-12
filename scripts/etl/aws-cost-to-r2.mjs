@@ -18,6 +18,16 @@ import { shapeResults } from "./aws-cost-to-lake.mjs";
 
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
 
+// Parquet schema for the cost lake — kept local so this live ETL does not
+// depend on the deprecated `aws-cost-to-lake.mjs` for anything but the pure
+// `shapeResults` transform.
+const schema = new ParquetSchema({
+  cost_date: { type: "UTF8" },
+  service: { type: "UTF8" },
+  amount_usd: { type: "DOUBLE" },
+  currency: { type: "UTF8" },
+});
+
 // Cost Explorer endpoint (global service, us-east-1)
 const CE_ENDPOINT = "https://ce.us-east-1.amazonaws.com/";
 
