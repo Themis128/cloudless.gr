@@ -154,7 +154,8 @@ nice -n 10 ionice -c2 -n7 sudo tar --zstd -xf "$TAR" -C "$NEW_REL"
 # Tarball layout: top-level standalone/ static/ public/ BUILD_ID (from pack OUT)
 if [[ -d "$NEW_REL/standalone" ]]; then
   # Flatten: move standalone contents up
-  sudo sh -c "shopt -s dotglob && mv '$NEW_REL'/standalone/* '$NEW_REL'/ && rmdir '$NEW_REL'/standalone"
+  # dash has no shopt — must use bash for dotglob flatten
+  sudo bash -c "shopt -s dotglob && mv '$NEW_REL'/standalone/* '$NEW_REL'/ && rmdir '$NEW_REL'/standalone"
 fi
 if [[ -d "$NEW_REL/static" ]]; then
   sudo mkdir -p "$NEW_REL/.next/static"
