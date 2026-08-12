@@ -48,9 +48,11 @@ auth_header() {
 
 AUTH="$(auth_header)"
 echo "==> Devices on $TAILNET"
-DEVICES=$(curl -fsS -H "$AUTH" -H 'Accept: application/json' "$API/tailnet/$TAILNET/devices")
+DEVICES_FILE=$(mktemp)
+trap 'rm -f "$DEVICES_FILE"' EXIT
+curl -fsS -H "$AUTH" -H 'Accept: application/json' "$API/tailnet/$TAILNET/devices" >"$DEVICES_FILE"
 
-python3 - "$DEVICES" "$DRY_RUN" "$LIST_ONLY" "$AUTH" "$API" <<'PY'
+python3 - "$DEVICES_FILE" "$DRY_RUN" "$LIST_ONLY" "$AUTH" "$API" <<'PY'
 import json, sys, urllib.request
 
 path, dry, list_only, auth, api = sys.argv[1:6]
@@ -60,7 +62,8 @@ data = json.load(open(path))
 devices = data.get("devices") or []
 
 def short_name(d):
-    name = d.get("hostname") or d.get("name") or ""
+    # Prefer MagicDNS leaf (cloudless-fly-proxy-6) over shared hostname
+    name = d.get("name") or d.get("hostname") or ""
     return name.split(".")[0]
 
 def desired_tags(short: str):
