@@ -1,0 +1,41 @@
+# Cloudless Pi hosts — classic OpenSSH over Tailscale (not Tailscale SSH).
+# Install snippet: append to ~/.ssh/config or `Include` this file.
+#
+# Policy: Tailscale SSH (RunSSH) is DISABLED on the Pis so BatchMode / CI keys work.
+# Connectivity heal: infrastructure/omv/pi-connectivity-heal.sh
+
+Host omv github-omv
+    HostName 100.74.191.58
+    User tbaltzakis
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    ConnectTimeout 12
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+    StrictHostKeyChecking accept-new
+
+Host omv-lan
+    HostName 192.168.1.128
+    User tbaltzakis
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    ConnectTimeout 8
+    StrictHostKeyChecking accept-new
+
+Host omv-ha
+    HostName 100.95.117.84
+    User tbaltzakis
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    ConnectTimeout 12
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+    StrictHostKeyChecking accept-new
+
+Host omv-ha-lan
+    HostName 192.168.1.130
+    User tbaltzakis
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    ConnectTimeout 8
+    StrictHostKeyChecking accept-new
