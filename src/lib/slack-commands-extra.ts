@@ -327,9 +327,7 @@ export async function buildUptimeBlocks(userId: string): Promise<unknown[]> {
   });
 
   const allUp = results.every((r) => r.ok);
-  const header = allUp
-    ? ":white_check_mark: All Systems Operational"
-    : ":warning: Issues Detected";
+  const header = allUp ? ":white_check_mark: All Systems Operational" : ":warning: Issues Detected";
 
   return [
     {

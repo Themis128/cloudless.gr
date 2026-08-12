@@ -25,9 +25,7 @@ export interface GenerateReportInput {
 let store: Report[] = [];
 
 export async function listReports(): Promise<Report[]> {
-  return store.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return store.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function getReport(id: string): Promise<Report | null> {
@@ -47,10 +45,7 @@ export async function createReport(input: GenerateReportInput): Promise<Report> 
   return report;
 }
 
-export async function updateReport(
-  id: string,
-  updates: Partial<Report>,
-): Promise<Report | null> {
+export async function updateReport(id: string, updates: Partial<Report>): Promise<Report | null> {
   const idx = store.findIndex((r) => r.id === id);
   if (idx === -1) return null;
   store[idx] = { ...store[idx], ...updates };

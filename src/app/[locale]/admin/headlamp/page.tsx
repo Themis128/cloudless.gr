@@ -32,7 +32,9 @@ export default function HeadlampHelperPage() {
     try {
       const res = await fetchWithAuth("/api/admin/headlamp/token", { method: "POST" });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as { error?: string };
+        const body = (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as {
+          error?: string;
+        };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as TokenResponse;
@@ -68,9 +70,9 @@ export default function HeadlampHelperPage() {
           >
             {HEADLAMP_URL}
           </a>
-          . Its login page asks for a k8s ServiceAccount token. Click below and it&apos;s copied
-          to your clipboard + Headlamp opens in a new tab — paste (Ctrl+V) into the &quot;ID token&quot;
-          field and you&apos;re in. Token is valid for 24h.
+          . Its login page asks for a k8s ServiceAccount token. Click below and it&apos;s copied to
+          your clipboard + Headlamp opens in a new tab — paste (Ctrl+V) into the &quot;ID
+          token&quot; field and you&apos;re in. Token is valid for 24h.
         </p>
       </header>
 
@@ -115,12 +117,10 @@ export default function HeadlampHelperPage() {
 
       {status === "error" && (
         <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950">
-          <p className="font-medium text-red-800 dark:text-red-200">
-            ❌ {error}
-          </p>
+          <p className="font-medium text-red-800 dark:text-red-200">❌ {error}</p>
           <p className="mt-2 text-xs text-red-700 dark:text-red-300">
-            Likely causes: the /api/admin/headlamp/token endpoint isn&apos;t deployed yet, the pod isn&apos;t
-            running in-cluster (dev mode?), or the RBAC in{" "}
+            Likely causes: the /api/admin/headlamp/token endpoint isn&apos;t deployed yet, the pod
+            isn&apos;t running in-cluster (dev mode?), or the RBAC in{" "}
             <code>infrastructure/headlamp/token-minter-rbac.yaml</code> hasn&apos;t been applied.
           </p>
         </div>

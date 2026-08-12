@@ -174,8 +174,8 @@ export default function SeoAnalyticsPage() {
           <p className="font-mono text-sm text-yellow-400">
             Google Search Console is not configured. Set{" "}
             <code className="text-yellow-300">GOOGLE_CLIENT_EMAIL</code> and{" "}
-            <code className="text-yellow-300">GOOGLE_PRIVATE_KEY</code> as Wrangler
-            secrets (or in D1 <code className="text-yellow-300">app_config</code>).
+            <code className="text-yellow-300">GOOGLE_PRIVATE_KEY</code> as Wrangler secrets (or in
+            D1 <code className="text-yellow-300">app_config</code>).
           </p>
         </div>
       </div>

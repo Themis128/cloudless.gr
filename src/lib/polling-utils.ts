@@ -1,12 +1,12 @@
-/** 
- * Shared polling utilities with throttling, deduplication, and backoff. 
- * 
- * Fixes HTTP 429 "Too Many Requests" by: 
- * - Increasing polling intervals to reasonable defaults 
- * - Deduplicating concurrent requests across tabs 
- * - Implementing exponential backoff on errors 
- * - Respecting Retry-After headers 
- * - Skipping polls when tab is hidden 
+/**
+ * Shared polling utilities with throttling, deduplication, and backoff.
+ *
+ * Fixes HTTP 429 "Too Many Requests" by:
+ * - Increasing polling intervals to reasonable defaults
+ * - Deduplicating concurrent requests across tabs
+ * - Implementing exponential backoff on errors
+ * - Respecting Retry-After headers
+ * - Skipping polls when tab is hidden
  */
 
 const POLLING_KEY = "cloudless:polling:lock";
@@ -20,7 +20,8 @@ interface PollingState {
 }
 
 function getPollingState(): PollingState {
-  if (typeof window === "undefined") return { lastSuccess: 0, consecutiveErrors: 0, backoffUntil: 0, retryAfter: 0 };
+  if (typeof window === "undefined")
+    return { lastSuccess: 0, consecutiveErrors: 0, backoffUntil: 0, retryAfter: 0 };
   try {
     const raw = localStorage.getItem(POLLING_STATE_KEY);
     if (!raw) return { lastSuccess: 0, consecutiveErrors: 0, backoffUntil: 0, retryAfter: 0 };
@@ -92,7 +93,12 @@ export function getEffectiveInterval(
  * Record a successful poll.
  */
 export function recordPollSuccess(): void {
-  setPollingState({ lastSuccess: Date.now(), consecutiveErrors: 0, backoffUntil: 0, retryAfter: 0 });
+  setPollingState({
+    lastSuccess: Date.now(),
+    consecutiveErrors: 0,
+    backoffUntil: 0,
+    retryAfter: 0,
+  });
 }
 
 /**
@@ -111,10 +117,7 @@ export function recordPollError(response: Response): void {
   setPollingState({
     lastSuccess: state.lastSuccess,
     consecutiveErrors: state.consecutiveErrors + 1,
-    backoffUntil: Date.now() + Math.min(
-      1000 * Math.pow(2, state.consecutiveErrors),
-      300_000
-    ),
+    backoffUntil: Date.now() + Math.min(1000 * Math.pow(2, state.consecutiveErrors), 300_000),
     retryAfter,
   });
 }
@@ -139,7 +142,7 @@ export function isPageVisible(): boolean {
  */
 export function createThrottledFetch(
   baseFetcher: () => Promise<Response>,
-  baseInterval = 30_000,
+  baseInterval = 30_000
 ): () => Promise<Response> {
   let inFlight = false;
   let pendingPromise: Promise<Response> | null = null;
@@ -158,9 +161,7 @@ export function createThrottledFetch(
     const now = Date.now();
     if (state.backoffUntil > now || state.retryAfter > now) {
       const waitMs = Math.min(state.backoffUntil, state.retryAfter) - now;
-      return Promise.reject(
-        new Error(`Rate limited, retry in ${Math.ceil(waitMs / 1000)}s`),
-      );
+      return Promise.reject(new Error(`Rate limited, retry in ${Math.ceil(waitMs / 1000)}s`));
     }
     inFlight = true;
     pendingPromise = (async () => {
@@ -178,10 +179,7 @@ export function createThrottledFetch(
         setPollingState({
           ...state,
           consecutiveErrors: state.consecutiveErrors + 1,
-          backoffUntil: Date.now() + Math.min(
-            1000 * Math.pow(2, state.consecutiveErrors),
-            300_000
-          ),
+          backoffUntil: Date.now() + Math.min(1000 * Math.pow(2, state.consecutiveErrors), 300_000),
         });
         throw err;
       } finally {

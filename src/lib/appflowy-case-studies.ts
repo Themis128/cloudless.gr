@@ -22,7 +22,12 @@ import {
 } from "./notion-case-studies";
 
 // Re-export types from Notion adapter (single source of truth)
-export type { CaseStudy, CaseStudyWithContent, CaseStudyMetric, CaseStudyInput } from "./notion-case-studies";
+export type {
+  CaseStudy,
+  CaseStudyWithContent,
+  CaseStudyMetric,
+  CaseStudyInput,
+} from "./notion-case-studies";
 
 function slugify(name: string): string {
   return name

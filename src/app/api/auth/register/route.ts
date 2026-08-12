@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createHmac,
-  randomBytes
-} from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import {
   createUser,
   getAuthDbFromEnv,
@@ -171,7 +168,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET ?? "";
+    const secret =
+      process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET ?? "";
     const exp = Date.now() + 5 * 60 * 1000;
     const nonce = randomBytes(16).toString("hex");
     const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
@@ -191,7 +189,7 @@ export async function POST(req: NextRequest) {
       metadata: { fullName: fullName ?? null, provider: "d1" },
     });
 
-slackRegistrationNotify(email).catch(() => {});
+    slackRegistrationNotify(email).catch(() => {});
     notifyTeam(
       "New User Registration",
       email + (fullName ? ` (${fullName})` : "") + " just signed up."

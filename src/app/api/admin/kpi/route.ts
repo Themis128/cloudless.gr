@@ -3,12 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 
 import { getSeoSnapshot } from "@/lib/gsc";
 import { getAnalyticsSummary } from "@/lib/notion-analytics";
-import {
-  listProjects,
-  getTaskSummary,
-  getOverdueTasks,
-  type Project,
-} from "@/lib/notion-projects";
+import { listProjects, getTaskSummary, getOverdueTasks, type Project } from "@/lib/notion-projects";
 
 import { isConfiguredAsync } from "@/lib/integrations";
 import { getConfig } from "@/lib/ssm-config";
@@ -40,8 +35,7 @@ export async function GET(request: NextRequest) {
 
   const analytics = analyticsResult.status === "fulfilled" ? analyticsResult.value : null;
   const gsc = gscResult.status === "fulfilled" ? gscResult.value : null;
-  const projects: Project[] =
-    projectsResult.status === "fulfilled" ? projectsResult.value : [];
+  const projects: Project[] = projectsResult.status === "fulfilled" ? projectsResult.value : [];
   const taskSummary = taskSummaryResult.status === "fulfilled" ? taskSummaryResult.value : {};
   const overdueTasks = overdueResult.status === "fulfilled" ? overdueResult.value : [];
 

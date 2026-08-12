@@ -3,7 +3,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isAppFlowyConfigured, listAllWorkspaces, listWorkspaceViews, getDocument, extractDocText, AppFlowyNotConfiguredError } from "@/lib/appflowy";
+import {
+  isAppFlowyConfigured,
+  listAllWorkspaces,
+  listWorkspaceViews,
+  getDocument,
+  extractDocText,
+  AppFlowyNotConfiguredError,
+} from "@/lib/appflowy";
 
 interface DbStatus {
   name: string;
@@ -14,11 +21,15 @@ interface DbStatus {
   error?: string;
 }
 
-async function probeAppFlowyDatabase(name: string, workspaceId: string, limit = 5): Promise<DbStatus> {
+async function probeAppFlowyDatabase(
+  name: string,
+  workspaceId: string,
+  limit = 5
+): Promise<DbStatus> {
   try {
     const views = await listWorkspaceViews(workspaceId);
     const sample = [];
-    
+
     for (const view of views.slice(0, limit)) {
       try {
         const doc = await getDocument(workspaceId, view.view_id);
@@ -55,7 +66,9 @@ async function probeAppFlowyDatabase(name: string, workspaceId: string, limit = 
   }
 }
 
-async function resolveBotName(): Promise<{ ok: true; botName: string } | { ok: false; response: NextResponse }> {
+async function resolveBotName(): Promise<
+  { ok: true; botName: string } | { ok: false; response: NextResponse }
+> {
   try {
     // AppFlowy doesn't have a direct "bot" concept, but we can get the workspace info
     const workspaces = await listAllWorkspaces();
@@ -66,14 +79,17 @@ async function resolveBotName(): Promise<{ ok: true; botName: string } | { ok: f
   } catch (err) {
     return {
       ok: false,
-      response: NextResponse.json({ authenticated: false, error: "AppFlowy not configured" }, { status: 200 }),
+      response: NextResponse.json(
+        { authenticated: false, error: "AppFlowy not configured" },
+        { status: 200 }
+      ),
     };
   }
 }
 
 const PROBE_TARGETS: Array<string> = [
   "Blog",
-  "Docs", 
+  "Docs",
   "Projects",
   "Tasks",
   "Submissions",
@@ -89,13 +105,16 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const configured = await isAppFlowyConfigured();
-  
+
   if (!configured) {
-    return NextResponse.json({ 
-      authenticated: false, 
-      error: "AppFlowy not configured. Set APPFLOWY_API_KEY and APPFLOWY_BASE_URL in .env.local",
-      databases: [] 
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        authenticated: false,
+        error: "AppFlowy not configured. Set APPFLOWY_API_KEY and APPFLOWY_BASE_URL in .env.local",
+        databases: [],
+      },
+      { status: 200 }
+    );
   }
 
   try {
@@ -104,24 +123,24 @@ export async function GET(request: NextRequest) {
 
     const workspaces = await listAllWorkspaces();
     const workspaceId = workspaces[0]?.workspace_id;
-    
+
     if (!workspaceId) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         authenticated: true,
         botName: bot.botName,
-        databases: PROBE_TARGETS.map(name => ({
+        databases: PROBE_TARGETS.map((name) => ({
           name,
           configured: true,
           connected: false,
           count: 0,
           sample: [],
-          error: "No workspace found"
-        }))
+          error: "No workspace found",
+        })),
       });
     }
 
     const databases = await Promise.all(
-      PROBE_TARGETS.map(name => probeAppFlowyDatabase(name, workspaceId))
+      PROBE_TARGETS.map((name) => probeAppFlowyDatabase(name, workspaceId))
     );
 
     return NextResponse.json({
@@ -131,17 +150,23 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ 
-        authenticated: false, 
-        error: "AppFlowy not configured",
-        databases: [] 
-      }, { status: 200 });
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error: "AppFlowy not configured",
+          databases: [],
+        },
+        { status: 200 }
+      );
     }
     console.error("[appflowy-status] Error:", err);
-    return NextResponse.json({ 
-      authenticated: false, 
-      error: err instanceof Error ? err.message : "Unknown error",
-      databases: [] 
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        authenticated: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+        databases: [],
+      },
+      { status: 200 }
+    );
   }
 }

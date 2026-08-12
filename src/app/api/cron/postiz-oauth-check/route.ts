@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     console.error("[postiz-oauth-check] listIntegrations failed:", e);
     return NextResponse.json(
-      { ok: false, reason: "postiz_unreachable", error: e instanceof Error ? e.message : String(e) },
+      {
+        ok: false,
+        reason: "postiz_unreachable",
+        error: e instanceof Error ? e.message : String(e),
+      },
       { status: 502 }
     );
   }

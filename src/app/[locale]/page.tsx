@@ -298,7 +298,7 @@ export default async function Home({
               <div className="animate-fade-in-up mt-8 flex flex-col gap-4 delay-300 sm:flex-row">
                 <Link
                   href="/contact"
-                  className="btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono font-semibold text-lg"
+                  className="btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono text-lg font-semibold"
                 >
                   {t("hero.ctaPrimary", "Get a Free Audit")}
                 </Link>

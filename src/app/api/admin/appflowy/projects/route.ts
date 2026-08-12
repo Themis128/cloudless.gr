@@ -3,7 +3,12 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { listProjects, createProject, updateProjectStatus, updateProjectProgress } from "@/lib/appflowy-projects";
+import {
+  listProjects,
+  createProject,
+  updateProjectStatus,
+  updateProjectProgress,
+} from "@/lib/appflowy-projects";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import type { ProjectStatus, ProjectPriority, ProjectType } from "@/lib/appflowy-projects";
 
@@ -28,7 +33,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "AppFlowy Projects not configured" }, { status: 503 });
   }
 
-  const body = (await request.json()) as { name: string; status?: ProjectStatus; priority?: ProjectPriority; type?: ProjectType; owner?: string; description?: string; [key: string]: unknown };
+  const body = (await request.json()) as {
+    name: string;
+    status?: ProjectStatus;
+    priority?: ProjectPriority;
+    type?: ProjectType;
+    owner?: string;
+    description?: string;
+    [key: string]: unknown;
+  };
   if (!body.name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
@@ -44,7 +57,10 @@ export async function POST(request: NextRequest) {
 
   const id = await createProject(body);
   if (!id) {
-    return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+    return NextResponse.json(
+      { error: "Write operations not yet implemented for AppFlowy" },
+      { status: 501 }
+    );
   }
   return NextResponse.json({ id }, { status: 201 });
 }
@@ -69,12 +85,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
     const ok = await updateProjectStatus(pageId, status as ProjectStatus);
-    if (!ok) return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+    if (!ok)
+      return NextResponse.json(
+        { error: "Write operations not yet implemented for AppFlowy" },
+        { status: 501 }
+      );
   }
 
   if (typeof progress === "number" && progress >= 0 && progress <= 100) {
     const ok = await updateProjectProgress(pageId, progress);
-    if (!ok) return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+    if (!ok)
+      return NextResponse.json(
+        { error: "Write operations not yet implemented for AppFlowy" },
+        { status: 501 }
+      );
   }
 
   return NextResponse.json({ ok: true });

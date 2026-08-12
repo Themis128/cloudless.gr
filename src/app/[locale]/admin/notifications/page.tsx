@@ -144,8 +144,8 @@ export default function NotificationsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Notifications</h1>
         <p className="mt-1 font-mono text-xs text-slate-500">
-          Durable audit log of client interactions and captured errors. 90-day hot window in
-          D1; older rows archived to R2.
+          Durable audit log of client interactions and captured errors. 90-day hot window in D1;
+          older rows archived to R2.
         </p>
       </div>
 
