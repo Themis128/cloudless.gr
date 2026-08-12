@@ -117,17 +117,20 @@ time on ARM:
 
 When billing is broken, these stay red until billing is fixed.
 
-## deploy-pi topology (build on omv, rollout from omv-ha)
+## deploy-pi topology (build on GH arm64, rollout from omv-ha)
 
 `deploy-pi.yml` is **two jobs** so an omv power-cycle mid-rollout does not
-throw away a finished build:
+throw away a finished build. **`pnpm build` never runs on omv** — compiling
+on the Pi 5 control plane pegs the USB SSD and trips the hardware watchdog
+(~5m into Turbopack).
 
 | Job | `runs-on` | Role |
 | --- | --------- | ---- |
-| `build` | `[self-hosted, omv, build]` | Next standalone compile on Pi 5 (8GB); upload `standalone-<sha>` artifact (2-day retention) |
+| `build` | `ubuntu-24.04-arm` | Next standalone compile on GitHub-hosted native ARM64 (public-repo free); upload `standalone-<sha>` artifact (2-day retention) |
 | `rollout` | `[self-hosted, omv-ha, deploy]` | Download artifact → `scripts/pi-rollout-from-artifact.sh` (rsync SafeDeploy releases/symlink on omv + `kubectl` over SSH) |
 
-- **Never** put the Next build on omv-ha (Pi 4 ~1GB — OOM).
+- **Never** put the Next build on omv or omv-ha (omv = production control plane; omv-ha = Pi 4 ~1GB — OOM).
+- Skip-if-live probes `https://pi-origin.cloudless.gr/api/health` (hosted runner has no LAN).
 - Concurrency group `deploy-pi` with `cancel-in-progress: true`.
 - Job timeouts: build 60m, rollout 15m.
 - `workflow_dispatch` input `rollout_only=true` re-downloads the artifact for
@@ -216,21 +219,24 @@ Current active fleet (as of 2026-08-12):
 | Host     | IP / Tailscale              | Runner name      | Labels                                         | Status / role |
 | -------- | --------------------------- | ---------------- | ---------------------------------------------- | ------------- |
 | omv-main | 192.168.1.128 / 100.74.191.58 | `omv`          | `self-hosted, Linux, ARM64, omv, pi`           | cluster jobs |
-| omv-main | 192.168.1.128               | `omv-build`      | `self-hosted, Linux, ARM64, omv, pi, build`    | **Next build** (`deploy-pi` build job) |
+| omv-main | 192.168.1.128               | `omv-build`      | `self-hosted, Linux, ARM64, omv, pi, build`    | Docker / `build-pi-image.yml` only — **not** `deploy-pi` Next build |
 | omv-ha   | 192.168.1.130 / 100.95.117.84 | `omv-ha-deploy` | `self-hosted, Linux, ARM64, omv-ha, deploy`   | **deploy proxy** (`deploy-pi` rollout) |
-| omv-ha   | 192.168.1.130               | `omv-2-build`    | `self-hosted, Linux, ARM64, omv, build`        | optional spare — **do not** rely on for Next builds (1GB RAM) |
+| omv-ha   | 192.168.1.130               | `omv-2-build`    | `self-hosted, Linux, ARM64, omv, build`        | optional spare — **do not** use for Next builds (1GB RAM) |
+| GitHub   | hosted                      | `ubuntu-24.04-arm` | (managed)                                   | **Next standalone build** (`deploy-pi` build job) |
 
 The `pi` label is for cluster-local jobs (NodePort audits, kubectl, CWV).
-The `build` label is **exclusive** for heavy compile on omv (Pi 5):
+The `build` label is for heavy Docker work on omv (Pi 5), **not** for
+`deploy-pi` Next compile:
 
 | Labels | Purpose | Workflows |
 | ------ | ------- | --------- |
-| `self-hosted, omv, build` | Next standalone **build** + artifact upload | `deploy-pi.yml` (build), `build-pi-image.yml` |
+| `ubuntu-24.04-arm` | Next standalone **build** + artifact upload | `deploy-pi.yml` (build) |
+| `self-hosted, omv, build` | Docker arm64 image build (ECR path) | `build-pi-image.yml` |
 | `self-hosted, omv-ha, deploy` | rsync SafeDeploy + kubectl over SSH to omv | `deploy-pi.yml` (rollout) |
 | `self-hosted, omv, pi` | Cluster reachability, NodePort Lighthouse, alert-api import | `core-web-vitals-audit.yml`, `cluster-status-audit.yml`, `deploy-alert-api.yml` |
 
 Do **not** put CWV, cluster-status, or ETL on exclusive `build` — one busy
-Lighthouse run previously queued `deploy-pi` for tens of minutes.
+Lighthouse run previously queued Docker builds for tens of minutes.
 
 `deploy-pi` concurrency uses `cancel-in-progress: true` so rapid main merges
 supersede older in-progress runs. A skip step no-ops when `/api/health`
@@ -238,9 +244,10 @@ already reports `version == github.sha`.
 
 ## Caveat: Pi runners share resources with production
 
-Pi 4/5 hosts also run the `cloudless` k3s pod that serves `pi-origin.cloudless.gr`.
-Heavy CI concurrency on the `build` runner will degrade prod latency. If you
-flip to `pi` mode for more than a short outage window, consider:
+Pi 5 (`omv`) also runs the `cloudless` k3s pod that serves
+`pi-origin.cloudless.gr`. `deploy-pi` Next compile no longer runs there, but
+Docker builds (`build-pi-image.yml` on `omv-build`) and other `omv,pi` jobs
+still share disk/CPU with prod. If you park heavy work on omv, consider:
 
 - A `nice -n 19` wrapper on the runner systemd unit
 - `cpuset.cpus` cgroup limit on the runner service
