@@ -356,15 +356,15 @@ test.describe("Admin API - Comprehensive Testing", () => {
   // Test Notion endpoints
   test.describe("Notion Endpoints", () => {
     const notionEndpoints = [
-      "/api/admin/notion/analytics",
-      "/api/admin/notion/blog",
-      "/api/admin/notion/comments",
-      "/api/admin/notion/docs",
-      "/api/admin/notion/projects",
-      "/api/admin/notion/search",
-      "/api/admin/notion/status",
-      "/api/admin/notion/submissions",
-      "/api/admin/notion/tasks"
+      "/api/admin/appflowy/analytics",
+      "/api/admin/appflowy/blog",
+      "/api/admin/appflowy/comments",
+      "/api/admin/appflowy/docs",
+      "/api/admin/appflowy/projects",
+      "/api/admin/appflowy/search",
+      "/api/admin/appflowy/status",
+      "/api/admin/appflowy/submissions",
+      "/api/admin/appflowy/tasks"
     ];
     
     notionEndpoints.forEach(endpoint => {
@@ -727,7 +727,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
   // Test ESP32 submodules
   test.describe("ESP32 Submodules", () => {
     const esp32Submodules = [
-      "/api/admin/esp32/notion-sync"
+      "/api/admin/esp32"
     ];
     
     esp32Submodules.forEach(endpoint => {
@@ -847,19 +847,19 @@ test.describe("Admin API - Comprehensive Testing", () => {
   test.describe("Notion Submodules (Additional)", () => {
     // Some notion submodules were already covered above, but let's ensure we have them all
     const notionSubmodules = [
-      "/api/admin/notion/analytics",
-      "/api/admin/notion/blog",
-      "/api/admin/notion/case-studies",
-      "/api/admin/notion/comments",
-      "/api/admin/notion/docs",
-      "/api/admin/notion/faqs",
-      "/api/admin/notion/projects",
-      "/api/admin/notion/search",
-      "/api/admin/notion/services",
-      "/api/admin/notion/status",
-      "/api/admin/notion/submissions",
-      "/api/admin/notion/tasks",
-      "/api/admin/notion/testimonials"
+      "/api/admin/appflowy/analytics",
+      "/api/admin/appflowy/blog",
+      "/api/admin/appflowy/case-studies",
+      "/api/admin/appflowy/comments",
+      "/api/admin/appflowy/docs",
+      "/api/admin/appflowy/faqs",
+      "/api/admin/appflowy/projects",
+      "/api/admin/appflowy/search",
+      "/api/admin/appflowy/services",
+      "/api/admin/appflowy/status",
+      "/api/admin/appflowy/submissions",
+      "/api/admin/appflowy/tasks",
+      "/api/admin/appflowy/testimonials"
     ];
     
     notionSubmodules.forEach(endpoint => {

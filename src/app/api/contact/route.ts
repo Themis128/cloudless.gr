@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   try {
     const { name, email, company, service, message, phone, attribution } =
       parsed as ContactRequestBody;
-    if (!name || !email || !message) {
+    if (!name || !email || message == null || message === "") {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
 
@@ -62,14 +62,16 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
+    const messageText = typeof message === "string" ? message : String(message);
+
     // Reject whitespace-only message to avoid sending empty emails
-    if (!message.trim()) {
+    if (!messageText.trim()) {
       return Response.json(
         { error: "Message cannot be empty or whitespace only." },
         { status: 400 }
       );
     }
-    if (process.env.NODE_ENV === "test" && message.trim() === " ") {
+    if (process.env.NODE_ENV === "test" && messageText.trim() === " ") {
       return Response.json(
         {
           error: "email.sending.error.email.sending_disabled",
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
       <p><strong>Company:</strong> ${escapeHtml(company || "—")}</p>
       <p><strong>Service:</strong> ${escapeHtml(service || "—")}</p>
       <hr />
-      <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>
+      <p>${escapeHtml(messageText).replace(/\n/g, "<br />")}</p>
     `;
 
     const text = [
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
       `Company: ${company || "—"}`,
       `Service: ${service || "—"}`,
       ``,
-      message,
+      messageText,
     ].join("\n");
 
     try {
@@ -150,7 +152,7 @@ export async function POST(request: Request) {
       email,
       service,
       company,
-      message: String(message),
+      message: messageText,
       attribution: attributionData,
     });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
@@ -162,7 +164,7 @@ export async function POST(request: Request) {
         phone,
         company,
         service,
-        message,
+        message: messageText,
         leadScore: lead.score,
         leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
         attributionSummary,
@@ -171,7 +173,7 @@ export async function POST(request: Request) {
         category: "contact",
         type: "info",
         title: `New contact: ${String(name)}`,
-        message: String(message).slice(0, 500),
+        message: messageText.slice(0, 500),
         actor: String(email),
         route: "/api/contact",
         metadata: {
@@ -189,12 +191,12 @@ export async function POST(request: Request) {
           company: company || undefined,
           phone: phone || undefined,
           service_interest: serviceSlug,
-          message: String(message).slice(0, 500),
+          message: messageText.slice(0, 500),
         });
         if (contactId) {
           const noteLines = [
             `Service interest: ${service || "General inquiry"}`,
-            `Message: ${String(message).slice(0, 500)}`,
+            `Message: ${messageText.slice(0, 500)}`,
             ...(company ? [`Company: ${company}`] : []),
             `Lead score: ${lead.score}/100 (${lead.band}) — ${lead.reasons.join("; ")}`,
             ...(attributionSummary ? [`Attribution: ${attributionSummary}`] : []),
@@ -205,7 +207,7 @@ export async function POST(request: Request) {
           dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
           dealstage: "qualifiedtobuy",
           lead_source: "contact_form",
-          description: String(message).slice(0, 500),
+          description: messageText.slice(0, 500),
           service_interest: serviceSlug,
         });
         if (dealId && contactId) {
@@ -218,7 +220,7 @@ export async function POST(request: Request) {
         phone,
         company,
         service,
-        message,
+        message: messageText,
         source: "contact",
       }),
       // Follow-up sequence — silent no-op when AC/automation ID unconfigured.

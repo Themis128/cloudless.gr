@@ -70,12 +70,12 @@ test.describe("encryption — HTTPS posture and secret-leak protection", () => {
     expect(hsts).toContain("preload");
   });
 
-  test("the app never echoes raw upstream error text in /api/admin/notion/status", async ({
+  test("the app never echoes raw upstream error text in /api/admin/appflowy/status", async ({
     request,
   }) => {
     // Without admin auth, this returns 401. The response MUST NOT include
     // any of the leak markers we banned from the route.
-    const r = await request.get("/api/admin/notion/status");
+    const r = await request.get("/api/admin/appflowy/status");
     const body = await r.text();
     // No upstream service URLs, no request-IDs, no API endpoint paths
     // should appear unintentionally.

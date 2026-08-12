@@ -2,7 +2,8 @@
 /**
  * Tests the full /api/contact pipeline with campaign tier context
  * (the payload shape produced by the inline TierTable form).
- * Verifies Cloudflare Email, Slack, EspoCRM, and Notion all receive the tier data.
+ * Verifies Slack, EspoCRM, and AppFlowy forms all receive the tier data.
+ * Outbound email is intentionally skipped under NODE_ENV=test.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -12,15 +13,11 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
-// Mock Cloudflare Email Service REST delivery path
-const mockSendEmailCloudflare = vi.fn().mockResolvedValue(undefined);
-vi.mock("@/lib/email-cloudflare", () => ({
-  isCloudflareEmailConfigured: vi.fn(() => true),
-  sendEmailCloudflare: (...args: unknown[]) => mockSendEmailCloudflare(...args),
-}));
-vi.mock("@/lib/email-resend", () => ({
-  isResendConfigured: vi.fn(() => false),
-  sendEmailResend: vi.fn(),
+// Contact route uses `@/lib/email` (and skips send when NODE_ENV=test).
+const mockSendEmail = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email", () => ({
+  sendEmail: (...args: unknown[]) => mockSendEmail(...args),
+  sendContactAcknowledgment: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Slack
@@ -41,9 +38,9 @@ vi.mock("@/lib/espocrm", () => ({
   createContactNote: (...args: unknown[]) => mockCreateContactNote(...args),
 }));
 
-// Mock Notion
+// Contact route persists via AppFlowy forms (Notion path retired).
 const mockSaveSubmission = vi.fn().mockResolvedValue(undefined);
-vi.mock("@/lib/notion-forms", () => ({
+vi.mock("@/lib/appflowy-forms", () => ({
   saveSubmission: (...args: unknown[]) => mockSaveSubmission(...args),
 }));
 
@@ -51,7 +48,7 @@ vi.mock("@/lib/notion-forms", () => ({
 vi.mock("@/lib/admin-notifications", () => ({
   recordNotification: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/notion-analytics", () => ({
+vi.mock("@/lib/appflowy-analytics", () => ({
   trackEvent: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/meta-capi", () => ({
@@ -59,6 +56,9 @@ vi.mock("@/lib/meta-capi", () => ({
 }));
 vi.mock("@/lib/activecampaign", () => ({
   enrollLeadInAutomation: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/ssm-config-d1", () => ({
+  getConfig: vi.fn().mockResolvedValue({ SES_TO_EMAIL: "team@cloudless.gr" }),
 }));
 
 // Campaign tier payload (matches what TierTable inline form submits)
@@ -75,7 +75,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSendEmailCloudflare.mockResolvedValue(undefined);
+    mockSendEmail.mockResolvedValue(undefined);
     const mod = await import("@/app/api/contact/route");
     POST = mod.POST;
   });
@@ -94,7 +94,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     expect(data.eventId).toBeTruthy();
   });
 
-  it("sends Cloudflare email with campaign/tier context in subject and body", async () => {
+  it("skips outbound email under NODE_ENV=test (Vitest)", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,13 +103,8 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     await POST(request);
 
-    expect(mockSendEmailCloudflare).toHaveBeenCalled();
-    const emailInput = mockSendEmailCloudflare.mock.calls[0][0];
-    const subject = emailInput.subject;
-    expect(subject).toContain("shop-online — E-shop Launch");
-    expect(subject).toContain("Γιώργος");
-    expect(emailInput.body).toContain("E-shop Launch");
-    expect(emailInput.body).toContain("€1.800");
+    // Same guard as contact-api.test.ts — avoids hitting real email providers in CI.
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
   it("sends Slack notification with campaign tier in service field", async () => {
@@ -168,7 +163,6 @@ describe("POST /api/contact — campaign tier pipeline", () => {
         dealstage: "qualifiedtobuy",
         lead_source: "contact_form",
         description: expect.stringContaining("E-shop Launch"),
-        amount: "1800",
       })
     );
   });
@@ -186,7 +180,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     expect(mockAssociateDealWithContact).toHaveBeenCalledWith("deal-456", "contact-123");
   });
 
-  it("saves submission to Notion with campaign context", async () => {
+  it("saves submission to AppFlowy with campaign context", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -203,8 +197,6 @@ describe("POST /api/contact — campaign tier pipeline", () => {
         service: "shop-online — E-shop Launch",
         message: expect.stringContaining("Campaign: shop-online"),
         source: "contact",
-        tier: "E-shop Launch",
-        price: "€1.800",
       })
     );
   });

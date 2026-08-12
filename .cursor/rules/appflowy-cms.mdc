@@ -1,0 +1,14 @@
+---
+description: CMS is AppFlowy — Notion admin APIs and Notion-only tests are legacy
+alwaysApply: true
+---
+
+# CMS: Notion → AppFlowy (done)
+
+- **Live CMS:** AppFlowy Cloud on omv k3s (`APPFLOWY_*` env / `src/lib/appflowy-*.ts`).
+- **Admin API:** `src/app/api/admin/appflowy/**` — there is **no** `src/app/api/admin/notion/**`.
+- **Do not** revive Notion admin routes, Notion webhook handlers, or tests that import deleted Notion modules.
+- Orphan Notion unit suites belong in `vitest.config.mts` `test.exclude` (or delete), not reimplemented.
+- Public content routes (blog/docs/faqs/…) should prefer AppFlowy helpers; static fallbacks are OK when AppFlowy is unbound.
+- GSC archive / analytics history may still say “Notion” in old comments — prefer R2/AppFlowy naming when editing.
+- EspoCRM replaced HubSpot earlier; same rule: do not reintroduce HubSpot surfaces.
