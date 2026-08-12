@@ -259,6 +259,19 @@ function buildConfigFromEnv(): AppConfig {
 }
 
 /**
+ * Merge D1 app_config with env-derived config.
+ * Base = env defaults; D1 fills gaps; non-empty env/secrets win.
+ * Empty env strings must NOT wipe D1 values (Wrangler secrets may be absent
+ * while the same key still lives in app_config).
+ */
+function mergeD1AndEnv(d1Config: Record<string, string>, envConfig: AppConfig): AppConfig {
+  const nonEmptyEnv = Object.fromEntries(
+    Object.entries(envConfig).filter(([, value]) => Boolean(value))
+  );
+  return { ...envConfig, ...d1Config, ...nonEmptyEnv } as AppConfig;
+}
+
+/**
  * Fetches config from D1 app_config (when AUTH_DB is bound) then process.env.
  * AWS SSM has been removed — secrets come from D1, k8s envFrom, or local .env.
  */
@@ -270,8 +283,7 @@ export async function getConfig(): Promise<AppConfig> {
     if (db) {
       const d1Config = await getD1Config(db as D1Database);
       const envConfig = buildConfigFromEnv();
-      // Env/secrets win; D1 fills non-secret gaps
-      return { ...d1Config, ...envConfig } as AppConfig;
+      return mergeD1AndEnv(d1Config as Record<string, string>, envConfig);
     }
   } catch (err) {
     console.warn("[config] D1 lookup failed, continuing:", err);

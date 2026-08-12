@@ -142,7 +142,8 @@ function ErrorState({ msg }: { readonly msg: string }) {
     <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
       <p className="font-mono text-sm text-red-400">{msg}</p>
       <p className="mt-2 text-xs text-slate-500">
-        Make sure GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY are set in SSM.
+        Make sure GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY are set as Wrangler
+        secrets (or in D1 app_config).
       </p>
     </div>
   );

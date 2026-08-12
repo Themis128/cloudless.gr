@@ -172,9 +172,10 @@ export default function SeoAnalyticsPage() {
         <BackLink />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            Google Search Console is not configured. Add{" "}
+            Google Search Console is not configured. Set{" "}
             <code className="text-yellow-300">GOOGLE_CLIENT_EMAIL</code> and{" "}
-            <code className="text-yellow-300">GOOGLE_PRIVATE_KEY</code> to AWS SSM.
+            <code className="text-yellow-300">GOOGLE_PRIVATE_KEY</code> as Wrangler
+            secrets (or in D1 <code className="text-yellow-300">app_config</code>).
           </p>
         </div>
       </div>
