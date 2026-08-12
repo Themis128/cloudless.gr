@@ -1,23 +1,22 @@
-import Script from "next/script";
-
 /**
  * Google Tag Manager (container + Consent Mode default).
  * Paste targets from GTM install: head script + body noscript.
  * Consent defaults to denied; CookieConsent updates via gtag("consent","update").
+ *
+ * Uses a plain <script> (not next/script) so the CSP nonce from proxy → layout
+ * stays identical on SSR and hydrate. next/script beforeInteractive was
+ * emitting nonce="" on the server while the client omitted the attribute.
  */
 const GTM_ID = (process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-W7N3J3TV").trim();
 
 export function GoogleTagManagerHead({ nonce }: { nonce?: string }) {
   if (!GTM_ID) return null;
 
-  // next/script omits empty-string nonce on the client (`undefined`) while SSR
-  // still emits nonce="" — that mismatch hydrates as a console error.
   const scriptNonce = nonce?.trim() ? nonce : undefined;
 
   return (
-    <Script
+    <script
       id="google-tag-manager"
-      strategy="beforeInteractive"
       {...(scriptNonce ? { nonce: scriptNonce } : {})}
       dangerouslySetInnerHTML={{
         __html: `

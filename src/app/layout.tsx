@@ -128,12 +128,12 @@ export default async function RootLayout({
               id="gtag-consent-init"
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
               strategy="afterInteractive"
-              nonce={nonce}
+              {...(nonce ? { nonce } : {})}
             />
             <Script
               id="gtag-config"
               strategy="afterInteractive"
-              nonce={nonce}
+              {...(nonce ? { nonce } : {})}
               dangerouslySetInnerHTML={{
                 __html: `
             window.dataLayer = window.dataLayer || [];
