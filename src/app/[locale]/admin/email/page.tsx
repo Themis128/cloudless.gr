@@ -107,10 +107,8 @@ export default function EmailPage() {
           <div className="h-8 w-px bg-slate-800" />
           <p className="font-mono text-xs text-slate-600">
             via EspoCRM CRM ·{" "}
-            {new Date(data.fetchedAt).toLocaleTimeString("en-IE", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {new Date(data.fetchedAt).toLocaleTimeString("en-IE", { hour: "2-digit",
+              minute: "2-digit", timeZone: "Europe/Athens" })}
           </p>
         </div>
       )}
@@ -197,7 +195,7 @@ export default function EmailPage() {
                       </td>
                     )}
                     <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                      {p.createdate ? new Date(p.createdate).toLocaleDateString("en-IE") : "—"}
+                      {p.createdate ? new Date(p.createdate).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" }) : "—"}
                     </td>
                   </tr>
                 );

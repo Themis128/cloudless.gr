@@ -26,13 +26,11 @@ const STATUS_STYLES: Record<string, string> = {
 
 function formatDate(iso: string) {
   try {
-    return new Date(iso).toLocaleString("en-GB", {
-      day: "2-digit",
+    return new Date(iso).toLocaleString("en-GB", { day: "2-digit",
       month: "short",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit",
-    });
+      minute: "2-digit", timeZone: "Europe/Athens" });
   } catch {
     return iso;
   }

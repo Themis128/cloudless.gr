@@ -358,7 +358,7 @@ function WaitingRoomContent() {
                   `$ portal order --status`,
                   `  ✓ account: ${status.email}`,
                   `  ✓ plan: ${status.planLabel ?? PLAN_LABELS[status.plan ?? ""] ?? status.plan}`,
-                  `  ✓ submitted: ${status.submittedAt ? new Date(status.submittedAt).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "just now"}`,
+                  `  ✓ submitted: ${status.submittedAt ? new Date(status.submittedAt).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Athens" }) : "just now"}`,
                   `  ---`,
                   `  status: pending review`,
                   `  estimated wait: usually < 24h`,

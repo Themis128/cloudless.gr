@@ -139,7 +139,7 @@ export default function VoiceBriefPage() {
             <span className="font-mono text-xs text-slate-500">
               Generated:{" "}
               <span className="text-white">
-                {new Date(brief.generatedAt).toLocaleString("en-IE")}
+                {new Date(brief.generatedAt).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}
               </span>
             </span>
           </div>

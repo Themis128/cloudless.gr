@@ -99,11 +99,9 @@ export default function ServicesPage() {
         {portalStatus?.submittedAt && (
           <p className="mt-3 font-mono text-xs text-slate-500">
             Enrolled:{" "}
-            {new Date(portalStatus.submittedAt).toLocaleDateString("en-IE", {
-              day: "numeric",
+            {new Date(portalStatus.submittedAt).toLocaleDateString("en-IE", { day: "numeric",
               month: "short",
-              year: "numeric",
-            })}
+              year: "numeric", timeZone: "Europe/Athens" })}
           </p>
         )}
       </div>

@@ -7,6 +7,7 @@
  */
 
 import { getSlackConfigAsync } from "@/lib/integrations";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -458,7 +459,7 @@ export async function slackBookingNotify(data: {
   const safeEmail = slackEscape(data.email);
   const dateStr = slackEscape(
     new Date(data.start).toLocaleString("en-IE", {
-      timeZone: "Europe/Athens",
+      timeZone: APP_TIMEZONE,
       dateStyle: "full",
       timeStyle: "short",
     })

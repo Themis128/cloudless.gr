@@ -9,6 +9,7 @@
 
 import type { AdConversionEvent, AdMetrics, DemographicBreakdown, DemographicPivot } from "./types";
 import type { NotificationBlock } from "./channels/notification";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 const FLAG_BY_COUNTRY: Record<string, string> = {
   GR: "🇬🇷",
@@ -52,7 +53,7 @@ export function renderConversionBlocks(
   const capiLine = formatCapiStatus(capiResults);
 
   const athensTime = new Date().toLocaleString("en-GB", {
-    timeZone: "Europe/Athens",
+    timeZone: APP_TIMEZONE,
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",

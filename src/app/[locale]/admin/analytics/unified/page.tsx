@@ -423,11 +423,9 @@ export default function UnifiedAnalyticsPage() {
       {data?.fetchedAt && (
         <p className="mt-10 font-mono text-xs text-slate-600">
           Last fetched:{" "}
-          {new Date(data.fetchedAt).toLocaleTimeString("en-IE", {
-            hour: "2-digit",
+          {new Date(data.fetchedAt).toLocaleTimeString("en-IE", { hour: "2-digit",
             minute: "2-digit",
-            second: "2-digit",
-          })}
+            second: "2-digit", timeZone: "Europe/Athens" })}
         </p>
       )}
     </div>

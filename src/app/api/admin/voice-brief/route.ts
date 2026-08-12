@@ -23,12 +23,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const agentResult = await runVoiceBriefAgent({
-      dateLabel: new Date().toLocaleDateString("en-IE", {
-        weekday: "long",
+      dateLabel: new Date().toLocaleDateString("en-IE", { weekday: "long",
         year: "numeric",
         month: "long",
-        day: "numeric",
-      }),
+        day: "numeric", timeZone: "Europe/Athens" }),
     });
     const brief: VoiceBrief = {
       text: agentResult.text,

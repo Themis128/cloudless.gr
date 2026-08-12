@@ -87,13 +87,13 @@ export async function POST(request: Request) {
         });
         if (contactId) {
           const noteLines = [
-            `Consultation booked: ${new Date(start).toLocaleString("en-IE")}`,
+            `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
             ...(notes ? [`Notes: ${notes}`] : []),
           ];
           await createContactNote(contactId, noteLines.join("\n"));
         }
         const dealId = await createDeal({
-          dealname: `Consultation – ${name} (${new Date(start).toLocaleDateString("en-IE")})`,
+          dealname: `Consultation – ${name} (${new Date(start).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })})`,
           dealstage: "appointmentscheduled",
           lead_source: "calendar_booking",
           closedate: new Date(start).toISOString(),

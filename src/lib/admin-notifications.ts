@@ -1,5 +1,6 @@
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 /**
  * Durable admin notifications store.
@@ -323,8 +324,13 @@ async function sinkToLake(notif: AdminNotification): Promise<void> {
   }
 
   const d = new Date(notif.createdAt);
-  const year = String(d.getUTCFullYear());
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const athensDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d); // YYYY-MM-DD
+  const [year, month] = athensDay.split("-");
   const key = `lake/notifications/year=${year}/month=${month}/${notif.id}.json`;
 
   const record = JSON.stringify({

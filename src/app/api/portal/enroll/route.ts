@@ -138,13 +138,11 @@ async function notifyAdminOfPendingClient(pending: {
   submittedAt: string;
   notes?: string;
 }) {
-  const submittedDate = new Date(pending.submittedAt).toLocaleString("en-IE", {
-    day: "numeric",
+  const submittedDate = new Date(pending.submittedAt).toLocaleString("en-IE", { day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit",
-  });
+    minute: "2-digit", timeZone: "Europe/Athens" });
   const adminUrl = `${BASE_URL}/admin/client-portals`;
 
   // Email — sent from noreply@cloudless.gr (per SES_FROM_EMAIL config) to admin

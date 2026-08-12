@@ -96,7 +96,7 @@ function fmtRam(b?: number): string {
 function fmtTs(iso?: string): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleTimeString();
+    return new Date(iso).toLocaleTimeString(undefined, { timeZone: "Europe/Athens" });
   } catch {
     return iso;
   }

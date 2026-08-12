@@ -78,7 +78,7 @@ export async function GET(
     <h1>${escapeHtml(report.clientName)} — Performance Report</h1>
     <div class="meta">
       <span>Period: ${escapeHtml(report.dateRange.start)} to ${escapeHtml(report.dateRange.end)}</span>
-      <span>Generated: ${new Date(report.createdAt).toLocaleDateString("en-IE", { year: "numeric", month: "long", day: "numeric" })}</span>
+      <span>Generated: ${new Date(report.createdAt).toLocaleDateString("en-IE", { year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Athens" })}</span>
       <span>Status: ${escapeHtml(report.status)}</span>
     </div>
   </header>

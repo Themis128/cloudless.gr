@@ -48,12 +48,10 @@ const TYPE_LABELS: Record<string, string> = {
 function formatDate(iso: string) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString("en-GB", {
-      day: "2-digit",
+    return new Date(iso).toLocaleString("en-GB", { day: "2-digit",
       month: "short",
       hour: "2-digit",
-      minute: "2-digit",
-    });
+      minute: "2-digit", timeZone: "Europe/Athens" });
   } catch {
     return iso;
   }

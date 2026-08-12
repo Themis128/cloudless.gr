@@ -4,3 +4,5 @@
  */
 export const DEFAULT_LOCALE = "en-IE";
 export const DEFAULT_CURRENCY = "EUR";
+/** Greek civil time — use for all user-visible dates (see `@/lib/timezone`). */
+export const DEFAULT_TIMEZONE = "Europe/Athens" as const;

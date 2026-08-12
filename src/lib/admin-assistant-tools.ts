@@ -75,7 +75,7 @@ export async function runAssistantTool(
       return results
         .map(
           (r) =>
-            `• [${r.title || "(untitled)"}](${r.url}) — ${r.type}, last edited ${new Date(r.lastEditedTime).toLocaleDateString("en-GB")}`
+            `• [${r.title || "(untitled)"}](${r.url}) — ${r.type}, last edited ${new Date(r.lastEditedTime).toLocaleDateString("en-GB", { timeZone: "Europe/Athens" })}`
         )
         .join("\n");
     }
@@ -87,7 +87,7 @@ export async function runAssistantTool(
       return orders
         .map((o) => {
           const amount = `${o.currency} ${(o.amount / 100).toFixed(2)}`;
-          const date = new Date(o.created * 1000).toLocaleDateString("en-GB");
+          const date = new Date(o.created * 1000).toLocaleDateString("en-GB", { timeZone: "Europe/Athens" });
           return `• ${o.email ?? "unknown"} — ${amount} — ${o.paymentStatus} — ${date}`;
         })
         .join("\n");

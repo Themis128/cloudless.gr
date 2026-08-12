@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { AnalyticsOrchestrationResult } from "@/lib/analytics-agent-orchestrator";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -183,8 +184,8 @@ export async function renderAnalyticsReportPdf(params: {
   state = { ...state, y: state.y - 24 };
   state.page.drawText(
     `Generated ${new Date(result.snapshot.generatedAt).toLocaleString("en-IE", {
-      timeZone: "UTC",
-    })} UTC`,
+      timeZone: APP_TIMEZONE,
+    })} (Europe/Athens)`,
     {
       x: PAGE_MARGIN,
       y: state.y,
