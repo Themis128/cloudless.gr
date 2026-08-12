@@ -3,6 +3,7 @@
 ## Remedy when connectivity breaks
 
 **Automatic (already on both Pis):** `pi-connectivity-heal.timer` every 2 minutes
+
 + on boot — restarts `tailscaled`/`sshd`, forces `tailscale set --ssh=false`,
 heals ghost-busy GHA runners.
 
@@ -64,10 +65,10 @@ sudo bash infrastructure/omv/configure-pi-firewall.sh
 
 ### Tailscale ACL (`infrastructure/tailscale/acl-policy.example.json`)
 
-- **`tag:pi`** — github-omv + omv-ha
-- **grants:** members → `tag:pi` `tcp:22`; admins → `tag:pi` `*`
-- **`ssh` block:** `action: accept` only (no check-mode)
-- Pis still run `tailscale set --ssh=false`
++ **`tag:pi`** — github-omv + omv-ha
++ **grants:** members → `tag:pi` `tcp:22`; admins → `tag:pi` `*`
++ **`ssh` block:** `action: accept` only (no check-mode)
++ Pis still run `tailscale set --ssh=false`
 
 Apply / retag fleet:
 
@@ -89,11 +90,11 @@ scripts/ssh-pi.sh omv-ha uptime
 
 Installed by `install-pi-connectivity-heal.sh`:
 
-- Boot oneshot + every **2 minutes**
-- Ensures `tailscaled` Running, forces `--ssh=false`
-- Ensures `ssh`/`sshd` listening on `:22`
-- Optional re-auth via `/etc/cloudless/tailscale-authkey` (operator-managed reusable key)
-- `sshd` systemd Nice=-5 so banner exchange still works during `next build`
++ Boot oneshot + every **2 minutes**
++ Ensures `tailscaled` Running, forces `--ssh=false`
++ Ensures `ssh`/`sshd` listening on `:22`
++ Optional re-auth via `/etc/cloudless/tailscale-authkey` (operator-managed reusable key)
++ `sshd` systemd Nice=-5 so banner exchange still works during `next build`
 
 ```bash
 # From a machine with LAN or working SSH:

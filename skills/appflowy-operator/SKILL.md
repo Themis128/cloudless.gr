@@ -12,7 +12,6 @@ description: |
 
 # AppFlowy operator toolkit
 
-
 > **⚠️ Topology note (2026-08-08):** references to a 2-node cluster or `omv-ha`
 > as a k3s worker below are **historical**. The cluster is now single-node
 > (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from

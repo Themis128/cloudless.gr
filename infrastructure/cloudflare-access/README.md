@@ -131,11 +131,13 @@ No changes needed to `/etc/cloudflared/config.yml` on omv nodes for Access.
 ## Troubleshooting: OTP email not arriving
 
 1. **Confirm the `onetimepin` IdP exists** in the account:
+
    ```bash
    curl -s "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access/identity_providers" \
      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
      | jq -r '.result[] | select(.type=="onetimepin") | .name'
    ```
+
 2. **Confirm the app has `allowed_idps`** pointing at that IdP.
 3. **Confirm the policy includes your email address** in its include rules.
 4. **Verify the destination inbox can receive mail** — check spam, and that

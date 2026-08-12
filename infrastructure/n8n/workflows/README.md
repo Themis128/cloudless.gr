@@ -30,6 +30,7 @@ Configure these secrets in the n8n **Settings → Environment Variables** or via
 | `NOTION_WEBHOOK_SECRET` | Secret for webhook verification |
 
 **Note:** SSM is no longer used. Secrets are now managed through:
+
 - D1 database (`cloudless.db` table)
 - n8n environment variables
 - Cloudflare Secrets (for Workers)

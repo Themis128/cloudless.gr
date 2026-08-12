@@ -33,6 +33,7 @@ bash tools/tunnel-endpoint-validator.sh
 ```
 
 This checks:
+
 1. Every tunnel ingress rule points to a valid, running NodePort
 2. Every NodePort service is healthy internally (HTTP check)
 3. Every external hostname resolves in DNS
@@ -107,6 +108,7 @@ Expected: Each hostname resolves to a CNAME like
 `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com`
 
 If a hostname doesn't resolve:
+
 - The DNS record is missing in Cloudflare
 - The domain is wrong (e.g., `cloudflow.gr` instead of `cloudless.gr`)
 
@@ -149,11 +151,13 @@ To add a missing route, append to the tunnel config before the catch-all:
 ```
 
 Then reload cloudflared:
+
 ```bash
 ssh 192.168.1.128 'sudo systemctl reload cloudflared'
 ```
 
 And add the DNS record in Cloudflare:
+
 ```bash
 # Via Cloudflare API or dashboard
 # CNAME: new-service.cloudless.gr → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com

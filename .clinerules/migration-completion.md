@@ -205,6 +205,7 @@ The following AWS resources can now be safely decommissioned:
 - **Cost Explorer ETL**: Can be dropped after PR-16 (scripts/etl/aws-cost-to-r2.mjs)
 
 Run cleanup scripts on machine with AWS CLI:
+
 - `scripts/cleanup-migrated-aws-resources.sh` (interactive, preserves pi-proxy and SES-to-EspoCRM Lambdas)
 - `scripts/cleanup-monitoring.sh` (monitoring-specific cleanup)
 - `scripts/cleanup-aws-post-email.sh` (post-email validation cleanup)
@@ -238,6 +239,7 @@ Timestamp: 2026-08-07T23:10:11Z
 ```
 
 **Build & TypeCheck**: ✅ PASS
+
 - `pnpm build` - Successful
 - `pnpm typecheck` - Successful  
 - `rg '@aws-sdk' package.json src/` - Empty (no AWS SDK imports)

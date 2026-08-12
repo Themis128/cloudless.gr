@@ -98,6 +98,7 @@ Reports are saved to `coverage/playwright/`
 ## Global Setup
 
 The `global-setup.mts` file runs a pre-flight health check before the suite:
+
 - Probes `/api/health` to verify API route handlers resolve
 - Probes `/en` to verify the proxy and next-intl are wired
 - Fails fast with a clear message if the dev server is stale/unhealthy

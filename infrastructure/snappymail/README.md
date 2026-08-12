@@ -45,6 +45,7 @@ sudo ./install_snappymail.sh
 ```
 
 The script will:
+
 1. Verify OMV version and architecture
 2. Check Docker installation and start service if needed
 3. Create shared folder `snappymail-data` (if not exists)
@@ -60,12 +61,14 @@ The script will:
 #### 1. DNS Configuration
 
 Create A record in Cloudflare DNS:
+
 - **Type**: A
 - **Name**: webmail
 - **IPv4**: [your OMV-HA public IP]
 - **Proxy**: DNS-only (orange cloud OFF)
 
 Verify propagation:
+
 ```bash
 dig webmail.cloudless.gr +short
 ```
@@ -73,6 +76,7 @@ dig webmail.cloudless.gr +short
 #### 2. SSL Certificate
 
 Create Let's Encrypt certificate via OMV Web UI:
+
 1. Go to **Storage → Certificates → + Add**
 2. Type: **Let's Encrypt**
 3. Domains: `webmail.cloudless.gr`
@@ -84,12 +88,14 @@ The Nginx config will automatically use this certificate.
 #### 3. Configure Mail Server
 
 Ensure mail server is running:
+
 ```bash
 sudo systemctl status postfix
 sudo systemctl status dovecot
 ```
 
 If not installed:
+
 ```bash
 sudo apt update
 sudo apt install postfix dovecot-imapd
@@ -163,6 +169,7 @@ docker compose -f /tmp/snappymail-compose.yml up -d
 ### Backup
 
 Snappymail data is stored in the OMV shared folder:
+
 ```bash
 # Find the shared folder path
 sudo sharedfolder-list --name snappymail-data --option mp
@@ -182,6 +189,7 @@ cat /tmp/snappymail-install.log
 ```
 
 This log contains detailed information about:
+
 - System verification results
 - Docker status and version
 - Shared folder creation and permissions
@@ -266,6 +274,7 @@ sudo chmod -R 755 /srv/dev-disk-by-label-*/snappymail-data
 ### Script Error Handling
 
 The script includes:
+
 - **Pre-flight checks**: Validates OMV version, Docker, ports, permissions
 - **Automatic rollback**: Nginx config rollback on failure
 - **Detailed logging**: All steps logged to `/tmp/snappymail-install.log`
@@ -317,6 +326,7 @@ Edit `/srv/dev-disk-by-label-*/snappymail-data/config.php` (if created by contai
 ### Reverse Proxy to Cloudflare Tunnel
 
 Add to Cloudflare Tunnel configuration:
+
 ```yaml
 - hostname: webmail.cloudless.gr
   service: http://192.168.1.128:443  # OMV-HA IP
@@ -325,6 +335,7 @@ Add to Cloudflare Tunnel configuration:
 ### Monitoring with Uptime Kuma
 
 Add monitor:
+
 - **URL**: https://webmail.cloudless.gr
 - **Type**: HTTP(s)
 - **Interval**: 60 seconds
@@ -339,6 +350,7 @@ Add monitor:
 ## Support
 
 For issues with:
+
 - **Snappymail**: Check [GitHub Issues](https://github.com/the-djmaze/snappymail/issues)
 - **OMV**: Check [Forum](https://forum.openmediavault.org/)
 - **Infrastructure**: Contact `tbaltzakis@cloudless.gr`

@@ -36,11 +36,13 @@
 ### Root Cause Analysis
 
 The device cleanup logic in `scripts/tailscale-admin-api.sh` has been fixed to:
+
 1. Match all office variants via updated `KEEP_RE` regex: `^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$`
 2. Detect offline devices by checking `offline` flag and `lastSeen` timestamp (>24h threshold)
 3. Report offline devices separately for attention before deletion
 
 **Common stale device patterns:**
+
 - `monitoring-proxies-*`, `ts-n8n-*`, `appflowy`, `grafana`, `meilisearch` (pre-annotation era)
 - Old per-service proxies from before shared `proxy-group` annotations
 

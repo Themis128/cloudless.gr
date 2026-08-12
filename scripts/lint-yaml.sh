@@ -73,6 +73,14 @@ run_yamllint .
 echo "==> actionlint (.github/workflows)"
 # Uses .github/actionlint.yaml for self-hosted runner labels.
 # concurrency.queue is valid on GitHub but not yet in actionlint's schema.
-run_actionlint -ignore 'unexpected key "queue"' -ignore 'context "secrets" is not allowed'
+# Skip Dependabot lock workflows (generated). Shellcheck on GHA `run:` blocks
+# is too noisy (SC2015/SC2034/style) for a required CI gate — keep syntax checks.
+shopt -s nullglob
+mapfile -t WF_FILES < <(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) ! -name '*.lock.yml' | sort)
+run_actionlint \
+  -ignore 'unexpected key "queue"' \
+  -ignore 'context "secrets" is not allowed' \
+  -ignore 'shellcheck reported issue in this script: .*' \
+  "${WF_FILES[@]}"
 
 echo "YAML lint OK"

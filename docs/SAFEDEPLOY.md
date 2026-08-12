@@ -29,10 +29,12 @@ that's been standard for zero-downtime deploys since the Capistrano days.
 
 The k8s Deployment mounts `cloudless-standalone` via `hostPath` (unchanged).
 The atomic operation `ln -sfn cloudless-releases/<sha> cloudless-standalone`
-+ `kubectl rollout restart` swaps versions in ~15 seconds. Old releases stay
+
+- `kubectl rollout restart` swaps versions in ~15 seconds. Old releases stay
 on disk (last 5 kept), so any of them can be re-selected.
 
 **On deploy** (`deploy-pi.yml` "Sync standalone → releases/ + flip symlink"):
+
 1. Build Next.js standalone.
 2. rsync into `releases/<new-sha>/` (staging).
 3. Remember the *previous* symlink target for possible rollback.
@@ -41,6 +43,7 @@ on disk (last 5 kept), so any of them can be re-selected.
 6. Prune to newest 5 releases.
 
 **On failed deploy** (`deploy-pi.yml` "Verify rollout (auto-rollback on failure)"):
+
 - Poll `/api/health` up to 6× / ~1 min.
 - If healthy → success.
 - If unhealthy → **flip symlink back to previous, restart, verify** — the
@@ -86,6 +89,7 @@ leave things half-flipped.
 ## Testing
 
 Verified 2026-08-08:
+
 - Migration to new layout preserved live site (`/api/health` = ok before
   and after; version unchanged).
 - Full pod restart after symlink swap works — k8s does follow the symlink.
