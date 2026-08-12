@@ -207,6 +207,25 @@ jobs:
         rm -rf "$OUT"
         mkdir -p "$OUT/standalone"
         rsync -a "$SRC/" "$OUT/standalone/"
+        # Belt-and-suspenders: file tracing can still miss @swc/helpers on
+        # ubuntu-24.04-arm; copy from the install tree if absent.
+        DEST_HELPERS="$OUT/standalone/node_modules/@swc/helpers"
+        if [ ! -f "$DEST_HELPERS/package.json" ]; then
+          SRC_HELPERS=""
+          if [ -f node_modules/@swc/helpers/package.json ]; then
+            SRC_HELPERS="node_modules/@swc/helpers"
+          else
+            SRC_HELPERS=$(find node_modules -path '*/@swc/helpers/package.json' 2>/dev/null | head -1 | xargs -r dirname || true)
+          fi
+          if [ -n "${SRC_HELPERS:-}" ] && [ -d "$SRC_HELPERS" ]; then
+            mkdir -p "$OUT/standalone/node_modules/@swc"
+            rsync -a "$SRC_HELPERS/" "$DEST_HELPERS/"
+            echo "Injected @swc/helpers from ${SRC_HELPERS}"
+          else
+            echo "::error::@swc/helpers missing from standalone and install tree"
+            exit 1
+          fi
+        fi
         if [ -d .next/static ]; then
           mkdir -p "$OUT/static"
           rsync -a .next/static/ "$OUT/static/"
