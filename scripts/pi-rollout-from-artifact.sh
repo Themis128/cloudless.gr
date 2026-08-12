@@ -85,8 +85,11 @@ USER_STAGE='$USER_STAGE'
 # Refuse incomplete packs before touching the live symlink (reboot mid-rsync
 # previously left a release without .next/BUILD_ID → CrashLoop).
 test -f "\${USER_STAGE}/server.js"
-test -f "\${USER_STAGE}/.next/BUILD_ID"
-test -s "\${USER_STAGE}/.next/BUILD_ID"
+if [ ! -s "\${USER_STAGE}/.next/BUILD_ID" ]; then
+  echo "::error::Staged release missing .next/BUILD_ID (pack/build incomplete)" >&2
+  ls -la "\${USER_STAGE}/.next" 2>/dev/null || true
+  exit 1
+fi
 echo "stage BUILD_ID=\$(cat "\${USER_STAGE}/.next/BUILD_ID")"
 REMOTE
 
@@ -159,19 +162,17 @@ echo "Using: \$KUBECTL"
 sleep 15
 \$KUBECTL get pods -n "\$NS" -l app=cloudless-app -o wide
 \$KUBECTL get endpoints -n "\$NS" cloudless-app || true
-# Origin path needs the named tunnel. Scale-to-zero (or CrashLoop) causes
-# public 502 even when NodePort health is fine — assert replicas before OK.
-TUNNEL_JSON=\$(\$KUBECTL get deploy cloudflare-tunnel -n "\$NS" -o json 2>/dev/null || true)
-if [ -n "\$TUNNEL_JSON" ]; then
-  TUNNEL_SPEC=\$(echo "\$TUNNEL_JSON" | jq -r '.spec.replicas // 0')
-  TUNNEL_READY=\$(echo "\$TUNNEL_JSON" | jq -r '.status.readyReplicas // 0')
-  echo "cloudflare-tunnel replicas spec=\${TUNNEL_SPEC} ready=\${TUNNEL_READY}"
-  if [ "\$TUNNEL_SPEC" = "0" ] || [ "\$TUNNEL_SPEC" = "null" ]; then
-    echo "::warning::cloudflare-tunnel scaled to 0 — restoring replicas=1"
-    \$KUBECTL scale deployment/cloudflare-tunnel -n "\$NS" --replicas=1
-    \$KUBECTL rollout status deployment/cloudflare-tunnel -n "\$NS" --timeout=120s || true
-  fi
+# Production origin is host systemd cloudflared on omv (pi-origin), NOT the
+# legacy k8s cloudflare-tunnel Deployment (misconfigured args → CrashLoop).
+# Assert the host tunnel unit; leave k8s replicas alone (expected 0).
+if systemctl is-active --quiet cloudflared.service 2>/dev/null; then
+  echo "host cloudflared.service: active"
+else
+  echo "::warning::host cloudflared.service not active — public edge may 502"
+  systemctl is-active cloudflared.service 2>&1 || true
 fi
+TUNNEL_SPEC=\$(\$KUBECTL get deploy cloudflare-tunnel -n "\$NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo missing)
+echo "k8s cloudflare-tunnel replicas=\${TUNNEL_SPEC:-missing} (host cloudflared is canonical; 0 is OK)"
 curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
 echo
 REMOTE
