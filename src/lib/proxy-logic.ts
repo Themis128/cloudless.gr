@@ -108,6 +108,21 @@ function generateNonce(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
 }
 
+/** Forward CSP nonce + pathname into the App Router request headers (for layout Scripts). */
+function continueToApp(
+  request: NextRequest,
+  pathname: string,
+  nonce: string
+): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-pathname", pathname);
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  return addSecurityHeaders(response, nonce);
+}
+
 function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse {
   response.headers.set("Content-Security-Policy", buildCSP(nonce));
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -333,7 +348,7 @@ async function handlePageRoute(
   if (isAdminRoute || isDashboardRoute || isPostLoginRoute) {
     // E2E bypass: if e2e_admin cookie is set, allow access to admin routes
     if (e2eAdminCookie && isAdminRoute) {
-      return NextResponse.next();
+      return continueToApp(request, pathname, nonce);
     }
     const sessionToken = readNextAuthJwt(request);
     const sessionCookie = request.cookies.get("authjs.session-token")?.value;
@@ -377,7 +392,7 @@ async function handlePageRoute(
               return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
             }
 
-            return NextResponse.next();
+            return continueToApp(request, pathname, nonce);
           }
         } catch {}
       }
@@ -435,8 +450,7 @@ async function handlePageRoute(
     }
   }
 
-  const response = await NextResponse.next();
-  return addSecurityHeaders(response, nonce);
+  return continueToApp(request, pathname, nonce);
 }
 
 export {
