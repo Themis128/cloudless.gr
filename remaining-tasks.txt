@@ -15,8 +15,8 @@
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
 - [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
-- [ ] Create /api/pi-proxy route (Tailscale proxy)
-- [ ] Create /api/inbound-email route (Email Routing webhook)
+- [x] Create /api/pi-proxy route (Tailscale proxy) — EXISTS at src/app/api/pi-proxy/
+- [x] Create /api/inbound-email route (Email Routing webhook) — EXISTS at src/app/api/inbound-email/
 - [ ] Update cloudflare-tunnel config for pi-alert-api exposure
 - [ ] Test Tailscale connectivity through Workers tunnel
 
@@ -25,6 +25,7 @@
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
 - [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
+- [x] GOOGLE_PRIVATE_KEY.pem untracked + gitignored (2026-08-12) — was a 66-byte `gh secret get` placeholder, not real key material; *.pem/*.key/*.p12/*.pfx/*.jks now ignored
 
 ## Analytics Stack Completion
 - [ ] Generate parquet files from R2 analytics data
@@ -34,8 +35,8 @@
 
 ## Performance Optimizations
 - [ ] Run `ANALYZE=true next build` to check bundle sizes
-- [ ] Audit large dependencies in package.json (langchain, aws-sdk)
-- [ ] Consider removing unused AWS SDK imports
+- [x] Audit large dependencies in package.json (aws-sdk) — DONE: no @aws-sdk/* or @aws-lambda-powertools/logger in package.json (verified 2026-08-12)
+- [x] Consider removing unused AWS SDK imports — DONE: src/ has zero AWS SDK imports (only comments); deprecated scripts under scripts/archive/ and scripts/etl/*-to-lake.mjs retain lazy/static imports but are not type-checked or run by any workflow
 - [ ] Optimize DuckDB-Wasm loading (lazy load)
 - [ ] Reduce cloudless-app replicas from 5 → 3 (if low traffic)
 - [ ] Lower PostgreSQL request from 1Gi → 512Mi (if usage is low)
@@ -80,3 +81,12 @@
 - [ ] Document DNS fix procedures (ACTIONS-REQUIRED.md)
 - [ ] Create tunnel status documentation (2026-07-20 fixes)
 - [ ] Verify all deprecation notices are addressed in codebase
+
+## Known Pre-existing Typecheck Errors (45 errors, 13 files — NOT introduced by 2026-08-12 changes)
+These were present on HEAD before the 2026-08-12 session. Fix in a dedicated Appflowy/FAQ session:
+- [ ] src/lib/appflowy-blog-admin.ts — TS2322: `string | undefined` not assignable to `string` (lines 165, 184, 185)
+- [ ] src/lib/appflowy-case-studies.ts — TS2304: Cannot find name 'CaseStudy' / 'CaseStudyMetric' / 'CaseStudyWithContent' (missing type imports)
+- [ ] src/lib/appflowy-faqs.ts — TS2304: Cannot find name 'view'; TS2339: Property 'date' does not exist on type 'Faq' (lines 63, 109, 155)
+- [ ] src/app/api/faqs/route.ts, src/app/api/contact/route.ts, src/app/api/auth/{activate,confirm,reset-password}/route.ts — related type errors
+- [ ] src/app/api/admin/appflowy/{comments,status}/route.ts — related type errors
+- [ ] src/app/[locale]/admin/{docs,notion/analytics,notion/tasks}/page.tsx — related type errors

@@ -51,6 +51,14 @@ lighthouse-*.json
 .env.*
 !.env.example
 
+# Private keys / service-account credentials — never commit
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+GOOGLE_PRIVATE_KEY.pem
+
 # OS files
 .DS_Store
 
