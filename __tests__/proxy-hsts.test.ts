@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const PROXY = resolve(__dirname, "../src/proxy.ts");
+const PROXY = resolve(__dirname, "../src/lib/proxy-logic.ts");
 const source = readFileSync(PROXY, "utf-8");
 
 describe("proxy.ts HSTS header — preload eligibility", () => {
