@@ -1,31 +1,31 @@
 name: CodeQL Security Analysis
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
   push:
     branches: [main]
     paths:
-    - src/**
-      # CodeQL also covers our Node tooling: audit scripts, Lambda handlers,
-      # e2e helpers. Without these, alerts on those files only surface on
-      # the weekly Monday scan instead of the commit that introduces them.
-    - scripts/**
-    - lambda/**
-    - e2e/**
-    - .github/workflows/codeql.yml
+      - src/**
+        # CodeQL also covers our Node tooling: audit scripts, Lambda handlers,
+        # e2e helpers. Without these, alerts on those files only surface on
+        # the weekly Monday scan instead of the commit that introduces them.
+      - scripts/**
+      - lambda/**
+      - e2e/**
+      - .github/workflows/codeql.yml
   pull_request:
     branches: [main]
     paths:
-    - src/**
-    - scripts/**
-    - lambda/**
-    - e2e/**
-    - .github/workflows/codeql.yml
+      - src/**
+      - scripts/**
+      - lambda/**
+      - e2e/**
+      - .github/workflows/codeql.yml
   workflow_dispatch:
   schedule:
-  - cron: 0 6 * * 1       # Every Monday at 06:00 UTC
+    - cron: 0 6 * * 1 # Every Monday at 06:00 UTC
 
 permissions:
   security-events: write
@@ -50,25 +50,24 @@ jobs:
         language: [javascript-typescript]
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3         # v4
-      with:
-        languages: ${{ matrix.language }}
-        queries: security-extended
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.37.6
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
 
-    - name: Autobuild
-      uses:
-        github/codeql-action/autobuild@7211b7c8077ea37d8641b6271f6a365a22a5fbfa             # v4
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.37.6
 
-    - name: Perform CodeQL Analysis
-        # Requires GitHub Advanced Security (GHAS) — available on public repos or
-        # private repos with a GHAS licence. Without it the upload step returns a
-        # 403 / "Code scanning is not enabled" error, so we mark it non-fatal and
-        # still surface any findings in the log.
-      uses:
-        github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa             # v4
-      continue-on-error: true
-      with:
-        category: /language:${{ matrix.language }}
+      - name:
+          Perform CodeQL Analysis
+          # Requires GitHub Advanced Security (GHAS) — available on public repos or
+          # private repos with a GHAS licence. Without it the upload step returns a
+          # 403 / "Code scanning is not enabled" error, so we mark it non-fatal and
+          # still surface any findings in the log.
+        uses: github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.37.6
+        continue-on-error: true
+        with:
+          category: /language:${{ matrix.language }}

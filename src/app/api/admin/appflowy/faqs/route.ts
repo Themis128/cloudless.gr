@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { appflowyWriteNotImplemented } from "@/lib/appflowy-admin-stub";
 import { getAllFaqsAdmin } from "@/lib/appflowy-faqs";
 import type { FaqInput } from "@/lib/notion-types";
 
@@ -15,8 +16,8 @@ export async function GET(request: NextRequest) {
   try {
     const faqs = await getAllFaqsAdmin();
     return NextResponse.json({ faqs, count: faqs.length });
-  } catch (err) {
-    console.error("[Admin AppFlowy FAQs] GET failed:", err instanceof Error ? err.message : err);
+  } catch {
+    console.error("[Admin AppFlowy FAQs] GET failed");
     return NextResponse.json({ error: "Failed to list FAQs" }, { status: 500 });
   }
 }
@@ -40,13 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "question is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented — static log only (js/log-injection).
-  void body;
-  console.log("[Admin AppFlowy FAQs] Would create FAQ (stub)");
-  return NextResponse.json(
-    { error: "Write operations not yet implemented for AppFlowy" },
-    { status: 501 }
-  );
+  return appflowyWriteNotImplemented("FAQs");
 }
 
 export async function PATCH(request: NextRequest) {
@@ -64,12 +59,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "pageId is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented — static log only (js/log-injection).
-  console.log("[Admin AppFlowy FAQs] Would update FAQ (stub)");
-  return NextResponse.json(
-    { error: "Write operations not yet implemented for AppFlowy" },
-    { status: 501 }
-  );
+  return appflowyWriteNotImplemented("FAQs");
 }
 
 export async function DELETE(request: NextRequest) {
@@ -81,10 +71,5 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "pageId query parameter is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented — static log only (js/log-injection).
-  console.log("[Admin AppFlowy FAQs] Would delete FAQ (stub)");
-  return NextResponse.json(
-    { error: "Write operations not yet implemented for AppFlowy" },
-    { status: 501 }
-  );
+  return appflowyWriteNotImplemented("FAQs");
 }

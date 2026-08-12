@@ -234,7 +234,7 @@ export async function getProject(pageId: string): Promise<Project | null> {
   }
 }
 
-export async function createProject(data: {
+export async function createProject(_data: {
   name: string;
   status?: ProjectStatus;
   priority?: ProjectPriority;
@@ -245,23 +245,21 @@ export async function createProject(data: {
   if (!(await isAppFlowyConfigured())) return null;
 
   // AppFlowy write API not yet implemented
-  void data;
   console.log("[AppFlowy Projects] Would create project (stub)");
   return null;
 }
 
-export async function updateProjectStatus(pageId: string, status: ProjectStatus): Promise<boolean> {
+export async function updateProjectStatus(
+  _pageId: string,
+  _status: ProjectStatus
+): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  void pageId;
-  void status;
   console.log("[AppFlowy Projects] Would update status (stub)");
   return false;
 }
 
-export async function updateProjectProgress(pageId: string, progress: number): Promise<boolean> {
+export async function updateProjectProgress(_pageId: string, _progress: number): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  void pageId;
-  void progress;
   console.log("[AppFlowy Projects] Would update progress (stub)");
   return false;
 }
@@ -345,7 +343,7 @@ export async function listTasks(filters?: {
   }
 }
 
-export async function createTask(data: {
+export async function createTask(_data: {
   task: string;
   status?: TaskStatus;
   priority?: TaskPriority;
@@ -356,15 +354,12 @@ export async function createTask(data: {
   dueDate?: string;
 }): Promise<string | null> {
   if (!(await isAppFlowyConfigured())) return null;
-  void data;
   console.log("[AppFlowy Tasks] Would create task (stub)");
   return null;
 }
 
-export async function updateTaskStatus(pageId: string, status: TaskStatus): Promise<boolean> {
+export async function updateTaskStatus(_pageId: string, _status: TaskStatus): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  void pageId;
-  void status;
   console.log("[AppFlowy Tasks] Would update status (stub)");
   return false;
 }
