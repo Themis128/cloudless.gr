@@ -323,31 +323,19 @@ jobs:
       id: r2
       if: steps.skip.outputs.already != 'true'
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: auto
-        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         OUT: ${{ steps.pack.outputs.artifact }}
       run: |
         set -euo pipefail
         KEY="releases/${{ github.sha }}.tar.zst"
         TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
         sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends zstd curl unzip
-        # awscli apt package is gone on ubuntu-24.04-arm — install AWS CLI v2.
-        ARCH="$(uname -m)"
-        case "$ARCH" in
-          aarch64|arm64) AWS_CLI_ARCH=aarch64 ;;
-          x86_64|amd64) AWS_CLI_ARCH=x86_64 ;;
-          *) echo "::error::unsupported arch $ARCH"; exit 1 ;;
-        esac
-        curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_CLI_ARCH}.zip" -o /tmp/awscliv2.zip
-        unzip -q /tmp/awscliv2.zip -d /tmp
-        sudo /tmp/aws/install --update
+        sudo apt-get install -y --no-install-recommends zstd
         tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
         echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
-        ENDPOINT="https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com"
-        aws s3 cp "$TAR" "s3://${R2_BUCKET}/${KEY}" --endpoint-url "$ENDPOINT"
+        # Cloudflare-native upload (no AWS CLI / S3 API client)
+        pnpm exec wrangler r2 object put "${R2_BUCKET}/${KEY}" --file="$TAR" --remote
         echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
         {
           echo "## R2 upload"
