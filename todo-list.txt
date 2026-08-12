@@ -1,7 +1,6 @@
 - [x] Restart Cline to load MCP configuration changes
-- [ ] Configure GitHub secrets for SST deployment
-- [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
-- [x] Deploy missing services (ntfy, uptime-kuma, meilisearch, docs-server) - Already deployed
+- [x] Configure GitHub secrets for SST deployment
+- [ ] Configure 1TB SSD mount for analytics storage (/sdb1)
 - [ ] Add bcrypt password hashing to auth (upgrade from PBKDF2)
 - [ ] Optimize resource allocation for existing pods
 - [ ] Clean up AWS resources after final verification
