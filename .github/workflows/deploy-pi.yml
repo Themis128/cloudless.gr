@@ -241,8 +241,47 @@ jobs:
         inject_pkg "client-only"
         inject_pkg "server-only"
 
+        # Sentry / OpenTelemetry instrumentation (instrumentation.ts) traces
+        # require-in-the-middle + import-in-the-middle into .next/node_modules
+        # with hashed folder names; their deps are often omitted from standalone.
+        inject_pkg "debug"
+        inject_pkg "ms"
+        inject_pkg "module-details-from-path"
+        inject_pkg "cjs-module-lexer"
+        inject_pkg "es-module-lexer"
+
+        # Also plant copies next to the traced hooks so Node resolves without
+        # walking all the way to /app/node_modules (Turbopack hashed paths).
+        inject_into_next_nm() {
+          local spec="$1"
+          local next_nm="$OUT/standalone/.next/node_modules"
+          [ -d "$next_nm" ] || return 0
+          local dest="${next_nm}/${spec}"
+          if [ -f "${dest}/package.json" ]; then
+            return 0
+          fi
+          local src=""
+          if [ -f "$OUT/standalone/node_modules/${spec}/package.json" ]; then
+            src="$OUT/standalone/node_modules/${spec}"
+          elif [ -f "node_modules/${spec}/package.json" ]; then
+            src="node_modules/${spec}"
+          else
+            src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
+          fi
+          if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
+            echo "::warning::Could not plant ${spec} under .next/node_modules"
+            return 0
+          fi
+          mkdir -p "$(dirname "$dest")"
+          rsync -a "$src/" "$dest/"
+          echo "Planted ${spec} → .next/node_modules/"
+        }
+        for tracing_dep in debug ms module-details-from-path cjs-module-lexer es-module-lexer; do
+          inject_into_next_nm "$tracing_dep"
+        done
+
         # Fail fast if the known crash deps are still missing
-        for must in @next/env @swc/helpers; do
+        for must in @next/env @swc/helpers debug ms module-details-from-path; do
           if [ ! -f "$OUT/standalone/node_modules/${must}/package.json" ]; then
             echo "::error::Required runtime package ${must} missing from standalone after inject"
             exit 1
