@@ -180,6 +180,7 @@ function buildCSP(nonce: string): string {
     object-src 'none';
     base-uri 'self';
     form-action 'self' https://www.facebook.com https://connect.facebook.net;
+    frame-src 'self' https://www.googletagmanager.com https://td.doubleclick.net;
     frame-ancestors 'none';
     ${IS_DEV ? "" : "upgrade-insecure-requests;"}
     report-uri /api/csp-report;
