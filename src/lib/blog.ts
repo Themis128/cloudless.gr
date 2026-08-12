@@ -427,8 +427,6 @@ export function getPostBySlug(slug: string): BlogPost | undefined {
   return posts.find((p) => p.slug === slug);
 }
 
-import { APP_TIMEZONE } from "@/lib/timezone";
-
 export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-IE", {
     timeZone: APP_TIMEZONE,
