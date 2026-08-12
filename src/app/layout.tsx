@@ -86,7 +86,10 @@ export default async function RootLayout({
   // browser accepts the inline runtime scripts Next.js emits.
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-pathname") ?? "/";
-  const nonce = requestHeaders.get("x-nonce") ?? "";
+  // Prefer undefined over "" — next/script drops empty nonce on the client and
+  // SSR would otherwise emit nonce="" → hydration mismatch (GTM / gtag).
+  const nonceRaw = requestHeaders.get("x-nonce");
+  const nonce = nonceRaw?.trim() ? nonceRaw : undefined;
   const theme = themeForRoute(pathname);
 
   // Safely extract locale from pathname

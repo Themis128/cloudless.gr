@@ -10,11 +10,15 @@ const GTM_ID = (process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-W7N3J3TV").trim();
 export function GoogleTagManagerHead({ nonce }: { nonce?: string }) {
   if (!GTM_ID) return null;
 
+  // next/script omits empty-string nonce on the client (`undefined`) while SSR
+  // still emits nonce="" — that mismatch hydrates as a console error.
+  const scriptNonce = nonce?.trim() ? nonce : undefined;
+
   return (
     <Script
       id="google-tag-manager"
       strategy="beforeInteractive"
-      nonce={nonce}
+      {...(scriptNonce ? { nonce: scriptNonce } : {})}
       dangerouslySetInnerHTML={{
         __html: `
 window.dataLayer=window.dataLayer||[];

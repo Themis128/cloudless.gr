@@ -207,25 +207,48 @@ jobs:
         rm -rf "$OUT"
         mkdir -p "$OUT/standalone"
         rsync -a "$SRC/" "$OUT/standalone/"
-        # Belt-and-suspenders: file tracing can still miss @swc/helpers on
-        # ubuntu-24.04-arm; copy from the install tree if absent.
-        DEST_HELPERS="$OUT/standalone/node_modules/@swc/helpers"
-        if [ ! -f "$DEST_HELPERS/package.json" ]; then
-          SRC_HELPERS=""
-          if [ -f node_modules/@swc/helpers/package.json ]; then
-            SRC_HELPERS="node_modules/@swc/helpers"
-          else
-            SRC_HELPERS=$(find node_modules -path '*/@swc/helpers/package.json' 2>/dev/null | head -1 | xargs -r dirname || true)
+
+        # Hosted arm64 + Turbopack file tracing often omits Next's own runtime
+        # deps (@next/env, @swc/helpers, styled-jsx, …). Inject from the install
+        # tree so the Pi node:22 hostPath boot does not MODULE_NOT_FOUND.
+        inject_pkg() {
+          local spec="$1"
+          local dest="$OUT/standalone/node_modules/${spec}"
+          if [ -f "${dest}/package.json" ]; then
+            return 0
           fi
-          if [ -n "${SRC_HELPERS:-}" ] && [ -d "$SRC_HELPERS" ]; then
-            mkdir -p "$OUT/standalone/node_modules/@swc"
-            rsync -a "$SRC_HELPERS/" "$DEST_HELPERS/"
-            echo "Injected @swc/helpers from ${SRC_HELPERS}"
+          local src=""
+          if [ -f "node_modules/${spec}/package.json" ]; then
+            src="node_modules/${spec}"
           else
-            echo "::error::@swc/helpers missing from standalone and install tree"
+            src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
+          fi
+          if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
+            echo "::warning::Could not locate ${spec} in install tree — skipping"
+            return 0
+          fi
+          mkdir -p "$(dirname "$dest")"
+          rsync -a "$src/" "$dest/"
+          echo "Injected ${spec} from ${src}"
+        }
+
+        # next/package.json dependencies (runtime) + common helpers
+        while IFS= read -r dep; do
+          [ -n "$dep" ] || continue
+          inject_pkg "$dep"
+        done < <(node -e "const d=require('./node_modules/next/package.json').dependencies||{}; for (const k of Object.keys(d)) console.log(k)")
+        inject_pkg "@swc/helpers"
+        inject_pkg "client-only"
+        inject_pkg "server-only"
+
+        # Fail fast if the known crash deps are still missing
+        for must in @next/env @swc/helpers; do
+          if [ ! -f "$OUT/standalone/node_modules/${must}/package.json" ]; then
+            echo "::error::Required runtime package ${must} missing from standalone after inject"
             exit 1
           fi
-        fi
+        done
+
         if [ -d .next/static ]; then
           mkdir -p "$OUT/static"
           rsync -a .next/static/ "$OUT/static/"
