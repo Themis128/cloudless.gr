@@ -472,7 +472,7 @@ export async function getDocument(workspaceId: string, viewId: string): Promise<
 
   try {
     const r = await callThrowing<{ data: unknown }>(
-      `/admin/workspace/${workspaceId}/document/${viewId}`
+      `/admin/workspace/${encodeURIComponent(workspaceId)}/document/${encodeURIComponent(viewId)}`
     );
     return r.data;
   } catch (e) {

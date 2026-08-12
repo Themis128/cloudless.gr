@@ -19,12 +19,12 @@ const instrumentSans = localFont({
   variable: "--font-instrument-sans",
   src: [
     {
-      path: "../fonts/instrument-sans.woff2",
+      path: path.resolve(__dirname, "../fonts/instrument-sans.woff2"),
       weight: "400",
       style: "normal",
     },
     {
-      path: "../fonts/instrument-sans-700.woff2",
+      path: path.resolve(__dirname, "../fonts/instrument-sans-700.woff2"),
       weight: "700",
       style: "normal",
     },
@@ -39,17 +39,17 @@ const workSans = localFont({
   variable: "--font-work-sans",
   src: [
     {
-      path: "../fonts/work-sans.woff2",
+      path: path.resolve(__dirname, "../fonts/work-sans.woff2"),
       weight: "400",
       style: "normal",
     },
     {
-      path: "../fonts/work-sans-500.woff2",
+      path: path.resolve(__dirname, "../fonts/work-sans-500.woff2"),
       weight: "500",
       style: "normal",
     },
     {
-      path: "../fonts/work-sans-700.woff2",
+      path: path.resolve(__dirname, "../fonts/work-sans-700.woff2"),
       weight: "700",
       style: "normal",
     },
@@ -63,12 +63,12 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   src: [
     {
-      path: "../fonts/geist-mono.woff2",
+      path: path.resolve(__dirname, "../fonts/geist-mono.woff2"),
       weight: "400",
       style: "normal",
     },
     {
-      path: "../fonts/geist-mono-700.woff2",
+      path: path.resolve(__dirname, "../fonts/geist-mono-700.woff2"),
       weight: "700",
       style: "normal",
     },

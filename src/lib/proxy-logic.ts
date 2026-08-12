@@ -228,6 +228,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
+return NextResponse.redirect(httpsUrl, 308);
   }
 
   if (pathname.startsWith("/api/")) {

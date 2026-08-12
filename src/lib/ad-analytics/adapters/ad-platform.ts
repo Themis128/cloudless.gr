@@ -12,6 +12,7 @@
  */
 
 import type { AdMetrics, AdPlatformId, DemographicPivot } from "../types";
+import type { AdMetrics, AdPlatformId, DemographicPivot } from "../types";
 
 /** Minimal user identifiers a CAPI push can use to match the event.
  *  LinkedIn supports hashed email, hashed phone, LiFatId, and a few others.

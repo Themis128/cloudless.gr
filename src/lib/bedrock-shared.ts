@@ -81,6 +81,7 @@ export interface RunBedrockTurnOptions {
   /** Ignored — Bedrock client is never used. */
   client?: unknown;
   system: string;
+system: string;
   messages: BedrockMessage[];
   toolConfig?: ToolConfiguration;
   maxTokens?: number;

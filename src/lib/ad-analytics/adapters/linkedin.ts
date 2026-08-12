@@ -22,6 +22,7 @@
 import { getConfig } from "@/lib/ssm-config";
 import type { AdPlatformAdapter, UserMatch } from "./ad-platform";
 import type { AdMetrics, DemographicBreakdown, DemographicPivot } from "../types";
+import type { AdMetrics, DemographicBreakdown, DemographicPivot } from "../types";
 import { resolvePivotLabel } from "../lookups";
 
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
