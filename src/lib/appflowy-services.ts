@@ -12,14 +12,8 @@
  *   **Icon**: 🔍
  */
 
-import {
-  listAllWorkspaces,
-  listAllViewsDeep,
-  getDocument,
-  extractDocText,
-  isAppFlowyConfigured,
-} from "./appflowy";
-import type { CloudlessService, ServiceCategory } from "./notion-types";
+import { listAllWorkspaces, listAllViewsDeep, getDocument, extractDocText, isAppFlowyConfigured } from "./appflowy";
+import type { CloudlessService, ServiceCategory } from "./notion-services";
 import { staticServices } from "./notion-services";
 
 function slugify(name: string): string {

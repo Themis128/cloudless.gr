@@ -25,12 +25,7 @@ import { listChannels } from "@/lib/slack-admin";
 import { getBotInfo } from "@/lib/slack-workspace";
 import { getSlackConfigAsync } from "@/lib/integrations";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
-import {
-  listEditorialPosts,
-  findEditorialPost,
-  setEditorialStatus,
-  type NotionBlogDraft,
-} from "@/lib/notion-blog";
+import { listEditorialPosts, findEditorialPost, setEditorialStatus, type NotionBlogDraft } from "@/lib/notion-blog-admin";
 import { getLiveCampaigns, getCampaign } from "@/data/campaigns";
 import { runAdHocSnapshot } from "@/lib/ad-analytics/runtime";
 import { renderDigest } from "@/lib/ad-analytics/digest";

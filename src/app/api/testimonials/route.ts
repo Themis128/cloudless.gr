@@ -4,10 +4,7 @@ import {
   getFeaturedTestimonials as getAppFlowyFeatured,
   staticTestimonials,
 } from "@/lib/appflowy-testimonials";
-import {
-  getTestimonials as getNotionTestimonials,
-  getFeaturedTestimonials as getNotionFeatured,
-} from "@/lib/notion-testimonials";
+import { getTestimonials as getNotionTestimonials, getFeaturedTestimonials as getNotionFeatured } from "@/lib/notion-testimonials";
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,

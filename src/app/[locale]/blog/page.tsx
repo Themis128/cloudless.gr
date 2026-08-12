@@ -35,13 +35,13 @@ export async function generateMetadata({
 }
 
 const categoryColors: Record<string, string> = {
-  Cloud: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
-  Serverless: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Analytics: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
-  "AI Marketing": "bg-neon-blue/10 text-neon-blue border border-neon-blue/20",
-  DevOps: "bg-neon-green/10 text-neon-green border border-neon-green/20",
-  Security: "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20",
-  Architecture: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",
+  Cloud: "bg-neon-cyan/10 text-slate-800 border border-neon-cyan/20",
+  Serverless: "bg-neon-green/10 text-slate-800 border border-neon-green/20",
+  Analytics: "bg-neon-magenta/10 text-slate-800 border border-neon-magenta/20",
+  "AI Marketing": "bg-neon-blue/10 text-slate-800 border border-neon-blue/20",
+  DevOps: "bg-neon-green/10 text-slate-800 border border-neon-green/20",
+  Security: "bg-neon-magenta/10 text-slate-800 border border-neon-magenta/20",
+  Architecture: "bg-neon-cyan/10 text-slate-800 border border-neon-cyan/20",
 };
 
 const PER_PAGE = 10;
@@ -171,7 +171,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
               {t("blog.titleHighlight", "practical guides")}
             </span>
           </h1>
-          <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-400 delay-200">
+          <p className="animate-fade-in-up mt-6 max-w-xl text-lg text-slate-600 delay-200">
             {t(
               "blog.subtitle",
               "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast."
@@ -186,7 +186,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                 name="q"
                 defaultValue={searchQuery}
                 placeholder={t("blog.searchPlaceholder", "Search posts…")}
-                className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:outline-none"
+                className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-500 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg
                 className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-600"
@@ -295,26 +295,26 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                           >
                             {post.category}
                           </span>
-                          <span className="font-mono text-xs text-slate-600">{post.readTime}</span>
+                          <span className="font-mono text-xs text-slate-700">{post.readTime}</span>
                         </div>
                         <h2 className="font-heading group-hover:text-neon-cyan text-xl font-bold text-white transition-colors">
                           {post.title}
                         </h2>
-                        <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                        <p className="mt-3 text-sm leading-relaxed text-slate-700">
                           {post.excerpt}
                         </p>
                         <div className="mt-4 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <time className="font-mono text-xs text-slate-600">
+                            <time className="font-mono text-xs text-slate-700">
                               {formatDate(post.date)}
                             </time>
                             {post.author && (
-                              <span className="font-mono text-xs text-slate-600">
+                              <span className="font-mono text-xs text-slate-700">
                                 {t("blog.by", "by")} {post.author}
                               </span>
                             )}
                           </div>
-                          <span className="text-neon-cyan inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
+                          <span className="text-slate-700 inline-flex items-center gap-1 font-mono text-sm font-semibold transition-all group-hover:gap-2">
                             {t("blog.readMore", "Read more")}
                             <svg
                               width="14"
@@ -332,7 +332,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                             {post.tags.slice(0, 3).map((tag) => (
                               <span
                                 key={tag}
-                                className="rounded border border-slate-700 bg-slate-800/50 px-2 py-0.5 font-mono text-[9px] text-slate-500"
+                                className="rounded border border-slate-700 bg-slate-800/50 px-2 py-0.5 font-mono text-[9px] text-slate-400"
                               >
                                 {tag}
                               </span>
@@ -405,7 +405,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                               }`}
                             >
                               <span>{cat}</span>
-                              <span className="font-mono text-[10px] text-slate-600">{count}</span>
+                              <span className="font-mono text-[10px] text-slate-400">{count}</span>
                             </Link>
                           </li>
                         ))}
@@ -433,7 +433,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                             }`}
                           >
                             {tag}
-                            <span className="ml-1 text-slate-600">{count}</span>
+                            <span className="ml-1 text-slate-400">{count}</span>
                           </Link>
                         ))}
                       </div>

@@ -18,12 +18,7 @@ import {
   unauthorizedNewsletterSlack,
 } from "@/lib/newsletter-slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
-import {
-  listEditorialPosts,
-  findEditorialPost,
-  setEditorialStatus,
-  type NotionBlogDraft,
-} from "@/lib/notion-blog";
+import { listEditorialPosts, findEditorialPost, setEditorialStatus, type NotionBlogDraft } from "@/lib/notion-blog-admin";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";

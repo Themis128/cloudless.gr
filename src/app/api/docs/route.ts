@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  getDocs as getAppFlowyDocs,
-  groupDocsByCategory as groupAppFlowyDocs,
-} from "@/lib/appflowy-docs";
-import {
-  getDocs as getNotionDocs,
-  groupDocsByCategory as groupNotionDocs,
-} from "@/lib/notion-docs";
+import { getDocs as getAppFlowyDocs, groupDocsByCategory as groupAppFlowyDocs } from "@/lib/appflowy-docs";
+import { getDocs as getNotionDocs, groupDocsByCategory as groupNotionDocs } from "@/lib/notion-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
