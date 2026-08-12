@@ -8,6 +8,10 @@ import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
+import {
+  GoogleTagManagerHead,
+  GoogleTagManagerNoscript,
+} from "@/components/GoogleTagManager";
 import { instrumentSans, workSans, geistMono } from "@/lib/fonts";
 import "./globals.css";
 
@@ -105,7 +109,11 @@ export default async function RootLayout({
       className={`${instrumentSans.variable} ${workSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <GoogleTagManagerHead nonce={nonce} />
+      </head>
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <GoogleTagManagerNoscript />
         <a href="#main-content" className="skip-nav">
           Skip to content
         </a>

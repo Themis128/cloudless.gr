@@ -21,10 +21,20 @@ export default function GoogleAnalyticsConsent() {
   const { preferences } = useCookieConsent();
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+    if (typeof window === "undefined") return;
+    window.dataLayer = window.dataLayer || [];
+    if (typeof window.gtag !== "function") {
+      // Official gtag stub — must push the Arguments object, not a rest array.
+      window.gtag = function gtag() {
+        // eslint-disable-next-line prefer-rest-params
+        window.dataLayer.push(arguments);
+      };
+    }
     window.gtag("consent", "update", {
       analytics_storage: preferences.analytics ? "granted" : "denied",
       ad_storage: preferences.marketing ? "granted" : "denied",
+      ad_user_data: preferences.marketing ? "granted" : "denied",
+      ad_personalization: preferences.marketing ? "granted" : "denied",
     });
   }, [preferences.analytics, preferences.marketing]);
 

@@ -93,11 +93,13 @@ test.describe("security headers — cloud", () => {
   test("CSP allows Google Analytics and GTM hosts", async ({ request }) => {
     const r = await request.get(PROBE);
     const csp = r.headers()["content-security-policy"] ?? "";
-    // script-src must allow the GTM loader
+    // script-src / connect-src must allow the GTM loader + GA4
     expect(csp).toContain("https://www.googletagmanager.com");
-    // connect-src must allow GA4 collection endpoints
     expect(csp).toContain("https://www.google-analytics.com");
     expect(csp).toContain("https://analytics.google.com");
+    // noscript iframe
+    expect(csp).toContain("frame-src");
+    expect(csp).toContain("https://www.googletagmanager.com");
   });
 
   test("CSP allows LinkedIn Insight Tag hosts", async ({ request }) => {
