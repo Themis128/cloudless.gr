@@ -117,16 +117,17 @@ export async function saveSubmission(data: ContactSubmission): Promise<string | 
       `**Date**: ${new Date().toISOString()}`,
     ].join("\n");
 
-    // Note: AppFlowy write API would go here when available
-    // For now, we'll just return a mock ID and log
-    console.log("[AppFlowy Forms] Would create submission:", name);
-    console.log("[AppFlowy Forms] Content:", content);
+    // Note: AppFlowy write API would go here when available.
+    // Do not log name/content — user-controlled (CodeQL js/log-injection).
+    console.log("[AppFlowy Forms] Would create submission (stub)");
+    void name;
+    void content;
 
     // Return a temporary ID based on timestamp
     return `submission-${Date.now()}`;
   } catch (err) {
-    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error("[AppFlowy Forms] Failed to save submission:", msg);
+    void err;
+    console.error("[AppFlowy Forms] Failed to save submission");
     return null;
   }
 }
@@ -194,6 +195,8 @@ export async function updateSubmissionStatus(
 
   // AppFlowy write API not yet implemented in appflowy.ts
   // This would update the document's Status field
-  console.log("[AppFlowy Forms] Would update status for", pageId, "to", status);
+  void pageId;
+  void status;
+  console.log("[AppFlowy Forms] Would update status (stub)");
   return false;
 }

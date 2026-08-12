@@ -245,19 +245,24 @@ export async function createProject(data: {
   if (!(await isAppFlowyConfigured())) return null;
 
   // AppFlowy write API not yet implemented
-  console.log("[AppFlowy Projects] Would create project:", data.name);
+  void data;
+  console.log("[AppFlowy Projects] Would create project (stub)");
   return null;
 }
 
 export async function updateProjectStatus(pageId: string, status: ProjectStatus): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Projects] Would update status for", pageId, "to", status);
+  void pageId;
+  void status;
+  console.log("[AppFlowy Projects] Would update status (stub)");
   return false;
 }
 
 export async function updateProjectProgress(pageId: string, progress: number): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Projects] Would update progress for", pageId, "to", progress);
+  void pageId;
+  void progress;
+  console.log("[AppFlowy Projects] Would update progress (stub)");
   return false;
 }
 
@@ -351,13 +356,16 @@ export async function createTask(data: {
   dueDate?: string;
 }): Promise<string | null> {
   if (!(await isAppFlowyConfigured())) return null;
-  console.log("[AppFlowy Tasks] Would create task:", data.task);
+  void data;
+  console.log("[AppFlowy Tasks] Would create task (stub)");
   return null;
 }
 
 export async function updateTaskStatus(pageId: string, status: TaskStatus): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Tasks] Would update status for", pageId, "to", status);
+  void pageId;
+  void status;
+  console.log("[AppFlowy Tasks] Would update status (stub)");
   return false;
 }
 

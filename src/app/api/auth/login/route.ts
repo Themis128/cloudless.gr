@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   authenticateUser,
   getUserBySession,
@@ -10,6 +11,17 @@ import {
   type AuthDatabase,
 } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+
+/** Zod parse (throw) so missing credentials are not modeled as a user-controlled security bypass. */
+const LoginBodySchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .transform((value) => value.toLowerCase()),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional().default(false),
+});
 
 /**
  * Fallback to HTTP D1 client if the bindings are not available.
@@ -139,41 +151,25 @@ export async function POST(req: NextRequest) {
     const ipRl = rateLimit(`auth-login:ip:${getClientIp(req)}`, 10, 60_000);
     if (!ipRl.ok) return ipRl.response;
 
-    let email: string | undefined;
-    let password: string | undefined;
+    let email: string;
+    let password: string;
     let rememberMe = false;
     try {
       const rawBody = await req.json();
-      // Defensive: ensure we have a plain object, not an array/null/primitive
-      const body =
-        rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
-          ? (rawBody as Record<string, unknown>)
-          : {};
-
-      // Strict validation - only accept strings, reject empty strings
-      const rawEmail = body.email;
-      const rawPassword = body.password;
-      const rawRememberMe = body.rememberMe;
-
-      email =
-        typeof rawEmail === "string" && rawEmail.trim().length > 0
-          ? rawEmail.toLowerCase().trim()
-          : undefined;
-
-      password =
-        typeof rawPassword === "string" && rawPassword.trim().length > 0 ? rawPassword : undefined;
-
-      rememberMe = Boolean(rawRememberMe);
-    } catch {
+      const credentials = LoginBodySchema.parse(rawBody);
+      email = credentials.email;
+      password = credentials.password;
+      rememberMe = credentials.rememberMe;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const issue = err.issues[0];
+        const message =
+          issue?.message === "Email is required" || issue?.message === "Password is required"
+            ? issue.message
+            : "Invalid request body";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
-
-    // Explicit check with clear error message - prevents bypass via empty strings or missing fields
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-    if (!password) {
-      return NextResponse.json({ error: "Password is required" }, { status: 400 });
     }
 
     // Check for account lockout

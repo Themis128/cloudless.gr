@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "question is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented
-  console.log("[Admin AppFlowy FAQs] Would create FAQ:", body.question);
+  // AppFlowy write API not yet implemented — static log only (js/log-injection).
+  void body;
+  console.log("[Admin AppFlowy FAQs] Would create FAQ (stub)");
   return NextResponse.json(
     { error: "Write operations not yet implemented for AppFlowy" },
     { status: 501 }
@@ -63,8 +64,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "pageId is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented
-  console.log("[Admin AppFlowy FAQs] Would update FAQ:", body.pageId);
+  // AppFlowy write API not yet implemented — static log only (js/log-injection).
+  console.log("[Admin AppFlowy FAQs] Would update FAQ (stub)");
   return NextResponse.json(
     { error: "Write operations not yet implemented for AppFlowy" },
     { status: 501 }
@@ -80,8 +81,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "pageId query parameter is required" }, { status: 400 });
   }
 
-  // AppFlowy write API not yet implemented
-  console.log("[Admin AppFlowy FAQs] Would delete FAQ:", pageId);
+  // AppFlowy write API not yet implemented — static log only (js/log-injection).
+  console.log("[Admin AppFlowy FAQs] Would delete FAQ (stub)");
   return NextResponse.json(
     { error: "Write operations not yet implemented for AppFlowy" },
     { status: 501 }
