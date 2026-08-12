@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Tech Stack
 
-- **Framework:** Next.js 16.2.12 (App Router, React 19.2.8, Turbopack)
+- **Framework:** Next.js 16.3.0 (App Router, React 19.2.8, Turbopack)
 - **Styling:** Tailwind CSS 4 with `@theme inline` custom tokens
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll

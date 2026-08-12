@@ -474,8 +474,8 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 
 ## Tech Stack
 
-- Next.js 16.2.4 (App Router, Turbopack)
-- React 19.2.4
+- Next.js 16.3.0 (App Router, Turbopack)
+- React 19.2.8
 - TypeScript 5
 - Tailwind CSS 4
 - Cloudflare D1 (authentication, sessions)
