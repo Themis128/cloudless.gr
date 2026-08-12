@@ -46,7 +46,7 @@
     {
       "src": ["autogroup:member"],
       "dst": ["tag:pi"],
-      "ip": ["tcp:22", "icmp", "icmpv6"]
+      "ip": ["tcp:22"]
     },
     {
       "src": ["tag:pi"],
