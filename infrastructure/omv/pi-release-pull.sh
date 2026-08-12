@@ -151,11 +151,11 @@ sudo mkdir -p "$NEW_REL"
 # Unpack with low priority onto SSD-backed home
 nice -n 10 ionice -c2 -n7 sudo tar --zstd -xf "$TAR" -C "$NEW_REL"
 
-# Tarball layout: top-level standalone/ static/ public/ BUILD_ID (from pack OUT)
+# Tarball layout: top-level standalone/ static/ public/ BUILD_ID (from pack OUT).
+# standalone/ often also has public/ — plain mv fails on non-empty dirs; merge with rsync.
 if [[ -d "$NEW_REL/standalone" ]]; then
-  # Flatten: move standalone contents up
-  # dash has no shopt — must use bash for dotglob flatten
-  sudo bash -c "shopt -s dotglob && mv '$NEW_REL'/standalone/* '$NEW_REL'/ && rmdir '$NEW_REL'/standalone"
+  sudo rsync -a "$NEW_REL/standalone/" "$NEW_REL/"
+  sudo rm -rf "$NEW_REL/standalone"
 fi
 if [[ -d "$NEW_REL/static" ]]; then
   sudo mkdir -p "$NEW_REL/.next/static"
