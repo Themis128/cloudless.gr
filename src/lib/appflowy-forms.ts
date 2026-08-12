@@ -94,39 +94,12 @@ export async function saveSubmission(data: ContactSubmission): Promise<string | 
   if (!workspaceId) return null;
 
   try {
-    const views = await listAllViewsDeep(workspaceId);
-    // Look for a "Forms" folder or create submissions at root
-    const formsFolder = views.find((v) => v.type === "folder" && /forms?/i.test(v.name));
-
-    const source = data.source ?? SOURCE_CONTACT;
-    const prefix = source === "subscribe" ? "[Subscribe]" : "[Contact]";
-    const name = `${prefix} ${data.name} - ${data.email}`;
-
-    // For now, we'll create a simple text document
-    // In a real implementation, you'd use AppFlowy's create document API
-    // Since the current appflowy.ts only has read methods, we'll store as text
-    const content = [
-      `**Name**: ${data.name}`,
-      `**Email**: ${data.email}`,
-      `**Phone**: ${data.phone || ""}`,
-      `**Company**: ${data.company || ""}`,
-      `**Service**: ${data.service || ""}`,
-      `**Message**: ${data.message}`,
-      `**Status**: New`,
-      `**Source**: ${source}`,
-      `**Date**: ${new Date().toISOString()}`,
-    ].join("\n");
-
-    // Note: AppFlowy write API would go here when available
-    // For now, we'll just return a mock ID and log
-    console.log("[AppFlowy Forms] Would create submission:", name);
-    console.log("[AppFlowy Forms] Content:", content);
-
-    // Return a temporary ID based on timestamp
+    // Write API not available yet — keep the shape ready without logging PII.
+    if (!data.email?.trim()) return null;
+    console.log("[AppFlowy Forms] Would create submission (stub)");
     return `submission-${Date.now()}`;
-  } catch (err) {
-    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error("[AppFlowy Forms] Failed to save submission:", msg);
+  } catch {
+    console.error("[AppFlowy Forms] Failed to save submission");
     return null;
   }
 }
@@ -187,13 +160,13 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
  * Note: This would require write API support in AppFlowy.
  */
 export async function updateSubmissionStatus(
-  pageId: string,
-  status: "New" | "In Review" | "Done"
+  _pageId: string,
+  _status: "New" | "In Review" | "Done"
 ): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
 
   // AppFlowy write API not yet implemented in appflowy.ts
   // This would update the document's Status field
-  console.log("[AppFlowy Forms] Would update status for", pageId, "to", status);
+  console.log("[AppFlowy Forms] Would update status (stub)");
   return false;
 }

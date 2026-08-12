@@ -26,8 +26,8 @@ export async function listComments(pageId: string): Promise<Comment[]> {
  * Add a comment to a page.
  * AppFlowy doesn't support comments yet — returns false.
  */
-export async function addComment(pageId: string, text: string): Promise<boolean> {
-  // AppFlowy doesn't have comments API
-  console.log("[AppFlowy Comments] Would add comment to", pageId, ":", text);
+export async function addComment(_pageId: string, _text: string): Promise<boolean> {
+  // AppFlowy doesn't have comments API — do not log pageId/text (log-injection).
+  console.log("[AppFlowy Comments] Would add comment (stub)");
   return false;
 }

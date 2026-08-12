@@ -39,7 +39,9 @@ function isFaqPage(name: string): boolean {
 }
 
 function parseField(markdown: string, key: string): string {
-  const re = new RegExp(`\*\*${key}\*\*:\s*(.+)`, "i");
+  // Template literals are not regex literals — escapes must be doubled (\\*, \\s).
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\*\\*${escapedKey}\\*\\*:\\s*(.+)`, "i");
   const match = re.exec(markdown);
   return match?.[1]?.trim() ?? "";
 }
