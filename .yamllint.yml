@@ -28,6 +28,8 @@ ignore: |
   **/helm/**/templates/**
   # Generated / vendor lock workflows — still covered by actionlint on hand-edited flows
   .github/workflows/*.lock.yml
+  # Nested SSH heredoc inside run: confuses yamllint's parser (pre-existing)
+  .github/workflows/restore-pi-connectivity.yml
 
 yaml-files:
 - '*.yaml'
