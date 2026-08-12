@@ -20,9 +20,19 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
     if (cached && Date.now() < cached.expires) return cached.token;
 
     const config = await getConfig();
-    const email = config.GOOGLE_CLIENT_EMAIL;
-    const key = config.GOOGLE_PRIVATE_KEY;
+    const email = config.GOOGLE_CLIENT_EMAIL?.trim();
+    let key = config.GOOGLE_PRIVATE_KEY?.trim() ?? "";
     if (!email || !key) throw new Error("Google service account not configured");
+    // Refuse placeholder / truncated secrets that otherwise produce opaque jose errors.
+    if (/^(your[_-]?value|your[_-]?service|changeme|todo|xxx|placeholder)/i.test(key) || key.length < 200) {
+      throw new Error(
+        "Google service account private key is missing or a placeholder — set GOOGLE_PRIVATE_KEY (PEM) on the Pi cloudless-secrets"
+      );
+    }
+    key = key.replace(/\\n/g, "\n");
+    if (!key.includes("BEGIN")) {
+      throw new Error("GOOGLE_PRIVATE_KEY must be a PEM private key (-----BEGIN PRIVATE KEY-----)");
+    }
 
     const { SignJWT, importPKCS8 } = await import("jose");
     const now = Math.floor(Date.now() / 1000);
