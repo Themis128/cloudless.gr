@@ -66,11 +66,11 @@ jobs:
       id: audit
       env:
         BASE_URL: ${{ github.event.inputs.base_url || 'https://cloudless.gr' }}
-          # Strict by default. 2026-06-13: live site has 0 serious/critical
-          # color-contrast violations across all 7 audited routes — locking
-          # that in so any new regression fails the daily run instead of
-          # being silently logged. Flip to false in a manual dispatch only
-          # when triaging a known issue.
+        # Strict by default. 2026-06-13: live site has 0 serious/critical
+        # color-contrast violations across all 7 audited routes — locking
+        # that in so any new regression fails the daily run instead of
+        # being silently logged. Flip to false in a manual dispatch only
+        # when triaging a known issue.
         STRICT: ${{ github.event.inputs.strict || 'true' }}
       run: |
         set -e
@@ -83,17 +83,17 @@ jobs:
 
         # Strict mode: any serious|critical violation fails the job
         if [ "$STRICT" = "true" ]; then
-          SERIOUS=$(node -e "
+          if ! node -e "
             const r = require('./audit-report/a11y-live.json');
             const bad = r.results.flatMap(p => p.violations.filter(v => v.impact === 'serious' || v.impact === 'critical'));
             if (bad.length) {
               console.log(bad.length);
               process.exit(1);
             }
-          ") || {
+          "; then
             echo "::error::A11y serious/critical violations found"
             exit 1
-          }
+          fi
         fi
 
     - name: Upload a11y live report

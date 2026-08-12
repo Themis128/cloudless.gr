@@ -102,6 +102,7 @@ All ETL scripts have been migrated:
 ## Package.json Cleanup (2026-08-08)
 
 All `@aws-sdk/*` packages removed from dependencies and devDependencies:
+
 - @aws-sdk/client-bedrock-runtime
 - @aws-sdk/client-cost-explorer
 - @aws-sdk/client-dynamodb

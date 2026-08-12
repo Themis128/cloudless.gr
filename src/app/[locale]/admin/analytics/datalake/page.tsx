@@ -163,7 +163,9 @@ export default function DatalakeDashboardPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  const generatedAt = data ? new Date(data.generated_at).toLocaleString(undefined, { timeZone: "Europe/Athens" }) : "—";
+  const generatedAt = data
+    ? new Date(data.generated_at).toLocaleString(undefined, { timeZone: "Europe/Athens" })
+    : "—";
 
   // All chrome below uses design-system v2 CSS variables
   // (--surface-raised, --border-subtle, --ink-primary, --ink-muted, --accent,

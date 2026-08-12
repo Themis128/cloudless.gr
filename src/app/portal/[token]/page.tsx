@@ -72,9 +72,12 @@ function formatAmount(cents: number, currency: string) {
 }
 
 function formatDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString("en-IE", { day: "numeric",
+  return new Date(unix * 1000).toLocaleDateString("en-IE", {
+    day: "numeric",
     month: "short",
-    year: "numeric", timeZone: "Europe/Athens" });
+    year: "numeric",
+    timeZone: "Europe/Athens",
+  });
 }
 
 function formatRelative(iso: string) {
@@ -86,8 +89,11 @@ function formatRelative(iso: string) {
   if (hr < 24) return `${hr}h ago`;
   const days = Math.floor(hr / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-IE", { day: "numeric",
-    month: "short", timeZone: "Europe/Athens" });
+  return new Date(iso).toLocaleDateString("en-IE", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Europe/Athens",
+  });
 }
 
 const STEP_CONFIG: Record<

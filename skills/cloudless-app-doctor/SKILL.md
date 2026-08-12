@@ -87,6 +87,7 @@ curl -sS https://cloudless.gr/api/config | jq '.config | {AUTH_PROVIDER, dbConne
 ```
 
 If D1 is not connected:
+
 - Check if `AUTH_DB` binding exists in `wrangler.jsonc`
 - Check if `SESSION_SECRET` is set (32+ bytes)
 - The D1 binding is `user-auth-db` (see `wrangler.jsonc`)
@@ -115,11 +116,13 @@ kubectl logs -n cloudless deploy/cloudless-app --tail=500 | grep "Signature veri
 kubectl logs -n cloudless deploy/cloudless-app --tail=500 | grep "NEWSLETTER_SLACK_SIGNING_SECRET"
 ```
 
-**Root cause**: 
+**Root cause**:
+
 - E2E tests or health checks hit the Slack endpoint without proper headers
 - `NEWSLETTER_SLACK_SIGNING_SECRET` is not set in the environment
 
 **Fix**: Set the secret via Wrangler or D1 app_config:
+
 ```bash
 # Via Wrangler secret
 npx wrangler secret put NEWSLETTER_SLACK_SIGNING_SECRET --config wrangler.jsonc

@@ -61,6 +61,7 @@ The omv-ha node has only ~955MB total RAM (~656MB allocatable). Pod memory
 requests total 636Mi — 97% of allocatable. The node is essentially full.
 
 **Impact**:
+
 - New pods cannot schedule on omv-ha (insufficient memory)
 - Risk of OOMKills if actual usage spikes
 - `tailscale/kube-0` has 27 restarts (though these are normal ACME renewals)
@@ -79,6 +80,7 @@ Cloudless-app logs show `getaddrinfo EAI_AGAIN api.cloudflare.com` —
 transient DNS failure when resolving the Cloudflare API for D1 lookups.
 
 **Impact**:
+
 - D1 lookups may fail intermittently
 - Readiness probe may time out if D1 is slow
 - The `/api/health` endpoint currently returns `{"status":"ok","dbConnected":true}`

@@ -123,6 +123,7 @@ DNS: `webmail.cloudless.gr` CNAME → `<tunnel-uuid>.cfargotunnel.com`
 ## Inbound (Cloudflare Email Routing)
 
 Cloudflare Email Routing is **enabled** on `cloudless.gr` with:
+
 - `tbaltzakis@cloudless.gr` → forward to `themis.baltzakis@gmail.com`
 - catch-all → forward to `themis.baltzakis@gmail.com`
 
@@ -159,6 +160,7 @@ using the same relay. See `src/lib/email-resend.ts`.
 `infrastructure/omv-ha/setup-mail-server.sh` installs and configures the
 dovecot + postfix relay stack idempotently (reads `RESEND_API_KEY` and the
 mailbox password from the environment; never hard-codes secrets). Roundcube
-+ nginx + php-fpm are apt packages and can be reinstalled by running the
+
+- nginx + php-fpm are apt packages and can be reinstalled by running the
 script's package list and re-applying the vhost / `config.inc.php` snippets
 above.

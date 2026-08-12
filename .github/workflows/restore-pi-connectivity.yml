@@ -140,20 +140,9 @@ jobs:
             # Jump via ha if possible
             if HA=$(try_host omv-ha 100.95.117.84 192.168.1.130); then
               echo "::group::Restore omv via omv-ha jump"
-              if ! "${SSH[@]}" "tbaltzakis@${HA}" bash -s <<'JUMP'
-set -euo pipefail
-KEY=""
-[ -f "$HOME/.ssh/omv_ha" ] && KEY="-i $HOME/.ssh/omv_ha"
-# shellcheck disable=SC2086
-ssh $KEY -o BatchMode=yes -o ConnectTimeout=25 tbaltzakis@192.168.1.128 '
-  sudo tailscale set --ssh=false || true
-  if [ -x /usr/local/sbin/pi-connectivity-heal.sh ]; then sudo /usr/local/sbin/pi-connectivity-heal.sh --boot || true; fi
-  sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd 2>/dev/null || true
-  if [ -x /usr/local/sbin/gha-runner-heal.sh ]; then sudo /usr/local/sbin/gha-runner-heal.sh --boot || true; fi
-  hostname; tailscale ip -4
-'
-JUMP
-              then
+              # Inline (no heredoc) so yamllint/actionlint can parse the workflow YAML.
+              if ! "${SSH[@]}" "tbaltzakis@${HA}" \
+                'KEY=""; [ -f "$HOME/.ssh/omv_ha" ] && KEY="-i $HOME/.ssh/omv_ha"; ssh $KEY -o BatchMode=yes -o ConnectTimeout=25 tbaltzakis@192.168.1.128 "sudo tailscale set --ssh=false || true; if [ -x /usr/local/sbin/pi-connectivity-heal.sh ]; then sudo /usr/local/sbin/pi-connectivity-heal.sh --boot || true; fi; sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd 2>/dev/null || true; if [ -x /usr/local/sbin/gha-runner-heal.sh ]; then sudo /usr/local/sbin/gha-runner-heal.sh --boot || true; fi; hostname; tailscale ip -4"'; then
                 FAILED=1
               fi
               echo "::endgroup::"

@@ -35,6 +35,7 @@ bash tools/cluster-health-audit.sh --json | jq .
 ```
 
 This checks all 10 areas:
+
 1. Node conditions (Ready, MemoryPressure, DiskPressure, PIDPressure)
 2. Node resource usage (kubectl top nodes)
 3. Pod status (non-Running, high-restart)
@@ -105,6 +106,7 @@ kubectl logs -n cloudless deploy/cloudless-app --tail=500 | grep "Signature veri
 ```
 
 Common issues:
+
 - **`EAI_AGAIN api.cloudflare.com`**: Transient DNS failure when resolving
   Cloudflare API for D1 lookups. Usually self-resolves. If persistent, check
   CoreDNS config and `/etc/resolv.conf` in the pod.
@@ -139,6 +141,7 @@ kubectl -n postiz exec deploy/postiz-redis -- redis-cli ping
 ```
 
 Common issues:
+
 - **Startup probe HTTP 500**: Postiz backend takes time to start. The startup
   probe may fail initially but the pod eventually becomes Ready. If it
   persists, check Postgres connectivity and JWT_SECRET.
@@ -169,6 +172,7 @@ kubectl -n appflowy exec deploy/minio -- mc admin info local
 ```
 
 Common issues:
+
 - **Domain mismatch**: Docs reference `appflowy.cloudflow.gr` but the actual
   domain is `appflowy.cloudless.gr`. The `cloudflow.gr` domain doesn't exist.
 - **gotrue restarts**: Gotrue may restart if Postgres isn't ready. Check
@@ -292,6 +296,7 @@ bash tools/pod-restart-investigator.sh monitoring kube-prom-prometheus-node-expo
 ```
 
 Known high-restart pods (as of 2026-07-31):
+
 - `tailscale/kube-0` (27 restarts): **Normal** — ACME cert renewal jobs
   complete (exit 0) and restart. `TS_DEBUG_ACME_FORCE_RENEWAL=true` forces
   frequent renewals.
@@ -308,6 +313,7 @@ bash tools/tunnel-endpoint-validator.sh
 ```
 
 This checks:
+
 - Every tunnel ingress rule points to a valid NodePort
 - Every NodePort service is healthy internally
 - Every external hostname resolves in DNS
@@ -322,6 +328,7 @@ bash tools/secret-completeness-check.sh
 ```
 
 This checks:
+
 - Kubernetes secrets referenced by pods but missing
 - Cloudless-app logs for DNS errors, D1 failures, Slack verification failures
 - Postiz secrets (POSTGRES_PASSWORD, JWT_SECRET)

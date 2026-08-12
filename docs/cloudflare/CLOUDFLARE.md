@@ -194,6 +194,7 @@ The tunnel uses a credentials file stored on the Pi:
 **File:** `/etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json`
 
 ⚠️ **SECURITY**: This file is:
+
 - Private to root user (644 permissions — fixed 2026-07-20)
 - NOT committed to git
 - Rotated automatically by Cloudflare
@@ -329,6 +330,7 @@ Each ingress rule maps a hostname to an origin service:
 | Size | <50 KiB (stays under Free tier 3 MiB gzip limit) |
 
 **Traffic Flow:**
+
 ```
 User → Cloudflare → cloudless2 (Worker, <50 KiB)
   → https://pi-origin.cloudless.gr
@@ -336,11 +338,13 @@ User → Cloudflare → cloudless2 (Worker, <50 KiB)
 ```
 
 **Key Features:**
+
 - Idempotent methods (GET/HEAD/OPTIONS) retry once on network failure or upstream 502
 - Sets `x-served-by: pi-tunnel-proxy` or `pi-tunnel-proxy-error` headers
 - GitHub Actions crons bypass this Worker by calling `pi-origin.cloudless.gr` directly
 
 **Deployment:**
+
 ```bash
 npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
 ```
@@ -392,12 +396,14 @@ async function handleRequest(request) {
 ```
 
 **Key Features:**
+
 - All HTTP methods fail over (body is buffered and replayed on retry)
 - AWS has 30s timeout, Pi has 10s timeout (configurable)
 - Returns real error responses (4xx/5xx) rather than generic 503 when possible
 - Sets `x-served-by: aws-primary` or `pi-standby` headers
 
 **Deployment:**
+
 ```bash
 cd workers/cloudless-failover
 npx wrangler deploy
@@ -501,7 +507,7 @@ Until the token is rotated, manage rules in the dashboard
 |----------|-------|
 | Token Name | cloudless2 |
 | Type | User API Token |
-| Prefix | cfut_ (vs cfat_ for API keys) |
+| Prefix | cfut_(vs cfat_ for API keys) |
 | Permissions | Zone.Zone:Read + Zone.DNS:Edit + Zone.SSL:Edit |
 | Scopes | cloudless.gr zone only |
 | Status | ✅ Active |
@@ -598,6 +604,7 @@ When rotating (e.g., quarterly):
 **Cloudflare Analytics:** cloudless.gr → Analytics
 
 Displays:
+
 - Requests over time
 - Cache performance
 - Bandwidth usage
@@ -687,11 +694,13 @@ curl -I http://192.168.1.128:30300/api/health
 **Solutions:**
 
 1. **Restart cloudless-app deployment:**
+
    ```bash
    kubectl rollout restart deployment/cloudless-app -n cloudless
    ```
 
 2. **Check Pi resources:**
+
    ```bash
    free -h
    df -h
@@ -733,17 +742,20 @@ curl http://192.168.1.128:30901 -v
 **Solutions:**
 
 1. **Update tunnel config to correct port:**
+
    ```bash
    sudo nano /etc/cloudflared/config.yml
    sudo systemctl restart cloudflared
    ```
 
 2. **Restart the docs pod:**
+
    ```bash
    kubectl rollout restart deployment/docs-server -n cloudless
    ```
 
 3. **Check pod logs:**
+
    ```bash
    kubectl logs -f deployment/docs-server -n cloudless
    ```
@@ -805,6 +817,7 @@ sudo systemctl restart cloudflared
 **Solution:**
 
 Bot Fight Mode is intentionally kept OFF on the Free plan. If it gets enabled:
+
 1. Cloudflare Dashboard → cloudless.gr → Security → Bots
 2. Set "Bot Fight Mode" to OFF
 3. For cron workflows, use `pi-origin.cloudless.gr` directly instead of `cloudless.gr`

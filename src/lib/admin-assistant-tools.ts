@@ -87,7 +87,9 @@ export async function runAssistantTool(
       return orders
         .map((o) => {
           const amount = `${o.currency} ${(o.amount / 100).toFixed(2)}`;
-          const date = new Date(o.created * 1000).toLocaleDateString("en-GB", { timeZone: "Europe/Athens" });
+          const date = new Date(o.created * 1000).toLocaleDateString("en-GB", {
+            timeZone: "Europe/Athens",
+          });
           return `• ${o.email ?? "unknown"} — ${amount} — ${o.paymentStatus} — ${date}`;
         })
         .join("\n");

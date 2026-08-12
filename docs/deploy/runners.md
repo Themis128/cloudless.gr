@@ -117,36 +117,42 @@ time on ARM:
 
 When billing is broken, these stay red until billing is fixed.
 
-## deploy-pi topology (build on GH arm64, rollout from omv-ha)
+## deploy-pi topology (GH build → R2 → CF Workflow → omv pull)
 
-`deploy-pi.yml` is **two jobs** so an omv power-cycle mid-rollout does not
-throw away a finished build. **`pnpm build` never runs on omv** — compiling
-on the Pi 5 control plane pegs the USB SSD and trips the hardware watchdog
-(~5m into Turbopack).
+`deploy-pi.yml` **never SSHs or rsyncs to omv**. Compiling or pushing
+~350MB onto the Pi 5 control plane pegs the USB SSD and trips the hardware
+watchdog / freezes CI.
 
 | Job | `runs-on` | Role |
 | --- | --------- | ---- |
-| `build` | `ubuntu-24.04-arm` | Next standalone compile on GitHub-hosted native ARM64 (public-repo free); upload `standalone-<sha>` artifact (2-day retention) |
-| `rollout` | `[self-hosted, omv-ha, deploy]` | Download artifact → `scripts/pi-rollout-from-artifact.sh` (rsync SafeDeploy releases/symlink on omv + `kubectl` over SSH) |
+| `build` | `ubuntu-24.04-arm` | Next standalone compile; pack (BUILD_ID + tracing deps); upload `releases/<sha>.tar.zst` to R2 bucket `cloudless-pi-releases` |
+| `publish` | `ubuntu-latest` (or `RUNNER_GENERIC`) | `POST` Cloudflare Worker `/trigger` → durable Workflow waits on `/api/health` |
 
-- **Never** put the Next build on omv or omv-ha (omv = production control plane; omv-ha = Pi 4 ~1GB — OOM).
-- Skip-if-live probes `https://pi-origin.cloudless.gr/api/health` (hosted runner has no LAN).
+**omv** runs `pi-release-pull.timer` (every 2m): reads `desired.json` via the
+orchestrator, skips when load/iowait is high, otherwise downloads from R2,
+BUILD_ID-gates, flips `cloudless-standalone`, restarts `cloudless-app`.
+
+**Tracking (correlate by sha):** GH step summary + issue [#382](https://github.com/Themis128/cloudless.gr/issues/382) comment;
+Workflow Slack/ntfy; `/var/log` via `journalctl -t pi-release-pull`.
+
+Worker: [`workers/pi-deploy-orchestrator/`](../../workers/pi-deploy-orchestrator/).
+Install pull agent: `sudo bash infrastructure/omv/install-pi-release-pull.sh`
+(after filling `/etc/cloudless/pi-release-pull.env`).
+
+Repo variable: `PI_DEPLOY_ORCHESTRATOR_URL`. Secrets: `DEPLOY_ORCHESTRATOR_TOKEN`,
+`CF_ACCOUNT_ID`, `CF_R2_ACCESS_KEY_ID`, `CF_R2_SECRET_ACCESS_KEY`.
+
+- Skip-if-live probes `https://pi-origin.cloudless.gr/api/health`.
 - Concurrency group `deploy-pi` with `cancel-in-progress: true`.
-- Job timeouts: build 60m, rollout 15m.
-- `workflow_dispatch` input `rollout_only=true` re-downloads the artifact for
-  `github.sha` from a prior completed run (use when build succeeded but
-  rollout failed / omv was down).
-- Fallback if omv-ha is offline: register a temporary runner with the same
-  `omv-ha,deploy` labels on another host that can SSH to omv, or re-run
-  rollout after ha recovers (artifact retained 2 days).
+- `workflow_dispatch` `trigger_only=true` re-fires the Workflow when the R2
+  object already exists.
 
-Register the deploy runner on omv-ha:
+### Legacy (retired)
 
-```bash
-TOKEN=$(gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq .token)
-scp .github/scripts/register-deploy-runner.sh tbaltzakis@192.168.1.130:~/
-ssh tbaltzakis@192.168.1.130 "bash ~/register-deploy-runner.sh $TOKEN"
-```
+Previously rollout used `[self-hosted, omv-ha, deploy]` + rsync. That path
+stuck the Pi and left zombie busy runners after power-cycles — do not restore
+it on the happy path. `scripts/pi-rollout-from-artifact.sh` remains for
+emergency manual use from a trusted host.
 
 ## Runner auto-heal after reboot (ghost-busy)
 

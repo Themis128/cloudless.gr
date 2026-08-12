@@ -1,0 +1,13 @@
+[Unit]
+Description=Pull cloudless.gr standalone release from R2 (load-guarded)
+After=network-online.target k3s-k3s-omv.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/cloudless/pi-release-pull.env
+ExecStart=/usr/local/sbin/pi-release-pull.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=20min

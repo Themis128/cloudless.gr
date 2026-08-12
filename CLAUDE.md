@@ -527,7 +527,6 @@ warm-standby (hourly snapshot pull to omv-ha + dormant promotion
 script). When a 3rd Pi is added, follow the runbook on Notion:
 [🏗️ k3s Cluster Architecture, Tuning & Third-Pi Promotion Runbook](https://www.notion.so/3817d82c410a8143ab76e80e4bfdd013).
 
-
 ## Prometheus tuning (2026-08-09)
 
 Grafana felt slow. Root cause was almost always deploy contention (a running
@@ -551,6 +550,7 @@ reverts these unless mirrored in the Helm values):
   over apiserver_request_total exceed rule-eval timeout on a Pi).
 
 Prometheus already had:
+
 - retention: 7d ✓
 - limit: 1200Mi (bumped earlier from 768Mi via CR patch — was at 74% and
   at real OOM risk).

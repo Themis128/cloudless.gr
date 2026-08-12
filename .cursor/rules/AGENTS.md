@@ -15,6 +15,7 @@
 | **`run_cloudflare_cost_analysis.py`** | Estimate monthly cost of moving AWS resources to Cloudflare (R2 storage, Workers KV, etc.). | `agents/run_cloudflare_cost_analysis.py` | `.agent-memory/memories/AGENTS.md` |
 
 > **How to run:**  
+>
 > ```bash
 > ./setup-agents.sh          # installs python deps & sets up .env
 > python agents/run_cloudflare_worker_research.py --topic "R2 pricing"

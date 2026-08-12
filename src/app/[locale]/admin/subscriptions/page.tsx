@@ -24,9 +24,12 @@ function formatAmount(amount: number, currency: string, interval: string) {
 }
 
 function formatDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString("en-IE", { day: "numeric",
+  return new Date(unix * 1000).toLocaleDateString("en-IE", {
+    day: "numeric",
     month: "short",
-    year: "numeric", timeZone: "Europe/Athens" });
+    year: "numeric",
+    timeZone: "Europe/Athens",
+  });
 }
 
 export default function SubscriptionsPage() {

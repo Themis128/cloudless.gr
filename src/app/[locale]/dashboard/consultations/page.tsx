@@ -157,16 +157,25 @@ export default function ConsultationsPage() {
                   </div>
                   <p className="mt-2 font-mono text-sm text-white">{c.title}</p>
                   <p className="mt-1 font-mono text-xs text-slate-500">
-                    {new Date(c.start).toLocaleDateString("en-IE", { weekday: "long",
+                    {new Date(c.start).toLocaleDateString("en-IE", {
+                      weekday: "long",
                       year: "numeric",
                       month: "long",
-                      day: "numeric", timeZone: "Europe/Athens" })}{" "}
+                      day: "numeric",
+                      timeZone: "Europe/Athens",
+                    })}{" "}
                     at{" "}
-                    {new Date(c.start).toLocaleTimeString("en-IE", { hour: "2-digit",
-                      minute: "2-digit", timeZone: "Europe/Athens" })}
+                    {new Date(c.start).toLocaleTimeString("en-IE", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Europe/Athens",
+                    })}
                     {" – "}
-                    {new Date(c.end).toLocaleTimeString("en-IE", { hour: "2-digit",
-                      minute: "2-digit", timeZone: "Europe/Athens" })}
+                    {new Date(c.end).toLocaleTimeString("en-IE", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Europe/Athens",
+                    })}
                   </p>
                 </div>
                 {c.meetLink && c.status === "upcoming" && (

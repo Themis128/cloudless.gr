@@ -234,10 +234,13 @@ function StepManager({
                               {c.author}
                             </span>
                             <span className="font-mono text-[10px] text-slate-600">
-                              {new Date(c.createdAt).toLocaleString("en-IE", { day: "numeric",
+                              {new Date(c.createdAt).toLocaleString("en-IE", {
+                                day: "numeric",
                                 month: "short",
                                 hour: "2-digit",
-                                minute: "2-digit", timeZone: "Europe/Athens" })}
+                                minute: "2-digit",
+                                timeZone: "Europe/Athens",
+                              })}
                             </span>
                           </div>
                           <p className="mt-0.5 text-sm whitespace-pre-wrap text-slate-400">
@@ -702,8 +705,12 @@ function TokenLifecycle({
     }
   }
 
-  const created = new Date(portal.createdAt).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" });
-  const expiresAt = hasExpiry ? new Date(expiresAtMs).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" }) : null;
+  const created = new Date(portal.createdAt).toLocaleDateString("en-IE", {
+    timeZone: "Europe/Athens",
+  });
+  const expiresAt = hasExpiry
+    ? new Date(expiresAtMs).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })
+    : null;
 
   return (
     <div className="mt-6 rounded-lg border border-slate-800 p-3">
@@ -864,10 +871,13 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
                 </span>
                 <span className="font-mono text-[10px] text-slate-500">
                   Submitted{" "}
-                  {new Date(c.submittedAt).toLocaleString("en-IE", { day: "numeric",
+                  {new Date(c.submittedAt).toLocaleString("en-IE", {
+                    day: "numeric",
                     month: "short",
                     hour: "2-digit",
-                    minute: "2-digit", timeZone: "Europe/Athens" })}
+                    minute: "2-digit",
+                    timeZone: "Europe/Athens",
+                  })}
                 </span>
               </div>
               {c.notes && (
@@ -1138,7 +1148,9 @@ export default function ClientPortalsPage() {
                         </span>
                       )}
                       <span className="font-mono text-xs text-slate-600">
-                        {new Date(portal.createdAt).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
+                        {new Date(portal.createdAt).toLocaleDateString("en-IE", {
+                          timeZone: "Europe/Athens",
+                        })}
                       </span>
                     </div>
 

@@ -19,6 +19,7 @@ Runs on **omv** (host, outside the k3s cluster) via a systemd timer every
 | — | recovers | "Recovered" alert; state reset |
 
 ### Safeguards
+
 - **60-minute cooldown** between auto-rollbacks (prevents ping-pong loops)
 - **Skip rollback if current release is <15 min old** (deploy-time verify
   already handled that window; a new deploy that immediately turns bad in
@@ -88,6 +89,7 @@ sudo systemctl start safedeploy-watchdog.timer
 ## Testing
 
 Live-verified at install (2026-08-09):
+
 - Script syntax + logic checks pass
 - All 3 alert channels sent test messages successfully (ntfy 200, Slack ok,
   Resend id returned)
@@ -95,6 +97,7 @@ Live-verified at install (2026-08-09):
   timer fires every 2 min per `systemctl list-timers`
 
 To exercise the actual alert threshold without a real outage:
+
 ```bash
 # Set fake failure count just below the notify threshold, then poll a bad URL
 sudo bash -c 'echo 2 > /var/lib/safedeploy-watchdog/fail_count'

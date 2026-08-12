@@ -205,8 +205,13 @@ export default function NotificationsPage() {
               </div>
             </div>
             <div className="font-mono text-[10px] text-slate-500">
-              {new Date(analytics.window.since).toLocaleDateString(undefined, { timeZone: "Europe/Athens" })} to{" "}
-              {new Date(analytics.window.until).toLocaleDateString(undefined, { timeZone: "Europe/Athens" })}
+              {new Date(analytics.window.since).toLocaleDateString(undefined, {
+                timeZone: "Europe/Athens",
+              })}{" "}
+              to{" "}
+              {new Date(analytics.window.until).toLocaleDateString(undefined, {
+                timeZone: "Europe/Athens",
+              })}
             </div>
           </div>
           {days.length > 0 && (

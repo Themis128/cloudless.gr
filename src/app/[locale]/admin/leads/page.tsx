@@ -26,7 +26,9 @@ const SOURCE_BADGE: Record<string, string> = {
 function formatDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-IE", { dateStyle: "medium", timeZone: "Europe/Athens" });
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString("en-IE", { dateStyle: "medium", timeZone: "Europe/Athens" });
 }
 
 export default function AdminLeadsPage() {
@@ -100,7 +102,8 @@ export default function AdminLeadsPage() {
         <div className="flex items-center gap-3">
           {fetchedAt && (
             <span className="font-mono text-xs text-slate-500">
-              Updated {new Date(fetchedAt).toLocaleTimeString(undefined, { timeZone: "Europe/Athens" })}
+              Updated{" "}
+              {new Date(fetchedAt).toLocaleTimeString(undefined, { timeZone: "Europe/Athens" })}
             </span>
           )}
           <button
