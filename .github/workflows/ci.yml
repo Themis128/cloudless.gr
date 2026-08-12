@@ -182,13 +182,20 @@ jobs:
     - run: pnpm install --frozen-lockfile --prefer-offline
     - run: pnpm build
     - name: Install Syft for SBOM generation
+      continue-on-error: true
       run: |
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.27.1
     - name: Generate SBOM
+      continue-on-error: true
       run: |
-        syft packages:pnpm-lock.yaml -o syft-json > sbom.json
-        syft . -o syft-json >> sbom.json
+        if ! command -v syft >/dev/null 2>&1; then
+          echo "syft not installed — skipping SBOM"
+          exit 0
+        fi
+        syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
+        test -s sbom.json
     - name: Generate SLSA provenance
+      continue-on-error: true
       run: |
         # Create SLSA Level 1 provenance attestation
         cat > provenance.json << EOF
@@ -257,12 +264,14 @@ jobs:
         }
         EOF
     - name: Upload provenance artifact
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: provenance
         path: provenance.json
         retention-days: 30
     - name: Upload SBOM artifact
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: sbom

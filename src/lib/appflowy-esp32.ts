@@ -52,7 +52,9 @@ export async function acknowledgeESP32Alert(alertId: string): Promise<boolean> {
  * Create an alert in AppFlowy for an ESP32 device.
  * No-op for AppFlowy.
  */
-export async function createESP32Alert(alert: Omit<ESP32Alert, "id" | "acknowledged" | "timestamp">): Promise<string | null> {
+export async function createESP32Alert(
+  alert: Omit<ESP32Alert, "id" | "acknowledged" | "timestamp">
+): Promise<string | null> {
   console.log("[AppFlowy ESP32] Would create alert:", alert);
   return null;
 }

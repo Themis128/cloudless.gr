@@ -1,0 +1,18 @@
+---
+description: Production traffic path — cloudless2 Worker proxies to Pi k3s app pod
+alwaysApply: true
+---
+
+# Production edge path
+
+```
+browser → cloudless.gr → Worker `cloudless2` (workers/pi-origin-proxy)
+        → pi-origin.cloudless.gr (Cloudflare Tunnel)
+        → k3s `cloudless-app` on omv (NodePort)
+```
+
+- **`cloudless2` is a reverse proxy only.** It does not run Next.js and does not need app secrets (`GOOGLE_PRIVATE_KEY`, `SENTRY_AUTH_TOKEN`, Notion, Stripe, D1 app_config keys, etc.). Empty Wrangler secrets on `cloudless2` are expected.
+- **App runtime secrets live on the Pi k3s pod** (env / Secret / D1 as the app loads them), not on the proxy Worker.
+- Response header `x-served-by: pi-tunnel-proxy` means the request hit this path.
+- App deploys: `deploy-pi.yml` → image + rollout on k3s. Do not confuse with `cloudless-web-production` / OpenNext Worker deploys unless the user explicitly asks about that surface.
+- Direct origin for debugging/crons: `https://pi-origin.cloudless.gr`.

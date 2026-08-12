@@ -58,7 +58,7 @@ async function postizFetch(
 ): Promise<Response> {
   const { baseUrl, apiKey } = await getPostizConfig();
   const { timeoutMs, ...init } = options;
-  
+
   // Build headers
   const headers = new Headers({
     "Content-Type": "application/json",

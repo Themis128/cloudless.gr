@@ -5,6 +5,9 @@
  * Never constructs BedrockRuntimeClient; never imports @aws-sdk/client-bedrock*.
  */
 
+/** Stub region for legacy imports — Bedrock client is never constructed. */
+export const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
+
 export const BEDROCK_MODEL_ID =
   process.env.BEDROCK_MODEL_ID ??
   process.env.WORKERS_AI_CHAT_MODEL ??
@@ -81,7 +84,6 @@ export interface RunBedrockTurnOptions {
   /** Ignored — Bedrock client is never used. */
   client?: unknown;
   system: string;
-system: string;
   messages: BedrockMessage[];
   toolConfig?: ToolConfiguration;
   maxTokens?: number;

@@ -50,8 +50,14 @@ export async function register() {
       // getAuthDbFromEnv() in auth-d1.ts will fall back to the local
       // wrangler D1 sqlite shim (auth-db-local.ts) at request time.
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("EAI_AGAIN") || msg.includes("fetch failed") || msg.includes("api.cloudflare.com")) {
-        console.warn("[Instrumentation] Cloudflare remote context unavailable (offline?) — auth will use local D1 sqlite fallback");
+      if (
+        msg.includes("EAI_AGAIN") ||
+        msg.includes("fetch failed") ||
+        msg.includes("api.cloudflare.com")
+      ) {
+        console.warn(
+          "[Instrumentation] Cloudflare remote context unavailable (offline?) — auth will use local D1 sqlite fallback"
+        );
       } else {
         console.warn("[Instrumentation] Local AUTH_DB bind failed:", msg);
       }
