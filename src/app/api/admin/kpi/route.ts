@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getAnalyticsSummary } from "@/lib/notion-analytics";
+
 import { getSeoSnapshot } from "@/lib/gsc";
-import { listProjects, getTaskSummary, getOverdueTasks } from "@/lib/notion-projects";
+
 import { isConfiguredAsync } from "@/lib/integrations";
 import { getConfig } from "@/lib/ssm-config";
 

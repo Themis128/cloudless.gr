@@ -7,7 +7,6 @@ import {
 import {
   getTestimonials as getNotionTestimonials,
   getFeaturedTestimonials as getNotionFeatured,
-} from "@/lib/notion-testimonials";
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,

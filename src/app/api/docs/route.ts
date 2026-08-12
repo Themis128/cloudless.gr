@@ -6,7 +6,6 @@ import {
 import {
   getDocs as getNotionDocs,
   groupDocsByCategory as groupNotionDocs,
-} from "@/lib/notion-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 

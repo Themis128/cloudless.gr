@@ -17,7 +17,7 @@ import {
 } from "@/lib/newsletter-slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";
-import { listEditorialPosts, type NotionBlogDraft } from "@/lib/notion-blog-admin";
+
 import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 
 // ---------------------------------------------------------------------------

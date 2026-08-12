@@ -7,7 +7,6 @@ import {
 import {
   getCaseStudies as getNotionCaseStudies,
   getFeaturedCaseStudies as getNotionFeatured,
-} from "@/lib/notion-case-studies";
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,

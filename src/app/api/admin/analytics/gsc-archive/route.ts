@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getGscReports } from "@/lib/notion-gsc-reports";
+
 import { IntegrationNotConfiguredError } from "@/lib/integrations";
 
 /**
