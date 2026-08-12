@@ -1,0 +1,12 @@
+[Unit]
+Description=Run gha-runner-heal check every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=gha-runner-heal-check.service
+
+[Install]
+WantedBy=timers.target

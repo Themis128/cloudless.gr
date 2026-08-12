@@ -1,20 +1,16 @@
 name: Deploy to Pi (hostPath standalone — no ECR)
 
-# Cloudflare-first: build Next standalone on the Pi runner and sync into
-# /home/tbaltzakis/cloudless-standalone (k8s/cloudless-app-hostpath.yaml).
-# Does not use AWS ECR, OIDC, or SSM.
+# Cloudflare-first: build Next standalone on omv (Pi 5), upload artifact, then
+# roll out from omv-ha (deploy proxy) via rsync + kubectl over SSH/Tailscale.
+# Survives omv power-cycles mid-deploy: a finished build lives in GH Artifacts
+# and rollout can complete once omv is back.
 #
-# Runner: exclusive [self-hosted, omv, build]. Do not put audits/CWV/ETL on
-# the `build` label — they starve this workflow (see docs/runners.md).
+# Jobs:
+#   build   — [self-hosted, omv, build]   (heavy compile; do NOT put on omv-ha)
+#   rollout — [self-hosted, omv-ha, deploy] (rsync SafeDeploy + kubectl)
 #
 # Concurrency: deploy the LATEST main SHA only. cancel-in-progress: true so a
-# newer push supersedes an older in-progress/queued build instead of stacking a
-# long serial queue behind it (every push otherwise builds in sequence, ~15min
-# each). Cancelling mid-build is safe: "Sync standalone → hostPath" runs only
-# after a successful build, so a cancelled build never touches hostPath and the
-# previously deployed SHA stays live.
-#
-# Caching: pnpm store + Next.js build cache on OMV-HA runner for speed.
+# newer push supersedes an older in-progress/queued run.
 
 on:
   push:
@@ -27,16 +23,19 @@ on:
     - pnpm-workspace.yaml
     - next.config.ts
     - patches/**
+    - scripts/pi-rollout-from-artifact.sh
     - .github/workflows/deploy-pi.yml
   workflow_dispatch:
+    inputs:
+      rollout_only:
+        description: Skip build; re-rollout using the standalone artifact for this SHA (must already exist)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: write
 
-# Deploy latest-only: a newer push cancels older in-progress/queued runs in
-# this group so builds don't pile up in a long serial queue. Safe to cancel
-# mid-build — the hostPath sync only runs after a successful build, so the live
-# SHA is never left partial (see the header note above).
 concurrency:
   group: deploy-pi
   cancel-in-progress: true
@@ -46,14 +45,18 @@ env:
   K3S_NAMESPACE: cloudless
   K3S_DEPLOYMENT: cloudless-app
   STANDALONE_HOSTPATH: /home/tbaltzakis/cloudless-standalone
-  # Cache paths on self-hosted runner (OMV-HA) - pnpm store only
   PNPM_STORE_PATH: /home/tbaltzakis/.pnpm-store
+  OMV_SSH_HOST: 192.168.1.128
 
 jobs:
-  build-and-rollout:
-    name: Build standalone + roll out hostPath
+  build:
+    name: Build standalone artifact
     runs-on: [self-hosted, omv, build]
     timeout-minutes: 60
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollout_only) }}
+    outputs:
+      already: ${{ steps.skip.outputs.already }}
+      artifact: ${{ steps.pack.outputs.artifact }}
 
     steps:
     - name: Checkout
@@ -99,15 +102,6 @@ jobs:
         mkdir -p "${PNPM_STORE_PATH}"
         pnpm config set store-dir "${PNPM_STORE_PATH}"
 
-    # Preserve `.next/cache/` between runs — it holds the Turbopack persistent
-    # build cache (enabled 2026-08-09 via next.config.ts
-    # `experimental.turbopackFileSystemCacheForBuild: true`, Next.js 16.3+).
-    # Once warm this cuts the `next build` step roughly in half on the Pi 5.
-    # Stale build ARTIFACTS (`server/`, `static/`, `standalone/`, etc.) are
-    # still purged — Turbopack's file-level dependency tracker invalidates
-    # cache entries whose source files changed, so keeping the cache does
-    # NOT resurrect old `proxy.ts` config (the original reason this step
-    # used to `rm -rf .next` wholesale).
     - name: Clean stale build output (keep cache)
       if: steps.skip.outputs.already != 'true'
       run: |
@@ -116,10 +110,8 @@ jobs:
           echo "No prior .next/ — clean workspace"
           exit 0
         fi
-        # size of the cache we're preserving (informational only)
         cache_size=$(du -sh .next/cache 2>/dev/null | cut -f1 || echo "0")
         echo "Preserving .next/cache/ (size: ${cache_size})"
-        # remove everything else — keep only .next/cache/
         find .next -mindepth 1 -maxdepth 1 -not -name cache -exec rm -rf {} +
         echo "Cleaned .next/ (kept cache):"
         ls -la .next
@@ -145,15 +137,18 @@ jobs:
         NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
         NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
       run: pnpm build
+
     - name: Install Syft for SBOM generation
       if: steps.skip.outputs.already != 'true'
       run: |
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
     - name: Generate SBOM
       if: steps.skip.outputs.already != 'true'
       run: |
         syft packages:pnpm-lock.yaml -o syft-json > sbom.json
         syft . -o syft-json >> sbom.json
+
     - name: Upload SBOM artifact
       if: steps.skip.outputs.already != 'true'
       uses: actions/upload-artifact@v4
@@ -161,10 +156,12 @@ jobs:
         name: sbom
         path: sbom.json
         retention-days: 30
+
     - name: Scan licenses with pnpm licenses
       if: steps.skip.outputs.already != 'true'
       run: |
         pnpm licenses ls --json > licenses.json
+
     - name: Upload licenses artifact
       if: steps.skip.outputs.already != 'true'
       uses: actions/upload-artifact@v4
@@ -173,169 +170,142 @@ jobs:
         path: licenses.json
         retention-days: 30
 
-    - name: Sync standalone → releases/ + flip symlink
-      # Atomic-symlink deploy. Writes the new bundle into a per-SHA release
-      # dir, then flips /home/tbaltzakis/cloudless-standalone (a symlink)
-      # to point at it — instant, reversible via scripts/rollback.sh.
-      # Old releases are kept (last 5) so any of them can be re-selected.
+    - name: Pack standalone artifact
+      id: pack
       if: steps.skip.outputs.already != 'true'
       run: |
         set -euo pipefail
-        CURRENT="${{ env.STANDALONE_HOSTPATH }}"           # the symlink k8s mounts
-        RELEASES="$(dirname "$CURRENT")/cloudless-releases"
-        SHA="${GITHUB_SHA::12}"
-        NEW_REL="$RELEASES/$SHA"
-        STAGE="$CURRENT.next-$SHA"                          # local build staging (rsync-safe on same fs)
         SRC=".next/standalone"
-
         if [ ! -f "${SRC}/server.js" ]; then
-          echo "::error::Standalone build output not found at ${SRC}/server.js — 'Build Next.js standalone' step likely failed."
+          echo "::error::Standalone build output not found at ${SRC}/server.js"
           exit 1
         fi
-
-        # 1. Build the release in a staging dir on the same filesystem
-        sudo rm -rf "$STAGE"
-        sudo mkdir -p "$STAGE"
-        sudo rsync -a "$SRC/" "$STAGE/"
-        [ -d .next/static ] && { sudo mkdir -p "$STAGE/.next/static"; sudo rsync -a .next/static/ "$STAGE/.next/static/"; }
-        [ -d public ]       && { sudo mkdir -p "$STAGE/public";       sudo rsync -a public/ "$STAGE/public/"; }
-        [ -f "$STAGE/server.js" ] || { echo "::error::Staging built but $STAGE/server.js missing"; exit 1; }
-
-        # 2. Atomic promote: mv staging → releases/<sha>/ (same fs = atomic rename)
-        sudo mkdir -p "$RELEASES"
-        # If a release with this SHA already exists (retry/duplicate), replace it.
-        sudo rm -rf "$NEW_REL"
-        sudo mv "$STAGE" "$NEW_REL"
-        echo "Prepared release: $NEW_REL ($(sudo du -sh "$NEW_REL" | cut -f1))"
-
-        # 3. Remember the PREVIOUS symlink target for auto-rollback later
-        PREV="$(readlink "$CURRENT" 2>/dev/null || true)"
-        echo "previous_release=${PREV}" >> "$GITHUB_OUTPUT"
-        echo "new_release=cloudless-releases/$SHA"   >> "$GITHUB_OUTPUT"
-
-        # 4. Flip the symlink atomically (ln -sfn is atomic on POSIX)
-        sudo ln -sfn "cloudless-releases/$SHA" "$CURRENT"
-        sudo chown -h tbaltzakis:users "$CURRENT"
-        echo "Symlink now: $CURRENT → $(readlink "$CURRENT")"
-
-        # 5. Prune old releases — keep the newest 5 (mtime order)
-        cd "$RELEASES"
-        ls -1t | tail -n +6 | while read -r old; do
-          # never delete the one we're currently linked to (belt-and-braces)
-          [ "cloudless-releases/$old" = "$(readlink "$CURRENT")" ] && continue
-          echo "  pruning old release: $old"
-          sudo rm -rf "$old"
-        done
-      id: sync
-
-    - name: Resolve kubectl
-      if: steps.skip.outputs.already != 'true'
-      id: kubectl
-      run: |
-        set -euo pipefail
-        # The k3s API server on the control-plane Pi can be briefly unresponsive
-        # right after a build pegs CPU/IO, so probe with retries + a generous
-        # per-attempt timeout instead of failing on a single 5s miss (which
-        # threw away an already-successful build + hostPath sync).
-        BIN=""
-        for attempt in $(seq 1 6); do
-          if command -v kubectl >/dev/null 2>&1 && kubectl get --raw /readyz --request-timeout=15s >/dev/null 2>&1; then
-            BIN="kubectl"; break
-          elif sudo kubectl get --raw /readyz --request-timeout=15s >/dev/null 2>&1; then
-            BIN="sudo kubectl"; break
-          fi
-          echo "kubectl not ready (attempt ${attempt}/6) — waiting 10s…"
-          sleep 10
-        done
-        if [ -z "$BIN" ]; then
-          echo "::error::kubectl cannot reach the cluster after 6 attempts (~2min)"
-          exit 1
+        OUT="${RUNNER_TEMP}/standalone-pack"
+        rm -rf "$OUT"
+        mkdir -p "$OUT/standalone"
+        rsync -a "$SRC/" "$OUT/standalone/"
+        if [ -d .next/static ]; then
+          mkdir -p "$OUT/static"
+          rsync -a .next/static/ "$OUT/static/"
         fi
-        echo "Using: ${BIN}"
-        echo "bin=${BIN}" >> "$GITHUB_OUTPUT"
+        if [ -d public ]; then
+          mkdir -p "$OUT/public"
+          rsync -a public/ "$OUT/public/"
+        fi
+        echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
+        echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
 
-    - name: Roll out cloudless-app
+    - name: Upload standalone artifact
       if: steps.skip.outputs.already != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: standalone-${{ github.sha }}
+        path: ${{ steps.pack.outputs.artifact }}
+        retention-days: 2
+        if-no-files-found: error
+
+  rollout:
+    name: Roll out via omv-ha proxy
+    needs: [build]
+    # Run when build finished and did not skip; OR when rollout_only dispatch
+    # (build job is skipped entirely — needs succeeds with skipped build only
+    # if we use if: always() carefully). For rollout_only, build is skipped
+    # via job-level if, and needs: build would fail — use:
+    if: |
+      always() && (
+        (needs.build.result == 'success' && needs.build.outputs.already != 'true') ||
+        (github.event_name == 'workflow_dispatch' && inputs.rollout_only && needs.build.result == 'skipped')
+      )
+    runs-on: [self-hosted, omv-ha, deploy]
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout (rollout script)
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+      with:
+        sparse-checkout: |
+          scripts/pi-rollout-from-artifact.sh
+        sparse-checkout-cone-mode: false
+
+    - name: Download standalone artifact (this run)
+      if: needs.build.result == 'success'
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-${{ github.sha }}
+        path: ${{ runner.temp }}/standalone-artifact
+
+    - name: Download standalone artifact (prior run — rollout_only)
+      if: github.event_name == 'workflow_dispatch' && inputs.rollout_only
       env:
-        KUBECTL: ${{ steps.kubectl.outputs.bin }}
+        GH_TOKEN: ${{ github.token }}
+        WANT_SHA: ${{ github.sha }}
+        ARTIFACT_NAME: standalone-${{ github.sha }}
+        OUT: ${{ runner.temp }}/standalone-artifact
+        REPO: ${{ github.repository }}
       run: |
         set -euo pipefail
-        FULL_SHA="${{ github.sha }}"
-        $KUBECTL set env "deployment/${{ env.K3S_DEPLOYMENT }}" \
-          -n "${{ env.K3S_NAMESPACE }}" \
-          "APP_VERSION=${FULL_SHA}" \
-          "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}" \
-          "NEXT_PUBLIC_AUTH_PROVIDER=d1" \
-          "SSM_DISABLED=1" \
-          "CLOUDFLARE_ACCOUNT_ID=fb7dc7b69b662480cd5961a4d1913c78"
-        $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" \
-          -n "${{ env.K3S_NAMESPACE }}"
-        $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \
-          -n "${{ env.K3S_NAMESPACE }}" --timeout=600s
-        # Wait for pod to be fully ready and NodePort to propagate
-        sleep 15
-        echo "Checking pod status:"
-        $KUBECTL get pods -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app -o wide
-        echo "Checking service endpoints:"
-        $KUBECTL get endpoints -n "${{ env.K3S_NAMESPACE }}" cloudless-app
-        curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
-        echo
-
-    - name: Verify rollout (auto-rollback on failure)
-      # Health-checks the new release; if unhealthy, atomically flips the
-      # symlink back to the previous release and restarts. This is the
-      # "SafeDeploy" auto-rollback: no bad release stays live.
-      if: steps.skip.outputs.already != 'true'
-      env:
-        KUBECTL: ${{ steps.kubectl.outputs.bin }}
-        PREV_RELEASE: ${{ steps.sync.outputs.previous_release }}
-        CURRENT: ${{ env.STANDALONE_HOSTPATH }}
-      run: |
-        set -euo pipefail
-        sleep 10   # NodePort propagation
-
-        # Try 6 times over ~1 min so a briefly-slow start doesn't trigger rollback
-        HEALTH_OK=0
-        for attempt in 1 2 3 4 5 6; do
-          for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
-            RESPONSE=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
-            if echo "$RESPONSE" | jq -e .version >/dev/null 2>&1; then
-              HEALTH_OK=1
-              echo "✅ health OK via $candidate (attempt ${attempt}): $RESPONSE"
-              break 2
-            fi
-          done
-          echo "  health not ready (attempt ${attempt}/6) — waiting 10s…"; sleep 10
-        done
-
-        if [ "$HEALTH_OK" = "1" ]; then
-          echo "Rollout verification successful."
-          exit 0
-        fi
-
-        # ─── AUTO-ROLLBACK ────────────────────────────────────────────────
-        echo "::warning::New release failed health checks — auto-rolling back to previous."
-        if [ -z "$PREV_RELEASE" ]; then
-          echo "::error::No previous release recorded (first-ever deploy?). Cannot auto-rollback."
-          $KUBECTL get pods -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app -o wide
-          $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=80
+        mkdir -p "$OUT"
+        # No `gh` on omv-ha — use the GitHub REST API + curl.
+        API="https://api.github.com/repos/${REPO}"
+        AUTH=( -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" )
+        RUNS_JSON=$(curl -fsSL "${AUTH[@]}" \
+          "${API}/actions/workflows/deploy-pi.yml/runs?branch=main&status=completed&per_page=30")
+        RUN_ID=$(python3 -c '
+import json,os,sys
+want=os.environ["WANT_SHA"]
+runs=json.load(sys.stdin).get("workflow_runs") or []
+for r in runs:
+  if r.get("head_sha")==want:
+    print(r["id"]); raise SystemExit(0)
+raise SystemExit("no run")
+' <<<"$RUNS_JSON" 2>/dev/null || true)
+        if [ -z "${RUN_ID:-}" ]; then
+          echo "::error::No completed deploy-pi run found for SHA ${WANT_SHA}"
           exit 1
         fi
-        echo "  flipping symlink back → $PREV_RELEASE"
-        sudo ln -sfn "$PREV_RELEASE" "$CURRENT"
-        sudo chown -h tbaltzakis:users "$CURRENT"
-        $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" -n "${{ env.K3S_NAMESPACE }}"
-        $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" -n "${{ env.K3S_NAMESPACE }}" --timeout=180s
+        echo "Found run ${RUN_ID} for ${WANT_SHA}"
+        ARTS_JSON=$(curl -fsSL "${AUTH[@]}" "${API}/actions/runs/${RUN_ID}/artifacts?per_page=50")
+        ART_ID=$(python3 -c '
+import json,os,sys
+name=os.environ["ARTIFACT_NAME"]
+arts=json.load(sys.stdin).get("artifacts") or []
+for a in arts:
+  if a.get("name")==name and not a.get("expired"):
+    print(a["id"]); raise SystemExit(0)
+raise SystemExit("no artifact")
+' <<<"$ARTS_JSON" 2>/dev/null || true)
+        if [ -z "${ART_ID:-}" ]; then
+          echo "::error::Artifact ${ARTIFACT_NAME} not found (or expired) on run ${RUN_ID}"
+          exit 1
+        fi
+        echo "Downloading artifact id=${ART_ID} → ${OUT}"
+        ZIP="${RUNNER_TEMP}/standalone-artifact.zip"
+        curl -fsSL "${AUTH[@]}" -L \
+          "${API}/actions/artifacts/${ART_ID}/zip" -o "$ZIP"
+        python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "$ZIP" "$OUT"
+        rm -f "$ZIP"
+        ls -la "$OUT" | head -20
 
-        # Verify the rollback actually restored health
-        sleep 8
-        for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
-          RESP=$(curl -sS --max-time 10 "$candidate" 2>&1 || true)
-          if echo "$RESP" | jq -e .version >/dev/null 2>&1; then
-            echo "::error::Deploy failed; auto-rollback SUCCEEDED — site now on previous release ($PREV_RELEASE). Fix the build and redeploy."
-            exit 1
+    - name: Roll out (rsync + kubectl over SSH)
+      env:
+        ARTIFACT_DIR: ${{ runner.temp }}/standalone-artifact
+        APP_VERSION: ${{ github.sha }}
+        OMV_SSH_HOST: ${{ env.OMV_SSH_HOST }}
+        STANDALONE_HOSTPATH: ${{ env.STANDALONE_HOSTPATH }}
+        K3S_NAMESPACE: ${{ env.K3S_NAMESPACE }}
+        K3S_DEPLOYMENT: ${{ env.K3S_DEPLOYMENT }}
+      run: |
+        set -euo pipefail
+        chmod +x scripts/pi-rollout-from-artifact.sh
+        # download-artifact / gh run download may nest an extra directory —
+        # normalize to …/standalone/server.js
+        ROOT="${ARTIFACT_DIR}"
+        if [ ! -f "${ROOT}/standalone/server.js" ]; then
+          CAND=$(find "$ROOT" -type f -path '*/standalone/server.js' 2>/dev/null | head -1 || true)
+          if [ -n "$CAND" ]; then
+            ROOT=$(dirname "$(dirname "$CAND")")
+            echo "Normalized ARTIFACT_DIR → $ROOT"
+            export ARTIFACT_DIR="$ROOT"
           fi
-        done
-        echo "::error::Deploy failed AND auto-rollback health-check also failed. Investigate manually — try 'scripts/rollback.sh list'."
-        $KUBECTL logs -n "${{ env.K3S_NAMESPACE }}" -l app=cloudless-app --tail=80
-        exit 1
+        fi
+        scripts/pi-rollout-from-artifact.sh

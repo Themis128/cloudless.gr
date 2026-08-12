@@ -212,3 +212,13 @@ kubectl describe pod -n cloudless cloudless-app-xxx
 - ✅ Analytics data persistence becomes critical
 
 See also: `infrastructure/omv-ha/` for standby node configuration
+
+## GitHub Actions runner heal
+
+After power-cycles, runners can go ghost-busy on GitHub. Install:
+
+```bash
+sudo bash infrastructure/omv/install-gha-runner-heal.sh
+```
+
+See `docs/deploy/runners.md`.
