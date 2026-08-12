@@ -35,6 +35,29 @@ function stripAllLocalePrefixes(pathname: string): string {
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
+const ALLOWED_ORIGINS = ["https://cloudless.gr", "https://www.cloudless.gr"];
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  const origin = request.headers.get("origin");
+  if (origin && isAllowedOrigin(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Stripe-Signature, X-Requested-With");
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Max-Age", "86400");
+  }
+  return response;
+}
+
+function handleOptionsRequest(request: NextRequest, nonce: string): NextResponse {
+  const response = new NextResponse(null, { status: 204 });
+  return addCorsHeaders(addSecurityHeaders(response, nonce), request);
+}
+
 const RATE_LIMITED_ROUTES = [
   "/api/contact",
   "/api/subscribe",
@@ -219,6 +242,11 @@ async function handleApiRoute(
   pathname: string,
   nonce: string
 ): Promise<NextResponse> {
+  // Handle OPTIONS preflight requests
+  if (request.method === "OPTIONS") {
+    return handleOptionsRequest(request, nonce);
+  }
+
   const ip = getSharedClientIp(request) || "unknown";
   const authToken = readAuthToken(request);
   
@@ -235,12 +263,16 @@ async function handleApiRoute(
   const identifier = authToken || ip;
   if (isRateLimited(identifier, limitConfig.limit, limitConfig.window, 
                    authToken ? authRequestMap : ipRequestMap)) {
-    return new NextResponse("Too Many Requests", {
+    const response = new NextResponse("Too Many Requests", {
       status: 429,
       headers: {
         "Retry-After": String(limitConfig.window),
+        "X-RateLimit-Limit": String(limitConfig.limit),
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": String(Math.ceil((Date.now() + limitConfig.window * 1000) / 1000)),
       },
     });
+    return addCorsHeaders(addSecurityHeaders(response, nonce), request);
   }
 
   if (Math.random() < 0.01) {
@@ -248,8 +280,15 @@ async function handleApiRoute(
     cleanupStaleEntries(ipRequestMap);
   }
 
+  // Calculate remaining for rate-limit headers
+  const store = authToken ? authRequestMap : ipRequestMap;
+  const record = store.get(identifier);
+  const remaining = record ? Math.max(0, limitConfig.limit - record.count) : limitConfig.limit - 1;
+
   const response = NextResponse.next();
-  return addSecurityHeaders(response, nonce);
+  response.headers.set("X-RateLimit-Limit", String(limitConfig.limit));
+  response.headers.set("X-RateLimit-Remaining", String(remaining));
+  return addCorsHeaders(addSecurityHeaders(response, nonce), request);
 }
 
 async function handlePageRoute(

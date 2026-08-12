@@ -163,8 +163,8 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
         title: fields.title || stripPrefix(view.name),
         slug: fields.slug || slugify(stripPrefix(view.name)),
         status: getStatusFromName(view.name) || (fields.status || ""),
-        category: fields.category,
-        readTime: fields.readTime,
+        category: fields.category || "Cloud",
+        readTime: fields.readTime || "5 min read",
         createdAt: fields.createdAt || view.last_edited_time,
         url: "",
       };
@@ -183,8 +183,8 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
         title: fields.title || stripPrefix(view.name),
         slug: fields.slug || slugify(stripPrefix(view.name)),
         status: getStatusFromName(view.name) || (fields.status || ""),
-        category: fields.category,
-        readTime: fields.readTime,
+        category: fields.category || "Cloud",
+        readTime: fields.readTime || "5 min read",
         createdAt: fields.createdAt || view.last_edited_time,
         url: "",
       };

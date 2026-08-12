@@ -87,7 +87,7 @@ function mapMarkdownToFaq(
   };
 }
 
-export async function getFaqs(locale?: string): Promise<Faq[]> {
+export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   if (!(await isAppFlowyConfigured())) return [];
 
   const workspaceId = await getPrimaryWorkspaceId();
@@ -130,7 +130,7 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
   }
 }
 
-export async function getFaqsByCategory(category: FaqCategory, locale?: string): Promise<Faq[]> {
+export async function getFaqsByCategory(category: FaqCategory, locale?: string): Promise<AppFlowyFaq[]> {
   const faqs = await getFaqs(locale);
   return faqs.filter((f) => f.category === category);
 }
@@ -139,8 +139,15 @@ export async function getFaqsByCategory(category: FaqCategory, locale?: string):
  * List ALL FAQs for the admin panel (published + unpublished, no locale filtering).
  * Mirrors the Notion getAllFaqsAdmin function.
  */
-export async function getAllFaqsAdmin(): Promise<Faq[]> {
-  if (!(await isAppFlowyConfigured())) return staticFaqs;
+export async function getAllFaqsAdmin(): Promise<AppFlowyFaq[]> {
+  if (!(await isAppFlowyConfigured())) {
+    // Convert staticFaqs to AppFlowyFaq format with required fields
+    return staticFaqs.map((f) => ({
+      ...f,
+      published: true,
+      date: new Date().toISOString(),
+    }));
+  }
 
   const workspaceId = await getPrimaryWorkspaceId();
   if (!workspaceId) return [];
@@ -172,7 +179,12 @@ export async function getAllFaqsAdmin(): Promise<Faq[]> {
       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     });
   } catch {
-    return staticFaqs;
+    // Convert staticFaqs to AppFlowyFaq format with required fields
+    return staticFaqs.map((f) => ({
+      ...f,
+      published: true,
+      date: new Date().toISOString(),
+    }));
   }
 }
 
