@@ -24,7 +24,10 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
     let key = config.GOOGLE_PRIVATE_KEY?.trim() ?? "";
     if (!email || !key) throw new Error("Google service account not configured");
     // Refuse placeholder / truncated secrets that otherwise produce opaque jose errors.
-    if (/^(your[_-]?value|your[_-]?service|changeme|todo|xxx|placeholder)/i.test(key) || key.length < 200) {
+    if (
+      /^(your[_-]?value|your[_-]?service|changeme|todo|xxx|placeholder)/i.test(key) ||
+      key.length < 200
+    ) {
       throw new Error(
         "Google service account private key is missing or a placeholder — set GOOGLE_PRIVATE_KEY (PEM) on the Pi cloudless-secrets"
       );

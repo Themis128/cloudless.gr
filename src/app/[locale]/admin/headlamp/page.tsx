@@ -98,7 +98,8 @@ export default function HeadlampHelperPage() {
       {status === "ready" && (
         <div className="space-y-3 rounded-lg border border-green-300 bg-green-50 p-4 text-sm dark:border-green-800 dark:bg-green-950">
           <p className="font-medium text-green-800 dark:text-green-200">
-            ✅ Token copied to clipboard. Expires {new Date(expiresAt).toLocaleString(undefined, { timeZone: "Europe/Athens" })}.
+            ✅ Token copied to clipboard. Expires{" "}
+            {new Date(expiresAt).toLocaleString(undefined, { timeZone: "Europe/Athens" })}.
           </p>
           <details>
             <summary className="cursor-pointer text-green-900 dark:text-green-100">

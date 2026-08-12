@@ -266,7 +266,11 @@ export default function AdminUsersPage() {
 
                     {/* Joined */}
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {user.created ? new Date(user.created).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" }) : "—"}
+                      {user.created
+                        ? new Date(user.created).toLocaleDateString("en-IE", {
+                            timeZone: "Europe/Athens",
+                          })
+                        : "—"}
                     </td>
 
                     {/* Actions */}

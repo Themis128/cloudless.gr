@@ -15,9 +15,12 @@ const FILTER_LABELS: Record<Filter, string> = {
 function formatDate(iso: string) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit",
+    return new Date(iso).toLocaleDateString("en-GB", {
+      day: "2-digit",
       month: "short",
-      year: "numeric", timeZone: "Europe/Athens" });
+      year: "numeric",
+      timeZone: "Europe/Athens",
+    });
   } catch {
     return iso;
   }

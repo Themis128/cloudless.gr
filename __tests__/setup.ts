@@ -75,8 +75,14 @@ process.env.SES_TO_EMAIL = "inbox@cloudless.gr";
 process.env.AWS_SES_REGION = "us-east-1";
 
 // ── Google / GSC ─────────────────────────────────────────────────────────────
+// Must look like a real PEM and be ≥200 chars so google-auth's placeholder
+// guard does not reject it. jose is mocked in GSC/Calendar suites.
+const TEST_GOOGLE_PRIVATE_KEY =
+  "-----BEGIN PRIVATE KEY-----\n" +
+  "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0TEST_KEY_ONLY_".repeat(4) +
+  "\n-----END PRIVATE KEY-----";
 process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
-process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+process.env.GOOGLE_PRIVATE_KEY = TEST_GOOGLE_PRIVATE_KEY;
 process.env.GOOGLE_CALENDAR_ID = "calendar@cloudless.gr";
 process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 
@@ -97,7 +103,7 @@ beforeEach(() => {
   delete process.env.SLACK_WEBHOOK_URL;
   // Restore credentials that 503 "not configured" tests may clear.
   process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
-  process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+  process.env.GOOGLE_PRIVATE_KEY = TEST_GOOGLE_PRIVATE_KEY;
   process.env.HUBSPOT_API_KEY = "test-hs-token";
   process.env.NOTION_API_KEY = "secret_test_key_12345";
   process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";

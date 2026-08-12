@@ -8,10 +8,7 @@ import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
-import {
-  GoogleTagManagerHead,
-  GoogleTagManagerNoscript,
-} from "@/components/GoogleTagManager";
+import { GoogleTagManagerHead, GoogleTagManagerNoscript } from "@/components/GoogleTagManager";
 import { instrumentSans, workSans, geistMono } from "@/lib/fonts";
 import "./globals.css";
 

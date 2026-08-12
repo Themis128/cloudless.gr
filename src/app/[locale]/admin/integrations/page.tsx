@@ -268,9 +268,12 @@ export default function IntegrationsPage() {
       {checkedAt && (
         <p className="mt-6 font-mono text-xs text-slate-600">
           Last checked:{" "}
-          {new Date(checkedAt).toLocaleTimeString("en-IE", { hour: "2-digit",
+          {new Date(checkedAt).toLocaleTimeString("en-IE", {
+            hour: "2-digit",
             minute: "2-digit",
-            second: "2-digit", timeZone: "Europe/Athens" })}
+            second: "2-digit",
+            timeZone: "Europe/Athens",
+          })}
         </p>
       )}
     </div>

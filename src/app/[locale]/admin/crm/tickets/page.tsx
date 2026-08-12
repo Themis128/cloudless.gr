@@ -149,7 +149,9 @@ export default function AdminTicketsPage() {
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
                       {t.properties.createdate
-                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })
+                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE", {
+                            timeZone: "Europe/Athens",
+                          })
                         : "—"}
                     </td>
                   </tr>
@@ -193,7 +195,8 @@ export default function AdminTicketsPage() {
           </button>
           {fetchedAt && (
             <span className="font-mono text-[10px] text-slate-600">
-              Updated {new Date(fetchedAt).toLocaleTimeString("en-IE", { timeZone: "Europe/Athens" })}
+              Updated{" "}
+              {new Date(fetchedAt).toLocaleTimeString("en-IE", { timeZone: "Europe/Athens" })}
             </span>
           )}
         </div>

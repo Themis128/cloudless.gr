@@ -41,6 +41,16 @@ function DynamicWrapper({
   );
 }
 
+/** Consent Mode v2 payload (analytics + ads + ad_user_data + ad_personalization). */
+function consentUpdate(analytics: "granted" | "denied", marketing: "granted" | "denied") {
+  return {
+    analytics_storage: analytics,
+    ad_storage: marketing,
+    ad_user_data: marketing,
+    ad_personalization: marketing,
+  };
+}
+
 describe("GoogleAnalyticsConsent", () => {
   let gtag: ReturnType<typeof vi.fn>;
 
@@ -60,34 +70,22 @@ describe("GoogleAnalyticsConsent", () => {
 
   it("denies both when analytics and marketing are off", () => {
     render(<Wrapper analytics={false} marketing={false} />);
-    expect(gtag).toHaveBeenCalledWith("consent", "update", {
-      analytics_storage: "denied",
-      ad_storage: "denied",
-    });
+    expect(gtag).toHaveBeenCalledWith("consent", "update", consentUpdate("denied", "denied"));
   });
 
   it("grants analytics only when analytics=true, marketing=false", () => {
     render(<Wrapper analytics={true} marketing={false} />);
-    expect(gtag).toHaveBeenCalledWith("consent", "update", {
-      analytics_storage: "granted",
-      ad_storage: "denied",
-    });
+    expect(gtag).toHaveBeenCalledWith("consent", "update", consentUpdate("granted", "denied"));
   });
 
   it("grants marketing only when analytics=false, marketing=true", () => {
     render(<Wrapper analytics={false} marketing={true} />);
-    expect(gtag).toHaveBeenCalledWith("consent", "update", {
-      analytics_storage: "denied",
-      ad_storage: "granted",
-    });
+    expect(gtag).toHaveBeenCalledWith("consent", "update", consentUpdate("denied", "granted"));
   });
 
   it("grants both when analytics=true and marketing=true", () => {
     render(<Wrapper analytics={true} marketing={true} />);
-    expect(gtag).toHaveBeenCalledWith("consent", "update", {
-      analytics_storage: "granted",
-      ad_storage: "granted",
-    });
+    expect(gtag).toHaveBeenCalledWith("consent", "update", consentUpdate("granted", "granted"));
   });
 
   it("does not throw when window.gtag is not a function", () => {
@@ -114,30 +112,21 @@ describe("GoogleAnalyticsConsent", () => {
     );
 
     // Initial render: both denied
-    expect(gtag).toHaveBeenLastCalledWith("consent", "update", {
-      analytics_storage: "denied",
-      ad_storage: "denied",
-    });
+    expect(gtag).toHaveBeenLastCalledWith("consent", "update", consentUpdate("denied", "denied"));
 
     // User accepts analytics
     await act(async () => {
       setPrefs(true, false);
     });
 
-    expect(gtag).toHaveBeenLastCalledWith("consent", "update", {
-      analytics_storage: "granted",
-      ad_storage: "denied",
-    });
+    expect(gtag).toHaveBeenLastCalledWith("consent", "update", consentUpdate("granted", "denied"));
 
     // User also accepts marketing
     await act(async () => {
       setPrefs(true, true);
     });
 
-    expect(gtag).toHaveBeenLastCalledWith("consent", "update", {
-      analytics_storage: "granted",
-      ad_storage: "granted",
-    });
+    expect(gtag).toHaveBeenLastCalledWith("consent", "update", consentUpdate("granted", "granted"));
 
     // Total: 3 calls (initial + 2 updates)
     expect(gtag).toHaveBeenCalledTimes(3);
@@ -158,10 +147,7 @@ describe("GoogleAnalyticsConsent", () => {
     await act(async () => setPrefs(true, true));
     await act(async () => setPrefs(false, false));
 
-    expect(gtag).toHaveBeenLastCalledWith("consent", "update", {
-      analytics_storage: "denied",
-      ad_storage: "denied",
-    });
+    expect(gtag).toHaveBeenLastCalledWith("consent", "update", consentUpdate("denied", "denied"));
   });
 
   it("renders nothing to the DOM", () => {

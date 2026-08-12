@@ -133,7 +133,10 @@ export default function MetaPage() {
                       : "—"}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
-                    {new Date(c.created_time).toLocaleDateString("en-IE", { dateStyle: "medium", timeZone: "Europe/Athens" })}
+                    {new Date(c.created_time).toLocaleDateString("en-IE", {
+                      dateStyle: "medium",
+                      timeZone: "Europe/Athens",
+                    })}
                   </td>
                 </tr>
               ))}

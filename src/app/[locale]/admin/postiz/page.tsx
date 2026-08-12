@@ -353,7 +353,9 @@ function ComposeTab({
     const { date } = (await res.json()) as { date: string };
     // datetime-local input wants local time, no seconds/zone.
     setDraft({ scheduleAt: new Date(date).toISOString().slice(0, 16) });
-    setFeedback(`Next free slot: ${new Date(date).toLocaleString(undefined, { timeZone: "Europe/Athens" })}`);
+    setFeedback(
+      `Next free slot: ${new Date(date).toLocaleString(undefined, { timeZone: "Europe/Athens" })}`
+    );
   };
 
   const aiDraft = async () => {
@@ -629,8 +631,8 @@ function ScheduleTab({
           <li key={p.id} className="space-y-1 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs text-gray-500">
-                {new Date(p.publishDate).toLocaleString(undefined, { timeZone: "Europe/Athens" })} · {p.state} · {p.integration.name} (
-                {postIdentifier(p)})
+                {new Date(p.publishDate).toLocaleString(undefined, { timeZone: "Europe/Athens" })} ·{" "}
+                {p.state} · {p.integration.name} ({postIdentifier(p)})
               </div>
               <div className="flex gap-3 text-xs">
                 {(p.state === "QUEUE" || p.state === "DRAFT") && (

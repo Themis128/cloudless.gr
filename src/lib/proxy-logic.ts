@@ -109,11 +109,7 @@ function generateNonce(): string {
 }
 
 /** Forward CSP nonce + pathname into the App Router request headers (for layout Scripts). */
-function continueToApp(
-  request: NextRequest,
-  pathname: string,
-  nonce: string
-): NextResponse {
+function continueToApp(request: NextRequest, pathname: string, nonce: string): NextResponse {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-pathname", pathname);
