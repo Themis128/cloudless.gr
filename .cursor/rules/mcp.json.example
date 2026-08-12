@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "project": "node ./node_modules/.bin/project-mcp",
+    "mcp-tool-shop": "node ./node_modules/.bin/mcp-tool-shop",
+    "notion": {
+      "module": "@notionhq/notion-mcp-server",
+      "arguments": {
+        "token": "{{ .Env.NOTION_TOKEN }}",
+        "spaceId": "default"
+      }
+    },
+    "cloudflare-worker": "wrangler dev --local --no-remote",
+    "cloudflare-publish": "wrangler publish --env production"
+  }
+}
