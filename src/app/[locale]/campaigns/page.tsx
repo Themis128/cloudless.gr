@@ -63,9 +63,9 @@ export default async function CampaignsIndex({ params }: PageProps) {
           {campaigns.map((c) => (
             <li key={c.slug} className="cl-cam-card">
               <div className="cl-cam-card__meta">
-                <time dateTime={c.startsAt}>{new Date(c.startsAt).toLocaleDateString(locale)}</time>
+                <time dateTime={c.startsAt}>{new Date(c.startsAt).toLocaleDateString(locale, { timeZone: "Europe/Athens" })}</time>
                 <span aria-hidden> — </span>
-                <time dateTime={c.endsAt}>{new Date(c.endsAt).toLocaleDateString(locale)}</time>
+                <time dateTime={c.endsAt}>{new Date(c.endsAt).toLocaleDateString(locale, { timeZone: "Europe/Athens" })}</time>
               </div>
               <h2>{c.headline[locale]}</h2>
               <p>{c.subhead[locale]}</p>

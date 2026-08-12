@@ -200,7 +200,7 @@ function WorkspaceCard({ a }: Readonly<{ a: WorkspaceAnalytics }>) {
   const title = a.workspace?.name ?? "Org-wide";
   const slug = a.workspace?.slug;
   const nextScheduled = a.calendar.nextScheduledAt
-    ? new Date(a.calendar.nextScheduledAt).toLocaleString("en-IE")
+    ? new Date(a.calendar.nextScheduledAt).toLocaleString("en-IE", { timeZone: "Europe/Athens" })
     : "—";
   return (
     <div className="bg-void-light/30 rounded-xl border border-slate-800 p-5">

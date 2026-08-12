@@ -265,11 +265,9 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                               {doc.lastVerified && (
                                 <span className="font-mono text-[9px] text-slate-600">
                                   Verified:{" "}
-                                  {new Date(doc.lastVerified).toLocaleDateString("en-GB", {
-                                    day: "2-digit",
+                                  {new Date(doc.lastVerified).toLocaleDateString("en-GB", { day: "2-digit",
                                     month: "short",
-                                    year: "numeric",
-                                  })}
+                                    year: "numeric", timeZone: "Europe/Athens" })}
                                 </span>
                               )}
                             </div>

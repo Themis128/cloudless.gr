@@ -458,7 +458,7 @@ export default function WorkspacesPage() {
                       </p>
                     )}
                     <p className="mt-1 font-mono text-xs text-slate-700">
-                      created {new Date(ws.createdAt).toLocaleDateString("en-IE")}
+                      created {new Date(ws.createdAt).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                     </p>
                   </div>
                   <div className="flex gap-2">

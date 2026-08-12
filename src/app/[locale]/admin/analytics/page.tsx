@@ -853,10 +853,8 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
                   className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                 >
                   <td className="px-6 py-3 font-mono text-xs text-slate-300">
-                    {new Date(h.date).toLocaleDateString("en-IE", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {new Date(h.date).toLocaleDateString("en-IE", { month: "short",
+                      day: "numeric", timeZone: "Europe/Athens" })}
                   </td>
                   <td className="px-6 py-3 text-right font-mono text-sm text-white">
                     {(h.clicks ?? 0).toLocaleString()}

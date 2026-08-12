@@ -304,7 +304,7 @@ export default function KpiDashboard() {
 
           {/* Footer */}
           <p className="text-right font-mono text-xs text-slate-700">
-            Fetched at {new Date(data.fetchedAt).toLocaleTimeString()}
+            Fetched at {new Date(data.fetchedAt).toLocaleTimeString(undefined, { timeZone: "Europe/Athens" })}
           </p>
         </div>
       )}

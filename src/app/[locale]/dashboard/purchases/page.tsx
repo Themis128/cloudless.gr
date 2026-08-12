@@ -191,7 +191,7 @@ export default function PurchasesPage() {
                         {p.status}
                       </span>
                       <span className="font-mono text-xs text-slate-600">
-                        {new Date(p.date).toLocaleDateString("en-IE")}
+                        {new Date(p.date).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                       </span>
                     </div>
                     <div className="mt-2 space-y-1">
@@ -253,7 +253,7 @@ export default function PurchasesPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-xs text-slate-500">
-                    Renews {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
+                    Renews {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                   </p>
                 </div>
               </div>

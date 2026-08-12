@@ -380,7 +380,7 @@ async function handleStats(): Promise<Response> {
           { type: "mrkdwn", text: `*Subscribers*\n${subscriberCount}` },
           { type: "mrkdwn", text: `*Pending drafts*\n${draftCount} (gates blocked)` },
           { type: "mrkdwn", text: `*In Review*\n${inReviewCount} (ready to send)` },
-          { type: "mrkdwn", text: `*Cadence*\nMon 08:15 UTC draft · 11:15 publish` },
+          { type: "mrkdwn", text: `*Cadence*\nMon 11:15 EET/EEST draft · 14:15 publish (Europe/Athens)` },
         ],
       },
     ],

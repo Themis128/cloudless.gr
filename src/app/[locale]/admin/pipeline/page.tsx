@@ -222,10 +222,8 @@ function DealCard({
       {deal.properties.closedate && (
         <p className="mt-1 font-mono text-[10px] text-slate-600">
           Close:{" "}
-          {new Date(deal.properties.closedate).toLocaleDateString("en-IE", {
-            day: "numeric",
-            month: "short",
-          })}
+          {new Date(deal.properties.closedate).toLocaleDateString("en-IE", { day: "numeric",
+            month: "short", timeZone: "Europe/Athens" })}
         </p>
       )}
       {stages.length > 1 && (

@@ -110,7 +110,7 @@ export default function AdminSettingsPage() {
       const data = (await res.json()) as CacheClearResponse;
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       const timestamp = data.clearedAt
-        ? new Date(data.clearedAt).toLocaleTimeString("en-IE")
+        ? new Date(data.clearedAt).toLocaleTimeString("en-IE", { timeZone: "Europe/Athens" })
         : "now";
       setCacheMsg({ ok: true, text: `Cache cleared: ${data.clearedPrefix} at ${timestamp}` });
     } catch (err) {

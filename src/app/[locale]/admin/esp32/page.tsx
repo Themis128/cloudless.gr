@@ -14,6 +14,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVisiblePoll } from "@/lib/use-visible-poll";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ function fmtRam(b: number | null): string {
 
 function fmtTs(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-IE", { timeZone: "Europe/Athens" });
+  return new Date(iso).toLocaleString("en-IE", { timeZone: APP_TIMEZONE });
 }
 
 function rssiBar(rssi: number | null): { width: string; color: string } {
@@ -521,7 +522,7 @@ export default function AdminEsp32Page() {
               <div key={i} className={`flex gap-3 ${entry.historic ? "opacity-50" : ""}`}>
                 <span className="shrink-0 text-slate-600 select-none">
                   {new Date(entry.ts).toLocaleTimeString("en-IE", {
-                    timeZone: "Europe/Athens",
+                    timeZone: APP_TIMEZONE,
                     hour12: false,
                   })}
                 </span>

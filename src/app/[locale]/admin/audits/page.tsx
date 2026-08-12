@@ -99,7 +99,7 @@ export default function AuditsPage() {
       {data && (
         <>
           <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-            Generated {new Date(data.generatedAt).toLocaleString()} · {data.repo}
+            Generated {new Date(data.generatedAt).toLocaleString(undefined, { timeZone: "Europe/Athens" })} · {data.repo}
           </p>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

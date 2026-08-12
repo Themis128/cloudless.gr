@@ -180,7 +180,7 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {new Date(order.created).toLocaleDateString("en-IE")}
+                      {new Date(order.created).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                     </td>
                   </tr>
                 ))}
@@ -240,7 +240,7 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE")}
+                      {new Date(sub.currentPeriodEnd).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                     </td>
                   </tr>
                 ))}

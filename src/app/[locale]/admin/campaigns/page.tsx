@@ -374,7 +374,7 @@ export default function CampaignsDashboard() {
           </button>
           {hub.fetchedAt && (
             <p className="font-mono text-[10px] text-slate-600">
-              Updated {new Date(hub.fetchedAt).toLocaleTimeString("en-IE")}
+              Updated {new Date(hub.fetchedAt).toLocaleTimeString("en-IE", { timeZone: "Europe/Athens" })}
             </p>
           )}
         </div>

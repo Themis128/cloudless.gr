@@ -133,7 +133,7 @@ export default function AdminCompaniesPage() {
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
                     {c.properties.createdate
-                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
+                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })
                       : "—"}
                   </td>
                 </tr>
@@ -174,7 +174,7 @@ export default function AdminCompaniesPage() {
           </button>
           {fetchedAt && (
             <span className="font-mono text-[10px] text-slate-600">
-              Updated {new Date(fetchedAt).toLocaleTimeString("en-IE")}
+              Updated {new Date(fetchedAt).toLocaleTimeString("en-IE", { timeZone: "Europe/Athens" })}
             </span>
           )}
         </div>

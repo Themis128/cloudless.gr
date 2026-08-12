@@ -1,5 +1,6 @@
 import { createGoogleAuth } from "@/lib/google-auth";
 import { getConfig } from "@/lib/ssm-config";
+import { APP_TIMEZONE } from "@/lib/timezone";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
@@ -12,7 +13,7 @@ const SLOT_DURATION_MINUTES = 30;
 const LOOKBACK_DAYS = 90;
 const LOOKAHEAD_DAYS = 30;
 const MAX_CALENDAR_RESULTS = 50;
-const CALENDAR_TIMEZONE = "Europe/Athens";
+const CALENDAR_TIMEZONE = APP_TIMEZONE;
 const DEFAULT_CALENDAR_ID = "primary";
 const DATE_PART_2_DIGIT = "2-digit";
 

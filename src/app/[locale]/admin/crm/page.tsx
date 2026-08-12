@@ -140,7 +140,7 @@ export default function AdminCRMPage() {
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
                     {c.properties?.createdate
-                      ? new Date(c.properties?.createdate).toLocaleDateString("en-IE")
+                      ? new Date(c.properties?.createdate).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })
                       : "—"}
                   </td>
                 </tr>

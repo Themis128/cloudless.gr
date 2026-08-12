@@ -275,9 +275,9 @@ export default function AdminErrorsPage() {
                       {issue.culprit || "unknown location"}
                     </p>
                     <p className="mt-1 font-mono text-[10px] text-slate-600">
-                      First: {new Date(issue.firstSeen).toLocaleDateString("en-IE")}
+                      First: {new Date(issue.firstSeen).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                       {" · "}
-                      Last: {new Date(issue.lastSeen).toLocaleDateString("en-IE")}
+                      Last: {new Date(issue.lastSeen).toLocaleDateString("en-IE", { timeZone: "Europe/Athens" })}
                     </p>
                   </div>
 

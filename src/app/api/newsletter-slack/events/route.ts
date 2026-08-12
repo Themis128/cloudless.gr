@@ -347,7 +347,7 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
         elements: [
           {
             type: "mrkdwn",
-            text: "Cadence: Mon 08:15 UTC draft → 11:15 UTC publish · Code: `scripts/article-quality-gates.ts`",
+            text: "Cadence: Mon 11:15 → 14:15 Europe/Athens draft/publish · Code: `scripts/article-quality-gates.ts`",
           },
         ],
       },

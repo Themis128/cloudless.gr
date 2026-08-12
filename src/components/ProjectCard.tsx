@@ -46,10 +46,8 @@ const TYPE_STYLES: Record<string, string> = {
 function formatDate(iso: string) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(iso).toLocaleDateString("en-GB", { month: "short",
+      year: "numeric", timeZone: "Europe/Athens" });
   } catch {
     return null;
   }

@@ -205,8 +205,8 @@ export default function NotificationsPage() {
               </div>
             </div>
             <div className="font-mono text-[10px] text-slate-500">
-              {new Date(analytics.window.since).toLocaleDateString()} to{" "}
-              {new Date(analytics.window.until).toLocaleDateString()}
+              {new Date(analytics.window.since).toLocaleDateString(undefined, { timeZone: "Europe/Athens" })} to{" "}
+              {new Date(analytics.window.until).toLocaleDateString(undefined, { timeZone: "Europe/Athens" })}
             </div>
           </div>
           {days.length > 0 && (
@@ -263,7 +263,7 @@ export default function NotificationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[10px] text-slate-500">
-                    {new Date(n.createdAt).toLocaleString()}
+                    {new Date(n.createdAt).toLocaleString(undefined, { timeZone: "Europe/Athens" })}
                   </span>
                   {!n.read && (
                     <button

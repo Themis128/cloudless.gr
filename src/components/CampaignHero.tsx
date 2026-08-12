@@ -35,8 +35,8 @@ export default function CampaignHero({ campaign, locale }: Props) {
               </strong>
               <span>
                 {locale === "el"
-                  ? `Λήγει ${new Date(campaign.endsAt).toLocaleDateString("el")}`
-                  : `Closes ${new Date(campaign.endsAt).toLocaleDateString("en")}`}
+                  ? `Λήγει ${new Date(campaign.endsAt).toLocaleDateString("el", { timeZone: "Europe/Athens" })}`
+                  : `Closes ${new Date(campaign.endsAt).toLocaleDateString("en", { timeZone: "Europe/Athens" })}`}
               </span>
             </div>
           ) : null}
