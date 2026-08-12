@@ -58,6 +58,7 @@ export interface Task {
   type: TaskType | "";
   description: string;
   labels: string[];
+  sprint: string;
   url: string;
 }
 
@@ -109,6 +110,7 @@ function parseTaskFields(text: string): Partial<Task> {
     type: (fields["Type"] || "") as TaskType | "",
     description: fields["Description"] || "",
     labels: fields["Labels"] ? fields["Labels"].split(",").map((t) => t.trim()) : [],
+    sprint: fields["Sprint"] || "",
   };
 }
 
@@ -300,6 +302,7 @@ export async function listTasks(filters?: {
           type: fields.type || "",
           description: fields.description || "",
           labels: fields.labels || [],
+          sprint: fields.sprint || "",
           url: "",
         });
       } catch {
@@ -412,7 +415,7 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
         const text = await extractDocText(doc);
         const fields = parseTaskFields(text);
 
-        if (fields.project === sprintName || text.includes(`**Sprint**: ${sprintName}`)) {
+        if (fields.sprint === sprintName || fields.project === sprintName) {
           tasks.push({
             id: view.view_id,
             task: fields.task || stripTaskPrefix(view.name),
@@ -425,6 +428,7 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
             type: fields.type || "",
             description: fields.description || "",
             labels: fields.labels || [],
+            sprint: fields.sprint || "",
             url: "",
           });
         }

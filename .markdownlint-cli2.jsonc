@@ -68,6 +68,8 @@
     // best-practices, etc.). Same principle as .claude/skills — external content.
     ".agents/**",
     ".kiro/**",
+    // .cline/** is local Cline agent context/rules — not shipped product docs.
+    ".cline/**",
     "logs_failed.md",
     "**/*logs*.md",
     "CHANGELOG.md",

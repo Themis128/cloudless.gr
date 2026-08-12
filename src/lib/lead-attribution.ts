@@ -130,7 +130,6 @@ export function captureAttribution(): void {
   try {
     if (window.sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY)) return; // first touch wins
     const parsed = parseAttribution(window.location.href, document.referrer);
-const parsed = parseAttribution(window.location.href, document.referrer);
     if (parsed) {
       window.sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(parsed));
     }

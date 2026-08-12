@@ -35,7 +35,9 @@ export async function getReport(id: string): Promise<Report | null> {
  * Create a report in AppFlowy.
  * No-op.
  */
-export async function createReport(data: Omit<Report, "id" | "createdAt" | "updatedAt">): Promise<string | null> {
+export async function createReport(
+  data: Omit<Report, "id" | "createdAt" | "updatedAt">
+): Promise<string | null> {
   console.log("[AppFlowy Reports] Would create report:", data.title);
   return null;
 }

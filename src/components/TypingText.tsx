@@ -128,11 +128,7 @@ export default function TypingText({
   ]);
 
   return (
-    <span
-      ref={ref}
-      className={className}
-      suppressHydrationWarning
-    >
+    <span ref={ref} className={className} suppressHydrationWarning>
       {displayed}
       {!reducedMotion && <span className="typing-cursor" />}
     </span>

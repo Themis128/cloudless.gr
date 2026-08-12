@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
     const services = await getServices();
     return NextResponse.json({ services, count: services.length });
   } catch (err) {
-    console.error("[Admin AppFlowy Services] GET failed:", err instanceof Error ? err.message : err);
+    console.error(
+      "[Admin AppFlowy Services] GET failed:",
+      err instanceof Error ? err.message : err
+    );
     return NextResponse.json({ error: "Failed to list services" }, { status: 500 });
   }
 }
@@ -42,7 +45,10 @@ export async function POST(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy Services] Would create service:", body.name);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }
 
 export async function PATCH(request: NextRequest) {
@@ -62,7 +68,10 @@ export async function PATCH(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy Services] Would update service:", body.pageId);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }
 
 export async function DELETE(request: NextRequest) {
@@ -76,5 +85,8 @@ export async function DELETE(request: NextRequest) {
 
   // AppFlowy write API not yet implemented
   console.log("[Admin AppFlowy Services] Would delete service:", pageId);
-  return NextResponse.json({ error: "Write operations not yet implemented for AppFlowy" }, { status: 501 });
+  return NextResponse.json(
+    { error: "Write operations not yet implemented for AppFlowy" },
+    { status: 501 }
+  );
 }
