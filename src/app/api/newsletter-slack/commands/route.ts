@@ -26,7 +26,6 @@ import {
 } from "@/lib/notion-blog-admin";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
-import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";
 
 interface SlashPayload {
   command: string;
@@ -438,7 +437,3 @@ function slackResponse(body: unknown): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
-
-// Touch the async config getter once at module load so any missing-secret
-// warning surfaces in Lambda logs before the first real request.
-void getNewsletterSlackConfigAsync().catch(() => {});
