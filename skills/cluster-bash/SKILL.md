@@ -4,7 +4,7 @@ description: |
   Run bash on the cloudless.gr Pi cluster — pick the right tool (single-node
   ssh, multi-node fanout, file read/write, k3s-aware) and the right fallback
   when the SSH MCP is unavailable. Triggered by phrases like "ssh to omv",
-  "run on the cluster", "check both Pis", "what's in /var/log on omv-main",
+  "run on the cluster", "check both Pis", "what's in /var/log on omv",
   "push a config to omv-ha", "diff a file across nodes", "is the cluster
   reachable", or any cluster-bash / cluster-diagnose intent.
 ---
@@ -15,12 +15,12 @@ The cloudless.gr cluster is two Pis:
 
 | Node       | Hardware            | Role                                    | LAN IP        | Tailnet IP        |
 |------------|---------------------|-----------------------------------------|---------------|-------------------|
-| `omv-main` | Pi 5, SATA SSD      | k3s control plane, primary runner host  | 192.168.1.128 | 100.74.191.58    |
-| `omv-ha`   | Pi 4                | k3s agent, keepalived VIP 192.168.1.200 | 192.168.1.130 | 100.95.117.84    |
+| `omv`      | Pi 5, SATA SSD      | k3s control plane, primary runner host  | 192.168.1.128 | 100.74.191.58    |
+| `omv-ha`   | Pi 4 (mail + deploy proxy; not k3s) | webmail / omv-ha-deploy runner | 192.168.1.130 | 100.95.117.84    |
 
-Both run a GitHub Actions self-hosted runner stack
-(`omv` / `omv-build` on main; `omv-2-build` on ha). The cluster is reached
-over Tailscale from cloud sessions and over LAN from Office.
+Both run GitHub Actions self-hosted runners
+(`omv` / `omv-build` on main; `omv-ha-deploy` on ha — mail host, not a k3s
+node). Reach over Tailscale from cloud sessions and over LAN from Office.
 
 ## Tool selection — pick the most specific that fits
 
@@ -94,7 +94,7 @@ cluster_run_fanout("df -h / /var/lib/rancher/k3s 2>/dev/null | tail -n +2")
 cluster_run_fanout("systemctl --no-pager status 'actions.runner.*' | grep -E 'Active:|Loaded:' | head -8")
 
 # Read the active k3s server token (sensitive — admin only)
-cluster_read_file("omv-main", "/var/lib/rancher/k3s/server/token")
+cluster_read_file("omv", "/var/lib/rancher/k3s/server/token")
 
 # What pods crashed in the last hour?
 mcp__cloudless-infra__k3s_get_pods({ namespace: "default" })  # then filter Status
@@ -121,7 +121,7 @@ Session-start hook reads three secrets from the Claude session config:
 | Secret                  | Used for                                                                |
 |-------------------------|-------------------------------------------------------------------------|
 | `TAILSCALE_AUTH_KEY`    | Joins the sandbox to the tailnet so it can reach `100.74.191.58`       |
-| `OMV_SSH_KEY_CONTENTS`  | base64'd `~/.ssh/id_ed25519` for `tbaltzakis@omv-main` and `@omv-ha`    |
+| `OMV_SSH_KEY_CONTENTS`  | base64'd `~/.ssh/id_ed25519` for `tbaltzakis@omv` and `@omv-ha`         |
 | `GITHUB_PAT`            | Unrelated to SSH but the same hook sets it; needed by `gh_*` tools     |
 
 If any of these are missing, every `mcp__cloudless-infra__*` tool fails

@@ -79,6 +79,16 @@ if [[ -d "${ARTIFACT_DIR}/public" ]]; then
   rsync_to "${ARTIFACT_DIR}/public/" "${USER_STAGE}/public/"
 fi
 remote "test -f '${USER_STAGE}/server.js'"
+remote bash -s <<REMOTE
+set -euo pipefail
+USER_STAGE='$USER_STAGE'
+# Refuse incomplete packs before touching the live symlink (reboot mid-rsync
+# previously left a release without .next/BUILD_ID → CrashLoop).
+test -f "\${USER_STAGE}/server.js"
+test -f "\${USER_STAGE}/.next/BUILD_ID"
+test -s "\${USER_STAGE}/.next/BUILD_ID"
+echo "stage BUILD_ID=\$(cat "\${USER_STAGE}/.next/BUILD_ID")"
+REMOTE
 
 echo "==> Promote → releases/${RELEASE_SHA12} + flip symlink"
 PREV="$(remote "readlink '$CURRENT' 2>/dev/null || true" | tr -d '\r')"
@@ -95,6 +105,12 @@ sudo rm -rf "\$NEW_REL"
 sudo mv "\$USER_STAGE" "\$NEW_REL"
 # Pod may run as a different uid — keep tree world-readable/executable.
 sudo chmod -R a+rX "\$NEW_REL"
+# Gate again on the promoted tree (mv must not drop BUILD_ID).
+if [ ! -s "\$NEW_REL/.next/BUILD_ID" ] || [ ! -f "\$NEW_REL/server.js" ]; then
+  echo "::error::Promoted release missing server.js or .next/BUILD_ID — refusing symlink flip" >&2
+  sudo rm -rf "\$NEW_REL"
+  exit 1
+fi
 sudo ln -sfn "cloudless-releases/\$SHA12" "\$CURRENT"
 sudo chown -h "\$OWNER:users" "\$CURRENT"
 echo "Symlink now: \$CURRENT → \$(readlink "\$CURRENT")"
@@ -143,6 +159,19 @@ echo "Using: \$KUBECTL"
 sleep 15
 \$KUBECTL get pods -n "\$NS" -l app=cloudless-app -o wide
 \$KUBECTL get endpoints -n "\$NS" cloudless-app || true
+# Origin path needs the named tunnel. Scale-to-zero (or CrashLoop) causes
+# public 502 even when NodePort health is fine — assert replicas before OK.
+TUNNEL_JSON=\$(\$KUBECTL get deploy cloudflare-tunnel -n "\$NS" -o json 2>/dev/null || true)
+if [ -n "\$TUNNEL_JSON" ]; then
+  TUNNEL_SPEC=\$(echo "\$TUNNEL_JSON" | jq -r '.spec.replicas // 0')
+  TUNNEL_READY=\$(echo "\$TUNNEL_JSON" | jq -r '.status.readyReplicas // 0')
+  echo "cloudflare-tunnel replicas spec=\${TUNNEL_SPEC} ready=\${TUNNEL_READY}"
+  if [ "\$TUNNEL_SPEC" = "0" ] || [ "\$TUNNEL_SPEC" = "null" ]; then
+    echo "::warning::cloudflare-tunnel scaled to 0 — restoring replicas=1"
+    \$KUBECTL scale deployment/cloudflare-tunnel -n "\$NS" --replicas=1
+    \$KUBECTL rollout status deployment/cloudflare-tunnel -n "\$NS" --timeout=120s || true
+  fi
+fi
 curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
 echo
 REMOTE
