@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { AppFlowyDoc } from "@/lib/appflowy-docs";
 
 export default function AdminDocsPage() {
-  const [docs, setDocs] = useState<DocRecord[]>([]);
+  const [docs, setDocs] = useState<AppFlowyDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDrafts, setShowDrafts] = useState(true);
@@ -16,7 +16,7 @@ export default function AdminDocsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { docs: DocRecord[] };
+      const data = (await res.json()) as { docs: AppFlowyDoc[] };
       setDocs(data.docs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load docs");

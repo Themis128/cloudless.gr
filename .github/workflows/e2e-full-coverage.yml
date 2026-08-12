@@ -93,7 +93,7 @@ jobs:
 
       - name: Run Playwright migrated + sweeps + journeys
         run: |
-          pnpm exec playwright test --config=playwright-improved.config.mts \
+          pnpm exec playwright test --config=playwright.config.mts \
             --project=chromium \
             --reporter=line \
             --workers=2 \

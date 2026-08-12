@@ -236,10 +236,9 @@ export async function POST(request: Request) {
 
     // Track form submission (fire-and-forget)
     trackEvent({
-      event: "contact_form_submit",
-      type: "form_submit",
-      page: "/contact",
-      source: service ?? "website_contact_form",
+      event: "contact_submit",
+      path: "/contact",
+      metadata: { source: service ?? "website_contact_form" },
     }).catch(() => {});
 
     // Meta CAPI — Lead event. Only read fbp/fbc marketing cookies when the

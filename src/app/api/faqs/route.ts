@@ -7,7 +7,7 @@ import {
   getFaqs as getNotionFaqs,
   getFaqsByCategory as getNotionFaqsByCategory,
 } from "../../../lib/notion-faqs";
-import type { FaqCategory } from "../../../lib/notion-faqs";
+import type { Faq, FaqCategory } from "../../../lib/notion-faqs";
 import {
   isAppFlowyCmsConfigured,
   isNotionCmsConfigured,
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const notionConfigured = await isNotionCmsConfigured("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
-    let data = [];
+    let data: Faq[] = [];
     if (category) data = data.filter((f) => f.category === category);
     return NextResponse.json(data, { headers: cmsSourceHeaders("static") });
   }

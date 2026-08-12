@@ -4,22 +4,21 @@ Patch local .env / .env.local to use the production SESSION_SECRET
 and fix the corrupted CLOUDFLARE_API_TOKEN (embedded space artifact).
 Also updates the local D1 admin password_hash to match the production hash.
 """
+import os
 import re
-import sys
 
 ENV_LOCAL = "/home/tbaltzakis/cloudless.gr/.env.local"
 ENV = "/home/tbaltzakis/cloudless.gr/.env"
 
 # NOTE: These are loaded from environment/.env at runtime.
 # Do NOT hardcode real secrets in this file.
-import os
 PROD_SECRET = os.environ.get("SESSION_SECRET", "")
 CORRUPT_TOKEN = os.environ.get("CORRUPT_CLOUDFLARE_API_TOKEN", "")
 CLEAN_TOKEN = os.environ.get("CLEAN_CLOUDFLARE_API_TOKEN", "")
 
 def patch(path):
     try:
-        with open(path, "r") as f:
+        with open(path) as f:
             content = f.read()
     except FileNotFoundError:
         print(f"  SKIP (not found): {path}")

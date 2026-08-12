@@ -186,8 +186,7 @@ jobs:
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
     - name: Generate SBOM
       run: |
-        syft packages:pnpm-lock.yaml -o syft-json > sbom.json
-        syft . -o syft-json >> sbom.json
+        syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
     - name: Generate SLSA provenance
       run: |
         # Create SLSA Level 1 provenance attestation

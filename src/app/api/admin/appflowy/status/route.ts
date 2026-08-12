@@ -61,7 +61,7 @@ async function resolveBotName(): Promise<{ ok: true; botName: string } | { ok: f
     const workspaces = await listAllWorkspaces();
     return {
       ok: true,
-      botName: workspaces[0]?.name ?? "AppFlowy Workspace",
+      botName: workspaces[0]?.workspace_name ?? "AppFlowy Workspace",
     };
   } catch (err) {
     return {

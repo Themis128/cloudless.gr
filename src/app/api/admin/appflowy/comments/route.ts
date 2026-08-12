@@ -35,7 +35,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "AppFlowy Comments not configured" }, { status: 503 });
   }
 
-  const { pageId, text } = await request.json();
+  const body = (await request.json()) as { pageId?: unknown; text?: unknown };
+  const pageId = typeof body.pageId === "string" ? body.pageId : "";
+  const text = typeof body.text === "string" ? body.text : "";
   if (!pageId || !text) {
     return NextResponse.json({ error: "pageId and text are required" }, { status: 400 });
   }

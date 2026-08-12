@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { trackEvent, type AnalyticsEventType } from "@/lib/notion-analytics";
 
 const ALLOWED_TYPES: AnalyticsEventType[] = ["page_view", "blog_view", "doc_view", "form_submit"];
 
