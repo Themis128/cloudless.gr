@@ -8,6 +8,9 @@
     ],
     "tag:app-connector": [
       "autogroup:admin"
+    ],
+    "tag:pi": [
+      "autogroup:admin"
     ]
   },
   "autoApprovers": {
@@ -37,7 +40,17 @@
   "grants": [
     {
       "src": ["autogroup:admin"],
-      "dst": ["tag:k8s", "tag:k8s-operator", "tag:app-connector"],
+      "dst": ["tag:k8s", "tag:k8s-operator", "tag:app-connector", "tag:pi"],
+      "ip": ["*"]
+    },
+    {
+      "src": ["autogroup:member"],
+      "dst": ["tag:pi"],
+      "ip": ["tcp:22", "icmp", "icmpv6"]
+    },
+    {
+      "src": ["tag:pi"],
+      "dst": ["tag:pi"],
       "ip": ["*"]
     },
     {
@@ -64,15 +77,9 @@
   "ssh": [
     {
       "action": "accept",
-      "src": ["autogroup:admin"],
-      "dst": ["autogroup:self", "tag:app-connector", "tag:k8s", "tag:k8s-operator"],
-      "users": ["autogroup:nonroot", "root", "tbaltzakis"]
-    },
-    {
-      "action": "check",
-      "src": ["autogroup:member"],
-      "dst": ["autogroup:self"],
-      "users": ["autogroup:nonroot", "root"]
+      "src": ["autogroup:admin", "autogroup:member"],
+      "dst": ["tag:pi", "autogroup:self"],
+      "users": ["autogroup:nonroot", "tbaltzakis", "root"]
     }
   ],
   "nodeAttrs": [

@@ -1,0 +1,12 @@
+[Unit]
+Description=Run pi-connectivity-heal every 2 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=30s
+Persistent=true
+Unit=pi-connectivity-heal-check.service
+
+[Install]
+WantedBy=timers.target

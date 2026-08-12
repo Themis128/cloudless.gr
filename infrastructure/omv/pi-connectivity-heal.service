@@ -1,0 +1,11 @@
+[Unit]
+Description=Heal Tailscale + OpenSSH connectivity after boot
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pi-connectivity-heal.sh --boot
+
+[Install]
+WantedBy=multi-user.target

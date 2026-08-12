@@ -51,3 +51,7 @@ jobs:
 
     - name: Run Tailscale Admin API script
       run: bash scripts/tailscale-admin-api.sh
+
+    - name: Retag Pi hosts to tag:pi
+      if: inputs.dry_run != 'true'
+      run: bash scripts/tailscale-retag-pi-hosts.sh

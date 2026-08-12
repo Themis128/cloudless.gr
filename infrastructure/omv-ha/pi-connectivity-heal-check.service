@@ -1,0 +1,7 @@
+[Unit]
+Description=Periodic Tailscale + OpenSSH connectivity heal
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pi-connectivity-heal.sh --check
