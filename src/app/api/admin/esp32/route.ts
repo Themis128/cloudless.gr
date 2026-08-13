@@ -1,7 +1,10 @@
 import { requireAdmin } from "@/lib/api-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-const ALERT_API = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
+// In-cluster default (Pi k3s). Override via ALERT_API_URL. Private LAN
+// defaults are rejected by isPrivateLanUrl below for non-cluster deploys.
+const ALERT_API =
+  process.env.ALERT_API_URL ?? "http://alert-api.alert-manager.svc.cluster.local:8080";
 
 /**
  * Device IDs are short slugs. Validate before interpolating into the upstream

@@ -2,11 +2,12 @@
  * Admin - Monitor API proxy
  *
  * Proxies requests to the Pi Alert API. The target URL is set via
- * ALERT_API_URL env var; when unset it defaults to the LAN address.
+ * ALERT_API_URL env var; when unset it defaults to the in-cluster
+ * Service DNS (alert-api.alert-manager.svc.cluster.local:8080).
  *
- * On Lambda/cloud deployments the Pi LAN is unreachable — the route
- * returns {offline:true} immediately without attempting a connection,
- * rather than hanging for 5s or producing an unhandled 500.
+ * If ALERT_API_URL points at a private LAN IP (legacy Lambda/cloud
+ * configs), the route returns {offline:true} immediately rather than
+ * hanging — the Pi app should use the cluster Service URL instead.
  *
  * Sub-resources (via ?resource=):
  *   status   → GET /api/status
@@ -16,7 +17,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 
-const ALERT_API_URL = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
+// In-cluster default (Pi k3s). Override via ALERT_API_URL. Private LAN
+// defaults are rejected by isPrivateLanUrl below for non-cluster deploys.
+const ALERT_API_URL =
+  process.env.ALERT_API_URL ?? "http://alert-api.alert-manager.svc.cluster.local:8080";
 
 const RESOURCE_MAP: Record<string, string> = {
   status: "/api/status",
