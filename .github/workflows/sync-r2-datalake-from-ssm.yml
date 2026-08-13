@@ -1,0 +1,144 @@
+name: Sync R2 datalake creds from SSM → Pi
+
+# Copies CF_R2_* (+ ANALYTICS_BUCKET) from AWS SSM /cloudless/production/*
+# into k8s cloudless-secrets and restarts cloudless-app. Soft-skips missing
+# params. Runtime stays SSM_DISABLED=1.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-r2-datalake-from-ssm
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AWS_REGION: us-east-1
+  SSM_PREFIX: /cloudless/production
+
+jobs:
+  sync:
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    steps:
+      - name: Pull SSM → patch cloudless-secrets
+        run: |
+          set -euo pipefail
+          KUBECTL="sudo k3s kubectl"
+          KEYS=(
+            CF_R2_ACCESS_KEY_ID
+            CF_R2_SECRET_ACCESS_KEY
+            R2_ACCESS_KEY_ID
+            R2_SECRET_ACCESS_KEY
+            ANALYTICS_BUCKET
+            DATALAKE_BUCKET_NAME
+            R2_BUCKET_NAME
+          )
+          export KEYS_CSV
+          KEYS_CSV=$(IFS=,; echo "${KEYS[*]}")
+
+          PATCH=$(python3 - <<'PY'
+          import base64, json, os, re, subprocess
+
+          prefix = os.environ["SSM_PREFIX"].rstrip("/")
+          keys = [k.strip() for k in os.environ["KEYS_CSV"].split(",") if k.strip()]
+          placeholder = re.compile(r"^(your[_-]?value|changeme|todo|xxx|placeholder)", re.I)
+          data, synced, skipped = {}, [], []
+
+          for key in keys:
+            name = f"{prefix}/{key}"
+            try:
+              out = subprocess.check_output(
+                [
+                  "aws", "ssm", "get-parameter",
+                  "--region", os.environ.get("AWS_REGION", "us-east-1"),
+                  "--name", name,
+                  "--with-decryption",
+                  "--query", "Parameter.Value",
+                  "--output", "text",
+                ],
+                stderr=subprocess.DEVNULL,
+                text=True,
+              ).strip()
+            except subprocess.CalledProcessError:
+              skipped.append(f"{key}(missing)")
+              continue
+            if not out:
+              skipped.append(f"{key}(empty)")
+              continue
+            if placeholder.match(out):
+              skipped.append(f"{key}(placeholder)")
+              continue
+            data[key] = base64.b64encode(out.encode()).decode()
+            synced.append(key)
+
+          # Normalize aliases → CF_R2_* + ANALYTICS_BUCKET
+          if "CF_R2_ACCESS_KEY_ID" not in data and "R2_ACCESS_KEY_ID" in data:
+            data["CF_R2_ACCESS_KEY_ID"] = data["R2_ACCESS_KEY_ID"]
+            synced.append("CF_R2_ACCESS_KEY_ID")
+          if "CF_R2_SECRET_ACCESS_KEY" not in data and "R2_SECRET_ACCESS_KEY" in data:
+            data["CF_R2_SECRET_ACCESS_KEY"] = data["R2_SECRET_ACCESS_KEY"]
+            synced.append("CF_R2_SECRET_ACCESS_KEY")
+          if "ANALYTICS_BUCKET" not in data:
+            for alt in ("DATALAKE_BUCKET_NAME", "R2_BUCKET_NAME"):
+              if alt in data:
+                data["ANALYTICS_BUCKET"] = data[alt]
+                synced.append("ANALYTICS_BUCKET")
+                break
+          for drop in ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "DATALAKE_BUCKET_NAME", "R2_BUCKET_NAME"):
+            data.pop(drop, None)
+
+          if "CF_R2_ACCESS_KEY_ID" not in data or "CF_R2_SECRET_ACCESS_KEY" not in data:
+            raise SystemExit("CF_R2_ACCESS_KEY_ID / CF_R2_SECRET_ACCESS_KEY missing in SSM")
+
+          if "ANALYTICS_BUCKET" not in data:
+            data["ANALYTICS_BUCKET"] = base64.b64encode(b"datalake-bucket").decode()
+            synced.append("ANALYTICS_BUCKET(default)")
+
+          open("/tmp/r2-sync-meta.json", "w").write(
+            json.dumps({"synced": synced, "skipped": skipped})
+          )
+          print(json.dumps({"data": data}))
+          PY
+          )
+
+          echo "sync meta: $(cat /tmp/r2-sync-meta.json)"
+          $KUBECTL -n cloudless patch secret cloudless-secrets --type merge -p "$PATCH"
+
+      - name: Restart cloudless-app
+        run: |
+          sudo k3s kubectl -n cloudless rollout restart deploy/cloudless-app
+          sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s
+
+      - name: Verify key presence (names only)
+        run: |
+          sudo k3s kubectl -n cloudless get secret cloudless-secrets -o json \
+            | python3 -c '
+          import json,sys
+          keys=set(json.load(sys.stdin).get("data",{}))
+          want=["CF_R2_ACCESS_KEY_ID","CF_R2_SECRET_ACCESS_KEY","ANALYTICS_BUCKET","CLOUDFLARE_ACCOUNT_ID"]
+          present=[k for k in want if k in keys]
+          missing=[k for k in want if k not in keys]
+          print("present:", ", ".join(present) or "(none)")
+          print("missing:", ", ".join(missing) or "(none)")
+          if missing:
+            raise SystemExit(1)
+          '
+
+      - name: Comment tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "# R2 datalake SSM → Pi — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo "**Source:** AWS SSM \`/cloudless/production/CF_R2_*\`"
+            echo "**Target:** cloudless/cloudless-secrets → restart cloudless-app"
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md || true
