@@ -1,3 +1,4 @@
+import { loadGooglePrivateKey } from "@/lib/google-sa-key";
 import { getConfig } from "@/lib/ssm-config";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -21,38 +22,18 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
 
     const config = await getConfig();
     const email = config.GOOGLE_CLIENT_EMAIL?.trim();
-    let key = config.GOOGLE_PRIVATE_KEY?.trim() ?? "";
-    if (!email || !key) throw new Error("Google service account not configured");
-    // Refuse placeholder / truncated secrets that otherwise produce opaque jose errors.
-    if (
-      /^(your[_-]?value|your[_-]?service|changeme|todo|xxx|placeholder)/i.test(key) ||
-      key.length < 200
-    ) {
+    const keyRaw = config.GOOGLE_PRIVATE_KEY?.trim() ?? "";
+    if (!email || !keyRaw) throw new Error("Google service account not configured");
+    // Refuse placeholder secrets that otherwise produce opaque crypto/jose errors.
+    if (/^(your[_-]?value|your[_-]?service|changeme|todo|xxx|placeholder)/i.test(keyRaw)) {
       throw new Error(
         "Google service account private key is missing or a placeholder — set GOOGLE_PRIVATE_KEY (PEM) on the Pi cloudless-secrets"
       );
     }
-    key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-    // Quotes / JSON wrappers from secret UIs
-    if (key.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(key) as { private_key?: string };
-        if (parsed.private_key) key = parsed.private_key.replace(/\\n/g, "\n").trim();
-      } catch {
-        /* fall through to PEM checks */
-      }
-    }
-    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-      key = key.slice(1, -1).replace(/\\n/g, "\n").trim();
-    }
-    if (!key.includes("BEGIN")) {
-      throw new Error("GOOGLE_PRIVATE_KEY must be a PEM private key (-----BEGIN PRIVATE KEY-----)");
-    }
 
     const { SignJWT } = await import("jose");
-    const { createPrivateKey } = await import("node:crypto");
     const now = Math.floor(Date.now() / 1000);
-    const privateKey = createPrivateKey({ key, format: "pem" });
+    const privateKey = loadGooglePrivateKey(keyRaw);
 
     const jwt = await new SignJWT({ iss: email, scope, aud: TOKEN_URL })
       .setProtectedHeader({ alg: "RS256" })

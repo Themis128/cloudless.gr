@@ -3,7 +3,7 @@ import { generateKeyPairSync } from "node:crypto";
 import {
   loadGooglePrivateKey,
   normalizeGooglePrivateKeyPem,
-} from "../scripts/lib/google-sa-key";
+} from "@/lib/google-sa-key";
 
 function samplePkcs8Pem(): string {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });

@@ -13,6 +13,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Static mocks (hoisted before any import) ─────────────────────────────────
 
+vi.mock("@/lib/google-sa-key", () => ({
+  loadGooglePrivateKey: vi.fn().mockReturnValue({ type: "private" }),
+}));
+
 vi.mock("jose", () => {
   // SignJWT is called with `new` — Vitest 4.x calls the implementation with
   // `new` too, so we must use a regular function (not an arrow function).
