@@ -32,14 +32,30 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
         "Google service account private key is missing or a placeholder — set GOOGLE_PRIVATE_KEY (PEM) on the Pi cloudless-secrets"
       );
     }
-    key = key.replace(/\\n/g, "\n");
+    key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+    // Quotes / JSON wrappers from secret UIs
+    if (key.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(key) as { private_key?: string };
+        if (parsed.private_key) key = parsed.private_key.replace(/\\n/g, "\n").trim();
+      } catch {
+        /* fall through to PEM checks */
+      }
+    }
+    if (
+      (key.startsWith('"') && key.endsWith('"')) ||
+      (key.startsWith("'") && key.endsWith("'"))
+    ) {
+      key = key.slice(1, -1).replace(/\\n/g, "\n").trim();
+    }
     if (!key.includes("BEGIN")) {
       throw new Error("GOOGLE_PRIVATE_KEY must be a PEM private key (-----BEGIN PRIVATE KEY-----)");
     }
 
-    const { SignJWT, importPKCS8 } = await import("jose");
+    const { SignJWT } = await import("jose");
+    const { createPrivateKey } = await import("node:crypto");
     const now = Math.floor(Date.now() / 1000);
-    const privateKey = await importPKCS8(key, "RS256");
+    const privateKey = createPrivateKey({ key, format: "pem" });
 
     const jwt = await new SignJWT({ iss: email, scope, aud: TOKEN_URL })
       .setProtectedHeader({ alg: "RS256" })

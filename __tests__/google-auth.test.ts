@@ -60,7 +60,7 @@ describe("createGoogleAuth()", () => {
     });
     const { createGoogleAuth } = await import("@/lib/google-auth");
     const getToken = createGoogleAuth("https://www.googleapis.com/auth/calendar");
-    // importPKCS8 will throw for a fake key, which means token fetch is never reached
+    // createPrivateKey will throw for a fake/truncated key — token fetch is never reached
     // We verify the function can be created and is callable
     expect(typeof getToken).toBe("function");
   });
