@@ -49,10 +49,10 @@ async function notionPost(path, token, body) {
 
 // Obtain a real user token via GoTrue password grant (service JWT doesn't have workspace access)
 async function getAppFlowyToken(baseUrl, email, password) {
-  const res = await fetch(`${baseUrl}/gotrue/token`, {
+  const res = await fetch(`${baseUrl}/gotrue/token?grant_type=password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "password", email, password }),
+    body: JSON.stringify({ email, password }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`AppFlowy login failed: ${res.status}`);

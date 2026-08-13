@@ -97,10 +97,12 @@ async function getUserAccessToken(cfg: AppFlowyConfig): Promise<string | null> {
     return cachedUserToken.token;
   }
 
-  const res = await fetch(`${cfg.baseUrl}/gotrue/token`, {
+  // GoTrue on AppFlowy Cloud rejects body-only grant_type with
+  // unsupported_grant_type; the grant must be in the query string.
+  const res = await fetch(`${cfg.baseUrl}/gotrue/token?grant_type=password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "password", email: cfg.email, password: cfg.password }),
+    body: JSON.stringify({ email: cfg.email, password: cfg.password }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {
@@ -324,6 +326,15 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
     }
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
+    // Fresh workspaces often 404 on /folder until the first page exists
+    // (AppFlowy-Cloud#1507). Treat as empty rather than a hard failure.
+    if (e instanceof AppFlowyApiError && (e.status === 404 || e.status === 400)) {
+      cachedViewsByWorkspace.set(workspaceId, {
+        value: [],
+        expiresAtMs: now + VIEWS_TTL_MS,
+      });
+      return [];
+    }
     // Fall through to admin API.
   }
 
@@ -337,6 +348,9 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
     return value;
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
+    if (e instanceof AppFlowyApiError && (e.status === 404 || e.status === 400)) {
+      return [];
+    }
     throw e;
   }
 }
