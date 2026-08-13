@@ -287,7 +287,11 @@ export default async function ServicesPage() {
       </section>
 
       {/* ── Step 2: Choose Your Scope — header ──────────────── */}
-      <section id="services" className="bg-void scroll-mt-24 pt-16 pb-4">
+      <section
+        id="services"
+        data-testid="services-container"
+        className="bg-void scroll-mt-24 pt-16 pb-4"
+      >
         <div className="mx-auto max-w-6xl px-6">
           <div className="flex items-start gap-4">
             <span className="border-neon-magenta/30 bg-neon-magenta/10 text-neon-magenta flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold">
@@ -314,7 +318,10 @@ export default async function ServicesPage() {
 
             return (
               <ScrollReveal key={service.title}>
-                <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+                <div
+                  data-testid="service-item"
+                  className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16"
+                >
                   {/* Text column */}
                   <div className={isReversed ? "lg:order-2" : ""}>
                     <div className="mb-5 flex items-center gap-3">
@@ -833,7 +840,10 @@ export default async function ServicesPage() {
       </section>
 
       {/* ── Ready to Get Started? — Centered CTA ────────────── */}
-      <section className="bg-void relative overflow-hidden py-20 lg:py-28">
+      <section
+        data-testid="services-cta"
+        className="bg-void relative overflow-hidden py-20 lg:py-28"
+      >
         <div className="cyber-grid absolute inset-0 opacity-10" />
         <div className="bg-neon-cyan/5 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-2xl px-6 text-center">

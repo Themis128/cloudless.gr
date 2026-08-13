@@ -173,10 +173,11 @@ for (const route of AUTH_PAGES) {
 // ── Root redirect ─────────────────────────────────────────────────────────────
 
 test("root / redirects to a locale prefix", async ({ page }) => {
-  const resp = await page.goto("/", { waitUntil: "domcontentloaded" });
-  const url = page.url();
-  expect(url).toMatch(/\/(en|el|fr|de)/);
-  expect(resp?.status()).toBeLessThan(500);
+  const resp = await page.goto("/", { waitUntil: "commit" });
+  // next-intl / proxy may finish the locale redirect after the first commit.
+  await page.waitForURL(/\/(en|el|fr|de)(\/|$|\?)/, { timeout: 15_000 });
+  expect(page.url()).toMatch(/\/(en|el|fr|de)/);
+  expect(resp?.status() ?? 0).toBeLessThan(500);
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

@@ -68,6 +68,7 @@ function ProductCard({
 
   return (
     <div
+      data-testid="product-card"
       className="group neon-border bg-void-light/50 overflow-hidden rounded-lg backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -299,7 +300,10 @@ export default function StoreGrid() {
       {/* Grid */}
       <h2 className="sr-only">Products</h2>
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div
+          data-testid="products-container"
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+        >
           {filtered.map((product) => (
             <ProductCard
               key={product.id}
