@@ -6,6 +6,7 @@ import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
@@ -27,7 +28,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email } = parsed as { email?: string };
+    const { email, turnstileToken } = parsed as { email?: string; turnstileToken?: string };
+
+    const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstile.ok) {
+      return Response.json({ error: turnstile.error }, { status: 403 });
+    }
 
     if (!isValidEmail(email)) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });

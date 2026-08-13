@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
+import {
+  adminAiNotConfiguredResponse,
+  generateAdminAiText,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 
 interface CopyRequest {
   service?: string;
@@ -31,19 +35,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   const CHAR_LIMITS: Record<string, { headline: number; body: number }> = {
-    Meta: { headline: 40, body: 125 }, // NOSONAR — platform-defined character limits
-    LinkedIn: { headline: 70, body: 150 }, // NOSONAR
-    TikTok: { headline: 50, body: 100 }, // NOSONAR
-    X: { headline: 0, body: 280 }, // NOSONAR
-    Google: { headline: 30, body: 90 }, // NOSONAR
+    Meta: { headline: 40, body: 125 },
+    LinkedIn: { headline: 70, body: 150 },
+    TikTok: { headline: 50, body: 100 },
+    X: { headline: 0, body: 280 },
+    Google: { headline: 30, body: 90 },
   };
-  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 }; // NOSONAR
+  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 };
   const limits = CHAR_LIMITS[platform] ?? DEFAULT_CHAR_LIMIT;
 
   const prompt = `Generate 5 ad copy variants for this service:
@@ -67,16 +70,16 @@ Respond with raw JSON only (no markdown fences):
 }`;
 
   try {
-    const text = await callClaude(prompt, apiKey, { maxTokens: 1_000 });
+    const { text, provider } = await generateAdminAiText(prompt, { maxTokens: 1_000 });
     let variants: unknown;
     try {
       variants = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       variants = { raw: text };
     }
-    return NextResponse.json({ variants });
+    return NextResponse.json({ variants, provider });
   } catch (e) {
-    console.error("[ai/copy] Claude call failed:", e);
+    console.error("[ai/copy] generation failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

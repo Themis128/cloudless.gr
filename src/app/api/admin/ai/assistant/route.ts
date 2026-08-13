@@ -1,56 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getAnthropicApiKey, isAnthropicConfigured } from "@/lib/anthropic";
+import {
+  adminAiNotConfiguredResponse,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
+import {
+  buildWorkersAiToolProtocol,
+  callWorkersAiChat,
+  parseWorkersAiToolCall,
+  isWorkersAiConfigured,
+} from "@/lib/workers-ai-client";
+import { generateAdminAiText } from "@/lib/admin-ai";
+import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
 const MAX_ITERATIONS = 4;
 
-const SYSTEM_PROMPT = `You are a helpful admin assistant for cloudless.gr, a digital marketing agency in Greece. You have access to three tools:
-- search_notion: find pages, projects, tasks, and docs in the Notion workspace
+const SYSTEM_PROMPT = `You are a helpful admin assistant for cloudless.gr, a digital marketing agency in Greece. You have access to tools:
+- search_notion: find pages, projects, tasks, and docs in the CMS workspace
 - get_recent_orders: look up recent Stripe orders
 - draft_email: compose or send a team email
 
 Use tools when the request needs live data. For general questions, answer directly. Be concise and actionable.`;
 
-interface TextBlock {
-  type: "text";
-  text: string;
-}
-
-interface ToolUseBlock {
-  type: "tool_use";
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-}
-
-interface ToolResultBlock {
-  type: "tool_result";
-  tool_use_id: string;
+interface AssistantMessage {
+  role: "user" | "assistant";
   content: string;
 }
 
-type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
-
-interface AssistantMessage {
-  role: "user" | "assistant";
-  content: string | ContentBlock[];
-}
-
-interface AnthropicResponse {
-  stop_reason: "end_turn" | "tool_use" | "max_tokens" | string;
-  content: ContentBlock[];
+function lastUserText(messages: AssistantMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user" && typeof messages[i].content === "string") {
+      return messages[i].content;
+    }
+  }
+  return "";
 }
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  if (!(await isAnthropicConfigured())) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured in AWS SSM." },
-      { status: 503 }
-    );
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   let messages: AssistantMessage[];
@@ -64,64 +56,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key unavailable" }, { status: 503 });
-  }
-
   const toolsUsed: string[] = [];
-  const currentMessages = [...messages];
+  const query = lastUserText(messages);
+  const rag = await retrieveAdminRagContext(query).catch(() => "");
+  const systemWithRag = rag
+    ? `${SYSTEM_PROMPT}\n\nRelevant site content:\n${rag}`
+    : SYSTEM_PROMPT;
 
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const res = await globalThis.fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+  // Workers AI tool loop (preferred)
+  if (isWorkersAiConfigured()) {
+    const loopMessages: { role: string; content: string }[] = [
+      {
+        role: "system",
+        content: `${systemWithRag}\n\n${buildWorkersAiToolProtocol(ASSISTANT_TOOLS)}`,
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        tools: ASSISTANT_TOOLS,
-        messages: currentMessages,
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
+      ...messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+    ];
 
-    if (!res.ok) {
-      const err = await res.text().catch(() => "");
-      console.error("[assistant] Anthropic error", res.status, err);
-      return NextResponse.json({ error: "AI service error" }, { status: 502 });
-    }
-
-    const data = (await res.json()) as AnthropicResponse;
-
-    if (data.stop_reason === "end_turn") {
-      const text =
-        (data.content.find((b) => b.type === "text") as TextBlock | undefined)?.text ?? "";
-      return NextResponse.json({ response: text, toolsUsed });
-    }
-
-    if (data.stop_reason === "tool_use") {
-      currentMessages.push({ role: "assistant", content: data.content });
-
-      const toolResults: ToolResultBlock[] = [];
-      for (const block of data.content) {
-        if (block.type !== "tool_use") continue;
-        const { id, name, input } = block as ToolUseBlock;
-        if (!toolsUsed.includes(name)) toolsUsed.push(name);
-        const result = await runAssistantTool(name, input);
-        toolResults.push({ type: "tool_result", tool_use_id: id, content: result });
+    try {
+      for (let i = 0; i < MAX_ITERATIONS; i++) {
+        const reply = await callWorkersAiChat(loopMessages, { maxTokens: 2000 });
+        const toolCall = parseWorkersAiToolCall(reply);
+        if (!toolCall) {
+          return NextResponse.json({
+            response: reply,
+            toolsUsed,
+            provider: "workers-ai",
+          });
+        }
+        if (!toolsUsed.includes(toolCall.name)) toolsUsed.push(toolCall.name);
+        loopMessages.push({ role: "assistant", content: reply });
+        const result = await runAssistantTool(toolCall.name, toolCall.args);
+        loopMessages.push({
+          role: "user",
+          content: `Tool ${toolCall.name} result:\n${result}`,
+        });
       }
-      currentMessages.push({ role: "user", content: toolResults });
+      return NextResponse.json({
+        response:
+          "I hit the tool-use limit without a final answer. Please try rephrasing your request.",
+        toolsUsed,
+        provider: "workers-ai",
+      });
+    } catch (err) {
+      console.warn("[assistant] Workers AI loop failed, falling back:", err);
     }
   }
 
-  return NextResponse.json({
-    response:
-      "I hit the tool-use limit without a final answer. Please try rephrasing your request.",
-    toolsUsed,
-  });
+  // Gemini / single-turn fallback (no native tools — answer with RAG only)
+  try {
+    const { text, provider } = await generateAdminAiText(
+      `${query}\n\n(Answer using any context provided in the system prompt. You cannot call tools in this mode.)`,
+      { maxTokens: 1500, system: systemWithRag }
+    );
+    return NextResponse.json({ response: text, toolsUsed, provider });
+  } catch (e) {
+    console.error("[assistant] generation failed:", e);
+    return NextResponse.json({ error: "AI service error" }, { status: 502 });
+  }
 }

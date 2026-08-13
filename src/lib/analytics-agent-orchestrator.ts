@@ -1,4 +1,4 @@
-import { callClaude } from "@/lib/anthropic";
+import { generateAdminAiText } from "@/lib/admin-ai";
 import type { StripeAnalyticsSnapshot } from "@/lib/stripe-analytics-read";
 
 export type AnalyticsConnector = "quicksight" | "powerbi" | "tableau" | "lookerstudio" | "metabase";
@@ -518,10 +518,9 @@ function buildConnectorPayload(
 export async function runAnalyticsAgentOrchestration(params: {
   snapshot: StripeAnalyticsSnapshot;
   connectors: AnalyticsConnector[];
-  apiKey: string;
   goals?: string[];
 }): Promise<AnalyticsOrchestrationResult> {
-  const { snapshot, connectors, apiKey } = params;
+  const { snapshot, connectors } = params;
   const goals = params.goals ?? [];
   const preprocessed = preprocessStripeAnalyticsSnapshot(snapshot);
   const workflow: AnalyticsOrchestrationResult["workflow"] = [
@@ -537,11 +536,13 @@ export async function runAnalyticsAgentOrchestration(params: {
     },
   ];
 
-  const raw = await callClaude(buildUserPrompt(snapshot, preprocessed, goals), apiKey, {
-    model: "claude-sonnet-4-6",
-    maxTokens: 1500,
-    system: buildSystemPrompt(),
-  });
+  const { text: raw } = await generateAdminAiText(
+    buildUserPrompt(snapshot, preprocessed, goals),
+    {
+      maxTokens: 1500,
+      system: buildSystemPrompt(),
+    }
+  );
 
   const report = parseClaudeJson(raw) ?? defaultReport(snapshot, preprocessed);
   workflow.push({

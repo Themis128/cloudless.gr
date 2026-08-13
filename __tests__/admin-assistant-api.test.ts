@@ -1,18 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock admin auth
 vi.mock("@/lib/api-auth", () => ({
   requireAdmin: vi.fn(),
 }));
 
-// Mock Anthropic lib
-vi.mock("@/lib/anthropic", () => ({
-  isAnthropicConfigured: vi.fn(),
-  getAnthropicApiKey: vi.fn(),
+vi.mock("@/lib/admin-ai", () => ({
+  isAdminAiConfiguredAsync: vi.fn(),
+  generateAdminAiText: vi.fn(),
+  adminAiNotConfiguredResponse: () =>
+    Response.json({ error: "Admin AI not configured." }, { status: 503 }),
 }));
 
-// Mock tool implementations (keeps tests fast and network-free)
+vi.mock("@/lib/workers-ai-client", () => ({
+  isWorkersAiConfigured: vi.fn(),
+  callWorkersAiChat: vi.fn(),
+  parseWorkersAiToolCall: vi.fn(),
+  buildWorkersAiToolProtocol: vi.fn(() => "tools protocol"),
+}));
+
+vi.mock("@/lib/admin-rag", () => ({
+  retrieveAdminRagContext: vi.fn().mockResolvedValue(""),
+}));
+
 vi.mock("@/lib/admin-assistant-tools", () => ({
   ASSISTANT_TOOLS: [
     {
@@ -30,7 +40,12 @@ vi.mock("@/lib/admin-assistant-tools", () => ({
 
 import { POST } from "@/app/api/admin/ai/assistant/route";
 import { requireAdmin } from "@/lib/api-auth";
-import { isAnthropicConfigured, getAnthropicApiKey } from "@/lib/anthropic";
+import { isAdminAiConfiguredAsync, generateAdminAiText } from "@/lib/admin-ai";
+import {
+  isWorkersAiConfigured,
+  callWorkersAiChat,
+  parseWorkersAiToolCall,
+} from "@/lib/workers-ai-client";
 import { runAssistantTool } from "@/lib/admin-assistant-tools";
 
 function makeReq(body: unknown) {
@@ -48,8 +63,8 @@ describe("POST /api/admin/ai/assistant", () => {
       ok: true,
       user: { email: "admin@test.com" },
     } as never);
-    vi.mocked(isAnthropicConfigured).mockResolvedValue(true);
-    vi.mocked(getAnthropicApiKey).mockResolvedValue("sk-ant-test");
+    vi.mocked(isAdminAiConfiguredAsync).mockResolvedValue(true);
+    vi.mocked(isWorkersAiConfigured).mockReturnValue(true);
   });
 
   it("returns 401 when not admin", async () => {
@@ -62,8 +77,8 @@ describe("POST /api/admin/ai/assistant", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when Anthropic not configured", async () => {
-    vi.mocked(isAnthropicConfigured).mockResolvedValue(false);
+  it("returns 503 when Admin AI not configured", async () => {
+    vi.mocked(isAdminAiConfiguredAsync).mockResolvedValue(false);
     const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
     expect(res.status).toBe(503);
   });
@@ -78,43 +93,26 @@ describe("POST /api/admin/ai/assistant", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns direct text response on end_turn", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "Hello admin!" }],
-      }),
-    });
+  it("returns direct text response when no tool call", async () => {
+    vi.mocked(callWorkersAiChat).mockResolvedValue("Hello admin!");
+    vi.mocked(parseWorkersAiToolCall).mockReturnValue(null);
 
     const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.response).toBe("Hello admin!");
     expect(data.toolsUsed).toEqual([]);
+    expect(data.provider).toBe("workers-ai");
   });
 
   it("runs tool and returns final response", async () => {
     vi.mocked(runAssistantTool).mockResolvedValue("• Page A (notion.so/a)");
-
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          stop_reason: "tool_use",
-          content: [
-            { type: "tool_use", id: "tu_1", name: "search_notion", input: { query: "projects" } },
-          ],
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          stop_reason: "end_turn",
-          content: [{ type: "text", text: "Found: Page A" }],
-        }),
-      });
+    vi.mocked(callWorkersAiChat)
+      .mockResolvedValueOnce('{"tool":"search_notion","args":{"query":"projects"}}')
+      .mockResolvedValueOnce("Found: Page A");
+    vi.mocked(parseWorkersAiToolCall)
+      .mockReturnValueOnce({ name: "search_notion", args: { query: "projects" } })
+      .mockReturnValueOnce(null);
 
     const res = await POST(makeReq({ messages: [{ role: "user", content: "find projects" }] }));
     expect(res.status).toBe(200);
@@ -123,10 +121,23 @@ describe("POST /api/admin/ai/assistant", () => {
     expect(data.toolsUsed).toContain("search_notion");
   });
 
-  it("returns 502 on Anthropic API error", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "error" });
+  it("falls back to generateAdminAiText when Workers AI fails", async () => {
+    vi.mocked(callWorkersAiChat).mockRejectedValue(new Error("workers down"));
+    vi.mocked(generateAdminAiText).mockResolvedValue({
+      text: "Fallback answer",
+      provider: "gemini",
+    });
+
+    const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.response).toBe("Fallback answer");
+    expect(data.provider).toBe("gemini");
+  });
+
+  it("returns 502 when all providers fail", async () => {
+    vi.mocked(callWorkersAiChat).mockRejectedValue(new Error("workers down"));
+    vi.mocked(generateAdminAiText).mockRejectedValue(new Error("gemini down"));
     const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
     expect(res.status).toBe(502);
   });
