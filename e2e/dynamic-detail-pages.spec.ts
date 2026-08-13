@@ -41,13 +41,13 @@ test.describe("Dynamic public detail pages", () => {
   test("/blog/[slug] — known post", async ({ page, request }) => {
     const slug = await fetchFirstSlug(request, "/api/blog/posts", "slug");
     if (!slug) test.skip(true, "no published blog posts to test against");
-    const res = await page.goto(`/blog/${slug}`);
+    const res = await page.goto(`/en/blog/${slug}`);
     expect(res?.status() ?? 0).toBeLessThan(500);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("/blog/[slug] — unknown slug returns documented 404", async ({ page }) => {
-    const res = await page.goto("/blog/this-post-does-not-exist-xyz");
+    const res = await page.goto("/en/blog/this-post-does-not-exist-xyz");
     // Either a true 404 status or a soft 200 with a not-found component.
     const status = res?.status() ?? 0;
     if (status >= 500) throw new Error(`unexpected 5xx: ${status}`);
@@ -58,13 +58,13 @@ test.describe("Dynamic public detail pages", () => {
   test("/case-studies/[slug] — known", async ({ page, request }) => {
     const slug = await fetchFirstSlug(request, "/api/case-studies", "slug");
     if (!slug) test.skip(true, "no case studies to test against");
-    const res = await page.goto(`/case-studies/${slug}`);
+    const res = await page.goto(`/en/case-studies/${slug}`);
     expect(res?.status() ?? 0).toBeLessThan(500);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("/case-studies/[slug] — unknown slug", async ({ page }) => {
-    const res = await page.goto("/case-studies/never-existed");
+    const res = await page.goto("/en/case-studies/never-existed");
     expect(res?.status() ?? 0).toBeLessThan(500);
     await expect(page.locator("body")).toBeVisible();
   });
@@ -72,20 +72,20 @@ test.describe("Dynamic public detail pages", () => {
   test("/docs/[slug] — known", async ({ page, request }) => {
     const slug = await fetchFirstSlug(request, "/api/docs", "slug");
     if (!slug) test.skip(true, "no docs to test against");
-    const res = await page.goto(`/docs/${slug}`);
+    const res = await page.goto(`/en/docs/${slug}`);
     expect(res?.status() ?? 0).toBeLessThan(500);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("/docs/[slug] — unknown slug", async ({ page }) => {
-    const res = await page.goto("/docs/no-such-doc");
+    const res = await page.goto("/en/docs/no-such-doc");
     expect(res?.status() ?? 0).toBeLessThan(500);
     await expect(page.locator("body")).toBeVisible();
   });
 
   test("/store/[id] — fallback when product list empty", async ({ page, request }) => {
     const id = await fetchFirstSlug(request, "/api/services", "id");
-    const target = id ? `/store/${id}` : "/store/sample-id";
+    const target = id ? `/en/store/${id}` : "/en/store/sample-id";
     const res = await page.goto(target);
     // Store pages may legitimately 404 in test if Stripe isn't connected —
     // we only assert no server crash.
@@ -103,7 +103,7 @@ test.describe("Admin detail routes", () => {
     // Anonymous request must redirect away.
     const anonCtx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const anonPage = await anonCtx.newPage();
-    const anonRes = await anonPage.goto("/admin/reports/sample", {
+    const anonRes = await anonPage.goto("/en/admin/reports/sample", {
       waitUntil: "domcontentloaded",
     });
     const finalUrl = anonPage.url();
@@ -116,7 +116,7 @@ test.describe("Admin detail routes", () => {
 
     // Authed leg: page should at least resolve (data may 404 — that's fine).
     // Reuse default context; rely on test runner login helpers elsewhere.
-    const res = await page.goto("/admin/reports/sample");
+    const res = await page.goto("/en/admin/reports/sample");
     expect(res?.status() ?? 0).toBeLessThan(500);
   });
 });

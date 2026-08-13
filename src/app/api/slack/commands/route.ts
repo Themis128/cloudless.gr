@@ -29,8 +29,8 @@ import {
   listEditorialPosts,
   findEditorialPost,
   setEditorialStatus,
-  type NotionBlogDraft,
-} from "@/lib/notion-blog-admin";
+  type AppFlowyBlogDraft,
+} from "@/lib/appflowy-blog-admin";
 import { getLiveCampaigns, getCampaign } from "@/data/campaigns";
 import { runAdHocSnapshot } from "@/lib/ad-analytics/runtime";
 import { renderDigest } from "@/lib/ad-analytics/digest";
@@ -894,11 +894,11 @@ function handleHelp(): Response {
             "• `/cloudless-errors` — top 5 unresolved Sentry errors",
             "• `/cloudless-uptime` — ping all endpoints (site, CloudFront, Pi)",
             "• `/cloudless-subscribers` — newsletter subscriber count + recent signups",
-            "• `/cloudless-cache [prefix]` — flush Notion cache",
+            "• `/cloudless-cache [prefix]` — flush content cache",
             "• `/cloudless-deploy` — deploy latest code to production",
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
-            "• `/cloudless-newsletter list` — show pending Notion drafts",
-            "• `/cloudless-newsletter send <slug|id>` — approve in Notion + publish + email subscribers",
+            "• `/cloudless-newsletter list` — show pending AppFlowy drafts",
+            "• `/cloudless-newsletter send <slug|id>` — approve in AppFlowy + publish + email subscribers",
             "• `/cloudless-newsletter unpublish <slug|id>` — emergency rollback: flip Status=Archived",
             "• `/cloudless-help` — show this message",
           ].join("\n"),
@@ -1199,7 +1199,7 @@ async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response>
       text:
         "Usage: `/cloudless-draft rerun` — triggers the *Weekly Article Draft* workflow.\n" +
         "The job appears in the GitHub Actions tab within ~5 seconds. " +
-        "A new Notion Draft row will be created if the run succeeds.",
+        "A new AppFlowy [Draft]/[Review] page will be created if the run succeeds.",
     });
   }
 
@@ -1233,14 +1233,14 @@ async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response>
 }
 
 // ---------------------------------------------------------------------------
-// /cloudless-newsletter — Notion → publish chain operated from Slack
+// /cloudless-newsletter — AppFlowy → publish chain operated from Slack
 //
 // Subcommands:
-//   list                    — show pending Notion drafts (Draft + In Review)
+//   list                    — show pending AppFlowy drafts (Draft + In Review)
 //   send <slug|page-id>     — flip Status to "In Review" + dispatch the
 //                             weekly-newsletter.yml workflow which:
 //                               · renders the page to HTML/text
-//                               · marks the row Published in Notion
+//                               · strips [Review] prefix in AppFlowy (= published)
 //                               · revalidates /blog/[slug] on the live site
 //                               · POSTs the rendered email to
 //                                 /api/newsletter/send → SES → subscribers
@@ -1250,7 +1250,7 @@ async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response>
 // available to anyone in the workspace.
 // ---------------------------------------------------------------------------
 
-function formatPostLine(p: NotionBlogDraft): string {
+function formatPostLine(p: AppFlowyBlogDraft): string {
   const statusEmoji = p.status === "In Review" ? ":eyes:" : ":memo:";
   const createdTs = p.createdAt ? Math.floor(new Date(p.createdAt).getTime() / 1000) : 0;
   const dateLabel = createdTs
@@ -1258,7 +1258,8 @@ function formatPostLine(p: NotionBlogDraft): string {
     : "—";
   // Slug is the operator-friendly handle for the `send` subcommand.
   const slugBit = p.slug ? `\`${p.slug}\`` : `\`${p.id.slice(0, 8)}\``;
-  return `${statusEmoji} *<${p.url}|${p.title}>* — ${p.category} · ${p.readTime} · ${dateLabel}\n   ${slugBit}`;
+  const titleBit = p.url ? `*<${p.url}|${p.title}>*` : `*${p.title}*`;
+  return `${statusEmoji} ${titleBit} — ${p.category} · ${p.readTime} · ${dateLabel}\n   ${slugBit}`;
 }
 
 async function handleNewsletter(payload: SlashCommandPayload): Promise<Response> {
@@ -1271,7 +1272,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       return slackResponse({
         response_type: "ephemeral",
         text:
-          ":mailbox_with_no_mail: No pending drafts in Notion. " +
+          ":mailbox_with_no_mail: No pending drafts in AppFlowy. " +
           "Run `/cloudless-draft rerun` to generate one.",
       });
     }
@@ -1313,7 +1314,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
         response_type: "ephemeral",
         text:
           "Usage: `/cloudless-newsletter unpublish <slug-or-notion-id>`\n" +
-          "Flips Notion Status to `Archived`. The post stops being indexed on the public blog. " +
+          "Flips AppFlowy status to `Archived`. The post stops being indexed on the public blog. " +
           "Use this for emergency rollback of a misfired auto-promoted article. " +
           "Allowlist applies (only `SLACK_OPS_USERS` can run this).",
       });
@@ -1331,7 +1332,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
     if (!post) {
       return slackResponse({
         response_type: "ephemeral",
-        text: `:warning: Could not find a Notion post matching \`${target}\`.`,
+        text: `:warning: Could not find an AppFlowy post matching \`${target}\`.`,
       });
     }
 
@@ -1339,7 +1340,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
     if (!flipped) {
       return slackResponse({
         response_type: "ephemeral",
-        text: ":warning: Failed to update Notion. Check NOTION_API_KEY in SSM.",
+        text: ":warning: Failed to update AppFlowy. Check APPFLOWY_* credentials.",
       });
     }
 
@@ -1355,7 +1356,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
           text: {
             type: "mrkdwn",
             text:
-              `<@${payload.user_id}> flipped *<${post.url}|${post.title}>* to Notion Status=\`Archived\`.\n\n` +
+              `<@${payload.user_id}> flipped *<${post.url}|${post.title}>* to AppFlowy status=\`Archived\`.\n\n` +
               `\`/blog/${post.slug}\` will start returning 404 within the next ISR cycle (5 min). ` +
               `The email is already in subscriber inboxes — nothing the API can do about that. ` +
               `If correction is needed, send a corrigendum via \`/cloudless-newsletter send\` for a fresh draft.`,
@@ -1391,7 +1392,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       return slackResponse({
         response_type: "ephemeral",
         text:
-          `:warning: Could not find a Notion draft matching \`${target}\`. ` +
+          `:warning: Could not find an AppFlowy draft matching \`${target}\`. ` +
           "Run `/cloudless-newsletter list` to see what's available.",
       });
     }
@@ -1401,7 +1402,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
         response_type: "ephemeral",
         text:
           `:information_source: *${post.title}* is already Published. ` +
-          "The publisher won't pick it up again. Revert Status to Draft in Notion to resend.",
+          "The publisher won't pick it up again. Revert to Draft in AppFlowy to resend.",
       });
     }
 
@@ -1411,7 +1412,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       return slackResponse({
         response_type: "ephemeral",
         text:
-          ":warning: Failed to update Notion status. Check NOTION_API_KEY in SSM " +
+          ":warning: Failed to update AppFlowy status. Check APPFLOWY_* credentials " +
           "and that the integration is shared with the Blog database.",
       });
     }
@@ -1422,7 +1423,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       return slackResponse({
         response_type: "ephemeral",
         text:
-          `:warning: Notion was updated to *In Review* but workflow dispatch failed ` +
+          `:warning: AppFlowy was updated to *In Review* but workflow dispatch failed ` +
           `(HTTP ${result.status}): \`${result.error.slice(0, 200)}\`. ` +
           "Re-run with `/cloudless-newsletter send " +
           (post.slug || post.id) +
@@ -1448,7 +1449,7 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
             text:
               `<@${payload.user_id}> approved *<${post.url}|${post.title}>* ` +
               `(${post.category} · ${post.readTime}) and triggered the publisher.\n\n` +
-              "The workflow will render the page, mark it Published in Notion, revalidate " +
+              "The workflow will render the page, publish it in AppFlowy, revalidate " +
               `\`/blog/${post.slug}\` on the live site, and SES-send to every newsletter subscriber.`,
           },
         },
@@ -1483,12 +1484,12 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
           type: "mrkdwn",
           text: [
             "*Subcommands:*",
-            "• `list` — show pending Notion drafts (Draft + In Review)",
-            "• `send <slug|notion-id>` — approve in Notion + publish + email subscribers",
-            "• `unpublish <slug|notion-id>` — emergency rollback (flip Status=Archived)",
+            "• `list` — show pending AppFlowy drafts (Draft + In Review)",
+            "• `send <slug|view-id>` — approve in AppFlowy + publish + email subscribers",
+            "• `unpublish <slug|view-id>` — emergency rollback (flip Status=Archived)",
             "",
             "*Example flow:*",
-            "1. `/cloudless-draft rerun` — generate a new draft (Claude → Notion)",
+            "1. `/cloudless-draft rerun` — generate a new draft (AI → AppFlowy)",
             "2. Quality gates auto-promote to `In Review` if they pass",
             "3. `/cloudless-newsletter list` — see pending drafts",
             "4. `/cloudless-newsletter send <slug>` — manual publish + send",

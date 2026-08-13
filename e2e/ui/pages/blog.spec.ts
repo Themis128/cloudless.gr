@@ -16,7 +16,7 @@ test.describe("Blog Page", () => {
     responsivePage = createResponsivePage(browserPage);
     authPage = createAuthenticatedPage(browserPage);
     
-    await page.navigate("/blog");
+    await page.navigate("/en/blog");
   });
 
   test("should load successfully", async ({ page: browserPage }) => {
@@ -146,7 +146,7 @@ test.describe("Blog Page", () => {
       await authPage.loginViaApi("test@example.com", "password123");
       
       // Navigate to a specific blog post
-      await page.navigate("/blog");
+      await page.navigate("/en/blog");
       const postLinks = browserPage.locator('.post-item a, .post-card a, [data-testid="post-link"]');
       const firstPostLink = postLinks.first();
       
@@ -179,7 +179,7 @@ test.describe("Blog Page", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/blog");
+      await responsivePage.navigate("/en/blog");
       
       // Check that essential elements are still visible
       const heading = browserPage.locator('h1, .blog-heading, [data-testid="blog-heading"]');
@@ -192,7 +192,7 @@ test.describe("Blog Page", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/blog");
+      await responsivePage.navigate("/en/blog");
       
       // Check that layout adapts appropriately
       const heading = browserPage.locator('h1, .blog-heading, [data-testid="blog-heading"]');
@@ -205,7 +205,7 @@ test.describe("Blog Page", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/blog");
+      await responsivePage.navigate("/en/blog");
       
       // Check that full layout is visible
       const heading = browserPage.locator('h1, .blog-heading, [data-testid="blog-heading"]');
@@ -329,7 +329,7 @@ test.describe("Blog Page", () => {
   test.describe("Performance", () => {
     test("should load within reasonable time", async ({ page: browserPage }) => {
       const startTime = Date.now();
-      await page.navigate("/blog");
+      await page.navigate("/en/blog");
       const endTime = Date.now();
       
       const loadTime = endTime - startTime;

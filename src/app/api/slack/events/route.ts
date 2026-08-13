@@ -302,7 +302,7 @@ async function handleAppHomeOpened(event: SlackEvent): Promise<void> {
           },
           {
             type: "mrkdwn",
-            text: "<#subscribers|subscribers> — Newsletter sign-ups",
+            text: "<#C0BBDKY6Q9E|newsletter> — Newsletter drafts, publishes, and sign-ups",
           },
         ],
       },
@@ -377,7 +377,7 @@ const CHANNEL_DESCRIPTIONS: Record<string, string> = {
   contacts: "contact form submissions from cloudless.gr",
   errors: "application error alerts (de-duplicated, 10-min window)",
   deployments: "deploy pipeline events — started, succeeded, or failed",
-  subscribers: "newsletter sign-up notifications",
+  subscribers: "newsletter sign-up notifications (#newsletter)",
 };
 
 async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {

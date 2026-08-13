@@ -528,3 +528,23 @@ export async function searchDocuments(workspaceId: string, query: string): Promi
     throw e;
   }
 }
+
+/** Rename a page/view (used for editorial status via [Draft]/[Review]/[Archived] prefixes). */
+export async function updateViewName(
+  workspaceId: string,
+  viewId: string,
+  name: string
+): Promise<boolean> {
+  try {
+    const res = await appflowyFetch(`/workspace/${workspaceId}/page-view`, {
+      method: "PATCH",
+      body: JSON.stringify({ view_id: viewId, name }),
+    });
+    cachedViewsByWorkspace.delete(workspaceId);
+    return res.ok;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return false;
+    console.error("[appflowy] updateViewName failed:", e);
+    return false;
+  }
+}

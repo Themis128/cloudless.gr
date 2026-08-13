@@ -17,11 +17,14 @@
  *                             contracts honored) without storageState dependency
  *
  * Extra contract checks the deep spec doesn't do:
- *   - POST with invalid JSON                  → 400 "Invalid JSON"
+ *   - POST with invalid JSON                  → 400 "Invalid JSON" (or 503)
  *   - POST with empty body                    → 400 (required-field message)
  *   - PATCH with no pageId                    → 400 "pageId is required"
  *   - DELETE without pageId query param       → 400
  *   - Method-shape sanity: GET returns the expected count/array key
+ *
+ * Auth is always first: unauthenticated POST/PATCH/DELETE → 401/403
+ * (never 501 stubs or ok:true for anon).
  */
 import { test, expect } from "@playwright/test";
 import { adminRequest, ADMIN_TOKEN } from "./_internal/admin-fixture";
@@ -58,9 +61,9 @@ const endpoints: Endpoint[] = [
   {
     url: "/api/admin/appflowy/testimonials",
     listKey: "testimonials",
-    // both name and quote are required
+    // handler gates on name (quote is optional for the stub contract)
     validPost: { name: "e2e Tester", quote: "Works as expected." },
-    invalidPost: { name: "missing-quote" },
+    invalidPost: { quote: "missing name" },
   },
 ];
 
@@ -76,9 +79,8 @@ test.describe("Admin AppFlowy CMS APIs — unauthenticated", () => {
         data: ep.validPost,
         failOnStatusCode: false,
       });
-      // AppFlowy admin endpoints intentionally return "Create via AppFlowy UI"
-      // without admin-gating these methods from the web client.
-      expect(r.status()).toBe(501);
+      // requireAdmin runs before any 501 "Create via AppFlowy UI" stub.
+      expect([401, 403]).toContain(r.status());
     });
 
     test(`PATCH ${ep.url} rejects anon`, async ({ request }) => {
@@ -86,19 +88,15 @@ test.describe("Admin AppFlowy CMS APIs — unauthenticated", () => {
         data: { pageId: "x" },
         failOnStatusCode: false,
       });
-      // AppFlowy admin endpoints intentionally return an ok response.
-      expect(r.status()).toBeLessThan(500);
-      const body = await r.json();
-      if (typeof body === "object" && body && "ok" in body) {
-        expect(body.ok).toBe(true);
-      }
+      // Auth gate before write stubs — anon must never get ok:true.
+      expect([401, 403]).toContain(r.status());
     });
 
     test(`DELETE ${ep.url} rejects anon`, async ({ request }) => {
       const r = await request.delete(`${ep.url}?pageId=x`, {
         failOnStatusCode: false,
       });
-      expect(r.status()).toBe(501);
+      expect([401, 403]).toContain(r.status());
     });
   }
 
@@ -141,11 +139,13 @@ test.describe("Admin AppFlowy CMS APIs — authenticated", () => {
           "content-type": "application/json",
           authorization: `Bearer ${ADMIN_TOKEN}`,
         },
-        data: "{not-json",
+        // Buffer avoids Playwright JSON.stringify-wrapping unparsable strings
+        // when Content-Type is application/json (which would yield a JSON string
+        // and hit the required-field 400 instead of Invalid JSON).
+        data: Buffer.from("{not-json", "utf8"),
         failOnStatusCode: false,
       });
-      // AppFlowy admin endpoints don't implement POST from here — they
-      // return 501 ("Create via AppFlowy UI") rather than 400 validation.
+      // Auth + AppFlowy config gate first; then Invalid JSON → 400, or 503 if unbound.
       expect([400, 501, 503]).toContain(r.status());
       if (r.status() === 400) {
         const body = await r.json();
@@ -166,22 +166,25 @@ test.describe("Admin AppFlowy CMS APIs — authenticated", () => {
     test(`PATCH ${ep.url} handles missing pageId (AppFlowy contract)`, async ({ request }) => {
       const a = await adminRequest(request);
       const r = await a.patch(ep.url, { title: "no pageId here" });
-      // AppFlowy admin PATCH returns 200 with { ok: true } even when we
-      // don't provide a pageId — actual edits happen in the AppFlowy UI.
-      expect(r.status()).toBeLessThan(500);
-      if (r.status() === 200) {
-        const body = await r.json();
-        expect(body.ok ?? true).toBeTruthy();
-      }
+      // After auth: missing pageId → 400; unconfigured AppFlowy is N/A on PATCH.
+      expect(r.status()).toBe(400);
+      const body = await r.json();
+      expect(body.error).toMatch(/pageId is required/i);
     });
 
-    test(`DELETE ${ep.url} is routed to AppFlowy UI (501 expected)`, async ({ request }) => {
+    test(`DELETE ${ep.url} without pageId returns 400 (or 501 stub with pageId path)`, async ({
+      request,
+    }) => {
       const a = await adminRequest(request);
       const r = await a.delete(ep.url);
+      // No pageId query → 400; with pageId, write stub returns 501.
       expect([400, 501, 503]).toContain(r.status());
-      if (r.status() === 501) {
+      if (r.status() === 400) {
         const body = await r.json();
-        expect(body.error ?? "").toMatch(/AppFlowy UI|Delete via/i);
+        expect(body.error).toMatch(/pageId/i);
+      } else if (r.status() === 501) {
+        const body = await r.json();
+        expect(body.error ?? "").toMatch(/not yet implemented|AppFlowy/i);
       }
     });
   }

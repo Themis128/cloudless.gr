@@ -9,11 +9,15 @@
  * falls back to its static array. Both modes (AppFlowy + fallback) pass because
  * tests assert on structural shape, not exact content.
  *
+ * baseURL is `http://localhost:4000/en`. Absolute paths like `/en/blog` hit the
+ * locale route directly; `/blog` hits the origin without locale and relies on
+ * next-intl redirect. Prefer `/en/...` for page navigations.
+ *
  * API contract tests hit the public JSON endpoints directly via `request`
  * so they catch schema regressions even when the page renders correctly.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { posts as staticPosts } from "../src/lib/blog";
 import {
   staticTestimonials,
@@ -31,35 +35,51 @@ import {
 const FIRST_STATIC_POST_SLUG = staticPosts[0]?.slug;
 const FIRST_STATIC_CASE_SLUG = staticCaseStudies[0]?.slug;
 
+async function waitForCmsPage(page: Page) {
+  // Cold Next routes stream; wait on landmark content, not networkidle.
+  await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 });
+}
+
 // ---------------------------------------------------------------------------
 // Blog
 // ---------------------------------------------------------------------------
 
 test.describe("AppFlowy CMS — /blog", () => {
   test("renders the blog header and search input", async ({ page }) => {
-    await page.goto("/blog");
+    await page.goto("/en/blog");
+    await waitForCmsPage(page);
+    await expect(page).toHaveURL(/\/en\/blog\/?$/);
     await expect(
       page.getByRole("heading", { level: 1, name: /insights/i })
     ).toBeVisible();
-    await expect(page.getByPlaceholder(/search posts/i)).toBeVisible();
+    // Placeholder uses a unicode ellipsis (…); match via accessible name.
+    await expect(page.getByRole("textbox", { name: /search posts/i })).toBeVisible();
   });
 
   test("lists at least one post card linking to /blog/[slug]", async ({ page }) => {
-    await page.goto("/blog");
-    const postLinks = page.locator('a[href^="/blog/"], a[href*="/blog/"]').filter({
-      hasNot: page.locator('a[href$="/blog"]'),
-    });
-    expect(await postLinks.count()).toBeGreaterThan(0);
-    await expect(postLinks.first()).toBeVisible();
+    await page.goto("/en/blog");
+    await waitForCmsPage(page);
+    const links = await page.getByRole("link").all();
+    const blogLinks: string[] = [];
+    for (const link of links) {
+      const href = await link.getAttribute("href");
+      // Locale-prefixed (/en/blog/…) or bare (/blog/…) — exclude the index.
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?(\?.*)?$/.test(href)) {
+        blogLinks.push(href);
+      }
+    }
+    expect(blogLinks.length).toBeGreaterThan(0);
   });
 
   test("search query is preserved in the input", async ({ page }) => {
-    await page.goto("/blog?q=cloud");
-    await expect(page.getByPlaceholder(/search posts/i)).toHaveValue("cloud");
+    await page.goto("/en/blog?q=cloud");
+    await waitForCmsPage(page);
+    await expect(page.getByRole("textbox", { name: /search posts/i })).toHaveValue("cloud");
   });
 
   test("nonexistent search yields empty-state message", async ({ page }) => {
-    await page.goto("/blog?q=zzz_no_such_post_xyz");
+    await page.goto("/en/blog?q=zzz_no_such_post_xyz");
+    await waitForCmsPage(page);
     await expect(page.getByText(/no posts found/i)).toBeVisible();
   });
 });
@@ -68,13 +88,13 @@ test.describe("AppFlowy CMS — /blog/[slug]", () => {
   test.skip(!FIRST_STATIC_POST_SLUG, "no static posts configured");
 
   test("static fallback post renders an article heading", async ({ page }) => {
-    await page.goto(`/blog/${FIRST_STATIC_POST_SLUG}`);
+    await page.goto(`/en/blog/${FIRST_STATIC_POST_SLUG}`);
     await expect(page).toHaveURL(new RegExp(`/blog/${FIRST_STATIC_POST_SLUG}`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("nonexistent slug renders the 404 page", async ({ page }) => {
-    await page.goto("/blog/this-slug-does-not-exist");
+    await page.goto("/en/blog/this-slug-does-not-exist");
     await expect(
       page.getByRole("heading", { level: 1, name: /page not found|introuvable|δεν βρέθηκε/i })
     ).toBeVisible();
@@ -102,27 +122,32 @@ test.describe("AppFlowy CMS — /api/blog/posts contract", () => {
 
 test.describe("AppFlowy CMS — /docs", () => {
   test("renders the docs header and search input", async ({ page }) => {
-    await page.goto("/docs");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/en/docs");
+    await waitForCmsPage(page);
+    await expect(page).toHaveURL(/\/en\/docs\/?$/);
     await expect(
       page.getByRole("heading", { level: 1, name: /documentation/i })
-    ).toBeVisible({ timeout: 15000 });
-    await expect(page.getByPlaceholder(/search docs/i)).toBeVisible({ timeout: 10000 });
+    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: /search docs/i })).toBeVisible();
   });
 
   test("renders either category headings or the empty state", async ({ page }) => {
-    await page.goto("/docs");
+    await page.goto("/en/docs");
+    await waitForCmsPage(page);
+    // Unbound AppFlowy/Notion → empty copy; populated CMS → category h2s.
     const categoryHeading = page.getByRole("heading", { level: 2 });
-    const emptyState = page.getByText(/no documentation published yet|no docs match/i);
+    const emptyState = page.getByText(
+      /no documentation published yet|no docs match your filters/i
+    );
     await expect(categoryHeading.or(emptyState).first()).toBeVisible();
   });
 
   test("filtering with no matches shows the no-results state", async ({ page }) => {
-    await page.goto("/docs?q=zzz_no_such_doc_xyz");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/en/docs?q=zzz_no_such_doc_xyz");
+    await waitForCmsPage(page);
     await expect(
       page.getByText(/no docs match your filters|no documentation published yet/i)
-    ).toBeVisible({ timeout: 15000 });
+    ).toBeVisible();
   });
 });
 
@@ -178,8 +203,8 @@ test.describe("AppFlowy CMS — /api/testimonials contract", () => {
 
 test.describe("AppFlowy CMS — testimonials on homepage", () => {
   test("homepage renders at least one testimonial quote", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/en");
+    await waitForCmsPage(page);
     // Testimonials are rendered as blockquotes or elements with the quote text
     const firstQuote = staticTestimonials[0].quote.slice(0, 20);
     const quoteEl = page.getByText(new RegExp(firstQuote, "i"));
@@ -196,21 +221,16 @@ test.describe("AppFlowy CMS — testimonials on homepage", () => {
 
 test.describe("AppFlowy CMS — /services page", () => {
   test("renders the services heading", async ({ page }) => {
-    await page.goto("/services");
-    await page.waitForLoadState("networkidle");
-    await expect(
-      page.getByRole("heading", { level: 1 })
-    ).toBeVisible({ timeout: 10000 });
+    await page.goto("/en/services");
+    await waitForCmsPage(page);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("lists service cards on the services page", async ({ page }) => {
-    await page.goto("/services");
-    await page.waitForLoadState("networkidle");
-    // When AppFlowy is unreachable, the page renders static fallback data.
-    // Assert the page has rendered service-related content.
+    await page.goto("/en/services");
+    await waitForCmsPage(page);
     const heading = page.getByRole("heading", { level: 1 });
-    await expect(heading).toBeVisible({ timeout: 10000 });
-    // Check for at least some service-related text on the page.
+    await expect(heading).toBeVisible();
     const bodyText = await page.textContent("body");
     expect(bodyText?.length).toBeGreaterThan(0);
   });
@@ -289,18 +309,16 @@ test.describe("AppFlowy CMS — /api/faqs contract", () => {
 
 test.describe("AppFlowy CMS — /case-studies page", () => {
   test("renders the case studies heading", async ({ page }) => {
-    await page.goto("/case-studies");
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
+    await page.goto("/en/case-studies");
+    await waitForCmsPage(page);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("lists case studies on the case-studies page", async ({ page }) => {
-    await page.goto("/case-studies");
-    await page.waitForLoadState("networkidle");
-    // When AppFlowy is unreachable, the page may show static fallback or
-    // an empty state. Assert the page has rendered without crashing.
+    await page.goto("/en/case-studies");
+    await waitForCmsPage(page);
     const heading = page.getByRole("heading", { level: 1 });
-    await expect(heading).toBeVisible({ timeout: 10000 });
+    await expect(heading).toBeVisible();
   });
 });
 
@@ -308,13 +326,13 @@ test.describe("AppFlowy CMS — /case-studies/[slug]", () => {
   test.skip(!FIRST_STATIC_CASE_SLUG, "no static case studies configured");
 
   test("static fallback case study renders an article heading", async ({ page }) => {
-    await page.goto(`/case-studies/${FIRST_STATIC_CASE_SLUG}`);
+    await page.goto(`/en/case-studies/${FIRST_STATIC_CASE_SLUG}`);
     await expect(page).toHaveURL(new RegExp(`/case-studies/${FIRST_STATIC_CASE_SLUG}`));
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("nonexistent slug renders the 404 page", async ({ page }) => {
-    await page.goto("/case-studies/this-slug-does-not-exist");
+    await page.goto("/en/case-studies/this-slug-does-not-exist");
     await expect(
       page.getByRole("heading", { level: 1, name: /page not found|introuvable|δεν βρέθηκε/i })
     ).toBeVisible();

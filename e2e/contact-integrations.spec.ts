@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Contact & Integrations", () => {
   test("contact form renders the documented fields", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
 
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByLabel(/name/i).first()).toBeVisible();
@@ -22,7 +22,7 @@ test.describe("Contact & Integrations", () => {
       })
     );
 
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await page.getByLabel(/name/i).first().fill("Playwright User");
     await page.getByLabel(/email/i).first().fill("playwright@example.com");
     await page.getByLabel(/message/i).first().fill("Hello from the e2e suite.");
@@ -36,7 +36,7 @@ test.describe("Contact & Integrations", () => {
   });
 
   test("legal pages render with a heading", async ({ page }) => {
-    for (const path of ["/privacy", "/terms", "/cookies"]) {
+    for (const path of ["/en/privacy", "/en/terms", "/en/cookies"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(path));
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10_000 });

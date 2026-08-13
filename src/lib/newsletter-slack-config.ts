@@ -35,7 +35,7 @@ export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackCo
   if (!token || !signingSecret || !channel) {
     try {
       const { getConfig } = await import("@/lib/ssm-config");
-      const ssm = (await getConfig()) as unknown as Record<string, string>;
+      const ssm = await getConfig();
       if (!token) token = ssm.NEWSLETTER_SLACK_BOT_TOKEN ?? "";
       if (!signingSecret) signingSecret = ssm.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
       if (!channel) channel = ssm.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
@@ -45,6 +45,9 @@ export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackCo
       }
     }
   }
+
+  // Live workspace ops channel when no explicit id is configured.
+  if (!channel) channel = "C0BBDKY6Q9E";
 
   // Secrets are not available during `next build` on hosted runners — do not
   // spam "unauthorized" into deploy logs. Runtime requests still reject when

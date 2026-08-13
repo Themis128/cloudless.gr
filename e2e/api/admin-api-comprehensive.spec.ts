@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { adminRequest, ADMIN_TOKEN } from "../_internal/admin-fixture";
-import { createAPIHelper } from "../helpers/api-helpers";
+import { ADMIN_TOKEN } from "../_internal/admin-fixture";
+import { createAPIHelper, assertAdminRouteWired } from "../helpers/api-helpers";
 
 /**
  * Comprehensive Admin API Test Suite
@@ -35,7 +35,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Validate response structure
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
       
       // Try to parse JSON if successful
       if (response.status() < 400) {
@@ -49,12 +49,11 @@ test.describe("Admin API - Comprehensive Testing", () => {
     
     test("should handle invalid AB test ID gracefully", async ({ request }) => {
       const response = await apiHelper.get("/api/admin/ab-tests/invalid-id", {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [400, 404, 500] // Depending on implementation
+        authToken: ADMIN_TOKEN
       });
       
       // Should not crash the server
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -62,26 +61,18 @@ test.describe("Admin API - Comprehensive Testing", () => {
   test.describe("AI Analytics Orchestration Endpoint", () => {
     test("should return analytics orchestration data", async ({ request }) => {
       const response = await apiHelper.post("/api/admin/ai/analytics-orchestration", {}, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 503] // 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
     
     test("should handle PDF generation request", async ({ request }) => {
       const response = await apiHelper.post("/api/admin/ai/analytics-orchestration/pdf", {}, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 501, 503] // 501 if feature not implemented, 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -93,14 +84,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
         platforms: ["Meta", "LinkedIn"],
         objective: "LEAD_GENERATION"
       }, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 503] // 200 if successful, 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -114,14 +101,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/ai/campaign", campaignData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501, 503] // 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -136,14 +119,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/ai/copy", copyRequest, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501, 503] // 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
     
     test("should accept copy generation request", async ({ request }) => {
@@ -155,14 +134,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/ai/copy", copyRequest, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501, 503] // 503 if ANTHROPIC_API_KEY not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept any status that indicates the endpoint exists and is working
-      // 503 means "integration not configured" which is valid for missing credentials in test environment
-      const statusOk = (response.status() < 500) || response.status() === 503;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -185,9 +160,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        // Accept 200 (success) or 503 (service not configured)
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
     
@@ -207,7 +180,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         
         // Accept any status that indicates the endpoint exists and is working
         // These endpoints return placeholder data (200) when services not configured
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -221,17 +194,16 @@ test.describe("Admin API - Comprehensive Testing", () => {
       
       // Accept any status that indicates the endpoint exists and is working
       // This endpoint returns 200 with cache statistics
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
     
     test("should accept cache clear request", async ({ request }) => {
       const response = await apiHelper.post("/api/admin/cache/clear", {}, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 204, 400, 501]
+        authToken: ADMIN_TOKEN
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -243,7 +215,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
     
     test("should accept calendar event creation", async ({ request }) => {
@@ -255,12 +227,11 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/calendar/create", eventData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501]
+        authToken: ADMIN_TOKEN
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -281,9 +252,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        // Accept 200 (success) or 503 (EspoCRM not configured)
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -304,9 +273,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        // Accept 200 (success), 503 (service not configured), or 501 (not implemented)
-        const statusOk = (response.status() < 500) || response.status() === 503 || response.status() === 501;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
     
@@ -319,13 +286,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/email/campaigns", campaignData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501, 503] // 503 if ActiveCampaign not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept 200 (success), 503 (service not configured), or 501 (not implemented)
-      const statusOk = (response.status() < 500) || response.status() === 503 || response.status() === 501;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -337,7 +301,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -349,7 +313,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -373,9 +337,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        // Accept 200 (success) or 503 (service not configured)
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -393,9 +355,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        // Accept 200 (success) or 503 (service not configured/unreachable)
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
     
@@ -407,13 +367,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/ops/errors", errorData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501, 503] // 503 if Sentry not configured
+        authToken: ADMIN_TOKEN
       });
       
-      // Accept 200 (success), 503 (service not configured), or 501 (not implemented)
-      const statusOk = (response.status() < 500) || response.status() === 503 || response.status() === 501;
-      expect(statusOk).toBeTruthy();
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -425,7 +382,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -443,7 +400,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
     
@@ -456,12 +413,11 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/pipeline/cards", cardData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501]
+        authToken: ADMIN_TOKEN
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -473,7 +429,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -491,7 +447,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
     
@@ -506,12 +462,11 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/reports/generate", reportRequest, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501]
+        authToken: ADMIN_TOKEN
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -523,7 +478,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -535,7 +490,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
     
     test("should accept user creation", async ({ request }) => {
@@ -547,12 +502,11 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/users", userData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 501]
+        authToken: ADMIN_TOKEN
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -564,7 +518,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -576,7 +530,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -604,7 +558,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -629,14 +583,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
     appflowySubmodules.forEach(endpoint => {
       test(`should return data for ${endpoint}`, async ({ request }) => {
         const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN,
-          expectedStatus: [200, 300, 301, 302, 303, 304, 305, 306, 307, 308, 400, 401, 402, 403, 404, 503]
+          authToken: ADMIN_TOKEN
         });
         
-        // Accept any status that indicates the endpoint exists and is working
-        // 503 means "integration not configured" which is valid for missing credentials
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -664,7 +614,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -687,7 +637,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -707,7 +657,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -720,7 +670,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -737,7 +687,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -758,7 +708,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -772,7 +722,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -784,7 +734,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -796,7 +746,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
       });
       
       // Accept any status that indicates the endpoint exists and is working
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 
@@ -819,7 +769,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -838,7 +788,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -865,14 +815,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
     notionSubmodules.forEach(endpoint => {
       test(`should return data for ${endpoint}`, async ({ request }) => {
         const response = await apiHelper.get(endpoint, {
-          authToken: ADMIN_TOKEN,
-          expectedStatus: [200, 300, 301, 302, 303, 304, 305, 306, 307, 308, 400, 401, 402, 403, 404, 503]
+          authToken: ADMIN_TOKEN
         });
         
-        // Accept any status that indicates the endpoint exists and is working
-        // 503 means "integration not configured" which is valid for missing credentials
-        const statusOk = (response.status() < 500) || response.status() === 503;
-        expect(statusOk).toBeTruthy();
+        assertAdminRouteWired(response.status());
         
         if (response.status() < 400) {
           const json = await response.json();
@@ -895,12 +841,8 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        expect(response.status()).toBeLessThan(500);
-        
-        if (response.status() < 400) {
-          const json = await response.json();
-          expect(json).toBeDefined();
-        }
+        assertAdminRouteWired(response.status());
+        // OAuth start may 302 to the provider — do not require JSON
       });
     });
   });
@@ -921,7 +863,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
         });
         
         // Accept any status that indicates the endpoint exists and is working
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
       });
     });
   });
@@ -962,7 +904,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
         
         if (response.status() < 400) {
           const json = await response.json();
@@ -993,7 +935,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
         
         if (response.status() < 400) {
           const json = await response.json();
@@ -1015,7 +957,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
           authToken: ADMIN_TOKEN
         });
         
-        expect(response.status()).toBeLessThan(500);
+        assertAdminRouteWired(response.status());
         
         if (response.status() < 400) {
           const json = await response.json();
@@ -1035,11 +977,10 @@ test.describe("Admin API - Comprehensive Testing", () => {
       };
       
       const response = await apiHelper.post("/api/admin/subscriptions", subscriptionData, {
-        authToken: ADMIN_TOKEN,
-        expectedStatus: [200, 201, 400, 401, 403, 404, 405, 409, 410, 429, 500, 501, 502, 503, 504]
+        authToken: ADMIN_TOKEN
       });
       
-      expect(response.status()).toBeLessThan(500);
+      assertAdminRouteWired(response.status());
     });
   });
 });

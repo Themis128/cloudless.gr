@@ -17,7 +17,7 @@ import {
 } from "@/lib/newsletter-slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";
-import { listEditorialPosts, type NotionBlogDraft } from "@/lib/notion-blog-admin";
+import { listEditorialPosts, type AppFlowyBlogDraft } from "@/lib/appflowy-blog-admin";
 
 import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 
@@ -138,7 +138,7 @@ async function handleEvent(event: SlackEvent): Promise<void> {
 // ---------------------------------------------------------------------------
 
 interface DashboardData {
-  drafts: NotionBlogDraft[];
+  drafts: AppFlowyBlogDraft[];
   subscriberCount: number;
   subscribersOk: boolean;
 }
@@ -147,7 +147,7 @@ async function gatherDashboardData(): Promise<DashboardData> {
   const [drafts, subs] = await Promise.all([
     listEditorialPosts().catch((err: unknown) => {
       console.warn("[NewsletterSlack Home] listEditorialPosts failed:", err);
-      return [] as NotionBlogDraft[];
+      return [] as AppFlowyBlogDraft[];
     }),
     listSubscribers()
       .then((arr: string[]) => ({ ok: true, count: arr.length }))
@@ -208,7 +208,7 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
           : p.status === "Published"
             ? ":white_check_mark:"
             : ":memo:";
-      return `${icon} <${p.url}|${p.title}> — \`${p.status || "—"}\``;
+      return p.url ? `${icon} <${p.url}|${p.title}> — \`${p.status || "—"}\`` : `${icon} *${p.title}* — \`${p.status || "—"}\``;
     })
     .join("\n");
 
@@ -252,9 +252,9 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
               elements: [
                 {
                   type: "button",
-                  text: { type: "plain_text", text: "Open in Notion", emoji: true },
+                  text: { type: "plain_text", text: "Open on blog", emoji: true },
                   url: top.url,
-                  action_id: "home_open_notion",
+                  action_id: "home_open_blog",
                 },
                 {
                   type: "button",
@@ -282,7 +282,7 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
                     title: { type: "plain_text", text: "Archive post?" },
                     text: {
                       type: "plain_text",
-                      text: `Flips "${top.title}" Notion Status to Archived. /blog/${top.slug} will 404 within ~5min. Already-sent emails cannot be recalled.`,
+                      text: `Flips "${top.title}" AppFlowy status to Archived. /blog/${top.slug} will 404 within ~5min. Already-sent emails cannot be recalled.`,
                     },
                     confirm: { type: "plain_text", text: "Archive" },
                     deny: { type: "plain_text", text: "Cancel" },
@@ -330,9 +330,9 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
           },
           {
             type: "button",
-            text: { type: "plain_text", text: "Open Notion DB", emoji: true },
-            url: "https://app.notion.com",
-            action_id: "home_open_notion_db",
+            text: { type: "plain_text", text: "Open blog index", emoji: true },
+            url: "https://cloudless.gr/en/blog",
+            action_id: "home_open_blog_index",
           },
           {
             type: "button",

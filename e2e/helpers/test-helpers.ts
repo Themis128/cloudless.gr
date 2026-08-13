@@ -12,9 +12,9 @@ export async function loginAsUser(
   page: Page,
   email: string,
   password: string,
-  expectedRedirect: string = "/dashboard",
+  expectedRedirect: string = "/en/dashboard",
 ): Promise<void> {
-  await page.goto("/auth/login");
+  await page.goto("/en/auth/login");
   await page.waitForLoadState("networkidle");
 
   const emailLocator = page.getByLabel(/email/i);
@@ -56,7 +56,7 @@ export async function signupUser(
   password: string,
   name?: string
 ): Promise<void> {
-  await page.goto("/auth/signup");
+  await page.goto("/en/auth/signup");
   await page.fill('input[name="email"]', email);
 
   if (name) {

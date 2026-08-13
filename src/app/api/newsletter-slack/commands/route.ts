@@ -1,7 +1,7 @@
 /**
  * Slash command endpoint for the DEDICATED Newsletter Slack app.
  *
- *   /newsletter-list         — pending Notion drafts + 3-layer gate verdict
+ *   /newsletter-list         — pending AppFlowy drafts + 3-layer gate verdict
  *   /newsletter-send         — approve + publish + email subscribers (ops)
  *   /newsletter-unpublish    — flip Status to Archived (ops)
  *   /newsletter-rerun-draft  — re-trigger weekly-article-draft.yml
@@ -22,8 +22,8 @@ import {
   listEditorialPosts,
   findEditorialPost,
   setEditorialStatus,
-  type NotionBlogDraft,
-} from "@/lib/notion-blog-admin";
+  type AppFlowyBlogDraft,
+} from "@/lib/appflowy-blog-admin";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 
@@ -89,14 +89,15 @@ export async function POST(request: Request): Promise<Response> {
 // /newsletter-list
 // ---------------------------------------------------------------------------
 
-function formatPostLine(p: NotionBlogDraft): string {
+function formatPostLine(p: AppFlowyBlogDraft): string {
   const statusEmoji = p.status === "In Review" ? ":eyes:" : ":memo:";
   const createdTs = p.createdAt ? Math.floor(new Date(p.createdAt).getTime() / 1000) : 0;
   const dateLabel = createdTs
     ? `<!date^${createdTs}^{date_short_pretty}|${p.createdAt.slice(0, 10)}>`
     : "—";
   const slugBit = p.slug ? `\`${p.slug}\`` : `\`${p.id.slice(0, 8)}\``;
-  return `${statusEmoji} *<${p.url}|${p.title}>* — ${p.category} · ${p.readTime} · ${dateLabel}\n   ${slugBit}`;
+  const titleBit = p.url ? `*<${p.url}|${p.title}>*` : `*${p.title}*`;
+  return `${statusEmoji} ${titleBit} — ${p.category} · ${p.readTime} · ${dateLabel}\n   ${slugBit}`;
 }
 
 async function handleList(): Promise<Response> {
@@ -105,7 +106,7 @@ async function handleList(): Promise<Response> {
     return slackResponse({
       response_type: "ephemeral",
       text:
-        ":mailbox_with_no_mail: No pending drafts in Notion. " +
+        ":mailbox_with_no_mail: No pending drafts in AppFlowy. " +
         "Try `/newsletter-rerun-draft` to generate one.",
     });
   }
@@ -147,7 +148,7 @@ async function handleSend(payload: SlashPayload): Promise<Response> {
     return slackResponse({
       response_type: "ephemeral",
       text:
-        "Usage: `/newsletter-send <slug-or-notion-id>`\n" +
+        "Usage: `/newsletter-send <slug-or-view-id>`\n" +
         "Tip: run `/newsletter-list` first to see available drafts.",
     });
   }
@@ -166,7 +167,7 @@ async function handleSend(payload: SlashPayload): Promise<Response> {
     return slackResponse({
       response_type: "ephemeral",
       text:
-        `:warning: No Notion draft matching \`${target}\`. ` +
+        `:warning: No AppFlowy draft matching \`${target}\`. ` +
         "Run `/newsletter-list` to see what is available.",
     });
   }
@@ -181,7 +182,7 @@ async function handleSend(payload: SlashPayload): Promise<Response> {
   if (!flipped) {
     return slackResponse({
       response_type: "ephemeral",
-      text: ":warning: Failed to update Notion. Check NOTION_API_KEY in SSM.",
+      text: ":warning: Failed to update AppFlowy editorial status. Check APPFLOWY_* credentials.",
     });
   }
 
@@ -190,7 +191,7 @@ async function handleSend(payload: SlashPayload): Promise<Response> {
     return slackResponse({
       response_type: "ephemeral",
       text:
-        `:warning: Notion updated to *In Review* but workflow dispatch failed ` +
+        `:warning: AppFlowy updated to *In Review* but workflow dispatch failed ` +
         `(HTTP ${result.status}): \`${result.error.slice(0, 200)}\`.`,
     });
   }
@@ -209,7 +210,7 @@ async function handleSend(payload: SlashPayload): Promise<Response> {
           text:
             `<@${payload.user_id}> approved *<${post.url}|${post.title}>* ` +
             `(${post.category} · ${post.readTime}) and triggered the publisher.\n\n` +
-            `Workflow will render → mark Published in Notion → revalidate ` +
+            `Workflow will render → publish in AppFlowy → revalidate ` +
             `\`/blog/${post.slug}\` → SES-send to every subscriber.`,
         },
       },
@@ -227,8 +228,8 @@ async function handleUnpublish(payload: SlashPayload): Promise<Response> {
     return slackResponse({
       response_type: "ephemeral",
       text:
-        "Usage: `/newsletter-unpublish <slug-or-notion-id>`\n" +
-        "Flips Notion Status to `Archived`. `/blog/<slug>` will 404 within the next ISR cycle.",
+        "Usage: `/newsletter-unpublish <slug-or-view-id>`\n" +
+        "Flips AppFlowy status to `Archived`. `/blog/<slug>` will 404 within the next ISR cycle.",
     });
   }
   if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
@@ -242,14 +243,14 @@ async function handleUnpublish(payload: SlashPayload): Promise<Response> {
   if (!post) {
     return slackResponse({
       response_type: "ephemeral",
-      text: `:warning: No Notion post matching \`${target}\`.`,
+      text: `:warning: No AppFlowy post matching \`${target}\`.`,
     });
   }
   const flipped = await setEditorialStatus(post.id, "Archived");
   if (!flipped) {
     return slackResponse({
       response_type: "ephemeral",
-      text: ":warning: Failed to update Notion. Check NOTION_API_KEY in SSM.",
+      text: ":warning: Failed to update AppFlowy editorial status. Check APPFLOWY_* credentials.",
     });
   }
   return slackResponse({
@@ -295,7 +296,7 @@ async function handleRerunDraft(payload: SlashPayload): Promise<Response> {
     response_type: "ephemeral",
     text:
       ":arrows_counterclockwise: Re-triggered `weekly-article-draft.yml`. " +
-      "New draft will appear in Notion within ~2 minutes. " +
+      "New draft will appear in AppFlowy within ~2 minutes. " +
       "Run `/newsletter-list` to see it and the gate verdict.",
   });
 }

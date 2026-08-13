@@ -224,25 +224,22 @@ describe("renderPlaintext", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Regression guard for the Notion status-name mismatch that broke 3 weeks of
-// Monday newsletter sends (2026-05-25, 06-01, 06-08).
-//
-// The Notion Blog DB's Status property exposes options
-// "Draft" | "In Review" | "Published" | "Archived". The script must filter on
-// "In Review" — "Approved" is a 400 from Notion and breaks the cron. Lock the
-// literal in source so a future rename has to update this test too.
+// AppFlowy editorial convention: pages named "[Review] <title>" are ready to
+// publish. The old Notion Status="Approved" filter must never return.
 // ─────────────────────────────────────────────────────────────────────────────
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-describe("Notion publisher status filter", () => {
+describe("AppFlowy publisher review filter", () => {
   const source = readFileSync(
     resolve(__dirname, "../scripts/publish-and-send-newsletter.ts"),
     "utf8"
   );
 
-  it("filters on the 'In Review' Status option (not 'Approved')", () => {
-    expect(source).toContain('equals: "In Review"');
+  it("selects [Review] pages and never filters Status=Approved", () => {
+    expect(source).toContain("[Review]");
+    expect(source).toContain('startsWith("[Review]")');
     expect(source).not.toContain('equals: "Approved"');
+    expect(source).toContain("/api/webhooks/content");
   });
 });

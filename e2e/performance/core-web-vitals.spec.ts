@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Core Web Vitals", () => {
   test("should measure LCP (Largest Contentful Paint) on homepage", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -36,7 +36,7 @@ test.describe("Core Web Vitals", () => {
   });
   
   test("should measure FID (First Input Delay) on homepage", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -65,7 +65,7 @@ test.describe("Core Web Vitals", () => {
   });
   
   test("should measure CLS (Cumulative Layout Shift) on homepage", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Wait for page to load and stabilize
     await page.waitForLoadState('networkidle');
@@ -99,7 +99,7 @@ test.describe("Core Web Vitals", () => {
   });
   
   test("should measure FCP (First Contentful Paint) on homepage", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -128,7 +128,7 @@ test.describe("Core Web Vitals", () => {
   });
   
   test("should measure TTFB (Time to First Byte) on homepage", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Measure TTFB using Navigation Timing API
     const ttfb = await page.evaluate(() => {
@@ -144,7 +144,7 @@ test.describe("Core Web Vitals", () => {
 test.describe("Page Load Times", () => {
   test("homepage should load within reasonable time", async ({ page }) => {
     const startTime = Date.now();
-    await page.goto("/", { waitUntil: 'networkidle' });
+    await page.goto("/en", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -153,7 +153,7 @@ test.describe("Page Load Times", () => {
   
   test("services page should load within reasonable time", async ({ page }) => {
     const startTime = Date.now();
-    await page.goto("/services", { waitUntil: 'networkidle' });
+    await page.goto("/en/services", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -162,7 +162,7 @@ test.describe("Page Load Times", () => {
   
   test("store page should load within reasonable time", async ({ page }) => {
     const startTime = Date.now();
-    await page.goto("/store", { waitUntil: 'networkidle' });
+    await page.goto("/en/store", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -171,7 +171,7 @@ test.describe("Page Load Times", () => {
   
   test("blog page should load within reasonable time", async ({ page }) => {
     const startTime = Date.now();
-    await page.goto("/blog", { waitUntil: 'networkidle' });
+    await page.goto("/en/blog", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -180,7 +180,7 @@ test.describe("Page Load Times", () => {
   
   test("contact page should load within reasonable time", async ({ page }) => {
     const startTime = Date.now();
-    await page.goto("/contact", { waitUntil: 'networkidle' });
+    await page.goto("/en/contact", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -202,7 +202,7 @@ test.describe("Page Load Times", () => {
     ]);
     
     const startTime = Date.now();
-    await page.goto("/dashboard", { waitUntil: 'networkidle' });
+    await page.goto("/en/dashboard", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -224,7 +224,7 @@ test.describe("Page Load Times", () => {
     ]);
     
     const startTime = Date.now();
-    await page.goto("/admin", { waitUntil: 'networkidle' });
+    await page.goto("/en/admin", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -234,7 +234,7 @@ test.describe("Page Load Times", () => {
 
 test.describe("Resource Optimization", () => {
   test("should optimize image loading", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const imageOptimization = await page.evaluate(() => {
       const images = document.querySelectorAll('img');
@@ -278,7 +278,7 @@ test.describe("Resource Optimization", () => {
   });
   
   test("should minimize render-blocking resources", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const renderBlocking = await page.evaluate(() => {
       const links = document.querySelectorAll('link[rel="stylesheet"]');
@@ -306,7 +306,7 @@ test.describe("Resource Optimization", () => {
   });
   
   test("should use browser caching", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     // Reload to check cache headers
     await page.reload();
@@ -324,7 +324,7 @@ test.describe("Mobile Performance", () => {
     await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
     
     const startTime = Date.now();
-    await page.goto("/", { waitUntil: 'networkidle' });
+    await page.goto("/en", { waitUntil: 'networkidle' });
     const endTime = Date.now();
     
     const loadTime = endTime - startTime;
@@ -345,7 +345,7 @@ test.describe("Mobile Performance", () => {
   
   test("should have appropriate tap targets on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE
-    await page.goto("/");
+    await page.goto("/en");
     
     const tapTargets = await page.evaluate(() => {
       const interactiveElements = document.querySelectorAll('a, button, [role="button"], input, select, textarea');
@@ -378,7 +378,7 @@ test.describe("Mobile Performance", () => {
 
 test.describe("Performance Budgets", () => {
   test("should keep total page size under budget", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const totalSize = await page.evaluate(() => {
       let totalSize = 0;
@@ -396,7 +396,7 @@ test.describe("Performance Budgets", () => {
   });
   
   test("should keep number of requests under budget", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const requestCount = await page.evaluate(() => {
       return performance.getEntriesByType('resource').length;
@@ -408,7 +408,7 @@ test.describe("Performance Budgets", () => {
   });
   
   test("should keep CSS size under budget", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const cssSize = await page.evaluate(() => {
       let totalSize = 0;
@@ -429,7 +429,7 @@ test.describe("Performance Budgets", () => {
   });
   
   test("should keep JavaScript size under budget", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     
     const jsSize = await page.evaluate(() => {
       let totalSize = 0;

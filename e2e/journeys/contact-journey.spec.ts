@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Contact User Journey", () => {
   test.beforeEach(async ({ page }) => {
     // Start from homepage
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page).toHaveURL(/.*\/$/);
   });
 
@@ -23,7 +23,7 @@ test.describe("Contact User Journey", () => {
   });
 
   test("should display contact form with required fields", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page).toHaveURL(/.*\/contact/);
     
     // Assert
@@ -38,7 +38,7 @@ test.describe("Contact User Journey", () => {
   });
 
   test("should allow user to submit contact form with valid data", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page).toHaveURL(/.*\/contact/);
     
     // Arrange
@@ -58,7 +58,7 @@ test.describe("Contact User Journey", () => {
   });
 
   test("should validate contact form data and show errors for invalid input", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page).toHaveURL(/.*\/contact/);
     
     // Arrange
@@ -75,7 +75,7 @@ test.describe("Contact User Journey", () => {
   });
 
   test("should validate email format in contact form", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page).toHaveURL(/.*\/contact/);
     
     // Arrange
@@ -95,7 +95,7 @@ test.describe("Contact User Journey", () => {
   });
 
   test("should allow user to view contact information (phone, address, etc.)", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page).toHaveURL(/.*\/contact/);
     
     // Look for contact info like phone, address, social links

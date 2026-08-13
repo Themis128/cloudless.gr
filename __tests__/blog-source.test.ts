@@ -95,6 +95,16 @@ describe("blog-source", () => {
     expect(post?.readTime).toMatch(/min read/);
   });
 
+  it("falls back to static when Notion returns an empty list", async () => {
+    process.env.NOTION_API_KEY = "test-key";
+    process.env.NOTION_BLOG_DB_ID = "test-db";
+    resetIntegrationCache();
+    getNotionPostsMock.mockResolvedValueOnce([]);
+
+    const { getBlogPosts } = await import("@/lib/blog-source");
+    await expect(getBlogPosts()).resolves.toEqual(staticPosts);
+  });
+
   it("falls back to static content when Notion lookup fails", async () => {
     getNotionPostBySlugMock.mockRejectedValueOnce(new Error("notion down"));
 

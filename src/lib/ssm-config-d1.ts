@@ -77,6 +77,9 @@ interface AppConfig {
   SLACK_WEBHOOK_URL: string;
   SLACK_BOT_TOKEN: string;
   SLACK_SIGNING_SECRET: string;
+  NEWSLETTER_SLACK_BOT_TOKEN: string;
+  NEWSLETTER_SLACK_SIGNING_SECRET: string;
+  NEWSLETTER_SLACK_CHANNEL_ID: string;
   /** @deprecated HubSpot decommissioned — use ESPOCRM_*. */
   HUBSPOT_API_KEY: string;
   /** @deprecated HubSpot decommissioned — use ESPOCRM_*. */
@@ -188,6 +191,9 @@ function buildConfigFromEnv(): AppConfig {
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
+    NEWSLETTER_SLACK_BOT_TOKEN: process.env.NEWSLETTER_SLACK_BOT_TOKEN || "",
+    NEWSLETTER_SLACK_SIGNING_SECRET: process.env.NEWSLETTER_SLACK_SIGNING_SECRET || "",
+    NEWSLETTER_SLACK_CHANNEL_ID: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "",
     HUBSPOT_API_KEY: "",
     HUBSPOT_CLIENT_SECRET: "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",

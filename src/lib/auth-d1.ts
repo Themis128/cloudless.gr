@@ -555,8 +555,16 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
 
 function tryLoadLocalAuthDb(): AuthDatabase | null {
   try {
+    // Do NOT let webpack/turbopack statically bundle this into proxy/edge.
+    // auth-db-local imports node:fs / node:sqlite — bundling it causes
+    // UnhandledSchemeError (webpack) or an indefinite "Compiling proxy…"
+    // hang (turbopack). Runtime Node still resolves the module fine.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
+    const { getLocalAuthDb } = require(
+      /* webpackIgnore: true */
+      /* turbopackIgnore: true */
+      "./auth-db-local"
+    ) as typeof import("./auth-db-local");
     return getLocalAuthDb();
   } catch {
     return null;
@@ -566,7 +574,11 @@ function tryLoadLocalAuthDb(): AuthDatabase | null {
 function tryLoadHttpAuthDb(): AuthDatabase | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
+    const { getHttpAuthDb } = require(
+      /* webpackIgnore: true */
+      /* turbopackIgnore: true */
+      "./d1-http"
+    ) as typeof import("./d1-http");
     return getHttpAuthDb() ?? null;
   } catch {
     return null;

@@ -17,7 +17,7 @@ test.describe("Header Component", () => {
     authPage = createAuthenticatedPage(browserPage);
     
     // Start on homepage for header tests
-    await page.navigate("/");
+    await page.navigate("/en");
   });
 
   test("should be visible on all pages", async ({ page: browserPage }) => {
@@ -133,7 +133,7 @@ test.describe("Header Component", () => {
     
     test("should navigate to homepage via logo", async ({ page: browserPage }) => {
       // Navigate to a different page first
-      await page.navigate("/services");
+      await page.navigate("/en/services");
       
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
@@ -188,7 +188,7 @@ test.describe("Header Component", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
@@ -216,7 +216,7 @@ test.describe("Header Component", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();
@@ -236,7 +236,7 @@ test.describe("Header Component", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const header = browserPage.locator('header, [data-testid="header"], .header');
       await expect(header).toBeVisible();

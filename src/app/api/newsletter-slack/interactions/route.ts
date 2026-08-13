@@ -19,7 +19,7 @@ import {
 } from "@/lib/newsletter-slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
-import { findEditorialPost, setEditorialStatus } from "@/lib/notion-blog-admin";
+import { findEditorialPost, setEditorialStatus } from "@/lib/appflowy-blog-admin";
 
 interface ButtonAction {
   action_id: string;
@@ -127,7 +127,7 @@ async function handleSend(userId: string, target: string, responseUrl: string): 
 
   const post = await findEditorialPost(target);
   if (!post) {
-    await replyEphemeral(responseUrl, `:warning: No Notion draft matching \`${target}\`.`);
+    await replyEphemeral(responseUrl, `:warning: No AppFlowy draft matching \`${target}\`.`);
     return;
   }
   if (post.status === "Published") {
@@ -136,14 +136,14 @@ async function handleSend(userId: string, target: string, responseUrl: string): 
   }
   const flipped = await setEditorialStatus(post.id, "In Review");
   if (!flipped) {
-    await replyEphemeral(responseUrl, ":warning: Failed to update Notion status.");
+    await replyEphemeral(responseUrl, ":warning: Failed to update AppFlowy status.");
     return;
   }
   const result = await dispatchWorkflow("weekly-newsletter.yml", "main");
   if (!result.ok) {
     await replyEphemeral(
       responseUrl,
-      `:warning: Notion updated but workflow dispatch failed (HTTP ${result.status}).`
+      `:warning: AppFlowy updated but workflow dispatch failed (HTTP ${result.status}).`
     );
     return;
   }
@@ -164,12 +164,12 @@ async function handleUnpublish(userId: string, target: string, responseUrl: stri
   }
   const post = await findEditorialPost(target);
   if (!post) {
-    await replyEphemeral(responseUrl, `:warning: No Notion post matching \`${target}\`.`);
+    await replyEphemeral(responseUrl, `:warning: No AppFlowy post matching \`${target}\`.`);
     return;
   }
   const flipped = await setEditorialStatus(post.id, "Archived");
   if (!flipped) {
-    await replyEphemeral(responseUrl, ":warning: Failed to update Notion status.");
+    await replyEphemeral(responseUrl, ":warning: Failed to update AppFlowy status.");
     return;
   }
   await replyEphemeral(
@@ -193,6 +193,6 @@ async function handleRerunDraft(userId: string, responseUrl: string): Promise<vo
   }
   await replyEphemeral(
     responseUrl,
-    ":arrows_counterclockwise: Re-triggered `weekly-article-draft.yml`. New draft in Notion within ~2 minutes."
+    ":arrows_counterclockwise: Re-triggered `weekly-article-draft.yml`. New draft in AppFlowy within ~2 minutes."
   );
 }

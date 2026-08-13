@@ -2,9 +2,8 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import { posts as staticPosts, formatDate } from "@/lib/blog";
-import { getPosts, getCategoryCounts, getTagCounts } from "@/lib/notion-blog";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { formatDate } from "@/lib/blog";
+import { getBlogPostsWithSource } from "@/lib/blog-source";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
@@ -48,6 +47,26 @@ const PER_PAGE = 10;
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type ListingPost = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
+  readTime: string;
+  category: string;
+  author: string;
+  coverImage: string;
+  tags: string[];
+};
+
+function categoryCountsFromPosts(posts: ListingPost[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const post of posts) {
+    counts[post.category] = (counts[post.category] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export default async function BlogPage({ searchParams }: { searchParams: SearchParams }) {
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
@@ -58,40 +77,22 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const activeTag = typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
-  // Fetch from Notion when configured, otherwise fall back to static posts
-  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
-  const notionPosts = useNotion ? await getPosts() : [];
+  // AppFlowy → Notion → static (same chain as /api/blog/posts)
+  const { posts: sourcePosts } = await getBlogPostsWithSource();
+  const allPosts: ListingPost[] = sourcePosts.map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    date: p.date,
+    readTime: p.readTime || "5 min read",
+    category: p.category || "Cloud",
+    author: "",
+    coverImage: "",
+    tags: [] as string[],
+  }));
 
-  // Fetch category and tag counts for sidebar
-  const [categoryCounts, tagCounts] = useNotion
-    ? await Promise.all([getCategoryCounts(), getTagCounts()])
-    : [{} as Record<string, number>, {} as Record<string, number>];
-
-  // Normalise into a common shape for rendering
-  const allPosts =
-    notionPosts.length > 0
-      ? notionPosts.map((p) => ({
-          slug: p.slug,
-          title: p.title,
-          excerpt: p.excerpt,
-          date: p.date,
-          readTime: p.readTime || "5 min read",
-          category: p.category || "Cloud",
-          author: p.author,
-          coverImage: p.coverImage,
-          tags: p.tags,
-        }))
-      : staticPosts.map((p) => ({
-          slug: p.slug,
-          title: p.title,
-          excerpt: p.excerpt,
-          date: p.date,
-          readTime: p.readTime,
-          category: p.category,
-          author: "",
-          coverImage: "",
-          tags: [] as string[],
-        }));
+  const categoryCounts = categoryCountsFromPosts(allPosts);
+  const tagCounts: Record<string, number> = {};
 
   // Apply filters
   let filteredPosts = allPosts;
@@ -102,7 +103,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
       (p) =>
         p.title.toLowerCase().includes(q) ||
         p.excerpt.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
+        p.tags.some((tag) => tag.toLowerCase().includes(q))
     );
   }
 
@@ -186,6 +187,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
                 name="q"
                 defaultValue={searchQuery}
                 placeholder={t("blog.searchPlaceholder", "Search posts…")}
+                aria-label={t("blog.searchPlaceholder", "Search posts…")}
                 className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-500 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg

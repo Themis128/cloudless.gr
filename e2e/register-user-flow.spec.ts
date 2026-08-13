@@ -54,7 +54,7 @@ test.describe("new-user registration flow", () => {
 
   test.describe("waiting room behavior (unauthenticated)", () => {
     test("does NOT leak waiting-room content to an unauthenticated visitor", async ({ page }) => {
-      await page.goto("/portal/waiting?plan=cloud");
+      await page.goto("/en/portal/waiting?plan=cloud");
       // The page hits one of two safe states for an unauth visitor:
       //   (a) redirected to /<locale>/auth/login?next=...
       //   (b) stuck on the auth-check spinner (no waiting-room content visible)

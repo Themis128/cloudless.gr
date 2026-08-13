@@ -147,11 +147,11 @@ test.describe("Style System", () => {
 
   // Test pages
   const testPages = [
-    { path: "/", name: "Homepage" },
-    { path: "/services", name: "Services" },
-    { path: "/store", name: "Store" },
-    { path: "/blog", name: "Blog" },
-    { path: "/contact", name: "Contact" },
+    { path: "/en", name: "Homepage" },
+    { path: "/en/services", name: "Services" },
+    { path: "/en/store", name: "Store" },
+    { path: "/en/blog", name: "Blog" },
+    { path: "/en/contact", name: "Contact" },
   ];
 
   testPages.forEach(({ path, name }) => {

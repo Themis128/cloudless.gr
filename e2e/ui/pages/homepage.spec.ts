@@ -14,7 +14,7 @@ test.describe("Homepage", () => {
     page = createBasePage(browserPage);
     responsivePage = createResponsivePage(browserPage);
     
-    await page.navigate("/");
+    await page.navigate("/en");
   });
 
   test("should load successfully", async ({ page: browserPage }) => {
@@ -74,7 +74,7 @@ test.describe("Homepage", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       // Check that essential elements are still visible
       const heading = browserPage.locator('h1, .hero-heading, [data-testid="hero-heading"]');
@@ -99,7 +99,7 @@ test.describe("Homepage", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       // Check that layout adapts appropriately
       const heading = browserPage.locator('h1, .hero-heading, [data-testid="hero-heading"]');
@@ -112,7 +112,7 @@ test.describe("Homepage", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
 
       await expect(browserPage.locator("h1").first()).toBeVisible();
       await expect(browserPage.getByTestId("main-nav")).toBeVisible();
@@ -167,7 +167,7 @@ test.describe("Homepage", () => {
     test("should load within reasonable time", async ({ page: browserPage }) => {
       // Measure time to first byte and first contentful paint
       const startTime = Date.now();
-      await page.navigate("/");
+      await page.navigate("/en");
       const endTime = Date.now();
       
       const loadTime = endTime - startTime;

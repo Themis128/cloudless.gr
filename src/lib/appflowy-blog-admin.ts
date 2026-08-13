@@ -6,7 +6,10 @@
  * `/blog` frontend) so admin functionality cannot accidentally leak
  * through the public render path.
  *
- * All functions read AppFlowy config from SSM. They return [] / null on
+ * Editorial state is encoded in the page name prefix:
+ *   [Draft] / [Review] / [Archived] / bare title = Published
+ *
+ * All functions read AppFlowy config from SSM/env. They return [] / null on
  * any failure and log the error — never throw — so a transient AppFlowy
  * outage cannot 500 a Slack interaction handler.
  */
@@ -17,9 +20,10 @@ import {
   getDocument,
   extractDocText,
   isAppFlowyConfigured,
+  updateViewName,
 } from "./appflowy";
 
-/** The four select values that exist on the AppFlowy Blog Document Status field. */
+/** Editorial statuses used by the 3-layer newsletter Slack ops surface. */
 export type AppFlowyBlogStatus = "Draft" | "In Review" | "Published" | "Archived";
 
 export interface AppFlowyBlogDraft {
@@ -30,7 +34,7 @@ export interface AppFlowyBlogDraft {
   category: string;
   readTime: string;
   createdAt: string;
-  /** Direct AppFlowy app URL — opens the page in the user's AppFlowy workspace. */
+  /** Public blog URL when slug is known; Slack Block Kit link target. */
   url: string;
 }
 
@@ -65,13 +69,39 @@ function parseBlogFields(text: string): AppFlowyBlogDraft {
 }
 
 function isEditorialPage(name: string): boolean {
-  return /^\[Review\]\s/i.test(name) || /^\[Draft\]\s/i.test(name);
+  return /^\[(Review|Draft|Archived)\]\s/i.test(name);
 }
 
 function getStatusFromName(name: string): AppFlowyBlogStatus | "" {
   if (/^\[Review\]\s/i.test(name)) return "In Review";
   if (/^\[Draft\]\s/i.test(name)) return "Draft";
+  if (/^\[Archived\]\s/i.test(name)) return "Archived";
   return "";
+}
+
+function publicBlogUrl(slug: string): string {
+  return slug ? `https://cloudless.gr/en/blog/${slug}` : "";
+}
+
+function toDraft(
+  viewId: string,
+  viewName: string,
+  fields: AppFlowyBlogDraft,
+  lastEdited: string
+): AppFlowyBlogDraft {
+  const title = fields.title || stripPrefix(viewName);
+  const slug = fields.slug || slugify(title);
+  const status = getStatusFromName(viewName) || fields.status || "";
+  return {
+    id: viewId,
+    title,
+    slug,
+    status,
+    category: fields.category || "Cloud",
+    readTime: fields.readTime || "5 min read",
+    createdAt: fields.createdAt || lastEdited,
+    url: publicBlogUrl(slug),
+  };
 }
 
 export async function listEditorialPosts(): Promise<AppFlowyBlogDraft[]> {
@@ -93,23 +123,12 @@ export async function listEditorialPosts(): Promise<AppFlowyBlogDraft[]> {
         const doc = await getDocument(workspaceId, view.view_id);
         const text = await extractDocText(doc);
         const fields = parseBlogFields(text);
-        const status = getStatusFromName(view.name) || fields.status || "";
-        drafts.push({
-          id: view.view_id,
-          title: fields.title || stripPrefix(view.name),
-          slug: fields.slug || slugify(stripPrefix(view.name)),
-          status,
-          category: fields.category,
-          readTime: fields.readTime,
-          createdAt: fields.createdAt || view.last_edited_time,
-          url: "", // AppFlowy doesn't have public URLs like Notion
-        });
+        drafts.push(toDraft(view.view_id, view.name, fields, view.last_edited_time));
       } catch (err) {
         console.warn("[appflowy-blog-admin] Failed to parse editorial post:", err);
       }
     }
 
-    // Sort newest first
     return drafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (err) {
     console.error("[appflowy-blog-admin] listEditorialPosts error:", err);
@@ -122,6 +141,7 @@ function stripPrefix(name: string): string {
     .replace(/^\[Blog\]\s*/i, "")
     .replace(/^\[Review\]\s*/i, "")
     .replace(/^\[Draft\]\s*/i, "")
+    .replace(/^\[Archived\]\s*/i, "")
     .trim();
 }
 
@@ -150,40 +170,28 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
 
     const views = await listAllViewsDeep(workspaceId);
 
-    // Try to find by view_id first
     let view = views.find((v) => v.view_id === trimmed);
     if (view && isEditorialPage(view.name)) {
       const doc = await getDocument(workspaceId, view.view_id);
       const text = await extractDocText(doc);
-      const fields = parseBlogFields(text);
-      return {
-        id: view.view_id,
-        title: fields.title || stripPrefix(view.name),
-        slug: fields.slug || slugify(stripPrefix(view.name)),
-        status: getStatusFromName(view.name) || fields.status || "",
-        category: fields.category || "Cloud",
-        readTime: fields.readTime || "5 min read",
-        createdAt: fields.createdAt || view.last_edited_time,
-        url: "",
-      };
+      return toDraft(view.view_id, view.name, parseBlogFields(text), view.last_edited_time);
     }
 
-    // Slug lookup
-    view = views.find((v) => isEditorialPage(v.name) && slugify(stripPrefix(v.name)) === trimmed);
-    if (view) {
-      const doc = await getDocument(workspaceId, view.view_id);
-      const text = await extractDocText(doc);
-      const fields = parseBlogFields(text);
-      return {
-        id: view.view_id,
-        title: fields.title || stripPrefix(view.name),
-        slug: fields.slug || slugify(stripPrefix(view.name)),
-        status: getStatusFromName(view.name) || fields.status || "",
-        category: fields.category || "Cloud",
-        readTime: fields.readTime || "5 min read",
-        createdAt: fields.createdAt || view.last_edited_time,
-        url: "",
-      };
+    for (const v of views.filter((x) => isEditorialPage(x.name))) {
+      try {
+        const doc = await getDocument(workspaceId, v.view_id);
+        const text = await extractDocText(doc);
+        const draft = toDraft(v.view_id, v.name, parseBlogFields(text), v.last_edited_time);
+        if (
+          draft.slug === trimmed ||
+          slugify(draft.title) === trimmed ||
+          slugify(stripPrefix(v.name)) === trimmed
+        ) {
+          return draft;
+        }
+      } catch {
+        /* skip unreadable */
+      }
     }
 
     return null;
@@ -193,13 +201,25 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
   }
 }
 
+function statusToName(title: string, status: AppFlowyBlogStatus): string {
+  const clean = stripPrefix(title);
+  switch (status) {
+    case "Draft":
+      return `[Draft] ${clean}`;
+    case "In Review":
+      return `[Review] ${clean}`;
+    case "Archived":
+      return `[Archived] ${clean}`;
+    case "Published":
+      return clean;
+    default:
+      return clean;
+  }
+}
+
 /**
- * Flip the Status on an AppFlowy Blog Document.
- * Used by the Slack /cloudless-newsletter send flow to move a Draft into In Review
- * before triggering the publisher workflow.
- *
- * Returns true on success, false on failure (logged).
- * Note: Requires AppFlowy write API support.
+ * Flip editorial status by renaming the AppFlowy page prefix
+ * ([Draft] / [Review] / [Archived] / bare title = Published).
  */
 export async function setEditorialStatus(
   pageId: string,
@@ -208,10 +228,22 @@ export async function setEditorialStatus(
   try {
     if (!(await isAppFlowyConfigured())) return false;
 
-    // AppFlowy write API not yet implemented in appflowy.ts
-    // This would update the document's Status field
-    console.log("[appflowy-blog-admin] Would update status for", pageId, "to", status);
-    return false;
+    const workspaceId = await getPrimaryWorkspaceId();
+    if (!workspaceId) return false;
+
+    const views = await listAllViewsDeep(workspaceId);
+    const view = views.find((v) => v.view_id === pageId);
+    if (!view) {
+      console.error("[appflowy-blog-admin] setEditorialStatus: view not found", pageId);
+      return false;
+    }
+
+    const newName = statusToName(view.name, status);
+    const ok = await updateViewName(workspaceId, pageId, newName);
+    if (!ok) {
+      console.error("[appflowy-blog-admin] setEditorialStatus rename failed", pageId, status);
+    }
+    return ok;
   } catch (err) {
     console.error("[appflowy-blog-admin] setEditorialStatus error:", err);
     return false;
