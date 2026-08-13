@@ -64,7 +64,9 @@ export default function MetaPage() {
           <p className="font-mono text-sm text-yellow-400">
             Meta Ads is not configured. Add{" "}
             <code className="text-yellow-300">META_ACCESS_TOKEN</code> and{" "}
-            <code className="text-yellow-300">META_AD_ACCOUNT_ID</code> to AWS SSM.
+            <code className="text-yellow-300">META_AD_ACCOUNT_ID</code> to the Pi{" "}
+            <code className="text-yellow-300">cloudless-secrets</code> (workflow:
+            sync-campaign-ads-pi-secrets).
           </p>
         </div>
       </div>
