@@ -6,26 +6,16 @@
  */
 
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
-import { createPrivateKey } from "node:crypto";
 import { SignJWT } from "jose";
 import { readFileSync, unlinkSync } from "fs";
 import { BUCKET, r2Put } from "./_r2-config.mjs";
+import { loadGooglePrivateKey } from "./_google-sa-key.mjs";
+
 const SITE = process.env.GSC_SITE_URL || "https://cloudless.gr/";
 const EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
-let KEY = process.env.GOOGLE_PRIVATE_KEY?.trim() ?? "";
-if (KEY.startsWith("{")) {
-	try {
-		KEY = JSON.parse(KEY).private_key ?? KEY;
-	} catch {
-		/* keep raw */
-	}
-}
-if ((KEY.startsWith('"') && KEY.endsWith('"')) || (KEY.startsWith("'") && KEY.endsWith("'"))) {
-	KEY = KEY.slice(1, -1);
-}
-KEY = KEY.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
+const KEY_RAW = process.env.GOOGLE_PRIVATE_KEY?.trim() ?? "";
 
-if (!EMAIL || !KEY) {
+if (!EMAIL || !KEY_RAW) {
 	console.error("GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY not set");
 	process.exit(1);
 }
@@ -47,7 +37,7 @@ const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
 async function getAccessToken() {
 	const now = Math.floor(Date.now() / 1000);
-	const privateKey = createPrivateKey({ key: KEY, format: "pem" });
+	const privateKey = loadGooglePrivateKey(KEY_RAW);
 	const jwt = await new SignJWT({ iss: EMAIL, scope: SCOPE, aud: TOKEN_URL })
 		.setProtectedHeader({ alg: "RS256" })
 		.setIssuedAt(now)

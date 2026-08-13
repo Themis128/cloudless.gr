@@ -38,9 +38,13 @@ jobs:
 
     - name: Configure kubectl
       run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
+        # Runner env often sets KUBECONFIG=/etc/rancher/k3s/k3s.yaml (unreadable).
+        # Always pin to a home-owned config from KUBECONFIG_B64.
+        mkdir -p "$HOME/.kube"
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+        kubectl --kubeconfig="$HOME/.kube/config" get ns >/dev/null
 
     - name: Run AppFlowy-to-R2 sync
       working-directory: scripts/etl
@@ -49,7 +53,9 @@ jobs:
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
         CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-      run: node appflowy-to-r2.mjs
+      run: |
+        export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
+        node appflowy-to-r2.mjs
 
     - name: Notify Slack on failure
       if: failure()
