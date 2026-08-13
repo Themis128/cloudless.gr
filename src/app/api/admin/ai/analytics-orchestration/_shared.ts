@@ -197,9 +197,13 @@ export async function prepareOrchestration(
           confidence: "medium",
           freshness: snapshot.generatedAt,
         };
-        await bucket.put(insightObjectKey(ORCHESTRATION_DOMAIN), JSON.stringify(insightDoc, null, 2), {
-          httpMetadata: { contentType: "application/json" },
-        });
+        await bucket.put(
+          insightObjectKey(ORCHESTRATION_DOMAIN),
+          JSON.stringify(insightDoc, null, 2),
+          {
+            httpMetadata: { contentType: "application/json" },
+          }
+        );
       }
     } catch (err) {
       console.warn(
