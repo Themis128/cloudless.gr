@@ -31,10 +31,7 @@ export function normalizeGooglePrivateKeyPem(raw: string): string {
   }
 
   // Quotes from gh secret set / YAML pastes
-  if (
-    (key.startsWith('"') && key.endsWith('"')) ||
-    (key.startsWith("'") && key.endsWith("'"))
-  ) {
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.slice(1, -1).trim();
   }
 
