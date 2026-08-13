@@ -26,7 +26,7 @@
     "blog": "Blog",
     "contact": "Contact",
     "store": "Boutique",
-    "freeAudit": "Audit Gratuit",
+    "freeAudit": "Réserver un audit gratuit",
     "toggleMenu": "Ouvrir le menu",
     "language": "Langue",
     "signIn": "Connexion",
@@ -38,13 +38,18 @@
   "hero": {
     "badge": "v2.0 — Nouveaux clients acceptés",
     "titleStatic": "Ciel dégagé.",
-    "typingTexts": ["Zéro friction.", "Contrôle total.", "Vitesse pure.", "Résultats concrets."],
+    "typingTexts": [
+      "Zéro friction.",
+      "Contrôle total.",
+      "Vitesse pure.",
+      "Résultats concrets."
+    ],
     "subtitle": "Le cloud enterprise ? Trop cher. L'infrastructure DIY ? Trop risqué. Nous sommes la troisième voie — serverless, croissance data-driven, et mise à l'échelle adaptée aux équipes de 2 à 20 personnes.",
     "subtitleHighlight": "Enfin.",
-    "ctaPrimary": "Audit Gratuit",
+    "ctaPrimary": "Réserver un audit gratuit",
     "ctaSecondary": "Voir les Services",
-    "microCopy1": "Sans engagement. Des conseils concrets en 30 min.",
-    "microCopy2": "Tarifs transparents. Sans engagement.",
+    "microCopy1": "Sans engagement. Des conseils concrets en 30 minutes.",
+    "microCopy2": "Tarifs transparents. Sans lock-in.",
     "terminalTitle": "cloudless-cli v2.0"
   },
   "stats": {
@@ -57,14 +62,14 @@
     "resultsTitle": "Résultats en 14 Jours",
     "resultsDesc": "Des progrès mesurables dans les deux semaines suivant le lancement — ou nous continuons jusqu'à ce que vous les voyiez.",
     "noLockInTitle": "Sans Engagement",
-    "noLockInDesc": "Paiement mensuel. Résiliez quand vous voulez. Nous méritons votre confiance chaque mois.",
+    "noLockInDesc": "Paiement mensuel. Résiliez quand vous voulez. Nous gagnons votre confiance chaque mois.",
     "yourCodeTitle": "Votre Code Vous Appartient",
     "yourCodeDesc": "Documentation complète, prêt pour le transfert. Nous le construisons et il vous appartient — toujours."
   },
   "credibility": {
-    "builtBy": "Créé par Thémistocle Baltais",
-    "bio": "— Cloudflare Certified Cloud Architecte, 8+ ans d'expérience en infrastructure serverless et systèmes de croissance. J'ai fondé cloudless.gr parce que les startups méritent un cloud de qualité enterprise sans le prix enterprise ni les complications enterprise.",
-    "badgeAws": "Cloudflare Certifié",
+    "builtBy": "Créé par Themistoklis Baltzakis",
+    "bio": "— Architecte Cloud certifié Cloudflare, plus de 8 ans d'expérience en infrastructure serverless et systèmes de croissance. J'ai fondé cloudless.gr parce que les startups méritent un cloud de qualité entreprise sans le prix ni la bureaucratie d’une grande entreprise.",
+    "badgeAws": "Certifié Cloudflare",
     "badgeOss": "Contributeur Open-Source",
     "badgeCapacity": "5 places disponibles pour Q2 2026"
   },
@@ -75,24 +80,24 @@
     "subtitle": "De l'infrastructure au marketing, nous couvrons l'ensemble de la stack de croissance moderne.",
     "viewPricing": "Voir les tarifs et détails",
     "service1Title": "Architecture Cloud & Migration",
-    "service1Desc": "Concevez et migrez votre infrastructure vers Cloudflare, GCP ou Azure sans interruption. Évolutif, sécurisé, coûts optimisés.",
+    "service1Desc": "Conception et migration de votre infrastructure vers Cloudflare, GCP ou Azure sans interruption. Évolutif, sécurisé, coûts optimisés.",
     "service1Tag": "CLOUD",
     "service1For": "Pour les équipes qui paient 500€+/mois pour une infrastructure qu'elles ne comprennent pas.",
     "service2Title": "Développement Serverless",
-    "service2Desc": "Créez des applications event-driven qui évoluent automatiquement et ne coûtent rien au repos. Workers, D1, R2.",
+    "service2Desc": "Création d’applications event-driven qui évoluent automatiquement et ne coûtent rien au repos. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
     "service2For": "Pour les fondateurs fatigués de payer des serveurs inactifs 90% du temps.",
     "service3Title": "Analyse de Données & Tableaux de Bord",
-    "service3Desc": "Transformez vos données brutes en informations exploitables avec des dashboards personnalisés, des pipelines et du reporting en temps réel.",
+    "service3Desc": "Transformation de vos données brutes en informations exploitables avec des dashboards personnalisés, des pipelines et du reporting en temps réel.",
     "service3Tag": "ANALYTICS",
-    "service3For": "Pour les équipes qui prennent des décisions à l'instinct plutôt qu'aux données.",
+    "service3For": "Pour les équipes qui prennent des décisions à l'instinct plutôt que sur les données.",
     "service4Title": "IA & Marketing Digital",
-    "service4Desc": "Campagnes propulsées par l'IA, SEO, stratégie de contenu et marketing de performance qui génère une croissance mesurable.",
+    "service4Desc": "Campagnes propulsées par l'IA, SEO, stratégie de contenu et marketing de performance qui génèrent une croissance mesurable.",
     "service4Tag": "IA",
     "service4For": "Pour les startups qui dépensent en publicité sans savoir ce qui fonctionne vraiment."
   },
   "leadCapture": {
-    "notReady": "Pas prêt pour un appel ? Aucun problème.",
+    "notReady": "Pas encore prêt pour un appel ? Aucun problème.",
     "playbookTitle": "Obtenez notre Cloud Migration Playbook gratuit — le framework exact que nous utilisons avec nos clients.",
     "playbookCta": "Télécharger le Playbook"
   },
@@ -101,7 +106,7 @@
     "title": "Questions",
     "titleHighlight": "fréquentes",
     "q1": "Combien cela va-t-il réellement me coûter ?",
-    "a1": "Les services individuels vont de 800€ à 2 400€ selon le périmètre. Le pack complet est à 3 600€/mois. Pour comparaison : embaucher un ingénieur cloud coûte 5K–8K€/mois. Un CTO + un marketeur + un analyste data ? 20K+€/mois. Nous les remplaçons tous les trois pour une fraction du coût — et vous pouvez résilier à tout moment.",
+    "a1": "Les services individuels vont de 800€ à 2 400€ selon le périmètre. Le pack complet est à 3 600€/mois. Pour comparaison : embaucher un ingénieur cloud coûte 5K–8K€/mois. Un CTO + un marketeur + un analyste data ? 20K€+/mois. Nous les remplaçons tous les trois pour une fraction du coût — et vous pouvez résilier à tout moment.",
     "q2": "À qui ça s'adresse ? Suis-je le bon profil ?",
     "a2": "Nous travaillons idéalement avec des startups et PME qui ont dépassé le stade MVP — typiquement des équipes de 2 à 20 personnes avec un chiffre d'affaires de 50K–500K€. Vous avez un produit qui fonctionne, mais votre infrastructure est bricolée, votre marketing repose sur des suppositions, et vous n'avez pas de CTO. Si ça vous parle, l'audit gratuit vous dira exactement quoi faire ensuite.",
     "q3": "Et si je veux partir ?",
@@ -117,16 +122,16 @@
     "label": "[ À PROPOS ]",
     "title": "Rencontrez le",
     "titleHighlight": "fondateur",
-    "name": "Thémistocle Baltais",
+    "name": "Themistoklis Baltzakis",
     "role": "Architecte Cloud & Ingénieur Croissance",
     "bio": "Architecte cloud certifié avec une expérience pratique en Cloudflare Workers, architectures serverless, analyse de données et marketing propulsé par l'IA. J'aide les startups et PME à construire une infrastructure qui évolue sans les coûts enterprise."
   },
   "cta": {
     "title": "Prêt à passer en mode",
     "titleHighlight": "cloudless",
-    "subtitle": "Réservez un audit gratuit de 30 minutes. Nous examinerons votre configuration actuelle et vous montrerons exactement où vous surpayez, sous-performez, ou les deux.",
+    "subtitle": "Réservez un audit gratuit de 30 minutes. Nous examinerons votre configuration actuelle et vous montrerons exactement où vous payez trop cher, où les résultats ne suivent pas, ou les deux.",
     "subtext": "Sans argumentaire. Sans engagement. Juste des conseils concrets que vous pourrez utiliser même si vous ne nous recontactez jamais.",
-    "ctaPrimary": "Réserver Votre Audit Gratuit",
+    "ctaPrimary": "Réserver un audit gratuit",
     "ctaSecondary": "Voir les Tarifs"
   },
   "footer": {
@@ -149,7 +154,7 @@
     "subscribing": "Inscription...",
     "success": "C'est fait ! Vérifiez votre email.",
     "error": "Une erreur est survenue. Réessayez.",
-    "consent": "En vous abonnant, vous acceptez de recevoir notre newsletter et notre",
+    "consent": "En vous abonnant, vous acceptez de recevoir notre newsletter et acceptez notre",
     "unsubscribe": "Désabonnement à tout moment."
   },
   "contact": {
@@ -180,7 +185,7 @@
     "allCategories": "Tout",
     "noResults": "Aucun produit trouvé.",
     "perMonth": "/mois",
-    "oneTime": "unique"
+    "oneTime": "paiement unique"
   },
   "cart": {
     "title": "Votre Panier",
@@ -259,8 +264,8 @@
     "orderUpdates": "Mises à jour des commandes",
     "orderUpdatesDesc": "Confirmations, expédition et livraison",
     "newsletter": "Newsletter",
-    "newsletterDesc": "Astuces cloud, patterns serverless & growth hacks",
-    "productUpdates": "Mises à jour produites",
+    "newsletterDesc": "Astuces cloud, patterns serverless et astuces de croissance",
+    "productUpdates": "Mises à jour produit",
     "productUpdatesDesc": "Nouveaux services et fonctionnalités",
     "accountInfo": "Compte",
     "settingsSaved": "Paramètres enregistrés"
@@ -281,7 +286,7 @@
     "privacyTitle": "Politique de Confidentialité",
     "privacyIntro": "Cette Politique de Confidentialité explique comment Cloudless (\"nous\") collecte, utilise et protège vos données lorsque vous visitez cloudless.gr. Nous respectons le RGPD, la directive ePrivacy et le CCPA/CPRA.",
     "controllerTitle": "1. Responsable du Traitement",
-    "controllerText": "Le responsable du traitement est Cloudless, opéré par Thémistocle Baltais, basé en Grèce, UE. Contact :",
+    "controllerText": "Le responsable du traitement est Cloudless, opéré par Themistoklis Baltzakis, basé en Grèce, UE. Contact :",
     "controllerEmail": "Email : tbaltzakis@cloudless.gr",
     "dataCollectedTitle": "2. Données Collectées",
     "dataProvidedTitle": "Données que vous fournissez :",
@@ -318,7 +323,7 @@
     "termsTitle": "Conditions d'Utilisation",
     "termsIntro": "Ces Conditions d'Utilisation régissent votre accès et utilisation de cloudless.gr. En utilisant notre site, vous acceptez ces Conditions.",
     "providerTitle": "1. Fournisseur de Services",
-    "providerText": "Cloudless est opéré par Thémistocle Baltais, Grèce, UE. Contact : tbaltzakis@cloudless.gr.",
+    "providerText": "Cloudless est opéré par Themistoklis Baltzakis, Grèce, UE. Contact : tbaltzakis@cloudless.gr.",
     "servicesTitle": "2. Services & Produits",
     "servicesText": "Nous offrons des services de conseil cloud, développement serverless, data analytics et marketing IA. Les prix sont en Euros (EUR), TVA incluse.",
     "ordersTitle": "3. Commandes & Paiement",
@@ -400,7 +405,7 @@
     "rejectAll": "Refuser les optionnels",
     "customise": "Personnaliser",
     "settingsTitle": "Préférences de Cookies",
-    "settingsDesc": "Choisissez quels cookies, vous souhaitez autoriser.",
+    "settingsDesc": "Choisissez quels cookies vous souhaitez autoriser.",
     "necessary": "Nécessaires",
     "necessaryDesc": "Essentiels au fonctionnement du site.",
     "alwaysOn": "Toujours actifs",
@@ -418,7 +423,7 @@
   },
   "blog": {
     "label": "[ BLOG ]",
-    "titleStatic": "Insights &",
+    "titleStatic": "Analyses &",
     "titleHighlight": "Guides pratiques",
     "subtitle": "Architecture cloud, serverless, analytics et marketing IA — rédigés pour les fondateurs et équipes techniques qui veulent avancer vite.",
     "searchPlaceholder": "Rechercher des articles…",
