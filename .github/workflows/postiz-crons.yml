@@ -84,9 +84,19 @@ jobs:
       run: |
         set -euo pipefail
         # SafeDeploy / pull-promote can 502 for 1–3 minutes. Wait before cron.
+        # curl -w '%{http_code}' prints 000 on connect failure AND exits non-zero;
+        # `|| echo 000` then concatenates → "000000", which misses the 502|000 case.
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         for i in $(seq 1 12); do
-          CODE=$(curl -sS -o /tmp/pi-health.json -w '%{http_code}' --max-time 10 \
-            "$BASE_URL/api/health" || echo "000")
+          CODE=$(http_code /tmp/pi-health.json 10 "$BASE_URL/api/health")
           if [ "$CODE" = "200" ]; then
             echo "pi-origin healthy (attempt $i)"
             cat /tmp/pi-health.json || true
@@ -104,14 +114,23 @@ jobs:
         CRON_SECRET: ${{ steps.secret.outputs.value }}
       run: |
         set -euo pipefail
+        # See "Wait for pi-origin health": never `|| echo 000` after curl -w http_code.
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         echo "Calling $BASE_URL/api/cron/postiz-sync"
         CODE="000"
         BODY="{}"
         for i in $(seq 1 8); do
-          CODE=$(curl -sS -o /tmp/postiz-sync.json -w '%{http_code}' \
-            --max-time 60 \
+          CODE=$(http_code /tmp/postiz-sync.json 60 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "$BASE_URL/api/cron/postiz-sync" || echo "000")
+            "$BASE_URL/api/cron/postiz-sync")
           BODY=$(cat /tmp/postiz-sync.json 2>/dev/null || echo '{}')
           case "$CODE" in
             2*)
@@ -142,8 +161,7 @@ jobs:
         done
         # Origin still unreachable → soft-skip (next schedule retries).
         # Health OK + cron 502 = Postiz upstream failure → hard fail.
-        HEALTH=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
-          "$BASE_URL/api/health" || echo "000")
+        HEALTH=$(http_code /dev/null 10 "$BASE_URL/api/health")
         if [ "$HEALTH" != "200" ]; then
           echo "::warning::pi-origin unhealthy (HTTP $HEALTH) after retries — soft-skipping postiz-sync"
           echo "## Postiz sync (origin unhealthy — soft-skip)" >> "$GITHUB_STEP_SUMMARY"
@@ -158,14 +176,22 @@ jobs:
         CRON_SECRET: ${{ steps.secret.outputs.value }}
       run: |
         set -euo pipefail
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
         CODE="000"
         BODY="{}"
         for i in $(seq 1 8); do
-          CODE=$(curl -sS -o /tmp/postiz-oauth.json -w '%{http_code}' \
-            --max-time 30 \
+          CODE=$(http_code /tmp/postiz-oauth.json 30 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "$BASE_URL/api/cron/postiz-oauth-check" || echo "000")
+            "$BASE_URL/api/cron/postiz-oauth-check")
           BODY=$(cat /tmp/postiz-oauth.json 2>/dev/null || echo '{}')
           case "$CODE" in
             2*)
@@ -192,8 +218,7 @@ jobs:
               ;;
           esac
         done
-        HEALTH=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
-          "$BASE_URL/api/health" || echo "000")
+        HEALTH=$(http_code /dev/null 10 "$BASE_URL/api/health")
         if [ "$HEALTH" != "200" ]; then
           echo "::warning::pi-origin unhealthy (HTTP $HEALTH) after retries — soft-skipping oauth-check"
           exit 0
