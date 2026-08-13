@@ -54,7 +54,14 @@ export async function POST(request: Request) {
   try {
     const { name, email, company, service, message, phone, attribution } =
       parsed as ContactRequestBody;
-    if (!name || !email || message == null || message === "") {
+
+    // Strict types — coerce-and-continue lets arrays/numbers reach escapeHtml
+    // and blow up with 500 (str.replace is not a function).
+    if (typeof name !== "string" || typeof email !== "string" || typeof message !== "string") {
+      return Response.json({ error: "Name, email, and message must be strings." }, { status: 400 });
+    }
+
+    if (!name.trim() || !email.trim() || message === "") {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
 
@@ -62,7 +69,15 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
-    const messageText = typeof message === "string" ? message : String(message);
+    const MAX_MESSAGE_CHARS = 10_000;
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return Response.json(
+        { error: `Message must be at most ${MAX_MESSAGE_CHARS} characters.` },
+        { status: 400 }
+      );
+    }
+
+    const messageText = message;
 
     // Reject whitespace-only message to avoid sending empty emails
     if (!messageText.trim()) {

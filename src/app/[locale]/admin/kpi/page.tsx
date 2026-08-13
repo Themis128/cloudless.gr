@@ -195,7 +195,11 @@ export default function KpiDashboard() {
 
           {/* Notion site analytics */}
           <section>
-            <SectionHeader title="Site Events (7 days)" icon="📈" href="/admin/appflowy/analytics" />
+            <SectionHeader
+              title="Site Events (7 days)"
+              icon="📈"
+              href="/admin/appflowy/analytics"
+            />
             {data.analytics ? (
               <>
                 <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

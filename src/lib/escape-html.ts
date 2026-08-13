@@ -2,7 +2,8 @@
  * Escapes HTML special characters to prevent XSS in email bodies.
  */
 export function escapeHtml(str: string): string {
-  return str
+  // Coerce so a non-string slip-through never throws (str.replace is not a function).
+  return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
