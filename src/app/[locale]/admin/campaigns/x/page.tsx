@@ -62,7 +62,10 @@ export default function XPage() {
         <BackLink />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            X is not configured. Add <code className="text-yellow-300">X_API_KEY</code> to AWS SSM.
+            X is not configured. Add <code className="text-yellow-300">X_API_KEY</code> and{" "}
+            <code className="text-yellow-300">X_ACCESS_TOKEN</code> to the Pi{" "}
+            <code className="text-yellow-300">cloudless-secrets</code> (workflow:
+            sync-campaign-ads-pi-secrets).
           </p>
         </div>
       </div>

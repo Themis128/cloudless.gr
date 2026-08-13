@@ -76,7 +76,9 @@ export default function GoogleCampaignsPage() {
           <p className="font-mono text-sm text-yellow-400">
             Google Ads is not configured. Add{" "}
             <code className="text-yellow-300">GOOGLE_ADS_DEVELOPER_TOKEN</code> and{" "}
-            <code className="text-yellow-300">GOOGLE_ADS_CUSTOMER_ID</code> to AWS SSM.
+            <code className="text-yellow-300">GOOGLE_ADS_CUSTOMER_ID</code> to the Pi{" "}
+            <code className="text-yellow-300">cloudless-secrets</code> (workflow:
+            sync-campaign-ads-pi-secrets).
           </p>
         </div>
       </div>

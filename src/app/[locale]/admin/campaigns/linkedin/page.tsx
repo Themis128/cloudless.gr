@@ -75,7 +75,9 @@ export default function LinkedInPage() {
           <p className="font-mono text-sm text-yellow-400">
             LinkedIn is not configured. Add{" "}
             <code className="text-yellow-300">LINKEDIN_ACCESS_TOKEN</code> and{" "}
-            <code className="text-yellow-300">LINKEDIN_AD_ACCOUNT_ID</code> to AWS SSM.
+            <code className="text-yellow-300">LINKEDIN_AD_ACCOUNT_ID</code> to the Pi{" "}
+            <code className="text-yellow-300">cloudless-secrets</code> (workflow:
+            sync-campaign-ads-pi-secrets).
           </p>
         </div>
       </div>
