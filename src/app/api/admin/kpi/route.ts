@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
       note: "Task KPIs come from appflowy_activity gold when present.",
     },
     insight: executive
-      ? { summary: executive.summary, bullets: executive.bullets, generated_at: executive.generated_at }
+      ? {
+          summary: executive.summary,
+          bullets: executive.bullets,
+          generated_at: executive.generated_at,
+        }
       : null,
     errors: kpi.errors,
     fetchedAt: kpi.fetchedAt,

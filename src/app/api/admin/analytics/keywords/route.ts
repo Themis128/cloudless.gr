@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       _filters: { days, limit },
     });
   } catch (err) {
-    console.error("[GSC keywords] lake error:", JSON.stringify(String((err as Error)?.message ?? err)));
+    console.error(
+      "[GSC keywords] lake error:",
+      JSON.stringify(String((err as Error)?.message ?? err))
+    );
     return NextResponse.json({ error: "Failed to load keywords from datalake." }, { status: 500 });
   }
 }

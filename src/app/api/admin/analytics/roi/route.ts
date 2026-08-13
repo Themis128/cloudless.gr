@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(summary);
   } catch (err) {
     console.error("[ROI] lake summary failed:", err);
-    return NextResponse.json({ error: "Failed to build ROI summary from datalake." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to build ROI summary from datalake." },
+      { status: 500 }
+    );
   }
 }

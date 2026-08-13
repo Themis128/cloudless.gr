@@ -21,9 +21,7 @@ import {
 
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
 
-export async function getGoldSection(
-  section: string
-): Promise<DatalakeSectionResult | null> {
+export async function getGoldSection(section: string): Promise<DatalakeSectionResult | null> {
   const dash = await getDatalakeDashboard({});
   return dash.sections.find((s) => s.section === section) ?? null;
 }
@@ -225,7 +223,7 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
           mrr: null,
           rows: stripeRows.slice(0, 30),
         },
-    attribution: attribution?.error ? null : attribution?.rows ?? [],
+    attribution: attribution?.error ? null : (attribution?.rows ?? []),
     sectionsMissing: dash.sections.filter((s) => s.error).map((s) => s.section),
   };
 }
@@ -259,10 +257,31 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
       platformLeads: linkedinRows.reduce((a, r) => a + (Number(r.leads ?? r.conversions) || 0), 0),
       error: linkedin?.error,
     },
-    { channel: "google", configured: false, spendCents: 0, impressions: 0, clicks: 0, platformLeads: 0 },
-    { channel: "tiktok", configured: false, spendCents: 0, impressions: 0, clicks: 0, platformLeads: 0 },
+    {
+      channel: "google",
+      configured: false,
+      spendCents: 0,
+      impressions: 0,
+      clicks: 0,
+      platformLeads: 0,
+    },
+    {
+      channel: "tiktok",
+      configured: false,
+      spendCents: 0,
+      impressions: 0,
+      clicks: 0,
+      platformLeads: 0,
+    },
     { channel: "x", configured: false, spendCents: 0, impressions: 0, clicks: 0, platformLeads: 0 },
-    { channel: "meta", configured: false, spendCents: 0, impressions: 0, clicks: 0, platformLeads: 0 },
+    {
+      channel: "meta",
+      configured: false,
+      spendCents: 0,
+      impressions: 0,
+      clicks: 0,
+      platformLeads: 0,
+    },
   ];
 
   const totalsSpend = channels.reduce((a, c) => a + c.spendCents, 0);
@@ -284,7 +303,9 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
       revenueCents: stripe?.error ? null : revenueCents,
       costPerLeadCents: null,
       roas:
-        totalsSpend > 0 && !stripe?.error ? Math.round((revenueCents / totalsSpend) * 100) / 100 : null,
+        totalsSpend > 0 && !stripe?.error
+          ? Math.round((revenueCents / totalsSpend) * 100) / 100
+          : null,
     },
     notes: [
       "ROI is lake-backed. Google/TikTok/X/Meta channels appear when their silver ETL lands.",
