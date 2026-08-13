@@ -42,10 +42,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
         /* fall through to PEM checks */
       }
     }
-    if (
-      (key.startsWith('"') && key.endsWith('"')) ||
-      (key.startsWith("'") && key.endsWith("'"))
-    ) {
+    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
       key = key.slice(1, -1).replace(/\\n/g, "\n").trim();
     }
     if (!key.includes("BEGIN")) {
