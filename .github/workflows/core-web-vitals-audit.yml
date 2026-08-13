@@ -116,8 +116,45 @@ jobs:
         done
         echo "base_url=${BASE}" >> "$GITHUB_OUTPUT"
 
+    # cloudless-app uses Recreate — a secret sync / probe patch / deploy mid-audit
+    # drops NodePort briefly and Chrome surfaces CHROME_INTERSTITIAL_ERROR
+    # (chrome-error://chromewebdata/). Re-gate immediately before LHCI and once
+    # on retry so install/cache time does not race a rollout.
+    - name: Wait for stable origin (pre-Lighthouse)
+      env:
+        BASE: ${{ steps.warm.outputs.base_url }}
+      run: |
+        set -euo pipefail
+        if command -v kubectl >/dev/null 2>&1; then
+          kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s || true
+        elif command -v k3s >/dev/null 2>&1; then
+          sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s || true
+        fi
+        ok=0
+        for i in $(seq 1 36); do
+          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
+          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+            -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
+            "${BASE}/en/store" || echo 000)
+          echo "stability check $i: health=$H store=$S"
+          if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
+            ok=$((ok + 1))
+            if [[ "$ok" -ge 3 ]]; then
+              echo "origin stable"
+              exit 0
+            fi
+            sleep 2
+            continue
+          fi
+          ok=0
+          sleep 5
+        done
+        echo "::error::origin never stabilized on ${BASE}"
+        exit 1
+
     - name: Run Lighthouse on key routes
       id: lhci
+      continue-on-error: true
       uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18         # v12
       with:
         configPath: .github/lighthouserc.cjs
@@ -131,11 +168,59 @@ jobs:
         budgetPath: .github/lighthouse-budget.json
         uploadArtifacts: true
         temporaryPublicStorage: true
+
+    - name: Re-stabilize origin after Lighthouse blip
+      if: steps.lhci.outcome == 'failure'
+      env:
+        BASE: ${{ steps.warm.outputs.base_url }}
+      run: |
+        set -euo pipefail
+        echo "::warning::Lighthouse collect failed (often CHROME_INTERSTITIAL during Recreate). Re-gating origin then retrying once."
+        ok=0
+        for i in $(seq 1 36); do
+          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
+          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+            -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
+            "${BASE}/en/store" || echo 000)
+          echo "retry gate $i: health=$H store=$S"
+          if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
+            ok=$((ok + 1))
+            [[ "$ok" -ge 3 ]] && exit 0
+            sleep 2
+            continue
+          fi
+          ok=0
+          sleep 5
+        done
+        exit 1
+
+    - name: Retry Lighthouse once
+      id: lhci_retry
+      if: steps.lhci.outcome == 'failure'
+      uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18         # v12
+      with:
+        configPath: .github/lighthouserc.cjs
+        urls: |
+          ${{ steps.warm.outputs.base_url }}/en
+          ${{ steps.warm.outputs.base_url }}/en/services
+          ${{ steps.warm.outputs.base_url }}/en/contact
+          ${{ steps.warm.outputs.base_url }}/en/store
+        budgetPath: .github/lighthouse-budget.json
+        uploadArtifacts: true
+        temporaryPublicStorage: true
+
     - name: Surface per-route CWV scores inline
       env:
-        MANIFEST: ${{ steps.lhci.outputs.manifest }}
+        MANIFEST: ${{ steps.lhci_retry.outputs.manifest || steps.lhci.outputs.manifest }}
         BASE_URL: ${{ steps.warm.outputs.base_url }}
+        LHCI_PRIMARY: ${{ steps.lhci.outcome }}
+        LHCI_RETRY: ${{ steps.lhci_retry.outcome }}
       run: |
+        set -euo pipefail
+        if [[ -z "${MANIFEST:-}" ]]; then
+          echo "::error::No Lighthouse manifest (primary=${LHCI_PRIMARY} retry=${LHCI_RETRY:-n/a})"
+          exit 1
+        fi
         # Group multi-run manifest by URL and reduce to the median per metric.
         MEDIANS=$(echo "$MANIFEST" | jq '[
           group_by(.url)[]
