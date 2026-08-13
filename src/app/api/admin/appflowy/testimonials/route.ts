@@ -1,44 +1,13 @@
-/**
- * /api/admin/appflowy/testimonials — backed by AppFlowy
- */
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { listAllWorkspaces, listWorkspaceViews, AppFlowyNotConfiguredError } from "@/lib/appflowy";
+import { getAllTestimonialsAdmin } from "@/lib/appflowy-testimonials";
+import { createAppFlowyAdminHandlers } from "@/lib/appflowy-admin-cms-handlers";
 
-export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) return auth.response;
-
-  try {
-    const workspaceId = (await listAllWorkspaces())[0]?.workspace_id;
-    if (!workspaceId) {
-      return NextResponse.json({ testimonials: [], count: 0 });
-    }
-
-    const views = await listWorkspaceViews(workspaceId);
-    const testimonials = views.map((v) => ({
-      id: v.view_id,
-      name: v.name,
-      url: `/appflowy/view/${v.view_id}`,
-    }));
-
-    return NextResponse.json({ testimonials, count: testimonials.length });
-  } catch (err) {
-    if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ testimonials: [], count: 0 });
-    }
-    return NextResponse.json({ error: "Failed to list testimonials" }, { status: 500 });
-  }
-}
-
-export async function POST() {
-  return NextResponse.json({ error: "Create via AppFlowy UI" }, { status: 501 });
-}
-
-export async function PATCH() {
-  return NextResponse.json({ ok: true });
-}
-
-export async function DELETE() {
-  return NextResponse.json({ error: "Delete via AppFlowy UI" }, { status: 501 });
-}
+export const { GET, POST, PATCH, DELETE } = createAppFlowyAdminHandlers({
+  surface: "Testimonials",
+  listKey: "testimonials",
+  list: getAllTestimonialsAdmin,
+  createRequired: {
+    field: "name",
+    message: "name is required",
+    read: (body) => body.name,
+  },
+});

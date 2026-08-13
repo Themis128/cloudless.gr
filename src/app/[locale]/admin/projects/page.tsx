@@ -2,7 +2,23 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import type { Project, Task, ProjectStatus, TaskStatus } from "@/lib/notion-projects";
+import type { Project, Task, ProjectStatus, TaskStatus } from "@/lib/appflowy-projects";
+
+async function readJson<T>(res: Response): Promise<T> {
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      res.status === 404
+        ? "API route missing — expected AppFlowy projects/tasks endpoints"
+        : `Expected JSON, got ${contentType || "unknown"} (HTTP ${res.status})`
+    );
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `HTTP ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
 
 type Tab = "projects" | "tasks";
 
@@ -67,9 +83,8 @@ export default function AdminProjectsPage() {
     setLoadingProjects(true);
     setErrorProjects(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { projects: Project[] } = await res.json();
+      const res = await fetchWithAuth("/api/admin/appflowy/projects");
+      const data = await readJson<{ projects: Project[] }>(res);
       setProjects(data.projects ?? []);
     } catch (err) {
       setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
@@ -82,9 +97,8 @@ export default function AdminProjectsPage() {
     setLoadingTasks(true);
     setErrorTasks(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { tasks: Task[] } = await res.json();
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks");
+      const data = await readJson<{ tasks: Task[] }>(res);
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {
@@ -109,12 +123,15 @@ export default function AdminProjectsPage() {
   async function updateProjectStatus(id: string, status: ProjectStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
       });
+      await readJson<{ ok: boolean }>(res);
       setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+    } catch (err) {
+      setErrorProjects(err instanceof Error ? err.message : "Failed to update project");
     } finally {
       setUpdatingId(null);
     }
@@ -123,12 +140,15 @@ export default function AdminProjectsPage() {
   async function updateTaskStatus(id: string, status: TaskStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/notion/tasks", {
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
       });
+      await readJson<{ ok: boolean }>(res);
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+    } catch (err) {
+      setErrorTasks(err instanceof Error ? err.message : "Failed to update task");
     } finally {
       setUpdatingId(null);
     }
@@ -143,7 +163,7 @@ export default function AdminProjectsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Projects & Tasks</h1>
         <p className="font-body mt-1 text-slate-400">
-          Manage projects and tasks from your Notion workspace.
+          Manage projects and tasks from your AppFlowy workspace.
         </p>
       </div>
 
@@ -202,7 +222,7 @@ export default function AdminProjectsPage() {
           )}
           {!loadingProjects && projects.length === 0 && !errorProjects && (
             <div className="bg-void-light/30 rounded-xl border border-slate-800 py-12 text-center">
-              <p className="font-mono text-sm text-slate-500">No projects in Notion yet.</p>
+              <p className="font-mono text-sm text-slate-500">No projects in AppFlowy yet.</p>
             </div>
           )}
           {!loadingProjects && projects.length > 0 && (
@@ -310,7 +330,7 @@ export default function AdminProjectsPage() {
           )}
           {!loadingTasks && fetchedTasks && tasks.length === 0 && !errorTasks && (
             <div className="bg-void-light/30 rounded-xl border border-slate-800 py-12 text-center">
-              <p className="font-mono text-sm text-slate-500">No tasks in Notion yet.</p>
+              <p className="font-mono text-sm text-slate-500">No tasks in AppFlowy yet.</p>
             </div>
           )}
           {!loadingTasks && tasks.length > 0 && (

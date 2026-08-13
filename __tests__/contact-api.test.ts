@@ -99,4 +99,36 @@ describe("POST /api/contact", () => {
     const data = await response.json();
     expect(data.success).toBe(true);
   });
+
+  it("returns 400 for oversized messages", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Themis",
+        email: "themis@test.com",
+        message: "x".repeat(15_000),
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    expect(mockSendEmailResend).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for non-string field types", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: 42,
+        email: "themis@test.com",
+        message: ["a", "b"],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    expect(mockSendEmailResend).not.toHaveBeenCalled();
+  });
 });
