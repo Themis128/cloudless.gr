@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
+import {
+  adminAiNotConfiguredResponse,
+  generateAdminAiText,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 
 interface AudienceRequest {
   description?: string;
@@ -28,9 +32,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   const prompt = `You are a digital marketing targeting expert for Cloudless.gr, a Greek digital agency specialising in AI-powered marketing.
@@ -90,16 +93,16 @@ Respond with a JSON object (no markdown fences, just raw JSON) with this structu
 Only include the platforms that were requested. Tailor recommendations for the Greek market unless the description specifies otherwise.`;
 
   try {
-    const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
+    const { text, provider } = await generateAdminAiText(prompt, { maxTokens: 1_500 });
     let targeting: unknown;
     try {
       targeting = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
     } catch {
       targeting = { raw: text };
     }
-    return NextResponse.json({ targeting });
+    return NextResponse.json({ targeting, provider });
   } catch (e) {
-    console.error("[ai/audience] Claude call failed:", e);
+    console.error("[ai/audience] generation failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

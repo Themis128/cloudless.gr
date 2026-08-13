@@ -228,14 +228,75 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
     },
     sentryReport(cfg),
     {
-      id: "anthropic",
-      name: "Anthropic (Claude AI)",
+      id: "workers-ai",
+      name: "Cloudflare Workers AI",
       category: "ai",
-      status: configuredIf(cfg.ANTHROPIC_API_KEY),
-      message: cfg.ANTHROPIC_API_KEY
-        ? undefined
-        : "Add ANTHROPIC_API_KEY to SSM or .env.local to enable AI features (report insights, ad copy, audience analysis).",
-      setupUrl: "https://console.anthropic.com/settings/keys",
+      status: configuredIf(
+        Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
+      ),
+      message:
+        process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
+          ? undefined
+          : "Set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (Workers AI Read+Run) for Marketing Hub AI.",
+      setupUrl: "https://dash.cloudflare.com/?to=/:account/ai",
+    },
+    {
+      id: "gemini",
+      name: "Google Gemini (AI fallback)",
+      category: "ai",
+      status: configuredIf(Boolean(cfg.GEMINI_API_KEY || process.env.GEMINI_API_KEY)),
+      message:
+        cfg.GEMINI_API_KEY || process.env.GEMINI_API_KEY
+          ? undefined
+          : "Optional fallback when Workers AI is unavailable. Set GEMINI_API_KEY.",
+      setupUrl: "https://aistudio.google.com/apikey",
+    },
+    {
+      id: "turnstile",
+      name: "Cloudflare Turnstile",
+      category: "ai",
+      status: configuredIf(
+        Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+      ),
+      message:
+        process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+          ? undefined
+          : "Set NEXT_PUBLIC_TURNSTILE_SITE_KEY + TURNSTILE_SECRET_KEY to bot-filter contact/signup/newsletter.",
+      setupUrl: "https://dash.cloudflare.com/?to=/:account/turnstile",
+    },
+    {
+      id: "ai-gateway",
+      name: "Cloudflare AI Gateway",
+      category: "ai",
+      status: configuredIf(Boolean(process.env.CLOUDFLARE_AI_GATEWAY_ID)),
+      message: process.env.CLOUDFLARE_AI_GATEWAY_ID
+        ? "Workers AI calls route through AI Gateway (cache + logs)."
+        : "Optional: set CLOUDFLARE_AI_GATEWAY_ID to front Workers AI with caching/rate limits.",
+      setupUrl: "https://dash.cloudflare.com/?to=/:account/ai/ai-gateway",
+    },
+    {
+      id: "vectorize",
+      name: "Cloudflare Vectorize (admin RAG)",
+      category: "ai",
+      status: configuredIf(
+        Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
+      ),
+      message:
+        "Index AppFlowy FAQs/docs via POST /api/admin/ai/rag/sync (CLOUDFLARE_VECTORIZE_INDEX).",
+      setupUrl: "https://dash.cloudflare.com/?to=/:account/vectorize",
+    },
+    {
+      id: "espocrm-queue",
+      name: "EspoCRM Queues fan-out",
+      category: "ai",
+      status: configuredIf(
+        Boolean(process.env.ESPOCRM_QUEUE_PRODUCER_URL && process.env.ESPOCRM_QUEUE_PRODUCER_SECRET)
+      ),
+      message:
+        process.env.ESPOCRM_QUEUE_PRODUCER_URL && process.env.ESPOCRM_QUEUE_PRODUCER_SECRET
+          ? "Webhooks enqueue to workers/espocrm-fanout."
+          : "Optional: set ESPOCRM_QUEUE_PRODUCER_URL + SECRET (see workers/espocrm-fanout).",
+      setupUrl: "https://dash.cloudflare.com/?to=/:account/workers/queues",
     },
   ];
 }

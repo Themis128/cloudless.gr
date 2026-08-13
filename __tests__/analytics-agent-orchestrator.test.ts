@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { callClaudeMock } = vi.hoisted(() => ({
-  callClaudeMock: vi.fn(),
+const { generateAdminAiTextMock } = vi.hoisted(() => ({
+  generateAdminAiTextMock: vi.fn(),
 }));
 
-vi.mock("@/lib/anthropic", () => ({
-  callClaude: callClaudeMock,
+vi.mock("@/lib/admin-ai", () => ({
+  generateAdminAiText: generateAdminAiTextMock,
 }));
 
 describe("analytics-agent-orchestrator", () => {
@@ -94,8 +94,8 @@ describe("analytics-agent-orchestrator", () => {
     });
   });
 
-  it("falls back to deterministic insights when Claude returns invalid JSON", async () => {
-    callClaudeMock.mockResolvedValue("not json");
+  it("falls back to deterministic insights when AI returns invalid JSON", async () => {
+    generateAdminAiTextMock.mockResolvedValue({ text: "not json", provider: "workers-ai" });
     const { runAnalyticsAgentOrchestration } = await import("@/lib/analytics-agent-orchestrator");
 
     const result = await runAnalyticsAgentOrchestration({
@@ -141,11 +141,10 @@ describe("analytics-agent-orchestrator", () => {
         ],
       },
       connectors: ["quicksight", "metabase"],
-      apiKey: "test-key",
       goals: ["Reduce payment failures"],
     });
 
-    expect(callClaudeMock).toHaveBeenCalledOnce();
+    expect(generateAdminAiTextMock).toHaveBeenCalledOnce();
     expect(result.workflow.map((step) => step.step)).toEqual([
       "collect_data",
       "preprocess_data",

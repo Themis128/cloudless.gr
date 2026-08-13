@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { isValidPlan } from "@/lib/plans";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 function SignUpForm() {
   const [locale] = useCurrentLocale();
@@ -51,6 +52,8 @@ function SignUpForm() {
   // 5-min countdown — seconds remaining until auto-resend fires
   const [secondsLeft, setSecondsLeft] = useState(0);
   const autoResendFiredRef = useRef(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const onTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +71,12 @@ function SignUpForm() {
       const res = await globalThis.fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName: fullName || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          fullName: fullName || undefined,
+          turnstileToken: turnstileToken ?? undefined,
+        }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; token?: string };
       if (!res.ok) {
@@ -349,6 +357,7 @@ function SignUpForm() {
                     placeholder={t("auth.reenterPassword", "Re-enter password")}
                   />
                 </div>
+                <TurnstileWidget onToken={onTurnstile} className="my-2" />
                 <button
                   type="submit"
                   disabled={submitting}

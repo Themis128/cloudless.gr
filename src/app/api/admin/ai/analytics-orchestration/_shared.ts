@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getAnthropicApiKey } from "@/lib/anthropic";
+import { isAdminAiConfiguredAsync } from "@/lib/admin-ai";
 import {
   runAnalyticsAgentOrchestration,
   type AnalyticsConnector,
@@ -49,11 +49,16 @@ export async function prepareOrchestration(
     };
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
+  if (!(await isAdminAiConfiguredAsync())) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 }),
+      response: NextResponse.json(
+        {
+          error:
+            "Admin AI not configured. Set Cloudflare Workers AI (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN) or GEMINI_API_KEY.",
+        },
+        { status: 503 }
+      ),
     };
   }
 
@@ -62,7 +67,6 @@ export async function prepareOrchestration(
     const orchestration = await runAnalyticsAgentOrchestration({
       snapshot,
       connectors: [...connectors],
-      apiKey,
       goals,
     });
     return { ok: true, data: { snapshot, orchestration, reportTitle } };
