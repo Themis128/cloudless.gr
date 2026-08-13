@@ -63,11 +63,12 @@ function isPrivateOriginHost(host: string): boolean {
   return false;
 }
 
-/** True when `nextUrl.origin` resolved to the prod-leaked CloudFront origin
+/** True when `nextUrl.origin` resolved to a listen-bind or CDN leak
  *  rather than the canonical apex. */
 function isProdLeakedOrigin(origin: string): boolean {
   try {
-    return new URL(origin).hostname.endsWith(".cloudfront.net");
+    const hostname = new URL(origin).hostname;
+    return hostname.endsWith(".cloudfront.net") || hostname === "0.0.0.0" || hostname === "::";
   } catch {
     return false;
   }

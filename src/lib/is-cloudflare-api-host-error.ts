@@ -4,7 +4,12 @@
  */
 export function isCloudflareApiHostError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  if (msg.includes("EAI_AGAIN") || msg.includes("fetch failed")) {
+  if (
+    msg.includes("EAI_AGAIN") ||
+    msg.includes("fetch failed") ||
+    msg.includes("CLOUDFLARE_API_TOKEN") ||
+    msg.includes("remote proxy session")
+  ) {
     return true;
   }
   for (const match of msg.matchAll(/https?:\/\/[^\s)'"<>]+/gi)) {

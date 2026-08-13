@@ -61,7 +61,7 @@ export const URL_PATHS = {
   privacy: "/en/privacy",
   terms: "/en/terms",
   cookies: "/en/cookies",
-  refund: "/en/refund-policy",
+  refund: "/en/refund",
 };
 
 export const WAIT_TIMES = {

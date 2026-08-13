@@ -7,6 +7,13 @@ describe("isCloudflareApiHostError", () => {
       true
     );
     expect(isCloudflareApiHostError(new Error("TypeError: fetch failed"))).toBe(true);
+    expect(
+      isCloudflareApiHostError(
+        new Error(
+          "Failed to start the remote proxy session. Error reloading remote server: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
+        )
+      )
+    ).toBe(true);
   });
 
   it("matches hostname via URL parse, not substring spoof hosts", () => {

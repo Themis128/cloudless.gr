@@ -1,0 +1,79 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { shouldBindRemoteAuthDb } from "@/instrumentation";
+
+const ROOT_INSTRUMENTATION = resolve(__dirname, "../instrumentation.ts");
+const SRC_INSTRUMENTATION = resolve(__dirname, "../src/instrumentation.ts");
+const DOCKERFILE = resolve(__dirname, "../Dockerfile");
+const HOSTPATH = resolve(__dirname, "../k8s/cloudless-app-hostpath.yaml");
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+function stubInteractiveDev(): void {
+  vi.stubEnv("NEXT_RUNTIME", "nodejs");
+  vi.stubEnv("NODE_ENV", "development");
+  vi.stubEnv("CI", "false");
+  vi.stubEnv("NEXT_PUBLIC_E2E", "");
+  vi.stubEnv("AUTH_DB_PREFER_LOCAL", "");
+  vi.stubEnv("CLOUDFLARE_API_TOKEN", "cf-token");
+}
+
+describe("Next.js instrumentation file location", () => {
+  it("lives under src/ (Next src/ layout) and not at the repo root", () => {
+    expect(existsSync(SRC_INSTRUMENTATION), "src/instrumentation.ts must exist").toBe(true);
+    expect(
+      existsSync(ROOT_INSTRUMENTATION),
+      "root instrumentation.ts would shadow or split hooks"
+    ).toBe(false);
+  });
+
+  it("loads Sentry in production and times out the remote D1 bind", () => {
+    const source = readFileSync(SRC_INSTRUMENTATION, "utf-8");
+    expect(source).toContain("sentry.server.config");
+    expect(source).toContain("sentry.edge.config");
+    expect(source).toContain("getCloudflareContext timed out");
+    expect(source).toContain("slackDeployNotify");
+  });
+});
+
+describe("shouldBindRemoteAuthDb", () => {
+  it("is true for interactive local next-dev with a Cloudflare token", () => {
+    stubInteractiveDev();
+    expect(shouldBindRemoteAuthDb()).toBe(true);
+  });
+
+  it("skips CI so Playwright webServer can become ready", () => {
+    stubInteractiveDev();
+    vi.stubEnv("CI", "true");
+    expect(shouldBindRemoteAuthDb()).toBe(false);
+  });
+
+  it("skips E2E (local sqlite fallback)", () => {
+    stubInteractiveDev();
+    vi.stubEnv("NEXT_PUBLIC_E2E", "1");
+    expect(shouldBindRemoteAuthDb()).toBe(false);
+  });
+
+  it("skips when CLOUDFLARE_API_TOKEN is unset", () => {
+    stubInteractiveDev();
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
+    expect(shouldBindRemoteAuthDb()).toBe(false);
+  });
+});
+
+describe("Next.js listen-bind HOSTNAME leak", () => {
+  it("Dockerfile runner does not assign ENV HOSTNAME", () => {
+    const dockerfile = readFileSync(DOCKERFILE, "utf-8");
+    const runner = dockerfile.match(/FROM[^\n]+AS runner[\s\S]*$/)?.[0] ?? "";
+    expect(runner).not.toMatch(/^\s*HOSTNAME=/m);
+    expect(runner).not.toMatch(/^ENV[^\n]*HOSTNAME=/m);
+  });
+
+  it("Pi ConfigMap does not set HOSTNAME", () => {
+    expect(readFileSync(HOSTPATH, "utf-8")).not.toMatch(/^\s*HOSTNAME:/m);
+  });
+});

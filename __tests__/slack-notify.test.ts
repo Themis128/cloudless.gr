@@ -155,7 +155,7 @@ describe("slack-notify", () => {
   });
 
   describe("slackSubscriberNotify", () => {
-    it("posts a header + email block to the subscribers channel", async () => {
+    it("posts a header + email block to the newsletter channel", async () => {
       getSlackConfigAsyncMock.mockResolvedValueOnce({
         SLACK_BOT_TOKEN: "xoxb-x",
       });
@@ -163,7 +163,7 @@ describe("slack-notify", () => {
       await slackSubscriberNotify("alice@example.com");
       expect(fetchMock).toHaveBeenCalled();
       const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
-      expect(body.channel).toBe("#subscribers");
+      expect(body.channel).toBe("#newsletter");
       expect(body.text).toContain("alice@example.com");
       expect(body.username).toBe("Cloudless");
     });

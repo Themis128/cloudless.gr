@@ -208,7 +208,9 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
           : p.status === "Published"
             ? ":white_check_mark:"
             : ":memo:";
-      return p.url ? `${icon} <${p.url}|${p.title}> — \`${p.status || "—"}\`` : `${icon} *${p.title}* — \`${p.status || "—"}\``;
+      return p.url
+        ? `${icon} <${p.url}|${p.title}> — \`${p.status || "—"}\``
+        : `${icon} *${p.title}* — \`${p.status || "—"}\``;
     })
     .join("\n");
 

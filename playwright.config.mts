@@ -5,14 +5,18 @@ const rootDir = import.meta.dirname ?? path.resolve();
 const isCi = !!process.env.CI;
 const isCoverage = process.env.COVERAGE === "1";
 
-/** k3s specs target the live cluster via playwright.k3s.config.mts only. */
-const ignoreK3s = "**/k3s/**";
+/**
+ * k3s specs target the live cluster via playwright.k3s.config.mts only.
+ * Project-level `testIgnore` replaces the top-level list (does not merge), so
+ * every project must re-include these patterns or chromium/mobile pick up
+ * e2e/k3s/*.spec.ts against localhost.
+ */
+const ignoreK3s: Array<string | RegExp> = ["**/k3s/**", "k3s/**", /(?:^|\/)k3s\//];
 
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
   testMatch: "**/*.spec.{ts,mts}",
-  // Project-level testIgnore replaces this — keep ignoreK3s on every project below.
-  testIgnore: [ignoreK3s],
+  testIgnore: ignoreK3s,
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
@@ -93,7 +97,7 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: "**/auth.setup.mts",
-      testIgnore: [ignoreK3s],
+      testIgnore: [...ignoreK3s],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -106,7 +110,7 @@ export default defineConfig({
       },
       dependencies: ["setup"],
       // Project testIgnore replaces the top-level list — re-include k3s.
-      testIgnore: [ignoreK3s, "**/ui/pages/admin.spec.ts"],
+      testIgnore: [...ignoreK3s, "**/ui/pages/admin.spec.ts"],
     },
     {
       name: "admin",
@@ -117,7 +121,7 @@ export default defineConfig({
       },
       dependencies: ["setup"],
       testMatch: "**/ui/pages/admin.spec.ts",
-      testIgnore: [ignoreK3s],
+      testIgnore: [...ignoreK3s],
     },
     {
       name: "mobile-chrome",
@@ -126,7 +130,7 @@ export default defineConfig({
         storageState: path.join(rootDir, "e2e/.auth/user.json"),
       },
       dependencies: ["setup"],
-      testIgnore: [ignoreK3s, "**/ui/pages/admin.spec.ts"],
+      testIgnore: [...ignoreK3s, "**/ui/pages/admin.spec.ts"],
     },
   ],
 });

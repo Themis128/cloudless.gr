@@ -5,8 +5,11 @@ env:
 
 on:
   workflow_run:
-    # Production deploys ship via Cloudflare Workers, not legacy AWS SST.
-    workflows: [Cloudflare Workers Deploy]
+    # Audit the Pi NodePort after the Next.js app is live. Cloudflare Workers
+    # Deploy finishes in ~45s (proxy-only); Deploy to Pi takes 7–14 min. Firing
+    # CWV off the Worker run races the Pi rollout → OOM / cold-pod TBT fails
+    # (not a score regression). Match lighthouse.yml.
+    workflows: [Deploy to Pi (R2 + Cloudflare Workflows pull)]
     types: [completed]
   workflow_dispatch:
 
@@ -51,7 +54,7 @@ jobs:
     - name: Wait for runner memory headroom
       run: |
         set -euo pipefail
-        MIN_MB=1500
+        MIN_MB=2500
         for i in $(seq 1 24); do
           FREE_MB=$(awk '/MemAvailable/ { printf "%d", $2/1024 }' /proc/meminfo)
           LOAD1=$(cut -d' ' -f1 /proc/loadavg)
