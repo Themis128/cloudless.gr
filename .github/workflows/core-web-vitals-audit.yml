@@ -236,9 +236,9 @@ jobs:
         # Perf floor 0.55 (not 0.60): Lighthouse lab scores routinely swing
         # 5–10 pts on shared Pi CPU; /en just failed at median 0.59. Industry
         # guidance is median-of-N plus a 3–5 pt score margin for CI gates.
-        echo "## 📊 Core Web Vitals Route Audit (median of 5 runs)" >> "$GITHUB_STEP_SUMMARY"
+        echo "## 📊 Core Web Vitals Route Audit (median of 5 runs, desktop preset)" >> "$GITHUB_STEP_SUMMARY"
         echo "" >> "$GITHUB_STEP_SUMMARY"
-        echo "Origin: \`${BASE_URL}\` (Pi NodePort — CF-bypass)" >> "$GITHUB_STEP_SUMMARY"
+        echo "Origin: \`${BASE_URL}\` (Pi NodePort — CF-bypass; desktop preset — no mobile 4× CPU stack)" >> "$GITHUB_STEP_SUMMARY"
         echo "" >> "$GITHUB_STEP_SUMMARY"
         echo "| Route | Perf | A11y | Best Practices | SEO |" >> "$GITHUB_STEP_SUMMARY"
         echo "|-------|------|------|----------------|-----|" >> "$GITHUB_STEP_SUMMARY"
