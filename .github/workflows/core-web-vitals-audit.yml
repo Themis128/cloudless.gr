@@ -43,7 +43,29 @@ jobs:
       with:
         node-version: 22
         cache: pnpm
-    - run: pnpm install --frozen-lockfile
+
+    # Post-deploy image pulls / k3s Recreate spike RAM + iowait on the single
+    # Pi. pnpm install under that load OOM-kills the Actions runner process —
+    # GitHub then reports "lost communication" with no score output (runs
+    # #1735/#1736). Wait for headroom so we fail cleanly or proceed safely.
+    - name: Wait for runner memory headroom
+      run: |
+        set -euo pipefail
+        MIN_MB=1500
+        for i in $(seq 1 24); do
+          FREE_MB=$(awk '/MemAvailable/ { printf "%d", $2/1024 }' /proc/meminfo)
+          LOAD1=$(cut -d' ' -f1 /proc/loadavg)
+          echo "attempt $i/24: MemAvailable=${FREE_MB}MB load1=${LOAD1}"
+          if [ "$FREE_MB" -ge "$MIN_MB" ]; then
+            echo "headroom ok (≥ ${MIN_MB}MB)"
+            exit 0
+          fi
+          sleep 15
+        done
+        echo "::error::Runner still under ${MIN_MB}MB free after ~6m — aborting CWV to avoid killing the self-hosted runner (not a score regression)"
+        exit 1
+
+    - run: pnpm install --frozen-lockfile --prefer-offline
 
       # omv is arm64 — Playwright ships arm64 Chrome for Testing.
     - name: Cache Playwright browsers
@@ -77,10 +99,18 @@ jobs:
         # Prefer local NodePort (Tunnel origin). Fall back to LAN IP if the
         # runner is on another Pi. Never hit cloudless.gr from CI — CF
         # challenges GitHub/datacenter IPs even with Bot Fight Mode off.
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         BASE=""
         for candidate in http://127.0.0.1:30300 http://192.168.1.128:30300; do
-          CODE=$(curl -sS -o /tmp/cwv-health.json -w "%{http_code}" --max-time 5 \
-            "${candidate}/api/health" || echo 000)
+          CODE=$(http_code /tmp/cwv-health.json 5 "${candidate}/api/health")
           echo "${candidate}/api/health → HTTP ${CODE}"
           if [[ "$CODE" == "200" ]]; then
             BASE="$candidate"
@@ -97,10 +127,10 @@ jobs:
           BODY=$(mktemp)
           # proxy.ts HTTPS-enforces when x-forwarded-proto=http (Next sets this
           # on plain HTTP). Pretend we are behind TLS like the Tunnel does.
-          CODE=$(curl -sS -o "$BODY" -w "%{http_code}" --max-time 30 \
+          CODE=$(http_code "$BODY" 30 \
             -H "X-Forwarded-Proto: https" \
             -H "Host: cloudless.gr" \
-            "$url" || echo 000)
+            "$url")
           echo "$url → HTTP $CODE"
           if grep -qiE 'Just a moment|cf-browser-verification' "$BODY"; then
             echo "::error::$url returned a Cloudflare challenge interstitial (unexpected on NodePort)"
@@ -130,12 +160,21 @@ jobs:
         elif command -v k3s >/dev/null 2>&1; then
           sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s || true
         fi
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         ok=0
         for i in $(seq 1 36); do
-          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
-          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+          H=$(http_code /dev/null 5 "${BASE}/api/health")
+          S=$(http_code /dev/null 15 \
             -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
-            "${BASE}/en/store" || echo 000)
+            "${BASE}/en/store")
           echo "stability check $i: health=$H store=$S"
           if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
             ok=$((ok + 1))
@@ -176,12 +215,21 @@ jobs:
       run: |
         set -euo pipefail
         echo "::warning::Lighthouse collect failed (often CHROME_INTERSTITIAL during Recreate). Re-gating origin then retrying once."
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         ok=0
         for i in $(seq 1 36); do
-          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
-          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+          H=$(http_code /dev/null 5 "${BASE}/api/health")
+          S=$(http_code /dev/null 15 \
             -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
-            "${BASE}/en/store" || echo 000)
+            "${BASE}/en/store")
           echo "retry gate $i: health=$H store=$S"
           if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
             ok=$((ok + 1))
