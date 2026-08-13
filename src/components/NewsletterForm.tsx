@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useCallback, type FormEvent } from "react";
 import { Link } from "@/i18n/navigation";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -12,9 +13,9 @@ const STATUS_ERROR = "error";
 export default function NewsletterForm() {
   const [locale] = useCurrentLocale();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error" // NOSONAR — type annotation
-  >("idle");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const onTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(e: FormEvent) {
@@ -26,7 +27,7 @@ export default function NewsletterForm() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken: turnstileToken ?? undefined }),
       });
 
       if (res.ok) {
@@ -61,24 +62,27 @@ export default function NewsletterForm() {
           "Cloud tips, cost-saving strategies, and growth hacks. No spam."
         )}
       </p>
-      <form onSubmit={handleSubmit} className="flex gap-2" suppressHydrationWarning>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={translate(locale, "newsletter.placeholder", "your@email.com")}
-          required
-          className="bg-void focus:border-neon-cyan/50 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={status === STATUS_LOADING}
-          className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status === STATUS_LOADING
-            ? translate(locale, "newsletter.subscribing", "Subscribing...")
-            : translate(locale, "newsletter.cta", "Subscribe")}
-        </button>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2" suppressHydrationWarning>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={translate(locale, "newsletter.placeholder", "your@email.com")}
+            required
+            className="bg-void focus:border-neon-cyan/50 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={status === STATUS_LOADING}
+            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {status === STATUS_LOADING
+              ? translate(locale, "newsletter.subscribing", "Subscribing...")
+              : translate(locale, "newsletter.cta", "Subscribe")}
+          </button>
+        </div>
+        <TurnstileWidget onToken={onTurnstile} />
       </form>
       <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
         {translate(
@@ -86,11 +90,6 @@ export default function NewsletterForm() {
           "newsletter.consent",
           "By subscribing, you agree to receive our newsletter and accept our"
         )}{" "}
-        {/*
-          A11y: previous text-neon-cyan/60 measured ~2.8:1 against the
-          dark background and failed WCAG AA. Solid neon-cyan (#22d3e6)
-          measures > 7:1 on the dark surface.
-        */}
         <Link href="/privacy" className="text-neon-cyan underline hover:text-white">
           {translate(locale, "legal.privacyTitle", "Privacy Policy")}
         </Link>

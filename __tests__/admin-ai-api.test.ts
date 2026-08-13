@@ -84,9 +84,21 @@ vi.mock("@/lib/ssm-config", () => ({
   getConfig: getConfigMock,
 }));
 
-// Mock fetch globally — routes call Anthropic via fetch
+// Mock fetch globally — routes call Workers AI via fetch
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
+
+function withWorkersAiEnv() {
+  process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
+  process.env.CLOUDFLARE_API_TOKEN = "test-token";
+  delete process.env.GEMINI_API_KEY;
+}
+
+function clearAiEnv() {
+  delete process.env.CLOUDFLARE_ACCOUNT_ID;
+  delete process.env.CLOUDFLARE_API_TOKEN;
+  delete process.env.GEMINI_API_KEY;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,10 +122,10 @@ function unauthReq(url: string): NextRequest {
   return new NextRequest(url, { method: "POST", body: JSON.stringify({ brief: "test" }) });
 }
 
-function mockAnthropicResponse(text: string) {
+function mockWorkersAiResponse(text: string) {
   fetchMock.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({ content: [{ text }] }),
+    json: async () => ({ result: { response: text } }),
   });
 }
 
@@ -123,7 +135,8 @@ function mockAnthropicResponse(text: string) {
 describe("POST /api/admin/ai/campaign", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
+    withWorkersAiEnv();
+    getConfigMock.mockResolvedValue({});
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -144,25 +157,23 @@ describe("POST /api/admin/ai/campaign", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 503 when ANTHROPIC_API_KEY not configured", async () => {
-    getConfigMock.mockResolvedValue({});
-    const saved = process.env.ANTHROPIC_API_KEY;
-    process.env.ANTHROPIC_API_KEY = "";
+  it("returns 503 when Admin AI not configured", async () => {
+    clearAiEnv();
     const { POST } = await import("@/app/api/admin/ai/campaign/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/campaign", { brief: "Promote AI tool" })
     );
-    process.env.ANTHROPIC_API_KEY = saved;
+    withWorkersAiEnv();
     expect(res.status).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("returns campaign strategy from Claude", async () => {
+  it("returns campaign strategy from Workers AI", async () => {
     const strategy = {
       recommended_platforms: ["Meta", "LinkedIn"],
       campaign_objective: "LEAD_GENERATION",
     };
-    mockAnthropicResponse(JSON.stringify(strategy));
+    mockWorkersAiResponse(JSON.stringify(strategy));
     const { POST } = await import("@/app/api/admin/ai/campaign/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/campaign", {
@@ -177,8 +188,8 @@ describe("POST /api/admin/ai/campaign", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("returns raw text when Claude response is not valid JSON", async () => {
-    mockAnthropicResponse("I recommend Meta and LinkedIn for this campaign.");
+  it("returns raw text when AI response is not valid JSON", async () => {
+    mockWorkersAiResponse("I recommend Meta and LinkedIn for this campaign.");
     const { POST } = await import("@/app/api/admin/ai/campaign/route");
     const res = await POST(adminReq("http://localhost/api/admin/ai/campaign", { brief: "Test" }));
     const data = await res.json();
@@ -193,7 +204,8 @@ describe("POST /api/admin/ai/campaign", () => {
 describe("POST /api/admin/ai/copy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
+    withWorkersAiEnv();
+    getConfigMock.mockResolvedValue({});
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -213,15 +225,13 @@ describe("POST /api/admin/ai/copy", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 503 when ANTHROPIC_API_KEY not configured", async () => {
-    getConfigMock.mockResolvedValue({});
-    const saved = process.env.ANTHROPIC_API_KEY;
-    process.env.ANTHROPIC_API_KEY = "";
+  it("returns 503 when Admin AI not configured", async () => {
+    clearAiEnv();
     const { POST } = await import("@/app/api/admin/ai/copy/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/copy", { service: "AI Marketing" })
     );
-    process.env.ANTHROPIC_API_KEY = saved;
+    withWorkersAiEnv();
     expect(res.status).toBe(503);
   });
 
@@ -236,7 +246,7 @@ describe("POST /api/admin/ai/copy", () => {
         },
       ],
     };
-    mockAnthropicResponse(JSON.stringify(variants));
+    mockWorkersAiResponse(JSON.stringify(variants));
     const { POST } = await import("@/app/api/admin/ai/copy/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/copy", {
@@ -257,7 +267,8 @@ describe("POST /api/admin/ai/copy", () => {
 describe("POST /api/admin/ai/audience", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-anthropic-key" });
+    withWorkersAiEnv();
+    getConfigMock.mockResolvedValue({});
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -277,15 +288,13 @@ describe("POST /api/admin/ai/audience", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 503 when ANTHROPIC_API_KEY not configured", async () => {
-    getConfigMock.mockResolvedValue({});
-    const saved = process.env.ANTHROPIC_API_KEY;
-    process.env.ANTHROPIC_API_KEY = "";
+  it("returns 503 when Admin AI not configured", async () => {
+    clearAiEnv();
     const { POST } = await import("@/app/api/admin/ai/audience/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/audience", { description: "Greek SMB owners" })
     );
-    process.env.ANTHROPIC_API_KEY = saved;
+    withWorkersAiEnv();
     expect(res.status).toBe(503);
   });
 
@@ -294,7 +303,7 @@ describe("POST /api/admin/ai/audience", () => {
       summary: "SMB decision makers in Greece",
       demographics: { age_range: "30-50" },
     };
-    mockAnthropicResponse(JSON.stringify(targeting));
+    mockWorkersAiResponse(JSON.stringify(targeting));
     const { POST } = await import("@/app/api/admin/ai/audience/route");
     const res = await POST(
       adminReq("http://localhost/api/admin/ai/audience", {

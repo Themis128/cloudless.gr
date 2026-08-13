@@ -19,6 +19,7 @@ import { mapIntegrationError } from "@/lib/api-errors";
 import { formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 interface ContactRequestBody {
   name: string;
@@ -28,6 +29,7 @@ interface ContactRequestBody {
   message: string;
   phone?: string;
   attribution?: string;
+  turnstileToken?: string;
 }
 
 export async function GET() {
@@ -52,8 +54,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, company, service, message, phone, attribution } =
+    const { name, email, company, service, message, phone, attribution, turnstileToken } =
       parsed as ContactRequestBody;
+
+    const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+    if (!turnstile.ok) {
+      return Response.json({ error: turnstile.error }, { status: 403 });
+    }
 
     // Strict types — coerce-and-continue lets arrays/numbers reach escapeHtml
     // and blow up with 500 (str.replace is not a function).

@@ -64,3 +64,18 @@ Allowed models: `@cf/meta/llama-3-8b-instruct` (default),
 
 Workers AI free tier: 10,000 neurons/day (≈ hundreds of Llama-3-8B calls).
 Past that, [pay-per-use pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/).
+
+## Free admin upgrades (operator)
+
+Marketing Hub AI (assistant, campaign, copy, audience, report-insights, analytics-orchestration)
+uses Workers AI with Gemini fallback via `src/lib/admin-ai.ts`. Optional free-tier add-ons:
+
+| Feature | Env | Notes |
+| ------- | --- | ----- |
+| AI Gateway | `CLOUDFLARE_AI_GATEWAY_ID` | Routes `workers-ai-client` through gateway (cache/logs). Id `default` auto-provisions. |
+| Turnstile | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | Contact / signup / newsletter. Soft-allow when unset. |
+| Vectorize RAG | `CLOUDFLARE_VECTORIZE_INDEX` (default `cloudless-admin-rag`) | 384-dim (bge-small). Sync from `/admin/ai-assistant`. |
+| Espo Queues | `ESPOCRM_QUEUE_PRODUCER_URL` + `ESPOCRM_QUEUE_PRODUCER_SECRET` | See `workers/espocrm-fanout/README.md`. |
+| Analytics Engine | same CF account token | Explorer at `/admin/analytics/engine`. |
+
+Status card: `GET /api/admin/ai/status` (also on AI Generator / Assistant).

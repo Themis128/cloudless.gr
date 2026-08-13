@@ -138,10 +138,21 @@ export async function POST(req: NextRequest) {
   let password: string | undefined;
   let fullName: string | undefined;
   try {
-    const body = (await req.json()) as { email?: string; password?: string; fullName?: string };
+    const body = (await req.json()) as {
+      email?: string;
+      password?: string;
+      fullName?: string;
+      turnstileToken?: string;
+    };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
     fullName = body.fullName;
+
+    const { verifyTurnstileToken } = await import("@/lib/turnstile");
+    const turnstile = await verifyTurnstileToken(body.turnstileToken, getClientIp(req));
+    if (!turnstile.ok) {
+      return NextResponse.json({ error: turnstile.error }, { status: 403 });
+    }
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }

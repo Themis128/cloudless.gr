@@ -1,11 +1,12 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import SocialLinks from "@/components/SocialLinks";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { trackPixelEvent } from "@/lib/meta-pixel";
@@ -49,6 +50,8 @@ export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const [status, setStatus] = useState<FormStatus>(FORM_STATUS_IDLE);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const onTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
   const searchParams = useSearchParams();
 
   // Pre-fill message from checkout redirect context
@@ -85,6 +88,7 @@ export default function ContactFormSection() {
       message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
+      turnstileToken: turnstileToken ?? undefined,
     };
 
     try {
@@ -259,6 +263,8 @@ export default function ContactFormSection() {
                     . *
                   </label>
                 </div>
+
+                <TurnstileWidget onToken={onTurnstile} className="my-2" />
 
                 {status === FORM_STATUS_ERROR && (
                   <p role="alert" className="text-neon-magenta font-mono text-sm">
