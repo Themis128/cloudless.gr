@@ -166,7 +166,7 @@ function tiktokReport(cfg: Cfg): IntegrationReport {
   const appReady = Boolean(cfg.TIKTOK_APP_ID && cfg.TIKTOK_APP_SECRET);
   const fullyConfigured = Boolean(appReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID);
   const tiktokSetupUrl = appReady
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/oauth/tiktok`
+    ? "/api/admin/oauth/tiktok"
     : "https://ads.tiktok.com/marketing_api/apps";
   return {
     id: "tiktok",
@@ -241,29 +241,15 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
 }
 
 function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
-  const metaConfigured = Boolean(
-    cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID
-  );
   const linkedInConfigured = Boolean(
     cfg.LINKEDIN_ACCESS_TOKEN && cfg.LINKEDIN_AD_ACCOUNT_ID && cfg.LINKEDIN_ORGANIZATION_URN
   );
   const googleAdsConfigured = Boolean(cfg.GOOGLE_ADS_DEVELOPER_TOKEN && cfg.GOOGLE_ADS_CUSTOMER_ID);
-  const metaMessage = metaConfigured
-    ? "Instagram Business Account ID blocked — Meta ad policy violation on account 1558125105019725. Appeal required."
-    : undefined;
   const googleAdsMessage = googleAdsConfigured
     ? undefined
     : "Needs GOOGLE_ADS_DEVELOPER_TOKEN (apply at ads.google.com/intl/en_us/home/tools/api-center/) and GOOGLE_ADS_CUSTOMER_ID. Google service account auth is already configured.";
 
   return [
-    {
-      id: "meta",
-      name: "Meta (Facebook/Instagram)",
-      category: "social_ads",
-      status: configuredIf(metaConfigured),
-      message: metaMessage,
-      setupUrl: "https://business.facebook.com/settings/system-users",
-    },
     {
       id: "linkedin",
       name: "LinkedIn Ads",
@@ -282,6 +268,43 @@ function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
       setupUrl: "https://ads.google.com/intl/en_us/home/tools/api-center/",
     },
   ];
+}
+
+/** Meta Marketing API account_status: 1=ACTIVE, 2=DISABLED, 3=UNSETTLED, … */
+async function pingMeta(accessToken: string, adAccountId: string): Promise<PingResult> {
+  try {
+    const url = new URL(`https://graph.facebook.com/v21.0/${adAccountId}`);
+    url.searchParams.set("fields", "id,name,account_status,disable_reason");
+    url.searchParams.set("access_token", accessToken);
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (res.status === 401 || res.status === 403)
+      return { status: "degraded", message: "Access token rejected by Graph API." };
+    if (!res.ok) return { status: "error", message: `Graph API returned ${res.status}` };
+    const data = (await res.json()) as {
+      account_status?: number;
+      disable_reason?: number;
+      name?: string;
+    };
+    if (data.account_status === 1) {
+      return {
+        status: "configured",
+        message: data.name ? `Ad account: ${data.name}` : undefined,
+      };
+    }
+    if (data.account_status === 2) {
+      return {
+        status: "degraded",
+        message:
+          "Ad account DISABLED (policy/payment). Appeal in Meta Business Manager before running ads.",
+      };
+    }
+    return {
+      status: "degraded",
+      message: `Ad account not active (account_status=${data.account_status ?? "unknown"}).`,
+    };
+  } catch {
+    return { status: "error", message: "Connection failed." };
+  }
 }
 
 function buildStaticReports(cfg: Cfg): IntegrationReport[] {
@@ -318,6 +341,7 @@ async function pingN8n(baseUrl: string, apiKey: string): Promise<PingResult> {
 }
 
 async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
+  const metaReady = Boolean(cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID);
   const [
     stripeResult,
     espocrmResult,
@@ -327,6 +351,7 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     postizResult,
     appflowyResult,
     n8nResult,
+    metaResult,
   ] = await Promise.all([
     cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
     cfg.ESPOCRM_BASE_URL && cfg.ESPOCRM_API_KEY
@@ -341,6 +366,9 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     cfg.APPFLOWY_API_URL ? pingAppFlowy(cfg.APPFLOWY_API_URL) : Promise.resolve(NOT_CONFIGURED),
     cfg.N8N_API_URL && cfg.N8N_API_KEY
       ? pingN8n(cfg.N8N_API_URL, cfg.N8N_API_KEY)
+      : Promise.resolve(NOT_CONFIGURED),
+    metaReady
+      ? pingMeta(cfg.META_ACCESS_TOKEN, cfg.META_AD_ACCOUNT_ID)
       : Promise.resolve(NOT_CONFIGURED),
   ]);
 
@@ -415,6 +443,13 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       category: "automation",
       ...n8nResult,
       setupUrl: cfg.N8N_API_URL || "https://n8n.cloudless.gr",
+    },
+    {
+      id: "meta",
+      name: "Meta (Facebook/Instagram)",
+      category: "social_ads",
+      ...metaResult,
+      setupUrl: "https://business.facebook.com/settings/ad_accounts",
     },
   ];
 }
