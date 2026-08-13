@@ -38,12 +38,7 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": [
-      "Zero friction.",
-      "Full control.",
-      "Pure speed.",
-      "Real results."
-    ],
+    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
     "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't have to. We're the third way — serverless infra, data-driven growth, and scaling that fits a 2–20-person team.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",
