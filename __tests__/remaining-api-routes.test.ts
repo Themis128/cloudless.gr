@@ -46,12 +46,15 @@ describe("GET /api/admin/esp32", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 with offline:true when Pi LAN unreachable (default URL)", async () => {
+  it("returns 404 with offline:true when ALERT_API_URL is a private LAN address", async () => {
     adminOk();
+    process.env.ALERT_API_URL = "http://192.168.1.128:30820";
     const { GET } = await import("@/app/api/admin/esp32/route");
     const res = await GET(req("http://localhost/api/admin/esp32?action=devices"));
     const data = await res.json();
+    expect(res.status).toBe(404);
     expect(data.offline).toBe(true);
+    delete process.env.ALERT_API_URL;
   });
 });
 

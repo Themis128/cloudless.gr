@@ -62,6 +62,7 @@ spec:
       containers:
       - name: alert-api
         image: docker.io/library/alert-api:v3.5
+        # v3.5: list_alerts calls get_alert_history (was broken get_history)
         imagePullPolicy: Never
         ports:
         - name: http

@@ -167,7 +167,7 @@ async def list_alerts(status: str | None = None):
     """Return all alerts. Use ?status=active to filter."""
     if status == "active":
         return await database.get_active_alerts()
-    return await database.get_history(limit=500)
+    return await database.get_alert_history(limit=500)
 
 
 @app.get("/api/alerts/active")

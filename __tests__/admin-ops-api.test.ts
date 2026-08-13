@@ -36,14 +36,17 @@ describe("GET /api/admin/ops/monitor", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 with offline:true when Pi LAN is unreachable", async () => {
+  it("returns 503 with offline:true when ALERT_API_URL is a private LAN address", async () => {
     adminOk();
+    process.env.ALERT_API_URL = "http://192.168.1.128:30820";
     const { GET } = await import("@/app/api/admin/ops/monitor/route");
     const res = await GET(
       new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
     );
     const data = await res.json();
+    expect(res.status).toBe(503);
     expect(data.offline).toBe(true);
+    delete process.env.ALERT_API_URL;
   });
 
   it("returns 400 for unknown resource", async () => {

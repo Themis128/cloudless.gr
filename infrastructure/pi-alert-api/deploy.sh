@@ -77,9 +77,9 @@ echo "==> Rebuilding alert-api image on Pi..."
 ssh "${PI}" bash -s <<'REMOTE'
 set -euo pipefail
 cd ~/alert-api
-docker build -t alert-api:v3.4 -t alert-api:v3 .
-docker save alert-api:v3.4 | sudo k3s ctr images import -
-kubectl -n alert-manager set image deployment/alert-api alert-api=docker.io/library/alert-api:v3.4
+docker build -t alert-api:v3.5 -t alert-api:v3.4 -t alert-api:v3 .
+docker save alert-api:v3.5 | sudo k3s ctr images import -
+kubectl -n alert-manager set image deployment/alert-api alert-api=docker.io/library/alert-api:v3.5
 kubectl -n alert-manager rollout status deployment/alert-api --timeout=120s
 REMOTE
 
