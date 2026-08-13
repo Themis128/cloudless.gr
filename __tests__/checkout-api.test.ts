@@ -2,9 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock store-products so product lookup works
+const mockCreate = vi.fn();
+const mockGetStripe = vi.fn();
+
 vi.mock("@/lib/stripe", () => ({
-  getStripe: vi.fn().mockResolvedValue(null),
+  getStripe: (...a: unknown[]) => mockGetStripe(...a),
 }));
 
 vi.mock("@/lib/api-auth", () => ({
@@ -16,15 +18,19 @@ vi.mock("@/lib/api-auth", () => ({
   })),
 }));
 
-// ---------------------------------------------------------------------------
-// GET /api/checkout — campaign tier flow (redirects to contact page)
-// ---------------------------------------------------------------------------
-
 describe("GET /api/checkout (campaign tier)", () => {
   let GET: (request: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({
+      checkout: { sessions: { create: mockCreate } },
+    });
+    mockCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_abc",
+      id: "cs_test_abc",
+    });
+    vi.resetModules();
     const mod = await import("@/app/api/checkout/route");
     GET = mod.GET;
   });
@@ -48,7 +54,7 @@ describe("GET /api/checkout (campaign tier)", () => {
     expect(location).toContain("utm_content=A_EN");
   });
 
-  it("redirects paid tier to campaign thanks (Stripe checkout path)", async () => {
+  it("creates Stripe session and redirects for paid campaign tier", async () => {
     const url =
       "http://localhost/api/checkout?campaign=shop-online&tier=starter" +
       "&utm_source=linkedin&utm_medium=cpc";
@@ -58,11 +64,20 @@ describe("GET /api/checkout (campaign tier)", () => {
     });
 
     const response = await GET(request);
-    expect(response.status).toBe(302);
+    expect(response.status).toBe(303);
+    expect(mockCreate).toHaveBeenCalled();
     const location = response.headers.get("location") ?? "";
-    expect(location).toContain("/en/campaigns/shop-online/thanks");
-    expect(location).toContain("tier=starter");
-    expect(location).toContain("utm_source=linkedin");
+    expect(location).toContain("checkout.stripe.com");
+  });
+
+  it("returns 503 when Stripe is not configured for paid tier", async () => {
+    mockGetStripe.mockResolvedValueOnce(null);
+    const url = "http://localhost/api/checkout?campaign=shop-online&tier=starter";
+    const request = new NextRequest(url, {
+      method: "GET",
+      headers: { "x-pathname": "/en/campaigns/shop-online" },
+    });
+    expect((await GET(request)).status).toBe(503);
   });
 
   it("returns 400 when campaign or tier query param is missing", async () => {
@@ -78,15 +93,19 @@ describe("GET /api/checkout (campaign tier)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// POST /api/checkout — store cart flow (redirects to contact page)
-// ---------------------------------------------------------------------------
-
 describe("POST /api/checkout", () => {
   let POST: (request: NextRequest) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({
+      checkout: { sessions: { create: mockCreate } },
+    });
+    mockCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_cart",
+      id: "cs_test_cart",
+    });
+    vi.resetModules();
     const mod = await import("@/app/api/checkout/route");
     POST = mod.POST;
   });
@@ -100,7 +119,6 @@ describe("POST /api/checkout", () => {
 
     const response = await POST(request);
     expect(response.status).toBe(400);
-
     const data = await response.json();
     expect(data.error).toBe("No items in cart");
   });
@@ -118,10 +136,14 @@ describe("POST /api/checkout", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns contact page URL with product names for valid items", async () => {
+  it("returns Stripe Checkout URL for valid cart items", async () => {
     const request = new NextRequest("http://localhost/api/checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        origin: "https://cloudless.gr",
+        "x-pathname": "/en/store",
+      },
       body: JSON.stringify({
         items: [{ id: "srv-cloud", quantity: 1 }],
       }),
@@ -129,27 +151,25 @@ describe("POST /api/checkout", () => {
 
     const response = await POST(request);
     expect(response.status).toBe(200);
-
     const data = await response.json();
-    expect(data.url).toContain("/contact");
-    expect(data.url).toContain("topic=purchase");
-    expect(data.url).toContain("Cloud+Architecture+Audit");
+    expect(data.url).toContain("checkout.stripe.com");
+    expect(mockCreate).toHaveBeenCalled();
+    const args = mockCreate.mock.calls[0][0] as {
+      success_url: string;
+      cancel_url: string;
+    };
+    expect(args.success_url).toContain("/en/store/success");
+    expect(args.cancel_url).toContain("/en/store");
   });
 
-  it("clamps quantity and shows (xN) in product names", async () => {
+  it("returns 503 when Stripe is not configured", async () => {
+    mockGetStripe.mockResolvedValueOnce(null);
     const request = new NextRequest("http://localhost/api/checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: [{ id: "phy-tshirt", quantity: 500 }],
-      }),
+      headers: { "Content-Type": "application/json", origin: "https://cloudless.gr" },
+      body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
     });
-
-    const response = await POST(request);
-    expect(response.status).toBe(200);
-
-    const data = await response.json();
-    expect(data.url).toContain("x99");
+    expect((await POST(request)).status).toBe(503);
   });
 
   it("returns 400 for invalid JSON body", async () => {

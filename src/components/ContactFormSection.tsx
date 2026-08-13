@@ -115,7 +115,7 @@ export default function ContactFormSection() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
           {/* Form */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3" data-testid="contact-form-panel">
             {isPurchaseFlow && status !== FORM_STATUS_SENT && (
               <div className="border-neon-cyan/30 bg-neon-cyan/5 mb-6 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
@@ -159,7 +159,7 @@ export default function ContactFormSection() {
                 </div>
               </ScrollReveal>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form data-testid="contact-form" onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
                     <label htmlFor={FIELD_NAME} className={LABEL_CLASS}>
@@ -283,7 +283,7 @@ export default function ContactFormSection() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-8 lg:col-span-2">
+          <div className="space-y-8 lg:col-span-2" data-testid="contact-info">
             <ScrollReveal>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
                 <h2 className="font-heading text-lg font-bold text-white">What happens next?</h2>

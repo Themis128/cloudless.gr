@@ -34,9 +34,8 @@ export async function sendEmailResend(options: ResendOptions): Promise<void> {
     throw new Error("RESEND_API_KEY not configured");
   }
 
-  const fromAddress = options.fromLabel
-    ? `${options.fromLabel} <orders@cloudless.gr>`
-    : "orders@cloudless.gr";
+  const fromEmail = process.env.SES_FROM_EMAIL || "noreply@cloudless.gr";
+  const fromAddress = options.fromLabel ? `${options.fromLabel} <${fromEmail}>` : fromEmail;
 
   try {
     const { error } = await client.emails.send({

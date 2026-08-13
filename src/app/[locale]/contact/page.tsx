@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import JsonLd from "@/components/JsonLd";
 import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
@@ -57,7 +58,9 @@ export default async function ContactPage() {
       </section>
 
       <div className="animate-scale-in delay-300">
-        <ContactFormSection />
+        <Suspense fallback={<div className="bg-void py-16 md:py-24" aria-hidden="true" />}>
+          <ContactFormSection />
+        </Suspense>
       </div>
     </>
   );

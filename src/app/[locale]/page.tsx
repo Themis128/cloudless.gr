@@ -231,7 +231,11 @@ export default async function Home({
       <JsonLd data={getFAQSchema(faqs)} />
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
+      <section
+        data-testid="hero"
+        className="relative overflow-hidden"
+        style={{ background: "var(--gradient-hero)" }}
+      >
         <div className="relative z-10 mx-auto max-w-6xl px-6 py-20 md:py-28 lg:py-32">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             {/* Left — copy */}
@@ -298,12 +302,14 @@ export default async function Home({
               <div className="animate-fade-in-up mt-8 flex flex-col gap-4 delay-300 sm:flex-row">
                 <Link
                   href="/contact"
+                  data-testid="hero-cta-primary"
                   className="btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono text-lg font-semibold"
                 >
                   {t("hero.ctaPrimary", "Get a Free Audit")}
                 </Link>
                 <Link
                   href="/services"
+                  data-testid="hero-cta-secondary"
                   className="btn-v2-ghost rounded-lg px-8 py-3.5 text-center font-mono font-semibold"
                 >
                   {t("hero.ctaSecondary", "View Services")}
@@ -568,7 +574,12 @@ export default async function Home({
       </section>
 
       {/* ── Services Overview ── */}
-      <section className="py-20 lg:py-24" style={{ background: "var(--surface-subtle)" }}>
+      <section
+        id="services"
+        data-testid="services-section"
+        className="py-20 lg:py-24"
+        style={{ background: "var(--surface-subtle)" }}
+      >
         <div className="mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -599,7 +610,10 @@ export default async function Home({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {services.map((service, i) => (
               <ScrollReveal key={service.title} delay={i * 100}>
-                <div className="v2-hover-card group rounded-xl p-6 lg:p-8">
+                <div
+                  data-testid="service-card"
+                  className="v2-hover-card group rounded-xl p-6 lg:p-8"
+                >
                   <div className="mb-4 flex items-center gap-4">
                     <span
                       className="flex h-10 w-10 items-center justify-center rounded-lg border font-mono text-sm font-bold"
@@ -845,6 +859,8 @@ export default async function Home({
 
       {/* ── CTA ── */}
       <section
+        id="cta"
+        data-testid="cta-section"
         className="relative overflow-hidden py-24 lg:py-32"
         style={{ background: "var(--gradient-hero)" }}
       >

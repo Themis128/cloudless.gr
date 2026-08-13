@@ -8,6 +8,7 @@ export default function CartButton() {
   return (
     <button
       onClick={toggleCart}
+      data-testid="cart"
       className="relative p-2 text-slate-300 transition-colors hover:text-white"
       aria-label="Open cart"
     >

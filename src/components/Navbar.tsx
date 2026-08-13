@@ -62,7 +62,10 @@ export default function Navbar() {
         className="border-b backdrop-blur-xl"
         style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
       >
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <nav
+          data-testid="main-nav"
+          className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6"
+        >
           {/* Logo */}
           <Link
             href="/"

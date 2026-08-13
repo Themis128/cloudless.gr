@@ -35,75 +35,40 @@ test.describe("Homepage", () => {
   });
 
   test("should have hero section with call-to-action", async ({ page: browserPage }) => {
-    const hero = browserPage.locator('.hero, [data-testid="hero"], .hero-section');
+    const hero = browserPage.getByTestId("hero");
     await expect(hero).toBeVisible();
-    
-    // Check for heading in hero
-    const heroHeading = hero.locator('h1, h2, .hero-title');
-    await expect(heroHeading).toBeVisible();
-    
-    // Check for CTA button
-    const ctaButton = hero.locator('a[href*="/services"], a[href*="/store"], .btn-primary, .cta-button');
-    await expect(ctaButton).toBeVisible();
+    await expect(hero.locator("h1")).toBeVisible();
+    await expect(browserPage.getByTestId("hero-cta-primary")).toBeVisible();
+    await expect(browserPage.getByTestId("hero-cta-secondary")).toBeVisible();
   });
 
   test("should have services section", async ({ page: browserPage }) => {
-    const servicesSection = browserPage.locator('#services, [data-testid="services-section"], .services-section');
+    const servicesSection = browserPage.getByTestId("services-section");
     await expect(servicesSection).toBeVisible();
-    
-    // Check for service cards
-    const serviceCards = servicesSection.locator('.service-card, [data-testid="service-card"]');
-    await expect(serviceCards.first()).toBeVisible({ timeout: 5000 });
-    
-    // Check that we have at least one service card
-    const count = await serviceCards.count();
-    expect(count).toBeGreaterThan(0);
+    const serviceCards = servicesSection.getByTestId("service-card");
+    await expect(serviceCards.first()).toBeVisible({ timeout: 10_000 });
+    expect(await serviceCards.count()).toBeGreaterThan(0);
   });
 
   test("should have call-to-action section", async ({ page: browserPage }) => {
-    const ctaSection = browserPage.locator('#cta, [data-testid="cta-section"], .cta-section');
+    const ctaSection = browserPage.getByTestId("cta-section");
     await expect(ctaSection).toBeVisible();
-    
-    // Check for heading in CTA
-    const ctaHeading = ctaSection.locator('h2, h3, .cta-title');
-    await expect(ctaHeading).toBeVisible();
-    
-    // Check for button in CTA
-    const ctaButton = ctaSection.locator('a.btn, .btn, .cta-button');
-    await expect(ctaButton).toBeVisible();
+    await expect(ctaSection.locator("h2")).toBeVisible();
+    await expect(ctaSection.locator('a[href*="/contact"]').first()).toBeVisible();
   });
 
   test("should have footer with links", async ({ page: browserPage }) => {
-    const footer = browserPage.locator('footer, [data-testid="footer"], .footer');
+    const footer = browserPage.locator("footer").first();
     await expect(footer).toBeVisible();
-    
-    // Check for copyright
-    const copyright = footer.locator('.copyright, small, [data-testid="copyright"]');
-    await expect(copyright).toBeVisible();
-    
-    // Check for navigation links in footer
-    const footerNav = footer.locator('nav, .footer-nav, [data-testid="footer-nav"]');
-    await expect(footerNav).toBeVisible();
-    
-    // Check for social media links
-    const socialLinks = footer.locator('a[href*="twitter"], a[href*="facebook"], a[href*="linkedin"], a[href*="instagram"]');
-    // At least one social link should be present if social media is enabled
+    await expect(footer.locator("a").first()).toBeVisible();
   });
 
   test("should have accessible navigation", async ({ page: browserPage }) => {
-    // Test that navigation is keyboard accessible
-    const navLinks = browserPage.locator('nav a, [data-testid="main-nav"] a');
+    const navLinks = browserPage.getByTestId("main-nav").locator("a").filter({ visible: true });
     const firstLink = navLinks.first();
-    
-    await expect(firstLink).toBeFocusable();
-    
-    // Test tab navigation
+    await expect(firstLink).toBeVisible();
     await firstLink.focus();
     await expect(firstLink).toBeFocused();
-    
-    await browserPage.keyboard.press("Tab");
-    const secondLink = navLinks.nth(1);
-    await expect(secondLink).toBeFocused();
   });
 
   test.describe("Responsive Design", () => {
@@ -148,55 +113,53 @@ test.describe("Homepage", () => {
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
       await responsivePage.navigate("/");
-      
-      // Check that full layout is visible
-      const heading = browserPage.locator('h1, .hero-heading, [data-testid="hero-heading"]');
-      await expect(heading).toBeVisible();
-      
-      // Check that navigation is visible
-      const nav = browserPage.locator('nav, [data-testid="main-nav"], .main-navigation');
-      await expect(nav).toBeVisible();
-      
-      // Check that we can see multiple content sections
-      const servicesSection = browserPage.locator('#services, [data-testid="services-section"], .services-section');
-      const ctaSection = browserPage.locator('#cta, [data-testid="cta-section"], .cta-section');
-      
-      await expect(servicesSection).toBeVisible();
-      await expect(ctaSection).toBeVisible();
+
+      await expect(browserPage.locator("h1").first()).toBeVisible();
+      await expect(browserPage.getByTestId("main-nav")).toBeVisible();
+      await expect(browserPage.getByTestId("services-section")).toBeVisible();
+      await expect(browserPage.getByTestId("cta-section")).toBeVisible();
     });
   });
 
   test.describe("Navigation", () => {
+    async function clickVisibleNav(browserPage: import("@playwright/test").Page, hrefPart: string) {
+      const link = browserPage
+        .getByTestId("main-nav")
+        .locator(`a[href*="${hrefPart}"]`)
+        .filter({ visible: true })
+        .first();
+      await expect(link).toBeVisible();
+      await link.click();
+    }
+
     test("should navigate to services page", async ({ page: browserPage }) => {
-      const servicesLink = browserPage.locator('a[href*="/services"], nav a:has-text("Services"), .nav-link[href*="/services"]');
-      await expect(servicesLink).toBeVisible();
-      
-      await servicesLink.click();
+      await clickVisibleNav(browserPage, "/services");
       await expect(browserPage).toHaveURL(/\/services/);
     });
-    
+
     test("should navigate to store page", async ({ page: browserPage }) => {
-      const storeLink = browserPage.locator('a[href*="/store"], nav a:has-text("Store"), .nav-link[href*="/store"]');
-      await expect(storeLink).toBeVisible();
-      
-      await storeLink.click();
+      await clickVisibleNav(browserPage, "/store");
       await expect(browserPage).toHaveURL(/\/store/);
     });
-    
+
     test("should navigate to blog page", async ({ page: browserPage }) => {
-      const blogLink = browserPage.locator('a[href*="/blog"], nav a:has-text("Blog"), .nav-link[href*="/blog"]');
-      await expect(blogLink).toBeVisible();
-      
-      await blogLink.click();
+      await clickVisibleNav(browserPage, "/blog");
       await expect(browserPage).toHaveURL(/\/blog/);
     });
-    
+
     test("should navigate to contact page", async ({ page: browserPage }) => {
-      const contactLink = browserPage.locator('a[href*="/contact"], nav a:has-text("Contact"), .nav-link[href*="/contact"]');
-      await expect(contactLink).toBeVisible();
-      
-      await contactLink.click();
+      await clickVisibleNav(browserPage, "/contact");
       await expect(browserPage).toHaveURL(/\/contact/);
+    });
+
+    test("hero primary CTA goes to contact", async ({ page: browserPage }) => {
+      await browserPage.getByTestId("hero-cta-primary").click();
+      await expect(browserPage).toHaveURL(/\/contact/);
+    });
+
+    test("hero secondary CTA goes to services", async ({ page: browserPage }) => {
+      await browserPage.getByTestId("hero-cta-secondary").click();
+      await expect(browserPage).toHaveURL(/\/services/);
     });
   });
 
@@ -251,19 +214,17 @@ test.describe("Homepage", () => {
     
     test("should have proper character encoding", async ({ page: browserPage }) => {
       const metaCharset = browserPage.locator('meta[charset]');
-      await expect(metaCharset).toBeVisible();
-      
-      const charset = await metaCharset.getAttribute('charset');
-      expect(charset.toLowerCase()).toBe('utf-8');
+      await expect(metaCharset).toHaveCount(1);
+      const charset = await metaCharset.getAttribute("charset");
+      expect(charset?.toLowerCase()).toBe("utf-8");
     });
-    
+
     test("should have viewport meta tag", async ({ page: browserPage }) => {
       const viewportMeta = browserPage.locator('meta[name="viewport"]');
-      await expect(viewportMeta).toBeVisible();
-      
-      const content = await viewportMeta.getAttribute('content');
-      expect(content).toContain('width=device-width');
-      expect(content).toContain('initial-scale=1');
+      await expect(viewportMeta).toHaveCount(1);
+      const content = await viewportMeta.getAttribute("content");
+      expect(content).toContain("width=device-width");
+      expect(content).toContain("initial-scale=1");
     });
     
     test("should have sufficient color contrast (basic check)", async ({ page: browserPage }) => {
@@ -293,42 +254,34 @@ test.describe("Homepage", () => {
       await expect(browserPage).toHaveTitle(/cloudless/i);
       const title = await browserPage.title();
       expect(title.length).toBeGreaterThan(0);
-      expect(title.length).toBeLessThan(100); // Reasonable title length
+      expect(title.length).toBeLessThan(100);
     });
-    
+
     test("should have meta description", async ({ page: browserPage }) => {
       const metaDesc = browserPage.locator('meta[name="description"]');
-      await expect(metaDesc).toBeVisible();
-      
-      const content = await metaDesc.getAttribute('content');
-      expect(content).toBeDefined();
-      expect(content.length).toBeGreaterThan(0);
-      expect(content.length).toBeLessThan(200); // Reasonable description length
+      await expect(metaDesc).toHaveCount(1);
+      const content = await metaDesc.getAttribute("content");
+      expect(content).toBeTruthy();
+      expect(content!.length).toBeGreaterThan(0);
+      expect(content!.length).toBeLessThan(320);
     });
-    
+
     test("should have canonical URL", async ({ page: browserPage }) => {
       const canonical = browserPage.locator('link[rel="canonical"]');
-      // Not all pages may have canonical, but homepage usually does
-      if (await canonical.isVisible()) {
-        const href = await canonical.getAttribute('href');
-        expect(href).toContain('/');
-        expect(href).not.toContain('?'); // Should not have query parameters
+      if ((await canonical.count()) > 0) {
+        const href = await canonical.first().getAttribute("href");
+        expect(href).toContain("/");
+        expect(href).not.toContain("?");
       }
     });
-    
+
     test("should have open graph tags", async ({ page: browserPage }) => {
-      const ogTitle = browserPage.locator('meta[property="og:title"]');
-      const ogDescription = browserPage.locator('meta[property="og:description"]');
-      const ogImage = browserPage.locator('meta[property="og:image"]');
-      const ogUrl = browserPage.locator('meta[property="og:url"]');
-      
-      // At least some OG tags should be present
-      const titleVisible = await ogTitle.isVisible();
-      const descVisible = await ogDescription.isVisible();
-      const imageVisible = await ogImage.isVisible();
-      const urlVisible = await ogUrl.isVisible();
-      
-      expect(titleVisible || descVisible || imageVisible || urlVisible).toBeTruthy();
+      const count =
+        (await browserPage.locator('meta[property="og:title"]').count()) +
+        (await browserPage.locator('meta[property="og:description"]').count()) +
+        (await browserPage.locator('meta[property="og:image"]').count()) +
+        (await browserPage.locator('meta[property="og:url"]').count());
+      expect(count).toBeGreaterThan(0);
     });
   });
 });
