@@ -6,7 +6,7 @@
 > k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
 > Topology" for current state.
 Architect view of every durable and ephemeral store for cloudless.gr.
-Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](../cloudflare/README.md).
+Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](README.md).
 
 **Principles**
 
@@ -17,6 +17,21 @@ Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](..
 5. **Developer access is mediated** — `kubectl port-forward` or snapshot pull; never tunnel DB ports through Cloudflare.
 
 Decision record: [ADR-001 — Mediated database access](ADR-001-mediated-db-access.md).
+
+## Gap status (post PR #1451)
+
+| Item | Status | Owner action |
+| ---- | ------ | -------------- |
+| AppFlowy MinIO → R2 backup | **Closed** | `pvc-backup-appflowy-minio` in `appflowy` NS |
+| Uptime Kuma SQLite → R2 | **Closed** | `pvc-backup-uptime-kuma` in `uptime-kuma` NS |
+| `cloudless-auth` D1 empty | **Closed in tooling** | Removed from SQLTools/pull; `CONFIRM=1 pnpm d1:retire:cloudless-auth` |
+| 2-node k3s ≠ DB HA | **Accepted** | Warm restore from R2 until 3rd Pi ([ADR-001](ADR-001-mediated-db-access.md)) |
+| SQLTools SQLite/D1 copies | **Closed** | `pnpm db:refresh-snapshots` before forensic reads |
+| Grafana durability | **Closed in values** | 2Gi PVC in `kube-prom-stack-values.yaml` — Helm upgrade when ready |
+
+**DevOps rule:** CronJob namespace equals workload namespace. Use
+`pnpm db:backup:test list|minio|kuma` so kubectl never queries the wrong NS
+(`scripts/pvc-backup-test.sh`).
 
 ---
 
@@ -340,6 +355,13 @@ flowchart TB
 
 ## 8. Target-state direction (Cloudflare-first)
 
+| Keep on Pi | Prefer Cloudflare |
+|------------|-------------------|
+| EspoCRM MariaDB — CRM SOR | D1 — auth / session / app config |
+| AppFlowy PG + MinIO — collab + blobs | R2 — backups + datalake |
+| Postiz PG — publisher state | New edge-fit state → D1 / R2 / Queues |
+| n8n SQLite — workflow history | **No** new AWS RDS / S3 backup paths |
+
 AWS-shaped shared DB HA manifests under `infrastructure/database/` are **not live**. Prefer Cloudflare-native durability where the app already runs on Workers:
 
 ```mermaid
@@ -356,7 +378,7 @@ Do not expand AWS RDS / S3 backup paths for new work; R2 + existing CronJobs are
 ## Related
 
 - [omv-cluster.md](omv-cluster.md) — field-level inventory, ports, secrets
-- [README.md](../cloudflare/README.md) — commands and SQLTools
+- [README.md](README.md) — commands and SQLTools
 - [ADR-001](ADR-001-mediated-db-access.md) — mediated access decision
 - [../kubectl-tailscale.md](../kubectl-tailscale.md) — API access (day-2)
 - [../TAILSCALE-FABRIC.md](../TAILSCALE-FABRIC.md) — Tailscale fabric architecture
