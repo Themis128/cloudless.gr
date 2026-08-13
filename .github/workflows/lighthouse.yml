@@ -5,7 +5,9 @@ env:
 
 on:
   workflow_run:
-    workflows: [Deploy to Cloudflare Workers + k3s]
+    # Production edge ships via deploy-pi (R2 → CF Workflow → omv pull), not the
+    # legacy OpenNext/Workers workflow name.
+    workflows: [Deploy to Pi (R2 + Cloudflare Workflows pull)]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -27,7 +29,9 @@ permissions:
 jobs:
   audit:
     name: Performance Audit
-    runs-on: ubuntu-latest
+    # Default GH-hosted; set repo var RUNNER_X64 to
+    # ["self-hosted","legion","x64"] for Legion WSL failover (never omv/Pi).
+    runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
     if: ${{ github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' }}
     timeout-minutes: 15

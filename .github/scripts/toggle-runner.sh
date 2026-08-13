@@ -1,30 +1,35 @@
 #!/usr/bin/env bash
-# Toggle CI between GitHub-hosted runners and the self-hosted Pi `build` cluster.
+# Toggle CI between GitHub-hosted runners and self-hosted pools.
 #
 # Why this exists:
 #   GitHub Actions has no native runner-failover. When GitHub billing breaks
 #   or hosted-runner capacity is exhausted, every workflow targeted at
-#   `ubuntu-latest` fails fast with "the job was not started because recent
-#   account payments have failed". Flipping the `RUNNER_GENERIC` repo variable
-#   re-routes all instrumented workflows to the Pi runners on their next run.
+#   `ubuntu-latest` fails fast. Flipping repo variables re-routes instrumented
+#   workflows on their next run.
+#
+# Two independent knobs:
+#   RUNNER_GENERIC — generic CI (lint/build/test style). Pi build pool only.
+#   RUNNER_X64     — browser suites (Lighthouse / Playwright / a11y). Legion WSL
+#                    only — NEVER point this at omv/Pi.
 #
 # Usage:
-#   .github/scripts/toggle-runner.sh status   # show current setting + runner inventory
-#   .github/scripts/toggle-runner.sh pi       # route generic jobs to Pi build runners
-#   .github/scripts/toggle-runner.sh hosted   # route generic jobs back to ubuntu-latest (clears the var)
+#   .github/scripts/toggle-runner.sh status
+#   .github/scripts/toggle-runner.sh pi|hosted
+#   .github/scripts/toggle-runner.sh x64-legion|x64-hosted
 #
 # Notes:
-#   - Already-queued jobs are NOT re-routed; cancel + re-run them after toggling.
-#   - Workflows must opt in by using:
+#   - Already-queued jobs are NOT re-routed; cancel + re-run after toggling.
+#   - Opt-in:
 #       runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-#   - Jobs that genuinely require x86_64 or more RAM than a Pi has (Lighthouse,
-#     CodeQL, heavy Playwright matrices) should keep a hard `runs-on: ubuntu-latest`.
+#       runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
 
 set -euo pipefail
 
 REPO="${REPO:-Themis128/cloudless.gr}"
-VAR_NAME="RUNNER_GENERIC"
+VAR_GENERIC="RUNNER_GENERIC"
+VAR_X64="RUNNER_X64"
 PI_VALUE='["self-hosted","omv","build"]'
+LEGION_VALUE='["self-hosted","legion","x64"]'
 
 cmd="${1:-status}"
 
@@ -36,14 +41,22 @@ show_runners() {
     || echo "  (unable to query — check gh auth)"
 }
 
-show_status() {
+show_var() {
+  local name="$1"
+  local current
   current=$(gh variable list --repo "${REPO}" --json name,value \
-    --jq ".[] | select(.name == \"${VAR_NAME}\") | .value" 2>/dev/null || true)
+    --jq ".[] | select(.name == \"${name}\") | .value" 2>/dev/null || true)
   if [[ -z "${current}" ]]; then
-    echo "Mode: HOSTED (ubuntu-latest)  —  ${VAR_NAME} is unset"
+    echo "  ${name}: unset → ubuntu-latest"
   else
-    echo "Mode: SELF-HOSTED  —  ${VAR_NAME}=${current}"
+    echo "  ${name}: ${current}"
   fi
+}
+
+show_status() {
+  echo "Runner variables on ${REPO}:"
+  show_var "${VAR_GENERIC}"
+  show_var "${VAR_X64}"
   show_runners
 }
 
@@ -52,18 +65,29 @@ case "${cmd}" in
     show_status
     ;;
   pi|self-hosted)
-    echo "==> Setting ${VAR_NAME}=${PI_VALUE} on ${REPO}"
-    gh variable set "${VAR_NAME}" --repo "${REPO}" --body "${PI_VALUE}"
+    echo "==> Setting ${VAR_GENERIC}=${PI_VALUE} on ${REPO}"
+    gh variable set "${VAR_GENERIC}" --repo "${REPO}" --body "${PI_VALUE}"
     echo "==> Done. Cancel + re-run any queued workflows to pick up the change."
     show_status
     ;;
   hosted|gh|github)
-    echo "==> Clearing ${VAR_NAME} on ${REPO} (back to ubuntu-latest)"
-    gh variable delete "${VAR_NAME}" --repo "${REPO}" 2>/dev/null || true
+    echo "==> Clearing ${VAR_GENERIC} on ${REPO} (back to ubuntu-latest)"
+    gh variable delete "${VAR_GENERIC}" --repo "${REPO}" 2>/dev/null || true
+    show_status
+    ;;
+  x64-legion)
+    echo "==> Setting ${VAR_X64}=${LEGION_VALUE} on ${REPO}"
+    echo "    (Lighthouse / e2e / a11y only — do not use omv for these)"
+    gh variable set "${VAR_X64}" --repo "${REPO}" --body "${LEGION_VALUE}"
+    show_status
+    ;;
+  x64-hosted)
+    echo "==> Clearing ${VAR_X64} on ${REPO} (browser suites → ubuntu-latest)"
+    gh variable delete "${VAR_X64}" --repo "${REPO}" 2>/dev/null || true
     show_status
     ;;
   *)
-    echo "Usage: $0 [status|pi|hosted]" >&2
+    echo "Usage: $0 [status|pi|hosted|x64-legion|x64-hosted]" >&2
     exit 2
     ;;
 esac

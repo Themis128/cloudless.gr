@@ -149,7 +149,8 @@
     "aw:a11y-audit": "gh aw run a11y-audit",
     "aw:lighthouse": "gh aw run lighthouse",
     "aw:cluster-doctor": "gh aw run cluster-doctor",
-    "aw:etl-espocrm": "gh aw run etl-espocrm-to-r2"
+    "aw:etl-espocrm": "gh aw run etl-espocrm-to-r2",
+    "lighthouse:audit": "bash scripts/lighthouse-local.sh"
   },
   "overrides": {
     "undici": "8.10.0",

@@ -255,3 +255,4 @@ RUN-MIGRATION.md
 # Local lint tool caches (yamllint / actionlint)
 .tools/
 test-results.json/
+.lighthouseci/
