@@ -19,7 +19,8 @@ concurrency:
 jobs:
   e2e:
     name: Playwright full coverage (local dev)
-    runs-on: ubuntu-latest
+    # Default GH-hosted; RUNNER_X64=["self-hosted","legion","x64"] for Legion failover.
+    runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
     timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'

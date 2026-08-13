@@ -368,7 +368,8 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.trigger_only)
       )
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-    timeout-minutes: 10
+    # Trigger is fast; edge smoke may wait a few minutes for omv pull + health.
+    timeout-minutes: 15
     steps:
     - name: Resolve artifact key
       id: key
@@ -423,6 +424,75 @@ jobs:
           echo "| githubRunId | \`${{ github.run_id }}\` |"
         } >> "$GITHUB_STEP_SUMMARY"
 
+    - name: Edge smoke (health SHA + public routes)
+      id: smoke
+      if: steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-url' && steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-token'
+      env:
+        WANT_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        WANT12="${WANT_SHA:0:12}"
+        HEALTH_URLS=(
+          https://cloudless.gr/api/health
+          https://pi-origin.cloudless.gr/api/health
+        )
+        PAGE_URLS=(
+          https://cloudless.gr/en
+          https://cloudless.gr/en/store
+          https://cloudless.gr/en/contact
+        )
+
+        echo "Waiting for /api/health version to match ${WANT12}…"
+        LIVE=""
+        MATCHED=0
+        for i in $(seq 1 12); do
+          for u in "${HEALTH_URLS[@]}"; do
+            BODY=$(curl -sS --max-time 15 "$u" || true)
+            if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
+              LIVE=$(echo "$BODY" | jq -r .version)
+              echo "  try ${i}: $u → version=${LIVE}"
+              case "$LIVE" in
+                "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
+                  MATCHED=1
+                  break 2
+                  ;;
+              esac
+            else
+              CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || echo 000)
+              echo "  try ${i}: $u → http=${CODE} (no version json)"
+            fi
+          done
+          sleep 30
+        done
+
+        if [ "$MATCHED" != "1" ]; then
+          echo "::error::Edge health did not report sha ${WANT12} within ~6m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
+          exit 1
+        fi
+
+        SMOKE_LINES=()
+        for u in "${PAGE_URLS[@]}"; do
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo 000)
+          echo "smoke $u → ${CODE}"
+          SMOKE_LINES+=("| \`$u\` | ${CODE} |")
+          case "$CODE" in
+            2??) ;;
+            *)
+              echo "::error::Smoke failed: $u returned ${CODE}"
+              exit 1
+              ;;
+          esac
+        done
+
+        {
+          echo "## Edge smoke"
+          echo ""
+          echo "| Check | Result |"
+          echo "| --- | --- |"
+          echo "| health version | \`${LIVE}\` (want \`${WANT12}\`) |"
+          printf '%s\n' "${SMOKE_LINES[@]}"
+        } | tee /tmp/smoke.md >> "$GITHUB_STEP_SUMMARY"
+
     - name: Comment tracking on issue 382
       if: always()
       env:
@@ -441,4 +511,13 @@ jobs:
           echo "| artifactKey | \`$KEY\` |"
           echo "| workflowInstanceId | \`$INSTANCE\` |"
           echo "| run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
+          if [ -f /tmp/smoke.md ]; then
+            echo ""
+            # Drop the H2 from the step summary copy; keep the table.
+            sed '1{/^## Edge smoke$/d;}' /tmp/smoke.md | sed '/^$/d' | {
+              echo "#### Edge smoke"
+              echo ""
+              cat
+            }
+          fi
         } | gh issue comment 382 --repo "${{ github.repository }}" --body-file -

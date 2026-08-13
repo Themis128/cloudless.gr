@@ -28,7 +28,8 @@ concurrency:
 jobs:
   axe-playwright:
     name: Playwright A11y Checks
-    runs-on: ubuntu-latest
+    # Default GH-hosted; RUNNER_X64=["self-hosted","legion","x64"] for Legion failover.
+    runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6

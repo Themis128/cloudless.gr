@@ -3,18 +3,20 @@ name: Switch Runner Mode
 # UI-accessible alternative to .github/scripts/toggle-runner.sh for
 # sessions where gh CLI is not available (e.g. Claude Code on the web).
 # Runs on ubuntu-latest (hardcoded) so it always uses a GH-hosted runner
-# regardless of the current RUNNER_GENERIC value.
+# regardless of RUNNER_GENERIC / RUNNER_X64.
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Runner pool for generic CI jobs
+        description: Runner pool to switch
         required: true
         type: choice
         options:
-        - hosted             # ubuntu-latest — free for public repos
-        - pi             # self-hosted Pi build runners
+        - hosted             # clear RUNNER_GENERIC → ubuntu-latest
+        - pi                 # RUNNER_GENERIC → omv build
+        - x64-hosted         # clear RUNNER_X64 → ubuntu-latest (LH/e2e/a11y)
+        - x64-legion         # RUNNER_X64 → legion WSL (LH/e2e/a11y only)
 
 permissions:
   actions: write
@@ -31,7 +33,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh variable delete RUNNER_GENERIC --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
-        echo "RUNNER_GENERIC cleared — workflows will use ubuntu-latest."
+        echo "RUNNER_GENERIC cleared — generic workflows will use ubuntu-latest."
 
     - name: Set RUNNER_GENERIC (→ Pi build runners)
       if: inputs.mode == 'pi'
@@ -43,22 +45,47 @@ jobs:
           --repo "$GITHUB_REPOSITORY"
         echo "RUNNER_GENERIC set to [self-hosted, omv, build]."
 
+    - name: Clear RUNNER_X64 (→ ubuntu-latest for browser suites)
+      if: inputs.mode == 'x64-hosted'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable delete RUNNER_X64 --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+        echo "RUNNER_X64 cleared — Lighthouse/e2e/a11y use ubuntu-latest."
+
+    - name: Set RUNNER_X64 (→ Legion WSL)
+      if: inputs.mode == 'x64-legion'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable set RUNNER_X64 \
+          --body '["self-hosted","legion","x64"]' \
+          --repo "$GITHUB_REPOSITORY"
+        echo "RUNNER_X64 set to [self-hosted, legion, x64]."
+        echo "Never point RUNNER_X64 at omv/Pi — browser suites need x86_64 Chrome."
+
     - name: Print summary
       run: |
-        if [ "${{ inputs.mode }}" = "hosted" ]; then
-          {
-            echo "## Runner mode: GitHub-hosted"
-            echo ""
-            echo "**RUNNER_GENERIC** cleared."
-            echo "All instrumented workflows now use \`ubuntu-latest\` (free for public repos)."
-          } >> "$GITHUB_STEP_SUMMARY"
-        else
-          {
-            echo "## Runner mode: Pi self-hosted"
-            echo ""
-            echo "**RUNNER_GENERIC** = \`[\"self-hosted\",\"omv\",\"build\"]\`"
-            echo "All instrumented workflows route to the Pi build runner pool."
-            echo ""
-            echo "> **Reminder:** already-queued jobs are not re-routed — cancel and re-run them."
-          } >> "$GITHUB_STEP_SUMMARY"
-        fi
+        MODE="${{ inputs.mode }}"
+        {
+          echo "## Runner mode: \`${MODE}\`"
+          echo ""
+          case "$MODE" in
+            hosted)
+              echo "**RUNNER_GENERIC** cleared → \`ubuntu-latest\` for instrumented generic CI."
+              ;;
+            pi)
+              echo "**RUNNER_GENERIC** = \`[\"self-hosted\",\"omv\",\"build\"]\`"
+              echo "Generic CI routes to the Pi build pool. Do **not** use for Lighthouse/Playwright."
+              ;;
+            x64-hosted)
+              echo "**RUNNER_X64** cleared → \`ubuntu-latest\` for Lighthouse / e2e / a11y."
+              ;;
+            x64-legion)
+              echo "**RUNNER_X64** = \`[\"self-hosted\",\"legion\",\"x64\"]\`"
+              echo "Browser suites route to the Legion WSL runner (must be online)."
+              ;;
+          esac
+          echo ""
+          echo "> **Reminder:** already-queued jobs are not re-routed — cancel and re-run them."
+        } >> "$GITHUB_STEP_SUMMARY"
