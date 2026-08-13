@@ -83,8 +83,13 @@ ARG APP_VERSION=dev
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0 \
     APP_VERSION=${APP_VERSION}
+
+# Listen address: Next standalone defaults HOSTNAME to all interfaces when
+# unset. Do not assign HOSTNAME to that bind address — Next also uses it
+# when minting redirect Location headers (308 to http://<bind>:3000/en).
+# Bind stays all-interfaces; absolute URLs come from Host /
+# NEXT_PUBLIC_SITE_URL via canonicalOrigin.
 
 # node:22-alpine ships with a non-root `node` user at uid/gid 1000 — reuse it
 # (matches the k3s Deployment's runAsUser: 1000). --chmod=0555 drops write bits

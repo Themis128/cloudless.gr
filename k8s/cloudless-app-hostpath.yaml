@@ -6,7 +6,9 @@ metadata:
 data:
   NODE_ENV: production
   PORT: '3000'
-  HOSTNAME: 0.0.0.0
+  # Do not set HOSTNAME to the all-interfaces bind address. Next standalone
+  # already binds that way when HOSTNAME is unset, and setting it makes 308
+  # Location headers use http://<bind>:3000/en instead of the request Host.
   SSM_DISABLED: '1'
   NEXT_PUBLIC_SITE_URL: https://cloudless.gr
   NEXT_PUBLIC_AUTH_PROVIDER: d1

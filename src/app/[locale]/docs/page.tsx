@@ -2,10 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import {
-  getDocs as getAppFlowyDocs,
-  type AppFlowyDoc,
-} from "@/lib/appflowy-docs";
+import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { getWikiDocs, type WikiDocRecord } from "@/lib/notion-docs";
 import JsonLd from "@/components/JsonLd";

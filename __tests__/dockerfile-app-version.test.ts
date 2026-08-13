@@ -49,4 +49,9 @@ describe("Dockerfile multi-stage APP_VERSION wiring", () => {
       "runner stage MUST set ENV APP_VERSION=${APP_VERSION} so process.env.APP_VERSION is populated at runtime"
     ).toMatch(/APP_VERSION=\$\{APP_VERSION\}|APP_VERSION=\$APP_VERSION/);
   });
+
+  it("does not assign ENV HOSTNAME in the runner stage", () => {
+    expect(runner).not.toMatch(/^\s*HOSTNAME=/m);
+    expect(runner).not.toMatch(/^ENV[^\n]*HOSTNAME=/m);
+  });
 });

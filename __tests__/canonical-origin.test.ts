@@ -60,6 +60,11 @@ describe("canonicalOrigin", () => {
     expect(canonicalOrigin(req)).toBe("http://localhost:4000");
   });
 
+  it("does not echo the Next listen bind 0.0.0.0 back to clients", () => {
+    const req = new NextRequest("http://0.0.0.0:3000/en/");
+    expect(canonicalOrigin(req)).toBe("https://cloudless.gr");
+  });
+
   it("never includes a trailing slash", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://cloudless.gr///";
     const req = new NextRequest("https://cloudless.gr/api/checkout");

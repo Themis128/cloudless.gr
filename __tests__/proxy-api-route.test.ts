@@ -38,7 +38,9 @@ describe("proxy /api/* route handling", () => {
     const res = await proxy(makeApiRequest("/api/health", { origin: "https://cloudless.gr" }));
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://cloudless.gr");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("OPTIONS");
-    expect(res.headers.get("Access-Control-Allow-Headers").toLowerCase()).toContain("stripe-signature");
+    expect(res.headers.get("Access-Control-Allow-Headers").toLowerCase()).toContain(
+      "stripe-signature"
+    );
   });
 
   it("does NOT attach CORS headers for an unknown origin", async () => {
@@ -82,6 +84,20 @@ describe("proxy HTTPS enforcement", () => {
     });
     const res = await proxy(req);
     expect(res.status).not.toBe(308);
+    vi.unstubAllEnvs();
+  });
+
+  it("308 Location uses the site URL, not the 0.0.0.0 listen bind", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloudless.gr");
+    const req = new NextRequest("http://0.0.0.0:3000/en/", {
+      headers: { "x-forwarded-proto": "http", host: "0.0.0.0:3000" },
+    });
+    const res = await proxy(req);
+    expect(res.status).toBe(308);
+    const location = res.headers.get("location") ?? "";
+    expect(location.startsWith("https://cloudless.gr")).toBe(true);
+    expect(location).not.toContain("0.0.0.0");
     vi.unstubAllEnvs();
   });
 });

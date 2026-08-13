@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "@/i18n/routing";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
 const LOCALES = routing.locales as readonly string[];
@@ -31,6 +32,11 @@ function stripAllLocalePrefixes(pathname: string): string {
     path = path.slice(segment.length + 1) || "/";
   }
   return path;
+}
+
+/** Absolute URL for redirects. Never echo the listen bind (`0.0.0.0`) or CDN origin. */
+function appUrl(path: string, request: NextRequest): URL {
+  return new URL(path, canonicalOrigin(request));
 }
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -241,7 +247,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const isHttps = forwardedProto === "https" || request.nextUrl.protocol === "https:";
 
   if (!isHttps && process.env.NODE_ENV === "production") {
-    const httpsUrl = request.nextUrl.clone();
+    const httpsUrl = appUrl(`${request.nextUrl.pathname}${request.nextUrl.search}`, request);
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
   }
@@ -374,7 +380,7 @@ async function handlePageRoute(
               const redirectPath = isLocalized
                 ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
                 : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-              return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+              return NextResponse.redirect(appUrl(redirectPath, request), 307);
             }
             
             const isAdminUser = await isAdmin(db, user.id);
@@ -382,16 +388,16 @@ async function handlePageRoute(
             if (isPostLoginRoute) {
               if (isAdminUser) {
                 const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
-                return NextResponse.redirect(new URL(adminUrl, request.nextUrl.origin), 307);
+                return NextResponse.redirect(appUrl(adminUrl, request), 307);
               } else {
                 const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-                return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+                return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
               }
             }
             
             if (isAdminRoute && !isAdminUser) {
               const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-              return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+              return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
             }
             
             return continueToApp(request, pathname, nonce);
@@ -410,22 +416,22 @@ async function handlePageRoute(
           const redirectPath = isLocalized
             ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
             : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-          return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+          return NextResponse.redirect(appUrl(redirectPath, request), 307);
         }
         
         if (isPostLoginRoute) {
           if (isAdminFromSession(session)) {
             const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
-            return NextResponse.redirect(new URL(adminUrl, request.nextUrl.origin), 307);
+            return NextResponse.redirect(appUrl(adminUrl, request), 307);
           } else {
             const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-            return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+            return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
           }
         }
         
         if (isAdminRoute && !isAdminFromSession(session)) {
           const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-          return NextResponse.redirect(new URL(dashboardUrl, request.nextUrl.origin), 307);
+          return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
         }
       } catch {
         const basePath = pathname.split("/")[1] || "";
@@ -433,14 +439,14 @@ async function handlePageRoute(
         const redirectPath = isLocalized
           ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
           : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-        return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+        return NextResponse.redirect(appUrl(redirectPath, request), 307);
       }
     } else {
       if (isPostLoginRoute) {
         const basePath = pathname.split("/")[1] || "";
         const isLocalized = LOCALES.includes(basePath);
         const loginPath = isLocalized ? `/${basePath}/auth/login` : "/auth/login";
-        return NextResponse.redirect(new URL(loginPath, request.nextUrl.origin), 307);
+        return NextResponse.redirect(appUrl(loginPath, request), 307);
       }
       
       const basePath = pathname.split("/")[1] || "";
@@ -449,7 +455,7 @@ async function handlePageRoute(
         ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
         : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
       
-      return NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 307);
+      return NextResponse.redirect(appUrl(redirectPath, request), 307);
     }
   }
 
