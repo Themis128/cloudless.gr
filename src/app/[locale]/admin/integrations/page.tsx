@@ -11,6 +11,7 @@ interface ApiIntegration {
   category: string;
   status: IntegrationStatus;
   message?: string;
+  setupUrl?: string;
 }
 
 interface ApiResponse {
@@ -25,35 +26,54 @@ interface ApiResponse {
   checkedAt: string;
 }
 
-// Static URL map — iterated directly so href is never derived from API response data
-const SETUP_URLS = {
-  ses: "https://console.aws.amazon.com/ses",
+/** Fallback Connect URLs when the status API omits setupUrl. */
+const SETUP_URL_FALLBACK: Record<string, string> = {
   stripe: "https://dashboard.stripe.com/apikeys",
   espocrm: "https://espocrm.cloudless.gr",
   slack: "https://api.slack.com/apps",
   notion: "https://www.notion.so/my-integrations",
+  "cloudflare-email": "https://dash.cloudflare.com",
   google: "https://console.cloud.google.com/iam-admin/serviceaccounts",
   sentry: "https://sentry.io/settings/auth-tokens/",
   anthropic: "https://console.anthropic.com/settings/keys",
   activecampaign: "https://www.activecampaign.com",
-  meta: "https://business.facebook.com/settings/system-users",
+  meta: "https://business.facebook.com/settings/ad_accounts",
   linkedin: "https://www.linkedin.com/campaignmanager",
-  tiktok: "https://ads.tiktok.com/marketing_api/apps",
+  tiktok: "/api/admin/oauth/tiktok",
   x: "https://ads.x.com/help",
   google_ads: "https://ads.google.com/intl/en_us/home/tools/api-center/",
-} as const;
+  postiz: "https://postiz.cloudless.gr",
+  appflowy: "https://appflowy.cloudless.gr",
+  n8n: "https://n8n.cloudless.gr",
+};
 
 const CATEGORY_ORDER = [
-  "Email",
-  "CRM",
-  "Ads",
-  "Analytics",
-  "Monitoring",
-  "Payments",
-  "Communication",
-  "Content",
-  "AI",
+  "email",
+  "payments",
+  "crm",
+  "communication",
+  "content",
+  "productivity",
+  "monitoring",
+  "ai",
+  "email_marketing",
+  "social_ads",
+  "automation",
 ];
+
+const CATEGORY_LABEL: Record<string, string> = {
+  email: "Email",
+  payments: "Payments",
+  crm: "CRM",
+  communication: "Communication",
+  content: "Content",
+  productivity: "Productivity",
+  monitoring: "Monitoring",
+  ai: "AI",
+  email_marketing: "Email marketing",
+  social_ads: "Social ads",
+  automation: "Automation",
+};
 
 const STATUS_DOT: Record<IntegrationStatus, string> = {
   configured: "bg-neon-green",
@@ -76,8 +96,6 @@ const STATUS_TEXT: Record<IntegrationStatus, string> = {
   error: "text-red-400",
 };
 
-type ApiMap = Map<string, ApiIntegration>;
-
 interface Row {
   id: string;
   setupUrl: string;
@@ -87,18 +105,15 @@ interface Row {
   message?: string;
 }
 
-function buildRows(apiMap: ApiMap): Row[] {
-  return Object.entries(SETUP_URLS).map(([id, setupUrl]) => {
-    const api = apiMap.get(id);
-    return {
-      id,
-      setupUrl,
-      name: api?.name ?? id,
-      category: api?.category ?? "Other",
-      status: api?.status ?? "not_configured",
-      message: api?.message,
-    };
-  });
+function buildRows(integrations: ApiIntegration[]): Row[] {
+  return integrations.map((api) => ({
+    id: api.id,
+    setupUrl: api.setupUrl || SETUP_URL_FALLBACK[api.id] || "#",
+    name: api.name,
+    category: api.category,
+    status: api.status,
+    message: api.message,
+  }));
 }
 
 function groupByCategory(rows: Row[]): Record<string, Row[]> {
@@ -120,8 +135,13 @@ function sortedCategories(map: Record<string, Row[]>): string[] {
   return [...known, ...rest];
 }
 
+function connectTarget(setupUrl: string): { href: string; external: boolean } {
+  if (setupUrl.startsWith("/")) return { href: setupUrl, external: false };
+  return { href: setupUrl, external: true };
+}
+
 export default function IntegrationsPage() {
-  const [apiMap, setApiMap] = useState<ApiMap>(new Map());
+  const [integrations, setIntegrations] = useState<ApiIntegration[]>([]);
   const [summary, setSummary] = useState<ApiResponse["summary"] | null>(null);
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,7 +158,7 @@ export default function IntegrationsPage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data: ApiResponse = await res.json();
         if (!cancelled) {
-          setApiMap(new Map(data.integrations.map((i) => [i.id, i])));
+          setIntegrations(data.integrations);
           setSummary(data.summary);
           setCheckedAt(data.checkedAt);
         }
@@ -154,7 +174,7 @@ export default function IntegrationsPage() {
     };
   }, [refreshKey]);
 
-  const rows = buildRows(apiMap);
+  const rows = buildRows(integrations);
   const grouped = groupByCategory(rows);
   const categories = sortedCategories(grouped);
 
@@ -181,7 +201,6 @@ export default function IntegrationsPage() {
         </button>
       </div>
 
-      {/* Summary bar */}
       {summary && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(
@@ -209,7 +228,7 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {loading && apiMap.size === 0 && (
+      {loading && integrations.length === 0 && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div
@@ -220,46 +239,51 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {/* Groups — href comes from SETUP_URLS static constant, never from API response */}
       <div className="space-y-6">
         {categories.map((category) => (
           <div key={category}>
             <h2 className="font-heading mb-3 text-sm font-semibold tracking-widest text-slate-500 uppercase">
-              {category}
+              {CATEGORY_LABEL[category] ?? category}
             </h2>
             <div className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800">
-              {grouped[category].map((row) => (
-                <div
-                  key={row.id}
-                  className="bg-void-light/50 flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[row.status]}`}
-                    />
-                    <span className="font-heading truncate font-medium text-white">{row.name}</span>
-                  </div>
+              {grouped[category].map((row) => {
+                const target = connectTarget(row.setupUrl);
+                return (
+                  <div
+                    key={row.id}
+                    className="bg-void-light/50 flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[row.status]}`}
+                      />
+                      <span className="font-heading truncate font-medium text-white">
+                        {row.name}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-3 pl-5 sm:pl-0">
-                    {row.message && (
-                      <span className="font-mono text-xs text-slate-500">{row.message}</span>
-                    )}
-                    <span className={`shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}>
-                      {STATUS_LABEL[row.status]}
-                    </span>
-                    {row.status !== "configured" && (
-                      <a
-                        href={row.setupUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:border-neon-magenta/50 shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:text-white"
-                      >
-                        Connect
-                      </a>
-                    )}
+                    <div className="flex items-center gap-3 pl-5 sm:pl-0">
+                      {row.message && (
+                        <span className="font-mono text-xs text-slate-500">{row.message}</span>
+                      )}
+                      <span className={`shrink-0 font-mono text-xs ${STATUS_TEXT[row.status]}`}>
+                        {STATUS_LABEL[row.status]}
+                      </span>
+                      {row.status !== "configured" && row.setupUrl !== "#" && (
+                        <a
+                          href={target.href}
+                          {...(target.external
+                            ? { target: "_blank", rel: "noopener noreferrer" }
+                            : {})}
+                          className="hover:border-neon-magenta/50 shrink-0 rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 transition-all hover:text-white"
+                        >
+                          Connect
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
