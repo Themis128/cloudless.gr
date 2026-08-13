@@ -54,7 +54,7 @@ jobs:
     - name: Wait for runner memory headroom
       run: |
         set -euo pipefail
-        MIN_MB=2500
+        MIN_MB=1500
         for i in $(seq 1 24); do
           FREE_MB=$(awk '/MemAvailable/ { printf "%d", $2/1024 }' /proc/meminfo)
           LOAD1=$(cut -d' ' -f1 /proc/loadavg)
@@ -163,12 +163,21 @@ jobs:
         elif command -v k3s >/dev/null 2>&1; then
           sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s || true
         fi
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         ok=0
         for i in $(seq 1 36); do
-          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
-          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+          H=$(http_code /dev/null 5 "${BASE}/api/health")
+          S=$(http_code /dev/null 15 \
             -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
-            "${BASE}/en/store" || echo 000)
+            "${BASE}/en/store")
           echo "stability check $i: health=$H store=$S"
           if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
             ok=$((ok + 1))
@@ -209,12 +218,21 @@ jobs:
       run: |
         set -euo pipefail
         echo "::warning::Lighthouse collect failed (often CHROME_INTERSTITIAL during Recreate). Re-gating origin then retrying once."
+        http_code() {
+          local out="$1" timeout="$2"; shift 2
+          local c
+          c=$(curl -sS -o "$out" -w '%{http_code}' --max-time "$timeout" "$@" || true)
+          case "$c" in
+            [1-5][0-9][0-9]) printf '%s' "$c" ;;
+            *) printf '000' ;;
+          esac
+        }
         ok=0
         for i in $(seq 1 36); do
-          H=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "${BASE}/api/health" || echo 000)
-          S=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+          H=$(http_code /dev/null 5 "${BASE}/api/health")
+          S=$(http_code /dev/null 15 \
             -H "X-Forwarded-Proto: https" -H "Host: cloudless.gr" \
-            "${BASE}/en/store" || echo 000)
+            "${BASE}/en/store")
           echo "retry gate $i: health=$H store=$S"
           if [[ "$H" == "200" && ( "$S" == "200" || "$S" == "304" ) ]]; then
             ok=$((ok + 1))
