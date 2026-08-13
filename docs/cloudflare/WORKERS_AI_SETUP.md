@@ -79,4 +79,3 @@ uses Workers AI with Gemini fallback via `src/lib/admin-ai.ts`. Optional free-ti
 | Analytics Engine | same CF account token | Explorer at `/admin/analytics/engine`. |
 
 Status card: `GET /api/admin/ai/status` (also on AI Generator / Assistant).
-
