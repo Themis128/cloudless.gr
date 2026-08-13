@@ -7,9 +7,16 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isActiveCampaignConfigured())) {
-    return NextResponse.json({ error: "ActiveCampaign not configured." }, { status: 503 });
+    return NextResponse.json({
+      configured: false,
+      automations: [],
+      total: 0,
+      message:
+        "ActiveCampaign is not configured. Add ACTIVECAMPAIGN_API_URL and ACTIVECAMPAIGN_API_TOKEN.",
+      setupUrl: "https://www.activecampaign.com",
+    });
   }
 
   const automations = await listAutomations();
-  return NextResponse.json({ automations, total: automations.length });
+  return NextResponse.json({ configured: true, automations, total: automations.length });
 }

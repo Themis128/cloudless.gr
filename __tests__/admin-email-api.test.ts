@@ -14,6 +14,7 @@ const {
   mockIsActiveCampaignConfigured,
   mockListACLists,
   mockListAutomations,
+  mockListCampaigns,
   mockGetConfig,
   mockFetch,
 } = vi.hoisted(() => ({
@@ -25,6 +26,7 @@ const {
   mockIsActiveCampaignConfigured: vi.fn(),
   mockListACLists: vi.fn(),
   mockListAutomations: vi.fn(),
+  mockListCampaigns: vi.fn(),
   mockGetConfig: vi.fn(),
   mockFetch: vi.fn(),
 }));
@@ -49,6 +51,7 @@ vi.mock("@/lib/activecampaign", () => ({
   isActiveCampaignConfigured: mockIsActiveCampaignConfigured,
   listACLists: mockListACLists,
   listAutomations: mockListAutomations,
+  listCampaigns: mockListCampaigns,
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
@@ -71,15 +74,31 @@ describe("Admin Email API routes", () => {
   });
 
   // ── GET /api/admin/email/campaigns ───────────────────────────────────────────
-  // Route is a 501 stub — EspoCRM Marketing Emails requires 'content' scope.
+  // ActiveCampaign-backed; soft-returns configured:false when unbound.
 
   describe("GET /api/admin/email/campaigns", () => {
-    it("returns 501 (EspoCRM scope not available)", async () => {
+    it("returns 200 with configured:false when ActiveCampaign not configured", async () => {
+      mockIsActiveCampaignConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/campaigns/route");
       const res = await GET(makeGet("/api/admin/email/campaigns"));
-      expect(res.status).toBe(501);
+      expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.error).toMatch(/managed directly in EspoCRM/i);
+      expect(data.configured).toBe(false);
+      expect(data.campaigns).toEqual([]);
+      expect(mockListCampaigns).not.toHaveBeenCalled();
+    });
+
+    it("returns campaigns from ActiveCampaign when configured", async () => {
+      mockListCampaigns.mockResolvedValueOnce([
+        { id: "9", name: "Welcome", subject: "Hi", status: "1", send_amt: "10" },
+      ]);
+      const { GET } = await import("@/app/api/admin/email/campaigns/route");
+      const res = await GET(makeGet("/api/admin/email/campaigns"));
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(data.configured).toBe(true);
+      expect(data.total).toBe(1);
+      expect(data.campaigns[0].name).toBe("Welcome");
     });
   });
 
@@ -139,11 +158,14 @@ describe("Admin Email API routes", () => {
   // Route uses ActiveCampaign: isActiveCampaignConfigured + listACLists.
 
   describe("GET /api/admin/email/lists", () => {
-    it("returns 503 when ActiveCampaign not configured", async () => {
+    it("returns 200 with configured:false when ActiveCampaign not configured", async () => {
       mockIsActiveCampaignConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/lists/route");
       const res = await GET(makeGet("/api/admin/email/lists"));
-      expect(res.status).toBe(503);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.configured).toBe(false);
+      expect(data.lists).toEqual([]);
     });
 
     it("returns lists", async () => {
@@ -160,11 +182,14 @@ describe("Admin Email API routes", () => {
   // Route uses ActiveCampaign: isActiveCampaignConfigured + listAutomations.
 
   describe("GET /api/admin/email/automations", () => {
-    it("returns 503 when ActiveCampaign not configured", async () => {
+    it("returns 200 with configured:false when ActiveCampaign not configured", async () => {
       mockIsActiveCampaignConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/automations/route");
       const res = await GET(makeGet("/api/admin/email/automations"));
-      expect(res.status).toBe(503);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.configured).toBe(false);
+      expect(data.automations).toEqual([]);
       expect(mockListAutomations).not.toHaveBeenCalled();
     });
 
