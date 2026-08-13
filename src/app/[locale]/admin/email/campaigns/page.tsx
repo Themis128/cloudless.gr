@@ -4,8 +4,6 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 
-/* Shapes mirror the /api/admin/email/* routes. */
-
 interface ACList {
   id: string;
   name: string;
@@ -18,18 +16,22 @@ interface ACAutomation {
   status?: string;
 }
 
+interface ACCampaign {
+  id: string;
+  name: string;
+  subject?: string;
+  status?: string;
+  sdate?: string;
+  uniqueopens?: string;
+  send_amt?: string;
+}
+
 export default function EmailCampaignsPage() {
   const [totalSubscribers, setTotalSubscribers] = useState<number | null>(null);
   const [lists, setLists] = useState<ACList[]>([]);
-  const [listsConfigured, setListsConfigured] = useState(true);
   const [automations, setAutomations] = useState<ACAutomation[]>([]);
-  // /api/admin/email/campaigns deliberately returns 501 until the EspoCRM
-  // token gains the Marketing Emails "content" scope — surface that here.
-  const [campaignsNotice, setCampaignsNotice] = useState<{
-    text: string;
-    setupUrl?: string;
-    docsUrl?: string;
-  } | null>(null);
+  const [campaigns, setCampaigns] = useState<ACCampaign[]>([]);
+  const [acConfigured, setAcConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,28 +50,32 @@ export default function EmailCampaignsPage() {
           ((await statsRes.json()) as { totalSubscribers: number | null }).totalSubscribers ?? null
         );
       }
+
       if (listsRes.ok) {
-        setLists(((await listsRes.json()) as { lists: ACList[] }).lists ?? []);
-      } else if (listsRes.status === 503) {
-        setListsConfigured(false);
+        const body = (await listsRes.json()) as {
+          configured?: boolean;
+          lists?: ACList[];
+        };
+        if (body.configured === false) setAcConfigured(false);
+        setLists(body.lists ?? []);
       }
-      if (autoRes.ok)
-        setAutomations(
-          ((await autoRes.json()) as { automations: ACAutomation[] }).automations ?? []
-        );
-      if (!campRes.ok) {
-        const body = (await campRes.json().catch(() => null)) as {
-          error?: string;
-          instructions?: string;
-          setupUrl?: string;
-          docsUrl?: string;
-        } | null;
-        setCampaignsNotice({
-          text:
-            body?.instructions ?? body?.error ?? `Campaigns unavailable (HTTP ${campRes.status})`,
-          setupUrl: body?.setupUrl,
-          docsUrl: body?.docsUrl,
-        });
+
+      if (autoRes.ok) {
+        const body = (await autoRes.json()) as {
+          configured?: boolean;
+          automations?: ACAutomation[];
+        };
+        if (body.configured === false) setAcConfigured(false);
+        setAutomations(body.automations ?? []);
+      }
+
+      if (campRes.ok) {
+        const body = (await campRes.json()) as {
+          configured?: boolean;
+          campaigns?: ACCampaign[];
+        };
+        if (body.configured === false) setAcConfigured(false);
+        setCampaigns(body.campaigns ?? []);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -104,98 +110,119 @@ export default function EmailCampaignsPage() {
 
       {!loading && !error && (
         <div className="space-y-10">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <MetricCard
               label="Newsletter Subscribers"
               value={totalSubscribers === null ? "—" : totalSubscribers.toLocaleString()}
             />
+            <MetricCard label="Campaigns" value={campaigns.length.toLocaleString()} />
             <MetricCard label="ActiveCampaign Lists" value={lists.length.toLocaleString()} />
             <MetricCard label="Automations" value={automations.length.toLocaleString()} />
           </div>
 
-          {campaignsNotice && (
+          {!acConfigured && (
             <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-4">
               <p className="font-mono text-xs text-yellow-400">
-                <span className="font-bold">Campaign history unavailable:</span>{" "}
-                {campaignsNotice.text}
+                ActiveCampaign is not connected. Add{" "}
+                <code className="text-yellow-300">ACTIVECAMPAIGN_API_URL</code> and{" "}
+                <code className="text-yellow-300">ACTIVECAMPAIGN_API_TOKEN</code> (Settings →
+                Developer → API Access), then restart the app. Until then campaigns, lists, and
+                automations stay empty.
               </p>
-              {(campaignsNotice.setupUrl || campaignsNotice.docsUrl) && (
-                <p className="mt-2 font-mono text-xs text-yellow-300">
-                  {campaignsNotice.setupUrl && (
-                    <a
-                      href={campaignsNotice.setupUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:text-yellow-100"
-                    >
-                      Open EspoCRM private-apps →
-                    </a>
-                  )}
-                  {campaignsNotice.setupUrl && campaignsNotice.docsUrl && (
-                    <span className="mx-2">·</span>
-                  )}
-                  {campaignsNotice.docsUrl && (
-                    <a
-                      href={campaignsNotice.docsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:text-yellow-100"
-                    >
-                      Marketing Emails API docs →
-                    </a>
-                  )}
-                </p>
-              )}
+              <p className="mt-2 font-mono text-xs text-yellow-300">
+                <Link href="/admin/integrations" className="underline hover:text-yellow-100">
+                  Open Integrations →
+                </Link>
+              </p>
             </div>
           )}
 
           <section>
             <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+              CAMPAIGNS
+            </h2>
+            <div className="overflow-hidden rounded-xl border border-slate-800">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/50">
+                    <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                      Campaign
+                    </th>
+                    <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                      Subject
+                    </th>
+                    <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Sent</th>
+                    <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">Opens</th>
+                    <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {campaigns.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center font-mono text-sm text-slate-600">
+                        {acConfigured
+                          ? "No campaigns yet."
+                          : "Connect ActiveCampaign to load campaigns."}
+                      </td>
+                    </tr>
+                  )}
+                  {campaigns.map((c) => (
+                    <tr key={c.id} className="transition-colors hover:bg-slate-800/30">
+                      <td className="px-4 py-3 font-mono text-sm text-white">{c.name}</td>
+                      <td className="px-4 py-3 font-mono text-sm text-slate-300">
+                        {c.subject ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                        {Number.parseInt(c.send_amt ?? "0", 10).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                        {Number.parseInt(c.uniqueopens ?? "0", 10).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-xs text-slate-400">
+                        {c.status ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
               ACTIVECAMPAIGN LISTS
             </h2>
-            {!listsConfigured && (
-              <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-4">
-                <p className="font-mono text-xs text-yellow-400">
-                  ActiveCampaign is not configured. Add{" "}
-                  <code className="text-yellow-300">ACTIVECAMPAIGN_API_URL</code> and{" "}
-                  <code className="text-yellow-300">ACTIVECAMPAIGN_API_TOKEN</code> to AWS SSM.
-                </p>
-              </div>
-            )}
-            {listsConfigured && (
-              <div className="overflow-hidden rounded-xl border border-slate-800">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/50">
-                      <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">List</th>
-                      <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
-                        Subscribers
-                      </th>
+            <div className="overflow-hidden rounded-xl border border-slate-800">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/50">
+                    <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">List</th>
+                    <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                      Subscribers
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {lists.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="py-8 text-center font-mono text-sm text-slate-600">
+                        {acConfigured ? "No lists found." : "Connect ActiveCampaign to load lists."}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {lists.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={2}
-                          className="py-8 text-center font-mono text-sm text-slate-600"
-                        >
-                          No lists found.
-                        </td>
-                      </tr>
-                    )}
-                    {lists.map((l) => (
-                      <tr key={l.id} className="transition-colors hover:bg-slate-800/30">
-                        <td className="px-4 py-3 font-mono text-sm text-white">{l.name}</td>
-                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-                          {Number.parseInt(l.subscriber_count, 10).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  )}
+                  {lists.map((l) => (
+                    <tr key={l.id} className="transition-colors hover:bg-slate-800/30">
+                      <td className="px-4 py-3 font-mono text-sm text-white">{l.name}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                        {Number.parseInt(l.subscriber_count, 10).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section>
@@ -218,7 +245,9 @@ export default function EmailCampaignsPage() {
                   {automations.length === 0 && (
                     <tr>
                       <td colSpan={2} className="py-8 text-center font-mono text-sm text-slate-600">
-                        No automations configured.
+                        {acConfigured
+                          ? "No automations configured."
+                          : "Connect ActiveCampaign to load automations."}
                       </td>
                     </tr>
                   )}
