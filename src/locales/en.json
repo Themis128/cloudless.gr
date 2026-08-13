@@ -26,7 +26,7 @@
     "blog": "Blog",
     "contact": "Contact",
     "store": "Store",
-    "freeAudit": "Get a Free Audit",
+    "freeAudit": "Book a Free Audit",
     "toggleMenu": "Toggle menu",
     "language": "Language",
     "signIn": "Sign In",
@@ -39,11 +39,11 @@
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
     "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
-    "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20-person team.",
+    "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't have to. We're the third way — serverless infra, data-driven growth, and scaling that fits a 2–20-person team.",
     "subtitleHighlight": "Finally.",
-    "ctaPrimary": "Get a Free Audit",
+    "ctaPrimary": "Book a Free Audit",
     "ctaSecondary": "View Services",
-    "microCopy1": "No commitment. Actionable insights in 30 min.",
+    "microCopy1": "No commitment. Actionable insights in 30 minutes.",
     "microCopy2": "Transparent pricing. No lock-in.",
     "terminalTitle": "cloudless-cli v2.0"
   },
@@ -55,7 +55,7 @@
   },
   "guarantees": {
     "resultsTitle": "Results in 14 Days",
-    "resultsDesc": "Measurable progress within two weeks of kickoff — or we keep working until you see it.",
+    "resultsDesc": "Measurable progress within 14 days of kickoff — or we keep working until you see it.",
     "noLockInTitle": "No Lock-in Contracts",
     "noLockInDesc": "Month-to-month. Cancel anytime. We earn your business every month.",
     "yourCodeTitle": "Your Code Is Yours",
@@ -66,13 +66,13 @@
     "bio": "— Cloudflare Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS.",
     "badgeAws": "Cloudflare Certified",
     "badgeOss": "Open-Source Contributor",
-    "badgeCapacity": "Now accepting 5 clients for Q2 2026"
+    "badgeCapacity": "Now accepting 5 clients for Q3 2026"
   },
   "servicesSection": {
     "label": "[ WHAT WE DO ]",
     "title": "Everything you need to",
     "titleHighlight": "scale",
-    "subtitle": "From infrastructure to marketing, we cover the full stack of modern business growth.",
+    "subtitle": "From infrastructure to marketing — the full stack for teams that need to grow.",
     "viewPricing": "See pricing & details",
     "service1Title": "Cloud Architecture & Migration",
     "service1Desc": "Design and migrate your infrastructure to Cloudflare, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
@@ -85,15 +85,15 @@
     "service3Title": "Data Analytics & Dashboards",
     "service3Desc": "Turn raw data into actionable insights with custom dashboards, pipelines, and real-time reporting.",
     "service3Tag": "ANALYTICS",
-    "service3For": "For teams making decisions on gut feeling instead of data.",
+    "service3For": "For teams deciding on gut feel instead of data.",
     "service4Title": "AI & Digital Marketing",
-    "service4Desc": "AI-powered campaigns, SEO, content strategy, and performance marketing that drives measurable growth.",
+    "service4Desc": "AI-powered campaigns, SEO, content strategy, and performance marketing that drive measurable growth.",
     "service4Tag": "AI",
     "service4For": "For startups spending on ads with no idea what's actually working."
   },
   "leadCapture": {
     "notReady": "Not ready for a call? No problem.",
-    "playbookTitle": "Get our free Cloud Migration Playbook — the exact framework we use with clients.",
+    "playbookTitle": "Get the free Cloud Migration Playbook — the framework we use with clients.",
     "playbookCta": "Download the Playbook"
   },
   "faq": {
@@ -103,15 +103,15 @@
     "q1": "How much will this actually cost me?",
     "a1": "Individual services range from €800 to €2,400 depending on scope. The full bundle is €3,600/month. For context: hiring a single cloud engineer in-house costs €5K–€8K/month. A CTO + marketer + data analyst? €20K+/month. We replace all three for a fraction of the cost — and you can cancel anytime.",
     "q2": "Who is this for? Am I the right fit?",
-    "a2": "We work best with startups and SMBs that are past the MVP stage — typically 2–20-person teams doing €50K–€500K in revenue. You have a product that works, but your infrastructure is duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next.",
+    "a2": "We work best with startups and SMBs that are past the MVP stage — typically 2–20-person teams doing €50K–€500K in revenue. You have a product that works, but your infrastructure is held together with duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next.",
     "q3": "What if I want to leave?",
     "a3": "Leave whenever you want. Month-to-month, no lock-in, no exit fees. Your code, infrastructure, and data are always yours — fully documented and handoff-ready. We're not in the business of holding your code hostage.",
     "q4": "How quickly can I see results?",
-    "a4": "Measurable progress within 14 days of kickoff. Cloud migrations show cost savings immediately. Marketing campaigns deliver initial data within two weeks. We guarantee it — or we keep working until you see it.",
+    "a4": "Measurable progress within 14 days of kickoff. Cloud migrations show cost savings immediately. Marketing campaigns show initial results within two weeks. We guarantee it — or we keep working until you see it.",
     "q5": "What does the free audit include?",
     "a5": "A 30-minute call where we review your current infrastructure, marketing setup, or both. You'll get a concrete action plan with specific recommendations — no pitch, no pressure. Most founders say it's the most useful 30 minutes they've spent on their tech stack.",
-    "q6": "Can I trust a new agency with my infrastructure?",
-    "a6": "Fair question. We're backed by Cloudflare certifications (check our Credly badges), open-source contributions to GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
+    "q6": "Can I trust a new consultancy with my infrastructure?",
+    "a6": "Fair question. We hold Cloudflare certifications (check our Credly badges), open-source contributions to GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
   },
   "founder": {
     "label": "[ ABOUT ]",
@@ -119,14 +119,14 @@
     "titleHighlight": "founder",
     "name": "Themistoklis Baltzakis",
     "role": "Cloud Architect & Growth Engineer",
-    "bio": "Certified cloud architect with hands-on experience in Cloudflare Workers, serverless architectures, data analytics, and AI-powered marketing. I help startups and SMBs build infrastructure that scales without the enterprise overhead."
+    "bio": "Certified cloud architect — Cloudflare Workers, serverless, data analytics, and AI-powered marketing."
   },
   "cta": {
     "title": "Ready to go",
     "titleHighlight": "cloudless",
     "subtitle": "Book a free 30-minute audit. We'll review your current setup and show you exactly where you're overpaying, underperforming, or both.",
-    "subtext": "No pitch. No commitment. Just actionable insights you can use even if you never talk to us again.",
-    "ctaPrimary": "Book Your Free Audit",
+    "subtext": "No pitch. No commitment. Actionable insights you can use even if we never speak again.",
+    "ctaPrimary": "Book a Free Audit",
     "ctaSecondary": "View Pricing"
   },
   "footer": {
@@ -143,7 +143,7 @@
   },
   "newsletter": {
     "title": "NEWSLETTER",
-    "subtitle": "Cloud tips, cost-saving strategies, and growth hacks. No spam.",
+    "subtitle": "Cloud tips, cost-saving strategies, and growth tactics. No spam.",
     "placeholder": "your@email.com",
     "cta": "Subscribe",
     "subscribing": "Subscribing...",
@@ -154,7 +154,7 @@
   },
   "contact": {
     "title": "Get in touch.",
-    "subtitle": "Ready to go cloudless? Tell us about your project, and we'll get back to you within 24 hours.",
+    "subtitle": "Ready to go cloudless? Tell us about your project — we'll reply within 24 hours.",
     "name": "Name",
     "email": "Email",
     "company": "Company",
@@ -174,7 +174,7 @@
     "subscribe": "Subscribe",
     "inCart": "In Cart",
     "checkout": "Checkout",
-    "success": "Order Successful",
+    "success": "Order successful",
     "searchPlaceholder": "Search products...",
     "sortBy": "Sort by",
     "allCategories": "All",
@@ -209,7 +209,7 @@
     "newPasswordDesc": "You must set a new password before continuing.",
     "signingIn": "Signing In...",
     "settingPassword": "Setting Password...",
-    "signupDesc": "Join Cloudless to access your dashboard",
+    "signupDesc": "Create your Cloudless account to access the dashboard.",
     "verifyEmail": "Verify Email",
     "verifyDesc": "Enter the verification code sent to {email}",
     "creatingAccount": "Creating Account...",
@@ -259,7 +259,7 @@
     "orderUpdates": "Order updates",
     "orderUpdatesDesc": "Confirmations, shipping, and delivery",
     "newsletter": "Newsletter",
-    "newsletterDesc": "Cloud tips, serverless patterns & growth hacks",
+    "newsletterDesc": "Cloud tips, serverless patterns & growth tactics",
     "productUpdates": "Product updates",
     "productUpdatesDesc": "New services and features",
     "accountInfo": "Account",
@@ -392,7 +392,7 @@
     "refundSeeAlso": "See also:"
   },
   "cookies": {
-    "bannerTitle": "We value your privacy",
+    "bannerTitle": "Your cookies, your choice",
     "bannerDesc": "We use cookies to improve your experience, analyse traffic, and personalise content. You can accept all cookies, reject optional ones, or customise your preferences.",
     "learnMore": "Learn more about cookies",
     "learnMoreLabel": "Learn more about our cookie policy",
@@ -419,7 +419,7 @@
   "blog": {
     "label": "[ BLOG ]",
     "titleStatic": "Insights &",
-    "titleHighlight": "Practical guides",
+    "titleHighlight": "practical guides",
     "subtitle": "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
     "searchPlaceholder": "Search posts…",
     "filtering": "Filtering:",
@@ -442,7 +442,7 @@
     },
     "services": {
       "title": "Services",
-      "description": "Cloud architecture, serverless development, data analytics, and AI-powered marketing solutions for startups and SMBs."
+      "description": "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs."
     },
     "contact": {
       "title": "Contact",
@@ -450,7 +450,7 @@
     },
     "store": {
       "title": "Store",
-      "description": "Premium cloud computing, serverless, and AI marketing service packages. Transparent pricing, no lock-in."
+      "description": "cloud computing, serverless, and AI marketing service packages. Transparent pricing, no lock-in."
     },
     "blog": {
       "title": "Blog",
