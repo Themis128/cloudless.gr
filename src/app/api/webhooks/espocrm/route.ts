@@ -73,12 +73,29 @@ export async function POST(req: NextRequest) {
     if (!e2 || !a2) {
       return NextResponse.json({ ok: true, skipped: "no_event" }, { status: 202 });
     }
-    await dispatch(e2, a2, records);
+    await dispatchOrEnqueue(e2, a2, records);
     return NextResponse.json({ ok: true, dispatched: records.length });
   }
 
-  await dispatch(entity, action, records);
+  await dispatchOrEnqueue(entity, action, records);
   return NextResponse.json({ ok: true, dispatched: records.length });
+}
+
+async function dispatchOrEnqueue(
+  entity: string,
+  action: string,
+  records: EspoEntityRecord[]
+): Promise<void> {
+  const { isEspoQueueConfigured, enqueueEspoWebhook } = await import("@/lib/espocrm-queue");
+  if (isEspoQueueConfigured()) {
+    try {
+      await enqueueEspoWebhook({ entity, action, records });
+      return;
+    } catch (err) {
+      console.error("[espocrm webhook] queue enqueue failed, falling back to sync:", err);
+    }
+  }
+  await dispatch(entity, action, records);
 }
 
 async function dispatch(

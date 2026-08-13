@@ -91,6 +91,12 @@ vi.mock("@/lib/analytics-agent-orchestrator", () => ({
   runAnalyticsAgentOrchestration: runOrchestrationMock,
 }));
 
+vi.mock("@/lib/admin-ai", () => ({
+  isAdminAiConfiguredAsync: vi.fn(async () => true),
+  adminAiNotConfiguredResponse: () =>
+    Response.json({ error: "Admin AI not configured." }, { status: 503 }),
+}));
+
 function makeAdminToken(): string {
   return "test-admin-session";
 }
@@ -216,8 +222,9 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 503 when ANTHROPIC_API_KEY is missing", async () => {
-    getConfigMock.mockResolvedValue({});
+  it("returns 503 when Admin AI is missing", async () => {
+    const adminAi = await import("@/lib/admin-ai");
+    vi.mocked(adminAi.isAdminAiConfiguredAsync).mockResolvedValueOnce(false);
     const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(adminReq({ windowDays: 30 }));
     expect(response.status).toBe(503);
