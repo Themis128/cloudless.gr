@@ -61,7 +61,16 @@ export async function getInsightsIndex(): Promise<DatalakeInsightsIndex | null> 
 
 export async function listInsightDomains(): Promise<DatalakeInsightsIndex> {
   const index = await getInsightsIndex();
-  if (index) return index;
+  // R2 may hold a stub `{}` or a malformed index — always return a stable shape.
+  if (index && Array.isArray(index.domains)) {
+    return {
+      generated_at:
+        typeof index.generated_at === "string" && index.generated_at.length > 0
+          ? index.generated_at
+          : new Date().toISOString(),
+      domains: index.domains,
+    };
+  }
   return { generated_at: new Date().toISOString(), domains: [] };
 }
 
