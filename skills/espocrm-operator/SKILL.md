@@ -4,7 +4,7 @@ description: |
   Deploy, debug, and operate the self-hosted EspoCRM stack (EspoCRM
   replacement). Triggered by phrases like "EspoCRM is down", "create an
   EspoCRM Lead", "EspoCRM API error", "rotate the EspoCRM API key", "the
-  espocrm-to-lake ETL failed", "EspoCRM webhook not firing", "import
+  espocrm-to-r2 ETL failed", "EspoCRM webhook not firing", "import
   contacts into EspoCRM", "EspoCRM Slack sync", "check espocrm.cloudless.gr",
   "EspoCRM Inbound Email", or any operational task on the `espocrm` k8s
   namespace, `src/lib/espocrm.ts`, or the EspoCRM SES bridge Lambda.
@@ -103,13 +103,12 @@ The two areas that intentionally diverge:
 - **`getOwners()`** doesn't exist — EspoCRM has no "owner" concept
   matching EspoCRM's. Use `getUsers()` for the closest analog.
 
-## ETL: EspoCRM → S3 data lake
+## ETL: EspoCRM → R2 datalake
 
-`scripts/etl/espocrm-to-lake.mjs` runs daily via GitHub Actions
-(`.github/workflows/etl-espocrm-to-lake.yml`). Writes Parquet to
-`s3://cloudless-data-lake/espocrm/{entity}/year=YYYY/month=MM/day=DD/`.
-Athena views in `cloudless_analytics.espocrm_*` join Contact, Lead,
-Opportunity, Case for analytics-dashboard queries.
+`scripts/etl/espocrm-to-r2.mjs` runs hourly via GitHub Actions
+(`.github/workflows/etl-espocrm-to-r2.yml`). Writes Parquet to R2
+`datalake-bucket` under `lake/espocrm-*`. Admin datalake materialize rolls
+contacts/opportunities into the EspoCRM funnel section.
 
 Failure modes:
 
@@ -191,7 +190,7 @@ The `Export Import` extension v2.9.0 is the canonical example, installed
 - `infrastructure/espocrm/cloudflare-tunnel.yaml` — tunnel fragment
 - `src/lib/espocrm.ts` — drop-in EspoCRM mirror
 - `src/app/api/webhooks/espocrm/route.ts` — Slack sync receiver
-- `scripts/etl/espocrm-to-lake.mjs` — daily Athena hydrator
+- `scripts/etl/espocrm-to-r2.mjs` — hourly R2 hydrator
 - `infrastructure/aws/lambdas/ses-espocrm-bridge/` — Inbound Email bridge
 - `skills/cloudflare-tunnel-ops/SKILL.md` — exposure tooling
 - `skills/appflowy-operator/SKILL.md` — sibling CMS stack

@@ -1,4 +1,8 @@
--- Cloudless analytics — Athena / Glue DDL.
+-- HISTORICAL ONLY — Athena / Glue DDL is retired.
+-- Live analytics: R2 datalake-bucket + D1 (see docs/data/datalake.md).
+-- Do not run this against a production Athena workgroup for cloudless.gr.
+--
+-- Cloudless analytics — Athena / Glue DDL (archived).
 -- Run from the Athena `primary` workgroup (which has the result location
 -- and 10 GB scan cap enforced — see docs/datalake.md).
 

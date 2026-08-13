@@ -9,12 +9,13 @@
 | PR-08 | **Done in tree** | Chat + agents + embeddings → Workers AI REST; Bedrock stubbed                                       |
 | PR-10 | **Done in tree** | `deploy-pi.yml` hostPath-only; `build-pi-image.yml` workflow_dispatch emergency only                |
 | PR-11 | **Done in tree** | `store-cloudflare-token.yml` → `gh secret set` (no SSM)                                             |
-| PR-12 | **Done in tree** | Deleted athena/sns/amplify/logger stubs + cron-invoker; kept `athena-d1.ts`                         |
+| PR-12 | **Done in tree** | Deleted athena/sns/amplify/logger stubs + cron-invoker; `athena-d1.ts` removed in Athena→R2 cutover |
 | PR-13 | **Done in tree** | R2 I/O via `aws4fetch` (`r2-upload.ts`, `scripts/etl/_r2-config.mjs`); `@aws-sdk/client-s3` removed |
 | PR-04 | **Done in tree** | Admin users / activate / confirm / user delete → D1 only; Cognito SDK removed from those routes |
 | PR-05 | **Done in tree** | Cognito surface removed: no Hosted UI, no JWKS, no Cognito SDK, no fake sync-users; D1 cookie auth only; Cognito operator scripts archived under `scripts/archive/cognito/` |
 | PR-06 | **Done** (#1456) | Dynamo → D1: profiles, admin-notifications, GSC cache, Stripe txs/analytics, ad-analytics bookmarks; no `@aws-sdk/client-dynamodb` in `src/` |
 | **PR-14** | **Done in tree** | **Uninstall all `@aws-sdk/*` — package.json cleaned; `rg '@aws-sdk' package.json src/` empty** |
+| **PR-17** | **Done in tree** | Cost Explorer ETL archived; `/admin/cost` frozen on D1/R2; no `aws-actions` in live `etl-*.yml` |
 
 **Failure model (PR-06):** primary reads/writes on user identity & money (profile write, Stripe ledger, admin notification mutations) **fail closed** without `AUTH_DB`. Cache/digest side-effects (GSC cache, `recordNotification` append, ad-analytics bookmarks) **soft-fail** so checkout/contact never 500 on missing binding.
 
@@ -91,7 +92,7 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 | --------- | --------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---- | ------------------------------------------- | ------------------------------------------------------- |
 | **PR-09** | Inbound mail off SES Lambda | `infrastructure/ses-to-espocrm`                                                       | CF Email Routing → `/api/inbound-email` → EspoCRM      | Med  | MX/SPF/DKIM on Cloudflare                   | Inbound support mail creates EspoCRM cases without SES  |
 | **PR-16** | Decommission AWS resources  | Cognito pool, SES, SSM params, Lambdas, ECR repo, Dynamo tables, IAM OIDC deploy role | Operator teardown in AWS console (no new SDK installs) | High | **PR-14 live ≥7 days**; rollback not needed | Resources deleted; billing shows residual CE only or $0 |
-| **PR-17** | Drop Cost Explorer ETL      | `etl-aws-cost-to-r2`, `@aws-sdk/client-cost-explorer`                                 | Remove cost dashboard or freeze last export            | Low  | PR-16 (AWS spend ≈ $0)                      | No AWS API calls remain anywhere                        |
+| **PR-17** | **Done in tree** | Drop Cost Explorer ETL | `etl-aws-cost-to-r2` archived; scripts deleted; `/admin/cost` frozen on last D1/R2 snapshot | Low | Analytics path | No CE schedule; no `aws-actions` in `etl-*.yml` |
 
 ---
 
@@ -127,7 +128,7 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 | Bedrock       | `bedrock-*.ts`, `agent-*.ts`                                                                     | Workers AI admin routes, `recommendations.ts`                        |
 | S3 (R2)       | `r2-upload.ts`, ETL `*-to-r2.mjs`                                                                | Keep R2; PR-13 drops SDK brand                                       |
 | ECR CI        | `deploy-pi.yml`, `build-pi-image.yml`                                                            | `k8s/cloudless-app-hostpath.yaml`, `scripts/pi-native-standalone.sh` |
-| Cost Explorer | `scripts/etl/aws-cost-to-r2.mjs`                                                                 | Delete after AWS off                                                 |
+| Cost Explorer | ~~`scripts/etl/aws-cost-to-r2.mjs`~~ | **Deleted** — `/admin/cost` reads frozen D1/R2 snapshot |
 
 ---
 

@@ -67,15 +67,9 @@ export default defineConfig({
     maxWorkers: 2,
     testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
-    // etl-aws-cost-to-lake imports @dsnp/parquetjs from scripts/etl/'s
-    // separate npm project. Vitest's root resolver can't see it, and
-    // adding it at root would duplicate a heavy native-build dep. Skip
-    // here; the script is exercised by the live ETL workflow run.
-    //
     // Orphaned suites: Notion CMS APIs removed (AppFlowy is live); agent tests
     // need optional `redis` which is not a root dependency. Exclude leftovers.
     exclude: [
-      "__tests__/etl-aws-cost-to-lake.test.ts",
       "__tests__/admin-ops-api.test.ts",
       "__tests__/remaining-api-routes.test.ts",
       "tests/BaseAgent.test.ts",

@@ -1,19 +1,10 @@
 "use client";
 
 /**
- * /admin/cost — AWS cost dashboard backed by the Athena view from R9.
- * R12. Bypasses the SCP-blocked Grafana → Athena path by rendering
- * directly in the admin app (the Lambda deploy role has Athena access).
+ * /admin/cost — AWS cost dashboard (Cloudflare read path).
  *
- * Panels:
- *   - 30-day total (stat card)
- *   - Yesterday spend (stat card with delta-from-7-day-avg color)
- *   - Daily trend (last 30 days, bar chart)
- *   - Top services (horizontal bar)
- *
- * Data freshness chip surfaces the most recent ETL upload timestamp
- * (S3 LastModified on `lake/aws-cost/cost.parquet`) so the operator
- * can see if the daily 06:30 UTC ETL is running.
+ * Storage/query: D1 `aws_cost_daily` and/or R2 `lake/aws-cost/cost.json`.
+ * Historical rows came from Cost Explorer ETL (retired — snapshot frozen).
  */
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
@@ -105,15 +96,15 @@ export default function CostAdminPage() {
       </div>
 
       <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-          <span className="font-mono text-xs text-emerald-400">AWS COST · ATHENA</span>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
+          <span className="font-mono text-xs text-amber-400">AWS COST · FROZEN SNAPSHOT</span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">AWS cost dashboard</h1>
         <p className="mt-2 font-mono text-xs text-slate-500">
-          Backed by{" "}
-          <code className="text-slate-400">cloudless_analytics.v_aws_cost_by_service</code> (daily
-          ETL via <code className="text-slate-400">etl-aws-cost-to-lake.yml</code>).
+          Read from D1 <code className="text-slate-400">aws_cost_daily</code> / R2{" "}
+          <code className="text-slate-400">lake/aws-cost/cost.json</code>. Cost Explorer ETL is
+          retired — this is the last imported snapshot.
           {data && (
             <>
               {" "}
@@ -129,18 +120,9 @@ export default function CostAdminPage() {
       {notConfigured && (
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            Athena view <code>v_aws_cost_by_service</code> not found. Run the R9 DDL once:
+            No cost snapshot in D1 or R2. Historical Cost Explorer imports are missing or never ran.
+            New AWS billing pulls are disabled after the Cloudflare analytics cutover.
           </p>
-          <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-900/60 p-3 font-mono text-xs text-slate-300">
-            {`CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.aws_cost_daily (
-  cost_date string, service string, amount_usd double, currency string
-) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/aws-cost/';
-
-CREATE OR REPLACE VIEW cloudless_analytics.v_aws_cost_by_service AS
-  SELECT cost_date, service, amount_usd, currency
-  FROM cloudless_analytics.aws_cost_daily
-  WHERE cost_date IS NOT NULL;`}
-          </pre>
         </div>
       )}
 

@@ -1,8 +1,8 @@
 /**
  * Admin → Analytics → Datalake
  *
- * Single-page dashboard that surfaces every Athena view from the
- * cloudless_analytics catalog in one scrollable view:
+ * Cloudflare-only dashboard (D1 analytics_events + R2 snapshot from
+ * materialize-datalake-snapshots). Sections:
  *
  *   - 30-day acquisition funnel (sessions → signups → purchasers → revenue)
  *   - UTM attribution by source/medium/campaign (90d)
@@ -11,9 +11,8 @@
  *   - Sentry top unresolved issues (14d)
  *   - EspoCRM lifecycle funnel
  *
- * Fetches all six in parallel from /api/admin/analytics/datalake. Each card
- * renders independently — a section with an error (e.g. ETL hasn't run yet)
- * shows that error inline rather than blanking the whole dashboard.
+ * Fetches from /api/admin/analytics/datalake. Each card renders independently —
+ * a section with an error (e.g. ETL hasn't run yet) shows inline.
  */
 "use client";
 
@@ -46,7 +45,7 @@ const SECTION_META: Record<
 > = {
   acquisition_funnel: {
     title: "Acquisition funnel — last 30 days",
-    subtitle: "Sessions → signups → purchasers → revenue. Sourced from v_acquisition_funnel.",
+    subtitle: "Sessions → signups → purchasers → revenue. Sourced from D1 analytics_events.",
     columns: [
       { key: "day", label: "Day" },
       { key: "sessions", label: "Sessions", format: "int" },
@@ -57,7 +56,7 @@ const SECTION_META: Record<
   },
   attribution: {
     title: "Attribution by UTM source/medium",
-    subtitle: "90-day window. Sourced from v_attribution_by_source.",
+    subtitle: "90-day window. Sourced from D1 analytics_events.",
     columns: [
       { key: "utm_source", label: "Source" },
       { key: "utm_medium", label: "Medium" },
@@ -69,8 +68,7 @@ const SECTION_META: Record<
   },
   top_keywords: {
     title: "GSC top keywords",
-    subtitle:
-      "Top 25 by clicks over the rolling 90-day GSC window. Sourced from v_gsc_top_keywords.",
+    subtitle: "Top 25 by clicks over the rolling 90-day GSC window. Sourced from R2 GSC parquet.",
     columns: [
       { key: "query", label: "Query" },
       { key: "clicks", label: "Clicks", format: "int" },
@@ -81,7 +79,7 @@ const SECTION_META: Record<
   },
   linkedin_ads: {
     title: "LinkedIn ads — per-campaign 90d",
-    subtitle: "Sourced from v_linkedin_ads_summary.",
+    subtitle: "Sourced from R2 LinkedIn Ads parquet.",
     columns: [
       { key: "campaign_name", label: "Campaign" },
       { key: "impressions", label: "Impressions", format: "int" },
@@ -95,7 +93,7 @@ const SECTION_META: Record<
   },
   top_errors: {
     title: "Top Sentry errors (14-day count)",
-    subtitle: "Top 10 unresolved by event count. Sourced from v_sentry_top_issues.",
+    subtitle: "Top 10 unresolved by event count. Sourced from R2 Sentry parquet.",
     columns: [
       { key: "short_id", label: "ID" },
       { key: "title", label: "Title" },
@@ -108,7 +106,7 @@ const SECTION_META: Record<
   espocrm_funnel: {
     title: "EspoCRM lifecycle funnel",
     subtitle:
-      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_espocrm_funnel.",
+      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from R2 EspoCRM parquet.",
     columns: [
       { key: "lifecycle_stage", label: "Stage" },
       { key: "lead_source", label: "Source" },
@@ -190,7 +188,7 @@ export default function DatalakeDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Datalake dashboard</h1>
           <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            All Athena views in one place. Generated at {generatedAt}.
+            D1 + R2 datalake snapshot. Generated at {generatedAt}.
             {data?.cache === "respected" && (
               <span
                 className="ml-2 rounded-full px-2 py-0.5 text-xs"
@@ -243,7 +241,7 @@ export default function DatalakeDashboardPage() {
 
       {loading && !data && (
         <div className="text-sm" style={{ color: "var(--ink-muted)" }}>
-          Querying Athena (first load may take 3-8s)…
+          Loading datalake snapshot…
         </div>
       )}
 
@@ -295,8 +293,8 @@ export default function DatalakeDashboardPage() {
                     color: "var(--warning)",
                   }}
                 >
-                  <strong>Athena query failed.</strong> Often means the underlying ETL has not run
-                  yet, or the view/table has not been CREATEd. Detail:{" "}
+                  <strong>Section unavailable.</strong> Usually the source ETL has not written
+                  parquet yet, or the materialize snapshot is stale. Detail:{" "}
                   <code className="break-all">{s.error}</code>
                 </div>
               ) : s.rows && s.rows.length > 0 ? (
