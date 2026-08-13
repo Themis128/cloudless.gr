@@ -1,0 +1,153 @@
+name: Sync campaign ads from SSM → Pi
+
+# Pulls LinkedIn / Meta / X / Google Ads / TikTok keys from
+# AWS SSM /cloudless/production/* into k8s cloudless-secrets, then
+# restarts cloudless-app. Runs on omv (local k3s + omv-main-cli AWS).
+#
+# Soft-skips missing SSM parameters. Runtime stays SSM_DISABLED=1 —
+# this is a one-way copy into the pod env, not an SSM runtime revive.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-campaign-ads-from-ssm
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AWS_REGION: us-east-1
+  SSM_PREFIX: /cloudless/production
+
+jobs:
+  sync:
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    steps:
+      - name: Pull SSM → patch cloudless-secrets
+        run: |
+          set -euo pipefail
+          KUBECTL="sudo k3s kubectl"
+          PREFIX="${SSM_PREFIX}"
+          KEYS=(
+            LINKEDIN_ACCESS_TOKEN
+            LINKEDIN_CAPI_ACCESS_TOKEN
+            LINKEDIN_CLIENT_ID
+            LINKEDIN_CLIENT_SECRET
+            LINKEDIN_ORGANIZATION_URN
+            LINKEDIN_REFRESH_TOKEN
+            LINKEDIN_AD_ACCOUNT_ID
+            META_ACCESS_TOKEN
+            META_AD_ACCOUNT_ID
+            META_CAPI_ACCESS_TOKEN
+            META_PAGE_ID
+            META_PIXEL_ID
+            NEXT_PUBLIC_META_PIXEL_ID
+            X_API_KEY
+            X_API_SECRET
+            X_ACCESS_TOKEN
+            X_ACCESS_SECRET
+            X_AD_ACCOUNT_ID
+            GOOGLE_ADS_DEVELOPER_TOKEN
+            GOOGLE_ADS_CUSTOMER_ID
+            TIKTOK_APP_ID
+            TIKTOK_APP_SECRET
+            TIKTOK_ACCESS_TOKEN
+            TIKTOK_ADVERTISER_ID
+          )
+
+          export KEYS_CSV
+          KEYS_CSV=$(IFS=,; echo "${KEYS[*]}")
+
+          PATCH=$(python3 - <<'PY'
+          import base64, json, os, re, subprocess
+
+          prefix = os.environ["SSM_PREFIX"].rstrip("/")
+          keys = [k.strip() for k in os.environ["KEYS_CSV"].split(",") if k.strip()]
+          placeholder = re.compile(r"^(your[_-]?value|changeme|todo|xxx|placeholder)", re.I)
+          data, synced, skipped = {}, [], []
+
+          for key in keys:
+            name = f"{prefix}/{key}"
+            try:
+              out = subprocess.check_output(
+                [
+                  "aws", "ssm", "get-parameter",
+                  "--region", os.environ.get("AWS_REGION", "us-east-1"),
+                  "--name", name,
+                  "--with-decryption",
+                  "--query", "Parameter.Value",
+                  "--output", "text",
+                ],
+                stderr=subprocess.DEVNULL,
+                text=True,
+              ).strip()
+            except subprocess.CalledProcessError:
+              skipped.append(f"{key}(missing)")
+              continue
+            if not out:
+              skipped.append(f"{key}(empty)")
+              continue
+            if placeholder.match(out):
+              skipped.append(f"{key}(placeholder)")
+              continue
+            data[key] = base64.b64encode(out.encode()).decode()
+            synced.append(key)
+
+          # Prefer META_PIXEL_ID; fall back to NEXT_PUBLIC_META_PIXEL_ID from SSM
+          if "META_PIXEL_ID" not in data and "NEXT_PUBLIC_META_PIXEL_ID" in data:
+            data["META_PIXEL_ID"] = data["NEXT_PUBLIC_META_PIXEL_ID"]
+            synced.append("META_PIXEL_ID")
+          data.pop("NEXT_PUBLIC_META_PIXEL_ID", None)
+
+          if not data:
+            raise SystemExit("no SSM campaign parameters to sync")
+
+          open("/tmp/campaign-sync-meta.json", "w").write(
+            json.dumps({"synced": synced, "skipped": skipped})
+          )
+          print(json.dumps({"data": data}))
+          PY
+          )
+
+          echo "sync meta: $(cat /tmp/campaign-sync-meta.json)"
+          $KUBECTL -n cloudless patch secret cloudless-secrets --type merge -p "$PATCH"
+          python3 -c 'import json; m=json.load(open("/tmp/campaign-sync-meta.json")); print("synced:", ", ".join(m.get("synced",[]))); print("skipped:", ", ".join(m.get("skipped",[])) or "(none)")'
+
+      - name: Restart cloudless-app
+        run: |
+          sudo k3s kubectl -n cloudless rollout restart deploy/cloudless-app
+          sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s
+
+      - name: Verify key presence (names only)
+        run: |
+          sudo k3s kubectl -n cloudless get secret cloudless-secrets -o json \
+            | python3 -c '
+          import json,sys
+          keys=set(json.load(sys.stdin).get("data",{}))
+          want=["LINKEDIN_ACCESS_TOKEN","LINKEDIN_AD_ACCOUNT_ID","META_ACCESS_TOKEN","META_AD_ACCOUNT_ID","X_API_KEY","X_ACCESS_TOKEN","GOOGLE_ADS_DEVELOPER_TOKEN","GOOGLE_ADS_CUSTOMER_ID"]
+          present=[k for k in want if k in keys]
+          missing=[k for k in want if k not in keys]
+          print("present:", ", ".join(present) or "(none)")
+          print("missing:", ", ".join(missing) or "(none)")
+          if len(present) < 4:
+            raise SystemExit(1)
+          '
+
+      - name: Comment tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "# Campaign ads SSM → Pi — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo "**Source:** AWS SSM \`/cloudless/production/*\`"
+            echo "**Target:** cloudless/cloudless-secrets → restart cloudless-app"
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md || true
