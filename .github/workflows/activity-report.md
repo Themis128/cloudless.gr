@@ -11,17 +11,23 @@ permissions:
   actions: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash
+# flash-lite: separate Free-tier RPD bucket from gemini-2.5-flash (20 RPD).
+# Activity Report #41 failed with TerminalQuotaError on 2.5-flash after other
+# gh-aw workflows exhausted that shared project quota.
+model: gemini-2.5-flash-lite
 models:
   default-ai-credits-pricing:
-    input: 0.15
-    output: 0.60
+    input: 0.10
+    output: 0.40
 tools:
   github:
     toolsets: [default, actions]
   bash: true
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+# Prefer continue-on-error once gh-aw ≥0.85 applies jobs.agent.continue-on-error
+# to the built-in agent job; v0.83.4 compiles the field away. Model switch below
+# is the durable Free-tier fix.
 safe-outputs:
   report-failure-as-issue: false
   noop:
@@ -51,7 +57,7 @@ You are the repository activity reporter for `cloudless.gr`. Your job is to scan
 
 ## Workflow
 
-1. Query issues and PRs from the last 24 hours.
+1. Query issues and PRs from the last 24 hours (prefer one or two broad GitHub MCP/list calls — avoid chatty pagination loops).
 2. Group findings into:
    - New Issues
    - Pull Requests
@@ -64,6 +70,7 @@ You are the repository activity reporter for `cloudless.gr`. Your job is to scan
    - One-line summary of status
 4. Flag any open blockers or failing checks that need attention.
 5. If there is no meaningful activity, report that clearly rather than padding the report.
+6. If the model/API returns a quota or rate-limit error, call `safeoutputs noop` once explaining the quota miss — do not retry the same Gemini call in a loop.
 
 ## Output
 
