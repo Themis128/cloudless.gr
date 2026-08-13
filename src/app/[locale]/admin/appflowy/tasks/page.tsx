@@ -365,7 +365,7 @@ export default function TasksKanbanPage() {
         <div>
           <div className="bg-neon-magenta/10 border-neon-magenta/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-magenta font-mono text-xs">NOTION_TASKS</span>
+            <span className="text-neon-magenta font-mono text-xs">APPFLOWY_TASKS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Task Board</h1>
           <p className="font-body mt-1 text-slate-400">

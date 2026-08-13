@@ -151,7 +151,7 @@ const NAV_GROUPS: NavGroup[] = [
       card("Testimonials", "Social proof shown across the site", "⭐", "/admin/cms/testimonials"),
       card("FAQs", "CMS for FAQ sections", "❓", "/admin/cms/faqs"),
       card("Docs", "Notion-backed docs on /docs", "📚", "/admin/docs"),
-      card("Form Submissions", "Contact entries stored in Notion", "📝", "/admin/notion"),
+      card("Form Submissions", "Contact entries stored in AppFlowy", "📝", "/admin/appflowy"),
       card("SEO", "Search Console performance and keywords", "🔍", "/admin/analytics/seo"),
     ],
   },

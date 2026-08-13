@@ -195,7 +195,7 @@ export default function KpiDashboard() {
 
           {/* Notion site analytics */}
           <section>
-            <SectionHeader title="Site Events (7 days)" icon="📈" href="/admin/notion/analytics" />
+            <SectionHeader title="Site Events (7 days)" icon="📈" href="/admin/appflowy/analytics" />
             {data.analytics ? (
               <>
                 <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,7 +247,7 @@ export default function KpiDashboard() {
 
           {/* Projects */}
           <section>
-            <SectionHeader title="Projects" icon="📋" href="/admin/notion/projects" />
+            <SectionHeader title="Projects" icon="📋" href="/admin/appflowy/projects" />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 label="Total Projects"
@@ -275,7 +275,7 @@ export default function KpiDashboard() {
 
           {/* Tasks */}
           <section>
-            <SectionHeader title="Tasks" icon="✅" href="/admin/notion/tasks" />
+            <SectionHeader title="Tasks" icon="✅" href="/admin/appflowy/tasks" />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 label="In Progress"

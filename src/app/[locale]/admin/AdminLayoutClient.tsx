@@ -91,7 +91,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/blog", label: "Blog", Icon: PenLine },
       { href: "/admin/docs", label: "Docs", Icon: FileText },
       { href: "/admin/projects", label: "Projects", Icon: FolderKanban },
-      { href: "/admin/notion", label: "Submissions", Icon: Inbox },
+      { href: "/admin/appflowy", label: "Submissions", Icon: Inbox },
     ],
   },
   {
