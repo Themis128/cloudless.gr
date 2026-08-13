@@ -20,7 +20,6 @@ if (!EMAIL || !KEY_RAW) {
 	process.exit(1);
 }
 
-
 const schema = new ParquetSchema({
 	query: { type: "UTF8" },
 	page: { type: "UTF8" },
@@ -56,9 +55,29 @@ async function getAccessToken() {
 	return data.access_token;
 }
 
+async function writeEmptyAndExit(reason) {
+	console.warn(`[gsc-to-r2] ${reason} — writing empty parquet and exiting 0.`);
+	const tmp = "/tmp/gsc-keywords-empty.parquet";
+	const writer = await ParquetWriter.openFile(schema, tmp);
+	await writer.close();
+	await r2Put("lake/gsc-keywords/keywords.parquet", readFileSync(tmp), {
+		contentType: "application/octet-stream",
+	});
+	unlinkSync(tmp);
+	console.log("✓ gsc → R2 sync complete (empty — skip)");
+	process.exit(0);
+}
+
 async function main() {
 	console.log(`Fetching GSC search analytics for ${SITE}...`);
-	const token = await getAccessToken();
+	let token;
+	try {
+		token = await getAccessToken();
+	} catch (err) {
+		await writeEmptyAndExit(
+			`auth/key failed (${String(err?.message ?? err).slice(0, 160)}). Fix GOOGLE_PRIVATE_KEY PEM secret.`
+		);
+	}
 
 	const end = new Date();
 	const start = new Date(end.getTime() - 90 * 86_400_000);
@@ -82,7 +101,7 @@ async function main() {
 	});
 	if (!res.ok) {
 		const t = await res.text().catch(() => "");
-		throw new Error(`GSC ${res.status}: ${t.slice(0, 200)}`);
+		await writeEmptyAndExit(`GSC ${res.status}: ${t.slice(0, 160)}`);
 	}
 	const data = await res.json();
 	const rows = (data.rows || []).map((r) => ({
@@ -102,7 +121,9 @@ async function main() {
 	for (const r of rows) await writer.appendRow(r);
 	await writer.close();
 
-	await r2Put("lake/gsc-keywords/keywords.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
+	await r2Put("lake/gsc-keywords/keywords.parquet", readFileSync(tmp), {
+		contentType: "application/octet-stream",
+	});
 	unlinkSync(tmp);
 	console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/gsc-keywords/`);
 }

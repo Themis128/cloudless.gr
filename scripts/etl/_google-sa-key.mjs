@@ -38,20 +38,27 @@ export function normalizeGooglePrivateKeyPem(raw) {
 		.replace(/\r/g, "\n")
 		.trim();
 
-	// Secret sometimes stored as base64(PEM)
+	// Secret sometimes stored as base64(PEM) or raw PKCS#8 DER base64 (no headers)
 	if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key)) {
-		try {
-			const decoded = Buffer.from(key, "base64").toString("utf8").trim();
-			if (/-----BEGIN (RSA )?PRIVATE KEY-----/.test(decoded)) {
-				key = decoded
-					.replace(/\\\\n/g, "\n")
-					.replace(/\\n/g, "\n")
-					.replace(/\r\n/g, "\n")
-					.replace(/\r/g, "\n")
-					.trim();
+		const compact = key.replace(/\s+/g, "");
+		if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 80) {
+			try {
+				const decoded = Buffer.from(compact, "base64").toString("utf8").trim();
+				if (/-----BEGIN (RSA )?PRIVATE KEY-----/.test(decoded)) {
+					key = decoded
+						.replace(/\\\\n/g, "\n")
+						.replace(/\\n/g, "\n")
+						.replace(/\r\n/g, "\n")
+						.replace(/\r/g, "\n")
+						.trim();
+				} else {
+					// Treat as DER → wrap as PKCS#8 PEM
+					const lines = compact.match(/.{1,64}/g) ?? [compact];
+					key = `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+				}
+			} catch {
+				/* keep raw */
 			}
-		} catch {
-			/* keep raw */
 		}
 	}
 
