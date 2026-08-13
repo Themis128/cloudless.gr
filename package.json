@@ -71,7 +71,6 @@
     "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
     "newsletter:draft": "tsx --tsconfig scripts/tsconfig.json scripts/generate-weekly-article.ts",
     "newsletter:send": "tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts",
-    "newsletter:report": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-subscriber-report.ts",
     "cognito:setup": "bash scripts/cognito-setup.sh",
     "cognito:setup:dry": "bash scripts/cognito-setup.sh --dry-run",
     "cognito:setup:quick": "bash scripts/cognito-setup.sh --skip-verify",

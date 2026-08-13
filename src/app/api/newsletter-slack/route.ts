@@ -2,7 +2,7 @@
  * POST /api/newsletter-slack — Newsletter signups to Slack relay.
  *
  * Sends a notification to Slack when a new newsletter subscriber signs up.
- * Used by the newsletters page to relay signups to #newsletters channel.
+ * Used by the newsletters page to relay signups to #newsletter channel.
  *
  * Auth: None (public endpoint) - validates via Content-Webhook-Secret header.
  */
@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
   // Also try Slack bot if webhook fails or isn't configured
   if (process.env.SLACK_BOT_TOKEN && !webhookUrl) {
     try {
-      const client = new SlackClient({ channel: "#newsletters" });
+      const client = new SlackClient({
+        channel: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "#newsletter",
+      });
       await client.post({
         text: `📰 New newsletter signup: ${body.email}${
           body.source ? ` (source: ${body.source})` : ""

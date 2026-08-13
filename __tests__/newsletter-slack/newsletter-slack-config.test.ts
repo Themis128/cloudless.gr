@@ -32,14 +32,14 @@ describe("getNewsletterSlackConfigAsync", () => {
     });
   });
 
-  it("returns empty strings when nothing is set anywhere", async () => {
+  it("defaults channel to #newsletter id when nothing is set", async () => {
     // SSM import will fail with no mock — that's the expected SSM-unavailable
-    // fallback path; we should still get a config object with empty strings.
+    // fallback path; bot/signing stay empty, channel falls back to live ops id.
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const cfg = await getNewsletterSlackConfigAsync();
     expect(cfg.NEWSLETTER_SLACK_BOT_TOKEN).toBe("");
     expect(cfg.NEWSLETTER_SLACK_SIGNING_SECRET).toBe("");
-    expect(cfg.NEWSLETTER_SLACK_CHANNEL_ID).toBe("");
+    expect(cfg.NEWSLETTER_SLACK_CHANNEL_ID).toBe("C0BBDKY6Q9E");
     // Should have warned about the missing signing secret (runtime / tests)
     expect(warn).toHaveBeenCalled();
   });

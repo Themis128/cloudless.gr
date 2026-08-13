@@ -1,32 +1,32 @@
 /**
  * Publisher + Newsletter Sender
  *
- * Finds Notion Blog rows with Status="In Review", promotes them to Published,
- * triggers ISR revalidation on the public blog, then asks the site's
- * newsletter send endpoint to email each post to every EspoCRM subscriber.
+ * Finds AppFlowy blog pages named "[Review] <title>", promotes them to
+ * published (strips the prefix), triggers ISR revalidation on the public
+ * blog, then asks the site's newsletter send endpoint to email each post
+ * to every EspoCRM subscriber.
  *
  * Designed to run from .github/workflows/weekly-newsletter.yml on Mondays
  * at 09:00 UTC, three hours after the draft generator (the human review
- * SLA). Self-contained: reads env directly, talks to Notion and the site's
- * own API via raw fetch (no src/lib/* imports).
+ * SLA). Self-contained: reads env directly, talks to AppFlowy and the
+ * site's own API via raw fetch (no src/lib/* imports).
  *
- * Why a server endpoint for the send: delivery runs through SES, and the
- * Lambda the site runs on already holds SES permissions. Posting the
- * rendered email to /api/newsletter/send keeps AWS keys out of CI; the
- * endpoint resolves the recipient list from EspoCRM and sends.
+ * Blog post convention (AppFlowy): name the page "[Review] <Post Title>"
+ * to queue it for newsletter publication. The script renames it to just
+ * "<Post Title>" after sending.
  *
  * Flow per approved post:
- *   1. Fetch full block tree, render to HTML + plaintext.
- *   2. Atomically set Status=Published, Published=true, Date.
- *   3. POST /api/webhooks/notion (page.updated, blog) to revalidate.
+ *   1. Search AppFlowy for Document pages starting with "[Review]".
+ *   2. Rename page to strip the "[Review]" prefix (marks as published).
+ *   3. POST /api/webhooks/content (page.updated, blog) to revalidate ISR.
  *   4. POST /api/newsletter/send with the rendered email.
  *   5. Slack-ping with subject, slug, and delivered/failed counts.
  *
- * If zero rows match, exit 0 with a "nothing approved" log line.
+ * If zero pages match, exit 0 with a "nothing approved" log line.
  * No empty newsletters.
  *
  * Required env:
- *   NOTION_API_KEY, NOTION_BLOG_DB_ID, NOTION_WEBHOOK_SECRET
+ *   APPFLOWY_API_URL, APPFLOWY_EMAIL, APPFLOWY_PASSWORD
  *   NEWSLETTER_SEND_SECRET
  *   SITE_URL                    (default: https://cloudless.gr)
  *   SLACK_WEBHOOK_URL           (optional)
@@ -34,8 +34,6 @@
  * Exit codes: 0 success or nothing-to-do, 1 hard failure
  */
 
-const NOTION_API = "https://api.notion.com/v1";
-const NOTION_VERSION = "2022-06-28";
 const SITE_URL_DEFAULT = "https://cloudless.gr";
 
 function requireEnv(name: string): string {
@@ -47,18 +45,32 @@ function requireEnv(name: string): string {
   return v;
 }
 
-// ── Notion ────────────────────────────────────────────────────────────────────
+// ── AppFlowy (self-hosted Notion replacement) ─────────────────────────────────
 
-async function notionFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(`${NOTION_API}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${requireEnv("NOTION_API_KEY")}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+
+async function appflowyLogin(): Promise<{ token: string; workspaceId: string }> {
+  const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
+  const email = requireEnv("APPFLOWY_EMAIL");
+  const password = requireEnv("APPFLOWY_PASSWORD");
+  const res = await fetch(`${base}/gotrue/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
+  if (!res.ok) throw new Error(`AppFlowy login failed: ${res.status}`);
+  const data = (await res.json()) as { access_token: string };
+  const token = data.access_token;
+  const wsRes = await fetch(`${base}/api/workspace`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!wsRes.ok) throw new Error(`AppFlowy workspace fetch failed: ${wsRes.status}`);
+  const wsData = (await wsRes.json()) as { data: Array<{ workspace_id: string }> };
+  const workspaceId = wsData.data[0]?.workspace_id ?? "";
+  if (!workspaceId) throw new Error("No AppFlowy workspace found");
+  return { token, workspaceId };
 }
 
 interface ApprovedPost {
@@ -70,76 +82,58 @@ interface ApprovedPost {
   readTime: string;
 }
 
+// AppFlowy pages don't have typed "Status" properties.
+// Blog posts pending review are all Document pages under the "Blog" workspace folder.
+// The name prefix "[Review]" marks posts ready for newsletter publication.
 async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
-  const dbId = requireEnv("NOTION_BLOG_DB_ID");
-  const res = await notionFetch(`/databases/${dbId}/query`, {
-    method: "POST",
-    body: JSON.stringify({
-      filter: { property: "Status", select: { equals: "In Review" } },
-      sorts: [{ timestamp: "created_time", direction: "ascending" }],
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(
-      `Notion query (In Review) failed: ${res.status} ${await res.text().catch(() => "")}`
-    );
-  }
-  const data = (await res.json()) as { results: NotionPage[] };
-  return data.results.map((page) => {
-    const p = page.properties ?? {};
-    const get = (rt?: NotionRichText[]): string =>
-      (rt ?? []).map((t) => t.plain_text ?? "").join("");
-    return {
-      id: page.id,
-      title: get(p.Title?.title ?? p.Name?.title),
-      slug: get(p.Slug?.rich_text),
-      excerpt: get(p.Excerpt?.rich_text),
-      category: p.Category?.select?.name ?? "Cloud",
-      readTime: get(p["Read Time"]?.rich_text) || "5 min read",
-    };
-  });
+  const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
+  const { token, workspaceId } = await appflowyLogin();
+  const res = await fetch(
+    `${base}/api/workspace/${workspaceId}/search?query=Review&limit=50`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error(`AppFlowy search failed: ${res.status}`);
+  const data = (await res.json()) as { data: Array<{ view_id: string; name: string; layout: string }> };
+  return (data.data ?? [])
+    .filter((v) => v.layout === "Document" && v.name.startsWith("[Review]"))
+    .map((v) => {
+      const title = v.name.replace(/^\[Review\]\s*/, "").trim();
+      return {
+        id: v.view_id,
+        title,
+        slug: slugify(title),
+        excerpt: "",
+        category: "Cloud",
+        readTime: "5 min read",
+      };
+    });
 }
 
-/** Recursively pull all child blocks (Notion paginates at 100). */
-async function fetchAllBlocks(pageId: string): Promise<NotionBlock[]> {
-  const blocks: NotionBlock[] = [];
-  let cursor: string | undefined;
-  do {
-    const url =
-      `/blocks/${pageId}/children?page_size=100` + (cursor ? `&start_cursor=${cursor}` : "");
-    const res = await notionFetch(url);
-    if (!res.ok) {
-      throw new Error(
-        `Notion blocks fetch failed: ${res.status} ${await res.text().catch(() => "")}`
-      );
-    }
-    const data = (await res.json()) as {
-      results: NotionBlock[];
-      next_cursor?: string | null;
-      has_more?: boolean;
-    };
-    blocks.push(...data.results);
-    cursor = data.has_more ? (data.next_cursor ?? undefined) : undefined;
-  } while (cursor);
-  return blocks;
+// AppFlowy document content is stored as rich-text delta, not block-tree.
+// Return an empty block list — the email template will use title + slug link only.
+async function fetchAllBlocks(_pageId: string): Promise<NotionBlock[]> {
+  return [];
 }
 
-async function markPublished(pageId: string, today: string): Promise<void> {
-  const res = await notionFetch(`/pages/${pageId}`, {
+// AppFlowy has no "publish" status field — renaming the page removes the [Review] prefix.
+async function markPublished(pageId: string, _today: string): Promise<void> {
+  const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
+  const { token, workspaceId } = await appflowyLogin();
+  // Fetch current name to strip the [Review] prefix
+  const res = await fetch(
+    `${base}/api/workspace/${workspaceId}/folder?depth=1`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return; // best-effort; don't block the send
+  const data = (await res.json()) as { data: { views?: Array<{ view_id: string; name: string }> } };
+  const view = (data.data?.views ?? []).find((v) => v.view_id === pageId);
+  if (!view) return;
+  const newName = view.name.replace(/^\[Review\]\s*/, "").trim();
+  await fetch(`${base}/api/workspace/${workspaceId}/page-view`, {
     method: "PATCH",
-    body: JSON.stringify({
-      properties: {
-        Status: { select: { name: "Published" } },
-        Published: { checkbox: true },
-        Date: { date: { start: today } },
-      },
-    }),
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ view_id: pageId, name: newName }),
   });
-  if (!res.ok) {
-    throw new Error(
-      `Notion mark-published failed: ${res.status} ${await res.text().catch(() => "")}`
-    );
-  }
 }
 
 // ── Block → HTML/plaintext renderer ───────────────────────────────────────────
@@ -404,15 +398,16 @@ async function postNewsletter(subject: string, html: string, text: string): Prom
 
 async function revalidate(slug: string, pageId: string): Promise<void> {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
-  const secret = process.env.NOTION_WEBHOOK_SECRET;
+  const secret =
+    process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET;
   if (!secret) {
     console.warn(
-      "[publish-and-send-newsletter] NOTION_WEBHOOK_SECRET not set — skipping revalidate"
+      "[publish-and-send-newsletter] CONTENT_WEBHOOK_SECRET not set — skipping revalidate"
     );
     return;
   }
   try {
-    const res = await fetch(`${siteUrl}/api/webhooks/notion`, {
+    const res = await fetch(`${siteUrl}/api/webhooks/content`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -421,10 +416,6 @@ async function revalidate(slug: string, pageId: string): Promise<void> {
       body: JSON.stringify({
         type: "page.updated",
         database: "blog",
-        // The webhook handler in src/app/api/webhooks/notion/route.ts
-        // rejects requests with empty page_id (400). Passing the real id
-        // here makes the revalidate call succeed instead of silently 400'ing
-        // on every publish (which it has been since this script was written).
         page_id: pageId,
         slug,
       }),

@@ -253,7 +253,10 @@ const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
 const contactsClient = new SlackClient({ channel: "#notifications" });
-const subscribersClient = new SlackClient({ channel: "#subscribers" });
+const subscribersClient = new SlackClient({
+  // Live channel is #newsletter (C0BBDKY6Q9E). Prefer env/SSM channel id when set.
+  channel: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "#newsletter",
+});
 
 /**
  * Notify Slack when a new newsletter subscriber signs up.
