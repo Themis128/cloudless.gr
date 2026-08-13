@@ -161,10 +161,11 @@ export default function EmailCampaignsPage() {
                 <tbody className="divide-y divide-slate-800">
                   {campaigns.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center font-mono text-sm text-slate-600">
-                        {acConfigured
-                          ? "No campaigns yet."
-                          : "Connect ActiveCampaign to load campaigns."}
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center font-mono text-sm text-slate-600"
+                      >
+                        {acConfigured ? "No campaigns yet." : "Connect ActiveCampaign to load campaigns."}
                       </td>
                     </tr>
                   )}
@@ -207,7 +208,10 @@ export default function EmailCampaignsPage() {
                 <tbody className="divide-y divide-slate-800">
                   {lists.length === 0 && (
                     <tr>
-                      <td colSpan={2} className="py-8 text-center font-mono text-sm text-slate-600">
+                      <td
+                        colSpan={2}
+                        className="py-8 text-center font-mono text-sm text-slate-600"
+                      >
                         {acConfigured ? "No lists found." : "Connect ActiveCampaign to load lists."}
                       </td>
                     </tr>
