@@ -1,18 +1,9 @@
 /**
  * Admin → Analytics → Datalake
  *
- * Cloudflare-only dashboard (D1 analytics_events + R2 snapshot from
- * materialize-datalake-snapshots). Sections:
- *
- *   - 30-day acquisition funnel (sessions → signups → purchasers → revenue)
- *   - UTM attribution by source/medium/campaign (90d)
- *   - GSC top keywords (90d rolling window)
- *   - LinkedIn ads campaign rollup (90d)
- *   - Sentry top unresolved issues (14d)
- *   - EspoCRM lifecycle funnel
- *
- * Fetches from /api/admin/analytics/datalake. Each card renders independently —
- * a section with an error (e.g. ETL hasn't run yet) shows inline.
+ * Snapshot-first gold serving: R2 `admin-datalake.json` from
+ * materialize-datalake-snapshots, plus D1 hot overlay for acquisition /
+ * attribution. Never calls live Stripe / GSC / Sentry / Espo / Postiz / n8n.
  */
 "use client";
 
@@ -31,8 +22,16 @@ interface SectionResult {
 
 interface DatalakeResponse {
   generated_at: string;
-  cache: "respected" | "skipped";
+  cache: string;
+  source?: "gold" | "hot_only" | "empty";
   sections: SectionResult[];
+  freshness?: {
+    generated_at?: string;
+    sources?: Record<
+      string,
+      { exists?: boolean; last_etl_at?: string | null; size?: number | null }
+    >;
+  };
 }
 
 const SECTION_META: Record<
@@ -45,7 +44,7 @@ const SECTION_META: Record<
 > = {
   acquisition_funnel: {
     title: "Acquisition funnel — last 30 days",
-    subtitle: "Sessions → signups → purchasers → revenue. Sourced from D1 analytics_events.",
+    subtitle: "Hot path: D1 analytics_events (live product events).",
     columns: [
       { key: "day", label: "Day" },
       { key: "sessions", label: "Sessions", format: "int" },
@@ -56,7 +55,7 @@ const SECTION_META: Record<
   },
   attribution: {
     title: "Attribution by UTM source/medium",
-    subtitle: "90-day window. Sourced from D1 analytics_events.",
+    subtitle: "Hot path: D1 analytics_events (90-day window).",
     columns: [
       { key: "utm_source", label: "Source" },
       { key: "utm_medium", label: "Medium" },
@@ -68,7 +67,7 @@ const SECTION_META: Record<
   },
   top_keywords: {
     title: "GSC top keywords",
-    subtitle: "Top 25 by clicks over the rolling 90-day GSC window. Sourced from R2 GSC parquet.",
+    subtitle: "Gold: R2 snapshot from gsc-to-r2 parquet.",
     columns: [
       { key: "query", label: "Query" },
       { key: "clicks", label: "Clicks", format: "int" },
@@ -79,7 +78,7 @@ const SECTION_META: Record<
   },
   linkedin_ads: {
     title: "LinkedIn ads — per-campaign 90d",
-    subtitle: "Sourced from R2 LinkedIn Ads parquet.",
+    subtitle: "Gold: R2 snapshot from linkedin-ads-to-r2 parquet.",
     columns: [
       { key: "campaign_name", label: "Campaign" },
       { key: "impressions", label: "Impressions", format: "int" },
@@ -93,7 +92,7 @@ const SECTION_META: Record<
   },
   top_errors: {
     title: "Top Sentry errors (14-day count)",
-    subtitle: "Top 10 unresolved by event count. Sourced from R2 Sentry parquet.",
+    subtitle: "Gold: R2 snapshot from sentry-to-r2 parquet.",
     columns: [
       { key: "short_id", label: "ID" },
       { key: "title", label: "Title" },
@@ -105,8 +104,7 @@ const SECTION_META: Record<
   },
   espocrm_funnel: {
     title: "EspoCRM lifecycle funnel",
-    subtitle:
-      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from R2 EspoCRM parquet.",
+    subtitle: "Gold: R2 snapshot from espocrm-to-r2 parquet.",
     columns: [
       { key: "lifecycle_stage", label: "Stage" },
       { key: "lead_source", label: "Source" },
@@ -115,17 +113,67 @@ const SECTION_META: Record<
       { key: "closed_won_revenue", label: "Revenue", format: "money" },
     ],
   },
+  stripe_revenue: {
+    title: "Stripe revenue (gold)",
+    subtitle: "Gold: R2 snapshot from stripe-to-r2 transactions parquet.",
+    columns: [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Count", format: "int" },
+      { key: "amount_eur", label: "Amount €", format: "money" },
+    ],
+  },
+  n8n_ops: {
+    title: "n8n operations",
+    subtitle: "Gold: R2 snapshot from n8n-to-r2 parquet.",
+    columns: [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Value", format: "decimal" },
+    ],
+  },
+  postiz_ops: {
+    title: "Postiz operations",
+    subtitle: "Gold: R2 snapshot from postiz-to-r2 parquet.",
+    columns: [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Value", format: "int" },
+    ],
+  },
+  appflowy_activity: {
+    title: "AppFlowy activity",
+    subtitle: "Gold: R2 snapshot from appflowy-to-r2 parquet.",
+    columns: [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Value", format: "int" },
+    ],
+  },
+  freshness: {
+    title: "ETL freshness",
+    subtitle: "Gold: last_etl_at / size per silver parquet key (from materialize).",
+    columns: [
+      { key: "source", label: "Source key" },
+      { key: "exists", label: "Exists", format: "int" },
+      { key: "last_etl_at", label: "Last ETL" },
+      { key: "size", label: "Bytes", format: "int" },
+    ],
+  },
 };
 
 function fmt(v: string | number | null, format?: "int" | "money" | "pct" | "decimal"): string {
   if (v === null || v === undefined || v === "") return "—";
   const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) && typeof v === "string") return v;
   if (!Number.isFinite(n)) return String(v);
   if (format === "int") return Math.round(n).toLocaleString();
   if (format === "money") return `€${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (format === "pct") return `${(n * 100).toFixed(2)}%`;
-  if (format === "decimal") return n.toFixed(1);
+  if (format === "decimal") return n.toFixed(3);
   return String(v);
+}
+
+function sourceBadge(source: DatalakeResponse["source"]): string {
+  if (source === "gold") return "GOLD SNAPSHOT";
+  if (source === "hot_only") return "HOT D1 ONLY";
+  return "EMPTY";
 }
 
 export default function DatalakeDashboardPage() {
@@ -153,10 +201,6 @@ export default function DatalakeDashboardPage() {
     }
   }, []);
 
-  // Defer the initial fetch one tick past mount so setState fires from a
-  // queued task, not synchronously inside the effect body. This pattern is
-  // the React 19 `react-hooks/set-state-in-effect` rule's recommended escape
-  // hatch for mount-triggered fetches that aren't framework-data-hook-able.
   useEffect(() => {
     const t = setTimeout(() => {
       void load();
@@ -168,11 +212,6 @@ export default function DatalakeDashboardPage() {
     ? new Date(data.generated_at).toLocaleString(undefined, { timeZone: "Europe/Athens" })
     : "—";
 
-  // All chrome below uses design-system v2 CSS variables
-  // (--surface-raised, --border-subtle, --ink-primary, --ink-muted, --accent,
-  // --danger, --warning, --shadow-sm) defined in src/app/theme-v2.css. /admin
-  // always renders with data-theme="dark" via ThemeProvider; the same tokens
-  // flip cleanly when /admin ever moves to a light variant.
   return (
     <div
       className="space-y-6"
@@ -180,7 +219,6 @@ export default function DatalakeDashboardPage() {
         color: "var(--ink-primary)",
       }}
     >
-      {/* Header */}
       <header
         className="flex flex-wrap items-end justify-between gap-3 pb-4"
         style={{ borderBottom: "1px solid var(--border-subtle)" }}
@@ -188,19 +226,20 @@ export default function DatalakeDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Datalake dashboard</h1>
           <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            D1 + R2 datalake snapshot. Generated at {generatedAt}.
-            {data?.cache === "respected" && (
+            Gold serving from R2 snapshot (+ D1 hot funnel). Generated at {generatedAt}.
+            {data?.source && (
               <span
-                className="ml-2 rounded-full px-2 py-0.5 text-xs"
+                className="ml-2 rounded-full px-2 py-0.5 font-mono text-xs"
                 style={{ background: "var(--surface-subtle)" }}
               >
-                cached (60s)
+                {sourceBadge(data.source)}
               </span>
             )}
           </p>
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => load(false)}
             disabled={loading}
             className="rounded-md px-3 py-1.5 text-sm disabled:opacity-50"
@@ -213,6 +252,7 @@ export default function DatalakeDashboardPage() {
             Reload
           </button>
           <button
+            type="button"
             onClick={() => load(true)}
             disabled={loading}
             className="rounded-md px-3 py-1.5 text-sm disabled:opacity-50"
@@ -221,7 +261,7 @@ export default function DatalakeDashboardPage() {
               color: "var(--accent-on)",
             }}
           >
-            Force refresh (skip cache)
+            Re-read gold snapshot
           </button>
         </div>
       </header>
@@ -241,11 +281,10 @@ export default function DatalakeDashboardPage() {
 
       {loading && !data && (
         <div className="text-sm" style={{ color: "var(--ink-muted)" }}>
-          Loading datalake snapshot…
+          Loading gold datalake snapshot…
         </div>
       )}
 
-      {/* Sections */}
       {data?.sections.map((s) => {
         const meta = SECTION_META[s.section] ?? {
           title: s.section,
@@ -273,13 +312,13 @@ export default function DatalakeDashboardPage() {
                 </p>
               </div>
               <div className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                {s.error ? "error" : `${s.rowCount ?? 0} rows`}
+                {s.error ? "error" : `${s.rowCount ?? s.rows?.length ?? 0} rows`}
                 {s.fromCache && !s.error && (
                   <span
                     className="ml-2 rounded px-1.5 py-0.5"
                     style={{ background: "var(--surface-subtle)" }}
                   >
-                    cached
+                    gold
                   </span>
                 )}
               </div>
@@ -293,8 +332,8 @@ export default function DatalakeDashboardPage() {
                     color: "var(--warning)",
                   }}
                 >
-                  <strong>Section unavailable.</strong> Usually the source ETL has not written
-                  parquet yet, or the materialize snapshot is stale. Detail:{" "}
+                  <strong>Section unavailable.</strong> Run the source ETL then{" "}
+                  <code>etl-materialize-snapshots</code>. Detail:{" "}
                   <code className="break-all">{s.error}</code>
                 </div>
               ) : s.rows && s.rows.length > 0 ? (

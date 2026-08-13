@@ -1,11 +1,15 @@
 /**
- * Admin datalake dashboard reads — Cloudflare only (D1 + R2).
+ * Admin datalake serving layer — gold snapshot first (Cloudflare R2 + D1).
  *
- * Acquisition/attribution: live D1 `analytics_events` when AUTH_DB is bound.
- * GSC / Sentry / LinkedIn / EspoCRM: R2 snapshot
- * `lake/snapshots/admin-datalake.json` (ETL: materialize-datalake-snapshots.mjs).
+ * Architecture (lakehouse serving):
+ *   ETL → R2 parquet (silver) → materialize-datalake-snapshots (gold JSON)
+ *   Admin UI → this module → never live Stripe/GSC/Sentry/Espo/Postiz/n8n
  *
- * Missing sections return an error — no Athena fallback.
+ * Gold source of truth: R2 `lake/snapshots/admin-datalake.json`
+ * Hot overlay only: D1 `analytics_events` for acquisition_funnel + attribution
+ * (product events are written live; no silver ETL for them yet).
+ *
+ * Missing sections return an error — no Athena / live-upstream fallback.
  */
 
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
@@ -19,27 +23,51 @@ export interface DatalakeSectionResult {
   error?: string;
 }
 
+export interface DatalakeFreshnessMeta {
+  generated_at?: string;
+  sources?: Record<
+    string,
+    {
+      exists?: boolean;
+      last_etl_at?: string | null;
+      size?: number | null;
+    }
+  >;
+}
+
 export interface DatalakeDashboardPayload {
   generated_at: string;
   cache: string;
+  /** "gold" = R2 snapshot present; "hot_only" = D1 overlay without gold */
+  source: "gold" | "hot_only" | "empty";
   sections: DatalakeSectionResult[];
+  freshness?: DatalakeFreshnessMeta;
 }
 
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
 
-const SECTION_ORDER = [
+/** Full gold section order — matches materialize-datalake-snapshots.mjs + D1 hot. */
+export const SECTION_ORDER = [
   "acquisition_funnel",
   "attribution",
   "top_keywords",
   "linkedin_ads",
   "top_errors",
   "espocrm_funnel",
+  "stripe_revenue",
+  "n8n_ops",
+  "postiz_ops",
+  "appflowy_activity",
+  "freshness",
 ] as const;
 
-/** Sections served from D1 — excluded when merging R2 snapshot rows. */
-const D1_SECTIONS = new Set<string>(["acquisition_funnel", "attribution"]);
+export type DatalakeSectionName = (typeof SECTION_ORDER)[number];
 
-const MISSING_ERROR = "not available (D1/R2 unbound or ETL snapshot missing)";
+/** Hot-path sections overlaid from D1 when AUTH_DB is bound. */
+const HOT_D1_SECTIONS = new Set<string>(["acquisition_funnel", "attribution"]);
+
+const MISSING_ERROR =
+  "not available (gold ETL snapshot missing — run materialize-datalake-snapshots)";
 
 function daysAgoUnix(days: number): number {
   return Math.floor(Date.now() / 1000) - days * 24 * 60 * 60;
@@ -103,27 +131,36 @@ async function attributionFromD1(db: AuthDatabase): Promise<DatalakeSectionResul
   };
 }
 
-export async function loadDatalakeSnapshotFromR2(): Promise<DatalakeDashboardPayload | null> {
+interface RawGoldSnapshot {
+  generated_at?: string;
+  cache?: string;
+  sections?: DatalakeSectionResult[];
+  freshness?: DatalakeFreshnessMeta;
+}
+
+export async function loadDatalakeSnapshotFromR2(): Promise<{
+  generated_at: string;
+  sections: DatalakeSectionResult[];
+  freshness?: DatalakeFreshnessMeta;
+} | null> {
   const bucket = getDataLakeBucketFromEnv();
   if (!bucket) return null;
   const object = await bucket.get(SNAPSHOT_KEY);
   if (!object) return null;
-  const parsed = JSON.parse(await object.text()) as DatalakeDashboardPayload;
+  const parsed = JSON.parse(await object.text()) as RawGoldSnapshot;
   if (!parsed?.sections || !Array.isArray(parsed.sections)) return null;
   return {
     generated_at: parsed.generated_at || new Date().toISOString(),
-    cache: "cloudflare",
-    sections: parsed.sections.filter((s) => !D1_SECTIONS.has(s.section)),
+    sections: parsed.sections.map((s) => ({
+      ...s,
+      fromCache: true,
+    })),
+    freshness: parsed.freshness,
   };
 }
 
 function sectionUsable(section: DatalakeSectionResult | undefined): boolean {
-  return Boolean(
-    section &&
-    !section.error &&
-    Array.isArray(section.rows) &&
-    (section.rowCount ?? section.rows.length) >= 0
-  );
+  return Boolean(section && !section.error && Array.isArray(section.rows));
 }
 
 function d1SectionError(section: string, error: unknown): DatalakeSectionResult {
@@ -133,49 +170,75 @@ function d1SectionError(section: string, error: unknown): DatalakeSectionResult 
   };
 }
 
+/**
+ * Snapshot-first dashboard payload for /admin/analytics/datalake.
+ *
+ * @param options.refresh — re-read gold from R2 (no skip); kept for API compat
+ */
 export async function getDatalakeDashboard(options: {
   refresh?: boolean;
 }): Promise<DatalakeDashboardPayload> {
-  const refresh = options.refresh === true;
-  const collected: DatalakeSectionResult[] = [];
+  void options.refresh;
 
+  const byName = new Map<string, DatalakeSectionResult>();
+  let goldGeneratedAt: string | null = null;
+  let freshness: DatalakeFreshnessMeta | undefined;
+  let hasGold = false;
+
+  // 1) Gold snapshot first (all ETL-backed sections)
+  try {
+    const snap = await loadDatalakeSnapshotFromR2();
+    if (snap) {
+      hasGold = true;
+      goldGeneratedAt = snap.generated_at;
+      freshness = snap.freshness;
+      for (const section of snap.sections) {
+        byName.set(section.section, section);
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "[datalake-r2] gold snapshot read failed:",
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  // 2) Hot D1 overlay for acquisition / attribution (near-real-time product events)
   const db = getAuthDbFromEnv();
   if (db) {
     try {
-      collected.push(await acquisitionFromD1(db));
+      byName.set("acquisition_funnel", await acquisitionFromD1(db));
     } catch (error) {
-      collected.push(d1SectionError("acquisition_funnel", error));
+      if (!sectionUsable(byName.get("acquisition_funnel"))) {
+        byName.set("acquisition_funnel", d1SectionError("acquisition_funnel", error));
+      }
     }
     try {
-      collected.push(await attributionFromD1(db));
+      byName.set("attribution", await attributionFromD1(db));
     } catch (error) {
-      collected.push(d1SectionError("attribution", error));
+      if (!sectionUsable(byName.get("attribution"))) {
+        byName.set("attribution", d1SectionError("attribution", error));
+      }
     }
   }
 
-  if (!refresh) {
-    try {
-      const snap = await loadDatalakeSnapshotFromR2();
-      if (snap) collected.push(...snap.sections);
-    } catch (error) {
-      console.warn(
-        "[datalake-r2] snapshot read failed:",
-        error instanceof Error ? error.message : error
-      );
-    }
-  }
-
-  const byName = new Map(collected.map((s) => [s.section, s]));
   const sections = SECTION_ORDER.map((section) => {
     const existing = byName.get(section);
     if (sectionUsable(existing)) return existing!;
     if (existing?.error) return existing;
+    if (HOT_D1_SECTIONS.has(section) && !db) {
+      return { section, error: "not available (AUTH_DB unbound — hot path needs D1)" };
+    }
     return { section, error: MISSING_ERROR };
   });
 
+  const source: DatalakeDashboardPayload["source"] = hasGold ? "gold" : db ? "hot_only" : "empty";
+
   return {
-    generated_at: new Date().toISOString(),
+    generated_at: goldGeneratedAt || new Date().toISOString(),
     cache: "cloudflare",
+    source,
     sections,
+    freshness,
   };
 }
