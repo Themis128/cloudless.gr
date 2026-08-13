@@ -9,8 +9,7 @@ name: Postiz crons
 #   /api/cron/postiz-oauth-check  — hourly. Pages a Slack alert per disabled
 #                                   channel (expired OAuth tokens).
 #
-# Auth: CRON_SECRET is read from SSM /cloudless/production/CRON_SECRET via
-# the existing AWS OIDC deploy role, same pattern as platform-crons.yml.
+# Auth: CRON_SECRET from repository secrets (same as platform-crons.yml).
 #
 # Manual run: workflow_dispatch with a target picker (defaults to both).
 
@@ -42,7 +41,7 @@ env:
 jobs:
   trigger:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
     - name: Read CRON_SECRET from repository secrets (no AWS)
       id: secret
@@ -80,42 +79,124 @@ jobs:
         echo "sync=$RUN_SYNC" >> "$GITHUB_OUTPUT"
         echo "oauth=$RUN_OAUTH" >> "$GITHUB_OUTPUT"
 
-    - name: Trigger postiz-sync
-      if: steps.targets.outputs.sync == 'true' && steps.secret.outputs.value !=
-        ''
+    - name: Wait for pi-origin health
+      if: steps.secret.outputs.value != '' && (steps.targets.outputs.sync == 'true' || steps.targets.outputs.oauth == 'true')
       run: |
+        set -euo pipefail
+        # SafeDeploy / pull-promote can 502 for 1–3 minutes. Wait before cron.
+        for i in $(seq 1 12); do
+          CODE=$(curl -sS -o /tmp/pi-health.json -w '%{http_code}' --max-time 10 \
+            "$BASE_URL/api/health" || echo "000")
+          if [ "$CODE" = "200" ]; then
+            echo "pi-origin healthy (attempt $i)"
+            cat /tmp/pi-health.json || true
+            echo
+            exit 0
+          fi
+          echo "pi-origin HTTP $CODE — waiting 15s (attempt $i/12)"
+          sleep 15
+        done
+        echo "::warning::pi-origin still unhealthy after ~3m — cron steps may soft-skip on 502"
+
+    - name: Trigger postiz-sync
+      if: steps.targets.outputs.sync == 'true' && steps.secret.outputs.value != ''
+      env:
+        CRON_SECRET: ${{ steps.secret.outputs.value }}
+      run: |
+        set -euo pipefail
         echo "Calling $BASE_URL/api/cron/postiz-sync"
-        RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 60 \
-          -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-          "$BASE_URL/api/cron/postiz-sync")
-        echo "Response: $RESPONSE"
-        echo "## Postiz sync" >> "$GITHUB_STEP_SUMMARY"
-        echo '```json' >> "$GITHUB_STEP_SUMMARY"
-        echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        CODE="000"
+        BODY="{}"
+        for i in $(seq 1 8); do
+          CODE=$(curl -sS -o /tmp/postiz-sync.json -w '%{http_code}' \
+            --max-time 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$BASE_URL/api/cron/postiz-sync" || echo "000")
+          BODY=$(cat /tmp/postiz-sync.json 2>/dev/null || echo '{}')
+          case "$CODE" in
+            2*)
+              echo "HTTP $CODE — $BODY"
+              {
+                echo "## Postiz sync (HTTP $CODE)"
+                echo '```json'
+                echo "$BODY"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+            503)
+              echo "::notice::Postiz not configured on ${BASE_URL} — skipping (503)"
+              echo "## Postiz sync (HTTP 503 — skipped)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+            502|000)
+              # Origin mid-rollout / tunnel blip — retry with backoff.
+              echo "HTTP $CODE (transient) — retry $i/8 in $((i * 5))s"
+              sleep $((i * 5))
+              ;;
+            *)
+              echo "::error::postiz-sync returned HTTP $CODE — $BODY"
+              exit 1
+              ;;
+          esac
+        done
+        # Origin still unreachable → soft-skip (next schedule retries).
+        # Health OK + cron 502 = Postiz upstream failure → hard fail.
+        HEALTH=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+          "$BASE_URL/api/health" || echo "000")
+        if [ "$HEALTH" != "200" ]; then
+          echo "::warning::pi-origin unhealthy (HTTP $HEALTH) after retries — soft-skipping postiz-sync"
+          echo "## Postiz sync (origin unhealthy — soft-skip)" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        echo "::error::postiz-sync failed after retries (last HTTP $CODE; origin healthy — likely Postiz upstream)"
+        exit 1
 
     - name: Trigger postiz-oauth-check
-      if: steps.targets.outputs.oauth == 'true' && steps.secret.outputs.value !=
-        ''
+      if: steps.targets.outputs.oauth == 'true' && steps.secret.outputs.value != ''
+      env:
+        CRON_SECRET: ${{ steps.secret.outputs.value }}
       run: |
+        set -euo pipefail
         echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
-        CODE=$(curl -sS -o /tmp/postiz-oauth.json -w '%{http_code}' \
-          --retry 3 --retry-delay 5 --max-time 30 \
-          -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-          "$BASE_URL/api/cron/postiz-oauth-check" || echo "000")
-        BODY=$(cat /tmp/postiz-oauth.json 2>/dev/null || echo '{}')
-        echo "HTTP $CODE — $BODY"
-        {
-          echo "## Postiz OAuth check (HTTP $CODE)"
-          echo '```json'
-          echo "$BODY"
-          echo '```'
-        } >> "$GITHUB_STEP_SUMMARY"
-        # 503 = integration not configured on this environment → clean skip.
-        # 2xx = success. Anything else (incl. 502 = Postiz unreachable) is a
-        # real failure worth alerting on.
-        case "$CODE" in
-          2*)  echo "OK" ;;
-          503) echo "::notice::Postiz not configured on ${BASE_URL} — skipping (503)" ;;
-          *)   echo "::error::postiz-oauth-check returned HTTP $CODE"; exit 1 ;;
-        esac
+        CODE="000"
+        BODY="{}"
+        for i in $(seq 1 8); do
+          CODE=$(curl -sS -o /tmp/postiz-oauth.json -w '%{http_code}' \
+            --max-time 30 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$BASE_URL/api/cron/postiz-oauth-check" || echo "000")
+          BODY=$(cat /tmp/postiz-oauth.json 2>/dev/null || echo '{}')
+          case "$CODE" in
+            2*)
+              echo "HTTP $CODE — $BODY"
+              {
+                echo "## Postiz OAuth check (HTTP $CODE)"
+                echo '```json'
+                echo "$BODY"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+            503)
+              echo "::notice::Postiz not configured on ${BASE_URL} — skipping (503)"
+              exit 0
+              ;;
+            502|000)
+              echo "HTTP $CODE (transient) — retry $i/8 in $((i * 5))s"
+              sleep $((i * 5))
+              ;;
+            *)
+              echo "::error::postiz-oauth-check returned HTTP $CODE"
+              exit 1
+              ;;
+          esac
+        done
+        HEALTH=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+          "$BASE_URL/api/health" || echo "000")
+        if [ "$HEALTH" != "200" ]; then
+          echo "::warning::pi-origin unhealthy (HTTP $HEALTH) after retries — soft-skipping oauth-check"
+          exit 0
+        fi
+        echo "::error::postiz-oauth-check failed after retries (last HTTP $CODE; origin healthy)"
+        exit 1
