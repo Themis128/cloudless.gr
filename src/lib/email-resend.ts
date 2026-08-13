@@ -35,9 +35,7 @@ export async function sendEmailResend(options: ResendOptions): Promise<void> {
   }
 
   const fromEmail = process.env.SES_FROM_EMAIL || "noreply@cloudless.gr";
-  const fromAddress = options.fromLabel
-    ? `${options.fromLabel} <${fromEmail}>`
-    : fromEmail;
+  const fromAddress = options.fromLabel ? `${options.fromLabel} <${fromEmail}>` : fromEmail;
 
   try {
     const { error } = await client.emails.send({

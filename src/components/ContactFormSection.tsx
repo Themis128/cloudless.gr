@@ -163,7 +163,11 @@ export default function ContactFormSection() {
                 </div>
               </ScrollReveal>
             ) : (
-              <form data-testid="contact-form" onSubmit={handleSubmit} className="space-y-6">
+              <form
+                data-testid="contact-form"
+                onSubmit={handleSubmit}
+                className="space-y-6"
+              >
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
                     <label htmlFor={FIELD_NAME} className={LABEL_CLASS}>
