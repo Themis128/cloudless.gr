@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useState } from "react";
+import AdminAiUsageCard from "@/components/admin/AdminAiUsageCard";
 
 /* Contract of POST /api/admin/ai/generate (Cloudflare Workers AI). */
 
@@ -75,7 +76,8 @@ export default function AiGeneratorPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4.5rem)] p-6">
+    <div className="min-h-[calc(100vh-4.5rem)] space-y-4 p-6">
+      <AdminAiUsageCard />
       <form onSubmit={generate} className="space-y-4">
         <div>
           <label htmlFor="prompt" className="mb-2 block font-mono text-xs text-slate-400">

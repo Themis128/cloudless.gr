@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
+import {
+  adminAiNotConfiguredResponse,
+  generateAdminAiText,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -21,9 +25,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = await getAnthropicApiKey();
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   const prompt = `You are a marketing analyst. Write concise, insightful commentary on this campaign performance data for a client report.
@@ -32,10 +35,10 @@ Metrics: ${JSON.stringify(metrics, null, 2)}
 Write 3-5 sentences of plain English insights. Mention specific numbers, compare to industry benchmarks where relevant, and end with 1-2 actionable recommendations. Be direct and professional.`;
 
   try {
-    const insights = await callClaude(prompt, apiKey, { maxTokens: 500 }); // NOSONAR
-    return NextResponse.json({ insights });
+    const { text: insights, provider } = await generateAdminAiText(prompt, { maxTokens: 500 });
+    return NextResponse.json({ insights, provider });
   } catch (e) {
-    console.error("[ai/report-insights] Claude call failed:", e);
+    console.error("[ai/report-insights] generation failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

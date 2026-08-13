@@ -32,17 +32,20 @@ function req(url: string, method = "GET", body?: unknown) {
 
 // ── /api/admin/ai/report-insights ────────────────────────────────────────────
 
-const mockCallClaude = vi.fn();
-const mockGetAnthropicApiKey = vi.fn();
-vi.mock("@/lib/anthropic", () => ({
-  callClaude: (...a: unknown[]) => mockCallClaude(...a),
-  getAnthropicApiKey: (...a: unknown[]) => mockGetAnthropicApiKey(...a),
+const mockGenerateAdminAiText = vi.fn();
+const mockIsAdminAiConfiguredAsync = vi.fn();
+vi.mock("@/lib/admin-ai", () => ({
+  generateAdminAiText: (...a: unknown[]) => mockGenerateAdminAiText(...a),
+  isAdminAiConfiguredAsync: (...a: unknown[]) => mockIsAdminAiConfiguredAsync(...a),
+  adminAiNotConfiguredResponse: () =>
+    Response.json({ error: "Admin AI not configured." }, { status: 503 }),
 }));
 
 describe("POST /api/admin/ai/report-insights", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    mockIsAdminAiConfiguredAsync.mockResolvedValue(true);
   });
 
   it("returns 401 when not admin", async () => {
@@ -74,47 +77,38 @@ describe("POST /api/admin/ai/report-insights", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 503 when Anthropic key not configured", async () => {
+  it("returns 503 when Admin AI not configured", async () => {
     adminOk();
-    mockGetAnthropicApiKey.mockResolvedValue(null);
+    mockIsAdminAiConfiguredAsync.mockResolvedValue(false);
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
     const res = await POST(
       req("http://localhost/api/admin/ai/report-insights", "POST", {
-        metrics: { clicks: 100 },
+        metrics: { clicks: 10 },
         period: "30d",
       })
     );
     expect(res.status).toBe(503);
   });
 
-  it("returns insights when configured", async () => {
+  it("returns insights text on success", async () => {
     adminOk();
-    mockGetAnthropicApiKey.mockResolvedValue("sk-ant-xxx");
-    mockCallClaude.mockResolvedValue("Campaign performed well with 100 clicks.");
+    mockGenerateAdminAiText.mockResolvedValue({
+      text: "CTR is strong; double down on LinkedIn.",
+      provider: "workers-ai",
+    });
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
     const res = await POST(
       req("http://localhost/api/admin/ai/report-insights", "POST", {
-        metrics: { clicks: 100 },
-        period: "30d",
+        metrics: { clicks: 100, impressions: 5000 },
+        period: "last 30 days",
       })
     );
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.insights).toContain("100 clicks");
-  });
-
-  it("returns 500 when Claude call fails", async () => {
-    adminOk();
-    mockGetAnthropicApiKey.mockResolvedValue("sk-ant-xxx");
-    mockCallClaude.mockRejectedValue(new Error("API error"));
-    const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: { clicks: 100 } })
-    );
-    expect(res.status).toBe(500);
+    expect(data.insights).toContain("CTR");
+    expect(data.provider).toBe("workers-ai");
   });
 });
-
 // ── Campaign insights routes ──────────────────────────────────────────────────
 
 const mockIsLinkedInConfigured = vi.fn();

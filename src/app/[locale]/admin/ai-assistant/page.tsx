@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useRef, useState } from "react";
+import AdminAiUsageCard from "@/components/admin/AdminAiUsageCard";
 
 type Mode = "chat" | "strategy" | "copy";
 
@@ -60,7 +61,9 @@ export default function AIAssistantPage() {
         }),
       });
       if (res.status === 503) {
-        setError("ANTHROPIC_API_KEY is not configured in AWS SSM.");
+        setError(
+          "Admin AI is not configured. Set Cloudflare Workers AI credentials or GEMINI_API_KEY."
+        );
         return;
       }
       if (!res.ok) throw new Error("Assistant request failed");
@@ -89,7 +92,9 @@ export default function AIAssistantPage() {
         body: JSON.stringify({ brief, budget, targetAudience }),
       });
       if (res.status === 503) {
-        setError("ANTHROPIC_API_KEY is not configured in AWS SSM.");
+        setError(
+          "Admin AI is not configured. Set Cloudflare Workers AI credentials or GEMINI_API_KEY."
+        );
         return;
       }
       if (!res.ok) throw new Error("Failed to generate strategy");
@@ -114,7 +119,9 @@ export default function AIAssistantPage() {
         body: JSON.stringify({ service, platform, objective, language }),
       });
       if (res.status === 503) {
-        setError("ANTHROPIC_API_KEY is not configured in AWS SSM.");
+        setError(
+          "Admin AI is not configured. Set Cloudflare Workers AI credentials or GEMINI_API_KEY."
+        );
         return;
       }
       if (!res.ok) throw new Error("Failed to generate copy");
@@ -138,6 +145,9 @@ export default function AIAssistantPage() {
 
   return (
     <div>
+      <div className="mb-6">
+        <AdminAiUsageCard />
+      </div>
       <div className="mb-8">
         <div className="border-neon-magenta/20 bg-neon-magenta/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
           <span className="bg-neon-magenta h-2 w-2 animate-pulse rounded-full" />
@@ -145,8 +155,35 @@ export default function AIAssistantPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">AI Campaign Assistant</h1>
         <p className="font-body mt-1 text-slate-400">
-          Generate campaign strategies and ad copy with Claude AI.
+          Generate campaign strategies and ad copy with Workers AI (Gemini fallback).
         </p>
+        <button
+          type="button"
+          className="hover:border-neon-cyan/40 hover:text-neon-cyan mt-3 rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-[10px] text-slate-400"
+          onClick={async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              const res = await fetchWithAuth("/api/admin/ai/rag/sync", { method: "POST" });
+              const data = (await res.json()) as { upserted?: number; error?: string };
+              if (!res.ok) throw new Error(data.error ?? "RAG sync failed");
+              setError(null);
+              setChatMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: `Synced ${data.upserted ?? 0} AppFlowy chunks into Vectorize.`,
+                },
+              ]);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "RAG sync failed");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          Sync AppFlowy → Vectorize RAG
+        </button>
       </div>
 
       <div className="mb-6 flex gap-1 rounded-lg border border-slate-800 bg-slate-900/50 p-1">

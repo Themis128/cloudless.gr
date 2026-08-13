@@ -1,0 +1,16 @@
+{
+  "name": "espocrm-fanout",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-01",
+  "queues": {
+    "producers": [{ "queue": "espocrm-events", "binding": "ESPOCRM_EVENTS" }],
+    "consumers": [
+      {
+        "queue": "espocrm-events",
+        "max_batch_size": 10,
+        "max_retries": 5,
+        "dead_letter_queue": "espocrm-events-dlq"
+      }
+    ]
+  }
+}
