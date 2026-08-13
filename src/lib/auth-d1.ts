@@ -21,6 +21,8 @@ const RESET_TOKEN_EXPIRY_SECONDS = 60 * 60 * 24; // 24 hours
 // Secret key for session tokens - must be set via Wrangler secret
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
 
+const ERR_AUTH_NOT_CONFIGURED = "Authentication not configured";
+
 // D1 binding interface (provided by Worker)
 export interface AuthDatabase {
   prepare: (query: string) => D1PreparedStatement;
@@ -268,7 +270,7 @@ export async function authenticateUser(
 ): Promise<AuthResult> {
   // Check if SESSION_SECRET is configured
   if (!SESSION_SECRET) {
-    return { error: "Authentication not configured" };
+    return { error: ERR_AUTH_NOT_CONFIGURED };
   }
 
   // Validate SESSION_SECRET length (32+ bytes)
@@ -378,7 +380,7 @@ export async function createAdminUser(
   email: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!SESSION_SECRET) {
-    return { success: false, error: "Authentication not configured" };
+    return { success: false, error: ERR_AUTH_NOT_CONFIGURED };
   }
 
   const user = await db
@@ -404,7 +406,7 @@ export async function createPasswordResetToken(
   email: string
 ): Promise<{ token?: string; error?: string }> {
   if (!SESSION_SECRET) {
-    return { error: "Authentication not configured" };
+    return { error: ERR_AUTH_NOT_CONFIGURED };
   }
 
   const user = await db
@@ -443,7 +445,7 @@ export async function consumePasswordResetToken(
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!SESSION_SECRET) {
-    return { success: false, error: "Authentication not configured" };
+    return { success: false, error: ERR_AUTH_NOT_CONFIGURED };
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -534,44 +536,41 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   // E2E / local next-dev: prefer wrangler sqlite so signup/login never hit
   // remote user-auth-db (and so CI works without a live CLOUDFLARE_API_TOKEN).
   if (preferLocal) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
-      const local = getLocalAuthDb();
-      if (local) return local;
-    } catch {
-      // Fall through to HTTP D1.
-    }
+    const local = tryLoadLocalAuthDb();
+    if (local) return local;
   }
 
   // Lazy-load Node-only modules using literal require() strings. Webpack
   // statically resolves these at build time (via tsconfig paths for "@/"),
   // which avoids webpackEmptyContext that computed strings produce. These
   // are server-only modules — never bundled into client or edge bundles.
+  const httpDb = tryLoadHttpAuthDb();
+  if (httpDb) return httpDb;
+
+  if (process.env.NODE_ENV === "development") {
+    return tryLoadLocalAuthDb() ?? null;
+  }
+  return null;
+}
+
+function tryLoadLocalAuthDb(): AuthDatabase | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
+    return getLocalAuthDb();
+  } catch {
+    return null;
+  }
+}
+
+function tryLoadHttpAuthDb(): AuthDatabase | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
-    const httpDb = getHttpAuthDb();
-    if (httpDb) {
-      return httpDb;
-    }
+    return getHttpAuthDb() ?? null;
   } catch {
-    // Module unavailable or misconfigured — fall through.
+    return null;
   }
-
-  if (process.env.NODE_ENV === "development") {
-    // Local D1 sqlite shim — only used in `next dev`; pulls node:sqlite so
-    // it must NOT reach the edge bundle. The literal require() is safe here
-    // because webpack only includes server-side chunks.
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
-      return getLocalAuthDb();
-    } catch {
-      return null;
-    }
-  }
-  return null;
 }
 
 export { verifyPassword, hashPassword, readPreferenceFlag };

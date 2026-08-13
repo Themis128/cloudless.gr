@@ -20,6 +20,9 @@ import {
 } from "@/lib/datalake-insights";
 
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
+const DATALAKE_GOLD_SOURCE = "datalake-gold" as const;
+const SECTION_STRIPE_REVENUE = "stripe_revenue";
+const SECTION_ACQUISITION_FUNNEL = "acquisition_funnel";
 
 export async function getGoldSection(section: string): Promise<DatalakeSectionResult | null> {
   const dash = await getDatalakeDashboard({});
@@ -95,10 +98,9 @@ export async function getSeoFromLake(days = 28): Promise<{
     position: number;
   }>;
   fetchedAt: string;
-  source: "datalake-gold";
+  source: typeof DATALAKE_GOLD_SOURCE;
   error?: string;
 }> {
-  void days;
   const section = await getGoldSection("top_keywords");
   const rows = section?.rows ?? [];
   const keywords = rows.map((r) => ({
@@ -123,7 +125,7 @@ export async function getSeoFromLake(days = 28): Promise<{
     },
     keywords: keywords.slice(0, 50),
     fetchedAt: snap?.generated_at ?? new Date().toISOString(),
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     error: section?.error,
   };
 }
@@ -140,7 +142,7 @@ export async function getCtrOpportunitiesFromLake(limit = 50): Promise<{
     position: number;
   }>;
   fetchedAt: string;
-  source: "datalake-gold";
+  source: typeof DATALAKE_GOLD_SOURCE;
   error?: string;
 }> {
   const seo = await getSeoFromLake(28);
@@ -150,7 +152,7 @@ export async function getCtrOpportunitiesFromLake(limit = 50): Promise<{
   return {
     opportunities,
     fetchedAt: seo.fetchedAt,
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     error: seo.error,
   };
 }
@@ -167,7 +169,7 @@ export async function getGscDimensionFromLake(
   rows: unknown[];
   snapshot: Awaited<ReturnType<typeof getSeoFromLake>>["snapshot"];
   fetchedAt: string;
-  source: "datalake-gold";
+  source: typeof DATALAKE_GOLD_SOURCE;
   note: string;
   error?: string;
 }> {
@@ -177,7 +179,7 @@ export async function getGscDimensionFromLake(
     rows: dimension === "query" ? seo.keywords : [],
     snapshot: seo.snapshot,
     fetchedAt: seo.fetchedAt,
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     note:
       dimension === "query"
         ? "Served from gold top_keywords."
@@ -193,7 +195,7 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
   const dash = await getGoldDashboard();
   const byName = new Map(dash.sections.map((s) => [s.section, s]));
   const seo = await getSeoFromLake(days);
-  const stripe = byName.get("stripe_revenue");
+  const stripe = byName.get(SECTION_STRIPE_REVENUE);
   const espocrm = byName.get("espocrm_funnel");
   const attribution = byName.get("attribution");
 
@@ -203,7 +205,7 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
   return {
     days,
     fetchedAt: dash.generated_at,
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     lakeSource: dash.source,
     seo: seo.error ? null : seo.snapshot,
     keywords: seo.keywords.slice(0, 10),
@@ -234,7 +236,7 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
  */
 export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>> {
   const linkedin = await getGoldSection("linkedin_ads");
-  const stripe = await getGoldSection("stripe_revenue");
+  const stripe = await getGoldSection(SECTION_STRIPE_REVENUE);
   const linkedinRows = linkedin?.rows ?? [];
   const spendCents = linkedinRows.reduce(
     (a, r) => a + Math.round((Number(r.spend ?? r.cost) || 0) * 100),
@@ -292,7 +294,7 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
   return {
     windowDays: days,
     generatedAt: new Date().toISOString(),
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     channels,
     totals: {
       spendCents: totalsSpend,
@@ -320,12 +322,12 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
  */
 export async function getKpiFromLake(days = 28): Promise<Record<string, unknown>> {
   const seo = await getSeoFromLake(days);
-  const stripe = await getGoldSection("stripe_revenue");
-  const funnel = await getGoldSection("acquisition_funnel");
+  const stripe = await getGoldSection(SECTION_STRIPE_REVENUE);
+  const funnel = await getGoldSection(SECTION_ACQUISITION_FUNNEL);
   return {
     days,
     fetchedAt: seo.fetchedAt,
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     seo: seo.snapshot,
     keywordsTop: seo.keywords.slice(0, 5),
     revenueRows: stripe?.rows?.slice(0, 14) ?? [],
@@ -357,10 +359,10 @@ export async function getStripeSnapshotFromLake(windowDays = 30): Promise<{
     processed: number;
     failed: number;
   }>;
-  source: "datalake-gold";
+  source: typeof DATALAKE_GOLD_SOURCE;
   error?: string;
 }> {
-  const section = await getGoldSection("stripe_revenue");
+  const section = await getGoldSection(SECTION_STRIPE_REVENUE);
   const rows = section?.rows ?? [];
   const dailyTrend = rows.map((r) => {
     const amountMajor = Number(r.revenue ?? r.amount) || 0;
@@ -399,7 +401,7 @@ export async function getStripeSnapshotFromLake(windowDays = 30): Promise<{
     byStatus: {},
     byCurrency: {},
     dailyTrend,
-    source: "datalake-gold",
+    source: DATALAKE_GOLD_SOURCE,
     error: section?.error,
   };
 }
