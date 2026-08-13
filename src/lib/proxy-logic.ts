@@ -59,10 +59,8 @@ const ADMIN_RATE_LIMIT = {
     limit: IS_DEV ? 1000 : 50,
     window: 10,
   },
-  // Authenticated admin dashboards fan out many GETs (SEO alone = 6).
-  // 100/10s was starving /api/admin/analytics/* during normal browsing.
   auth: {
-    limit: IS_DEV ? 2000 : 300,
+    limit: IS_DEV ? 2000 : 100,
     window: 10,
   },
 };
@@ -261,11 +259,19 @@ async function handleApiRoute(
 
   const ip = getSharedClientIp(request) || "unknown";
   const authToken = readAuthToken(request);
+  const method = request.method.toUpperCase();
 
   let limitConfig = RATE_LIMITS.ip;
   if (pathname.startsWith("/api/admin/")) {
-    limitConfig = ADMIN_RATE_LIMIT.ip;
-    if (authToken) {
+    if (!authToken) {
+      // Unauthenticated probes of admin APIs stay tightly capped.
+      limitConfig = ADMIN_RATE_LIMIT.ip;
+    } else if (method === "GET" || method === "HEAD") {
+      // Dashboard pages fan out many parallel GETs (SEO alone = 6). Each route
+      // still enforces requireAdmin — use the general auth budget so reads do
+      // not 429 during normal browsing.
+      limitConfig = RATE_LIMITS.auth;
+    } else {
       limitConfig = ADMIN_RATE_LIMIT.auth;
     }
   } else if (authToken) {
