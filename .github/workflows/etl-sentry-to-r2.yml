@@ -1,0 +1,72 @@
+name: 'ETL: Sentry to R2'
+# Sentry issues → R2. Feeds admin datalake top_errors.
+
+on:
+  schedule:
+  - cron: 15 6 * * *       # daily 06:15 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etl-sentry-to-r2
+  cancel-in-progress: false
+
+jobs:
+  etl:
+    name: Run Sentry → R2 sync
+    runs-on: [self-hosted, omv, build]
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4.3.1
+
+    - name: Set up Node.js 22
+      uses: actions/setup-node@v4.4.0
+      with:
+        node-version: 22
+
+    - name: Install dependencies
+      working-directory: scripts/etl
+      run: |
+        corepack enable || true
+        corepack prepare pnpm@latest --activate || true
+        pnpm install --frozen-lockfile --prod
+
+    - name: Run Sentry-to-R2 sync
+      working-directory: scripts/etl
+      env:
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+        CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+      run: node sentry-to-r2.mjs
+
+    - name: Notify Slack on failure
+      if: failure()
+      uses: actions/github-script@v9.0.0
+      env:
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          if (process.env.SLACK_WEBHOOK_URL) {
+            const payload = {
+              text: `ETL: Sentry to R2 failed in workflow run ${context.runId}`,
+              blocks: [{
+                type: "section",
+                text: { type: "mrkdwn", text: ":x: ETL: Sentry to R2 failed" }
+              }]
+            };
+            fetch(process.env.SLACK_WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            }).catch(() => {});
+          }

@@ -27,20 +27,26 @@ Conventions in use today (consolidated retroactively):
 | `build-pi-image.yml` | Standalone Pi ARM64 image build | manual / workflow_call |
 | `rollout-pi-force.yml` | Emergency force-rollout (skip checks) | manual |
 
-## 📥 ETL (10) — daily lake feeders
+## 📥 ETL — R2 datalake feeders (Cloudflare)
 
-| File | Source | S3 prefix |
+Athena/S3 lake workflows are retired. All feeders write parquet to R2
+`datalake-bucket`; `etl-materialize-snapshots.yml` rolls them into
+`lake/snapshots/admin-datalake.json` for the admin UI (D1 + R2).
+
+| File | Source | R2 prefix |
 |------|--------|-----------|
-| `etl-aws-cost-to-lake.yml` | AWS Cost Explorer | `lake/aws-cost/` |
-| `etl-espocrm-to-lake.yml` | EspoCRM CRM | `lake/espocrm/` |
-| `etl-stripe-to-lake.yml` | Stripe orders/subs | `lake/stripe/` |
-| `etl-sentry-to-lake.yml` | Sentry issues | `lake/sentry-issues/` |
-| `etl-gsc-to-lake.yml` | Google Search Console | `lake/gsc/` |
-| `etl-linkedin-ads-to-lake.yml` | LinkedIn Ads | `lake/linkedin/` |
-| `etl-clients-to-lake.yml` | Client portals | `lake/clients/` |
-| `etl-selfhosted-to-lake.yml` | AppFlowy + Postiz + n8n | `lake/{appflowy,postiz,n8n}/` |
-| `etl-compute-rfm-churn.yml` | Computes RFM segments | `lake/rfm/` |
-| `analytics-etl.yml` | Umbrella runner (legacy) | mixed — review for archival |
+| `etl-espocrm-to-r2.yml` | EspoCRM CRM | `lake/espocrm-*` |
+| `etl-stripe-to-r2.yml` | Stripe orders/subs | `lake/transactions/` |
+| `etl-compute-rfm-to-r2.yml` | RFM/churn from Stripe parquet | `ml-parquet/` |
+| `etl-clients-to-r2.yml` | D1 users + portals + RFM | `lake/clients/` |
+| `etl-portals-to-r2.yml` | Client portals | `lake/portals/` |
+| `etl-gsc-to-r2.yml` | Google Search Console | `lake/gsc-keywords/` |
+| `etl-sentry-to-r2.yml` | Sentry issues | `lake/sentry-issues/` |
+| `etl-linkedin-ads-to-r2.yml` | LinkedIn Ads | `lake/linkedin-ads/` |
+| `etl-appflowy-to-r2.yml` | AppFlowy (kubectl/psql) | `lake/appflowy-*` |
+| `etl-postiz-to-r2.yml` | Postiz | `lake/postiz-*` |
+| `etl-n8n-to-r2.yml` | n8n | `lake/n8n-*` |
+| `etl-materialize-snapshots.yml` | Rollup → admin snapshot | `lake/snapshots/` |
 
 ## 🔍 Probe (12) — silent-failure detectors
 

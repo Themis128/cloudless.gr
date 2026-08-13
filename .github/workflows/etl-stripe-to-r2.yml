@@ -1,27 +1,22 @@
-name: 'ETL: Clients to R2'
-# ETL sync: Cognito users + portals + ML scores → unified clients parquet in R2.
-# Reads config from D1 app_config via /api/config endpoint.
+name: 'ETL: Stripe to R2'
+# Daily Stripe transactions → R2 parquet. Feeds RFM + admin datalake stripe_revenue.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
 
 on:
   schedule:
-  - cron: 45 6 * * *       # daily at 06:45 UTC — after stripe (06:00) + RFM (06:15)
-  workflow_run:
-    workflows: ['ETL: Compute RFM to R2']
-    types: [completed]
+  - cron: 0 6 * * *       # daily 06:00 UTC — before RFM (06:15) and clients (06:45)
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: etl-stripe-to-r2
+  cancel-in-progress: false
+
 jobs:
   etl:
-    name: Run Clients → R2 sync
-    if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
-    # Always Pi — Cloudflare blocks GH-hosted/data-center IPs for this ETL.
-    # Do not use vars.RUNNER_GENERIC failover (hosted = blocked).
+    name: Run Stripe → R2 sync
     runs-on: [self-hosted, omv, build]
     timeout-minutes: 20
 
@@ -34,25 +29,22 @@ jobs:
       with:
         node-version: 22
 
-
-    - name: Install dependencies (use pnpm, avoid npm ci on pnpm-managed repo)
+    - name: Install dependencies
       working-directory: scripts/etl
       run: |
-        # Ensure pnpm is available via corepack, then install production deps
         corepack enable || true
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
 
-    - name: Run Clients-to-R2 sync
+    - name: Run Stripe-to-R2 sync
       working-directory: scripts/etl
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
         CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-        AUTH_DB_URL: http://localhost:8787/api/config
-      run: node clients-to-r2.mjs
+      run: node stripe-to-r2.mjs
 
     - name: Notify Slack on failure
       if: failure()
@@ -65,10 +57,10 @@ jobs:
         script: |
           if (process.env.SLACK_WEBHOOK_URL) {
             const payload = {
-              text: `ETL: Clients to R2 failed in workflow run ${context.runId}`,
+              text: `ETL: Stripe to R2 failed in workflow run ${context.runId}`,
               blocks: [{
                 type: "section",
-                text: { type: "mrkdwn", text: ":x: ETL: Clients to R2 failed" }
+                text: { type: "mrkdwn", text: ":x: ETL: Stripe to R2 failed" }
               }]
             };
             fetch(process.env.SLACK_WEBHOOK_URL, {
@@ -77,9 +69,3 @@ jobs:
               body: JSON.stringify(payload)
             }).catch(() => {});
           }
-
-# Required secrets (add via GitHub repo → Settings → Secrets → Actions):
-# CF_ACCOUNT_ID - Your Cloudflare account ID
-# CF_R2_ACCESS_KEY_ID - R2 access key from Cloudflare dashboard
-# CF_R2_SECRET_ACCESS_KEY - R2 secret key from Cloudflare dashboard
-# SLACK_WEBHOOK_URL - Slack webhook for failure notifications (optional)

@@ -1,8 +1,8 @@
 /**
  * GET /api/admin/cost — admin-gated AWS cost summary.
  *
- * Cloudflare-only: D1 `aws_cost_daily` → R2 `lake/aws-cost/cost.json`.
- * Source ETL is Cost Explorer → R2/D1 (`scripts/etl/aws-cost-to-r2.mjs`).
+ * Cloudflare-only frozen snapshot: D1 `aws_cost_daily` → R2 `lake/aws-cost/cost.json`.
+ * Cost Explorer ETL retired (PR-17); no new AWS billing pulls.
  *
  * Returns {total_30d, yesterday, topServices, dailyTrend, lastEtlAt}.
  * Empty summary when no cost source is available.

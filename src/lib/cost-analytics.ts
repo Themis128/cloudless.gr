@@ -1,12 +1,12 @@
 /**
  * Cost analytics for `/admin/cost` (R12).
  *
- * Cloudflare-only read path:
- *   1. D1 `aws_cost_daily` when AUTH_DB is bound (ETL: aws-cost-to-r2 + wrangler)
+ * Cloudflare-only read path (frozen snapshot):
+ *   1. D1 `aws_cost_daily` when AUTH_DB is bound
  *   2. R2 `lake/aws-cost/cost.json` when DATALAKE_BUCKET is bound
  *
- * Source data still comes from AWS Cost Explorer (billing API); storage/query
- * is Cloudflare-native. No Athena / S3 reads.
+ * Cost Explorer ETL is retired (PR-17). No new AWS billing pulls.
+ * No Athena / S3 reads.
  */
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
