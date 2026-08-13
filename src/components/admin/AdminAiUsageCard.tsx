@@ -52,7 +52,7 @@ export default function AdminAiUsageCard() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-void-light/50 p-4 text-sm text-slate-400">
+      <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4 text-sm text-slate-400">
         AI status unavailable: {error}
       </div>
     );
@@ -60,7 +60,7 @@ export default function AdminAiUsageCard() {
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-void-light/50 p-4 text-sm text-slate-500">
+      <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4 text-sm text-slate-500">
         Loading AI usage…
       </div>
     );
@@ -70,8 +70,8 @@ export default function AdminAiUsageCard() {
   const lastError = u.recent.find((r) => !r.ok);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-void-light/50 p-4">
-      <h2 className="mb-3 font-mono text-xs tracking-widest text-neon-cyan uppercase">
+    <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
+      <h2 className="text-neon-cyan mb-3 font-mono text-xs tracking-widest uppercase">
         AI usage / status
       </h2>
       <div className="grid gap-2 font-mono text-xs text-slate-300 sm:grid-cols-2">
@@ -96,7 +96,7 @@ export default function AdminAiUsageCard() {
         </p>
       </div>
       {lastError ? (
-        <p className="mt-3 font-mono text-xs text-neon-magenta">
+        <p className="text-neon-magenta mt-3 font-mono text-xs">
           Last error: {lastError.error ?? "unknown"} ({lastError.latencyMs}ms)
         </p>
       ) : null}

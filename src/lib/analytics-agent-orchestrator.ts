@@ -536,13 +536,10 @@ export async function runAnalyticsAgentOrchestration(params: {
     },
   ];
 
-  const { text: raw } = await generateAdminAiText(
-    buildUserPrompt(snapshot, preprocessed, goals),
-    {
-      maxTokens: 1500,
-      system: buildSystemPrompt(),
-    }
-  );
+  const { text: raw } = await generateAdminAiText(buildUserPrompt(snapshot, preprocessed, goals), {
+    maxTokens: 1500,
+    system: buildSystemPrompt(),
+  });
 
   const report = parseClaudeJson(raw) ?? defaultReport(snapshot, preprocessed);
   workflow.push({

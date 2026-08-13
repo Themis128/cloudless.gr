@@ -22,16 +22,11 @@ function indexName(): string {
 
 export function isAdminVectorizeConfigured(): boolean {
   return Boolean(
-    isWorkersAiConfigured() &&
-      process.env.CLOUDFLARE_ACCOUNT_ID &&
-      process.env.CLOUDFLARE_API_TOKEN
+    isWorkersAiConfigured() && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
   );
 }
 
-async function vectorizeFetch(
-  path: string,
-  init?: RequestInit
-): Promise<Response> {
+async function vectorizeFetch(path: string, init?: RequestInit): Promise<Response> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !token) {

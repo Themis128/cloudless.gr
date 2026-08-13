@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  adminAiNotConfiguredResponse,
-  isAdminAiConfiguredAsync,
-} from "@/lib/admin-ai";
+import { adminAiNotConfiguredResponse, isAdminAiConfiguredAsync } from "@/lib/admin-ai";
 import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
 import {
   buildWorkersAiToolProtocol,
@@ -59,9 +56,7 @@ export async function POST(req: NextRequest) {
   const toolsUsed: string[] = [];
   const query = lastUserText(messages);
   const rag = await retrieveAdminRagContext(query).catch(() => "");
-  const systemWithRag = rag
-    ? `${SYSTEM_PROMPT}\n\nRelevant site content:\n${rag}`
-    : SYSTEM_PROMPT;
+  const systemWithRag = rag ? `${SYSTEM_PROMPT}\n\nRelevant site content:\n${rag}` : SYSTEM_PROMPT;
 
   // Workers AI tool loop (preferred)
   if (isWorkersAiConfigured()) {

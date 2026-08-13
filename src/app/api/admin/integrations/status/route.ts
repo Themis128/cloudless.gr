@@ -245,9 +245,10 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
       name: "Google Gemini (AI fallback)",
       category: "ai",
       status: configuredIf(Boolean(cfg.GEMINI_API_KEY || process.env.GEMINI_API_KEY)),
-      message: cfg.GEMINI_API_KEY || process.env.GEMINI_API_KEY
-        ? undefined
-        : "Optional fallback when Workers AI is unavailable. Set GEMINI_API_KEY.",
+      message:
+        cfg.GEMINI_API_KEY || process.env.GEMINI_API_KEY
+          ? undefined
+          : "Optional fallback when Workers AI is unavailable. Set GEMINI_API_KEY.",
       setupUrl: "https://aistudio.google.com/apikey",
     },
     {
@@ -289,9 +290,7 @@ function buildCoreReports(cfg: Cfg): IntegrationReport[] {
       name: "EspoCRM Queues fan-out",
       category: "ai",
       status: configuredIf(
-        Boolean(
-          process.env.ESPOCRM_QUEUE_PRODUCER_URL && process.env.ESPOCRM_QUEUE_PRODUCER_SECRET
-        )
+        Boolean(process.env.ESPOCRM_QUEUE_PRODUCER_URL && process.env.ESPOCRM_QUEUE_PRODUCER_SECRET)
       ),
       message:
         process.env.ESPOCRM_QUEUE_PRODUCER_URL && process.env.ESPOCRM_QUEUE_PRODUCER_SECRET

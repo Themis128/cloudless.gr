@@ -3,10 +3,7 @@
  * Used by Marketing Hub routes that previously required ANTHROPIC_API_KEY.
  */
 
-import {
-  callWorkersAiChat,
-  isWorkersAiConfigured,
-} from "@/lib/workers-ai-client";
+import { callWorkersAiChat, isWorkersAiConfigured } from "@/lib/workers-ai-client";
 import { callGemini, getGeminiApiKey } from "@/lib/gemini-admin";
 
 export function isAdminAiConfigured(): boolean {
@@ -57,9 +54,7 @@ export async function generateAdminAiText(
 
   const geminiKey = (await getGeminiApiKey()) || process.env.GEMINI_API_KEY || "";
   if (geminiKey) {
-    const fullPrompt = opts.system?.trim()
-      ? `${opts.system.trim()}\n\n${prompt}`
-      : prompt;
+    const fullPrompt = opts.system?.trim() ? `${opts.system.trim()}\n\n${prompt}` : prompt;
     const text = await callGemini(fullPrompt, geminiKey, maxTokens);
     return { text, provider: "gemini" };
   }

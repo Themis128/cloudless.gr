@@ -15,9 +15,7 @@ export type AdminAiCallRecord = {
 const MAX = 50;
 const calls: AdminAiCallRecord[] = [];
 
-export function recordAdminAiCall(
-  entry: Omit<AdminAiCallRecord, "at"> & { at?: string }
-): void {
+export function recordAdminAiCall(entry: Omit<AdminAiCallRecord, "at"> & { at?: string }): void {
   calls.unshift({
     at: entry.at ?? new Date().toISOString(),
     ok: entry.ok,

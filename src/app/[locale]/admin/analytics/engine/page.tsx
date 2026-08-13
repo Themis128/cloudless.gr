@@ -40,7 +40,7 @@ export default function AnalyticsEngineExplorerPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const rows = data?.rows ?? [];
@@ -58,17 +58,17 @@ export default function AnalyticsEngineExplorerPage() {
         <button
           type="button"
           onClick={() => load()}
-          className="rounded-lg border border-neon-cyan/40 px-4 py-2 font-mono text-xs text-neon-cyan hover:bg-neon-cyan/10"
+          className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg border px-4 py-2 font-mono text-xs"
         >
           Refresh
         </button>
       </div>
 
       {loading ? <p className="font-mono text-sm text-slate-500">Loading…</p> : null}
-      {error ? <p className="font-mono text-sm text-neon-magenta">{error}</p> : null}
+      {error ? <p className="text-neon-magenta font-mono text-sm">{error}</p> : null}
 
       {data?.sql ? (
-        <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-void-light/50 p-3 font-mono text-[11px] text-slate-400">
+        <pre className="bg-void-light/50 overflow-x-auto rounded-xl border border-slate-800 p-3 font-mono text-[11px] text-slate-400">
           {data.sql}
         </pre>
       ) : null}
@@ -99,7 +99,9 @@ export default function AnalyticsEngineExplorerPage() {
           </table>
         </div>
       ) : !loading && !error ? (
-        <p className="text-sm text-slate-500">No rows yet — write beacons from cloudless2 or app.</p>
+        <p className="text-sm text-slate-500">
+          No rows yet — write beacons from cloudless2 or app.
+        </p>
       ) : null}
 
       {data?.fetchedAt ? (

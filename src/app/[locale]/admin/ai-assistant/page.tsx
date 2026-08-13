@@ -159,7 +159,7 @@ export default function AIAssistantPage() {
         </p>
         <button
           type="button"
-          className="mt-3 rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-[10px] text-slate-400 hover:border-neon-cyan/40 hover:text-neon-cyan"
+          className="hover:border-neon-cyan/40 hover:text-neon-cyan mt-3 rounded-lg border border-slate-700 px-3 py-1.5 font-mono text-[10px] text-slate-400"
           onClick={async () => {
             setLoading(true);
             setError(null);

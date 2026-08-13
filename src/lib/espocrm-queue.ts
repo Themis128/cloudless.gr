@@ -14,11 +14,13 @@ export type EspoQueueMessage = {
 export function isEspoQueueConfigured(): boolean {
   return Boolean(
     process.env.ESPOCRM_QUEUE_PRODUCER_URL?.trim() &&
-      process.env.ESPOCRM_QUEUE_PRODUCER_SECRET?.trim()
+    process.env.ESPOCRM_QUEUE_PRODUCER_SECRET?.trim()
   );
 }
 
-export async function enqueueEspoWebhook(msg: Omit<EspoQueueMessage, "enqueuedAt">): Promise<boolean> {
+export async function enqueueEspoWebhook(
+  msg: Omit<EspoQueueMessage, "enqueuedAt">
+): Promise<boolean> {
   const url = process.env.ESPOCRM_QUEUE_PRODUCER_URL?.trim();
   const secret = process.env.ESPOCRM_QUEUE_PRODUCER_SECRET?.trim();
   if (!url || !secret) return false;

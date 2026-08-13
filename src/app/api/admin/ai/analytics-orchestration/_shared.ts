@@ -50,13 +50,16 @@ export async function prepareOrchestration(
   }
 
   if (!(await isAdminAiConfiguredAsync())) {
-    return { ok: false, response: NextResponse.json(
-      {
-        error:
-          "Admin AI not configured. Set Cloudflare Workers AI (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN) or GEMINI_API_KEY.",
-      },
-      { status: 503 }
-    ) };
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Admin AI not configured. Set Cloudflare Workers AI (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN) or GEMINI_API_KEY.",
+        },
+        { status: 503 }
+      ),
+    };
   }
 
   try {
