@@ -1,12 +1,12 @@
 /**
  * GET /api/admin/analytics/datalake
  *
- * Cloudflare-only dashboard payload for /admin/analytics/datalake:
- *   - D1 analytics_events for acquisition / attribution when AUTH_DB bound
- *   - R2 lake/snapshots/admin-datalake.json for GSC / Sentry / LinkedIn / EspoCRM
+ * Gold serving layer for /admin/analytics/datalake:
+ *   - R2 lake/snapshots/admin-datalake.json (ETL materialize — all lake sections)
+ *   - D1 analytics_events overlay for acquisition / attribution (hot path)
  *
  * Query params:
- *   ?refresh=1  — skip R2 snapshot cache (D1 sections still served live)
+ *   ?refresh=1  — re-read gold snapshot from R2 (no live upstream calls)
  */
 
 import { NextRequest, NextResponse } from "next/server";
