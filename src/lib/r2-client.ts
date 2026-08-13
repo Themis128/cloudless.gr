@@ -6,6 +6,7 @@
  */
 
 import type { R2Bucket } from "@cloudflare/workers-types";
+import { createNodeDataLakeBucket } from "@/lib/r2-node-bucket";
 
 interface R2Env {
   ASSETS_BUCKET?: R2Bucket;
@@ -52,7 +53,7 @@ export function getDataLakeBucket(env: R2Env): R2Bucket | null {
   return null;
 }
 
-/** Resolve DATALAKE_BUCKET from Workers global / env object (no AWS S3). */
+/** Resolve DATALAKE_BUCKET from Workers binding, or Node CF_R2_* S3 API. */
 export function getDataLakeBucketFromEnv(): R2Bucket | null {
   const g = globalThis as unknown as {
     __DATALAKE_BUCKET__?: R2Bucket;
@@ -61,7 +62,14 @@ export function getDataLakeBucketFromEnv(): R2Bucket | null {
   const fromProcess = (process as unknown as { env?: R2Env }).env?.DATALAKE_BUCKET;
   // Prefer explicit globals — Node process.env cannot hold R2 binding objects.
   const candidate = g.__DATALAKE_BUCKET__ ?? g.__R2__?.DATALAKE_BUCKET ?? fromProcess;
-  return getDataLakeBucket({ DATALAKE_BUCKET: candidate });
+  const bound = getDataLakeBucket({ DATALAKE_BUCKET: candidate });
+  if (bound) return bound;
+
+  // Pi / Node: S3-compatible credentials (CF_R2_* + CLOUDFLARE_ACCOUNT_ID).
+  if (!isCloudflareWorkers()) {
+    return createNodeDataLakeBucket();
+  }
+  return null;
 }
 
 // Serve static asset from R2 with proper headers
