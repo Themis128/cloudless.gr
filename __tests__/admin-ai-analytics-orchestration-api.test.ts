@@ -22,7 +22,6 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
-    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
       return { ...plainUser, email, sub: `user-${email}` };
@@ -59,10 +58,17 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     },
   };
 });
-const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(() => ({
-  getConfigMock: vi.fn(),
-  getSnapshotMock: vi.fn(),
+
+const {
+  getStripeSnapshotFromLakeMock,
+  getInsightMock,
+  runOrchestrationMock,
+  preprocessMock,
+} = vi.hoisted(() => ({
+  getStripeSnapshotFromLakeMock: vi.fn(),
+  getInsightMock: vi.fn(),
   runOrchestrationMock: vi.fn(),
+  preprocessMock: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -79,16 +85,14 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
-}));
-
-vi.mock("@/lib/stripe-analytics-read", () => ({
-  getStripeAnalyticsSnapshot: getSnapshotMock,
+vi.mock("@/lib/datalake-serve", () => ({
+  getStripeSnapshotFromLake: (...a: unknown[]) => getStripeSnapshotFromLakeMock(...a),
+  getInsight: (...a: unknown[]) => getInsightMock(...a),
 }));
 
 vi.mock("@/lib/analytics-agent-orchestrator", () => ({
-  runAnalyticsAgentOrchestration: runOrchestrationMock,
+  runAnalyticsAgentOrchestration: (...a: unknown[]) => runOrchestrationMock(...a),
+  preprocessStripeAnalyticsSnapshot: (...a: unknown[]) => preprocessMock(...a),
 }));
 
 vi.mock("@/lib/admin-ai", () => ({
@@ -96,6 +100,60 @@ vi.mock("@/lib/admin-ai", () => ({
   adminAiNotConfiguredResponse: () =>
     Response.json({ error: "Admin AI not configured." }, { status: 503 }),
 }));
+
+vi.mock("@/lib/r2-client", () => ({
+  getDataLakeBucketFromEnv: vi.fn(() => null),
+}));
+
+const SAMPLE_LAKE_SNAP = {
+  windowDays: 30,
+  generatedAt: "2026-05-03T12:00:00.000Z",
+  totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
+  byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
+  byStatus: { processed: 2, handler_failed: 1 },
+  byCurrency: { eur: 4500 },
+  dailyTrend: [
+    { day: "2026-05-01", revenueMinor: 2000, events: 1, processed: 1, failed: 0 },
+    { day: "2026-05-02", revenueMinor: 2500, events: 2, processed: 1, failed: 1 },
+  ],
+  source: "datalake-gold" as const,
+};
+
+const SAMPLE_PREPROCESSED = {
+  windowDays: 30,
+  hasData: true,
+  failureRatePct: 33.33,
+  processedRatePct: 66.67,
+  averageRevenuePerEventMinor: 1500,
+  averageDailyRevenueMinor: 2250,
+  averageDailyEvents: 1.5,
+  revenuePerProcessedEventMinor: 2250,
+  topRevenueCategories: [
+    { category: "checkout", events: 2, revenueMinor: 4500, revenueSharePct: 100 },
+  ],
+  topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
+  strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
+  momentum: {
+    comparisonWindowDays: 2,
+    recentRevenueMinor: 4500,
+    priorRevenueMinor: null,
+    revenueDeltaPct: null,
+    recentFailureRatePct: 33.33,
+    priorFailureRatePct: null,
+    failureRateDeltaPct: null,
+  },
+  dataQuality: {
+    sparseWindow: true,
+    notes: ["Sample size is sparse for the selected window."],
+  },
+};
+
+const CACHED_ORCHESTRATION_INSIGHT = {
+  domain: "orchestration",
+  summary: "Cached lake orchestration summary",
+  bullets: ["Revenue stable", "Failures elevated on 2026-05-02"],
+  generated_at: "2026-05-03T10:00:00.000Z",
+};
 
 function makeAdminToken(): string {
   return "test-admin-session";
@@ -123,33 +181,9 @@ function unauthReq(): NextRequest {
 describe("POST /api/admin/ai/analytics-orchestration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({
-      ANTHROPIC_API_KEY: "test-anthropic-key",
-    });
-    getSnapshotMock.mockResolvedValue({
-      windowDays: 30,
-      generatedAt: new Date().toISOString(),
-      totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
-      byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
-      byStatus: { processed: 2, handler_failed: 1 },
-      byCurrency: { eur: 4500 },
-      dailyTrend: [
-        {
-          day: "2026-05-01",
-          revenueMinor: 2000,
-          events: 1,
-          processed: 1,
-          failed: 0,
-        },
-        {
-          day: "2026-05-02",
-          revenueMinor: 2500,
-          events: 2,
-          processed: 1,
-          failed: 1,
-        },
-      ],
-    });
+    getStripeSnapshotFromLakeMock.mockResolvedValue(SAMPLE_LAKE_SNAP);
+    getInsightMock.mockResolvedValue(CACHED_ORCHESTRATION_INSIGHT);
+    preprocessMock.mockReturnValue(SAMPLE_PREPROCESSED);
     runOrchestrationMock.mockResolvedValue({
       workflow: [
         { step: "collect_data", status: "completed", details: "ok" },
@@ -157,50 +191,10 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
         { step: "generate_insights", status: "completed", details: "ok" },
         { step: "prepare_connectors", status: "completed", details: "ok" },
       ],
-      snapshot: {
-        windowDays: 30,
-        generatedAt: new Date().toISOString(),
-        totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
-        byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
-        byStatus: { processed: 2, handler_failed: 1 },
-        byCurrency: { eur: 4500 },
-        dailyTrend: [],
-      },
-      preprocessed: {
-        windowDays: 30,
-        hasData: true,
-        failureRatePct: 33.33,
-        processedRatePct: 66.67,
-        averageRevenuePerEventMinor: 1500,
-        averageDailyRevenueMinor: 2250,
-        averageDailyEvents: 1.5,
-        revenuePerProcessedEventMinor: 2250,
-        topRevenueCategories: [
-          {
-            category: "checkout",
-            events: 2,
-            revenueMinor: 4500,
-            revenueSharePct: 100,
-          },
-        ],
-        topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
-        strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
-        momentum: {
-          comparisonWindowDays: 2,
-          recentRevenueMinor: 4500,
-          priorRevenueMinor: null,
-          revenueDeltaPct: null,
-          recentFailureRatePct: 33.33,
-          priorFailureRatePct: null,
-          failureRateDeltaPct: null,
-        },
-        dataQuality: {
-          sparseWindow: true,
-          notes: ["Sample size is sparse for the selected window."],
-        },
-      },
+      snapshot: SAMPLE_LAKE_SNAP,
+      preprocessed: SAMPLE_PREPROCESSED,
       report: {
-        executiveSummary: "test summary",
+        executiveSummary: "live llm summary",
         keyInsights: ["a", "b"],
         risks: ["r1"],
         nextMoves: [],
@@ -216,21 +210,7 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 400 when windowDays is invalid", async () => {
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
-    const response = await POST(adminReq({ windowDays: 0 }));
-    expect(response.status).toBe(400);
-  });
-
-  it("returns 503 when Admin AI is missing", async () => {
-    const adminAi = await import("@/lib/admin-ai");
-    vi.mocked(adminAi.isAdminAiConfiguredAsync).mockResolvedValueOnce(false);
-    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
-    const response = await POST(adminReq({ windowDays: 30 }));
-    expect(response.status).toBe(503);
-  });
-
-  it("returns orchestrated analytics report with connector payloads", async () => {
+  it("serves cached orchestration insight without calling live LLM", async () => {
     const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
     const response = await POST(
       adminReq({
@@ -242,21 +222,77 @@ describe("POST /api/admin/ai/analytics-orchestration", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(getSnapshotMock).toHaveBeenCalledWith(14);
-    expect(runOrchestrationMock).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(getStripeSnapshotFromLakeMock).toHaveBeenCalledWith(14);
+    expect(getInsightMock).toHaveBeenCalledWith("orchestration");
+    expect(runOrchestrationMock).not.toHaveBeenCalled();
+    expect(data.report.executiveSummary).toBe(CACHED_ORCHESTRATION_INSIGHT.summary);
+    expect(data.report.keyInsights).toEqual(CACHED_ORCHESTRATION_INSIGHT.bullets);
+    expect(data.workflow).toBeDefined();
+    expect(data.preprocessed).toEqual(SAMPLE_PREPROCESSED);
+  });
+
+  it("falls back to defaults when windowDays is invalid (parse errors are swallowed)", async () => {
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const response = await POST(adminReq({ windowDays: 0 }));
+    expect(response.status).toBe(200);
+    expect(getStripeSnapshotFromLakeMock).toHaveBeenCalledWith(30);
+  });
+
+  it("returns 503 when live_llm is requested and Admin AI is missing", async () => {
+    const adminAi = await import("@/lib/admin-ai");
+    vi.mocked(adminAi.isAdminAiConfiguredAsync).mockResolvedValueOnce(false);
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const response = await POST(adminReq({ windowDays: 30, live_llm: true }));
+    expect(response.status).toBe(503);
+    expect(runOrchestrationMock).not.toHaveBeenCalled();
+  });
+
+  it("runs live orchestration when live_llm is true", async () => {
+    getInsightMock.mockImplementation(async (domain: string) => {
+      if (domain === "orchestration") return null;
+      if (domain === "revenue") {
+        return { domain: "revenue", summary: "MRR flat", bullets: [], generated_at: "2026-05-03T09:00:00.000Z" };
+      }
+      if (domain === "executive") {
+        return {
+          domain: "executive",
+          summary: "Focus retention",
+          bullets: [],
+          generated_at: "2026-05-03T09:00:00.000Z",
+        };
+      }
+      return null;
+    });
+
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
+    const response = await POST(
+      adminReq({
+        windowDays: 14,
+        live_llm: true,
         connectors: ["quicksight", "powerbi"],
         goals: ["Increase retained revenue"],
       })
     );
-    expect(data.report).toBeDefined();
-    expect(data.workflow).toBeDefined();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(runOrchestrationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectors: ["quicksight", "powerbi"],
+        goals: expect.arrayContaining([
+          "Increase retained revenue",
+          expect.stringContaining("Lake revenue insight"),
+          expect.stringContaining("Lake executive insight"),
+        ]),
+      })
+    );
+    expect(data.report.executiveSummary).toBe("live llm summary");
   });
 
-  it("returns 500 when orchestration step fails", async () => {
+  it("returns 500 when live orchestration step fails", async () => {
     runOrchestrationMock.mockRejectedValue(new Error("orchestration boom"));
     const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/route");
-    const response = await POST(adminReq({ windowDays: 30 }));
+    const response = await POST(adminReq({ windowDays: 30, live_llm: true }));
     const body = await response.json();
 
     expect(response.status).toBe(500);

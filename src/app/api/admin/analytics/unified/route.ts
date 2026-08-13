@@ -1,88 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
-import { getSeoSnapshot } from "@/lib/gsc";
-import { readThrough } from "@/lib/gsc-cache";
-import { isEspoCRMConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
-import { getStripe } from "@/lib/stripe";
+import { getUnifiedFromLake } from "@/lib/datalake-serve";
 
-async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
-  try {
-    return await fn();
-  } catch {
-    return null;
-  }
-}
-
+/** Unified analytics — composed from datalake gold (no live GSC/Espo/Stripe). */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const config = await getConfig();
   const days = Math.max(
     1,
-    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2),
+    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2)
   );
 
-  const [seo, pipeline, email, stripe] = await Promise.all([
-    config.GOOGLE_CLIENT_EMAIL && config.GOOGLE_PRIVATE_KEY
-      ? safeCall(async () =>
-          (
-            await readThrough(
-              "seo-unified",
-              { days },
-              () => getSeoSnapshot(undefined, days),
-              { ttlSeconds: 3600 },
-            )
-          ).value,
-        )
-      : Promise.resolve(null),
-
-    (await isEspoCRMConfigured())
-      ? safeCall(() => getPipelineStats())
-      : Promise.resolve(null),
-
-    (await isEspoCRMConfigured())
-      ? safeCall(async () => {
-          const subscribers = await listNewsletterSubscribers();
-          return { totalContacts: subscribers.length, totalCampaigns: 0 };
-        })
-      : Promise.resolve(null),
-
-    config.STRIPE_SECRET_KEY
-      ? safeCall(async () => {
-          const stripeClient = await getStripe();
-          if (!stripeClient) return null;
-          const [sessions, subscriptions] = await Promise.all([
-            stripeClient.checkout.sessions.list({ limit: 100 }),
-            stripeClient.subscriptions.list({ limit: 100, status: "active" }),
-          ]);
-          const revenue = sessions.data
-            .filter((s) => s.payment_status === "paid")
-            .reduce((acc, s) => acc + (s.amount_total ?? 0), 0);
-          return {
-            totalOrders: sessions.data.filter(
-              (s) => s.payment_status === "paid",
-            ).length,
-            revenue: revenue / 100,
-            activeSubscriptions: subscriptions.data.length,
-            mrr:
-              subscriptions.data.reduce(
-                (acc, sub) =>
-                  acc + (sub.items.data[0]?.price?.unit_amount ?? 0),
-                0,
-              ) / 100,
-          };
-        })
-      : Promise.resolve(null),
-  ]);
-
+  const payload = await getUnifiedFromLake(days);
   return NextResponse.json({
-    seo,
-    pipeline,
-    email,
-    stripe,
-    fetchedAt: new Date().toISOString(),
+    seo: payload.seo,
+    pipeline: payload.pipeline,
+    email: payload.email,
+    stripe: payload.stripe,
+    attribution: payload.attribution,
+    keywords: payload.keywords,
+    sectionsMissing: payload.sectionsMissing,
+    fetchedAt: payload.fetchedAt,
+    source: payload.source,
     _filters: { days },
   });
 }

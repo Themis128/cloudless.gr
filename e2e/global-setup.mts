@@ -75,4 +75,41 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   });
 
   console.log("[e2e:preflight] Server is healthy — /api/health and /en both resolve.");
+
+  // Warm heavy admin API modules so Turbopack has compiled them before the
+  // full suite hammers the server (avoids persistent 404 flakes on first hit).
+  const warmPaths = [
+    "/api/admin/appflowy/blog",
+    "/api/admin/appflowy/docs",
+    "/api/admin/appflowy/submissions",
+    "/api/admin/appflowy/tasks",
+    "/api/admin/integrations/status",
+    "/api/admin/ops/monitor",
+    "/api/admin/analytics/datalake",
+    "/api/admin/ai/analytics-orchestration",
+    "/api/admin/ai/analytics-orchestration/pdf",
+    "/api/admin/cost",
+    "/api/admin/insights",
+    "/api/admin/insights/revenue",
+  ];
+  for (const pathname of warmPaths) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        const isPost = pathname.includes("analytics-orchestration");
+        const res = await fetch(`${BASE_URL}${pathname}`, {
+          method: isPost ? "POST" : "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: isPost ? "{}" : undefined,
+        });
+        if (res.status !== 404) break;
+      } catch {
+        // Server still settling — retry.
+      }
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+  }
+  console.log("[e2e:preflight] Warmed admin API compile paths.");
 }

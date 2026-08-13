@@ -90,7 +90,7 @@ Workspace MCP servers configured in `mcp.json`:
 
 - **Store:** Cloudflare D1 `user-auth-db` — users, sessions, roles, PBKDF2 hashes.
 - **Session:** Opaque `session_token` cookie. Default 30 days.
-- **Admin:** Membership in D1 `roles` table. Promote via `/api/admin/users/promote`.
+- **Admin:** Membership in D1 `roles` table. Promote via `POST /api/admin/users` `{ action: "promote", username }`.
 - **Route protection:** Server-side via `src/proxy.ts` and layout guards.
 
 ## Internationalization (i18n)

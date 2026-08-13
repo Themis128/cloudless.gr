@@ -22,7 +22,6 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
-    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
       return { ...plainUser, email, sub: `user-${email}` };
@@ -59,23 +58,12 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     },
   };
 });
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { getConfigMock, gscMocks } = vi.hoisted(() => ({
-  getConfigMock: vi.fn(),
-  gscMocks: {
-    getWebAnalytics: vi.fn(),
-    getSeoSnapshot: vi.fn(),
-    getTopKeywords: vi.fn(),
-    getDeviceBreakdown: vi.fn(),
-    getTrafficByCountry: vi.fn(),
-    getPerformanceHistory: vi.fn(),
-    getTopPages: vi.fn(),
-    getProductPageMetrics: vi.fn(),
-    getCtrOpportunities: vi.fn(),
-    getQueryPageMapping: vi.fn(),
-    getSearchIntentBreakdown: vi.fn(),
+
+const { lakeMocks } = vi.hoisted(() => ({
+  lakeMocks: {
+    getSeoFromLake: vi.fn(),
+    getGscDimensionFromLake: vi.fn(),
+    getCtrOpportunitiesFromLake: vi.fn(),
   },
 }));
 
@@ -93,27 +81,12 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
+vi.mock("@/lib/datalake-serve", () => ({
+  getSeoFromLake: lakeMocks.getSeoFromLake,
+  getGscDimensionFromLake: lakeMocks.getGscDimensionFromLake,
+  getCtrOpportunitiesFromLake: lakeMocks.getCtrOpportunitiesFromLake,
 }));
 
-vi.mock("@/lib/gsc", () => ({
-  getWebAnalytics: gscMocks.getWebAnalytics,
-  getSeoSnapshot: gscMocks.getSeoSnapshot,
-  getTopKeywords: gscMocks.getTopKeywords,
-  getDeviceBreakdown: gscMocks.getDeviceBreakdown,
-  getTrafficByCountry: gscMocks.getTrafficByCountry,
-  getPerformanceHistory: gscMocks.getPerformanceHistory,
-  getTopPages: gscMocks.getTopPages,
-  getProductPageMetrics: gscMocks.getProductPageMetrics,
-  getCtrOpportunities: gscMocks.getCtrOpportunities,
-  getQueryPageMapping: gscMocks.getQueryPageMapping,
-  getSearchIntentBreakdown: gscMocks.getSearchIntentBreakdown,
-}));
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function makeAdminToken(): string {
   return "test-admin-session";
 }
@@ -126,56 +99,77 @@ function unauthReq(url: string): NextRequest {
   return new NextRequest(url);
 }
 
-const gscConfigured = {
-  GOOGLE_CLIENT_EMAIL: "svc@test.iam.gserviceaccount.com",
-  GOOGLE_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----",
+const SAMPLE_SEO = {
+  snapshot: {
+    clicks: 500,
+    impressions: 10000,
+    ctr: 0.05,
+    position: 12.3,
+    days: 28,
+  },
+  keywords: [
+    {
+      query: "digital agency greece",
+      clicks: 45,
+      impressions: 600,
+      ctr: 0.075,
+      position: 4.2,
+    },
+  ],
+  fetchedAt: "2026-08-13T12:00:00.000Z",
+  source: "datalake-gold" as const,
 };
-const gscUnconfigured = {};
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/web
-// ---------------------------------------------------------------------------
+const SAMPLE_DIMENSION = {
+  dimension: "device",
+  rows: [
+    { device: "DESKTOP", clicks: 300 },
+    { device: "MOBILE", clicks: 200 },
+  ],
+  snapshot: SAMPLE_SEO.snapshot,
+  fetchedAt: SAMPLE_SEO.fetchedAt,
+  source: "datalake-gold" as const,
+  note: "Dimension stub from gold",
+};
+
 describe("GET /api/admin/analytics/web", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET(unauthReq("http://localhost/api/admin/analytics/web"));
     expect(res.status).toBe(401);
-    expect(gscMocks.getWebAnalytics).not.toHaveBeenCalled();
+    expect(lakeMocks.getSeoFromLake).not.toHaveBeenCalled();
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
+  it("returns analytics data from lake SEO snapshot", async () => {
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/web"));
     const data = await res.json();
-    expect(res.status).toBe(503);
-    expect(data.error).toMatch(/not configured/i);
-  });
-
-  it("returns analytics data", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getWebAnalytics.mockResolvedValue({
+    expect(res.status).toBe(200);
+    expect(lakeMocks.getSeoFromLake).toHaveBeenCalledWith(28);
+    expect(data.analytics).toEqual({
       clicks: 500,
       impressions: 10000,
       ctr: 0.05,
       position: 12.3,
     });
-    const { GET } = await import("@/app/api/admin/analytics/web/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/web"));
-    const data = await res.json();
-    expect(res.status).toBe(200);
-    expect(data.analytics).toBeDefined();
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/seo
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/seo", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getSeoFromLake.mockResolvedValue({
+      ...SAMPLE_SEO,
+      snapshot: { ...SAMPLE_SEO.snapshot, clicks: 1200, position: 8.4 },
+      keywords: [{ query: "cloudless ai", clicks: 80, impressions: 900, ctr: 0.089, position: 3.1 }],
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
@@ -183,33 +177,26 @@ describe("GET /api/admin/analytics/seo", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/seo/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/seo"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns snapshot and keywords", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getSeoSnapshot.mockResolvedValue({ totalClicks: 1200, avgPosition: 8.4 });
-    gscMocks.getTopKeywords.mockResolvedValue([
-      { query: "cloudless ai", clicks: 80, position: 3.1 },
-    ]);
+  it("returns snapshot and keywords from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/seo"));
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.snapshot).toBeDefined();
     expect(data.keywords).toHaveLength(1);
+    expect(data.source).toBe("datalake-gold");
+    expect(data._cache).toEqual({ source: "datalake-gold", ageSeconds: null });
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/devices
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/devices", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "device",
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/devices/route");
@@ -217,32 +204,22 @@ describe("GET /api/admin/analytics/devices", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/devices/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/devices"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns device breakdown", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getDeviceBreakdown.mockResolvedValue([
-      { device: "DESKTOP", clicks: 300 },
-      { device: "MOBILE", clicks: 200 },
-    ]);
+  it("returns device breakdown from lake dimension helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/devices/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/devices"));
     const data = await res.json();
     expect(res.status).toBe(200);
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("device", 28);
     expect(data.devices).toHaveLength(2);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/keywords
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/keywords", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
@@ -250,32 +227,29 @@ describe("GET /api/admin/analytics/keywords", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/keywords"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns keywords list", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getTopKeywords.mockResolvedValue([
-      { query: "digital agency greece", clicks: 45, impressions: 600, ctr: 0.075, position: 4.2 },
-    ]);
+  it("returns keywords list from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/keywords"));
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.keywords).toHaveLength(1);
     expect(data.keywords[0].query).toBe("digital agency greece");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/countries
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/countries", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "country",
+      rows: [
+        { country: "grc", clicks: 280, impressions: 4000 },
+        { country: "usa", clicks: 120, impressions: 2000 },
+      ],
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/countries/route");
@@ -283,32 +257,22 @@ describe("GET /api/admin/analytics/countries", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/countries/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/countries"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns country data", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getTrafficByCountry.mockResolvedValue([
-      { country: "grc", clicks: 280, impressions: 4000 },
-      { country: "usa", clicks: 120, impressions: 2000 },
-    ]);
+  it("returns country data from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/countries/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/countries"));
     const data = await res.json();
     expect(res.status).toBe(200);
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("country", 28);
     expect(data.countries).toHaveLength(2);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/history
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/history", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
@@ -316,33 +280,26 @@ describe("GET /api/admin/analytics/history", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/history/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/history"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns performance history", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getPerformanceHistory.mockResolvedValue([
-      { week: "2024-W01", clicks: 100, impressions: 1500 },
-      { week: "2024-W02", clicks: 120, impressions: 1700 },
-    ]);
+  it("returns empty history with SEO snapshot from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/history"));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.history).toHaveLength(2);
-    expect(data.weeks).toBeDefined();
+    expect(data.history).toEqual([]);
+    expect(data.snapshot).toEqual(SAMPLE_SEO.snapshot);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/pages
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/pages", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "page",
+      rows: [{ page: "/en/", clicks: 200, impressions: 3000, ctr: 0.067, position: 5.1 }],
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
@@ -350,31 +307,26 @@ describe("GET /api/admin/analytics/pages", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/pages"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns top pages", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getTopPages.mockResolvedValue([
-      { page: "/en/", clicks: 200, impressions: 3000, ctr: 0.067, position: 5.1 },
-    ]);
+  it("returns top pages from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/pages"));
     const data = await res.json();
     expect(res.status).toBe(200);
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("page", 28);
     expect(data.pages).toHaveLength(1);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/products
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/products", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "product",
+      rows: [{ page: "/en/store/ai-seo-bundle", clicks: 50, impressions: 800 }],
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/products/route");
@@ -382,34 +334,30 @@ describe("GET /api/admin/analytics/products", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/products/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/products"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns product page metrics", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getProductPageMetrics.mockResolvedValue([
-      { page: "/en/store/ai-seo-bundle", clicks: 50, impressions: 800 },
-    ]);
+  it("returns product page metrics from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/products/route");
     const res = await GET(
       adminReq("http://localhost/api/admin/analytics/products?pattern=/store/")
     );
     const data = await res.json();
     expect(res.status).toBe(200);
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("product", 28);
     expect(data.products).toHaveLength(1);
-    expect(data.pattern).toBe("/store/");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/ctr-opportunities
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/ctr-opportunities", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getCtrOpportunitiesFromLake.mockResolvedValue({
+      opportunities: [
+        { query: "seo agency athens", impressions: 500, clicks: 10, ctr: 0.02, position: 7.8 },
+      ],
+      fetchedAt: SAMPLE_SEO.fetchedAt,
+      source: "datalake-gold" as const,
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
@@ -417,31 +365,26 @@ describe("GET /api/admin/analytics/ctr-opportunities", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/ctr-opportunities"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns CTR opportunities", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getCtrOpportunities.mockResolvedValue([
-      { query: "seo agency athens", impressions: 500, ctr: 0.02, position: 7.8 },
-    ]);
+  it("returns CTR opportunities from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/ctr-opportunities"));
     const data = await res.json();
     expect(res.status).toBe(200);
+    expect(lakeMocks.getCtrOpportunitiesFromLake).toHaveBeenCalledWith(50);
     expect(data.opportunities).toHaveLength(1);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/query-pages
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/query-pages", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "query_page",
+      rows: [{ query: "ai marketing tool", page: "/en/store/ai-marketing", clicks: 30 }],
+    });
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
@@ -449,31 +392,22 @@ describe("GET /api/admin/analytics/query-pages", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/query-pages"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns query-page mappings", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getQueryPageMapping.mockResolvedValue([
-      { query: "ai marketing tool", page: "/en/store/ai-marketing", clicks: 30 },
-    ]);
+  it("returns query-page rows from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/query-pages"));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.mappings).toHaveLength(1);
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("query_page", 28);
+    expect(data.queryPages).toHaveLength(1);
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/admin/analytics/search-intent
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/search-intent", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
+  });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
@@ -481,29 +415,14 @@ describe("GET /api/admin/analytics/search-intent", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when GSC not configured", async () => {
-    getConfigMock.mockResolvedValue(gscUnconfigured);
-    const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/search-intent"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns search intent breakdown", async () => {
-    getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getSearchIntentBreakdown.mockResolvedValue({
-      brand: [{ query: "cloudless.gr" }],
-      product: [{ query: "ai seo tool" }],
-      informational: [{ query: "what is programmatic seo" }],
-      navigational: [{ query: "cloudless login" }],
-    });
+  it("returns empty intents with keywords from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/search-intent"));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.intent).toBeDefined();
-    expect(data.summary.brand).toBe(1);
-    expect(data.summary.product).toBe(1);
-    expect(data.summary.informational).toBe(1);
-    expect(data.summary.navigational).toBe(1);
+    expect(data.intents).toEqual([]);
+    expect(data.keywords).toEqual(SAMPLE_SEO.keywords);
+    expect(data.source).toBe("datalake-gold");
+    expect(data.note).toMatch(/no live gsc/i);
   });
 });

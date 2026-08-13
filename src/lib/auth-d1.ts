@@ -252,7 +252,10 @@ export async function createUser(
     return {
       user: { id, email, name, password_hash: passwordHash, created_at: now, updated_at: now },
     };
-  } catch {
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[auth-d1] createUser failed:", err);
+    }
     return { error: "Failed to create user" };
   }
 }
@@ -503,8 +506,9 @@ export function validateSessionSecret(): { valid: boolean; error?: string } {
  * 1. process.env.AUTH_DB — Workers/OpenNext polyfill or tests
  * 2. globalThis.__AUTH_DB__ — mirrored binding for Node libs
  * 3. OpenNext Cloudflare context (`initOpenNextCloudflareForDev` / Worker entry)
- * 4. D1 HTTP (Pi/Node) via CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
- * 5. Local wrangler D1 sqlite shim (`auth-db-local`) in development only
+ * 4. Local wrangler D1 sqlite in development (unless AUTH_DB_USE_HTTP=1)
+ * 5. D1 HTTP (Pi/Node) via CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
+ * 6. Local wrangler D1 sqlite shim fallback in development
  */
 export function getAuthDbFromEnv(): AuthDatabase | null {
   const fromEnv = (process as unknown as { env?: { AUTH_DB?: AuthDatabase } }).env?.AUTH_DB;
@@ -521,6 +525,25 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   const db = fromEnv ?? fromGlobal ?? fromCf;
   if (db && typeof db.prepare === "function") return db;
 
+  const preferLocal =
+    process.env.NODE_ENV === "development" &&
+    (process.env.NEXT_PUBLIC_E2E === "1" ||
+      process.env.AUTH_DB_PREFER_LOCAL === "1" ||
+      process.env.AUTH_DB_USE_HTTP !== "1");
+
+  // E2E / local next-dev: prefer wrangler sqlite so signup/login never hit
+  // remote user-auth-db (and so CI works without a live CLOUDFLARE_API_TOKEN).
+  if (preferLocal) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getLocalAuthDb } = require("./auth-db-local") as typeof import("./auth-db-local");
+      const local = getLocalAuthDb();
+      if (local) return local;
+    } catch {
+      // Fall through to HTTP D1.
+    }
+  }
+
   // Lazy-load Node-only modules using literal require() strings. Webpack
   // statically resolves these at build time (via tsconfig paths for "@/"),
   // which avoids webpackEmptyContext that computed strings produce. These
@@ -530,12 +553,9 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
     const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
     const httpDb = getHttpAuthDb();
     if (httpDb) {
-      // console.log("[auth-d1] HTTP D1 DB obtained via require");
       return httpDb;
     }
-    // console.log("[auth-d1] HTTP D1 DB was null");
-  } catch (err) {
-    // console.log("[auth-d1] Failed to require d1-http:", err);
+  } catch {
     // Module unavailable or misconfigured — fall through.
   }
 

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { resetIntegrationCache } from "@/lib/integrations";
-import { resetSsmCache } from "@/lib/ssm-config";
 
 // Mock api-auth module to provide consistent test tokens
 vi.mock("@/lib/api-auth", () => ({
@@ -126,15 +125,8 @@ const GSC_CONFIGURED_CONFIG = {
   ANTHROPIC_API_KEY: "test-anthropic-key",
 };
 
-const GSC_MISSING_CONFIG = {
-  ...GSC_CONFIGURED_CONFIG,
-  GOOGLE_CLIENT_EMAIL: "",
-  GOOGLE_PRIVATE_KEY: "",
-};
-
 // Set default getConfig() return value (overridden per-test where needed).
 mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
-
 // Reset mocks before each test to the safe defaults.
 beforeEach(() => {
   mockGetConfig.mockResolvedValue(GSC_CONFIGURED_CONFIG);
@@ -215,77 +207,58 @@ vi.mock("@/lib/stripe", () => ({
   }),
 }));
 
-// Google Search Console (GSC)
+// Google Search Console (legacy — analytics routes use datalake-serve)
 vi.mock("@/lib/gsc", () => ({
-  getSeoSnapshot: vi.fn().mockResolvedValue({
-    clicks: 500,
-    impressions: 12000,
-    ctr: 4.17,
-    avgPosition: 14.2,
-    organicKeywords: 87,
-  }),
-  getTopKeywords: vi
-    .fn()
-    .mockResolvedValue([
-      { keyword: "cloudless gr", clicks: 120, impressions: 3000, ctr: 4, position: 8.5 },
-    ]),
-  getTopPages: vi
-    .fn()
-    .mockResolvedValue([
-      { page: "https://cloudless.gr/", clicks: 200, impressions: 5000, ctr: 4, position: 7 },
-    ]),
-  getPerformanceHistory: vi
-    .fn()
-    .mockResolvedValue([
-      { date: "2025-01-01", clicks: 30, impressions: 600, ctr: 5, avgPosition: 11 },
-    ]),
-  getWebAnalytics: vi.fn().mockResolvedValue({
-    clicks: 500,
-    impressions: 12000,
-    ctr: 4.17,
-    avgPosition: 14.2,
-    topPages: [{ page: "https://cloudless.gr/", clicks: 200, impressions: 5000, position: 7 }],
-  }),
-  getCtrOpportunities: vi
-    .fn()
-    .mockResolvedValue([
-      { keyword: "serverless nextjs", clicks: 10, impressions: 800, ctr: 1.25, position: 7.2 },
-    ]),
-  getDeviceBreakdown: vi.fn().mockResolvedValue([
-    { device: "DESKTOP", clicks: 300, impressions: 6000, ctr: 5, avgPosition: 9 },
-    { device: "MOBILE", clicks: 200, impressions: 5000, ctr: 4, avgPosition: 12 },
-  ]),
-  getProductPageMetrics: vi.fn().mockResolvedValue([
-    {
-      page: "https://cloudless.gr/store/pro-plan",
-      clicks: 40,
-      impressions: 900,
-      ctr: 4.44,
-      position: 8,
-    },
-  ]),
-  getQueryPageMapping: vi.fn().mockResolvedValue([
-    {
-      query: "cloudless hosting",
-      page: "https://cloudless.gr/",
-      clicks: 60,
-      impressions: 1500,
-      ctr: 4,
-      position: 6,
-    },
-  ]),
-  getSearchIntentBreakdown: vi.fn().mockResolvedValue({
-    brand: [{ keyword: "cloudless gr", clicks: 100, impressions: 2000, ctr: 5, position: 3 }],
-    product: [],
-    informational: [],
-    navigational: [],
-  }),
-  getTrafficByCountry: vi
-    .fn()
-    .mockResolvedValue([
-      { country: "grc", clicks: 350, impressions: 7000, ctr: 5, avgPosition: 8 },
-    ]),
+  getSeoSnapshot: vi.fn(),
+  getTopKeywords: vi.fn(),
+  getTopPages: vi.fn(),
+  getPerformanceHistory: vi.fn(),
+  getWebAnalytics: vi.fn(),
+  getCtrOpportunities: vi.fn(),
+  getDeviceBreakdown: vi.fn(),
+  getProductPageMetrics: vi.fn(),
+  getQueryPageMapping: vi.fn(),
+  getSearchIntentBreakdown: vi.fn(),
+  getTrafficByCountry: vi.fn(),
 }));
+
+const { lakeMocks } = vi.hoisted(() => ({
+  lakeMocks: {
+    getSeoFromLake: vi.fn(),
+    getGscDimensionFromLake: vi.fn(),
+    getCtrOpportunitiesFromLake: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/datalake-serve", () => ({
+  getSeoFromLake: lakeMocks.getSeoFromLake,
+  getGscDimensionFromLake: lakeMocks.getGscDimensionFromLake,
+  getCtrOpportunitiesFromLake: lakeMocks.getCtrOpportunitiesFromLake,
+}));
+
+const SAMPLE_SEO = {
+  snapshot: {
+    clicks: 500,
+    impressions: 12000,
+    ctr: 0.0417,
+    position: 14.2,
+    days: 28,
+  },
+  keywords: [
+    { query: "cloudless gr", clicks: 120, impressions: 3000, ctr: 0.04, position: 8.5 },
+  ],
+  fetchedAt: "2026-08-13T12:00:00.000Z",
+  source: "datalake-gold" as const,
+};
+
+const SAMPLE_DIMENSION = {
+  dimension: "device",
+  rows: [] as unknown[],
+  snapshot: SAMPLE_SEO.snapshot,
+  fetchedAt: SAMPLE_SEO.fetchedAt,
+  source: "datalake-gold" as const,
+  note: "Dimension stub from gold",
+};
 
 // EspoCRM
 vi.mock("@/lib/espocrm", () => ({
@@ -374,51 +347,37 @@ describe("GET /api/admin/orders", () => {
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/web  (Google Search Console)
+// /api/admin/analytics/web  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/web", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/web/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/web"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns analytics payload when GSC is configured", async () => {
+  it("returns analytics payload from lake SEO snapshot", async () => {
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/web"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty("analytics");
     expect(typeof data.fetchedAt).toBe("string");
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/seo  (Google Search Console)
+// /api/admin/analytics/seo  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/seo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
   });
 
-  it("returns 503 when GSC credentials are not configured", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/seo/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/seo"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns snapshot + keywords when GSC is configured", async () => {
+  it("returns snapshot + keywords from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/seo"));
     expect(res.status).toBe(200);
@@ -426,7 +385,7 @@ describe("GET /api/admin/analytics/seo", () => {
     expect(data).toHaveProperty("snapshot");
     expect(Array.isArray(data.keywords)).toBe(true);
     expect(typeof data.fetchedAt).toBe("string");
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
@@ -550,303 +509,271 @@ describe("GET /api/admin/ops/errors", () => {
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/keywords  (GSC)
+// /api/admin/analytics/keywords  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/keywords", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns keywords array when configured", async () => {
+  it("returns keywords array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.keywords)).toBe(true);
     expect(typeof data.fetchedAt).toBe("string");
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 
   it("respects ?limit query param", async () => {
-    const { getTopKeywords } = await import("@/lib/gsc");
+    lakeMocks.getSeoFromLake.mockResolvedValue({
+      ...SAMPLE_SEO,
+      keywords: Array.from({ length: 10 }, (_, i) => ({
+        query: `q${i}`,
+        clicks: i,
+        impressions: i * 10,
+        ctr: 0.01,
+        position: 5,
+      })),
+    });
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/keywords?limit=5"));
-    // Route now passes (undefined, limit, days) — days defaults to 28 when ?days is omitted.
-    expect(getTopKeywords).toHaveBeenCalledWith(undefined, 5, 28);
+    const res = await GET(adminRequest("http://localhost/api/admin/analytics/keywords?limit=5"));
+    const data = await res.json();
+    expect(lakeMocks.getSeoFromLake).toHaveBeenCalledWith(28);
+    expect(data.keywords).toHaveLength(5);
+    expect(data._filters).toEqual({ days: 28, limit: 5 });
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/pages  (GSC)
+// /api/admin/analytics/pages  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/pages", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "page",
+      rows: [{ page: "https://cloudless.gr/", clicks: 200, impressions: 5000 }],
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/pages"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns pages array when configured", async () => {
+  it("returns pages array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/pages"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.pages)).toBe(true);
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 
-  it("respects ?limit query param", async () => {
-    const { getTopPages } = await import("@/lib/gsc");
+  it("passes days filter to lake helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/pages?limit=10"));
-    // Route now passes (undefined, limit, days) — days defaults to 28 when ?days is omitted.
-    expect(getTopPages).toHaveBeenCalledWith(undefined, 10, 28);
+    await GET(adminRequest("http://localhost/api/admin/analytics/pages?days=10"));
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("page", 10);
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/history  (GSC)
+// /api/admin/analytics/history  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/history", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/history/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/history"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns history array when configured", async () => {
+  it("returns empty history with SEO snapshot from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/history"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.history)).toBe(true);
-    expect(typeof data.weeks).toBe("number");
-    expect(data.source).toBe("google-search-console");
+    expect(data.history).toEqual([]);
+    expect(data.snapshot).toEqual(SAMPLE_SEO.snapshot);
+    expect(data.source).toBe("datalake-gold");
   });
 
-  it("respects ?weeks query param", async () => {
-    const { getPerformanceHistory } = await import("@/lib/gsc");
+  it("passes days filter to lake helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/history/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/history?weeks=4"));
-    expect(getPerformanceHistory).toHaveBeenCalledWith(undefined, 4);
+    await GET(adminRequest("http://localhost/api/admin/analytics/history?days=4"));
+    expect(lakeMocks.getSeoFromLake).toHaveBeenCalledWith(4);
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/ctr-opportunities  (GSC)
+// /api/admin/analytics/ctr-opportunities  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/ctr-opportunities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getCtrOpportunitiesFromLake.mockResolvedValue({
+      opportunities: [
+        { query: "serverless nextjs", clicks: 10, impressions: 800, ctr: 0.0125, position: 7.2 },
+      ],
+      fetchedAt: SAMPLE_SEO.fetchedAt,
+      source: "datalake-gold" as const,
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns opportunities array when configured", async () => {
+  it("returns opportunities array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.opportunities)).toBe(true);
     expect(typeof data.fetchedAt).toBe("string");
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 
   it("respects ?limit query param", async () => {
-    const { getCtrOpportunities } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/ctr-opportunities/route");
     await GET(adminRequest("http://localhost/api/admin/analytics/ctr-opportunities?limit=20"));
-    expect(getCtrOpportunities).toHaveBeenCalledWith(undefined, 20);
+    expect(lakeMocks.getCtrOpportunitiesFromLake).toHaveBeenCalledWith(20);
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/devices  (GSC)
+// /api/admin/analytics/devices  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/devices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "device",
+      rows: [
+        { device: "DESKTOP", clicks: 300 },
+        { device: "MOBILE", clicks: 200 },
+      ],
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/devices/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/devices"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns devices array when configured", async () => {
+  it("returns devices array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/devices/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/devices"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.devices)).toBe(true);
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/products  (GSC)
+// /api/admin/analytics/products  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/products", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "product",
+      rows: [{ page: "https://cloudless.gr/store/pro-plan", clicks: 40 }],
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/products/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/products"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns products array when configured", async () => {
+  it("returns products array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/products/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/products"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.products)).toBe(true);
-    expect(typeof data.pattern).toBe("string");
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 
-  it("respects ?pattern and ?limit query params", async () => {
-    const { getProductPageMetrics } = await import("@/lib/gsc");
+  it("passes days filter to lake helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/products/route");
-    await GET(
-      adminRequest("http://localhost/api/admin/analytics/products?pattern=/blog/&limit=10")
-    );
-    expect(getProductPageMetrics).toHaveBeenCalledWith(undefined, "/blog/", 10);
+    await GET(adminRequest("http://localhost/api/admin/analytics/products?days=14"));
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("product", 14);
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/query-pages  (GSC)
+// /api/admin/analytics/query-pages  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/query-pages", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "query_page",
+      rows: [{ query: "cloudless hosting", page: "https://cloudless.gr/", clicks: 60 }],
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/query-pages"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns mappings array when configured", async () => {
+  it("returns queryPages array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/query-pages"));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(Array.isArray(data.mappings)).toBe(true);
-    expect(data.source).toBe("google-search-console");
+    expect(Array.isArray(data.queryPages)).toBe(true);
+    expect(data.source).toBe("datalake-gold");
   });
 
-  it("respects ?limit query param", async () => {
-    const { getQueryPageMapping } = await import("@/lib/gsc");
+  it("passes days filter to lake helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/query-pages/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/query-pages?limit=50"));
-    expect(getQueryPageMapping).toHaveBeenCalledWith(undefined, 50);
+    await GET(adminRequest("http://localhost/api/admin/analytics/query-pages?days=50"));
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("query_page", 50);
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/search-intent  (GSC)
+// /api/admin/analytics/search-intent  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/search-intent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getSeoFromLake.mockResolvedValue(SAMPLE_SEO);
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/search-intent"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns intent breakdown with summary when configured", async () => {
+  it("returns empty intents with keywords from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/search-intent/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/search-intent"));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data).toHaveProperty("intent");
-    expect(data).toHaveProperty("summary");
-    expect(typeof data.summary.brand).toBe("number");
-    expect(data.source).toBe("google-search-console");
+    expect(data.intents).toEqual([]);
+    expect(data.keywords).toEqual(SAMPLE_SEO.keywords);
+    expect(data).toHaveProperty("snapshot");
+    expect(data.source).toBe("datalake-gold");
   });
 });
 
 // ---------------------------------------------------------------------------
-// /api/admin/analytics/countries  (GSC)
+// /api/admin/analytics/countries  (datalake gold)
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/analytics/countries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetSsmCache();
+    lakeMocks.getGscDimensionFromLake.mockResolvedValue({
+      ...SAMPLE_DIMENSION,
+      dimension: "country",
+      rows: [{ country: "grc", clicks: 350, impressions: 7000 }],
+    });
   });
 
-  it("returns 503 when GSC credentials are missing", async () => {
-    mockGetConfig.mockResolvedValueOnce(GSC_MISSING_CONFIG);
-    const { GET } = await import("@/app/api/admin/analytics/countries/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/analytics/countries"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns countries array when configured", async () => {
+  it("returns countries array from lake", async () => {
     const { GET } = await import("@/app/api/admin/analytics/countries/route");
     const res = await GET(adminRequest("http://localhost/api/admin/analytics/countries"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.countries)).toBe(true);
-    expect(data.source).toBe("google-search-console");
+    expect(data.source).toBe("datalake-gold");
   });
 
-  it("respects ?limit query param", async () => {
-    const { getTrafficByCountry } = await import("@/lib/gsc");
+  it("passes days filter to lake helper", async () => {
     const { GET } = await import("@/app/api/admin/analytics/countries/route");
-    await GET(adminRequest("http://localhost/api/admin/analytics/countries?limit=10"));
-    expect(getTrafficByCountry).toHaveBeenCalledWith(undefined, 10);
+    await GET(adminRequest("http://localhost/api/admin/analytics/countries?days=10"));
+    expect(lakeMocks.getGscDimensionFromLake).toHaveBeenCalledWith("country", 10);
   });
 });
