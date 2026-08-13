@@ -130,17 +130,17 @@ describe("getAutologinUrl — AppFlowy (GoTrue password-grant)", () => {
     await getAutologinUrl("appflowy");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://appflowy.cloudless.gr/gotrue/token",
+      "https://appflowy.cloudless.gr/gotrue/token?grant_type=password",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ "Content-Type": "application/json" }),
       })
     );
-    // Ensure the request body contains email and grant_type (but NOT the raw password in our assertion)
+    // Ensure the request body contains email (grant_type is in the query string)
     const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(callArgs[1].body as string) as { email?: string; grant_type?: string };
     expect(body.email).toBe("admin@cloudless.gr");
-    expect(body.grant_type).toBe("password");
+    expect(body.grant_type).toBeUndefined();
   });
 
   it("throws a sanitized error when GoTrue returns HTTP 4xx", async () => {

@@ -152,13 +152,19 @@ sudo mkdir -p "$NEW_REL"
 nice -n 10 ionice -c2 -n7 sudo tar --zstd -xf "$TAR" -C "$NEW_REL"
 
 # Tarball layout: top-level standalone/ static/ public/ BUILD_ID (from pack OUT).
-# standalone/ often also has public/ — plain mv fails on non-empty dirs; merge with rsync.
+# Never rsync standalone/ into its parent ($NEW_REL) — that is a classic infinite
+# recursion footgun (dest contains source). Merge via a sibling temp dir instead.
 if [[ -d "$NEW_REL/standalone" ]]; then
-  sudo rsync -a "$NEW_REL/standalone/" "$NEW_REL/"
-  sudo rm -rf "$NEW_REL/standalone"
+  MERGE="$(mktemp -d "$RELEASES/.merge-${SHA12}.XXXXXX")"
+  # Prefer standalone contents as the app root, then overlay other top-level files.
+  sudo rsync -a "$NEW_REL/standalone/" "$MERGE/"
+  sudo rsync -a --exclude standalone "$NEW_REL/" "$MERGE/"
+  sudo rm -rf "$NEW_REL"
+  sudo mv "$MERGE" "$NEW_REL"
 fi
 if [[ -d "$NEW_REL/static" ]]; then
   sudo mkdir -p "$NEW_REL/.next/static"
+  # static/ is a sibling of the app root, not a child of itself — safe.
   sudo rsync -a "$NEW_REL/static/" "$NEW_REL/.next/static/"
   sudo rm -rf "$NEW_REL/static"
 fi

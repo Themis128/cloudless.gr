@@ -14,6 +14,7 @@
 let lastNotifiedVersion: string | undefined;
 
 const REMOTE_BIND_TIMEOUT_MS = 5_000;
+const LOG_PREFIX = "[Instrumentation]";
 
 /**
  * Remote OpenNext bind needs a Cloudflare token and a live API. CI, E2E, and
@@ -50,9 +51,9 @@ async function bindRemoteAuthDb(): Promise<void> {
   if (authDb && typeof authDb.prepare === "function") {
     (globalThis as { __AUTH_DB__?: typeof authDb }).__AUTH_DB__ = authDb;
     (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
-    console.warn("[Instrumentation] AUTH_DB bound for local D1 auth");
+    console.warn(`${LOG_PREFIX} AUTH_DB bound for local D1 auth`);
   } else {
-    console.warn("[Instrumentation] AUTH_DB missing from Cloudflare context");
+    console.warn(`${LOG_PREFIX} AUTH_DB missing from Cloudflare context`);
   }
 }
 
@@ -63,7 +64,7 @@ async function fireDeployNotification(): Promise<void> {
   lastNotifiedVersion = version;
   const { slackDeployNotify } = await import("@/lib/slack-notify");
   slackDeployNotify({ version, stage, status: "succeeded", commitSha: version }).catch((err) =>
-    console.warn("[Instrumentation] slackDeployNotify failed:", err)
+    console.warn(`${LOG_PREFIX} slackDeployNotify failed:`, err)
   );
 }
 
@@ -76,11 +77,11 @@ export async function register() {
         const { isCloudflareApiHostError } = await import("@/lib/is-cloudflare-api-host-error");
         if (isCloudflareApiHostError(err)) {
           console.warn(
-            "[Instrumentation] Cloudflare remote context unavailable — auth will use local D1 sqlite fallback"
+            `${LOG_PREFIX} Cloudflare remote context unavailable — auth will use local D1 sqlite fallback`
           );
         } else {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn("[Instrumentation] Local AUTH_DB bind failed:", msg);
+          console.warn(`${LOG_PREFIX} Local AUTH_DB bind failed:`, msg);
         }
       }
     }

@@ -55,16 +55,16 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
     );
   }
 
-  // GoTrue password-grant: POST {base}/gotrue/token with grant_type in body
-  // (Query param form is deprecated; modern GoTrue requires all params in JSON body)
-  const grantUrl = `${base}/gotrue/token`;
+  // GoTrue on AppFlowy Cloud rejects body-only grant_type with
+  // unsupported_grant_type; the grant must be in the query string.
+  const grantUrl = `${base}/gotrue/token?grant_type=password`;
 
   let res: Response;
   try {
     res = await fetch(grantUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ grant_type: "password", email, password }),
+      body: JSON.stringify({ email, password }),
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {

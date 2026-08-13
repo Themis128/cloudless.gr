@@ -41,6 +41,11 @@ function appUrl(path: string, request: NextRequest): URL {
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
+const ADMIN_PATH = "/admin";
+const ADMIN_PATH_EN = "/en/admin";
+const DASHBOARD_PATH = "/dashboard";
+const DASHBOARD_PATH_EN = "/en/dashboard";
+
 const ALLOWED_ORIGINS = ["https://cloudless.gr", "https://www.cloudless.gr"];
 
 function isAllowedOrigin(origin: string): boolean {
@@ -321,6 +326,89 @@ async function handleApiRoute(
   return addCorsHeaders(addSecurityHeaders(response, nonce), request);
 }
 
+/** Builds the locale-aware `/auth/login?redirect=...` path for unauthenticated redirects. */
+function buildLoginRedirectPath(pathname: string): string {
+  const basePath = pathname.split("/")[1] ?? "";
+  if (LOCALES.includes(basePath)) {
+    const bare = pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/";
+    return `/${basePath}/auth/login?redirect=${encodeURIComponent(bare)}`;
+  }
+  return `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
+}
+
+/** Validates the D1 session token and returns the appropriate response, or null to fall through to NextAuth. */
+async function handleD1SessionRoute(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+  d1SessionToken: string,
+  isAdminRoute: boolean,
+  isPostLoginRoute: boolean
+): Promise<NextResponse | null> {
+  try {
+    const { getUserBySession, isAdmin, getAuthDbFromEnv } = await import("@/lib/auth-d1");
+    const db = getAuthDbFromEnv();
+    if (!db) return null;
+
+    const user = await getUserBySession(db, d1SessionToken);
+    if (!user) {
+      return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
+    }
+
+    const isAdminUser = await isAdmin(db, user.id);
+
+    if (isPostLoginRoute) {
+      const dest = isAdminUser
+        ? (pathname.startsWith("/en") ? ADMIN_PATH_EN : ADMIN_PATH)
+        : (pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH);
+      return NextResponse.redirect(appUrl(dest, request), 307);
+    }
+
+    if (isAdminRoute && !isAdminUser) {
+      const dest = pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH;
+      return NextResponse.redirect(appUrl(dest, request), 307);
+    }
+
+    return continueToApp(request, pathname, nonce);
+  } catch {
+    return null;
+  }
+}
+
+/** Validates the NextAuth JWT session and returns the appropriate response. */
+async function handleNextAuthRoute(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+  isAdminRoute: boolean,
+  isPostLoginRoute: boolean
+): Promise<NextResponse> {
+  try {
+    const { getToken } = await import("next-auth/jwt");
+    const session = await getToken({ req: request as unknown as Request });
+
+    if (!session) {
+      return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
+    }
+
+    if (isPostLoginRoute) {
+      const dest = isAdminFromSession(session)
+        ? (pathname.startsWith("/en") ? ADMIN_PATH_EN : ADMIN_PATH)
+        : (pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH);
+      return NextResponse.redirect(appUrl(dest, request), 307);
+    }
+
+    if (isAdminRoute && !isAdminFromSession(session)) {
+      const dest = pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH;
+      return NextResponse.redirect(appUrl(dest, request), 307);
+    }
+
+    return continueToApp(request, pathname, nonce);
+  } catch {
+    return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
+  }
+}
+
 async function handlePageRoute(
   request: NextRequest,
   pathname: string,
@@ -328,9 +416,7 @@ async function handlePageRoute(
 ): Promise<NextResponse> {
   const isRscPrefetch = request.nextUrl.searchParams.has("_rsc");
   if (!isRscPrefetch) {
-    const ip = getSharedClientIp(request);
-    const identifier = ip || "unknown";
-    
+    const identifier = getSharedClientIp(request) || "unknown";
     if (isRateLimited(identifier, RATE_LIMITS.ip.limit, RATE_LIMITS.ip.window, ipRequestMap)) {
       return new NextResponse("Too Many Requests", {
         status: 429,
@@ -345,118 +431,43 @@ async function handlePageRoute(
     cleanupStaleEntries(ipRequestMap);
   }
 
-  const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/en/admin");
-  const isDashboardRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/en/dashboard");
-  const isPostLoginRoute = pathname.startsWith("/auth/post-login") || pathname === "/auth/post-login" ||
-                            pathname.startsWith("/en/auth/post-login");
-  
-  // Check for E2E admin bypass cookie
-  const e2eAdminCookie = request.cookies.get("e2e_admin")?.value === "1";
-  
+  const isAdminRoute = pathname.startsWith(ADMIN_PATH) || pathname.startsWith(ADMIN_PATH_EN);
+  const isDashboardRoute = pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(DASHBOARD_PATH_EN);
+  const isPostLoginRoute =
+    pathname.startsWith("/auth/post-login") ||
+    pathname === "/auth/post-login" ||
+    pathname.startsWith("/en/auth/post-login");
+
   if (isAdminRoute || isDashboardRoute || isPostLoginRoute) {
     // E2E bypass: if e2e_admin cookie is set, allow access to admin routes
+    const e2eAdminCookie = request.cookies.get("e2e_admin")?.value === "1";
     if (e2eAdminCookie && isAdminRoute) {
       return continueToApp(request, pathname, nonce);
     }
+
     const sessionToken = readNextAuthJwt(request);
     const sessionCookie = request.cookies.get("authjs.session-token")?.value;
     const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
     const d1SessionToken = request.cookies.get("session_token")?.value;
-    
     const hasSessionToken = sessionToken || sessionCookie || chunkedCookie || d1SessionToken;
-    
-    if (hasSessionToken) {
-      if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
-        try {
-          const { getUserBySession, isAdmin, getAuthDbFromEnv } = await import("@/lib/auth-d1");
-          const db = getAuthDbFromEnv();
-          
-          if (db) {
-            const user = await getUserBySession(db, d1SessionToken);
-            
-            if (!user) {
-              const basePath = pathname.split("/")[1] || "";
-              const isLocalized = LOCALES.includes(basePath);
-              const redirectPath = isLocalized
-                ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
-                : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-              return NextResponse.redirect(appUrl(redirectPath, request), 307);
-            }
-            
-            const isAdminUser = await isAdmin(db, user.id);
-            
-            if (isPostLoginRoute) {
-              if (isAdminUser) {
-                const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
-                return NextResponse.redirect(appUrl(adminUrl, request), 307);
-              } else {
-                const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-                return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
-              }
-            }
-            
-            if (isAdminRoute && !isAdminUser) {
-              const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-              return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
-            }
-            
-            return continueToApp(request, pathname, nonce);
-          }
-        } catch {
-        }
-      }
-      
-      try {
-        const { getToken } = await import("next-auth/jwt");
-        const session = await getToken({ req: request as unknown as Request });
-        
-        if (!session) {
-          const basePath = pathname.split("/")[1] || "";
-          const isLocalized = LOCALES.includes(basePath);
-          const redirectPath = isLocalized
-            ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
-            : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-          return NextResponse.redirect(appUrl(redirectPath, request), 307);
-        }
-        
-        if (isPostLoginRoute) {
-          if (isAdminFromSession(session)) {
-            const adminUrl = pathname.startsWith("/en") ? "/en/admin" : "/admin";
-            return NextResponse.redirect(appUrl(adminUrl, request), 307);
-          } else {
-            const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-            return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
-          }
-        }
-        
-        if (isAdminRoute && !isAdminFromSession(session)) {
-          const dashboardUrl = pathname.startsWith("/en") ? "/en/dashboard" : "/dashboard";
-          return NextResponse.redirect(appUrl(dashboardUrl, request), 307);
-        }
-      } catch {
-        const basePath = pathname.split("/")[1] || "";
-        const isLocalized = LOCALES.includes(basePath);
-        const redirectPath = isLocalized
-          ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
-          : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-        return NextResponse.redirect(appUrl(redirectPath, request), 307);
-      }
-    } else {
+
+    if (!hasSessionToken) {
       if (isPostLoginRoute) {
         const basePath = pathname.split("/")[1] || "";
-        const isLocalized = LOCALES.includes(basePath);
-        const loginPath = isLocalized ? `/${basePath}/auth/login` : "/auth/login";
+        const loginPath = LOCALES.includes(basePath) ? `/${basePath}/auth/login` : "/auth/login";
         return NextResponse.redirect(appUrl(loginPath, request), 307);
       }
-      
-      const basePath = pathname.split("/")[1] || "";
-      const isLocalized = LOCALES.includes(basePath);
-      const redirectPath = isLocalized
-        ? `/${basePath}/auth/login?redirect=${encodeURIComponent(pathname === `/${basePath}` ? "/" : pathname.slice(`${basePath}/`.length) || "/")}`
-        : `/auth/login?redirect=${encodeURIComponent(pathname === "/" ? "/" : pathname)}`;
-      
-      return NextResponse.redirect(appUrl(redirectPath, request), 307);
+      return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
     }
+
+    if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
+      const d1Result = await handleD1SessionRoute(
+        request, pathname, nonce, d1SessionToken, isAdminRoute, isPostLoginRoute
+      );
+      if (d1Result) return d1Result;
+    }
+
+    return handleNextAuthRoute(request, pathname, nonce, isAdminRoute, isPostLoginRoute);
   }
 
   return continueToApp(request, pathname, nonce);
