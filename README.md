@@ -1,6 +1,6 @@
 # Cloudless — cloudless.gr
 
-> **Auth is Cloudflare D1.** App admin = membership in the `admin` group in the D1 `user-auth-db`. Managed via `/api/admin/users/promote`.
+> **Auth is Cloudflare D1.** App admin = membership in the `admin` group in the D1 `user-auth-db`. Managed via `POST /api/admin/users` (`action: "promote"`).
 
 Cloud computing, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs.
 

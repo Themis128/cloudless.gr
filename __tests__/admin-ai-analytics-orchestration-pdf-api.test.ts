@@ -22,7 +22,6 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
-    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
       return { ...plainUser, email, sub: `user-${email}` };
@@ -59,10 +58,17 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     },
   };
 });
-const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(() => ({
-  getConfigMock: vi.fn(),
-  getSnapshotMock: vi.fn(),
+
+const {
+  getStripeSnapshotFromLakeMock,
+  getInsightMock,
+  runOrchestrationMock,
+  preprocessMock,
+} = vi.hoisted(() => ({
+  getStripeSnapshotFromLakeMock: vi.fn(),
+  getInsightMock: vi.fn(),
   runOrchestrationMock: vi.fn(),
+  preprocessMock: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -79,16 +85,14 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
-}));
-
-vi.mock("@/lib/stripe-analytics-read", () => ({
-  getStripeAnalyticsSnapshot: getSnapshotMock,
+vi.mock("@/lib/datalake-serve", () => ({
+  getStripeSnapshotFromLake: (...a: unknown[]) => getStripeSnapshotFromLakeMock(...a),
+  getInsight: (...a: unknown[]) => getInsightMock(...a),
 }));
 
 vi.mock("@/lib/analytics-agent-orchestrator", () => ({
-  runAnalyticsAgentOrchestration: runOrchestrationMock,
+  runAnalyticsAgentOrchestration: (...a: unknown[]) => runOrchestrationMock(...a),
+  preprocessStripeAnalyticsSnapshot: (...a: unknown[]) => preprocessMock(...a),
 }));
 
 vi.mock("@/lib/admin-ai", () => ({
@@ -96,6 +100,60 @@ vi.mock("@/lib/admin-ai", () => ({
   adminAiNotConfiguredResponse: () =>
     Response.json({ error: "Admin AI not configured." }, { status: 503 }),
 }));
+
+vi.mock("@/lib/r2-client", () => ({
+  getDataLakeBucketFromEnv: vi.fn(() => null),
+}));
+
+const SAMPLE_LAKE_SNAP = {
+  windowDays: 30,
+  generatedAt: "2026-05-03T12:00:00.000Z",
+  totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
+  byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
+  byStatus: { processed: 2, handler_failed: 1 },
+  byCurrency: { eur: 4500 },
+  dailyTrend: [
+    { day: "2026-05-01", revenueMinor: 2000, events: 1, processed: 1, failed: 0 },
+    { day: "2026-05-02", revenueMinor: 2500, events: 2, processed: 1, failed: 1 },
+  ],
+  source: "datalake-gold" as const,
+};
+
+const SAMPLE_PREPROCESSED = {
+  windowDays: 30,
+  hasData: true,
+  failureRatePct: 33.33,
+  processedRatePct: 66.67,
+  averageRevenuePerEventMinor: 1500,
+  averageDailyRevenueMinor: 2250,
+  averageDailyEvents: 1.5,
+  revenuePerProcessedEventMinor: 2250,
+  topRevenueCategories: [
+    { category: "checkout", events: 2, revenueMinor: 4500, revenueSharePct: 100 },
+  ],
+  topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
+  strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
+  momentum: {
+    comparisonWindowDays: 2,
+    recentRevenueMinor: 4500,
+    priorRevenueMinor: null,
+    revenueDeltaPct: null,
+    recentFailureRatePct: 33.33,
+    priorFailureRatePct: null,
+    failureRateDeltaPct: null,
+  },
+  dataQuality: {
+    sparseWindow: true,
+    notes: ["Sample size is sparse for the selected window."],
+  },
+};
+
+const CACHED_ORCHESTRATION_INSIGHT = {
+  domain: "orchestration",
+  summary: "Cached lake orchestration summary",
+  bullets: ["Revenue stable", "Investigate failures"],
+  generated_at: "2026-05-03T10:00:00.000Z",
+};
 
 function makeAdminToken(): string {
   return "test-admin-session";
@@ -115,33 +173,9 @@ function adminReq(body?: Record<string, unknown>): NextRequest {
 describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getConfigMock.mockResolvedValue({
-      ANTHROPIC_API_KEY: "test-anthropic-key",
-    });
-    getSnapshotMock.mockResolvedValue({
-      windowDays: 30,
-      generatedAt: "2026-05-03T12:00:00.000Z",
-      totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
-      byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
-      byStatus: { processed: 2, handler_failed: 1 },
-      byCurrency: { eur: 4500 },
-      dailyTrend: [
-        {
-          day: "2026-05-01",
-          revenueMinor: 2000,
-          events: 1,
-          processed: 1,
-          failed: 0,
-        },
-        {
-          day: "2026-05-02",
-          revenueMinor: 2500,
-          events: 2,
-          processed: 1,
-          failed: 1,
-        },
-      ],
-    });
+    getStripeSnapshotFromLakeMock.mockResolvedValue(SAMPLE_LAKE_SNAP);
+    getInsightMock.mockResolvedValue(CACHED_ORCHESTRATION_INSIGHT);
+    preprocessMock.mockReturnValue(SAMPLE_PREPROCESSED);
     runOrchestrationMock.mockResolvedValue({
       workflow: [
         { step: "collect_data", status: "completed", details: "ok" },
@@ -149,50 +183,10 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
         { step: "generate_insights", status: "completed", details: "ok" },
         { step: "prepare_connectors", status: "completed", details: "ok" },
       ],
-      snapshot: {
-        windowDays: 30,
-        generatedAt: "2026-05-03T12:00:00.000Z",
-        totals: { events: 3, revenueMinor: 4500, processed: 2, failed: 1 },
-        byCategory: { checkout: { events: 2, revenueMinor: 4500 } },
-        byStatus: { processed: 2, handler_failed: 1 },
-        byCurrency: { eur: 4500 },
-        dailyTrend: [],
-      },
-      preprocessed: {
-        windowDays: 30,
-        hasData: true,
-        failureRatePct: 33.33,
-        processedRatePct: 66.67,
-        averageRevenuePerEventMinor: 1500,
-        averageDailyRevenueMinor: 2250,
-        averageDailyEvents: 1.5,
-        revenuePerProcessedEventMinor: 2250,
-        topRevenueCategories: [
-          {
-            category: "checkout",
-            events: 2,
-            revenueMinor: 4500,
-            revenueSharePct: 100,
-          },
-        ],
-        topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
-        strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
-        momentum: {
-          comparisonWindowDays: 2,
-          recentRevenueMinor: 4500,
-          priorRevenueMinor: null,
-          revenueDeltaPct: null,
-          recentFailureRatePct: 33.33,
-          priorFailureRatePct: null,
-          failureRateDeltaPct: null,
-        },
-        dataQuality: {
-          sparseWindow: true,
-          notes: ["Sample size is sparse for the selected window."],
-        },
-      },
+      snapshot: SAMPLE_LAKE_SNAP,
+      preprocessed: SAMPLE_PREPROCESSED,
       report: {
-        executiveSummary: "test summary",
+        executiveSummary: "live llm summary",
         keyInsights: ["a", "b"],
         risks: ["r1"],
         nextMoves: [
@@ -237,11 +231,14 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
     });
   });
 
-  it("returns a PDF download", async () => {
+  it("returns a PDF download from cached lake orchestration insight", async () => {
     const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
     const response = await POST(adminReq({ reportTitle: "Executive Stripe Report" }));
 
     expect(response.status).toBe(200);
+    expect(getStripeSnapshotFromLakeMock).toHaveBeenCalled();
+    expect(getInsightMock).toHaveBeenCalledWith("orchestration");
+    expect(runOrchestrationMock).not.toHaveBeenCalled();
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toContain(
       "analytics-report-2026-05-03.pdf"
@@ -251,12 +248,24 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
     expect(body.length).toBeGreaterThan(500);
   });
 
-  it("returns 400 for invalid input", async () => {
+  it("returns a PDF via live_llm when requested", async () => {
+    getInsightMock.mockResolvedValue(null);
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
+    const response = await POST(
+      adminReq({ reportTitle: "Executive Stripe Report", live_llm: true })
+    );
+
+    expect(response.status).toBe(200);
+    expect(runOrchestrationMock).toHaveBeenCalled();
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+  });
+
+  it("falls back to defaults when reportTitle is blank (parse errors are swallowed)", async () => {
     const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
     const response = await POST(adminReq({ reportTitle: "   ", connectors: [] }));
-    const body = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(body.error).toContain("reportTitle cannot be empty");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(getStripeSnapshotFromLakeMock).toHaveBeenCalledWith(30);
   });
 });

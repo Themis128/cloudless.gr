@@ -142,11 +142,18 @@ export async function POST(req: NextRequest) {
       email?: string;
       password?: string;
       fullName?: string;
+      name?: string;
       turnstileToken?: string;
     };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
-    fullName = body.fullName;
+    // Accept both `fullName` (API) and `name` (e2e / curl docs).
+    fullName =
+      typeof body.fullName === "string"
+        ? body.fullName
+        : typeof body.name === "string"
+          ? body.name
+          : undefined;
 
     const { verifyTurnstileToken } = await import("@/lib/turnstile");
     const turnstile = await verifyTurnstileToken(body.turnstileToken, getClientIp(req));

@@ -52,42 +52,49 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Apply local D1 migrations
+        run: |
+          # Non-interactive CI skips the confirmation prompt automatically.
+          # Includes 0015-fix-user-role-fk (broken user_old FK → signup fails).
+          pnpm exec wrangler d1 migrations apply user-auth-db --local
+
       - name: Setup test database
+        env:
+          NEXT_PUBLIC_E2E: '1'
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
         run: |
           echo "Setting up test database..."
-          # Start dev server temporarily to seed database
           setsid pnpm dev -p 4000 < /dev/null > /tmp/dev-server.log 2>&1 &
           DEV_PID=$!
 
-          # Wait for server to be ready
-          for i in $(seq 1 30); do
-            if curl -sf -m 2 http://localhost:4000 > /dev/null 2>&1; then
+          for i in $(seq 1 45); do
+            if curl -sf -m 2 http://localhost:4000/api/health > /dev/null 2>&1; then
               echo "Dev server ready"
               break
             fi
             sleep 2
           done
 
-          # Seed admin user
           echo "Seeding admin user..."
-          curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
+          curl -sS -X POST http://localhost:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
-            -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' || echo "Admin user may already exist"
+            -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' \
+            || echo "Admin register soft-failed (may already exist)"
 
-          # Promote to admin
           echo "Promoting test admin..."
-          curl -sf -X POST http://localhost:4000/api/admin/users/promote \
+          curl -sS -X POST http://localhost:4000/api/admin/users \
             -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
             -H "Content-Type: application/json" \
-            -d '{"email":"testadmin@cloudless.gr"}' || echo "Promotion may have failed"
+            -d '{"action":"promote","username":"testadmin@cloudless.gr"}' \
+            || echo "Promotion soft-failed"
 
-          # Seed regular user
           echo "Seeding test user..."
-          curl -sf -X POST http://localhost:4000/api/auth/register-d1 \
+          curl -sS -X POST http://localhost:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
-            -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' || echo "Test user may already exist"
+            -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' \
+            || echo "User register soft-failed (may already exist)"
 
-          # Kill seed server and free port 4000 (setsid can leave orphans)
           kill $DEV_PID 2>/dev/null || true
           pkill -f "next dev -p 4000" 2>/dev/null || true
           if command -v fuser >/dev/null 2>&1; then

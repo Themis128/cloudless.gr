@@ -1,110 +1,96 @@
-# Test Accounts & Access Model
+# Test Accounts & Access Model (D1)
 
-This documents the two test accounts used by the Playwright e2e suite and
-the authorization model they exercise. The access model is **derived from
-the codebase** (`src/proxy.ts` middleware + `src/lib/api-auth.ts` API
-guards), which is the source of truth.
+Playwright e2e accounts and how local login/signup/admin work. Source of truth:
+`src/lib/auth-d1.ts`, `src/lib/api-auth.ts`, `src/proxy.ts`, `e2e/auth.setup.mts`.
 
 ## Identity provider
 
-- **AWS Cognito** Hosted UI (production default since the 2026-06 migration),
-  pool **`cloudless-auth`**, app client **`cloudless-app`**. Cognito
-  (realm `master`, `https://auth.cloudless.gr`) remains the fallback when
-  `COGNITO_ISSUER` is not set.
-- The session is a **next-auth (Auth.js) v5** JWT carried in the
-  `authjs.session-token` cookie (`__Secure-` prefix in production).
-- The login form is served at `/{locale}/auth/login` (e.g. `/en/auth/login`).
-  When `NEXT_PUBLIC_AUTH_PROVIDER=cognito`, the form renders a single
-  "Continue with AWS" button that hands off to the Cognito Hosted UI
-  (`src/app/[locale]/auth/login/page.tsx`).
+- **Cloudflare D1** (`user-auth-db`) — email/password (PBKDF2) + opaque
+  `session_token` cookie. Cognito is retired.
+- Login UI: `/{locale}/auth/login` · Signup: `/{locale}/auth/signup`
+- APIs: `POST /api/auth/register-d1`, `POST /api/auth/login`, `POST /api/auth/logout`
 
-## How "admin" is decided (group membership, not a role)
+## How "admin" is decided
 
-Admin status is **`admin` group membership**, surfaced into the next-auth
-token as a groups claim (`cognito:groups` on Cognito, `groups` on Cognito):
-
-- **Page routes** — `src/proxy.ts` reads the next-auth JWT and treats a user
-  as admin if the groups claim includes `"admin"`.
-- **API routes** — `src/lib/api-auth.ts` (`isAdmin`) checks both `groups`
-  and `cognito:groups` for `"admin"`; `requireAdmin` returns **403** when
-  that group is absent.
-
-> On Cognito the `cognito:groups` claim is emitted automatically for any
-> user added to the `admin` group — no protocol mapper needed (unlike
-> Cognito). The provisioning script below adds the admin test user to that
-> group.
+- D1 `roles` table (or equivalent admin flag) → session `groups: ["admin"]`.
+- Pages: `src/proxy.ts` + client `AuthContext` (also honors `e2e_admin=1` when
+  `NEXT_PUBLIC_E2E=1`).
+- APIs: `requireAdmin` in `src/lib/api-auth.ts`. In E2E, Bearer
+  `E2E_ADMIN_TOKEN` (env) synthesizes an admin when `NEXT_PUBLIC_E2E=1`.
 
 ## Access tiers
 
-| Tier                   | Routes                       | Requirement                 | Enforced by                                          |
-| ---------------------- | ---------------------------- | --------------------------- | ---------------------------------------------------- |
-| **Public**             | everything else              | none                        | `src/proxy.ts` passes through to next-intl           |
-| **Authenticated user** | `/dashboard/**`              | any valid next-auth session | `src/proxy.ts:328-338`                               |
-| **Admin**              | `/admin/**`, `/api/admin/**` | session **+** `admin` group | `src/proxy.ts:331-333` (pages), `requireAdmin` (API) |
+| Tier | Routes | Requirement |
+|------|--------|-------------|
+| Public | marketing, store, public APIs | none |
+| Authenticated user | `/dashboard/**` | valid D1 session |
+| Admin | `/admin/**`, `/api/admin/**` | session + admin role (or E2E bypass) |
 
-Behavior details:
+Unauthenticated `/admin` → redirect to login. Unauthenticated `/api/admin/**`
+→ **401/403** (never treat transient **404** as success in security tests).
 
-- **Unauthenticated** access to `/admin/**` or `/dashboard/**` → redirect to
-  `/{locale}/auth/login?redirect=<bare-path>` (`src/proxy.ts:334-337`). The
-  redirect param is the **locale-stripped** path, per the rule in `CLAUDE.md`.
-- **Authenticated but not admin** hitting `/admin/**` → redirected to
-  `/{locale}/dashboard` (`src/proxy.ts:331-333`). API routes return **403**.
-- `/portal/**` is excluded from the middleware matcher
-  (`src/proxy.ts:381`) — portal access uses its own magic-link token, not
-  the next-auth session.
-
-## The two test accounts
-
-These are exactly what `scripts/archive/cognito/e2e-cognito-provision.sh` creates:
-
-| Account        | Email                    | Group   | Can reach                                                               |
-| -------------- | ------------------------ | ------- | ----------------------------------------------------------------------- |
-| **Test user**  | `e2e-user@cloudless.gr`  | none    | `/dashboard/**`; **blocked** from `/admin` (redirected to `/dashboard`) |
-| **Test admin** | `e2e-admin@cloudless.gr` | `admin` | `/admin/**`, `/api/admin/**`, plus `/dashboard/**`                      |
-
-The plain user deliberately has **no** group — that is what proves the
-`/admin` gate works: it should be bounced to `/dashboard`.
-
-## Creating the accounts (existing tooling)
-
-`scripts/archive/cognito/e2e-cognito-provision.sh` provisions both users in the Cognito
-`cloudless-auth` pool. It is idempotent (re-running only resets the password
-and group membership), ensures the `admin` group exists, and gives each user
-a **permanent** password so Playwright can drive the Hosted UI login directly
-(no FORCE_CHANGE_PASSWORD step). It needs AWS creds with `cognito-idp` admin
-permissions; the pool/client are discovered by name (no hard-coded IDs).
+## Local / CI bootstrap (must work for login + signup)
 
 ```bash
-pnpm e2e:cognito:dry      # preview — no writes
-pnpm e2e:cognito          # create / update both users, write .env.e2e
+# 1) Create / migrate local D1 sqlite (required for auth-db-local shim)
+pnpm exec wrangler d1 migrations apply user-auth-db --local
+
+# 2) Start app (port 4000). Prefer local sqlite in next-dev by default.
+#    To force remote D1 instead: AUTH_DB_USE_HTTP=1
+NEXT_PUBLIC_E2E=1 E2E_ADMIN_TOKEN=e2e-admin-token-do-not-use-in-prod pnpm dev
+
+# 3) Register + promote (or let e2e/auth.setup.mts do it)
+curl -X POST http://localhost:4000/api/auth/register-d1 \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}'
+
+curl -X POST http://localhost:4000/api/admin/users \
+  -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"promote","username":"testadmin@cloudless.gr"}'
+
+curl -X POST http://localhost:4000/api/auth/register-d1 \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}'
 ```
 
-On success it writes `E2E_USER_EMAIL/PASSWORD` and
-`E2E_ADMIN_EMAIL/PASSWORD` into a gitignored `.env.e2e`.
+If signup returns `{"error":"Failed to create user"}`, re-apply migrations
+(`0015-fix-user-role-fk.sql` rebuilds a broken `user_role` FK that still
+referenced `user_old`). `auth-db-local` also auto-repairs that FK on open.
 
-> In a cloud session without the `aws` CLI or AWS creds, run this step where
-> those creds exist (or via the e2e CI job that assumes the deploy role).
+Env for Playwright (`playwright.config.mts` webServer + CI):
 
-## Testing the login
+| Var | Default / CI value |
+|-----|--------------------|
+| `NEXT_PUBLIC_E2E` | `1` |
+| `NEXT_PUBLIC_AUTH_PROVIDER` | `d1` |
+| `E2E_ADMIN_TOKEN` | `e2e-admin-token-do-not-use-in-prod` |
+| `E2E_USER_EMAIL` | `testuser@cloudless.gr` |
+| `E2E_USER_PASSWORD` | `TestPass123!` |
+| `E2E_ADMIN_EMAIL` | `testadmin@cloudless.gr` |
+| `E2E_ADMIN_PASSWORD` | `AdminPass123!` |
 
-The Playwright `setup` project (`e2e/auth.setup.ts`) logs in at
-`/auth/login`, then saves signed-in `storageState` to
-`e2e/.auth/admin.json` / `user.json`, which the admin/dashboard specs reuse.
-It **skips** unless the matching `E2E_*` env vars are set.
+**Port 4000:** free any foreign `pnpm dev` before the suite. Playwright sets
+`NEXT_PUBLIC_E2E=1` on its own webServer; a reused server without that env
+will 401 the E2E Bearer token (admin API sweeps / datalake gold test).
+
+If login fails, `e2e/auth.setup.mts` falls back to empty user state / `e2e_admin`
+cookie so admin **page** sweeps still run. API sweeps use Bearer
+`E2E_ADMIN_TOKEN`.
+
+## Datalake gold serving (admin analytics)
+
+`/api/admin/analytics/datalake` is snapshot-first (R2 gold + D1 hot overlay).
+Unauth → 401/403. With E2E admin token → JSON `{ cache, source, sections }`
+including `stripe_revenue`, `freshness`, etc. See `docs/data/datalake.md`.
+
+## Playwright commands
 
 ```bash
-# Local suite (reads .env.e2e via scripts/e2e-with-env.sh):
-pnpm e2e:setup            # bootstrap .env.e2e (CRON_SECRET + creds)
-pnpm e2e:cognito          # provision the two test users
-pnpm e2e:run:admin        # admin-scoped specs
-pnpm e2e:run:user         # user-scoped specs
-
-# Against production:
-E2E_BASE_URL=https://cloudless.gr pnpm e2e:prod
+pnpm exec wrangler d1 migrations apply user-auth-db --local
+pnpm exec playwright test --config=playwright.config.mts \
+  --project=chromium --workers=2 e2e/migrated/admin-api.spec.ts
 ```
 
-What a green run proves:
-
-- The **admin** account logs in and reaches `/admin`.
-- The **user** account logs in and reaches `/dashboard` but is denied
-  `/admin` (redirected) — confirming the group gate.
+CI workflow `.github/workflows/e2e-full-coverage.yml` applies local D1
+migrations, seeds users, then runs the suite.

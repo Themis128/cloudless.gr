@@ -70,8 +70,13 @@ export default defineConfig({
     reuseExistingServer: !isCi || process.env.E2E_REUSE_SERVER === "1",
     env: {
       NEXT_PUBLIC_E2E: "1",
+      NEXT_PUBLIC_AUTH_PROVIDER: "d1",
       E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
-      PATH: `${process.env.PATH}:/home/tbaltzakis/.local/share/pnpm/bin`
+      E2E_USER_EMAIL: process.env.E2E_USER_EMAIL || "testuser@cloudless.gr",
+      E2E_USER_PASSWORD: process.env.E2E_USER_PASSWORD || "TestPass123!",
+      E2E_ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL || "testadmin@cloudless.gr",
+      E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD || "AdminPass123!",
+      PATH: `${process.env.PATH}:/home/tbaltzakis/.local/share/pnpm/bin`,
     },
   },
 

@@ -554,4 +554,16 @@ test.describe("Admin API route sweep (authenticated)", () => {
     expect([401, 403]).not.toContain(r.status());
     expect(r.status()).toBeGreaterThanOrEqual(200);
   });
+  test("GET /api/admin/insights", async ({ request }) => {
+    const a = await adminRequest(request);
+    const r = await a.get("/api/admin/insights");
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(200);
+  });
+  test("GET /api/admin/insights/revenue", async ({ request }) => {
+    const a = await adminRequest(request);
+    const r = await a.get("/api/admin/insights/revenue");
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(200);
+  });
 });

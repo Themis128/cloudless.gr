@@ -31,7 +31,8 @@ Conventions in use today (consolidated retroactively):
 
 Athena/S3 lake workflows are retired. All feeders write parquet to R2
 `datalake-bucket`; `etl-materialize-snapshots.yml` rolls them into
-`lake/snapshots/admin-datalake.json` for the admin UI (D1 + R2).
+`lake/snapshots/admin-datalake.json`; `etl-materialize-insights.yml`
+writes LLM insight JSON under `lake/snapshots/insights/`.
 
 | File | Source | R2 prefix |
 |------|--------|-----------|
@@ -47,6 +48,7 @@ Athena/S3 lake workflows are retired. All feeders write parquet to R2
 | `etl-postiz-to-r2.yml` | Postiz | `lake/postiz-*` |
 | `etl-n8n-to-r2.yml` | n8n | `lake/n8n-*` |
 | `etl-materialize-snapshots.yml` | Rollup → admin snapshot | `lake/snapshots/` |
+| `etl-materialize-insights.yml` | Gold → LLM insights | `lake/snapshots/insights/` |
 
 ## 🔍 Probe (12) — silent-failure detectors
 

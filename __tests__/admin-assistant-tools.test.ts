@@ -1,17 +1,31 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-const { searchPagesMock, listRecentCheckoutSessionsMock, notifyTeamMock } = vi.hoisted(() => ({
-  searchPagesMock: vi.fn(),
-  listRecentCheckoutSessionsMock: vi.fn(),
+const {
+  retrieveAdminRagContextMock,
+  getSeoFromLakeMock,
+  getGoldSectionMock,
+  getInsightMock,
+  listInsightDomainsMock,
+  notifyTeamMock,
+} = vi.hoisted(() => ({
+  retrieveAdminRagContextMock: vi.fn(),
+  getSeoFromLakeMock: vi.fn(),
+  getGoldSectionMock: vi.fn(),
+  getInsightMock: vi.fn(),
+  listInsightDomainsMock: vi.fn(),
   notifyTeamMock: vi.fn(),
 }));
 
-vi.mock("@/lib/notion-search", () => ({
-  searchPages: (...args: unknown[]) => searchPagesMock(...args),
+vi.mock("@/lib/admin-rag", () => ({
+  retrieveAdminRagContext: (...args: unknown[]) => retrieveAdminRagContextMock(...args),
 }));
 
-vi.mock("@/lib/stripe", () => ({
-  listRecentCheckoutSessions: (...args: unknown[]) => listRecentCheckoutSessionsMock(...args),
+vi.mock("@/lib/datalake-serve", () => ({
+  getSeoFromLake: (...args: unknown[]) => getSeoFromLakeMock(...args),
+  getGoldSection: (...args: unknown[]) => getGoldSectionMock(...args),
+  getInsight: (...args: unknown[]) => getInsightMock(...args),
+  getInsightsIndex: vi.fn(async () => ({ generated_at: "", domains: [] })),
+  listInsightDomains: (...args: unknown[]) => listInsightDomainsMock(...args),
 }));
 
 vi.mock("@/lib/email", () => ({
@@ -22,15 +36,26 @@ import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
 
 describe("admin-assistant-tools", () => {
   beforeEach(() => {
-    searchPagesMock.mockReset();
-    listRecentCheckoutSessionsMock.mockReset();
+    retrieveAdminRagContextMock.mockReset();
+    getSeoFromLakeMock.mockReset();
+    getGoldSectionMock.mockReset();
+    getInsightMock.mockReset();
+    listInsightDomainsMock.mockReset();
     notifyTeamMock.mockReset();
+    listInsightDomainsMock.mockResolvedValue({ generated_at: "", domains: [] });
+    getSeoFromLakeMock.mockResolvedValue({ keywords: [], snapshot: {}, fetchedAt: "", source: "datalake-gold" });
   });
 
   describe("ASSISTANT_TOOLS registry", () => {
-    it("exposes the 3 expected tools by name", () => {
+    it("exposes lake-backed tools by name", () => {
       const names = ASSISTANT_TOOLS.map((t) => t.name);
-      expect(names).toEqual(["search_notion", "get_recent_orders", "draft_email"]);
+      expect(names).toEqual([
+        "search_notion",
+        "get_datalake_section",
+        "get_lake_insight",
+        "get_recent_orders",
+        "draft_email",
+      ]);
     });
 
     it("every tool has Anthropic-shaped input_schema", () => {
@@ -52,105 +77,61 @@ describe("admin-assistant-tools", () => {
     });
   });
 
-  describe("runAssistantTool — search_notion", () => {
-    it("formats results as markdown bullets", async () => {
-      searchPagesMock.mockResolvedValueOnce({
-        results: [
-          {
-            title: "Q4 OKRs",
-            url: "https://notion.so/q4",
-            type: "page",
-            lastEditedTime: "2026-01-15T10:00:00Z",
-          },
-          {
-            title: "",
-            url: "https://notion.so/untitled",
-            type: "database",
-            lastEditedTime: "2026-01-20T10:00:00Z",
-          },
-        ],
-      });
+  describe("runAssistantTool — search_notion (lake RAG)", () => {
+    it("formats RAG context as bullets", async () => {
+      retrieveAdminRagContextMock.mockResolvedValueOnce(
+        "[1] (appflowy) Q4 OKRs\nGoals text\n\n[2] (appflowy) Untitled\nMore"
+      );
       const out = await runAssistantTool("search_notion", { query: "Q4" });
-      expect(out).toContain("[Q4 OKRs](https://notion.so/q4)");
-      expect(out).toContain("(untitled)");
-      expect(out).toContain("page");
-      expect(out).toContain("database");
+      expect(out).toContain("Q4 OKRs");
+      expect(out).toContain("Untitled");
     });
 
     it("returns a friendly message when no results", async () => {
-      searchPagesMock.mockResolvedValueOnce({ results: [] });
+      retrieveAdminRagContextMock.mockResolvedValueOnce("");
+      getSeoFromLakeMock.mockResolvedValueOnce({ keywords: [], fetchedAt: "", source: "datalake-gold", snapshot: {} });
       const out = await runAssistantTool("search_notion", { query: "nothing" });
-      expect(out).toMatch(/no notion pages found/i);
+      expect(out).toMatch(/no lake docs found/i);
     });
 
-    it("clamps limit at 20", async () => {
-      searchPagesMock.mockResolvedValueOnce({ results: [] });
-      await runAssistantTool("search_notion", { query: "x", limit: 100 });
-      expect(searchPagesMock).toHaveBeenCalledWith("x", { limit: 20 });
-    });
-
-    it("defaults limit to 8 when omitted", async () => {
-      searchPagesMock.mockResolvedValueOnce({ results: [] });
-      await runAssistantTool("search_notion", { query: "x" });
-      expect(searchPagesMock).toHaveBeenCalledWith("x", { limit: 8 });
+    it("falls back to gold keywords", async () => {
+      retrieveAdminRagContextMock.mockResolvedValueOnce("");
+      getSeoFromLakeMock.mockResolvedValueOnce({
+        keywords: [{ query: "cloud hosting", clicks: 10, impressions: 100, ctr: 0.1, position: 3 }],
+        fetchedAt: "",
+        source: "datalake-gold",
+        snapshot: {},
+      });
+      const out = await runAssistantTool("search_notion", { query: "cloud" });
+      expect(out).toContain("cloud hosting");
     });
 
     it("returns the error message instead of throwing", async () => {
-      searchPagesMock.mockRejectedValueOnce(new Error("Notion 401"));
+      retrieveAdminRagContextMock.mockRejectedValueOnce(new Error("Vectorize 401"));
       const out = await runAssistantTool("search_notion", { query: "x" });
-      expect(out).toMatch(/search_notion error.*Notion 401/);
+      expect(out).toMatch(/search_notion error.*Vectorize 401/);
     });
   });
 
-  describe("runAssistantTool — get_recent_orders", () => {
-    it("formats orders as bullet lines with amount/status/date", async () => {
-      listRecentCheckoutSessionsMock.mockResolvedValueOnce({
-        orders: [
-          {
-            email: "alice@example.com",
-            amount: 12500,
-            currency: "EUR",
-            paymentStatus: "paid",
-            created: 1_700_000_000,
-          },
-        ],
+  describe("runAssistantTool — get_recent_orders (gold)", () => {
+    it("formats gold revenue rows", async () => {
+      getGoldSectionMock.mockResolvedValueOnce({
+        section: "stripe_revenue",
+        rows: [{ day: "2026-08-01", revenue: 125, count: 2 }],
+        rowCount: 1,
       });
       const out = await runAssistantTool("get_recent_orders", {});
-      expect(out).toContain("alice@example.com");
+      expect(out).toContain("2026-08-01");
       expect(out).toContain("EUR 125.00");
-      expect(out).toContain("paid");
     });
 
-    it("falls back to 'unknown' when no email", async () => {
-      listRecentCheckoutSessionsMock.mockResolvedValueOnce({
-        orders: [
-          {
-            email: null,
-            amount: 100,
-            currency: "EUR",
-            paymentStatus: "open",
-            created: 1_700_000_000,
-          },
-        ],
+    it("returns a friendly message when gold missing", async () => {
+      getGoldSectionMock.mockResolvedValueOnce({
+        section: "stripe_revenue",
+        error: "not available",
       });
-      const out = await runAssistantTool("get_recent_orders", {});
-      expect(out).toContain("unknown");
-    });
-
-    it("returns a friendly message when no orders", async () => {
-      listRecentCheckoutSessionsMock.mockResolvedValueOnce({ orders: [] });
       const out = await runAssistantTool("get_recent_orders", {});
       expect(out).toMatch(/no recent orders/i);
-    });
-
-    it("clamps limit at 20 and defaults to 5", async () => {
-      listRecentCheckoutSessionsMock.mockResolvedValueOnce({ orders: [] });
-      await runAssistantTool("get_recent_orders", { limit: 999 });
-      expect(listRecentCheckoutSessionsMock).toHaveBeenCalledWith(20);
-
-      listRecentCheckoutSessionsMock.mockResolvedValueOnce({ orders: [] });
-      await runAssistantTool("get_recent_orders", {});
-      expect(listRecentCheckoutSessionsMock).toHaveBeenLastCalledWith(5);
     });
   });
 

@@ -22,7 +22,6 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
-    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
       return { ...plainUser, email, sub: `user-${email}` };
@@ -59,17 +58,12 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     },
   };
 });
+
 const ANALYTICS_URL = "http://localhost/api/admin/analytics/unified";
 const ALG_RS256 = "RS256";
-const ENC_BASE64URL = "base64url";
 
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { mockGetConfig, mockIsHubSpot, mockIsAC } = vi.hoisted(() => ({
-  mockGetConfig: vi.fn(),
-  mockIsHubSpot: vi.fn(),
-  mockIsAC: vi.fn(),
+const { mockGetUnifiedFromLake } = vi.hoisted(() => ({
+  mockGetUnifiedFromLake: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -86,54 +80,10 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
-
-vi.mock("@/lib/gsc", () => ({
-  getSeoSnapshot: vi.fn().mockResolvedValue({
-    clicks: 400,
-    impressions: 8000,
-    ctr: 0.05,
-    avgPosition: 12,
-  }),
+vi.mock("@/lib/datalake-serve", () => ({
+  getUnifiedFromLake: (...a: unknown[]) => mockGetUnifiedFromLake(...a),
 }));
 
-vi.mock("@/lib/espocrm", () => ({
-  isEspoCRMConfigured: mockIsHubSpot,
-  getPipelineStats: vi.fn().mockResolvedValue({
-    totalDeals: 5,
-    totalValue: 150000,
-    stages: {},
-  }),
-}));
-
-vi.mock("@/lib/activecampaign", () => ({
-  isActiveCampaignConfigured: mockIsAC,
-  getEmailStats: vi.fn().mockResolvedValue({
-    totalContacts: 200,
-    totalCampaigns: 3,
-    openRate: 0.25,
-    clickRate: 0.1,
-  }),
-}));
-
-vi.mock("@/lib/stripe", () => ({
-  getStripe: vi.fn().mockResolvedValue({
-    checkout: {
-      sessions: {
-        list: vi.fn().mockResolvedValue({
-          data: [
-            { payment_status: "paid", amount_total: 4900 },
-            { payment_status: "unpaid", amount_total: 0 },
-          ],
-        }),
-      },
-    },
-  }),
-}));
-
-// ---------------------------------------------------------------------------
-// JWT helpers
-// ---------------------------------------------------------------------------
 function makeAdminToken(): string {
   return "test-admin-session";
 }
@@ -150,55 +100,72 @@ function userReq(url: string): NextRequest {
   return new NextRequest(url, { headers: { Authorization: `Bearer ${makeUserToken()}` } });
 }
 
-const BASE_CFG = {
-  STRIPE_SECRET_KEY: "sk_test_x",
-  GOOGLE_CLIENT_EMAIL: "svc@test.iam",
-  GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-  NOTION_API_KEY: "",
-  NOTION_PROJECTS_DB_ID: "",
+const SAMPLE_UNIFIED = {
+  days: 28,
+  fetchedAt: "2026-08-13T12:00:00.000Z",
+  source: "datalake-gold",
+  lakeSource: "r2",
+  seo: { clicks: 400, impressions: 8000, ctr: 0.05, position: 12, days: 28 },
+  keywords: [{ query: "cloudless", clicks: 40 }],
+  pipeline: { stages: [{ stage: "Qualified", count: 3 }], rowCount: 1 },
+  email: null,
+  stripe: {
+    totalOrders: 2,
+    revenue: 150,
+    activeSubscriptions: null,
+    mrr: null,
+    rows: [{ day: "2026-08-01", revenue: 150 }],
+  },
+  attribution: [{ channel: "organic", sessions: 10 }],
+  sectionsMissing: [],
 };
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/analytics/unified", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue(BASE_CFG);
-    mockIsHubSpot.mockResolvedValue(true);
-    mockIsAC.mockResolvedValue(true);
+    mockGetUnifiedFromLake.mockResolvedValue(SAMPLE_UNIFIED);
   });
 
   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(new NextRequest(ANALYTICS_URL));
     expect(res.status).toBe(401);
+    expect(mockGetUnifiedFromLake).not.toHaveBeenCalled();
   });
 
   it("returns 403 for non-admin user", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(userReq(ANALYTICS_URL));
     expect(res.status).toBe(403);
+    expect(mockGetUnifiedFromLake).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with all sources when all configured", async () => {
+  it("returns 200 with lake-composed sources", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
+    expect(mockGetUnifiedFromLake).toHaveBeenCalledWith(28);
+    expect(data.source).toBe("datalake-gold");
     expect(data).toHaveProperty("stripe");
     expect(data).toHaveProperty("seo");
     expect(data).toHaveProperty("pipeline");
     expect(data).toHaveProperty("email");
+    expect(data).toHaveProperty("attribution");
+    expect(data).toHaveProperty("keywords");
+    expect(data).toHaveProperty("sectionsMissing");
     expect(typeof data.fetchedAt).toBe("string");
+    expect(data._filters).toEqual({ days: 28 });
   });
 
-  it("returns null seo when GSC not configured", async () => {
-    mockGetConfig.mockResolvedValue({
-      ...BASE_CFG,
-      GOOGLE_CLIENT_EMAIL: "",
-      GOOGLE_PRIVATE_KEY: "",
-    });
+  it("passes days query to getUnifiedFromLake", async () => {
+    const { GET } = await import("@/app/api/admin/analytics/unified/route");
+    await GET(adminReq(`${ANALYTICS_URL}?days=14`));
+    expect(mockGetUnifiedFromLake).toHaveBeenCalledWith(14);
+  });
+
+  it("surfaces null seo from the lake payload", async () => {
+    mockGetUnifiedFromLake.mockResolvedValue({ ...SAMPLE_UNIFIED, seo: null });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);
@@ -206,24 +173,23 @@ describe("GET /api/admin/analytics/unified", () => {
     expect(data.seo).toBeNull();
   });
 
-  it("returns null pipeline when EspoCRM not configured", async () => {
-    mockIsHubSpot.mockResolvedValue(false);
+  it("surfaces null pipeline from the lake payload", async () => {
+    mockGetUnifiedFromLake.mockResolvedValue({ ...SAMPLE_UNIFIED, pipeline: null });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.pipeline).toBeNull();
   });
 
-  it("returns null email when ActiveCampaign not configured", async () => {
-    mockIsAC.mockResolvedValue(false);
+  it("keeps email null (not in gold yet)", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.email).toBeNull();
   });
 
-  it("returns null stripe when not configured", async () => {
-    mockGetConfig.mockResolvedValue({ ...BASE_CFG, STRIPE_SECRET_KEY: "" });
+  it("surfaces null stripe from the lake payload", async () => {
+    mockGetUnifiedFromLake.mockResolvedValue({ ...SAMPLE_UNIFIED, stripe: null });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();

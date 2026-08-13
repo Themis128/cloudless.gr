@@ -1,6 +1,12 @@
-import { listRecentCheckoutSessions } from "@/lib/stripe";
 import { notifyTeam } from "@/lib/email";
-import { searchPages } from "@/lib/notion-search";
+import {
+  getGoldSection,
+  getInsight,
+  getInsightsIndex,
+  getSeoFromLake,
+  listInsightDomains,
+} from "@/lib/datalake-serve";
+import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
 export interface AnthropicTool {
   name: string;
@@ -12,11 +18,16 @@ export interface AnthropicTool {
   };
 }
 
+/**
+ * Tool names keep legacy identifiers (search_notion / get_recent_orders) for
+ * prompt compatibility; implementations are lake / Vectorize only — no live
+ * Notion or Stripe API calls.
+ */
 export const ASSISTANT_TOOLS: AnthropicTool[] = [
   {
     name: "search_notion",
     description:
-      "Search Notion workspace pages and databases. Returns page titles, URLs, and last-edited dates. Use this to find projects, tasks, documentation, or any Notion content.",
+      "Search lake-synced CMS docs via Vectorize RAG (AppFlowy). Falls back to gold SEO keywords. Not live Notion.",
     input_schema: {
       type: "object",
       properties: {
@@ -30,15 +41,42 @@ export const ASSISTANT_TOOLS: AnthropicTool[] = [
     },
   },
   {
+    name: "get_datalake_section",
+    description:
+      "Read a gold datalake section (stripe_revenue, top_keywords, linkedin_ads, espocrm_funnel, top_errors, etc.).",
+    input_schema: {
+      type: "object",
+      properties: {
+        section: {
+          type: "string",
+          description: "Gold section name from admin-datalake.json",
+        },
+      },
+      required: ["section"],
+    },
+  },
+  {
+    name: "get_lake_insight",
+    description:
+      "Read a materialized LLM insight: seo, revenue, crm_funnel, ads, ops_errors, executive, orchestration.",
+    input_schema: {
+      type: "object",
+      properties: {
+        domain: { type: "string", description: "Insight domain" },
+      },
+      required: ["domain"],
+    },
+  },
+  {
     name: "get_recent_orders",
     description:
-      "Fetch recent Stripe checkout sessions. Returns customer email, order amount, currency, and payment status.",
+      "Summarize revenue rows from datalake gold stripe_revenue (not the live Stripe API).",
     input_schema: {
       type: "object",
       properties: {
         limit: {
           type: "number",
-          description: "Number of orders to return (default 5, max 20)",
+          description: "Number of gold rows to return (default 5, max 20)",
         },
       },
     },
@@ -67,30 +105,83 @@ export async function runAssistantTool(
   input: Record<string, unknown>
 ): Promise<string> {
   try {
-    if (name === "search_notion") {
+    if (name === "search_notion" || name === "search_lake_docs") {
       const query = String(input.query ?? "");
       const limit = Math.min(Number(input.limit ?? 8), 20);
-      const { results } = await searchPages(query, { limit });
-      if (!results.length) return "No Notion pages found for that query.";
-      return results
-        .map(
-          (r) =>
-            `• [${r.title || "(untitled)"}](${r.url}) — ${r.type}, last edited ${new Date(r.lastEditedTime).toLocaleDateString("en-GB", { timeZone: "Europe/Athens" })}`
-        )
+      const rag = await retrieveAdminRagContext(query);
+      if (rag.trim()) {
+        return rag
+          .split("\n\n")
+          .slice(0, limit)
+          .map((block) => `• ${block.replace(/\n/g, " — ").slice(0, 400)}`)
+          .join("\n");
+      }
+      const seo = await getSeoFromLake(28);
+      const matched = seo.keywords
+        .filter((k) => k.query.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, limit);
+      if (!matched.length) {
+        const index = await listInsightDomains();
+        return `No lake docs found for that query. Insight domains: ${
+          index.domains.map((d) => d.domain).join(", ") ||
+          "(none — run materialize-datalake-insights)"
+        }`;
+      }
+      return matched
+        .map((k) => `• keyword "${k.query}" — clicks ${k.clicks}, impressions ${k.impressions}`)
         .join("\n");
+    }
+
+    if (name === "get_datalake_section") {
+      const section = String(input.section ?? "");
+      const result = await getGoldSection(section);
+      if (!result) return `Section "${section}" not found in gold snapshot.`;
+      if (result.error) return `Section "${section}" error: ${result.error}`;
+      return JSON.stringify(
+        {
+          section: result.section,
+          rowCount: result.rowCount,
+          rows: (result.rows ?? []).slice(0, 15),
+        },
+        null,
+        2
+      );
+    }
+
+    if (name === "get_lake_insight") {
+      const domain = String(input.domain ?? "");
+      const insight = await getInsight(domain);
+      if (!insight) {
+        const index = await getInsightsIndex();
+        return `Insight "${domain}" missing. Index: ${JSON.stringify(index?.domains ?? [])}`;
+      }
+      return JSON.stringify(
+        {
+          domain: insight.domain,
+          summary: insight.summary,
+          bullets: insight.bullets,
+          generated_at: insight.generated_at,
+          error: insight.error,
+        },
+        null,
+        2
+      );
     }
 
     if (name === "get_recent_orders") {
       const limit = Math.min(Number(input.limit ?? 5), 20);
-      const { orders } = await listRecentCheckoutSessions(limit);
-      if (!orders.length) return "No recent orders found (Stripe may not be configured).";
-      return orders
-        .map((o) => {
-          const amount = `${o.currency} ${(o.amount / 100).toFixed(2)}`;
-          const date = new Date(o.created * 1000).toLocaleDateString("en-GB", {
-            timeZone: "Europe/Athens",
-          });
-          return `• ${o.email ?? "unknown"} — ${amount} — ${o.paymentStatus} — ${date}`;
+      const section = await getGoldSection("stripe_revenue");
+      if (!section || section.error) {
+        return `No recent orders found (stripe_revenue gold ${section?.error ?? "missing"}).`;
+      }
+      const rows = (section.rows ?? []).slice(0, limit);
+      if (!rows.length) return "No recent orders found (stripe_revenue gold empty).";
+      return rows
+        .map((r) => {
+          const day = r.day ?? r.date ?? r.period ?? "unknown";
+          const amount = Number(r.revenue ?? r.amount) || 0;
+          const count = r.count ?? r.orders ?? r.events ?? "";
+          return `• ${day} — EUR ${amount.toFixed(2)} — events ${count}`;
         })
         .join("\n");
     }
