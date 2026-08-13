@@ -40,6 +40,9 @@ jobs:
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+        # Preferred (SO #74131595): base64(entire service-account JSON)
+        GOOGLE_SERVICE_ACCOUNT_JSON_B64: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON_B64 }}
+        # Fallback: split email + PEM (often corrupted in GH secrets)
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
