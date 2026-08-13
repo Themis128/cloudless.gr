@@ -85,7 +85,7 @@ async function main() {
 		token = await getAccessToken();
 	} catch (err) {
 		await writeEmptyAndExit(
-			`auth/key failed (${String(err?.message ?? err).slice(0, 160)}). Fix GOOGLE_PRIVATE_KEY PEM secret.`
+			`auth/key failed (${String(err?.message ?? err).slice(0, 200)}). Prefer GOOGLE_SERVICE_ACCOUNT_JSON_B64.`
 		);
 	}
 

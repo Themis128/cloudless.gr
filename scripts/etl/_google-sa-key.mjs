@@ -103,21 +103,25 @@ export function normalizeGooglePrivateKeyPem(raw) {
 
 	key = unescapeNewlines(key);
 
-	// Secret sometimes stored as base64(PEM) or raw PKCS#8 DER base64 (no headers)
+	// Headers glued after secret stores strip spaces/newlines
+	if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key) && /BEGIN.*PRIVATE.?KEY/i.test(key)) {
+		key = repairGluedPemHeaders(key);
+	}
+
+	// Secret sometimes stored as base64(PEM) or base64(SA JSON)
 	if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key)) {
 		const compact = key.replace(/\s+/g, "");
 		if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 80) {
 			try {
 				const decoded = Buffer.from(compact, "base64").toString("utf8").trim();
-				if (/-----BEGIN (RSA )?PRIVATE KEY-----/.test(decoded)) {
-					key = decoded
-						.replace(/\\\\n/g, "\n")
-						.replace(/\\n/g, "\n")
-						.replace(/\r\n/g, "\n")
-						.replace(/\r/g, "\n")
-						.trim();
+				if (decoded.startsWith("{")) {
+					const parsed = JSON.parse(decoded);
+					key = unescapeNewlines(String(parsed.private_key ?? ""));
+				} else if (/-----BEGIN (RSA )?PRIVATE KEY-----/.test(decoded)) {
+					key = unescapeNewlines(decoded);
+				} else if (/BEGIN.*PRIVATE.?KEY/i.test(decoded)) {
+					key = repairGluedPemHeaders(unescapeNewlines(decoded));
 				} else {
-					// Treat as DER → wrap as PKCS#8 PEM
 					const lines = compact.match(/.{1,64}/g) ?? [compact];
 					key = `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
 				}
