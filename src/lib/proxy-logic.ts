@@ -59,8 +59,10 @@ const ADMIN_RATE_LIMIT = {
     limit: IS_DEV ? 1000 : 50,
     window: 10,
   },
+  // Authenticated admin dashboards fan out many GETs (SEO alone = 6).
+  // 100/10s was starving /api/admin/analytics/* during normal browsing.
   auth: {
-    limit: IS_DEV ? 2000 : 100,
+    limit: IS_DEV ? 2000 : 300,
     window: 10,
   },
 };

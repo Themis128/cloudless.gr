@@ -142,6 +142,9 @@ export default function DatalakeDashboardPage() {
       const res = await fetchWithAuth(
         `/api/admin/analytics/datalake${refresh ? "?refresh=1" : ""}`
       );
+      if (res.status === 429) {
+        throw new Error("Too many admin requests — wait a few seconds and retry.");
+      }
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const body = (await res.json()) as DatalakeResponse;
       setData(body);
