@@ -36,6 +36,12 @@ jobs:
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
 
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
     - name: Run AppFlowy-to-R2 sync
       working-directory: scripts/etl
       env:
