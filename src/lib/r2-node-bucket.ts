@@ -21,7 +21,9 @@ function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return ab;
 }
 
-function toBodyInit(body: ArrayBuffer | ArrayBufferView | string | Blob | ReadableStream): BodyInit {
+function toBodyInit(
+  body: ArrayBuffer | ArrayBufferView | string | Blob | ReadableStream
+): BodyInit {
   if (typeof body === "string") return body;
   if (body instanceof Blob) return body;
   if (typeof ReadableStream !== "undefined" && body instanceof ReadableStream) return body;
@@ -114,7 +116,9 @@ export function resolveDataLakeBucketName(): string {
 }
 
 /** Minimal R2Bucket backed by the S3-compatible R2 API. */
-export function createNodeDataLakeBucket(bucketName = resolveDataLakeBucketName()): R2Bucket | null {
+export function createNodeDataLakeBucket(
+  bucketName = resolveDataLakeBucketName()
+): R2Bucket | null {
   if (!hasR2S3Credentials()) return null;
 
   const client = createR2ClientFromEnv();
