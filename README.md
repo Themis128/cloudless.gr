@@ -451,17 +451,23 @@ The visual identity uses a navy/electric-blue/cyan palette with Instrument Sans 
 
 ## CI/CD
 
-GitHub Actions workflows in `.github/workflows/`:
+GitHub Actions workflows in `.github/workflows/` (high-signal ones):
 
-- **deploy.yml** — Builds and deploys to Cloudflare Workers on push to `main`
-- **cloudflare-deploy.yml** — Deploys Worker via Wrangler
-- **lighthouse.yml** — Runs Lighthouse audits on PRs against key pages
+- **deploy-pi.yml** — Builds the arm64 Next.js image on a Pi runner and rolls out `cloudless-app` on k3s (primary production path)
+- **cloudflare-deploy.yml** — Deploys the tiny `cloudless2` reverse-proxy Worker + Tunnel ingress (`pi-origin`)
+- **lighthouse.yml** / Core Web Vitals audits — route-level Lighthouse against the Pi NodePort
 - **pr-labeler.yml** — Auto-labels PRs by size and file paths
 - **stale.yml** — Marks and closes stale issues/PRs
 
 ## Deployment
 
-The app deploys to **Cloudflare Workers** via Wrangler. The deployment workflow handles build and deploy automatically on push to `main`. Secrets are managed via Wrangler secrets and D1 `app_config`.
+**Production edge** is Cloudflare as a reverse proxy only:
+
+`browser → cloudless.gr → Worker cloudless2 (workers/pi-origin-proxy) → pi-origin Tunnel → k3s cloudless-app on omv`
+
+- App code ships via **`deploy-pi.yml`** on every push to `main`. Runtime secrets live on the Pi pod / D1 — not on the proxy Worker.
+- Direct origin for debugging/crons: `https://pi-origin.cloudless.gr`.
+- Full **OpenNext** SSR on Workers Free is blocked by the ~3 MiB gzip script limit (`opennext.config.ts` / `sst-infra-deploy.yml`). Do not treat OpenNext as the live path unless you explicitly run `cloudflare-deploy.yml` with `try_opennext=true` for experiments.
 
 ## Git Line Endings
 
