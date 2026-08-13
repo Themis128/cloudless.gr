@@ -53,11 +53,15 @@ pnpm db:sqlite:pull      # n8n / Kuma / Grafana → .local/db/
 pnpm db:d1:pull          # Cloudflare D1 → .local/db/*.sqlite
 pnpm db:refresh-snapshots # sqlite + d1 (avoid stale SQLTools views)
 pnpm db:forward:stop
+pnpm db:backup:test list|minio|kuma   # CronJob NS = workload NS
+CONFIRM=1 pnpm d1:retire:cloudless-auth  # idempotent orphan D1 guard
 ```
 
 After `pnpm db:ready`, open the **SQLTools** sidebar in Cursor (not SQL Server), connect a profile under `omv` / `omv-sqlite` / `cloudflare-d1`, and paste the matching password from `pnpm db:passwords` when prompted. Reload the Cursor window once if connections do not appear after pulling this branch.
 
-Orphan D1 `cloudless-auth` and KV `HEALTH_CACHE` were deleted 2026-07-30. `pnpm d1:retire:cloudless-auth` remains an idempotent guard only.
+Gap closure (MinIO/Kuma R2, D1 retire, accepted non-HA) is tabulated in
+[landscape.md](landscape.md#gap-status-post-pr-1451). Orphan D1 `cloudless-auth`
+and KV `HEALTH_CACHE` were deleted 2026-07-30.
 
 Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.  
 SQLTools config: `.vscode/settings.json` (`sqltools.connections`).  

@@ -31,5 +31,5 @@ Port-forwards die on sleep (`pnpm db:ready`). Snapshots require refresh. Passwor
 
 ## Related
 
-- [landscape.md](landscape.md) · [omv-cluster.md](omv-cluster.md) · [README.md](../cloudflare/README.md)
+- [landscape.md](landscape.md) · [omv-cluster.md](omv-cluster.md) · [README.md](README.md)
 - [infrastructure/backup/README.md](../../infrastructure/backup/README.md)
