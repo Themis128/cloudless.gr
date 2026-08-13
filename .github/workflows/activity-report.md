@@ -11,10 +11,10 @@ permissions:
   actions: read
 strict: false
 engine: gemini
-# flash-lite: separate Free-tier RPD bucket from gemini-2.5-flash (20 RPD).
-# Activity Report #41 failed with TerminalQuotaError on 2.5-flash after other
-# gh-aw workflows exhausted that shared project quota.
-model: gemini-2.5-flash-lite
+# Activity Report #41/#43: Free-tier gemini-2.5-flash is ~20 RPD and is shared
+# across the Google Cloud project. gemini-cli also steered flash-lite requests
+# onto 2.5-flash (same bucket). Use 2.0-flash (separate Free-tier RPD).
+model: gemini-2.0-flash
 models:
   default-ai-credits-pricing:
     input: 0.10
@@ -25,9 +25,12 @@ tools:
   bash: true
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-# Prefer continue-on-error once gh-aw ≥0.85 applies jobs.agent.continue-on-error
-# to the built-in agent job; v0.83.4 compiles the field away. Model switch below
-# is the durable Free-tier fix.
+# Do not fail the workflow when Gemini quota is exhausted mid-run.
+# jobs.agent.continue-on-error is also pinned in the compiled lock.yml
+# (gh-aw currently omits it from built-in agent emission).
+jobs:
+  agent:
+    continue-on-error: true
 safe-outputs:
   report-failure-as-issue: false
   noop:
