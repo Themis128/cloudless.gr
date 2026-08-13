@@ -65,8 +65,9 @@ export default function MetaPage() {
             Meta Ads is not configured. Add{" "}
             <code className="text-yellow-300">META_ACCESS_TOKEN</code> and{" "}
             <code className="text-yellow-300">META_AD_ACCOUNT_ID</code> to the Pi{" "}
-            <code className="text-yellow-300">cloudless-secrets</code> (workflow:
-            sync-campaign-ads-pi-secrets).
+            <code className="text-yellow-300">cloudless-secrets</code> via workflow
+            sync-campaign-ads-from-ssm (SSM{" "}
+            <code className="text-yellow-300">/cloudless/production/*</code>).
           </p>
         </div>
       </div>

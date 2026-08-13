@@ -190,8 +190,9 @@ function NotConfiguredBanner({
               {i < keys.length - 1 ? " and " : ""}
             </span>
           ))}{" "}
-          to the Pi <code className="text-yellow-300">cloudless-secrets</code> (workflow:
-          sync-campaign-ads-pi-secrets).
+          to the Pi <code className="text-yellow-300">cloudless-secrets</code> via
+          sync-campaign-ads-from-ssm (SSM{" "}
+          <code className="text-yellow-300">/cloudless/production/*</code>).
         </p>
       </div>
     </div>
