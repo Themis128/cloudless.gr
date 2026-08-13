@@ -15,7 +15,7 @@
     "learnMore": "Mehr erfahren",
     "getStarted": "Loslegen",
     "viewAll": "Alle anzeigen",
-    "theme": "Design",
+    "theme": "Theme",
     "themeSystem": "System",
     "themeLight": "Hell",
     "themeDark": "Dunkel"
@@ -26,7 +26,7 @@
     "blog": "Blog",
     "contact": "Kontakt",
     "store": "Shop",
-    "freeAudit": "Kostenloses Audit",
+    "freeAudit": "Kostenloses Audit buchen",
     "toggleMenu": "Menü ein-/ausblenden",
     "language": "Sprache",
     "signIn": "Anmelden",
@@ -46,7 +46,7 @@
     ],
     "subtitle": "Enterprise-Cloud? Zu teuer. DIY-Infrastruktur? Zu riskant. Wir sind der dritte Weg — serverless, datengetrieben und skalierbar für Teams von 2 bis 20 Personen.",
     "subtitleHighlight": "Endlich.",
-    "ctaPrimary": "Kostenloses Audit",
+    "ctaPrimary": "Kostenloses Audit buchen",
     "ctaSecondary": "Leistungen ansehen",
     "microCopy1": "Keine Verpflichtung. Umsetzbare Erkenntnisse in 30 Min.",
     "microCopy2": "Transparente Preise. Kein Lock-in.",
@@ -64,18 +64,18 @@
     "noLockInTitle": "Keine Laufzeitverträge",
     "noLockInDesc": "Monat für Monat. Jederzeit kündbar. Wir verdienen Ihr Vertrauen jeden Monat neu.",
     "yourCodeTitle": "Ihr Code gehört Ihnen",
-    "yourCodeDesc": "Vollständige Dokumentation, übergabebereit. Wir entwickeln es, aber Sie besitzen es — immer."
+    "yourCodeDesc": "Vollständige Dokumentation, übergabebereit. Wir entwickeln ihn, aber Sie besitzen ihn — immer."
   },
   "credibility": {
-    "builtBy": "Entwickelt von Themistokles Baltzakis",
-    "bio": "— Cloudflare Certified Cloud Architect mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
+    "builtBy": "Entwickelt von Themistoklis Baltzakis",
+    "bio": "— Zertifizierter Cloud-Architekt (Cloudflare) mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
     "badgeAws": "Cloudflare-zertifiziert",
     "badgeOss": "Open-Source-Contributor",
     "badgeCapacity": "Noch 5 Plätze frei für Q2 2026"
   },
   "servicesSection": {
     "label": "[ UNSERE LEISTUNGEN ]",
-    "title": "Alles, was Sie zum",
+    "title": "Alles, was Sie brauchen zum",
     "titleHighlight": "Skalieren",
     "subtitle": "Von Infrastruktur bis Marketing — wir decken den gesamten Stack modernen Unternehmenswachstums ab.",
     "viewPricing": "Preise & Details anzeigen",
@@ -86,7 +86,7 @@
     "service2Title": "Serverlose Entwicklung",
     "service2Desc": "Ereignisgesteuerte Anwendungen, die automatisch skalieren und im Leerlauf nichts kosten. Workers, D1, R2.",
     "service2Tag": "SERVERLESS",
-    "service2For": "Für Gründer, die es leid sind, für Server zu bezahlen, die 90 % der Zeit idle sind.",
+    "service2For": "Für Gründer, die es leid sind, für Server zu bezahlen, die 90 % der Zeit im Leerlauf sind.",
     "service3Title": "Datenanalyse & Dashboards",
     "service3Desc": "Rohdaten in umsetzbare Erkenntnisse verwandeln — mit individuellen Dashboards, Pipelines und Echtzeit-Reporting.",
     "service3Tag": "ANALYTICS",
@@ -107,7 +107,7 @@
     "titleHighlight": "Fragen",
     "q1": "Was kostet das wirklich?",
     "a1": "Einzelne Leistungen liegen zwischen €800 und €2.400 je nach Umfang. Das Gesamtpaket kostet €3.600/Monat. Zum Vergleich: Ein Cloud-Engineer im eigenen Team kostet €5K–€8K/Monat. CTO + Marketer + Data Analyst? €20K+/Monat. Wir ersetzen alle drei zu einem Bruchteil der Kosten — jederzeit kündbar.",
-    "q2": "Für wen ist das geeignet? Passe ich als Kunde?",
+    "q2": "Für wen ist das geeignet? Passt das zu mir?",
     "a2": "Wir arbeiten am besten mit Startups und KMUs, die über das MVP-Stadium hinaus sind — typischerweise Teams mit 2–20 Personen und €50K–€500K Umsatz. Sie haben ein funktionierendes Produkt, aber Ihre Infrastruktur ist improvisiert, Ihr Marketing basiert auf Vermutungen und Sie haben keinen CTO, der das behebt. Das kostenlose Audit zeigt Ihnen genau, was als Nächstes zu tun ist.",
     "q3": "Was, wenn ich aufhören möchte?",
     "a3": "Jederzeit kündbar. Monat für Monat, kein Lock-in, keine Ausstiegsgebühren. Ihr Code, Ihre Infrastruktur und Ihre Daten gehören immer Ihnen — vollständig dokumentiert und übergabebereit.",
@@ -120,16 +120,16 @@
   },
   "founder": {
     "label": "[ ÜBER UNS ]",
-    "title": "Lernen Sie den",
-    "titleHighlight": "Gründer kennen",
-    "name": "Themistokles Baltzakis",
+    "title": "Treffen Sie den",
+    "titleHighlight": "Gründer",
+    "name": "Themistoklis Baltzakis",
     "role": "Cloud-Architekt & Growth Engineer",
-    "bio": "Zertifizierter Cloud Architect mit praktischer Erfahrung in Cloudflare Workers, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
+    "bio": "Zertifizierter Cloud-Architekt mit praktischer Erfahrung in Cloudflare Workers, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
   },
   "cta": {
     "title": "Bereit,",
     "titleHighlight": "cloudless zu werden",
-    "subtitle": "Buchen Sie ein kostenloses 30-minütiges Audit. Wir überprüfen Ihr aktuelles Setup und zeigen Ihnen genau, wo Sie zu viel bezahlen, underperformen oder beides.",
+    "subtitle": "Buchen Sie ein kostenloses 30-minütiges Audit. Wir überprüfen Ihr aktuelles Setup und zeigen Ihnen genau, wo Sie zu viel bezahlen, hinter den Erwartungen zurückbleiben oder beides.",
     "subtext": "Kein Pitch. Keine Verpflichtung. Nur umsetzbare Erkenntnisse — auch wenn Sie nie wieder mit uns sprechen.",
     "ctaPrimary": "Kostenloses Audit buchen",
     "ctaSecondary": "Preise ansehen"
@@ -227,7 +227,7 @@
     "resetRequestDesc": "Wir senden einen Bestätigungscode an Ihre E-Mail",
     "resetCodeDesc": "Geben Sie den Code ein, der an {email} gesendet wurde",
     "sendingCode": "Code wird gesendet …",
-    "sendResetCode": "Reset-Code senden",
+    "sendResetCode": "Code zum Zurücksetzen senden",
     "resetting": "Wird zurückgesetzt …",
     "rememberPassword": "Passwort doch bekannt?"
   },
@@ -258,7 +258,7 @@
     "settingsCardDesc": "Design, Sprache und Benachrichtigungseinstellungen",
     "settingsDesc": "Verwalten Sie Ihre Einstellungen und Benachrichtigungen.",
     "appearance": "Erscheinungsbild",
-    "theme": "Design",
+    "theme": "Theme",
     "preferredLanguage": "Bevorzugte Sprache",
     "notifications": "Benachrichtigungen",
     "orderUpdates": "Bestellaktualisierungen",
@@ -286,7 +286,7 @@
     "privacyTitle": "Datenschutzerklärung",
     "privacyIntro": "Diese Datenschutzerklärung erläutert, wie Cloudless Ihre Daten erhebt, verwendet, offenlegt und schützt, wenn Sie cloudless.gr besuchen. Wir sind der DSGVO, der ePrivacy-Richtlinie und dem CCPA/CPRA verpflichtet.",
     "controllerTitle": "1. Verantwortlicher",
-    "controllerText": "Verantwortlicher für Ihre personenbezogenen Daten ist Cloudless, betrieben von Themistokles Baltzakis, Griechenland, EU. Datenschutzanfragen richten Sie bitte an:",
+    "controllerText": "Verantwortlicher für Ihre personenbezogenen Daten ist Cloudless, betrieben von Themistoklis Baltzakis, Griechenland, EU. Datenschutzanfragen richten Sie bitte an:",
     "controllerEmail": "E-Mail: tbaltzakis@cloudless.gr",
     "dataCollectedTitle": "2. Erhobene Informationen",
     "dataProvidedTitle": "Von Ihnen bereitgestellte Informationen:",
@@ -323,7 +323,7 @@
     "termsTitle": "Nutzungsbedingungen",
     "termsIntro": "Diese Nutzungsbedingungen regeln Ihren Zugang zu und die Nutzung von cloudless.gr und allen angebotenen Diensten.",
     "providerTitle": "1. Dienstanbieter",
-    "providerText": "Cloudless wird von Themistokles Baltzakis, Griechenland, EU betrieben. Kontakt: tbaltzakis@cloudless.gr.",
+    "providerText": "Cloudless wird von Themistoklis Baltzakis, Griechenland, EU betrieben. Kontakt: tbaltzakis@cloudless.gr.",
     "servicesTitle": "2. Leistungen & Produkte",
     "servicesText": "Wir bieten Cloud-Beratung, serverlose Entwicklung, Datenanalyse und KI-Marketing-Dienste an. Alle Preise sind in Euro (EUR) angegeben.",
     "ordersTitle": "3. Bestellungen & Zahlung",
@@ -402,7 +402,7 @@
     "learnMore": "Mehr über Cookies erfahren",
     "learnMoreLabel": "Mehr über unsere Cookie-Richtlinie erfahren",
     "acceptAll": "Alle akzeptieren",
-    "rejectAll": "Nur notwendige",
+    "rejectAll": "Optionale ablehnen",
     "customise": "Anpassen",
     "settingsTitle": "Cookie-Einstellungen",
     "settingsDesc": "Wählen Sie, welche Cookies Sie zulassen möchten. Notwendige Cookies können nicht deaktiviert werden.",
@@ -442,11 +442,11 @@
   },
   "meta": {
     "home": {
-      "title": "Cloudless — Cloud Computing, Serverless & AI-Marketing",
-      "description": "Klarer Himmel. Null Reibung. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalen Marketing."
+      "title": "Cloudless — Cloud Computing, Serverless & KI-Marketing",
+      "description": "Klarer Himmel. Kein Reibungsverlust. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalen Marketing."
     },
     "services": {
-      "title": "Dienstleistungen",
+      "title": "Leistungen",
       "description": "Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestützte Marketinglösungen für Startups und KMU."
     },
     "contact": {
