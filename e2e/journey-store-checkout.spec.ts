@@ -46,8 +46,8 @@ test.describe("Store checkout flow", () => {
     }
   });
 
-  test("/en/order-success renders confirmation heading", async ({ page }) => {
-    const r = await page.goto("/en/order-success");
+  test("/en/store/success renders confirmation heading", async ({ page }) => {
+    const r = await page.goto("/en/store/success");
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2").first()).toBeVisible();
   });

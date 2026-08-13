@@ -2,7 +2,19 @@
 
 cloudless.gr uses Stripe for one-time payments and recurring subscriptions. The integration covers checkout session creation, webhook event processing, order confirmation emails, and Slack notifications.
 
-> **Status:** Required for store functionality. The app throws if `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` are missing from SSM.
+> **Status (2026-08-13):** Live on Pi via `cloudless-secrets`. Requires
+> `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`.
+> `getStripe()` returns `null` (API routes answer **503**) when the secret key
+> is missing — it does not throw at import time.
+>
+> - **Store cart:** `POST /api/checkout` creates a Stripe Checkout Session and
+>   returns `{ url }` (anonymous carts allowed; optional auth pre-fills email).
+> - **Campaign paid tiers:** `GET /api/checkout?campaign=&tier=` 303-redirects
+>   to Stripe Checkout; `fit-call` still 302s to the contact form.
+> - **Webhooks:** `POST /api/webhooks/stripe` verifies signatures, sends order
+>   confirmation from `SES_FROM_EMAIL` (default `noreply@cloudless.gr`),
+>   `notifyTeam` → `SES_TO_EMAIL` (default `tbaltzakis@cloudless.gr`), and
+>   Slack `#orders`.
 
 ---
 

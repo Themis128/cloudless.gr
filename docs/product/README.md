@@ -6,4 +6,4 @@
 | [USE-CASES.md](USE-CASES.md) | `product/USE-CASES.md` |
 | [user-flow-simulation.md](user-flow-simulation.md) | `product/user-flow-simulation.md` |
 | [DEVDocs-ANALYSIS.md](DEVDocs-ANALYSIS.md) | `product/DEVDocs-ANALYSIS.md` |
-| [available-tooling-inventory.md](available-tooling-inventory.md) | `product/available-tooling-inventory.md` |
+| [PUBLIC-FORMS-AND-CHECKOUT.md](PUBLIC-FORMS-AND-CHECKOUT.md) | Forms → email/Slack + Stripe checkout |
