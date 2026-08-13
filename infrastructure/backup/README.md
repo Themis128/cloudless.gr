@@ -64,11 +64,12 @@ Each CronJob lives in the **same namespace as its target pods**. Use the helper
 so `-n` always matches (avoids `No resources found in <wrong-ns>`):
 
 ```bash
-bash scripts/pvc-backup-test.sh list
-bash scripts/pvc-backup-test.sh appflowy   # -n appflowy
-bash scripts/pvc-backup-test.sh minio      # -n appflowy  (MinIO pods)
-bash scripts/pvc-backup-test.sh kuma       # -n uptime-kuma
-bash scripts/pvc-backup-test.sh n8n        # -n n8n
+pnpm db:backup:test list
+pnpm db:backup:test appflowy   # -n appflowy
+pnpm db:backup:test minio      # -n appflowy  (MinIO pods)
+pnpm db:backup:test kuma       # -n uptime-kuma
+pnpm db:backup:test n8n        # -n n8n
+# equivalent: bash scripts/pvc-backup-test.sh <target>
 ```
 
 | Target | Namespace | CronJob |

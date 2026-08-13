@@ -150,7 +150,17 @@
     "aw:lighthouse": "gh aw run lighthouse",
     "aw:cluster-doctor": "gh aw run cluster-doctor",
     "aw:etl-espocrm": "gh aw run etl-espocrm-to-r2",
-    "lighthouse:audit": "bash scripts/lighthouse-local.sh"
+    "lighthouse:audit": "bash scripts/lighthouse-local.sh",
+    "db:forward": "bash scripts/db-port-forward.sh start",
+    "db:forward:status": "bash scripts/db-port-forward.sh status",
+    "db:forward:stop": "bash scripts/db-port-forward.sh stop",
+    "db:passwords": "bash scripts/db-port-forward.sh passwords",
+    "db:sqlite:pull": "bash scripts/db-sqlite-pull.sh",
+    "db:d1:pull": "bash scripts/db-d1-pull.sh",
+    "db:refresh-snapshots": "bash scripts/db-sqlite-pull.sh && bash scripts/db-d1-pull.sh",
+    "db:ready": "bash scripts/db-port-forward.sh start && bash scripts/db-port-forward.sh status",
+    "db:backup:test": "bash scripts/pvc-backup-test.sh",
+    "d1:retire:cloudless-auth": "bash scripts/d1-retire-cloudless-auth.sh"
   },
   "overrides": {
     "undici": "8.10.0",
