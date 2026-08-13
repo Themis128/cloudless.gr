@@ -166,7 +166,12 @@ const NAV_GROUPS: NavGroup[] = [
         "/admin/selfhosted"
       ),
       card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
-      card("AWS Cost", "Per-service spend (R2/D1 snapshot, frozen after CF cutover)", "💸", "/admin/cost"),
+      card(
+        "AWS Cost",
+        "Per-service spend (R2/D1 snapshot, frozen after CF cutover)",
+        "💸",
+        "/admin/cost"
+      ),
       card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
         s.errors === null ? null : `${s.errors} unresolved`
       ),
