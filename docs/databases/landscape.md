@@ -18,10 +18,10 @@ Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](RE
 
 Decision record: [ADR-001 — Mediated database access](ADR-001-mediated-db-access.md).
 
-### Gap status (post PR #1451)
+## Gap status (post PR #1451)
 
-| ID | Item | Status | Owner action |
-|----|------|--------|--------------|
+| Item | Status | Owner action |
+| ---- | ------ | -------------- |
 | AppFlowy MinIO → R2 backup | **Closed** | `pvc-backup-appflowy-minio` in `appflowy` NS |
 | Uptime Kuma SQLite → R2 | **Closed** | `pvc-backup-uptime-kuma` in `uptime-kuma` NS |
 | `cloudless-auth` D1 empty | **Closed in tooling** | Removed from SQLTools/pull; `CONFIRM=1 pnpm d1:retire:cloudless-auth` |
