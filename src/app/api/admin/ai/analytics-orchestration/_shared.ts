@@ -13,11 +13,14 @@ import { getInsight, getStripeSnapshotFromLake } from "@/lib/datalake-serve";
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { insightObjectKey } from "@/lib/datalake-insights";
 
+const DATALAKE_GOLD_SOURCE = "datalake-gold" as const;
+const ORCHESTRATION_DOMAIN = "orchestration";
+
 export interface PreparedOrchestration {
   snapshot: StripeAnalyticsSnapshot;
   orchestration: AnalyticsOrchestrationResult;
   reportTitle: string;
-  source: "datalake-gold" | "live_llm";
+  source: typeof DATALAKE_GOLD_SOURCE | "live_llm";
 }
 
 export type PrepareResult =
@@ -106,7 +109,7 @@ export async function prepareOrchestration(
   };
 
   if (!liveLlm) {
-    const cached = await getInsight("orchestration");
+    const cached = await getInsight(ORCHESTRATION_DOMAIN);
     if (cached && !cached.error && (cached.summary || cached.bullets?.length)) {
       return {
         ok: true,
@@ -119,7 +122,7 @@ export async function prepareOrchestration(
             "Served lake/snapshots/insights/orchestration.json (no live LLM)."
           ),
           reportTitle,
-          source: "datalake-gold",
+          source: DATALAKE_GOLD_SOURCE,
         },
       };
     }
@@ -140,7 +143,7 @@ export async function prepareOrchestration(
             "Insight snapshot missing and Admin AI not configured."
           ),
           reportTitle,
-          source: "datalake-gold",
+          source: DATALAKE_GOLD_SOURCE,
         },
       };
     }
@@ -179,7 +182,7 @@ export async function prepareOrchestration(
       const bucket = getDataLakeBucketFromEnv();
       if (bucket && typeof bucket.put === "function") {
         const insightDoc = {
-          domain: "orchestration",
+          domain: ORCHESTRATION_DOMAIN,
           generated_at: new Date().toISOString(),
           inputs_ref: {
             gold_generated_at: snapshot.generatedAt,
@@ -194,7 +197,7 @@ export async function prepareOrchestration(
           confidence: "medium",
           freshness: snapshot.generatedAt,
         };
-        await bucket.put(insightObjectKey("orchestration"), JSON.stringify(insightDoc, null, 2), {
+        await bucket.put(insightObjectKey(ORCHESTRATION_DOMAIN), JSON.stringify(insightDoc, null, 2), {
           httpMetadata: { contentType: "application/json" },
         });
       }

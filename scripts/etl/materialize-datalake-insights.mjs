@@ -13,6 +13,7 @@ import { r2Put, r2Get } from "./_r2-config.mjs";
 
 const GOLD_KEY = "lake/snapshots/admin-datalake.json";
 const INSIGHTS_PREFIX = "lake/snapshots/insights";
+const CONTENT_TYPE_JSON = "application/json";
 
 const DOMAINS = [
   { domain: "seo", sections: ["top_keywords", "freshness"] },
@@ -105,9 +106,9 @@ async function callWorkersAi(prompt) {
 
   const res = await fetch(workersAiUrl(accountId, WORKERS_MODEL), {
     method: "POST",
-    headers: {
+      headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      "Content-Type": CONTENT_TYPE_JSON,
     },
     body: JSON.stringify({
       messages: [
@@ -139,7 +140,7 @@ async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(key)}`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": CONTENT_TYPE_JSON },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { maxOutputTokens: 900, temperature: 0.3 },
@@ -265,7 +266,7 @@ async function main() {
     const metrics = extractMetrics(packs);
     const insight = await generateInsight(domain, packs, metrics, goldGeneratedAt);
     const key = `${INSIGHTS_PREFIX}/${domain}.json`;
-    await r2Put(key, JSON.stringify(insight, null, 2), { contentType: "application/json" });
+    await r2Put(key, JSON.stringify(insight, null, 2), { contentType: CONTENT_TYPE_JSON });
     console.log(`  wrote ${key} (provider=${insight.provider})`);
     indexDomains.push({
       domain,
@@ -280,7 +281,7 @@ async function main() {
     domains: indexDomains,
   };
   const indexKey = `${INSIGHTS_PREFIX}/insights-index.json`;
-  await r2Put(indexKey, JSON.stringify(index, null, 2), { contentType: "application/json" });
+  await r2Put(indexKey, JSON.stringify(index, null, 2), { contentType: CONTENT_TYPE_JSON });
   console.log(`[insights] wrote ${indexKey}`);
 }
 
