@@ -573,12 +573,13 @@ function tryLoadLocalAuthDb(): AuthDatabase | null {
 
 function tryLoadHttpAuthDb(): AuthDatabase | null {
   try {
+    // Must be a bundler-visible require (no webpackIgnore). On Pi standalone,
+    // webpackIgnore left ./d1-http unresolved → getAuthDbFromEnv() null →
+    // /api/health dbConnected:false even when CLOUDFLARE_* creds work via REST.
+    // d1-http is fetch-only (safe for server chunks); auth-db-local still uses
+    // webpackIgnore because it pulls node:fs / node:sqlite into proxy/edge.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getHttpAuthDb } = require(
-      /* webpackIgnore: true */
-      /* turbopackIgnore: true */
-      "./d1-http"
-    ) as typeof import("./d1-http");
+    const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
     return getHttpAuthDb() ?? null;
   } catch {
     return null;

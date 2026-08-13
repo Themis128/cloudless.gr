@@ -65,6 +65,17 @@ describe("shouldBindRemoteAuthDb", () => {
   });
 });
 
+describe("Pi D1 HTTP auth bundling", () => {
+  it("auth-d1 loads d1-http with a bundler-visible require (no webpackIgnore)", () => {
+    const authD1 = resolve(__dirname, "../src/lib/auth-d1.ts");
+    const source = readFileSync(authD1, "utf-8");
+    // webpackIgnore on ./d1-http strips it from standalone → dbConnected:false on Pi.
+    expect(source).toMatch(/require\(\s*["']\.\/d1-http["']\s*\)/);
+    expect(source).not.toMatch(/webpackIgnore:[\s\S]{0,80}\.\/d1-http/);
+    expect(source).toMatch(/webpackIgnore:[\s\S]{0,80}\.\/auth-db-local/);
+  });
+});
+
 describe("Next.js listen-bind HOSTNAME leak", () => {
   it("Dockerfile runner does not assign ENV HOSTNAME", () => {
     const dockerfile = readFileSync(DOCKERFILE, "utf-8");
