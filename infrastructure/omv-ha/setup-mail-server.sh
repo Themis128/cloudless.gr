@@ -59,6 +59,9 @@ protocols = imap lmtp
 
 mail_driver = maildir
 mail_path = /var/mail/vhosts/%{user | domain}/%{user | username}
+# Without this, Debian Dovecot defaults INBOX to /var/mail/%u and Roundcube
+# fails with "Failed to autocreate mailbox: Permission denied".
+mail_inbox_path = /var/mail/vhosts/%{user | domain}/%{user | username}
 mail_uid = vmail
 mail_gid = vmail
 first_valid_uid = 5000
