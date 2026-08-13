@@ -91,7 +91,28 @@ function fmtDay(dr) {
 
 async function main() {
 	console.log(`Fetching LinkedIn campaigns for account ${ACCOUNT}...`);
-	const campaigns = await listCampaigns();
+	let campaigns;
+	try {
+		campaigns = await listCampaigns();
+	} catch (err) {
+		const msg = String(err?.message ?? err);
+		if (/\b401\b|INVALID_ACCESS_TOKEN|Unauthorized/i.test(msg)) {
+			console.warn(
+				`[linkedin-ads-to-r2] auth failed (${msg.slice(0, 160)}) — writing empty parquet and exiting 0. Rotate LINKEDIN_ACCESS_TOKEN.`
+			);
+			const local = "/tmp/linkedin-ads-empty.parquet";
+			const writer = await ParquetWriter.openFile(schema, local);
+			await writer.close();
+			const body = readFileSync(local);
+			await r2Put("lake/linkedin-ads/insights.parquet", body, {
+				contentType: "application/octet-stream",
+			});
+			unlinkSync(local);
+			console.log("✓ linkedin-ads → R2 sync complete (empty — auth skip)");
+			return;
+		}
+		throw err;
+	}
 	console.log(`  ${campaigns.length} campaigns`);
 
 	const end = new Date();

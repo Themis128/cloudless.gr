@@ -6,10 +6,20 @@
  */
 
 import { execSync } from "node:child_process";
+import { homedir } from "node:os";
+import { existsSync } from "node:fs";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 import { BUCKET, r2Put } from "./_r2-config.mjs";
 
+// Prefer a readable home kubeconfig over an unreadable system k3s.yaml.
+const homeKube = `${homedir()}/.kube/config`;
+if (
+	(!process.env.KUBECONFIG || /k3s\.yaml/.test(process.env.KUBECONFIG)) &&
+	existsSync(homeKube)
+) {
+	process.env.KUBECONFIG = homeKube;
+}
 
 // `kubectl exec` into the postgres pod and run a psql query
 function psqlRows(sql) {

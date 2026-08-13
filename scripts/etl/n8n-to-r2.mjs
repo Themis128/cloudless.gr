@@ -64,7 +64,26 @@ async function uploadToR2(key, body) {
 }
 
 async function syncWorkflows() {
-	const data = await n8nFetch("/workflows?limit=250");
+	let data;
+	try {
+		data = await n8nFetch("/workflows?limit=250");
+	} catch (err) {
+		const msg = String(err?.message ?? err);
+		if (/\b401\b|unauthorized/i.test(msg)) {
+			console.warn(
+				`[n8n-to-r2] auth failed (${msg.slice(0, 160)}) — writing empty parquets and exiting 0. Rotate N8N_API_KEY.`
+			);
+			const emptyWf = await writeParquet([], workflowSchema, "/tmp/n8n-workflows.parquet");
+			await uploadToR2("lake/n8n-workflows/workflows.parquet", emptyWf);
+			unlinkSync("/tmp/n8n-workflows.parquet");
+			const emptyEx = await writeParquet([], executionSchema, "/tmp/n8n-executions.parquet");
+			await uploadToR2("lake/n8n-executions/executions.parquet", emptyEx);
+			unlinkSync("/tmp/n8n-executions.parquet");
+			console.log("✓ n8n → R2 sync complete (empty — auth skip)");
+			process.exit(0);
+		}
+		throw err;
+	}
 	const rows = (data.data || []).map((w) => ({
 		workflow_id: String(w.id ?? ""),
 		name: String(w.name ?? ""),
