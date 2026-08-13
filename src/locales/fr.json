@@ -38,7 +38,12 @@
   "hero": {
     "badge": "v2.0 — Nouveaux clients acceptés",
     "titleStatic": "Ciel dégagé.",
-    "typingTexts": ["Zéro friction.", "Contrôle total.", "Vitesse pure.", "Résultats concrets."],
+    "typingTexts": [
+      "Zéro friction.",
+      "Contrôle total.",
+      "Vitesse pure.",
+      "Résultats concrets."
+    ],
     "subtitle": "Le cloud enterprise ? Trop cher. L'infrastructure DIY ? Trop risqué. Nous sommes la troisième voie — serverless, croissance data-driven, et mise à l'échelle adaptée aux équipes de 2 à 20 personnes.",
     "subtitleHighlight": "Enfin.",
     "ctaPrimary": "Réserver un audit gratuit",
