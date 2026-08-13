@@ -3,20 +3,30 @@
  *
  * Migrated version using R2 S3-compatible endpoint.
  * Same logic as gsc-to-lake.mjs - only client configuration differs.
+ *
+ * Auth (preferred): GOOGLE_SERVICE_ACCOUNT_JSON_B64 = base64(entire SA JSON)
+ * Fallback: GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY (PEM with \\n OK)
  */
 
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { SignJWT } from "jose";
 import { readFileSync, unlinkSync } from "fs";
 import { BUCKET, r2Put } from "./_r2-config.mjs";
-import { loadGooglePrivateKey } from "./_google-sa-key.mjs";
+import {
+	loadGooglePrivateKey,
+	resolveGoogleServiceAccountFromEnv,
+} from "./_google-sa-key.mjs";
 
 const SITE = process.env.GSC_SITE_URL || "https://cloudless.gr/";
-const EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
-const KEY_RAW = process.env.GOOGLE_PRIVATE_KEY?.trim() ?? "";
 
-if (!EMAIL || !KEY_RAW) {
-	console.error("GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY not set");
+let EMAIL = "";
+let KEY_RAW = "";
+try {
+	const sa = resolveGoogleServiceAccountFromEnv();
+	EMAIL = sa.email;
+	KEY_RAW = sa.privateKeyRaw;
+} catch (err) {
+	console.error(String(err?.message ?? err));
 	process.exit(1);
 }
 
@@ -75,7 +85,7 @@ async function main() {
 		token = await getAccessToken();
 	} catch (err) {
 		await writeEmptyAndExit(
-			`auth/key failed (${String(err?.message ?? err).slice(0, 160)}). Fix GOOGLE_PRIVATE_KEY PEM secret.`
+			`auth/key failed (${String(err?.message ?? err).slice(0, 200)}). Prefer GOOGLE_SERVICE_ACCOUNT_JSON_B64.`
 		);
 	}
 
