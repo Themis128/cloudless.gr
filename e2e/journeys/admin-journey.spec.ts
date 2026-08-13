@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Admin User Journey", () => {
   test.beforeEach(async ({ page }) => {
     // Start from homepage
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page).toHaveURL(/.*\/$/);
   });
 
@@ -23,7 +23,7 @@ test.describe("Admin User Journey", () => {
   });
 
   test("should show admin login form with required fields", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await expect(page).toHaveURL(/.*\/auth\/login/);
     
     // Expect
@@ -37,7 +37,7 @@ test.describe("Admin User Journey", () => {
   });
 
   test("should allow admin to login with valid credentials (test credentials)", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await expect(page).toHaveURL(/.*\/auth\/login/);
     
     // Arrange - Using test credentials - in real scenario these would be valid test credentials
@@ -57,7 +57,7 @@ test.describe("Admin User Journey", () => {
   });
 
   test("should show appropriate error for invalid login credentials", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await expect(page).toHaveURL(/.*\/auth\/login/);
     
     // Arrange - Fill in obviously invalid credentials
@@ -78,7 +78,7 @@ test.describe("Admin User Journey", () => {
     // This test assumes we have valid test credentials
     // In a real test environment, we would set up test credentials beforehand
     
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await expect(page).toHaveURL(/.*\/auth\/login/);
     
     // Assert - Verify login page elements exist
@@ -89,7 +89,7 @@ test.describe("Admin User Journey", () => {
 
   test("should show admin dashboard widgets and navigation after login", async ({ page }) => {
     // We'll test that if we somehow get to a dashboard, we see expected elements
-    await page.goto("/admin");
+    await page.goto("/en/admin");
     await page.waitForTimeout(2000);
     
     // If redirected to login, that's expected for unauthenticated access
@@ -104,11 +104,11 @@ test.describe("Admin User Journey", () => {
   test("should allow admin to navigate to different admin sections", async ({ page }) => {
     // Test admin navigation without authentication (should redirect to login)
     const adminSections = [
-      '/admin/analytics',
-      '/admin/users',
-      '/admin/settings',
-      '/admin/crm',
-      '/admin/email'
+      '/en/admin/analytics',
+      '/en/admin/users',
+      '/en/admin/settings',
+      '/en/admin/crm',
+      '/en/admin/email'
     ];
     
     for (const section of adminSections) {
@@ -124,7 +124,7 @@ test.describe("Admin User Journey", () => {
   test("should allow admin to log out", async ({ page }) => {
     // We'd need to be logged in first to test logout
     // For now, verify logout link exists on login page or would be visible after login
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     
     // In a real scenario after login, there would be a logout button/link
   });

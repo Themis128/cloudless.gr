@@ -16,19 +16,19 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Homepage", () => {
   test("renders hero heading and title", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page).toHaveTitle(/cloudless/i);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("main landmark is present", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page.locator("main")).toBeVisible();
   });
 
   test("desktop: navigation bar shows core links", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links are hidden behind hamburger on mobile");
-    await page.goto("/");
+    await page.goto("/en");
     const nav = page.getByRole("navigation").first();
     await expect(nav.getByRole("link", { name: /services/i })).toBeVisible();
     await expect(nav.getByRole("link", { name: /store/i })).toBeVisible();
@@ -37,7 +37,7 @@ test.describe("Homepage", () => {
 
   test("desktop: homepage → services navigation works", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("networkidle");
     const link = page.getByRole("navigation").first().getByRole("link", { name: /services/i });
     await link.waitFor({ state: "visible" });
@@ -50,7 +50,7 @@ test.describe("Homepage", () => {
 
   test("desktop: homepage → store navigation works", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("networkidle");
     const link = page.getByRole("navigation").first().getByRole("link", { name: /store/i });
     await link.waitFor({ state: "visible" });
@@ -63,7 +63,7 @@ test.describe("Homepage", () => {
 
   test("desktop: homepage → blog navigation works", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/en", { waitUntil: "domcontentloaded" });
     const link = page.getByRole("navigation").first().getByRole("link", { name: /blog/i });
     await link.waitFor({ state: "visible" });
     await Promise.all([
@@ -80,14 +80,14 @@ test.describe("Homepage", () => {
 
 test.describe("Services page", () => {
   test("renders h1 and service section headings", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const h2s = page.getByRole("heading", { level: 2 });
     await expect(h2s.first()).toBeVisible();
   });
 
   test("has a contact / book a call CTA", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     await page.waitForLoadState("networkidle");
     const cta = page.getByRole("link", { name: /contact|book|get started|schedule|consult/i }).first();
     await cta.scrollIntoViewIfNeeded();
@@ -95,7 +95,7 @@ test.describe("Services page", () => {
   });
 
   test("CTA links to contact or auth", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     const cta = page.getByRole("link", { name: /contact|book|get started|schedule|consult/i }).first();
     const href = await cta.getAttribute("href");
     expect(href).toMatch(/contact|auth|signup|login/i);
@@ -106,18 +106,18 @@ test.describe("Services page", () => {
 
 test.describe("Store – product listing", () => {
   test("renders h1", async ({ page }) => {
-    await page.goto("/store");
+    await page.goto("/en/store");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("shows at least one product with a price", async ({ page }) => {
-    await page.goto("/store");
+    await page.goto("/en/store");
     // Price elements contain currency symbol
     await expect(page.locator("text=/€|\\$|EUR/").first()).toBeVisible();
   });
 
   test("clicking a product card navigates to product detail", async ({ page }) => {
-    await page.goto("/store");
+    await page.goto("/en/store");
     // Find a link that goes to /store/<id>
     const links = await page.getByRole("link").all();
     let productHref: string | null = null;
@@ -139,21 +139,21 @@ test.describe("Store – product listing", () => {
 
 test.describe("Store – product detail", () => {
   test("Cloud Architecture Audit shows name, price, and add-to-cart button", async ({ page }) => {
-    await page.goto("/store/srv-cloud");
+    await page.goto("/en/store/srv-cloud");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/cloud architecture audit/i);
     await expect(page.locator("text=/€|\\$|EUR/").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /add to cart|buy|order/i })).toBeVisible();
   });
 
   test("digital product detail renders correctly", async ({ page }) => {
-    await page.goto("/store/dig-cloud-playbook");
+    await page.goto("/en/store/dig-cloud-playbook");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/playbook/i);
     await expect(page.getByRole("button", { name: /add to cart|buy/i })).toBeVisible();
   });
 
   test("product breadcrumb has a link back to the Store", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Breadcrumb may be collapsed on mobile viewports");
-    await page.goto("/store/srv-cloud");
+    await page.goto("/en/store/srv-cloud");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     // Breadcrumb link with href ending in /store
     const storeLink = page.locator("a[href$='/store']").first();
@@ -161,13 +161,13 @@ test.describe("Store – product detail", () => {
   });
 
   test("related products section is rendered", async ({ page }) => {
-    await page.goto("/store/srv-cloud");
+    await page.goto("/en/store/srv-cloud");
     const related = page.getByText(/related|you may also|more products/i).first();
     await expect(related).toBeVisible();
   });
 
   test("non-existent product ID renders a not-found page", async ({ page }) => {
-    const res = await page.goto("/store/this-product-xyz-does-not-exist");
+    const res = await page.goto("/en/store/this-product-xyz-does-not-exist");
     // Next.js notFound() → 404; dev mode may return 200 with error UI
     expect(res?.status()).not.toBe(500);
     const body = await page.locator("body").textContent();
@@ -199,20 +199,20 @@ test.describe("Store – checkout API", () => {
 
 test.describe("Order success page", () => {
   test("renders a confirmation heading", async ({ page }) => {
-    await page.goto("/store/success");
+    await page.goto("/en/store/success");
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
   });
 
   test("has a link back to store or home", async ({ page }) => {
-    await page.goto("/store/success");
+    await page.goto("/en/store/success");
     await page.waitForLoadState("networkidle");
     const link = page.getByRole("link", { name: /store|home|continue|explore/i }).first();
     await expect(link).toBeVisible({ timeout: 10000 });
   });
 
   test("page body mentions order, confirmation, or thank-you", async ({ page }) => {
-    await page.goto("/store/success");
+    await page.goto("/en/store/success");
     await page.waitForLoadState("networkidle");
     const body = await page.locator("body").textContent();
     expect(body).toMatch(/order|confirm|thank|success/i);
@@ -223,20 +223,21 @@ test.describe("Order success page", () => {
 
 test.describe("Blog", () => {
   test("renders h1 and article list", async ({ page }) => {
-    await page.goto("/blog");
+    await page.goto("/en/blog");
+    await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("at least one article link is present", async ({ page }) => {
-    await page.goto("/blog");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/en/blog");
+    await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 });
     const links = await page.getByRole("link").all();
     const blogLinks = [];
     for (const link of links) {
       const href = await link.getAttribute("href");
       // Match any /blog/<slug> link — slugs may start with digits or letters,
       // and may be absolute (https://...) or locale-prefixed (/en/blog/...)
-      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?$/.test(href)) {
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?(\?.*)?$/.test(href)) {
         blogLinks.push(href);
       }
     }
@@ -244,21 +245,20 @@ test.describe("Blog", () => {
   });
 
   test("clicking a blog post navigates to the article page", async ({ page }) => {
-    await page.goto("/blog");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/en/blog");
+    await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 });
     const links = await page.getByRole("link").all();
     let postHref: string | null = null;
     for (const link of links) {
       const href = await link.getAttribute("href");
-      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?$/.test(href)) {
+      if (href && /\/blog\/.+/.test(href) && !/\/blog\/?(\?.*)?$/.test(href)) {
         postHref = href;
         break;
       }
     }
-    if (postHref) {
-      await page.goto(postHref);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    }
+    expect(postHref, "expected at least one /blog/[slug] link").toBeTruthy();
+    await page.goto(postHref!);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
 
@@ -266,7 +266,8 @@ test.describe("Blog", () => {
 
 test.describe("Docs", () => {
   test("docs index renders a heading", async ({ page }) => {
-    await page.goto("/docs");
+    await page.goto("/en/docs");
+    await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
@@ -275,7 +276,7 @@ test.describe("Docs", () => {
 
 test.describe("Contact form", () => {
   test("renders name, email, and message fields plus Send Message button", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator("#name")).toBeVisible();
     await expect(page.locator("#email")).toBeVisible();
@@ -284,13 +285,13 @@ test.describe("Contact form", () => {
   });
 
   test("submitting empty form stays on contact page (HTML5 validation)", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await page.getByRole("button", { name: /send message/i }).click();
     expect(page.url()).toMatch(/\/contact/);
   });
 
   test("typing a valid message into all fields is possible", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await page.locator("#name").fill("Playwright Test");
     await page.locator("#email").fill("playwright@example.com");
     await page.locator("#message").fill("Automated test message — please ignore.");
@@ -346,21 +347,22 @@ test.describe("Contact form API", () => {
 
 test.describe("Auth – Login page", () => {
   test("renders email, password fields and Sign In button", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasEmail = await page.locator("#login-email").isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
+    // D1 auth: labeled email/password fields + Sign In (Cognito AWS hosted UI is gone)
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/^password/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 
   test("has a Create Account signup link", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
     await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
   });
 
   test("has a Forgot Password link", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
     // Cognito Hosted UI handles forgot-password; the login page may or may not show a local link.
     const hasForgotLink = await page.getByRole("link", { name: /forgot password/i }).isVisible({ timeout: 5_000 }).catch(() => false);
@@ -370,7 +372,7 @@ test.describe("Auth – Login page", () => {
   });
 
   test("submitting blank stays on login page", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
     await page.getByRole("button").first().click();
     expect(page.url()).toMatch(/\/auth\/login|auth\/login/);
@@ -379,7 +381,7 @@ test.describe("Auth – Login page", () => {
 
 test.describe("Auth – Signup page", () => {
   test("renders Full Name, email, password fields and Create Account button", async ({ page }) => {
-    await page.goto("/auth/signup");
+    await page.goto("/en/auth/signup");
     await expect(page.locator("#signup-email")).toBeVisible();
     await expect(page.locator("#signup-password")).toBeVisible();
     await expect(page.locator("#signup-confirm-password")).toBeVisible();
@@ -387,7 +389,7 @@ test.describe("Auth – Signup page", () => {
   });
 
   test("has a Sign In link back to login", async ({ page }) => {
-    await page.goto("/auth/signup");
+    await page.goto("/en/auth/signup");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("#signup-email")).toBeVisible({ timeout: 10000 });
     // Sign In link sits below the form — scroll it into view
@@ -397,7 +399,7 @@ test.describe("Auth – Signup page", () => {
   });
 
   test("password mismatch shows an error", async ({ page }) => {
-    await page.goto("/auth/signup");
+    await page.goto("/en/auth/signup");
     await expect(page.locator("#signup-email")).toBeVisible();
     await page.locator("#signup-email").fill("test@example.com");
     await page.locator("#signup-password").fill("password123");
@@ -410,7 +412,7 @@ test.describe("Auth – Signup page", () => {
 
 test.describe("Auth – Forgot Password page", () => {
   test("renders email input and a submit button", async ({ page }) => {
-    await page.goto("/auth/forgot-password");
+    await page.goto("/en/auth/forgot-password");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("#forgot-email")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: /send reset link/i })).toBeVisible();
@@ -476,12 +478,12 @@ test.describe("Calendar booking API", () => {
 
 test.describe("Portal – unauthenticated", () => {
   test("portal/waiting renders without crashing", async ({ page }) => {
-    await page.goto("/portal/waiting");
+    await page.goto("/en/portal/waiting");
     await expect(page.locator("body")).toBeVisible();
   });
 
   test("portal with fake token does not 500", async ({ page }) => {
-    const res = await page.goto("/portal/fake-token-xyz");
+    const res = await page.goto("/en/portal/fake-token-xyz");
     expect(res?.status()).not.toBe(500);
   });
 });
@@ -490,10 +492,10 @@ test.describe("Portal – unauthenticated", () => {
 
 test.describe("Legal pages", () => {
   for (const { path, label } of [
-    { path: "/privacy", label: "Privacy" },
-    { path: "/terms", label: "Terms" },
-    { path: "/cookies", label: "Cookies" },
-    { path: "/refund", label: "Refund" },
+    { path: "/en/privacy", label: "Privacy" },
+    { path: "/en/terms", label: "Terms" },
+    { path: "/en/cookies", label: "Cookies" },
+    { path: "/en/refund", label: "Refund" },
   ]) {
     test(`${label} page renders h1`, async ({ page }) => {
       await page.goto(path);
@@ -511,7 +513,7 @@ test.describe("Internationalisation", () => {
   });
 
   test("both /en and /el homepages have an h1", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     const enH1 = await page.getByRole("heading", { level: 1 }).textContent();
     expect(enH1).toBeTruthy();
 
@@ -525,12 +527,12 @@ test.describe("Internationalisation", () => {
 
 test.describe("404 handling", () => {
   test("unknown route returns 404 status", async ({ page }) => {
-    const res = await page.goto("/this-page-xyz-does-not-exist");
+    const res = await page.goto("/en/this-page-xyz-does-not-exist");
     expect(res?.status()).toBe(404);
   });
 
   test("404 page has a message and a home link", async ({ page }) => {
-    await page.goto("/this-page-xyz-does-not-exist");
+    await page.goto("/en/this-page-xyz-does-not-exist");
     const body = await page.locator("body").textContent();
     expect(body).toMatch(/not found|404|missing|doesn't exist/i);
     const homeLink = page.getByRole("link", { name: /home|go back|return/i });
@@ -542,26 +544,26 @@ test.describe("404 handling", () => {
 
 test.describe("End-to-end visitor journeys", () => {
   test("visitor reads services then reaches contact page via direct URL", async ({ page }) => {
-    await page.goto("/services");
+    await page.goto("/en/services");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     // Go to contact directly (CTA text varies by locale/experiment)
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await expect(page.locator("#name")).toBeVisible();
     await expect(page.getByRole("button", { name: /send message/i })).toBeVisible();
   });
 
   test("visitor browses store grid and opens a product", async ({ page }) => {
-    await page.goto("/store");
+    await page.goto("/en/store");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
 
-    await page.goto("/store/dig-cloud-playbook");
+    await page.goto("/en/store/dig-cloud-playbook");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/playbook/i, { timeout: 10000 });
     await expect(page.getByRole("button", { name: /add to cart|buy/i })).toBeVisible();
   });
 
   test("visitor reads a blog post from the blog index", async ({ page }) => {
-    await page.goto("/blog");
+    await page.goto("/en/blog");
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
@@ -581,7 +583,7 @@ test.describe("End-to-end visitor journeys", () => {
   });
 
   test("visitor fills the contact form and sees the send button", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/en/contact");
     await page.locator("#name").fill("Jane Customer");
     await page.locator("#email").fill("jane@example.com");
     await page.locator("#message").fill("I'd like to learn more about your cloud services.");

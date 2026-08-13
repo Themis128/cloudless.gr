@@ -20,17 +20,17 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD || "";
 const enabled = Boolean(adminEmail && adminPassword);
 
 const cmsPages = [
-  { path: "/admin/cms/case-studies", label: /case stud/i },
-  { path: "/admin/cms/faqs",         label: /FAQ/i },
-  { path: "/admin/cms/services",     label: /service/i },
-  { path: "/admin/cms/testimonials", label: /testimonial/i },
+  { path: "/en/admin/cms/case-studies", label: /case stud/i },
+  { path: "/en/admin/cms/faqs",         label: /FAQ/i },
+  { path: "/en/admin/cms/services",     label: /service/i },
+  { path: "/en/admin/cms/testimonials", label: /testimonial/i },
 ];
 
 test.describe("Admin CMS pages", () => {
   test.beforeEach(async ({ page }, testInfo) => {
     if (!enabled) testInfo.skip("E2E admin credentials not configured");
     try {
-      await loginAsUser(page, adminEmail, adminPassword, "/admin");
+      await loginAsUser(page, adminEmail, adminPassword, "/en/admin");
     } catch (err) {
       testInfo.skip(`Admin login failed: ${err}`);
     }
@@ -43,7 +43,7 @@ test.describe("Admin CMS pages", () => {
   for (const { path, label } of cmsPages) {
     test(`renders ${path}`, async ({ page }) => {
       const res = await page.goto(path);
-      // next-intl rewrites /admin → /en/admin; either 200 OK or a soft error
+      // Locale-prefixed admin CMS route; either 200 OK or a soft error
       // boundary (error.tsx) is acceptable — what we're testing is that the
       // route resolves without an unhandled exception (5xx, JS crash).
       expect(res?.status() ?? 0).toBeLessThan(500);
@@ -65,7 +65,7 @@ test.describe("Admin CMS pages", () => {
     // Anonymous request — must redirect to login (not silently 200 onto the CMS).
     const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await ctx.newPage();
-    const res = await page.goto("/admin/cms/case-studies", { waitUntil: "domcontentloaded" });
+    const res = await page.goto("/en/admin/cms/case-studies", { waitUntil: "domcontentloaded" });
     // Either a redirect happened (URL now contains /auth/login) or the middleware
     // returned a 401/403/302 — anything other than a full 200 page render.
     const finalUrl = page.url();

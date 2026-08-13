@@ -20,7 +20,7 @@ test.describe("Dashboard Page", () => {
     // Login before each test
     await authPage.loginViaApi("test@example.com", "password123");
     
-    await page.navigate("/dashboard");
+    await page.navigate("/en/dashboard");
   });
 
   test("should load successfully", async ({ page: browserPage }) => {
@@ -154,7 +154,7 @@ test.describe("Dashboard Page", () => {
       await authPage.logout();
       
       // Try to access dashboard
-      await page.navigate("/dashboard");
+      await page.navigate("/en/dashboard");
       
       // Should redirect to login page
       await expect(browserPage).toHaveURL(/\/auth\/login|\/login/, { timeout: 5000 });
@@ -164,7 +164,7 @@ test.describe("Dashboard Page", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/dashboard");
+      await responsivePage.navigate("/en/dashboard");
       
       // Check that essential elements are still visible
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
@@ -193,7 +193,7 @@ test.describe("Dashboard Page", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/dashboard");
+      await responsivePage.navigate("/en/dashboard");
       
       // Check that layout adapts appropriately
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
@@ -210,7 +210,7 @@ test.describe("Dashboard Page", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/dashboard");
+      await responsivePage.navigate("/en/dashboard");
       
       // Check that full layout is visible
       const heading = browserPage.locator('h1, .dashboard-heading, [data-testid="dashboard-heading"]');
@@ -363,7 +363,7 @@ test.describe("Dashboard Page", () => {
   test.describe("Performance", () => {
     test("should load within reasonable time", async ({ page: browserPage }) => {
       const startTime = Date.now();
-      await page.navigate("/dashboard");
+      await page.navigate("/en/dashboard");
       const endTime = Date.now();
       
       const loadTime = endTime - startTime;

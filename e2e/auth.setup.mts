@@ -82,7 +82,7 @@ async function promoteAdmin(email: string) {
 }
 
 async function loginAndSave(page: Page, email: string, password: string, storage: string) {
-  await page.goto("/auth/login");
+  await page.goto("/en/auth/login");
   await page.waitForLoadState("domcontentloaded");
 
   const emailLocator = page.getByLabel(/email/i).first();

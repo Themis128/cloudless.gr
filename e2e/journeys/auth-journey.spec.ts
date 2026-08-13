@@ -20,7 +20,7 @@ test.describe("Authentication Journey", () => {
   test.describe("Login Flow", () => {
     test("should allow user to login with valid credentials", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -57,7 +57,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show error for invalid login credentials", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -91,7 +91,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show validation errors for empty login fields", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -117,7 +117,7 @@ test.describe("Authentication Journey", () => {
   test.describe("Registration Flow", () => {
     test("should allow user to register with valid information", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to registration page
       const registerLink = browserPage.locator('a[href*="/auth/register"], a[href*="/signup"], .register-link, [data-testid="register-link"], a:has-text("Sign Up")');
@@ -161,7 +161,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show error for duplicate email registration", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to registration page
       const registerLink = browserPage.locator('a[href*="/auth/register"], a[href*="/signup"], .register-link, [data-testid="register-link"], a:has-text("Sign Up")');
@@ -201,7 +201,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show validation errors for empty registration fields", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to registration page
       const registerLink = browserPage.locator('a[href*="/auth/register"], a[href*="/signup"], .register-link, [data-testid="register-link"], a:has-text("Sign Up")');
@@ -229,7 +229,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show validation error for password mismatch", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to registration page
       const registerLink = browserPage.locator('a[href*="/auth/register"], a[href*="/signup"], .register-link, [data-testid="register-link"], a:has-text("Sign Up")');
@@ -271,7 +271,7 @@ test.describe("Authentication Journey", () => {
   test.describe("Password Reset Flow", () => {
     test("should allow user to request password reset", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -309,7 +309,7 @@ test.describe("Authentication Journey", () => {
     
     test("should show error for non-existent email in password reset", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -350,7 +350,7 @@ test.describe("Authentication Journey", () => {
       await authPage.loginViaApi("test@example.com", "password123");
       
       // Verify login
-      await page.navigate("/");
+      await page.navigate("/en");
       const userIndicator = browserPage.locator('.user-info, [data-testid="user-info"], text=/hello, test/i, .avatar');
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
@@ -380,7 +380,7 @@ test.describe("Authentication Journey", () => {
       await authPage.loginViaApi("test@example.com", "password123");
       
       // Verify login
-      await page.navigate("/");
+      await page.navigate("/en");
       const userIndicator = browserPage.locator('.user-info, [data-testid="user-info"], text=/hello, test/i, .avatar');
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
@@ -397,24 +397,24 @@ test.describe("Authentication Journey", () => {
       await authPage.loginViaApi("test@example.com", "password123");
       
       // Verify login
-      await page.navigate("/");
+      await page.navigate("/en");
       const userIndicator = browserPage.locator('.user-info, [data-testid="user-info"], text=/hello, test/i, .avatar');
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
       // Navigate to different pages
-      await page.navigate("/services");
+      await page.navigate("/en/services");
       await expect(browserPage).toHaveURL(/\/services/);
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
-      await page.navigate("/blog");
+      await page.navigate("/en/blog");
       await expect(browserPage).toHaveURL(/\/blog/);
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
-      await page.navigate("/contact");
+      await page.navigate("/en/contact");
       await expect(browserPage).toHaveURL(/\/contact/);
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
       
-      await page.navigate("/");
+      await page.navigate("/en");
       await expect(browserPage).toHaveURL(/\/($|\?#)/);
       await expect(userIndicator).toBeVisible({ timeout: 5000 });
     });
@@ -425,7 +425,7 @@ test.describe("Authentication Journey", () => {
       await responsivePage.setMobileViewport();
       
       // Test login flow on mobile
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -461,7 +461,7 @@ test.describe("Authentication Journey", () => {
       await responsivePage.setTabletViewport();
       
       // Similar to mobile test but with tablet viewport
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -497,7 +497,7 @@ test.describe("Authentication Journey", () => {
       await responsivePage.setDesktopViewport();
       
       // Similar to mobile test but with desktop viewport
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -533,7 +533,7 @@ test.describe("Authentication Journey", () => {
   test.describe("Accessibility", () => {
     test("should have accessible login form", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -579,7 +579,7 @@ test.describe("Authentication Journey", () => {
     
     test("should have accessible registration form", async ({ page: browserPage }) => {
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to registration page
       const registerLink = browserPage.locator('a[href*="/auth/register"], a[href*="/signup"], .register-link, [data-testid="register-link"], a:has-text("Sign Up")');
@@ -647,7 +647,7 @@ test.describe("Authentication Journey", () => {
   test.describe("Performance", () => {
     test("should load login page within reasonable time", async ({ page: browserPage }) => {
       const startTime = Date.now();
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');
@@ -665,7 +665,7 @@ test.describe("Authentication Journey", () => {
       const startTime = Date.now();
       
       // Start from homepage
-      await page.navigate("/");
+      await page.navigate("/en");
       
       // Navigate to login page
       const loginLink = browserPage.locator('a[href*="/auth/login"], a[href*="/login"], .login-link, [data-testid="login-link"]');

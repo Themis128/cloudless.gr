@@ -20,6 +20,22 @@ import type { CmsSource } from "@/lib/cms-provider";
 
 const DEFAULT_CATEGORY = "Cloud" as BlogPost["category"];
 const WORDS_PER_MINUTE = 200;
+/** Bound CMS lookups so unbound/unreachable Notion/AppFlowy cannot hang SSR. */
+const CMS_LOOKUP_MS = 8_000;
+
+async function withCmsTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), CMS_LOOKUP_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function normalizeCategory(tags: string[]): BlogPost["category"] {
   return (tags.find((tag) => tag.trim()) ?? DEFAULT_CATEGORY) as BlogPost["category"];
@@ -178,7 +194,7 @@ export async function getBlogPostsWithSource(): Promise<{
 }> {
   if (await isAppFlowyConfigured()) {
     try {
-      const appFlowyPosts = await getAppFlowyPosts();
+      const appFlowyPosts = await withCmsTimeout(getAppFlowyPosts(), []);
       const published = appFlowyPosts.filter((post) => post.published);
       if (published.length > 0) {
         return {
@@ -196,11 +212,15 @@ export async function getBlogPostsWithSource(): Promise<{
   }
 
   try {
-    const notionPosts = await getNotionPosts();
-    return { posts: notionPosts.map(mapNotionListingPost), source: "notion" };
+    const notionPosts = await withCmsTimeout(getNotionPosts(), []);
+    if (notionPosts.length > 0) {
+      return { posts: notionPosts.map(mapNotionListingPost), source: "notion" };
+    }
   } catch {
-    return { posts: staticPosts, source: "static" };
+    // Fall through to static.
   }
+
+  return { posts: staticPosts, source: "static" };
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
@@ -209,9 +229,12 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+  // Instant path for built-in static posts (avoids CMS round-trip on known slugs).
+  const staticHit = getStaticPostBySlug(slug);
+
   if (await isAppFlowyConfigured()) {
     try {
-      const appFlowyPost = await getAppFlowyPostBySlug(slug);
+      const appFlowyPost = await withCmsTimeout(getAppFlowyPostBySlug(slug), null);
       if (appFlowyPost?.published) {
         return mapAppFlowyPost(appFlowyPost);
       }
@@ -221,16 +244,17 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefi
   }
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    return getStaticPostBySlug(slug);
+    return staticHit;
   }
 
   try {
-    const notionPost = await getNotionPostBySlug(slug);
+    const notionPost = await withCmsTimeout(getNotionPostBySlug(slug), null);
     if (notionPost) {
       return mapNotionPost(notionPost);
     }
-    return getStaticPostBySlug(slug);
   } catch {
-    return getStaticPostBySlug(slug);
+    // Fall through to static.
   }
+
+  return staticHit;
 }

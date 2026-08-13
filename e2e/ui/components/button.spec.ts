@@ -15,7 +15,7 @@ test.describe("Button Component", () => {
     responsivePage = createResponsivePage(browserPage);
     
     // Test on a page that likely has various buttons (like homepage or services)
-    await page.navigate("/services");
+    await page.navigate("/en/services");
   });
 
   test("should render different button variants", async ({ page: browserPage }) => {
@@ -227,7 +227,7 @@ test.describe("Button Component", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/services");
+      await responsivePage.navigate("/en/services");
       
       const buttons = browserPage.locator('button, .btn');
       const count = await buttons.count();
@@ -256,7 +256,7 @@ test.describe("Button Component", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/services");
+      await responsivePage.navigate("/en/services");
       
       const buttons = browserPage.locator('button, .btn');
       const count = await buttons.count();
@@ -275,7 +275,7 @@ test.describe("Button Component", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/services");
+      await responsivePage.navigate("/en/services");
       
       const buttons = browserPage.locator('button, .btn');
       const count = await buttons.count();

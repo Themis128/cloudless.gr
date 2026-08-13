@@ -2,8 +2,12 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import { getWikiDocs, groupDocsByCategory } from "@/lib/notion-docs";
-import type { WikiDocRecord } from "@/lib/notion-docs";
+import {
+  getDocs as getAppFlowyDocs,
+  type AppFlowyDoc,
+} from "@/lib/appflowy-docs";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { getWikiDocs, type WikiDocRecord } from "@/lib/notion-docs";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
@@ -16,6 +20,18 @@ export const metadata: Metadata = {
 export const revalidate = 3600; // Revalidate hourly
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+type DocsListItem = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  order: number;
+  verificationStatus: string;
+  owner: string;
+  lastVerified: string;
+};
 
 const VERIFICATION_STYLES: Record<string, { badge: string; icon: string }> = {
   Verified: {
@@ -32,17 +48,75 @@ const VERIFICATION_STYLES: Record<string, { badge: string; icon: string }> = {
   },
 };
 
+function mapAppFlowyDoc(doc: AppFlowyDoc): DocsListItem {
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    title: doc.title,
+    description: doc.description,
+    category: doc.category,
+    order: doc.order,
+    verificationStatus: doc.verificationStatus,
+    owner: doc.owner ?? "",
+    lastVerified: doc.lastVerified ?? "",
+  };
+}
+
+function mapWikiDoc(doc: WikiDocRecord): DocsListItem {
+  return {
+    id: doc.id,
+    slug: doc.slug,
+    title: doc.title,
+    description: doc.description,
+    category: doc.category,
+    order: doc.order,
+    verificationStatus: doc.verificationStatus,
+    owner: doc.owner,
+    lastVerified: doc.lastVerified,
+  };
+}
+
+function groupByCategory(docs: DocsListItem[]): Record<string, DocsListItem[]> {
+  return docs.reduce<Record<string, DocsListItem[]>>((acc, doc) => {
+    const key = doc.category || "General";
+    (acc[key] ??= []).push(doc);
+    return acc;
+  }, {});
+}
+
+/** AppFlowy first; Notion wiki only as legacy fallback when AppFlowy is empty/unbound. */
+async function loadPublicDocs(): Promise<DocsListItem[]> {
+  if (await isAppFlowyConfigured()) {
+    try {
+      const docs = await getAppFlowyDocs();
+      const published = docs.filter((d) => d.published);
+      if (published.length > 0) {
+        return published.map(mapAppFlowyDoc);
+      }
+    } catch (err) {
+      console.error("[Docs] AppFlowy fetch failed:", err);
+    }
+  }
+
+  try {
+    const wiki = await getWikiDocs();
+    return wiki.map(mapWikiDoc);
+  } catch (err) {
+    console.error("[Docs] Notion wiki fetch failed:", err);
+    return [];
+  }
+}
+
 export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
   const resolvedParams = await searchParams;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =
     typeof resolvedParams.status === "string" ? resolvedParams.status : null;
 
-  // Use wiki-aware docs for verification metadata
-  const allDocs = await getWikiDocs();
+  const allDocs = await loadPublicDocs();
 
   // Apply search filter
-  let docs: WikiDocRecord[] = allDocs;
+  let docs: DocsListItem[] = allDocs;
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     docs = docs.filter(
@@ -55,7 +129,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
     docs = docs.filter((d) => d.verificationStatus === filterVerification);
   }
 
-  const grouped = groupDocsByCategory(docs);
+  const grouped = groupByCategory(docs);
   const categories = Object.keys(grouped);
 
   // Verification stats
@@ -113,6 +187,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                 name="q"
                 defaultValue={searchQuery}
                 placeholder="Search docs…"
+                aria-label="Search docs"
                 className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg
@@ -225,7 +300,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                 <div key={category}>
                   <h2 className="font-heading mb-6 text-xl font-semibold text-white">{category}</h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {(grouped[category] as WikiDocRecord[]).map((doc) => {
+                    {(grouped[category] as DocsListItem[]).map((doc) => {
                       const vStyle =
                         VERIFICATION_STYLES[doc.verificationStatus] ??
                         VERIFICATION_STYLES.Unverified;

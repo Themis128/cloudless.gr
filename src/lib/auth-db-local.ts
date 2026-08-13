@@ -4,6 +4,8 @@
  * getAuthDbFromEnv() works without Cognito or a cross-process workerd proxy.
  *
  * Only used when NODE_ENV=development and no Workers binding is present.
+ * Must never be imported from edge/proxy or client graphs (loaded via
+ * webpackIgnore require from auth-d1.ts).
  */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";

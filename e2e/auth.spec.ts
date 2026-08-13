@@ -2,12 +2,12 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Authentication", () => {
   test("homepage is accessible without login", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("login page shows email and password fields", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
     await page.waitForLoadState("networkidle").catch(() => {});
     
@@ -21,7 +21,7 @@ test.describe("Authentication", () => {
   });
 
   test("signup page exposes name, email and password fields", async ({ page }) => {
-    await page.goto("/auth/signup");
+    await page.goto("/en/auth/signup");
     await expect(page).toHaveURL(/\/auth\/signup/);
     await expect(page.getByLabel(/name/i)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
@@ -29,7 +29,7 @@ test.describe("Authentication", () => {
   });
 
   test("forgot-password page is reachable from login", async ({ page }) => {
-    await page.goto("/auth/login");
+    await page.goto("/en/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
     // Click forgot password link
     const forgotLink = page.getByTestId("forgot-password-link");

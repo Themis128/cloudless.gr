@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Blog User Journey", () => {
   test.beforeEach(async ({ page }) => {
     // Start from homepage
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page).toHaveURL(/.*\/$/);
   });
 

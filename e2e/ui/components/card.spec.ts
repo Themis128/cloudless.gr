@@ -15,7 +15,7 @@ test.describe("Card Component", () => {
     responsivePage = createResponsivePage(browserPage);
     
     // Test on a page that likely has cards (like homepage, services, or blog)
-    await page.navigate("/");
+    await page.navigate("/en");
   });
 
   test("should render card containers", async ({ page: browserPage }) => {
@@ -279,7 +279,7 @@ test.describe("Card Component", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const cards = browserPage.locator('.card, [data-testid="card"], .service-card, .product-card, .post-card');
       const count = await cards.count();
@@ -318,7 +318,7 @@ test.describe("Card Component", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const cards = browserPage.locator('.card, [data-testid="card"], .service-card, .product-card, .post-card');
       const count = await cards.count();
@@ -347,7 +347,7 @@ test.describe("Card Component", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const cards = browserPage.locator('.card, [data-testid="card"], .service-card, .product-card, .post-card');
       const count = await cards.count();

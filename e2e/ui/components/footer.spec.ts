@@ -15,7 +15,7 @@ test.describe("Footer Component", () => {
     responsivePage = createResponsivePage(browserPage);
     
     // Start on homepage for footer tests
-    await page.navigate("/");
+    await page.navigate("/en");
   });
 
   test("should be visible on all pages", async ({ page: browserPage }) => {
@@ -109,7 +109,7 @@ test.describe("Footer Component", () => {
   test.describe("Navigation Functionality", () => {
     test("should navigate to homepage via footer link", async ({ page: browserPage }) => {
       // Navigate to a different page first
-      await page.navigate("/services");
+      await page.navigate("/en/services");
       
       const footer = browserPage.locator('footer, [data-testid="footer"], .footer');
       await expect(footer).toBeVisible();
@@ -241,7 +241,7 @@ test.describe("Footer Component", () => {
   test.describe("Responsive Design", () => {
     test("should render correctly on mobile", async ({ page: browserPage }) => {
       await responsivePage.setMobileViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const footer = browserPage.locator('footer, [data-testid="footer"], .footer');
       await expect(footer).toBeVisible();
@@ -264,7 +264,7 @@ test.describe("Footer Component", () => {
     
     test("should render correctly on tablet", async ({ page: browserPage }) => {
       await responsivePage.setTabletViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const footer = browserPage.locator('footer, [data-testid="footer"], .footer');
       await expect(footer).toBeVisible();
@@ -282,7 +282,7 @@ test.describe("Footer Component", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/");
+      await responsivePage.navigate("/en");
       
       const footer = browserPage.locator('footer, [data-testid="footer"], .footer');
       await expect(footer).toBeVisible();

@@ -8,7 +8,7 @@ test.describe("Response time budgets", () => {
     const isProd = !!(baseURL && !baseURL.includes("localhost"));
     const budget = isProd ? 3_000 : 10_000;
     const start = Date.now();
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/en", { waitUntil: "domcontentloaded" });
     expect(Date.now() - start).toBeLessThan(budget);
   });
 
@@ -23,14 +23,14 @@ test.describe("Response time budgets", () => {
 
 test.describe("SEO basics", () => {
   test("homepage has exactly one H1", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("domcontentloaded");
     const h1Count = await page.locator("h1").count();
     expect(h1Count).toBe(1);
   });
 
   test("all images have alt text", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("domcontentloaded");
     const missing = await page.evaluate(() =>
       Array.from(document.querySelectorAll("img"))

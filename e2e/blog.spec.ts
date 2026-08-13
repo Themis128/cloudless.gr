@@ -17,7 +17,7 @@ test.describe("Blog API", () => {
 test.describe("Blog pages", () => {
   test("blog listing page loads", async ({ page }) => {
     // Try common locale paths
-    const paths = ["/en/blog", "/el/blog", "/blog"];
+    const paths = ["/en/blog", "/el/blog"];
     let found = false;
 
     for (const p of paths) {

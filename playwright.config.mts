@@ -5,10 +5,14 @@ const rootDir = import.meta.dirname ?? path.resolve();
 const isCi = !!process.env.CI;
 const isCoverage = process.env.COVERAGE === "1";
 
+/** k3s specs target the live cluster via playwright.k3s.config.mts only. */
+const ignoreK3s = "**/k3s/**";
+
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
   testMatch: "**/*.spec.{ts,mts}",
-  testIgnore: ["**/k3s/**"],
+  // Project-level testIgnore replaces this — keep ignoreK3s on every project below.
+  testIgnore: [ignoreK3s],
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
@@ -65,9 +69,14 @@ export default defineConfig({
 
   webServer: {
     command: "pnpm dev",
-    url: "http://localhost:4000",
-    timeout: 120_000,
-    reuseExistingServer: !isCi || process.env.E2E_REUSE_SERVER === "1",
+    // Hit a real route — bare `/` can 308 and confuse the readiness probe
+    // while Next 16 is still compiling proxy.
+    url: "http://127.0.0.1:4000/api/health",
+    timeout: 180_000,
+    // Local: reuse a healthy `pnpm dev`. CI always starts fresh.
+    // Next 16 refuses a second `next dev` when .next/dev/lock exists — if we
+    // spawn anyway and it exits 1, Playwright fails even though the URL is up.
+    reuseExistingServer: !isCi,
     env: {
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
@@ -84,6 +93,7 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: "**/auth.setup.mts",
+      testIgnore: [ignoreK3s],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -95,7 +105,8 @@ export default defineConfig({
         storageState: path.join(rootDir, "e2e/.auth/user.json"),
       },
       dependencies: ["setup"],
-      testIgnore: ["**/ui/pages/admin.spec.ts"],
+      // Project testIgnore replaces the top-level list — re-include k3s.
+      testIgnore: [ignoreK3s, "**/ui/pages/admin.spec.ts"],
     },
     {
       name: "admin",
@@ -106,6 +117,7 @@ export default defineConfig({
       },
       dependencies: ["setup"],
       testMatch: "**/ui/pages/admin.spec.ts",
+      testIgnore: [ignoreK3s],
     },
     {
       name: "mobile-chrome",
@@ -114,6 +126,7 @@ export default defineConfig({
         storageState: path.join(rootDir, "e2e/.auth/user.json"),
       },
       dependencies: ["setup"],
+      testIgnore: [ignoreK3s, "**/ui/pages/admin.spec.ts"],
     },
   ],
 });

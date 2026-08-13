@@ -2,12 +2,12 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Homepage", () => {
   test("loads with correct title", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await expect(page).toHaveTitle(/Cloudless/i);
   });
 
   test("has no broken internal links on homepage (4xx)", async ({ page, request }) => {
-    await page.goto("/");
+    await page.goto("/en");
     const hrefs = await page.evaluate(() =>
       Array.from(document.querySelectorAll("a[href]"))
         .map((a) => (a as HTMLAnchorElement).href)
@@ -27,14 +27,14 @@ test.describe("Homepage", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("domcontentloaded");
 
     expect(errors.filter((e) => !e.includes("ResizeObserver"))).toHaveLength(0);
   });
 
   test("has meta description and OG tags", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     await page.waitForLoadState("networkidle");
     const desc = await page.$eval('meta[name="description"]', (el) => el.getAttribute("content"));
     expect(desc).toBeTruthy();
@@ -47,7 +47,7 @@ test.describe("Homepage", () => {
   });
 
   test("has cloudless.gr canonical URL (not personal name)", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/en");
     const canonical = await page
       .$eval('link[rel="canonical"]', (el) => el.getAttribute("href"))
       .catch(() => null);

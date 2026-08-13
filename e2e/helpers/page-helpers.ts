@@ -74,7 +74,7 @@ export class AuthenticatedPage {
     }
 
     // Fallback: UI-based login
-    await this.page.goto("/auth/login");
+    await this.page.goto("/en/auth/login");
     await this.page.waitForSelector("form", { timeout: 5_000 });
     
     const emailInput = this.page.locator('input[name="email"], input[name="username"], input[type="email"]').first();
