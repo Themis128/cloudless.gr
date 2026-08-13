@@ -6,16 +6,29 @@
 
 This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHub workflows**, **MCP/tools**, and **online docs**. Prefer the listed skill/script before inventing a new path.
 
-### Live snapshot (updated 2026-08-14 ~02:23 EEST — playbook run)
+### Live snapshot (updated 2026-08-14 ~02:32 EEST — playbook executed)
 
 | Signal | Value |
 | --- | --- |
-| HostPath symlink | `cloudless-releases/27d4d14038aa` (**pinned**; tip promote rolled back) |
-| `/api/health` | `ok`, `dbConnected: true`, version `27d4d14038aa` |
-| Tip `8240be2c` promote | **Failed**: `getAuthDbFromEnv()` returned null — `webpackIgnore` on `./d1-http` stripped HTTP D1 from standalone |
-| Fix in flight | Bundle-visible `require("./d1-http")` in `src/lib/auth-d1.ts` + source guard test |
-| R2 `desired.json` | **Deleted** again so pull agent stops re-applying broken tip |
-| `pi-release-pull.timer` | `active` (expects `noop_no_desired`) |
+| HostPath / health | **`cec309465b98`** — `ok`, `dbConnected: true` |
+| Homepage | `https://cloudless.gr/en` → **200** |
+| Tip promote | PR [#1640](https://github.com/Themis128/cloudless.gr/pull/1640) fixed D1 bundling; `deploy-pi` promoted successfully |
+| Prior tip `8240be2c` | Failed (`getAuthDbFromEnv()` null); rolled back; desired cleared mid-incident |
+| Notion → AppFlowy | **Live migrate completed** (Blog/Docs/Tasks/GSC/Contact/… — see outcomes) |
+| AI Gateway | `CLOUDFLARE_AI_GATEWAY_ID=default` set in `cloudless-secrets` |
+| CF token rotate | Dry-run **success** (token id verified active); **apply not run** (needs operator) |
+
+### Playbook outcomes (2026-08-14)
+
+| ID | Result |
+| --- | --- |
+| deploy-lag | **Done** — live on `cec309465b98` with healthy D1 |
+| notion-migrate | **Done** — migrate script finished (e.g. Contact 233, Site Analytics 1000, Tasks 72, KB 32, …) |
+| hotpatch | **Done** — clean tip release; no chunk edits |
+| ai-gateway | **Done (config)** — `default` wired; confirm `/api/admin/ai/status` when logged in |
+| secret-rotate | **Partial** — dry-run OK; run `apply=true` only if exposure risk warrants |
+| meta / tiktok / x-ads | **Still human** — Business Manager / OAuth / Ads API |
+| activecampaign / turnstile / espo-queue | **Still optional** — need human-minted secrets / CF widget / Worker deploy |
 
 ---
 
