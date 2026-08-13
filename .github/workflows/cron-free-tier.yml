@@ -36,7 +36,8 @@ jobs:
     - name: Run GSC sync to AppFlowy
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+        # Canonical GH secret is GOOGLE_CLIENT_EMAIL (not GOOGLE_SERVICE_ACCOUNT_EMAIL).
+        GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
         APPFLOWY_API_URL: https://appflowy.cloudless.gr
@@ -100,7 +101,7 @@ jobs:
     - name: Run full analytics sync to AppFlowy
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+        GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
         APPFLOWY_API_URL: https://appflowy.cloudless.gr
