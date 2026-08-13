@@ -11,10 +11,10 @@ permissions:
   actions: read
 strict: false
 engine: gemini
-# Activity Report #41/#43: Free-tier gemini-2.5-flash is ~20 RPD and is shared
-# across the Google Cloud project. gemini-cli also steered flash-lite requests
-# onto 2.5-flash (same bucket). Use 2.0-flash (separate Free-tier RPD).
-model: gemini-2.0-flash
+# Free-tier gemini-2.5-flash is ~20 RPD (shared project). gemini-2.0-flash is
+# retired (ModelNotFound on run #46). Prefer flash-lite; soft-fail agent if
+# the API steers back onto an exhausted 2.5-flash bucket.
+model: gemini-2.5-flash-lite
 models:
   default-ai-credits-pricing:
     input: 0.10
