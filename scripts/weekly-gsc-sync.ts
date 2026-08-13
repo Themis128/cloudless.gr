@@ -33,7 +33,8 @@
  *   Report JSON       Rich text   Full raw payload (truncated to 2000 chars)
  */
 
-import { SignJWT, importPKCS8 } from "jose";
+import { SignJWT } from "jose";
+import { loadGooglePrivateKey } from "./lib/google-sa-key";
 
 const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -63,8 +64,7 @@ export function dateRange(): { startDate: string; endDate: string } {
 
 async function getGoogleAccessToken(): Promise<string> {
   const email = requireEnv("GOOGLE_CLIENT_EMAIL");
-  const rawKey = requireEnv("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n");
-  const privateKey = await importPKCS8(rawKey, "RS256");
+  const privateKey = loadGooglePrivateKey(requireEnv("GOOGLE_PRIVATE_KEY"));
   const now = Math.floor(Date.now() / 1000);
 
   const jwt = await new SignJWT({ iss: email, scope: SCOPE, aud: TOKEN_URL })

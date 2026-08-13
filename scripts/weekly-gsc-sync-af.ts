@@ -11,14 +11,15 @@
  * Required env:
  *   GSC_SITE_URL                 e.g. "sc-domain:cloudless.gr"
  *   GOOGLE_CLIENT_EMAIL          service-account email with GSC access
- *   GOOGLE_PRIVATE_KEY           PEM with literal "\n" — replaced before signing
+ *   GOOGLE_PRIVATE_KEY           PEM (PKCS#8 or PKCS#1) or SA JSON; escaped \\n OK
  *   APPFLOWY_API_URL             AppFlowy base URL (e.g. https://appflowy.cloudless.gr)
  *   APPFLOWY_EMAIL               AppFlowy login email
  *   APPFLOWY_PASSWORD            AppFlowy login password
  *   APPFLOWY_GSC_REPORTS_FOLDER  parent view id (optional, uses first space as default)
  */
 
-import { SignJWT, importPKCS8 } from "jose";
+import { SignJWT } from "jose";
+import { loadGooglePrivateKey } from "./lib/google-sa-key";
 
 const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -49,8 +50,7 @@ async function getGoogleAccessToken(): Promise<string> {
     console.error("[weekly-gsc-sync-af] missing env var: GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_CLIENT_EMAIL");
     process.exit(1);
   }
-  const rawKey = requireEnv("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n");
-  const privateKey = await importPKCS8(rawKey, "RS256");
+  const privateKey = loadGooglePrivateKey(requireEnv("GOOGLE_PRIVATE_KEY"));
   const now = Math.floor(Date.now() / 1000);
 
   const jwt = await new SignJWT({ iss: email, scope: SCOPE, aud: TOKEN_URL })

@@ -3,6 +3,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockGetConfig = vi.fn();
 const mockFetch = vi.fn();
 
+vi.mock("jose", () => ({
+  SignJWT: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.setProtectedHeader = vi.fn().mockReturnThis();
+    this.setIssuedAt = vi.fn().mockReturnThis();
+    this.setExpirationTime = vi.fn().mockReturnThis();
+    this.sign = vi.fn().mockResolvedValue("mock-jwt");
+  }),
+}));
+
+const mockLoadGooglePrivateKey = vi.fn().mockReturnValue({ type: "private" });
+
+vi.mock("@/lib/google-sa-key", () => ({
+  loadGooglePrivateKey: (...args: unknown[]) => mockLoadGooglePrivateKey(...args),
+}));
+
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: () => mockGetConfig(),
   resetSsmCache: vi.fn(),
@@ -10,9 +25,10 @@ vi.mock("@/lib/ssm-config", () => ({
 
 globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-const fakePrivateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7o4qne60TB3wo
------END PRIVATE KEY-----`;
+const fakePrivateKey =
+  "-----BEGIN PRIVATE KEY-----\n" +
+  "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7o4qne60TB3wo".repeat(4) +
+  "\n-----END PRIVATE KEY-----";
 
 describe("createGoogleAuth()", () => {
   beforeEach(() => {
@@ -52,16 +68,13 @@ describe("createGoogleAuth()", () => {
   });
 
   it("fetch error results in a rejected promise", async () => {
-    // Real key import would fail with a fake key, but we can verify the fetch path
-    // by supplying a real-looking (but invalid) key and verifying fetch is called
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
     });
     const { createGoogleAuth } = await import("@/lib/google-auth");
     const getToken = createGoogleAuth("https://www.googleapis.com/auth/calendar");
-    // importPKCS8 will throw for a fake key, which means token fetch is never reached
-    // We verify the function can be created and is callable
-    expect(typeof getToken).toBe("function");
+    await expect(getToken()).rejects.toThrow("Google token error: 401");
+    expect(mockLoadGooglePrivateKey).toHaveBeenCalledWith(fakePrivateKey);
   });
 });

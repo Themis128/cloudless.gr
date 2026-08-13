@@ -6,6 +6,10 @@ const { mockImportPKCS8, mockSign } = vi.hoisted(() => ({
   mockSign: vi.fn().mockResolvedValue("fake-jwt"),
 }));
 
+vi.mock("@/lib/google-sa-key", () => ({
+  loadGooglePrivateKey: vi.fn().mockReturnValue({ type: "private" }),
+}));
+
 vi.mock("jose", () => ({
   SignJWT: vi.fn(function (this: Record<string, unknown>) {
     this.setProtectedHeader = vi.fn().mockReturnThis();
