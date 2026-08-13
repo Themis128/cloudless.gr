@@ -112,7 +112,7 @@ test.describe("Homepage", () => {
     
     test("should render correctly on desktop", async ({ page: browserPage }) => {
       await responsivePage.setDesktopViewport();
-      await responsivePage.navigate("/en");
+      await responsivePage.navigate("/");
 
       await expect(browserPage.locator("h1").first()).toBeVisible();
       await expect(browserPage.getByTestId("main-nav")).toBeVisible();

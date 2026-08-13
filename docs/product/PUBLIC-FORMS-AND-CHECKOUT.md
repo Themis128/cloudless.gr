@@ -20,7 +20,7 @@ Slack outbound: `SLACK_BOT_TOKEN` and/or `SLACK_WEBHOOK_URL`, default channel
 
 | Surface | API | Email | Slack |
 |---|---|---|---|
-| Contact | `POST /api/contact` | Team + visitor ack (from `noreply@`) | `#notifications` (contact form). UI requires GDPR `privacyConsent` checkbox. |
+| Contact | `POST /api/contact` | Team + visitor ack | `#notifications` (contact form) |
 | Newsletter subscribe | `POST /api/subscribe` | Team + welcome | `#subscribers` |
 | Unsubscribe | `POST/GET /api/unsubscribe` | Team + confirm | — |
 | Calendar book | `POST /api/calendar/book` | — | `#bookings` (503 if Google unbound) |
@@ -66,13 +66,6 @@ Campaign buy buttons hit `/api/checkout?campaign=&tier=` (API GET, not i18n Link
 - Public run: `pnpm e2e:run:public`
 - Store / checkout journey: `e2e/journey-store-checkout.spec.ts`
 - Homepage CTAs: `e2e/ui/pages/homepage.spec.ts`
-- Contact UI + API: `e2e/ui/pages/contact.spec.ts`, `e2e/journey-contact-lead.spec.ts`, `e2e/contact.spec.ts`, `e2e/form-submission-flows.spec.ts`
-- Services / store CTAs: `e2e/ui/pages/services.spec.ts`, `e2e/ui/pages/store.spec.ts`
-- Locale coverage: `e2e/public-pages-audit.spec.ts`
-
-Stable `data-testid`s used by public UI specs: `main-nav`, `hero`, `hero-cta-primary`,
-`hero-cta-secondary`, `services-section`, `service-card`, `cta-section`, `contact-form`,
-`contact-info`, `services-container`, `service-item`, `services-cta`, `products-container`,
-`product-card`, `cart`.
+- Contact: `e2e/journey-contact-lead.spec.ts`, `e2e/contact.spec.ts`
 
 503 on calendar/integrations APIs means “not configured”, not a broken route.
