@@ -442,10 +442,11 @@ jobs:
           https://cloudless.gr/en/contact
         )
 
-        echo "Waiting for /api/health version to match ${WANT12}…"
+        # omv pull can take >6m under SSD load; poll ~12m (24×30s) before failing.
+        echo "Waiting for /api/health version to match ${WANT12} (up to ~12m)…"
         LIVE=""
         MATCHED=0
-        for i in $(seq 1 12); do
+        for i in $(seq 1 24); do
           for u in "${HEALTH_URLS[@]}"; do
             BODY=$(curl -sS --max-time 15 "$u" || true)
             if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
@@ -466,7 +467,7 @@ jobs:
         done
 
         if [ "$MATCHED" != "1" ]; then
-          echo "::error::Edge health did not report sha ${WANT12} within ~6m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
+          echo "::error::Edge health did not report sha ${WANT12} within ~12m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
           exit 1
         fi
 
