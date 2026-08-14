@@ -10,17 +10,18 @@ permissions:
   contents: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash
+# flash-lite = separate free-tier quota from gemini-2.5-flash (avoids #1485 parse_error).
+model: gemini-2.5-flash-lite
 models:
   default-ai-credits-pricing:
-    input: 0.15
-    output: 0.60
+    input: 0.10
+    output: 0.40
 tools:
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   github:
     toolsets: [default, labels]
   bash: true
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 safe-outputs:
   report-failure-as-issue: false
   noop:
@@ -29,6 +30,8 @@ safe-outputs:
     max: 1
   add-labels:
     max: 5
+  threat-detection:
+    continue-on-error: true
 ---
 
 # Issue Triage

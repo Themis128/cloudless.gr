@@ -39,6 +39,8 @@ safe-outputs:
     title-prefix: "[activity-report] "
     labels: [activity-report, agentic-workflows]
     max: 1
+  threat-detection:
+    continue-on-error: true
 ---
 
 # Activity Report
