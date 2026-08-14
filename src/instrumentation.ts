@@ -65,11 +65,23 @@ async function bindLocalAuthDb(): Promise<void> {
     console.warn(`${LOG_PREFIX} AUTH_DB already bound`);
     return;
   }
+  // Node-only: createRequire so Turbopack does not pull node:sqlite into
+  // Edge Instrumentation (a static import of auth-db-local does that).
+  const { createRequire } = await import("node:module");
+  const { join } = await import("node:path");
+  const req = createRequire(join(process.cwd(), "src/instrumentation.ts"));
+  const { getLocalAuthDb } = req("./lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+  const local = getLocalAuthDb();
+  if (local && typeof local.prepare === "function") {
+    (globalThis as { __AUTH_DB__?: typeof local }).__AUTH_DB__ = local;
+    console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
+    return;
+  }
   const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
   const db = getAuthDbFromEnv();
   if (db && typeof db.prepare === "function") {
     (globalThis as { __AUTH_DB__?: typeof db }).__AUTH_DB__ = db;
-    console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
+    console.warn(`${LOG_PREFIX} AUTH_DB bound`);
     return;
   }
   console.error(
