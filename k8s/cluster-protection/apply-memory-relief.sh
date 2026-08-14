@@ -61,6 +61,8 @@ KEEPERS=(
   kube-prom-kubelet
   kube-prom-apiserver
   kube-prom-coredns
+  cloudflared
+  tailscale
 )
 for sm in "${KEEPERS[@]}"; do
   if kubectl get servicemonitor -n monitoring "$sm" >/dev/null 2>&1; then
