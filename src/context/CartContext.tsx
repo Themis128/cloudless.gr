@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { StoreProduct } from "@/lib/store-products";
 
 // --- Types ---

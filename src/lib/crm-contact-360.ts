@@ -166,9 +166,7 @@ async function loadGoldAttributionSection(): Promise<Record<string, unknown>[]> 
   try {
     const section = await getGoldSection("attribution");
     if (!section?.rows?.length) return [];
-    return section.rows.filter((row): row is Record<string, unknown> =>
-      Boolean(row && typeof row === "object")
-    );
+    return section.rows;
   } catch {
     return [];
   }

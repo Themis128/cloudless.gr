@@ -92,6 +92,6 @@ export default async function CampaignPage({ params }: PageProps) {
         .cl-cam-foot p { margin: 0; font-size: 16px; color: #1a2528; }
         .cl-cam-foot a { color: #0a7785; font-weight: 600; text-decoration: none; }
       `}</style>
-      </div>
+    </div>
   );
 }

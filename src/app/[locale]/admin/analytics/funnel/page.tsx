@@ -92,7 +92,7 @@ export default function SearchFunnelPage() {
       </div>
 
       {loading ? <Spinner /> : null}
-      {error ? <ErrorMsg>{error}</ErrorMsg> : null}
+      {error ? <ErrorMsg msg={error} /> : null}
       {data && !data.configured ? (
         <p className="font-mono text-xs text-slate-500">
           {data.message || "D1 AUTH_DB not bound — funnel ingest is off."}

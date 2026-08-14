@@ -111,8 +111,8 @@ export default function WorkspaceAnalyticsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Workspaces analytics</h1>
         <p className="font-body mt-1 text-slate-400">
-          Per-workspace summary joining workspaces, client portals, and the in-memory calendar — read off a
-          single API call (
+          Per-workspace summary joining workspaces, client portals, and the in-memory calendar —
+          read off a single API call (
           <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
             GET /api/admin/analytics/workspaces
           </code>

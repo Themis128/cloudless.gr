@@ -217,7 +217,8 @@ export default function AIAssistantPage() {
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {chatMessages.length === 0 && (
               <p className="font-mono text-xs text-slate-500">
-                Ask me anything — I can search AppFlowy docs, look up lake metrics, or draft a team email.
+                Ask me anything — I can search AppFlowy docs, look up lake metrics, or draft a team
+                email.
               </p>
             )}
             {chatMessages.map((msg, i) => (

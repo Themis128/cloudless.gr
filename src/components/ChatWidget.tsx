@@ -138,7 +138,7 @@ export default function ChatWidget() {
         type="button"
         aria-label={open ? "Close chat" : "Open chat assistant"}
         onClick={() => setOpen((o) => !o)}
-        className="border-neon-green/30 bg-void shadow-neon-green/10 hover:border-neon-green/60 hover:shadow-neon-green/20 fixed right-4 bottom-[calc(1.5rem+var(--cookie-banner-h,0px))] z-50 flex h-14 w-14 min-h-14 min-w-14 items-center justify-center rounded-full border shadow-lg transition-all sm:right-6"
+        className="border-neon-green/30 bg-void shadow-neon-green/10 hover:border-neon-green/60 hover:shadow-neon-green/20 fixed right-4 bottom-[calc(1.5rem+var(--cookie-banner-h,0px))] z-50 flex h-14 min-h-14 w-14 min-w-14 items-center justify-center rounded-full border shadow-lg transition-all sm:right-6"
       >
         <span className="text-xl" aria-hidden="true">
           {open ? "\u2715" : "\u{1F4AC}"}
@@ -149,7 +149,7 @@ export default function ChatWidget() {
       {open && (
         <div
           data-testid="chat-panel"
-          className="bg-void fixed right-4 bottom-[calc(5.5rem+var(--cookie-banner-h,0px))] left-4 z-50 flex max-h-[min(28rem,70dvh)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-800 shadow-2xl sm:left-auto sm:right-6 sm:w-96"
+          className="bg-void fixed right-4 bottom-[calc(5.5rem+var(--cookie-banner-h,0px))] left-4 z-50 flex max-h-[min(28rem,70dvh)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-800 shadow-2xl sm:right-6 sm:left-auto sm:w-96"
         >
           {/* Header */}
           <div className="bg-void-light flex items-center gap-3 border-b border-slate-800 px-4 py-3">

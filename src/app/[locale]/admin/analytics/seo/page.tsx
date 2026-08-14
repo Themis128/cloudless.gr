@@ -300,8 +300,7 @@ export default function SeoAnalyticsPage() {
           {archive.length > 0 && (
             <section>
               <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
-                WEEKLY ARCHIVE{" "}
-                <span className="text-slate-600">— R2 gold snapshots</span>
+                WEEKLY ARCHIVE <span className="text-slate-600">— R2 gold snapshots</span>
               </h2>
               <SeoTable
                 head={[
