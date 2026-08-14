@@ -773,12 +773,12 @@ function CalendarTab({ posts, onReload }: { posts: PostizPost[] | null; onReload
           cell === null ? (
             <div
               key={`empty-${idx}`}
-              className="min-h-[80px] rounded border border-dashed border-gray-100"
+              className="min-h-20 rounded border border-dashed border-gray-100"
             />
           ) : (
             <div
               key={cell.key}
-              className="min-h-[80px] space-y-0.5 rounded border border-gray-200 p-1"
+              className="min-h-20 space-y-0.5 rounded border border-gray-200 p-1"
             >
               <div className="text-right text-[10px] text-gray-500">{cell.day}</div>
               {(byDay.get(cell.key) ?? []).slice(0, 3).map((p) => (
