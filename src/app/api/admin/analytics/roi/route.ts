@@ -4,7 +4,8 @@ import { getRoiFromLake } from "@/lib/datalake-serve";
 
 /**
  * ROI summary — lake gold (LinkedIn ads + stripe_revenue).
- * Other ad channels report configured=false until silver ETL lands.
+ * Other ad channels report configured=false / status=not_in_gold until silver ETL lands.
+ * Never imports live roi.ts adapters.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);

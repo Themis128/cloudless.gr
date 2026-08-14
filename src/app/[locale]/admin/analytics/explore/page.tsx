@@ -56,7 +56,25 @@ export default function LakeExplorePage() {
         <h1 className="font-heading text-2xl font-bold text-white">Explore bronze parquet</h1>
         <p className="mt-2 max-w-2xl font-mono text-xs text-slate-500">
           Catalog-allowlisted R2 objects only. Prefer gold snapshots on the datalake dashboard for
-          production panels.
+          production panels. This DuckDB-Wasm explorer is the operator SQL path today — Cloudflare{" "}
+          <a
+            href="https://developers.cloudflare.com/r2-data-catalog/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-neon-cyan hover:underline"
+          >
+            R2 Data Catalog
+          </a>{" "}
+          /{" "}
+          <a
+            href="https://developers.cloudflare.com/r2-sql/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-neon-cyan hover:underline"
+          >
+            R2 SQL
+          </a>{" "}
+          remains optional platform enablement (Iceberg), not required for admin dashboards.
         </p>
       </div>
 
