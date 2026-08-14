@@ -113,6 +113,7 @@ const adminGroups: AdminGroup[] = [
     label: "Marketing Hub",
     links: [
       { href: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
+      { href: "/admin/campaigns/anomalies", label: "Ad Anomalies", Icon: AlertTriangle },
       { href: "/admin/email", label: "Email", Icon: Mail },
       { href: "/admin/email/campaigns", label: "Email Campaigns", Icon: Mail },
       { href: "/admin/pipeline", label: "Pipeline", Icon: GitMerge },

@@ -36,6 +36,7 @@ import { slackChannel } from "./channels/slack";
 import { renderConversionBlocks, renderDigest, renderAnomalyBlocks } from "./digest";
 import { bookmarkKeyOf, getBookmarkStore } from "./bookmarks";
 import { evaluateAnomalies, findingDedupKey, type AnomalyFinding } from "./anomaly";
+import { recordAnomalyEvents } from "./anomaly-log";
 
 /**
  * Registry of concrete adapters. Keep this map literal — `as const` enforces
@@ -437,6 +438,13 @@ async function markFindingsSent(
     });
     await store.putBookmark(key, ctx.snapshot);
   }
+  await recordAnomalyEvents({
+    campaignSlug: ctx.campaignSlug,
+    platform: ctx.platform,
+    windowEnd: ctx.windowEnd,
+    snapshot: ctx.snapshot,
+    findings,
+  });
 }
 
 // ---------------------------------------------------------------------------
