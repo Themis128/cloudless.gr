@@ -299,3 +299,123 @@ export async function createTimeEntry(input: {
     return null;
   }
 }
+
+export async function getAgencyProject(
+  id: string
+): Promise<{ bound: boolean; project: AgencyProject | null }> {
+  const db = getAuthDbFromEnv();
+  if (!db) return { bound: false, project: null };
+  if (!id.startsWith("ap_")) return { bound: true, project: null };
+
+  try {
+    const row = await db
+      .prepare(
+        `SELECT p.*,
+           COALESCE((SELECT SUM(minutes) FROM time_entry t WHERE t.project_id = p.id), 0) AS total_minutes,
+           COALESCE((
+             SELECT SUM(minutes) FROM time_entry t
+             WHERE t.project_id = p.id AND t.billable = 1 AND t.stripe_invoice_id IS NULL
+           ), 0) AS unbilled_minutes
+         FROM agency_project p
+         WHERE p.id = ?`
+      )
+      .bind(id)
+      .first<ProjectRow>();
+    return { bound: true, project: row ? mapProject(row) : null };
+  } catch (err) {
+    console.warn("[agency-projects-d1] get failed:", err instanceof Error ? err.message : err);
+    return { bound: true, project: null };
+  }
+}
+
+/** Billable entries not yet attached to a Stripe invoice. */
+export async function listUnbilledBillableEntries(
+  projectId: string
+): Promise<{ bound: boolean; entries: TimeEntry[] }> {
+  const db = getAuthDbFromEnv();
+  if (!db) return { bound: false, entries: [] };
+  if (!projectId.startsWith("ap_")) return { bound: true, entries: [] };
+
+  try {
+    const result = await db
+      .prepare(
+        `SELECT * FROM time_entry
+         WHERE project_id = ? AND billable = 1 AND stripe_invoice_id IS NULL
+         ORDER BY work_date ASC, created_at ASC`
+      )
+      .bind(projectId)
+      .all<EntryRow>();
+    return { bound: true, entries: (result.results ?? []).map(mapEntry) };
+  } catch (err) {
+    console.warn(
+      "[agency-projects-d1] list unbilled failed:",
+      err instanceof Error ? err.message : err
+    );
+    return { bound: true, entries: [] };
+  }
+}
+
+export async function markTimeEntriesInvoiced(
+  entryIds: string[],
+  stripeInvoiceId: string
+): Promise<number> {
+  const db = getAuthDbFromEnv();
+  if (!db || !stripeInvoiceId.startsWith("in_") || entryIds.length === 0) return 0;
+
+  const now = Math.floor(Date.now() / 1000);
+  let changed = 0;
+  try {
+    for (const id of entryIds) {
+      if (!id.startsWith("te_")) continue;
+      const res = await db
+        .prepare(
+          `UPDATE time_entry
+           SET stripe_invoice_id = ?
+           WHERE id = ? AND stripe_invoice_id IS NULL`
+        )
+        .bind(stripeInvoiceId, id)
+        .run();
+      changed += res.meta?.changes ?? 0;
+    }
+    const first = entryIds.find((id) => id.startsWith("te_"));
+    if (first) {
+      const row = await db
+        .prepare(`SELECT project_id FROM time_entry WHERE id = ?`)
+        .bind(first)
+        .first<{ project_id: string }>();
+      if (row?.project_id) {
+        await db
+          .prepare(`UPDATE agency_project SET updated_at = ? WHERE id = ?`)
+          .bind(now, row.project_id)
+          .run();
+      }
+    }
+    return changed;
+  } catch (err) {
+    console.warn(
+      "[agency-projects-d1] mark invoiced failed:",
+      err instanceof Error ? err.message : err
+    );
+    return changed;
+  }
+}
+
+export async function setAgencyProjectStripeCustomer(
+  projectId: string,
+  stripeCustomerId: string
+): Promise<boolean> {
+  const db = getAuthDbFromEnv();
+  if (!db || !projectId.startsWith("ap_") || !stripeCustomerId.startsWith("cus_")) {
+    return false;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    const res = await db
+      .prepare(`UPDATE agency_project SET stripe_customer_id = ?, updated_at = ? WHERE id = ?`)
+      .bind(stripeCustomerId, now, projectId)
+      .run();
+    return (res.meta?.changes ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
