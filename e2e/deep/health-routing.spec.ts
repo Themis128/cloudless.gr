@@ -15,6 +15,7 @@ test.describe("Health and API routing pin", () => {
     expect(String(body.timestamp)).toMatch(/^\d{4}-/);
     expect(body.version).toBeTruthy();
     expect(body.authProvider).toBe("d1");
+    expect(body.authDb).toBe("d1-http");
     expect(body.dbConnected).toBe(true);
   });
 

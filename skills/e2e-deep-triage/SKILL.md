@@ -7,7 +7,7 @@ description: Diagnose and re-run cloudless.gr Playwright e2e/deep failures (mobi
 
 Live suite is **`e2e/deep/`** (+ `e2e/k3s/**` via `playwright.k3s.config.mts` only). Deleted files (`customer-behavior.spec.ts`, `e2e/journeys/**`, `e2e/ui/**`) are not the source of truth.
 
-Local Playwright uses **port 4010** and `.next-e2e` so it does not fight interactive `pnpm dev` on :4000 (`e2e/_port.ts`). `reuseExistingServer` is **false**.
+Local Playwright uses **port 4010** and `.next-e2e` so it does not fight interactive `pnpm dev` on :4000 (`e2e/_port.ts`). `reuseExistingServer` is **false**. Auth is live Cloudflare D1 (`AUTH_DB_USE_HTTP=1`, same `user-auth-db` as production).
 
 ## Tool
 

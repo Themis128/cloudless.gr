@@ -14,6 +14,15 @@ const isCoverage = process.env.COVERAGE === "1";
  */
 const ignoreK3s: Array<string | RegExp> = ["**/k3s/**", "k3s/**", /(?:^|\/)k3s\//];
 
+function inheritEnv(...keys: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
   testMatch: "**/*.spec.{ts,mts}",
@@ -83,14 +92,24 @@ export default defineConfig({
     // interactive `pnpm dev`. CI uses 4000.
     reuseExistingServer: false,
     env: {
+      ...inheritEnv(
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CF_ACCOUNT_ID",
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_D1_DATABASE_ID",
+        "SESSION_SECRET",
+        "AUTH_SECRET",
+        "PATH"
+      ),
       DEV_PORT: E2E_PORT,
       DEV_HOST: E2E_HOST,
       // Isolate Turbopack cache from interactive `pnpm dev` on :4000.
       NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || (isCi ? ".next" : ".next-e2e"),
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
-      // Prefer local wrangler sqlite for signup/login in e2e (no remote D1 required).
-      AUTH_DB_PREFER_LOCAL: "1",
+      // Same live user-auth-db as cloudless.gr (real login/signup results).
+      AUTH_DB_USE_HTTP: "1",
+      AUTH_DB_PREFER_LOCAL: "0",
       E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
       E2E_USER_EMAIL: process.env.E2E_USER_EMAIL || "testuser@cloudless.gr",
       E2E_USER_PASSWORD: process.env.E2E_USER_PASSWORD || "TestPass123!",

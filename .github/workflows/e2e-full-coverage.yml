@@ -18,15 +18,22 @@ concurrency:
 
 jobs:
   e2e:
-    name: Playwright full coverage (local dev)
+    name: Playwright full coverage (live D1)
     # Default GH-hosted; RUNNER_X64=["self-hosted","legion","x64"] for Legion failover.
     runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
     timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       NEXT_PUBLIC_E2E: '1'
-      E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
+      NEXT_PUBLIC_AUTH_PROVIDER: d1
       CI: 'true'
+      AUTH_DB_USE_HTTP: '1'
+      AUTH_DB_PREFER_LOCAL: '0'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      CLOUDFLARE_D1_DATABASE_ID: 7ca74513-23c3-412a-b9ca-b0c55835973d
+      E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
       E2E_USER_EMAIL: testuser@cloudless.gr
       E2E_USER_PASSWORD: TestPass123!
       E2E_ADMIN_EMAIL: testadmin@cloudless.gr
@@ -52,19 +59,15 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Apply local D1 migrations
-        run: |
-          # Non-interactive CI skips the confirmation prompt automatically.
-          # Includes 0015-fix-user-role-fk (broken user_old FK → signup fails).
-          pnpm exec wrangler d1 migrations apply user-auth-db --local
-
-      - name: Setup test database
+      - name: Probe live user-auth-db and ensure seed users
         env:
           NEXT_PUBLIC_E2E: '1'
           NEXT_PUBLIC_AUTH_PROVIDER: d1
+          AUTH_DB_USE_HTTP: '1'
+          AUTH_DB_PREFER_LOCAL: '0'
           E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
         run: |
-          echo "Setting up test database..."
+          echo "Starting next-dev against live D1..."
           setsid pnpm dev -p 4000 < /dev/null > /tmp/dev-server.log 2>&1 &
           DEV_PID=$!
 
@@ -76,7 +79,15 @@ jobs:
             sleep 2
           done
 
-          echo "Seeding admin user..."
+          HEALTH="$(curl -sS -m 8 http://localhost:4000/api/health || true)"
+          echo "health: $HEALTH"
+          echo "$HEALTH" | python3 -c '
+          import json, sys
+          body = json.load(sys.stdin)
+          assert body.get("dbConnected") is True, body
+          assert body.get("authDb") == "d1-http", body
+          '
+          echo "Seeding admin user on live user-auth-db (idempotent)..."
           curl -sS -X POST http://localhost:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
             -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' \
@@ -103,7 +114,7 @@ jobs:
             lsof -ti:4000 | xargs -r kill -9 2>/dev/null || true
           fi
           sleep 2
-          echo "Database seeding complete"
+          echo "Live D1 seed complete"
 
       - name: Run Playwright deep suite
         run: |

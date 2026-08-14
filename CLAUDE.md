@@ -329,6 +329,11 @@ D1 `roles` table, surfaced as `groups: ["admin"]` and checked by `api-auth.ts`
 `requireAdmin`. Promote via `POST /api/admin/users` with `{ action: "promote", username }`. Session resolution lives in
 `src/lib/auth-d1.ts` + `src/lib/api-auth.ts` (cookie or Bearer).
 
+Interactive `pnpm dev`, Playwright, and CI use the **live** D1 database via
+`AUTH_DB_USE_HTTP=1` (same users as cloudless.gr). Sqlite only with
+`pnpm dev:local-auth` or `AUTH_DB_PREFER_LOCAL=1`. `SESSION_SECRET` must match
+production for password verify. See `docs/runbooks/test-accounts.md`.
+
 - Legacy CloudWatch metric filters that counted next-auth Cognito
   `[auth][error] Configuration` lines are obsolete noise if still present in AWS;
   do not expand them. Prefer app/Sentry signals on the Pi path.

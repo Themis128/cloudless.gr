@@ -2,7 +2,8 @@
 
 Local Playwright coverage lives in `e2e/deep/`. Those specs exercise real
 user and API paths (auth, store/cart, contact contracts, i18n, admin auth,
-webhooks, CMS) instead of sweeping every route for “status < 600”.
+webhooks, CMS) against **live Cloudflare D1** `user-auth-db` (same database as
+https://cloudless.gr). Playwright starts its own server on **4010**.
 
 Live-cluster checks stay in `e2e/k3s/` and use `playwright.k3s.config.mts`.
 

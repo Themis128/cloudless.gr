@@ -8,7 +8,6 @@
  * @see https://github.com/vercel/next.js/issues/85938
  */
 
-import { getLocalAuthDb } from "./lib/auth-db-local";
 import { shouldBindRemoteAuthDb } from "./instrumentation-flags";
 
 const REMOTE_BIND_TIMEOUT_MS = 5_000;
@@ -50,7 +49,14 @@ async function bindRemoteAuthDb(): Promise<void> {
 }
 
 function bindLocalAuthDb(): void {
-  const local = getLocalAuthDb();
+  // Computed specifier so Turbopack does not statically trace node:sqlite into
+  // the Edge instrumentation graph (same pattern as auth-d1 tryLoadLocalAuthDb).
+  const spec = "." + "/lib/" + ["auth", "db", "local"].join("-");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getLocalAuthDb } = require(spec) as {
+    getLocalAuthDb?: () => AuthDbBinding | null;
+  };
+  const local = getLocalAuthDb?.();
   if (local && typeof local.prepare === "function") {
     bindAuthDb(local);
     console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
@@ -72,6 +78,20 @@ async function fireDeployNotification(): Promise<void> {
 
 export async function registerNode(): Promise<void> {
   if (process.env.NODE_ENV === "development") {
+    // Live D1 REST: do not bind local sqlite into __AUTH_DB__, or getAuthDbFromEnv
+    // would prefer it over Cloudflare user-auth-db (same DB as cloudless.gr).
+    if (process.env.AUTH_DB_USE_HTTP === "1") {
+      const { canUseD1Http } = await import("@/lib/d1-http");
+      if (canUseD1Http()) {
+        console.warn(
+          `${LOG_PREFIX} AUTH_DB_USE_HTTP=1 — live D1 REST (user-auth-db), not local sqlite`
+        );
+        return;
+      }
+      console.warn(
+        `${LOG_PREFIX} AUTH_DB_USE_HTTP=1 but CLOUDFLARE_ACCOUNT_ID/API_TOKEN missing — falling back to local sqlite`
+      );
+    }
     if (shouldBindRemoteAuthDb()) {
       try {
         await bindRemoteAuthDb();

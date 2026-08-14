@@ -17,6 +17,8 @@
 #   DEV_HEAL_INTERVAL probe period in seconds (default 5)
 #   DEV_HEAL_FAILS    consecutive probe failures before restart (default 3)
 #   DEV_HEAL_MAX      max restarts per session (default 20)
+#   AUTH_DB_USE_HTTP  default 1 for interactive `pnpm dev` (live user-auth-db)
+#   AUTH_DB_PREFER_LOCAL=1  use local wrangler sqlite instead (or `pnpm dev:local-auth`)
 
 set -u
 
@@ -42,9 +44,16 @@ PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/cloudless-dev-${PORT}.pid"
 
 log() { printf '[dev-heal] %s\n' "$*"; }
 
-# Local next-dev always binds wrangler D1 sqlite unless HTTP D1 is forced.
-if [[ "${AUTH_DB_USE_HTTP:-}" != "1" ]]; then
-  export AUTH_DB_PREFER_LOCAL="${AUTH_DB_PREFER_LOCAL:-1}"
+# Live Cloudflare D1 (same user-auth-db as cloudless.gr) is the default for
+# interactive next-dev, Playwright, and CI. Sqlite only: AUTH_DB_PREFER_LOCAL=1
+# or `pnpm dev:local-auth`.
+if [[ "${AUTH_DB_PREFER_LOCAL:-}" == "1" ]]; then
+  export AUTH_DB_USE_HTTP=0
+  log "AUTH_DB_PREFER_LOCAL=1 — local wrangler sqlite (not live user-auth-db)"
+else
+  export AUTH_DB_USE_HTTP=1
+  export AUTH_DB_PREFER_LOCAL=0
+  log "AUTH_DB_USE_HTTP=1 — live Cloudflare D1 user-auth-db (same as cloudless.gr)"
 fi
 
 for arg in "$@"; do

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "bash scripts/dev-server.sh",
+    "dev:local-auth": "AUTH_DB_PREFER_LOCAL=1 bash scripts/dev-server.sh",
     "dev:raw": "AUTH_DB_PREFER_LOCAL=1 next dev -p 4000 --hostname localhost",
     "dev:info": "bash scripts/wsl-dev-info.sh",
     "dev:restart": "bash scripts/dev-server.sh --restart",

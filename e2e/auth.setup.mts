@@ -3,8 +3,9 @@
  * Produces signed-in storageState files reused by dashboard + admin specs.
  *
  * Identity is Cloudflare D1 (email/password), not Cognito.
- * Local/CI needs: `pnpm exec wrangler d1 migrations apply user-auth-db --local`
- * then register + promote seed users (see docs/runbooks/test-accounts.md).
+ * Local/CI hit live `user-auth-db` via AUTH_DB_USE_HTTP=1 (same DB as
+ * cloudless.gr). Sqlite only when AUTH_DB_PREFER_LOCAL=1.
+ * Seed users: see docs/runbooks/test-accounts.md.
  *
  * Admin page bypass: cookie `e2e_admin=1` when NEXT_PUBLIC_E2E=1 (AuthContext).
  * Admin API bypass: Bearer E2E_ADMIN_TOKEN when NEXT_PUBLIC_E2E=1 (api-auth).

@@ -3,6 +3,13 @@
  * so Edge compilation of instrumentation.ts can import it.
  */
 
+/** Live D1 REST is the default. Sqlite only when AUTH_DB_PREFER_LOCAL=1. */
+export function shouldPreferLocalAuthDb(): boolean {
+  if (process.env.NODE_ENV !== "development") return false;
+  if (process.env.AUTH_DB_USE_HTTP === "1") return false;
+  return process.env.AUTH_DB_PREFER_LOCAL === "1";
+}
+
 /**
  * Remote OpenNext bind needs a Cloudflare token and a live API. CI, E2E, and
  * tokenless `next dev` must skip it — otherwise wrangler starts a remote

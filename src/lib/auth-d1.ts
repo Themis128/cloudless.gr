@@ -7,6 +7,8 @@
  * - Custom password reset flow
  * - JWT-like session tokens (stored server-side, referenced by cookie)
  */
+import { shouldPreferLocalAuthDb } from "../instrumentation-flags";
+
 // Lazy-loaded Node-only modules. `d1-http` uses a literal require() so webpack
 // keeps it in the Pi standalone graph. Local sqlite is loaded with a computed
 // specifier so Edge proxy cannot statically pull node:fs / node:sqlite.
@@ -506,9 +508,9 @@ export function validateSessionSecret(): { valid: boolean; error?: string } {
  * 1. process.env.AUTH_DB — Workers/OpenNext polyfill or tests
  * 2. globalThis.__AUTH_DB__ — mirrored binding for Node libs
  * 3. OpenNext Cloudflare context (`initOpenNextCloudflareForDev` / Worker entry)
- * 4. Local wrangler D1 sqlite in development (unless AUTH_DB_USE_HTTP=1)
- * 5. D1 HTTP (Pi/Node) via CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
- * 6. Local wrangler D1 sqlite shim fallback in development
+ * 4. Local wrangler D1 sqlite only when AUTH_DB_PREFER_LOCAL=1
+ * 5. D1 HTTP (Pi, next-dev, Playwright, CI) via CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
+ * 6. Local wrangler D1 sqlite shim fallback in development (never when AUTH_DB_USE_HTTP=1)
  */
 export function getAuthDbFromEnv(): AuthDatabase | null {
   const fromEnv = (process as unknown as { env?: { AUTH_DB?: AuthDatabase } }).env?.AUTH_DB;
@@ -525,15 +527,9 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   const db = fromEnv ?? fromGlobal ?? fromCf;
   if (db && typeof db.prepare === "function") return db;
 
-  const preferLocal =
-    process.env.NODE_ENV === "development" &&
-    (process.env.NEXT_PUBLIC_E2E === "1" ||
-      process.env.AUTH_DB_PREFER_LOCAL === "1" ||
-      process.env.AUTH_DB_USE_HTTP !== "1");
-
-  // E2E / local next-dev: prefer wrangler sqlite so signup/login never hit
-  // remote user-auth-db (and so CI works without a live CLOUDFLARE_API_TOKEN).
-  if (preferLocal) {
+  // E2E / explicit local: wrangler sqlite so CI never needs a live token.
+  // Interactive `pnpm dev` defaults to AUTH_DB_USE_HTTP=1 → live user-auth-db.
+  if (shouldPreferLocalAuthDb()) {
     const local = tryLoadLocalAuthDb();
     if (local) return local;
   }

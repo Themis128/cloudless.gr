@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { shouldBindRemoteAuthDb } from "@/instrumentation";
+import { shouldBindRemoteAuthDb, shouldPreferLocalAuthDb } from "@/instrumentation";
 
 const ROOT_INSTRUMENTATION = resolve(__dirname, "../instrumentation.ts");
 const SRC_INSTRUMENTATION = resolve(__dirname, "../src/instrumentation.ts");
@@ -52,6 +52,9 @@ describe("Next.js instrumentation file location", () => {
     expect(nodeSource).toContain("slackDeployNotify");
     expect(nodeSource).toContain("AUTH_DB bound (local D1)");
     expect(nodeSource).toContain("pnpm d1:migrate:local");
+    expect(nodeSource).toContain("AUTH_DB_USE_HTTP=1 — live D1 REST");
+    expect(nodeSource).not.toMatch(/from\s+["']\.\/lib\/auth-db-local["']/);
+    expect(nodeSource).not.toMatch(/require\(\s*["']\.\/lib\/auth-db-local["']\s*\)/);
   });
 });
 
@@ -86,6 +89,32 @@ describe("shouldBindRemoteAuthDb", () => {
   });
 });
 
+describe("shouldPreferLocalAuthDb", () => {
+  it("is false for interactive next-dev (live D1 HTTP is the default)", () => {
+    stubInteractiveDev();
+    expect(shouldPreferLocalAuthDb()).toBe(false);
+  });
+
+  it("is false for E2E (live D1 is the default)", () => {
+    stubInteractiveDev();
+    vi.stubEnv("NEXT_PUBLIC_E2E", "1");
+    expect(shouldPreferLocalAuthDb()).toBe(false);
+  });
+
+  it("is true when AUTH_DB_PREFER_LOCAL=1", () => {
+    stubInteractiveDev();
+    vi.stubEnv("AUTH_DB_PREFER_LOCAL", "1");
+    expect(shouldPreferLocalAuthDb()).toBe(true);
+  });
+
+  it("AUTH_DB_USE_HTTP=1 wins over AUTH_DB_PREFER_LOCAL", () => {
+    stubInteractiveDev();
+    vi.stubEnv("AUTH_DB_PREFER_LOCAL", "1");
+    vi.stubEnv("AUTH_DB_USE_HTTP", "1");
+    expect(shouldPreferLocalAuthDb()).toBe(false);
+  });
+});
+
 describe("Pi D1 HTTP auth bundling", () => {
   it("auth-d1 loads d1-http with a bundler-visible require (no webpackIgnore)", () => {
     const authD1 = resolve(__dirname, "../src/lib/auth-d1.ts");
@@ -96,6 +125,12 @@ describe("Pi D1 HTTP auth bundling", () => {
     expect(source).not.toMatch(/require\([\s\S]{0,120}["']\.\/auth-db-local["']/);
     expect(source).not.toMatch(/typeof import\(["'][^"']*auth-db-local["']\)/);
     expect(source).toMatch(/NEXT_RUNTIME === ["']edge["']/);
+  });
+
+  it("Playwright webServer uses live D1 HTTP (same user-auth-db as production)", () => {
+    const source = readFileSync(resolve(__dirname, "../playwright.config.mts"), "utf-8");
+    expect(source).toMatch(/AUTH_DB_USE_HTTP:\s*["']1["']/);
+    expect(source).toMatch(/AUTH_DB_PREFER_LOCAL:\s*["']0["']/);
   });
 });
 

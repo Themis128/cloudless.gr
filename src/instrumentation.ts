@@ -14,7 +14,7 @@
  * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/
  */
 
-export { shouldBindRemoteAuthDb } from "./instrumentation-flags";
+export { shouldBindRemoteAuthDb, shouldPreferLocalAuthDb } from "./instrumentation-flags";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {

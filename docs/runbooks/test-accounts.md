@@ -29,34 +29,51 @@ Playwright e2e accounts and how local login/signup/admin work. Source of truth:
 Unauthenticated `/admin` → redirect to login. Unauthenticated `/api/admin/**`
 → **401/403** (never treat transient **404** as success in security tests).
 
-## Local / CI bootstrap (must work for login + signup)
+## Local / CI bootstrap
+
+Interactive `pnpm dev`, Playwright, and CI use **live** Cloudflare D1
+`user-auth-db` (same database as https://cloudless.gr) via `AUTH_DB_USE_HTTP=1`.
+Login/signup from tests mutate production auth data.
+
+Required env:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` (D1 `Edit` on `user-auth-db`)
+- `SESSION_SECRET` **identical to production** (password hashes mix this secret)
+
+CI reads those from GitHub secrets (`CF_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID`,
+`CLOUDFLARE_API_TOKEN`, `SESSION_SECRET`). Isolated sqlite: `pnpm dev:local-auth`
+or `AUTH_DB_PREFER_LOCAL=1`.
 
 ```bash
-# 1) Create / migrate local D1 sqlite (required for auth-db-local shim)
+# Live auth (default): same users as cloudless.gr
+pnpm dev
+
+# Isolated local sqlite instead
+pnpm dev:local-auth
+# 1) Create / migrate local D1 sqlite
 pnpm exec wrangler d1 migrations apply user-auth-db --local
 
-# 2) Start app (port 4000). Prefer local sqlite in next-dev by default.
-#    To force remote D1 instead: AUTH_DB_USE_HTTP=1
-NEXT_PUBLIC_E2E=1 E2E_ADMIN_TOKEN=e2e-admin-token-do-not-use-in-prod pnpm dev
+# Seed only the local sqlite (does not touch production)
+NEXT_PUBLIC_E2E=1 E2E_ADMIN_TOKEN=e2e-admin-token-do-not-use-in-prod pnpm dev:local-auth
 
-# 3) Register + promote (or let e2e/auth.setup.mts do it)
 curl -X POST http://localhost:4000/api/auth/register-d1 \
   -H 'Content-Type: application/json' \
   -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}'
-
-curl -X POST http://localhost:4000/api/admin/users \
-  -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
-  -H 'Content-Type: application/json' \
-  -d '{"action":"promote","username":"testadmin@cloudless.gr"}'
-
-curl -X POST http://localhost:4000/api/auth/register-d1 \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}'
 ```
 
-If signup returns `{"error":"Failed to create user"}`, re-apply migrations
-(`0015-fix-user-role-fk.sql` rebuilds a broken `user_role` FK that still
-referenced `user_old`). `auth-db-local` also auto-repairs that FK on open.
+Confirm which DB `next-dev` is using:
+
+```bash
+curl -sS http://127.0.0.1:4000/api/health
+# "authDb":"d1-http" → live user-auth-db
+# "authDb":"local-or-binding" → sqlite / OpenNext bind
+```
+
+If signup returns `{"error":"Failed to create user"}` on **local sqlite**, re-apply
+migrations (`0015-fix-user-role-fk.sql` rebuilds a broken `user_role` FK that still
+referenced `user_old`). `auth-db-local` also auto-repairs `user_role` and `session`
+FKs that still point at `user_old`.
 
 Env for Playwright (`playwright.config.mts` webServer + CI):
 
