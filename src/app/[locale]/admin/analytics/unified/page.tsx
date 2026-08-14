@@ -183,7 +183,9 @@ function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
               <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Spend</th>
               <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Impressions</th>
               <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Clicks</th>
-              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Platform leads</th>
+              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">
+                Platform leads
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
