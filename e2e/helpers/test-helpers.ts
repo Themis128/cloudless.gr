@@ -228,7 +228,7 @@ export async function makeAuthenticatedRequest(
  */
 export async function dismissCookieBanner(page: Page): Promise<void> {
   const banner = page.locator(
-    '[data-test-id="cookie-banner"], .cookie-banner, .cookie-consent'
+    '[data-testid="cookie-banner"], .cookie-banner, .cookie-consent'
   ).first();
 
   if (await banner.isVisible()) {

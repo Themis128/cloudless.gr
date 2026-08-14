@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
 import { useCookieConsent, type CookiePreferences } from "@/context/CookieConsentContext";
+import { observeCookieBannerHeight } from "@/lib/cookie-banner-height";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -41,26 +42,20 @@ export default function CookieConsent() {
 
   // Local toggle state for the settings modal
   const [localPrefs, setLocalPrefs] = useState<CookiePreferences>(preferences);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Reserve bottom chrome so chat FAB / push prompt sit above the banner.
-  useEffect(() => {
-    const root = document.documentElement;
-    if (mounted && bannerVisible) {
-      root.style.setProperty("--cookie-banner-h", "12rem");
-    } else {
-      root.style.setProperty("--cookie-banner-h", "0px");
-    }
-    return () => {
-      root.style.setProperty("--cookie-banner-h", "0px");
-    };
-  }, [mounted, bannerVisible]);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const bannerShown = mounted && bannerVisible && !showSettings && !settingsVisible;
+
+  // Reserve bottom chrome so chat FAB / push prompt sit above the live banner.
+  useLayoutEffect(() => {
+    return observeCookieBannerHeight(document.documentElement, bannerShown ? bannerRef.current : null);
+  }, [bannerShown]);
 
   // Sync local prefs when settings modal opens
   const handleOpenFromBanner = () => {
     setLocalPrefs(preferences);
   };
-
-  const [showSettings, setShowSettings] = useState(false);
 
   /* ── Focus trap + Escape key for settings modal ────────── */
   const modalRef = useRef<HTMLDivElement>(null);
@@ -270,6 +265,8 @@ export default function CookieConsent() {
 
       {!showSettings && !settingsVisible && (
         <div
+          ref={bannerRef}
+          data-testid="cookie-banner"
           className="fixed inset-x-0 bottom-0 z-[10000] p-4"
           role="region"
           aria-label={t("cookies.bannerTitle", "We value your privacy")}

@@ -1,6 +1,6 @@
 import { test, expect, devices } from "@playwright/test";
 import { GUEST_STORAGE } from "./_helpers";
-import { openMobileNavIfNeeded } from "../helpers/mobile-nav";
+import { openMobileNavIfNeeded, closeMobileNavIfOpen } from "../helpers/mobile-nav";
 
 // CI e2e-full-coverage only runs --project=chromium (desktop). This file is
 // mobile chrome smoke, so pin Pixel 7 or the hamburger stays lg:hidden.
@@ -21,7 +21,27 @@ test.describe("Mobile chrome smoke", () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
 
-    await page.getByRole("button", { name: /open chat assistant/i }).click();
+    await closeMobileNavIfOpen(page);
+
+    const chatFab = page.getByRole("button", { name: /open chat assistant/i });
+    await expect(chatFab).toBeVisible();
+
+    const cookieBanner = page.getByTestId("cookie-banner");
+    // Banner mounts after requestIdleCallback (up to 2s). Wait for it when
+    // guest storage has no consent, then assert the FAB sits above it.
+    await cookieBanner.waitFor({ state: "visible", timeout: 8_000 }).catch(() => undefined);
+    if (await cookieBanner.isVisible().catch(() => false)) {
+      await expect
+        .poll(async () => {
+          const fabBox = await chatFab.boundingBox();
+          const bannerBox = await cookieBanner.boundingBox();
+          if (!fabBox || !bannerBox) return false;
+          return fabBox.y + fabBox.height <= bannerBox.y + 1;
+        })
+        .toBe(true);
+    }
+
+    await chatFab.click();
     const panel = page.getByTestId("chat-panel");
     await expect(panel).toBeVisible();
     const panelBox = await panel.boundingBox();
