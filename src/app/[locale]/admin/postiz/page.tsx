@@ -495,9 +495,7 @@ function ComposeTab({
                 key={img.id}
                 className="flex items-center gap-2 rounded border bg-gray-50 px-2 py-1 text-xs"
               >
-                <span className="max-w-[200px] truncate">
-                  {img.path.split("/").pop() ?? img.id}
-                </span>
+                <span className="max-w-50 truncate">{img.path.split("/").pop() ?? img.id}</span>
                 <button type="button" onClick={() => removeImage(img.id)} className="text-red-600">
                   ×
                 </button>
@@ -773,13 +771,10 @@ function CalendarTab({ posts, onReload }: { posts: PostizPost[] | null; onReload
           cell === null ? (
             <div
               key={`empty-${idx}`}
-              className="min-h-[80px] rounded border border-dashed border-gray-100"
+              className="min-h-20 rounded border border-dashed border-gray-100"
             />
           ) : (
-            <div
-              key={cell.key}
-              className="min-h-[80px] space-y-0.5 rounded border border-gray-200 p-1"
-            >
+            <div key={cell.key} className="min-h-20 space-y-0.5 rounded border border-gray-200 p-1">
               <div className="text-right text-[10px] text-gray-500">{cell.day}</div>
               {(byDay.get(cell.key) ?? []).slice(0, 3).map((p) => (
                 <div
