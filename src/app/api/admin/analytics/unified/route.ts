@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getUnifiedFromLake } from "@/lib/datalake-serve";
+import { getStripeAnalyticsSnapshot } from "@/lib/stripe-analytics-read";
 
-/** Unified analytics — composed from datalake gold (no live GSC/Espo/Stripe). */
+/** Unified analytics — gold KPIs + D1 Stripe dailyTrend when AUTH_DB is bound. */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -13,11 +14,27 @@ export async function GET(request: NextRequest) {
   );
 
   const payload = await getUnifiedFromLake(days);
+  const stripe =
+    payload.stripe && typeof payload.stripe === "object"
+      ? ({ ...(payload.stripe as Record<string, unknown>) } as Record<string, unknown>)
+      : null;
+
+  if (stripe) {
+    try {
+      const snap = await getStripeAnalyticsSnapshot(days);
+      stripe.dailyTrend = snap.dailyTrend;
+      stripe.dailyTrendSource = "d1-stripe-transaction";
+    } catch {
+      stripe.dailyTrend = Array.isArray(stripe.dailyTrend) ? stripe.dailyTrend : [];
+      stripe.dailyTrendSource = "unavailable";
+    }
+  }
+
   return NextResponse.json({
     seo: payload.seo,
     pipeline: payload.pipeline,
     email: payload.email,
-    stripe: payload.stripe,
+    stripe,
     attribution: payload.attribution,
     keywords: payload.keywords,
     sectionsMissing: payload.sectionsMissing,

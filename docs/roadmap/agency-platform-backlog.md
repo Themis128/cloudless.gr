@@ -118,7 +118,7 @@ The dashboards already exist. Prefer wiring data the APIs already return over ne
 
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
-| Wait | Sparkline / daily bars on Unified + Stripe `dailyTrend` | `stripe-analytics-read.ts` already computes per-day revenue; unified is point-in-time cards | Reuse History-tab SVG pattern |
+| **Done (this branch)** | Sparkline / daily bars on Unified + Stripe `dailyTrend` | `stripe-analytics-read.ts` already computes per-day revenue; unified is point-in-time cards | Shared `AdminDailyBars`; D1 trend on Unified; Cost page reuses the same strip |
 | Wait | Anomaly history table in admin | Five rules already fire to Slack only | Read D1 bookmarks / a small log; no alerting-config UI |
 | Wait | CSV export on datalake section tables | Operators already have gold tables with no download | After contact 360 |
 | Wait | Funnel `ab_variant` comparison | `/admin/ab-tests` toggles flags; it does not show funnel results | Distinct from flag admin |
