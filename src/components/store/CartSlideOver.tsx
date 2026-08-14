@@ -76,6 +76,11 @@ export default function CartSlideOver() {
 
       {/* Panel */}
       <div
+        data-testid="cart-drawer"
+        data-open={isOpen ? "true" : "false"}
+        role="dialog"
+        aria-modal={isOpen}
+        aria-label="Shopping cart"
         className={`bg-void border-neon-cyan/10 fixed top-0 right-0 z-50 h-full w-full max-w-md transform border-l shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}

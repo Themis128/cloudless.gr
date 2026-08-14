@@ -105,21 +105,13 @@ jobs:
           sleep 2
           echo "Database seeding complete"
 
-      - name: Run Playwright migrated + sweeps + journeys
+      - name: Run Playwright deep suite
         run: |
           pnpm exec playwright test --config=playwright.config.mts \
             --project=chromium \
             --reporter=line \
             --workers=2 \
-            e2e/migrated/ \
-            e2e/admin-api-sweep.spec.ts \
-            e2e/public-api-sweep.spec.ts \
-            e2e/journey-blog-nav.spec.ts \
-            e2e/journey-contact-lead.spec.ts \
-            e2e/journey-store-checkout.spec.ts \
-            e2e/journey-theme-locale.spec.ts \
-            e2e/journey-admin-tour.spec.ts \
-            e2e/admin-pages-sweep.spec.ts
+            e2e/deep/
 
       - name: Upload Playwright report on failure
         if: failure()

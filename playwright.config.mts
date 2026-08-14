@@ -110,33 +110,37 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // Reuse the storage state produced by the setup project so
-        // authenticated tests (dashboard) have cookies ready.
-        storageState: path.join(rootDir, "e2e/.auth/user.json"),
+        // Deep specs opt into auth via describe-level storageState.
+        storageState: { cookies: [], origins: [] },
       },
       dependencies: ["setup"],
-      // Project testIgnore replaces the top-level list — re-include k3s.
-      testIgnore: [...ignoreK3s, "**/ui/pages/admin.spec.ts"],
+      testIgnore: [...ignoreK3s, "**/deep/admin-surface.spec.ts"],
     },
     {
       name: "admin",
       use: {
         ...devices["Desktop Chrome"],
-        // Use admin storage state for admin panel tests
         storageState: path.join(rootDir, "e2e/.auth/admin.json"),
       },
       dependencies: ["setup"],
-      testMatch: "**/ui/pages/admin.spec.ts",
+      testMatch: "**/deep/admin-surface.spec.ts",
       testIgnore: [...ignoreK3s],
     },
     {
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 7"],
-        storageState: path.join(rootDir, "e2e/.auth/user.json"),
+        storageState: { cookies: [], origins: [] },
       },
       dependencies: ["setup"],
-      testIgnore: [...ignoreK3s, "**/ui/pages/admin.spec.ts"],
+      testIgnore: [
+        ...ignoreK3s,
+        "**/deep/admin-surface.spec.ts",
+        "**/deep/public-api-contracts.spec.ts",
+        "**/deep/security.spec.ts",
+        "**/deep/health-routing.spec.ts",
+        "**/deep/a11y.spec.ts",
+      ],
     },
   ],
 });

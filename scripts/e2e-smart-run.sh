@@ -18,12 +18,12 @@ case "$MODE" in
     curl -s -o /dev/null --max-time 10 http://localhost:4000/en || true
     curl -s -o /dev/null --max-time 5 http://localhost:4000/api/health || true
 
-    echo "==> Running smoke set (API + homepage + security headers)..."
+    echo "==> Running smoke set (health + auth + i18n)..."
     pnpm exec playwright test \
-      e2e/api-routes.spec.ts \
-      e2e/api-auth.spec.ts \
-      e2e/homepage.spec.ts \
-      e2e/security-headers.spec.ts \
+      e2e/deep/health-routing.spec.ts \
+      e2e/deep/auth-lifecycle.spec.ts \
+      e2e/deep/i18n-nav.spec.ts \
+      e2e/deep/security.spec.ts \
       --project=chromium \
       --workers=2 \
       --reporter=line

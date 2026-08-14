@@ -55,7 +55,7 @@ jobs:
     - name: Install Playwright system deps (cache hit)
       if: steps.playwright-cache.outputs.cache-hit == 'true'
       run: pnpm exec playwright install-deps chromium
-    - run: pnpm exec playwright test e2e/accessibility.spec.ts
+    - run: pnpm exec playwright test e2e/deep/a11y.spec.ts --project=chromium
     - name: Upload a11y report
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a         # v7
