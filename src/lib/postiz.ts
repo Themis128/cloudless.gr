@@ -341,6 +341,55 @@ export function createPost(
   });
 }
 
+/** One successful or failed entry from {@link createPostsBulk}. */
+export type BulkCreatePostResult =
+  | {
+      index: number;
+      ok: true;
+      result: Array<{ postId: string; integration: string }>;
+    }
+  | {
+      index: number;
+      ok: false;
+      error: string;
+      status?: number;
+    };
+
+/**
+ * Schedule / draft / publish many posts sequentially.
+ *
+ * Postiz's create-post endpoint takes a single top-level `date`, so multi-day
+ * calendars need one request per date (or per content row). We keep going after
+ * individual failures so a bad mid-list item doesn't abort the rest. Cap the
+ * batch size in the route layer — create-post is rate-limited (~90/hr, tunable
+ * via `API_LIMIT` on the Postiz pod).
+ */
+export async function createPostsBulk(bodies: CreatePostBody[]): Promise<BulkCreatePostResult[]> {
+  const out: BulkCreatePostResult[] = [];
+  for (let index = 0; index < bodies.length; index++) {
+    try {
+      const result = await createPost(bodies[index]!);
+      out.push({ index, ok: true, result });
+    } catch (err) {
+      if (err instanceof PostizApiError) {
+        out.push({
+          index,
+          ok: false,
+          error: err.body.slice(0, 300) || err.message,
+          status: err.status,
+        });
+        continue;
+      }
+      out.push({
+        index,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return out;
+}
+
 /** Delete a post.
  *
  * Per docs.postiz.com / API Overview, `DELETE` on a missing post should

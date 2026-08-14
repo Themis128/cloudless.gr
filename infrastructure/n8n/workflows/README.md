@@ -9,6 +9,7 @@ two app-side automations wired in PR R2:
 | ---- | ------------ | ---- |
 | `lead-enrich.json` | EspoCRM `Lead.create` → `POST /api/webhooks/n8n/trigger` (name=`lead-enrich`) | Assigns owner via round-robin from a hardcoded list, PUTs the assignment back to EspoCRM, and Slack-DMs the assignee. (Apollo enrich was dropped 2026-06-21 — see the note below if you want it back.) |
 | `newsletter-nurture.json` | `/api/subscribe` → `POST /api/webhooks/n8n/trigger` (name=`newsletter-nurture`) | Tags the new EspoCRM contact with `newsletter_signup_<source>`, adds them to the `Newsletter Nurture` sequence in EspoCRM. |
+| `postiz-rss-multichannel.json` | Schedule (every 6h) | Reads RSS → builds a caption → lists Postiz channels in-cluster → `POST /api/public/v1/posts` to matching platforms. No Next.js involvement. |
 
 ## Operator bootstrap (one-time per workflow)
 
@@ -40,6 +41,23 @@ coverage is thin for Greek SMBs + lead volume is too low to justify the cost.
 The `lead-enrich` workflow now goes Webhook → Extract → Round-robin → EspoCRM
 PUT → Slack DM. Re-add an HTTP-Request node before "Round-robin" if/when you
 want enrichment back.)_
+
+## Postiz RSS → multi-channel (operator setup)
+
+1. Import `postiz-rss-multichannel.json` into https://n8n.cloudless.gr.
+2. Create credential **Header Auth**:
+   - Name: `Authorization`
+   - Value: your Postiz Public API key (Settings → Developers → Public API).
+3. Point both HTTP Request nodes at that credential (replace the placeholder credential id).
+4. Optional env vars on the n8n Deployment (or workflow Variables):
+   - `POSTIZ_API_BASE` — default `http://postiz.postiz.svc.cluster.local:5000` (in-cluster, no Cloudflare Access).
+   - `POSTIZ_RSS_FEED_URL` — default `https://cloudless.gr/en/blog/rss.xml`.
+   - `POSTIZ_CHANNEL_IDENTIFIERS` — comma list, default `linkedin,linkedin-page,x,bluesky`.
+5. Connect at least one matching channel in the Postiz UI, then Activate the workflow.
+
+Optional: install the community node `n8n-nodes-postiz` (Settings → Community Nodes) and
+swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/api`
+(e.g. `http://postiz.postiz.svc.cluster.local:5000/api`).
 
 ## Verify
 

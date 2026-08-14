@@ -35,10 +35,18 @@ const POSTIZ_FILE_ACCEPT =
  *   POST   /api/admin/postiz/upload        → upload media by URL
  *   POST   /api/admin/postiz/upload-file   → multipart file upload
  *   GET    /api/admin/postiz/slot?id=...   → next free time slot
+ *   POST   /api/admin/postiz/posts/bulk    → multi-day / multi-row schedule
+ *   GET    /api/admin/postiz/analytics/... → channel + post metrics
  *   POST   /api/admin/ai/generate          → AI-draft a post
  */
 
-type Tab = "compose" | "schedule" | "calendar" | "channels";
+type Tab = "compose" | "bulk" | "schedule" | "calendar" | "channels" | "analytics";
+
+interface PostizAnalyticsMetric {
+  label: string;
+  data: Array<{ total: string; date: string }>;
+  percentageChange: number;
+}
 
 interface ImageRef {
   id: string;
@@ -162,24 +170,29 @@ export default function PostizAdminPage() {
       )}
 
       <nav className="flex gap-2 border-b">
-        {(["compose", "schedule", "calendar", "channels"] as const).map((t) => (
-          <button
-            type="button"
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm capitalize ${
-              tab === t ? "border-b-2 border-blue-600 font-medium text-blue-700" : "text-gray-600"
-            }`}
-          >
-            {t}
-            {t === "compose" && draft.id ? " (edit)" : ""}
-          </button>
-        ))}
+        {(["compose", "bulk", "schedule", "calendar", "channels", "analytics"] as const).map(
+          (t) => (
+            <button
+              type="button"
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-3 py-2 text-sm capitalize ${
+                tab === t
+                  ? "border-b-2 border-blue-600 font-medium text-blue-700"
+                  : "text-gray-600"
+              }`}
+            >
+              {t}
+              {t === "compose" && draft.id ? " (edit)" : ""}
+            </button>
+          )
+        )}
       </nav>
 
       {tab === "channels" && (
         <ChannelsTab integrations={integrations} onReload={reloadIntegrations} />
       )}
+      {tab === "analytics" && <AnalyticsTab integrations={integrations} />}
       {tab === "compose" && (
         <ComposeTab
           integrations={integrations ?? []}
@@ -189,6 +202,15 @@ export default function PostizAdminPage() {
           onPosted={() => {
             void reloadPosts();
             setDraft(EMPTY_DRAFT);
+            setTab("schedule");
+          }}
+        />
+      )}
+      {tab === "bulk" && (
+        <BulkTab
+          integrations={integrations ?? []}
+          onPosted={() => {
+            void reloadPosts();
             setTab("schedule");
           }}
         />

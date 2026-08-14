@@ -260,3 +260,7 @@ test-results.json/
 
 # gh-aw audit downloads (`gh aw audit <run-id>`)
 .github/aw/logs/
+
+# Local MCP launcher secrets (never commit keys)
+scripts/cursor-mcp/*.env
+scripts/cursor-mcp/*-secret*

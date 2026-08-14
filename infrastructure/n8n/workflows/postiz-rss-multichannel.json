@@ -1,0 +1,179 @@
+{
+  "name": "Postiz — RSS → multi-channel schedule",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "name": "Every 6 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.POSTIZ_RSS_FEED_URL || 'https://cloudless.gr/en/blog/rss.xml' }}",
+        "options": {}
+      },
+      "name": "Read RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "name": "Newest item only",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "link",
+              "value": "={{ $json.link }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ ($json.title || '').trim() + '\\n\\n' + ($json.link || '') + '\\n\\nutm_source=postiz&utm_medium=social&utm_campaign=rss' }}"
+            },
+            {
+              "name": "scheduleAt",
+              "value": "={{ $now.plus(1, 'hour').toUTC().toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Build caption",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ ($env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000') + '/api/public/v1/integrations' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "List Postiz channels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_POSTIZ_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const caption = $('Build caption').first().json;\nconst raw = $input.first().json;\nconst list = Array.isArray(raw) ? raw : (raw.integrations || []);\nconst allow = String($env.POSTIZ_CHANNEL_IDENTIFIERS || 'linkedin,linkedin-page,x,bluesky')\n  .split(',')\n  .map((s) => s.trim())\n  .filter(Boolean);\nconst channels = list.filter((i) => allow.includes(i.identifier) && !i.disabled);\nif (!channels.length) {\n  return [{ json: { skipped: true, reason: 'no_matching_channels', allow } }];\n}\nconst settingsFor = (identifier) => {\n  if (identifier === 'x') return { __type: 'x', who_can_reply_post: 'everyone' };\n  if (identifier === 'linkedin' || identifier === 'linkedin-page') {\n    return { __type: identifier, post_as_images_carousel: false };\n  }\n  return { __type: identifier };\n};\nconst body = {\n  type: 'schedule',\n  date: caption.scheduleAt,\n  shortLink: false,\n  tags: [],\n  posts: channels.map((c) => ({\n    integration: { id: c.id },\n    value: [{ content: caption.content, image: [] }],\n    settings: settingsFor(c.identifier),\n  })),\n};\nreturn [{ json: { body, channelCount: channels.length, title: caption.title } }];"
+      },
+      "name": "Assemble Postiz payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !$json.skipped }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Has channels?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000') + '/api/public/v1/posts' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "name": "Create Postiz posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 220],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_POSTIZ_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "note",
+              "value": "={{ $json.reason || 'skipped' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1760, 400]
+    }
+  ],
+  "connections": {
+    "Every 6 hours": {
+      "main": [[{ "node": "Read RSS", "type": "main", "index": 0 }]]
+    },
+    "Read RSS": {
+      "main": [[{ "node": "Newest item only", "type": "main", "index": 0 }]]
+    },
+    "Newest item only": {
+      "main": [[{ "node": "Build caption", "type": "main", "index": 0 }]]
+    },
+    "Build caption": {
+      "main": [[{ "node": "List Postiz channels", "type": "main", "index": 0 }]]
+    },
+    "List Postiz channels": {
+      "main": [[{ "node": "Assemble Postiz payload", "type": "main", "index": 0 }]]
+    },
+    "Assemble Postiz payload": {
+      "main": [[{ "node": "Has channels?", "type": "main", "index": 0 }]]
+    },
+    "Has channels?": {
+      "main": [
+        [{ "node": "Create Postiz posts", "type": "main", "index": 0 }],
+        [{ "node": "Skipped", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -78,6 +78,16 @@ spec:
           value: Europe/Athens
         - name: TZ
           value: Europe/Athens
+        # Allow Settings → Community Nodes (e.g. n8n-nodes-postiz).
+        - name: N8N_COMMUNITY_PACKAGES_ENABLED
+          value: 'true'
+        # In-cluster Postiz Public API (RSS / cron workflows). Override in UI Variables if needed.
+        - name: POSTIZ_API_BASE
+          value: http://postiz.postiz.svc.cluster.local:5000
+        - name: POSTIZ_RSS_FEED_URL
+          value: https://cloudless.gr/en/blog/rss.xml
+        - name: POSTIZ_CHANNEL_IDENTIFIERS
+          value: linkedin,linkedin-page,x,bluesky
         volumeMounts:
         - name: data
           mountPath: /home/node/.n8n
