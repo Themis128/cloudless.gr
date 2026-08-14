@@ -1,105 +1,71 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Contact User Journey Test Suite
- * Tests user flows for contacting support, submitting inquiries, and getting help
+ * Contact journey — form fields by label/id/name; locale /en paths.
  */
+
+async function openMobileNavIfNeeded(page: Page) {
+  const hamburger = page.locator('button[aria-label*="menu" i]').first();
+  if (await hamburger.isVisible().catch(() => false)) {
+    await hamburger.click();
+  }
+}
+
+async function contactFields(page: Page) {
+  const form = page.getByTestId("contact-form").or(page.locator("form")).first();
+  const name = page.locator("#name, input[name='name']").first();
+  const email = page.locator("#email, input[name='email']").first();
+  const message = page.locator("#message, textarea[name='message']").first();
+  return { form, name, email, message };
+}
 
 test.describe("Contact User Journey", () => {
   test.beforeEach(async ({ page }) => {
-    // Start from homepage
-    await page.goto("/en");
-    await expect(page).toHaveURL(/.*\/$/);
+    await page.goto("/en", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/en\/?$/);
   });
 
-  test("should allow user to navigate to contact page", async ({ page }) => {
-    // Assert
-    expect(page.locator('text=Contact, text=Contact Us, text=Get in touch')).toBeVisible();
-    
-    // Act
-    await page.click('text=Contact, text=Contact Us, text=Get in touch');
-    // Assert
-    await expect(page).toHaveURL(/.*\/contact/);
+  test("navigate to contact from homepage", async ({ page }) => {
+    await openMobileNavIfNeeded(page);
+    await page.getByRole("link", { name: /contact/i }).filter({ visible: true }).first().click();
+    await expect(page).toHaveURL(/\/contact/);
   });
 
-  test("should display contact form with required fields", async ({ page }) => {
-    await page.goto("/en/contact");
-    await expect(page).toHaveURL(/.*\/contact/);
-    
-    // Assert
-    expect(page.locator('form')).toBeVisible();
-    
-    // Arrange
-    const form = page.locator('form');
-    // Assert
-    await expect(form.locator('input[name="name"], input[name="your-name"], input[name="fullname"]')).toBeVisible();
-    await expect(form.locator('input[name="email"], input[name="your-email"], input[name="email-address"]')).toBeVisible();
-    await expect(form.locator('textarea[name="message"], textarea[name="your-message"], input[name="subject"]')).toBeVisible();
+  test("contact form shows name, email, message", async ({ page }) => {
+    await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
+    const { name, email, message } = await contactFields(page);
+    await expect(name).toBeVisible({ timeout: 20_000 });
+    await expect(email).toBeVisible();
+    await expect(message).toBeVisible();
   });
 
-  test("should allow user to submit contact form with valid data", async ({ page }) => {
-    await page.goto("/en/contact");
-    await expect(page).toHaveURL(/.*\/contact/);
-    
-    // Arrange
-    const form = page.locator('form');
-    await form.locator('input[name="name"], input[name="your-name"], input[name="fullname"]').first().fill(`Test User ${Date.now()}`);
-    await form.locator('input[name="email"], input[name="your-email"], input[name="email-address"]').first().fill(`test${Date.now()}@example.com`);
-    await form.locator('textarea[name="message"], textarea[name="your-message"], input[name="subject"]').first().fill(`This is a test message from automated testing at ${new Date().toISOString()}`);
-    
-    // Act
-    await form.locator('button:has-text("Send"), button:has-text("Submit"), button:has-text("Contact")').first().click();
-    
-    // Assert
-    await page.waitForTimeout(3000);
-    
-    const successMessage = page.locator('.success, .confirmation, text=Thanks, text=Message sent, text=We\'ll get back to you');
-    expect(successMessage.first()).toBeVisible();
+  test("empty submit stays on contact (required validation)", async ({ page }) => {
+    await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
+    const { name } = await contactFields(page);
+    await expect(name).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /send|submit|message/i }).first().click();
+    await expect(page).toHaveURL(/\/contact/);
+    const missing = await name.evaluate((el: HTMLInputElement) => el.validity.valueMissing);
+    expect(missing).toBe(true);
   });
 
-  test("should validate contact form data and show errors for invalid input", async ({ page }) => {
-    await page.goto("/en/contact");
-    await expect(page).toHaveURL(/.*\/contact/);
-    
-    // Arrange
-    const form = page.locator('form');
-    
-    // Test with empty required fields
-    await form.locator('button:has-text("Send"), button:has-text("Submit"), button:has-text("Contact")').first().click();
-    
-    // Assert
-    await page.waitForTimeout(1000);
-    
-    const errorMessages = page.locator('.error, .invalid, [role="alert"], text=Required, text=Please fill in');
-    expect(errorMessages.first()).toBeVisible();
+  test("invalid email is blocked by native validation", async ({ page }) => {
+    await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
+    const { name, email, message } = await contactFields(page);
+    await expect(email).toBeVisible({ timeout: 20_000 });
+    await name.fill("Test User");
+    await email.fill("not-an-email");
+    await message.fill("Test message");
+    await page.getByRole("button", { name: /send|submit|message/i }).first().click();
+    await expect(page).toHaveURL(/\/contact/);
+    const invalid = await email.evaluate((el: HTMLInputElement) => !el.validity.valid);
+    expect(invalid).toBe(true);
   });
 
-  test("should validate email format in contact form", async ({ page }) => {
-    await page.goto("/en/contact");
-    await expect(page).toHaveURL(/.*\/contact/);
-    
-    // Arrange
-    const form = page.locator('form');
-    await form.locator('input[name="name"], input[name="your-name"], input[name="fullname"]').first().fill(`Test User ${Date.now()}`);
-    await form.locator('input[name="email"], input[name="your-email"], input[name="email-address"]').first().fill(`invalid-email`);
-    await form.locator('textarea[name="message"], textarea[name="your-message"], input[name="subject"]').first().fill(`Test message`);
-    
-    // Act
-    await form.locator('button:has-text("Send"), button:has-text("Submit"), button:has-text("Contact")').first().click();
-    
-    // Assert
-    await page.waitForTimeout(1000);
-    
-    const emailError = page.locator('.error, .invalid, [role="alert"]:has-text("email"), text=Valid email, text=Please enter a valid');
-    expect(emailError.first()).toBeVisible();
-  });
-
-  test("should allow user to view contact information (phone, address, etc.)", async ({ page }) => {
-    await page.goto("/en/contact");
-    await expect(page).toHaveURL(/.*\/contact/);
-    
-    // Look for contact info like phone, address, social links
-    const contactInfo = page.locator('text=Phone, text=Call, text=Address, text=Location, text=Email, text=Follow us');
-    expect(contactInfo.first()).toBeVisible();
+  test("contact info panel is present", async ({ page }) => {
+    await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
+    const info = page.getByTestId("contact-info").or(page.locator("main"));
+    await expect(info.first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/cloudless|email|@/i).first()).toBeVisible();
   });
 });

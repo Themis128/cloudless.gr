@@ -113,6 +113,8 @@ setup("authenticate as user", async ({ page }) => {
     await ensureRegistered(email, password, "E2E User");
     await loginAndSave(page, email, password, USER_STORAGE);
   } catch (err) {
+    // Local D1/sqlite may be unavailable (degraded health) — leave empty storage
+    // so storageState-dependent specs skip/soft-fail instead of blocking setup.
     setup.info().annotations.push({ type: "skip", description: `User login failed: ${err}` });
     emptyState(USER_STORAGE);
   }
@@ -121,10 +123,15 @@ setup("authenticate as user", async ({ page }) => {
 setup("authenticate as admin", async ({ page }) => {
   const email = process.env.E2E_ADMIN_EMAIL || "";
   const password = process.env.E2E_ADMIN_PASSWORD || "";
-  if (!email || !password) {
+  // Prefer cookie bypass when NEXT_PUBLIC_E2E=1 — reliable without remote D1.
+  // Still attempt real login when credentials exist so session-cookie specs work.
+  const preferBypass = process.env.E2E_ADMIN_BYPASS === "1";
+  if (!email || !password || preferBypass) {
     setup.info().annotations.push({
       type: "skip",
-      description: "E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set — using e2e_admin cookie",
+      description: preferBypass
+        ? "E2E_ADMIN_BYPASS=1 — using e2e_admin cookie"
+        : "E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set — using e2e_admin cookie",
     });
     adminBypassState(ADMIN_STORAGE);
     return;

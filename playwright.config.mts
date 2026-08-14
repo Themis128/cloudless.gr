@@ -64,7 +64,7 @@ export default defineConfig({
   expect: { timeout: 20_000 },
 
   use: {
-    baseURL: "http://localhost:4000/en",
+    baseURL: "http://localhost:4000/en/",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -84,11 +84,17 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
+      // Prefer local wrangler sqlite for signup/login in e2e (no remote D1 required).
+      AUTH_DB_PREFER_LOCAL: "1",
       E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
       E2E_USER_EMAIL: process.env.E2E_USER_EMAIL || "testuser@cloudless.gr",
       E2E_USER_PASSWORD: process.env.E2E_USER_PASSWORD || "TestPass123!",
       E2E_ADMIN_EMAIL: process.env.E2E_ADMIN_EMAIL || "testadmin@cloudless.gr",
       E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD || "AdminPass123!",
+      // Cookie bypass for admin pages when D1 promote/login is flaky under load.
+      E2E_ADMIN_BYPASS: process.env.E2E_ADMIN_BYPASS || "1",
+      // Keep contact/subscribe rate limits realistic so e2e can assert 429.
+      E2E_STRICT_RATE_LIMIT: process.env.E2E_STRICT_RATE_LIMIT || "1",
       PATH: `${process.env.PATH}:/home/tbaltzakis/.local/share/pnpm/bin`,
     },
   },

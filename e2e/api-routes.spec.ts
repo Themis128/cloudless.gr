@@ -52,7 +52,8 @@ test.describe("API: /api/contact", () => {
     expect([400, 429]).toContain(res.status());
     if (res.status() === 400) {
       const body = await res.json();
-      expect(body.error).toMatch(/required/i);
+      // Missing fields may be typed as non-strings ("must be strings") or empty ("required").
+      expect(body.error).toMatch(/required|must be strings/i);
     }
   });
 

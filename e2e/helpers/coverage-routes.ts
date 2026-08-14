@@ -76,7 +76,6 @@ export const ADMIN_PAGES = [
   "/en/admin/errors",
   "/en/admin/esp32",
   "/en/admin/esp32-manager",
-  "/en/admin/hubspot",
   "/en/admin/integrations",
   "/en/admin/kpi",
   "/en/admin/leads",

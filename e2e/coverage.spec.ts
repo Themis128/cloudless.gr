@@ -86,7 +86,7 @@ test.describe("Coverage - Full Path Testing", () => {
       const response = await request.post(`${BASE_URL}/api/contact`, {
         data: { invalid: "data" },
       });
-      expect([400, 401, 403, 404, 405]).toContain(response.status());
+      expect([400, 401, 403, 404, 405, 429]).toContain(response.status());
     });
 
     test("404 page renders correctly", async ({ page }) => {

@@ -14,8 +14,8 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("rate-limit cap — /api/contact (3 req/min/container)", () => {
-  test("4th rapid same-IP submission is rejected (429 or 4xx)", async ({
+test.describe("rate-limit cap — /api/contact (5 req / 10 min / IP)", () => {
+  test("6th rapid same-IP submission is rejected (429)", async ({
     request,
   }) => {
     // CloudFront/Lambda distributes requests across containers — each has its
@@ -39,21 +39,24 @@ test.describe("rate-limit cap — /api/contact (3 req/min/container)", () => {
     // regardless of body shape.
     const data = { name: "rl-test", email: "rl@example.com", message: "x" };
 
+    // Route limiter is 5 / IP / 10 minutes (see contact/route.ts). Send 6.
     const statuses: number[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const r = await request.post("/api/contact", {
         headers,
-        data: JSON.stringify(data),
+        data: {
+          ...data,
+          // Unique message so caches don't collapse requests.
+          message: `rl-test-${i}-${Date.now()}`,
+        },
       });
       statuses.push(r.status());
     }
-    // At least one of the 4 requests must be 429 — confirming the rate limiter
-    // is active. In dev the 4th triggers it; in production the bucket may be
-    // partially full from prior runs (especially via CDN that normalises the
-    // source IP), so we accept any position triggering the limit.
+    // Prefer 429 once the bucket is exhausted. Accept mixed 2xx/4xx before the
+    // limit trips; at least one response must be 429.
     expect(
-      statuses.some(s => s === 429),
-      `expected at least one 429 in rapid requests; got ${statuses.join(",")}`,
+      statuses.some((s) => s === 429),
+      `expected at least one 429 after 6 contact posts; got ${statuses.join(",")}`,
     ).toBe(true);
   });
 });

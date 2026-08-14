@@ -16,6 +16,7 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import { ADMIN_APIS, ADMIN_API_DYNAMIC } from "./helpers/coverage-routes";
+import { requestUntilCompiled } from "./_internal/request-until-compiled";
 
 const STORAGE = path.join(__dirname, ".auth", "admin.json");
 
@@ -34,17 +35,17 @@ const ALL_ADMIN_APIS = Array.from(
 
 test.describe("Admin APIs unauthenticated", () => {
   for (const api of ALL_ADMIN_APIS) {
-    test(`unauth GET ${api} — returns 401/403/404`, async ({ request }) => {
-      const r = await request.get(api, { failOnStatusCode: false });
-      // Must reject unauthenticated; 200 would be a data leak
-      expect([401, 403, 404, 405]).toContain(r.status());
+    test(`unauth GET ${api} — returns 401/403`, async ({ request }) => {
+      // Retry past Turbopack compile 404s — never treat transient 404 as auth OK.
+      const r = await requestUntilCompiled(request, "get", api);
+      // Must reject unauthenticated; 200 would be a data leak. 405 = method gated.
+      expect([401, 403, 405]).toContain(r.status());
     });
   }
 
   test("unauth GET with garbage Bearer token still rejected", async ({ request }) => {
-    const r = await request.get("/api/admin/users", {
+    const r = await requestUntilCompiled(request, "get", "/api/admin/users", {
       headers: { Authorization: "Bearer garbage" },
-      failOnStatusCode: false,
     });
     expect([401, 403]).toContain(r.status());
   });
@@ -64,7 +65,7 @@ test.describe("Admin APIs authenticated", () => {
 
   for (const api of ALL_ADMIN_APIS) {
     test(`auth GET ${api} — non-5xx`, async ({ request }) => {
-      const r = await request.get(api, { failOnStatusCode: false });
+      const r = await requestUntilCompiled(request, "get", api);
       expect(r.status(), `${api} returned ${r.status()}`).toBeLessThan(500);
     });
   }

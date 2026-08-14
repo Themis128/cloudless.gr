@@ -1,14 +1,17 @@
 import { test as base, expect, type APIRequestContext } from "@playwright/test";
+import { requestUntilCompiled } from "./request-until-compiled";
 
 export const ADMIN_TOKEN = "e2e-admin-token-do-not-use-in-prod";
 
 /** Returns request context that always sends the E2E admin Bearer token. */
 export async function adminRequest(request: APIRequestContext) {
+  const authHeaders = { authorization: `Bearer ${ADMIN_TOKEN}` };
   return {
-    get: (url: string) => request.get(url, { headers: { authorization: `Bearer ${ADMIN_TOKEN}` } }),
+    get: (url: string) =>
+      requestUntilCompiled(request, "get", url, { headers: authHeaders }),
     post: (url: string, data?: unknown) =>
-      request.post(url, {
-        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+      requestUntilCompiled(request, "post", url, {
+        headers: authHeaders,
         data: data ?? {},
       }),
     put: (url: string, body?: unknown) => {
@@ -20,16 +23,16 @@ export async function adminRequest(request: APIRequestContext) {
           ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (body as any).data
           : body;
-      return request.put(url, {
-        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+      return requestUntilCompiled(request, "put", url, {
+        headers: authHeaders,
         data: payload ?? {},
       });
     },
     delete: (url: string) =>
-      request.delete(url, { headers: { authorization: `Bearer ${ADMIN_TOKEN}` } }),
+      requestUntilCompiled(request, "delete", url, { headers: authHeaders }),
     patch: (url: string, data?: unknown) =>
-      request.patch(url, {
-        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+      requestUntilCompiled(request, "patch", url, {
+        headers: authHeaders,
         data: data ?? {},
       }),
   };

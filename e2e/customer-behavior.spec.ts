@@ -347,33 +347,36 @@ test.describe("Contact form API", () => {
 
 test.describe("Auth – Login page", () => {
   test("renders email, password fields and Sign In button", async ({ page }) => {
-    await page.goto("/en/auth/login");
-    await page.waitForLoadState("networkidle").catch(() => {});
-    // D1 auth: labeled email/password fields + Sign In (Cognito AWS hosted UI is gone)
-    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByLabel(/^password/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+    await page.goto("/en/auth/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#password")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible({ timeout: 20_000 });
   });
 
   test("has a Create Account signup link", async ({ page }) => {
-    await page.goto("/en/auth/login");
-    await page.waitForLoadState("networkidle").catch(() => {});
-    await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
+    await page.goto("/en/auth/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /create account/i })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("has a Forgot Password link", async ({ page }) => {
-    await page.goto("/en/auth/login");
-    await page.waitForLoadState("networkidle").catch(() => {});
-    // Cognito Hosted UI handles forgot-password; the login page may or may not show a local link.
-    const hasForgotLink = await page.getByRole("link", { name: /forgot password/i }).isVisible({ timeout: 5_000 }).catch(() => false);
+    await page.goto("/en/auth/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
+    const hasForgotLink = await page
+      .getByRole("link", { name: /forgot password/i })
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
     if (hasForgotLink) {
       await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
     }
   });
 
   test("submitting blank stays on login page", async ({ page }) => {
-    await page.goto("/en/auth/login");
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.goto("/en/auth/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button").first().click();
     expect(page.url()).toMatch(/\/auth\/login|auth\/login/);
   });
@@ -381,41 +384,50 @@ test.describe("Auth – Login page", () => {
 
 test.describe("Auth – Signup page", () => {
   test("renders Full Name, email, password fields and Create Account button", async ({ page }) => {
-    await page.goto("/en/auth/signup");
-    await expect(page.locator("#signup-email")).toBeVisible();
-    await expect(page.locator("#signup-password")).toBeVisible();
-    await expect(page.locator("#signup-confirm-password")).toBeVisible();
-    await expect(page.getByRole("button", { name: /create account/i })).toBeVisible();
+    await page.goto("/en/auth/signup", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#signup-email")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#signup-password")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#signup-confirm-password")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /create account/i })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("has a Sign In link back to login", async ({ page }) => {
-    await page.goto("/en/auth/signup");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator("#signup-email")).toBeVisible({ timeout: 10000 });
-    // Sign In link sits below the form — scroll it into view
+    await page.goto("/en/auth/signup", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#signup-email")).toBeVisible({ timeout: 20_000 });
     const signInLink = page.getByRole("link", { name: /sign in/i }).first();
     await signInLink.scrollIntoViewIfNeeded();
-    await expect(signInLink).toBeVisible();
+    await expect(signInLink).toBeVisible({ timeout: 20_000 });
   });
 
   test("password mismatch shows an error", async ({ page }) => {
-    await page.goto("/en/auth/signup");
-    await expect(page.locator("#signup-email")).toBeVisible();
-    await page.locator("#signup-email").fill("test@example.com");
-    await page.locator("#signup-password").fill("password123");
-    await page.locator("#signup-confirm-password").fill("different456");
-    await page.getByRole("button", { name: /create account/i }).click();
-    // Should show a "passwords do not match" error
-    await expect(page.getByText(/passwords do not match/i)).toBeVisible();
+    // baseURL is http://localhost:4000/en (no trailing slash) — use an absolute path.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await page.goto("/en/auth/signup", { waitUntil: "domcontentloaded" });
+      if (!(await page.getByRole("heading", { name: /page not found/i }).count())) break;
+      await page.waitForTimeout(500 * (attempt + 1));
+    }
+    await expect(page.locator("#signup-email")).toBeVisible({ timeout: 30_000 });
+    await page.locator("#signup-name").fill("E2E Tester");
+    await page.locator("#signup-email").fill(`mismatch-${Date.now()}@example.com`);
+    await page.locator("#signup-password").fill("password12345");
+    await page.locator("#signup-confirm-password").fill("different45678");
+    await page.getByRole("button", { name: /create account|sign up|register/i }).click();
+    await expect(
+      page.getByText(/passwords? (do )?not match|mismatch/i).first(),
+    ).toBeVisible({ timeout: 20_000 });
   });
 });
 
 test.describe("Auth – Forgot Password page", () => {
   test("renders email input and a submit button", async ({ page }) => {
-    await page.goto("/en/auth/forgot-password");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator("#forgot-email")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("button", { name: /send reset link/i })).toBeVisible();
+    await page.goto("/en/auth/forgot-password", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#forgot-email")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /send reset link/i })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });
 
