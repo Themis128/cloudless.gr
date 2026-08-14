@@ -135,6 +135,7 @@ const adminGroups: AdminGroup[] = [
         label: "Subscriptions",
         Icon: CreditCard,
       },
+      { href: "/admin/invoices", label: "Invoices", Icon: FileText },
       { href: "/admin/ab-tests", label: "A/B Tests", Icon: FlaskConical },
       { href: "/admin/integrations", label: "Integrations", Icon: Plug },
       { href: "/admin/errors", label: "Errors", Icon: AlertTriangle },
