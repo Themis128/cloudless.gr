@@ -185,7 +185,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 ### Online
 
 - Business Support Home: https://business.facebook.com/business-support-home  
-- Account Quality (legacy alias still lands correctly): https://business.facebook.com/business/accountquality  
+- Account Quality (legacy path, often 404): `https://business.facebook.com/business/accountquality`  
 - Recovery pattern (2026): diagnose restricted asset → fix billing/policy → appeal as admin within ~180 days; avoid parallel accounts while appealing
 
 ---

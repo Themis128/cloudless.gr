@@ -2,12 +2,10 @@
 
 Topic-oriented documentation for cloudless.gr. Pick a folder by subject; each folder has its own `README.md`.
 
-**Start here:** [current-source-of-truth-checklist.md](current-source-of-truth-checklist.md) ·
-[ARCHITECTURE.md](ARCHITECTURE.md) ·
-[ARCHITECTURE-MAP.md](ARCHITECTURE-MAP.md) ·
-[BUSINESS-LOGIC-REPORT.md](BUSINESS-LOGIC-REPORT.md) ·
+**Start here:** [BUSINESS-LOGIC-REPORT.md](BUSINESS-LOGIC-REPORT.md) ·
 [DOCUMENTATION-SUMMARY.md](DOCUMENTATION-SUMMARY.md) ·
-[roadmap/agency-platform-backlog.md](roadmap/agency-platform-backlog.md)
+[roadmap/agency-platform-backlog.md](roadmap/agency-platform-backlog.md) ·
+production edge in `.cursor/rules/cloudless2-pi-proxy.mdc`
 
 | Folder | Topic |
 |--------|--------|

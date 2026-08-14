@@ -4,8 +4,7 @@ R2 + D1 replace the former S3 + Glue + Athena stack. Admin analytics and AI
 **read the lake only** — never Athena or live vendor APIs on page load.
 
 Layer-by-layer map (ingestion, medallion, DuckDB / AE / D1, insights, APIs,
-admin UI): [`datalake-architecture-report.md`](datalake-architecture-report.md).
-Filtered follow-ups live in
+admin UI) is this hub. Filtered follow-ups live in
 [`../roadmap/agency-platform-backlog.md`](../roadmap/agency-platform-backlog.md).
 Operator UI map:
 [`admin-analytics-ui-report.md`](admin-analytics-ui-report.md).

@@ -6,7 +6,7 @@ Inventory of operator docs for cloudless.gr (August 2026). Use with
 still describe AWS primary, Cognito, HubSpot, or Notion CMS.
 
 Hub index: [`README.md`](README.md). Current production path:
-[`current-source-of-truth-checklist.md`](current-source-of-truth-checklist.md).
+`.cursor/rules/cloudless2-pi-proxy.mdc`.
 
 ---
 
@@ -161,10 +161,9 @@ AWS-migration skills are for **retiring** leftover AWS, not expanding it.
 
 **Missing files** (linked from the architecture skill / CLAUDE.md):
 
-`docs/ARCHITECTURE.md` is a stub pointing at the checklist +
-[`ARCHITECTURE-MAP.md`](ARCHITECTURE-MAP.md). The old names
-`CLOUDFLARE-ARCHITECTURE.md` / `HA-ARCHITECTURE.md` still do not exist — do
-not recreate them as long essays.
+`docs/ARCHITECTURE.md` / `ARCHITECTURE-MAP.md` are local gitignored
+planning ledgers. The old names `CLOUDFLARE-ARCHITECTURE.md` /
+`HA-ARCHITECTURE.md` still do not exist — do not recreate them as long essays.
 
 ---
 

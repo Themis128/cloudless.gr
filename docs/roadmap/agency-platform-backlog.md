@@ -3,11 +3,10 @@
 Filters (August 2026) — treat as **backlog filters**, not build plans:
 
 - [Cloudless Platform Assessment rev. 2](https://claude.ai/code/artifact/7c1b2cf7-4f30-449d-acad-32aff8c37109)
-- [Datalake and analytics architecture](../data/datalake-architecture-report.md)
+- [Datalake and analytics architecture](../data/datalake.md)
 - [Admin analytics UI — operator visibility](../data/admin-analytics-ui-report.md)
 - [Structured documentation summary](../DOCUMENTATION-SUMMARY.md)
-- [Current source of truth checklist](../current-source-of-truth-checklist.md)
-- [Architecture map](../ARCHITECTURE-MAP.md)
+- Production edge: `.cursor/rules/cloudless2-pi-proxy.mdc`
 - [Integration / data-flow / business logic](../BUSINESS-LOGIC-REPORT.md)
 
 **Scope:** Cloudless is an agency operating system (marketing + CRM + light delivery). Do not build general-purpose ERP (HR, payroll, inventory, warehouse).
@@ -69,7 +68,7 @@ Matching is email-only. If that fails in production, _then_ consider a CDP.
 
 ## Datalake / analytics — filter
 
-Architecture: [`docs/data/datalake-architecture-report.md`](../data/datalake-architecture-report.md).
+Architecture: [`docs/data/datalake.md`](../data/datalake.md).
 The lake already exists (ETL → R2 parquet → gold JSON → `datalake-serve.ts`).
 Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo from admin pages.
 
@@ -139,7 +138,7 @@ The dashboards already exist. Prefer wiring data the APIs already return over ne
 ## Documentation — filter
 
 Inventory: [`docs/DOCUMENTATION-SUMMARY.md`](../DOCUMENTATION-SUMMARY.md).
-Live checklist: [`docs/current-source-of-truth-checklist.md`](../current-source-of-truth-checklist.md).
+Live checklist: `.cursor/rules/cloudless2-pi-proxy.mdc` plus this backlog.
 Prefer `.cursor/rules/` over AWS-primary / Cognito / HubSpot / Notion-CMS runbooks.
 
 ### Do now (doc hygiene)

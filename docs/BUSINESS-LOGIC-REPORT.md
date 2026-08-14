@@ -4,8 +4,8 @@ What the product **does** today (CRM, Stripe, analytics, AI, CMS, comms).
 **Filter, not a rebuild.** Production origin is Pi Next.js behind `cloudless2`,
 not OpenNext on Workers.
 
-Code map: [`ARCHITECTURE-MAP.md`](ARCHITECTURE-MAP.md).  
-Lake: [`data/datalake-architecture-report.md`](data/datalake-architecture-report.md).  
+Code map: [`skills/cloudless-architecture/SKILL.md`](../skills/cloudless-architecture/SKILL.md).  
+Lake: [`data/datalake.md`](data/datalake.md).  
 Backlog: [`roadmap/agency-platform-backlog.md`](roadmap/agency-platform-backlog.md).
 
 Config cascade: D1 `app_config` → `process.env` (k8s / local). AWS SSM is
@@ -166,7 +166,7 @@ Ad notification `email` / `discord` types are **unimplemented**. Slack only.
 
 ## 8. Admin surface
 
-Treat [`ARCHITECTURE-MAP.md`](ARCHITECTURE-MAP.md) as the page list.
+Treat `src/app/[locale]/admin/AdminLayoutClient.tsx` as the page list.
 Corrections vs older “40+ sections” write-ups:
 
 - CRM includes **`/admin/crm/[id]`**

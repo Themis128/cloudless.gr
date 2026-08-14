@@ -4,7 +4,7 @@ What the operator can see today, what is queryable, what is auto-generated,
 and what is missing. Filter (not a rebuild):
 [`../roadmap/agency-platform-backlog.md`](../roadmap/agency-platform-backlog.md).
 
-Lake serving rules: [`datalake-architecture-report.md`](datalake-architecture-report.md).
+Lake serving rules: [`datalake.md`](datalake.md).
 Admin analytics pages that talk to `/api/admin/analytics/*` (except Engine and
 workspaces) are **gold / D1 hot**, not live GSC/Stripe/Espo on page load.
 

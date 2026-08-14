@@ -3,7 +3,6 @@
 | Doc | File |
 |-----|------|
 | [datalake.md](datalake.md) | Hub: lakehouse serving rule, gold sections, ETL schedule |
-| [datalake-architecture-report.md](datalake-architecture-report.md) | Full ingestion → storage → query → insights → API → UI map |
 | [admin-analytics-ui-report.md](admin-analytics-ui-report.md) | What the operator sees, query paths, auto-insights, gaps |
 | [datalake-schema.sql](datalake-schema.sql) | `data/datalake-schema.sql` |
 | [datalake-views.sql](datalake-views.sql) | `data/datalake-views.sql` |
