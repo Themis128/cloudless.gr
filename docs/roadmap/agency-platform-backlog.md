@@ -32,23 +32,13 @@ Percentages in the artifact (~75% marketing, ~60% CRM, ~15% ERP) are a snapshot,
 
 | Status | Item                                                  | Why                                                              | Notes                                                                       |
 | ------ | ----------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
-<<<<<<< HEAD
-| Wait   | Customer Data Platform (new D1 + identity resolution) | 4–6 weeks. Only if join-by-email on `/admin/crm/[id]` is painful | Do not start four new D1 databases up front                                 |
-| Wait   | Marketing automation beyond ActiveCampaign            | Phase 2 in the artifact                                          | Use existing AC automations until the contact page shows gaps               |
-| **Done** | Invoicing                                             | Agency-only finance                                              | Stripe Invoicing admin (#1665) — no finance-db                              |
-| **Done (this branch)** | Projects + time tracking                              | Agency delivery, not ERP                                         | D1 `agency_project` + `time_entry`; `/admin/delivery` — not AppFlowy CMS, no project-db Worker |
-| **Done** | EspoCRM D1 cache                                      | Latency, not a new CRM                                           | `espocrm_cache` + 45–60s read-through; write-path invalidate; not a CDP     |
-| Wait   | Docs / contracts                                      | Phase 6                                                          | AppFlowy already hosts docs; do not add `docs-db` as a Worker               |
-| Wait   | AI agents on Cloudflare Workers                       | Artifact Phase 7                                                 | Keep LangGraph / Bedrock on the Pi app path                                 |
-=======
 | **Won’t / Defer** | Customer Data Platform (new D1 + identity resolution) | 4–6 weeks. Only if join-by-email on `/admin/crm/[id]` is painful | Contact 360 `matchHints` shows email-join gaps; revisit only after systematic multi-email miss rates |
 | **Stay on AC** | Marketing automation beyond ActiveCampaign            | Phase 2 in the artifact                                          | Integrations status flags missing `ACTIVECAMPAIGN_LEAD_AUTOMATION_ID`; keep AC until that surface shows real gaps |
 | **Done** | Invoicing                                             | Agency-only finance                                              | Stripe Invoicing admin (#1665) — no finance-db                              |
-| Wait   | Projects + time tracking                              | Agency delivery, not ERP                                         | After invoicing has a real operator workflow (#1666 open)                   |
-| Wait   | EspoCRM D1 cache                                      | Latency, not a new CRM                                           | After Notion adapters are gone (#1664 open)                                 |
+| **Done (this branch)** | Projects + time tracking                              | Agency delivery, not ERP                                         | D1 `agency_project` + `time_entry`; `/admin/delivery`; bill unbilled → Stripe draft |
+| **Done** | EspoCRM D1 cache                                      | Latency, not a new CRM                                           | `espocrm_cache` + 45–60s read-through; write-path invalidate; not a CDP     |
 | **Done (AppFlowy)** | Docs / contracts                                      | Phase 6                                                          | Category parse on `/admin/docs`; no `docs-db` Worker                        |
 | **Won’t** | AI agents on Cloudflare Workers                       | Artifact Phase 7                                                 | Workers AI for chat; LangGraph stays on Pi (`/admin/langgraph`)              |
->>>>>>> 6e8c77d6 (Close platform Wait items with diagnostics, not new platforms.)
 
 ## Explicitly out of scope
 
