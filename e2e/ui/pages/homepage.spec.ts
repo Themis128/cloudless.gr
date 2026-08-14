@@ -30,7 +30,9 @@ test.describe("Homepage", () => {
     const nav = browserPage.locator('nav, [data-testid="main-nav"], .main-navigation');
     await expect(nav).toBeVisible();
     await openMobileNavIfNeeded(browserPage);
-    const navLinks = nav.locator('a[href*="/services"], a[href*="/store"], a[href*="/blog"], a[href*="/contact"]');
+    const navLinks = nav
+      .locator('a[href*="/services"], a[href*="/store"], a[href*="/blog"], a[href*="/contact"]')
+      .filter({ visible: true });
     await expect(navLinks.first()).toBeVisible();
   });
 

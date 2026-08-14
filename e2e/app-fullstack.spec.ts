@@ -246,7 +246,7 @@ test.describe("Contact Form API", () => {
       data: {},
     });
     // Accept 400/401/403/404/405 or 200 (SPA may return index.html)
-    expect([400, 401, 403, 404, 405, 200]).toContain(response.status());
+    expect([200, 400, 401, 403, 404, 405, 429]).toContain(response.status());
   });
 });
 

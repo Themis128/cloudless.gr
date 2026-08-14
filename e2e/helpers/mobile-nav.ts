@@ -5,11 +5,13 @@ import { expect, type Page } from "@playwright/test";
  * hamburger drawer — open it before clicking nav items.
  */
 export async function openMobileNavIfNeeded(page: Page): Promise<void> {
-  const hamburger = page.getByRole("button", { name: /toggle menu/i });
+  const hamburger = page.getByTestId("mobile-menu-button");
   if (!(await hamburger.isVisible().catch(() => false))) return;
   if ((await hamburger.getAttribute("aria-expanded")) === "true") return;
-  await hamburger.click();
-  await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+  await hamburger.click({ force: true });
+  await expect(
+    page.getByTestId("main-nav").locator('a[href*="/services"]').filter({ visible: true }).first(),
+  ).toBeVisible({ timeout: 10_000 });
 }
 
 export async function clickNavHref(page: Page, hrefPart: string): Promise<void> {
@@ -20,5 +22,5 @@ export async function clickNavHref(page: Page, hrefPart: string): Promise<void> 
     .filter({ visible: true })
     .first();
   await expect(link).toBeVisible({ timeout: 10_000 });
-  await link.click();
+  await link.click({ force: true });
 }

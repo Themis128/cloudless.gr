@@ -180,7 +180,8 @@ export default function Navbar() {
             <CartButton />
             <button
               type="button"
-              className="text-neon-cyan p-2"
+              data-testid="mobile-menu-button"
+              className="text-neon-cyan min-h-11 min-w-11 p-2"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={toggleMenuLabel}
               aria-expanded={mobileOpen}
