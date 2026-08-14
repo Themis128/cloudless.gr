@@ -93,6 +93,16 @@ export interface Contact360Attribution {
   goldMatches: Contact360GoldAttributionRow[];
 }
 
+export interface Contact360Scores {
+  rfmScore: number | null;
+  recencyDays: number | null;
+  frequency: number | null;
+  monetary: number | null;
+  lastPurchaseAt: string | null;
+  churnScore: number | null;
+  riskBand: string | null;
+}
+
 export interface Contact360 {
   contact: Contact360Person;
   opportunities: Contact360Related[];
@@ -102,11 +112,24 @@ export interface Contact360 {
   account: Contact360Account | null;
   events: Contact360Event[];
   attribution: Contact360Attribution;
+  scores: Contact360Scores;
   fetchedAt: string;
 }
 
 export function emptyAttribution(): Contact360Attribution {
   return { firstTouch: null, goldMatches: [] };
+}
+
+export function emptyScores(): Contact360Scores {
+  return {
+    rfmScore: null,
+    recencyDays: null,
+    frequency: null,
+    monetary: null,
+    lastPurchaseAt: null,
+    churnScore: null,
+    riskBand: null,
+  };
 }
 
 function normSource(value: string): string {
@@ -148,6 +171,27 @@ export function matchGoldAttributionRows(
     });
   }
   return out;
+}
+
+export function matchRfmChurnRow(
+  goldRows: Record<string, unknown>[],
+  email: string
+): Contact360Scores {
+  const needle = email.trim().toLowerCase();
+  if (!needle || goldRows.length === 0) return emptyScores();
+  const row = goldRows.find((raw) => asString(raw.email).toLowerCase() === needle);
+  if (!row) return emptyScores();
+  const lastPurchaseAt = asString(row.last_purchase_at ?? row.lastPurchaseAt);
+  const riskBand = asString(row.risk_band ?? row.riskBand);
+  return {
+    rfmScore: asNumberOrNull(row.rfm_score ?? row.rfmScore),
+    recencyDays: asNumberOrNull(row.recency_days ?? row.recencyDays),
+    frequency: asNumberOrNull(row.frequency),
+    monetary: asNumberOrNull(row.monetary),
+    lastPurchaseAt: lastPurchaseAt || null,
+    churnScore: asNumberOrNull(row.churn_score ?? row.churnScore ?? row.churn_risk),
+    riskBand: riskBand || null,
+  };
 }
 
 export function contactDisplayName(c: {
@@ -206,6 +250,12 @@ function asString(value: unknown): string {
 function asNumber(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function asNumberOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
