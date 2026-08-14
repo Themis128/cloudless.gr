@@ -579,7 +579,7 @@ export default function AdminAnalyticsPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
+            className={`min-h-9 rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
               tab === t.id
                 ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"

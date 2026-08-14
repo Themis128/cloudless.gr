@@ -29,6 +29,26 @@ export async function openMobileNavIfNeeded(page: Page): Promise<void> {
   await expect(page.getByTestId("mobile-menu")).toBeVisible();
 }
 
+export async function closeMobileNavIfOpen(page: Page): Promise<void> {
+  const hamburger = page.getByTestId("mobile-menu-button");
+  if (!(await hamburger.isVisible().catch(() => false))) return;
+  if ((await hamburger.getAttribute("aria-expanded")) !== "true") return;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await hamburger.click({ force: true });
+    try {
+      await expect(hamburger).toHaveAttribute("aria-expanded", "false", { timeout: 4_000 });
+      await expect(page.getByTestId("mobile-menu")).toBeHidden({ timeout: 4_000 });
+      return;
+    } catch {
+      // Drawer animation / first-click swallow — retry.
+    }
+  }
+
+  await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByTestId("mobile-menu")).toBeHidden();
+}
+
 export async function clickNavHref(page: Page, hrefPart: string): Promise<void> {
   const escaped = hrefPart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const dest = new RegExp(`/(?:en|el|fr|de)${escaped}(?:/)?(?:\\?.*)?$`);

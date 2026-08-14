@@ -137,8 +137,8 @@ export default function SeoAnalyticsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">SEO Deep Dive</h1>
         <p className="mt-1 font-mono text-xs text-slate-500">
-          Organic search from gold GSC snapshots — last 28 days. Country / device / page
-          dimensions stay hidden until that ETL lands.
+          Organic search from gold GSC snapshots — last 28 days. Country / device / page dimensions
+          stay hidden until that ETL lands.
         </p>
       </div>
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
 import { useCookieConsent, type CookiePreferences } from "@/context/CookieConsentContext";
+import { observeCookieBannerHeight } from "@/lib/cookie-banner-height";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -41,26 +42,23 @@ export default function CookieConsent() {
 
   // Local toggle state for the settings modal
   const [localPrefs, setLocalPrefs] = useState<CookiePreferences>(preferences);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Reserve bottom chrome so chat FAB / push prompt sit above the banner.
-  useEffect(() => {
-    const root = document.documentElement;
-    if (mounted && bannerVisible) {
-      root.style.setProperty("--cookie-banner-h", "12rem");
-    } else {
-      root.style.setProperty("--cookie-banner-h", "0px");
-    }
-    return () => {
-      root.style.setProperty("--cookie-banner-h", "0px");
-    };
-  }, [mounted, bannerVisible]);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const bannerShown = mounted && bannerVisible && !showSettings && !settingsVisible;
+
+  // Reserve bottom chrome so chat FAB / push prompt sit above the live banner.
+  useLayoutEffect(() => {
+    return observeCookieBannerHeight(
+      document.documentElement,
+      bannerShown ? bannerRef.current : null
+    );
+  }, [bannerShown]);
 
   // Sync local prefs when settings modal opens
   const handleOpenFromBanner = () => {
     setLocalPrefs(preferences);
   };
-
-  const [showSettings, setShowSettings] = useState(false);
 
   /* ── Focus trap + Escape key for settings modal ────────── */
   const modalRef = useRef<HTMLDivElement>(null);
@@ -132,7 +130,7 @@ export default function CookieConsent() {
 
   /* ── Settings panel (inline or modal) ─────────────────── */
   const settingsPanel = (showSettings || settingsVisible) && (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-10001 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
         ref={modalRef}
         role="dialog"
@@ -234,21 +232,21 @@ export default function CookieConsent() {
           <button
             type="button"
             onClick={() => savePreferences(localPrefs)}
-            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] rounded-lg border px-6 py-2 font-mono text-sm font-semibold transition-all"
+            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2 font-mono text-sm font-semibold transition-all"
           >
             {t("cookies.savePreferences", "Save preferences")}
           </button>
           <button
             type="button"
             onClick={acceptAll}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-6 py-2 font-mono text-sm text-slate-300 transition-colors hover:border-slate-500"
+            className="min-h-11 rounded-lg border border-slate-700 px-6 py-2 font-mono text-sm text-slate-300 transition-colors hover:border-slate-500"
           >
             {t("cookies.acceptAll", "Accept all")}
           </button>
           <button
             type="button"
             onClick={handleCloseModal}
-            className="min-h-[44px] rounded-lg px-4 py-2 font-mono text-sm text-slate-400 transition-colors hover:text-slate-300"
+            className="min-h-11 rounded-lg px-4 py-2 font-mono text-sm text-slate-400 transition-colors hover:text-slate-300"
           >
             {t("cookies.cancel", "Cancel")}
           </button>
@@ -270,7 +268,9 @@ export default function CookieConsent() {
 
       {!showSettings && !settingsVisible && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[10000] p-4"
+          ref={bannerRef}
+          data-testid="cookie-banner"
+          className="fixed inset-x-0 bottom-0 z-10000 p-4"
           role="region"
           aria-label={t("cookies.bannerTitle", "We value your privacy")}
         >
@@ -294,14 +294,14 @@ export default function CookieConsent() {
                 <button
                   type="button"
                   onClick={acceptAll}
-                  className="bg-neon-cyan text-void hover:bg-neon-cyan/90 min-h-[44px] rounded-lg px-5 py-2 font-mono text-xs font-bold transition-all"
+                  className="bg-neon-cyan text-void hover:bg-neon-cyan/90 min-h-11 rounded-lg px-5 py-2 font-mono text-xs font-bold transition-all"
                 >
                   {t("cookies.acceptAll", "Accept all")}
                 </button>
                 <button
                   type="button"
                   onClick={rejectAll}
-                  className="min-h-[44px] rounded-lg border border-slate-700 px-5 py-2 font-mono text-xs text-slate-300 transition-colors hover:border-slate-500"
+                  className="min-h-11 rounded-lg border border-slate-700 px-5 py-2 font-mono text-xs text-slate-300 transition-colors hover:border-slate-500"
                 >
                   {t("cookies.rejectAll", "Reject optional")}
                 </button>
@@ -311,7 +311,7 @@ export default function CookieConsent() {
                     handleOpenFromBanner();
                     setShowSettings(true);
                   }}
-                  className="min-h-[44px] rounded-lg px-5 py-2 font-mono text-xs text-slate-400 transition-colors hover:text-slate-300"
+                  className="min-h-11 rounded-lg px-5 py-2 font-mono text-xs text-slate-400 transition-colors hover:text-slate-300"
                 >
                   {t("cookies.customise", "Customise")}
                 </button>
