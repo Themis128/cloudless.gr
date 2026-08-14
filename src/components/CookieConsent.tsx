@@ -49,7 +49,10 @@ export default function CookieConsent() {
 
   // Reserve bottom chrome so chat FAB / push prompt sit above the live banner.
   useLayoutEffect(() => {
-    return observeCookieBannerHeight(document.documentElement, bannerShown ? bannerRef.current : null);
+    return observeCookieBannerHeight(
+      document.documentElement,
+      bannerShown ? bannerRef.current : null
+    );
   }, [bannerShown]);
 
   // Sync local prefs when settings modal opens

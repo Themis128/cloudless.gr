@@ -16,7 +16,10 @@ export function applyCookieBannerOffset(
  * Keep `--cookie-banner-h` in sync with the live banner box so bottom chrome
  * (chat FAB, push prompt) sits above it on narrow viewports.
  */
-export function observeCookieBannerHeight(root: HTMLElement, banner: HTMLElement | null): () => void {
+export function observeCookieBannerHeight(
+  root: HTMLElement,
+  banner: HTMLElement | null
+): () => void {
   if (!banner) {
     applyCookieBannerOffset(root.style, 0);
     return () => applyCookieBannerOffset(root.style, 0);
