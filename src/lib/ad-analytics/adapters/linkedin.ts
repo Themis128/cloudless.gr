@@ -323,14 +323,14 @@ async function fetchHeadlineMetrics(
       }>;
     };
     const els = data.elements ?? [];
-    return els.reduce(
+    return els.reduce<HeadlineMetrics>(
       (acc, el) => ({
         impressions: acc.impressions + (el.impressions ?? 0),
         clicks: acc.clicks + (el.clicks ?? 0),
         conversions: acc.conversions + (el.externalWebsiteConversions ?? 0),
         spendEur: acc.spendEur + Number(el.costInLocalCurrency ?? 0),
       }),
-      { ...empty }
+      empty
     );
   } catch (err) {
     console.warn(
