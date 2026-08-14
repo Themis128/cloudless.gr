@@ -132,6 +132,28 @@ kubectl -n postiz exec deploy/postiz-postgres -- \
 
    …and at `https://cloudless.gr/en/admin/postiz` (Channels tab).
 
+## Cursor MCP
+
+Postiz exposes streamable-HTTP MCP at `/api/mcp/<apiKey>` (9 tools on the
+current image, including `integrationList` / `integrationSchedulePostTool`).
+
+From this WSL/tailnet host, Cloudflare Access blocks the public hostname, so
+Cursor is configured in `~/.cursor/mcp.json` against the Tailscale NodePort:
+
+```text
+http://100.74.191.58:30500/api/mcp/<POSTIZ_API_KEY>
+```
+
+See `scripts/cursor-mcp/README-postiz.md`. Reload Cursor MCP after key rotation.
+`integrationList` returns `[]` until channels are connected in the Postiz UI.
+
+## Ecosystem hub
+
+For the full gitroomhq repo map (agent CLI, n8n node, agent-media, what to
+skip) and implementation order, open **`postiz-hub`**. Related skills:
+`postiz-agent-cli`, `postiz-agent-media`, `postiz-n8n-node`, `postiz-automation`,
+`postiz-doctor`.
+
 ## Posting via the API
 
 Smoke test (Bluesky needs no extra settings):

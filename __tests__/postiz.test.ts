@@ -11,6 +11,7 @@ vi.stubGlobal("fetch", mockFetch);
 import {
   changePostStatus,
   createPost,
+  createPostsBulk,
   deleteIntegration,
   deletePost,
   deletePostsByGroup,
@@ -247,6 +248,41 @@ describe("createPost (throwing)", () => {
     expect(result).toEqual(upstream);
     const [, init] = mockFetch.mock.calls[0];
     expect(init.method).toBe("POST");
+  });
+});
+
+describe("createPostsBulk", () => {
+  const sampleBody = {
+    type: "schedule" as const,
+    date: "2026-08-16T10:00:00.000Z",
+    shortLink: false,
+    tags: [] as Array<{ value: string; label: string }>,
+    posts: [
+      {
+        integration: { id: "fb" },
+        value: [{ content: "hi", image: [] }],
+        settings: { __type: "facebook" },
+      },
+    ],
+  };
+
+  it("returns per-item ok/fail without aborting the batch", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse([{ postId: "p1", integration: "fb" }]))
+      .mockResolvedValueOnce(jsonResponse({ error: "nope" }, 400))
+      .mockResolvedValueOnce(jsonResponse([{ postId: "p3", integration: "fb" }]));
+
+    const results = await createPostsBulk([
+      { ...sampleBody, date: "2026-08-16T10:00:00.000Z" },
+      { ...sampleBody, date: "2026-08-17T10:00:00.000Z" },
+      { ...sampleBody, date: "2026-08-18T10:00:00.000Z" },
+    ]);
+
+    expect(results).toHaveLength(3);
+    expect(results[0]).toMatchObject({ index: 0, ok: true });
+    expect(results[1]).toMatchObject({ index: 1, ok: false, status: 400 });
+    expect(results[2]).toMatchObject({ index: 2, ok: true });
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
 
