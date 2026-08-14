@@ -1,13 +1,9 @@
-import { expect, type APIRequestContext, type APIResponse, type TestInfo } from "@playwright/test";
+import { expect, type APIRequestContext, type APIResponse } from "@playwright/test";
 import { requestUntilCompiled } from "../_internal/request-until-compiled";
 
 export const GUEST_STORAGE = { cookies: [] as [], origins: [] as [] };
 
 export const ADMIN_TOKEN = "e2e-admin-token-do-not-use-in-prod";
-
-export function isMobileProject(testInfo: TestInfo): boolean {
-  return testInfo.project.name === "mobile-chrome";
-}
 
 export async function api(
   request: APIRequestContext,

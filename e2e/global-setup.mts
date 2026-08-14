@@ -100,6 +100,14 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     "/api/admin/insights/revenue",
     "/en/auth/login",
     "/en/auth/signup",
+    "/api/auth/session",
+    "/api/auth/login",
+    "/api/contact",
+    "/api/subscribe",
+    "/api/checkout",
+    "/api/webhooks/stripe",
+    "/api/webhooks/espocrm",
+    "/api/user/purchases",
   ];
   for (const pathname of warmPaths) {
     for (let attempt = 0; attempt < 8; attempt++) {

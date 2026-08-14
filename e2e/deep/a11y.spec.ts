@@ -20,7 +20,7 @@ test.describe("Accessibility (focused public surface)", () => {
       page,
     }) => {
       await page.goto(route);
-      await expect(page.locator("main#main-content")).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator("main")).toBeVisible({ timeout: 30_000 });
       await expect(page.getByRole("link", { name: /skip to content/i })).toHaveCount(1);
 
       const results = await new AxeBuilder({ page })

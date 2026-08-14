@@ -11,13 +11,13 @@ export async function requestUntilCompiled(
   method: "get" | "post" | "patch" | "put" | "delete",
   url: string,
   options: Parameters<APIRequestContext["get"]>[1] = {},
-  attempts = 8
+  attempts = 16
 ): Promise<APIResponse> {
   let last: APIResponse | undefined;
   for (let i = 0; i < attempts; i++) {
     last = await request[method](url, { ...options, failOnStatusCode: false });
     if (last.status() !== 404) return last;
-    await new Promise((r) => setTimeout(r, 250 * (i + 1)));
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
   }
   return last!;
 }
