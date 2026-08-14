@@ -22,6 +22,12 @@
  */
 import { getIntegrationsAsync } from "@/lib/integrations";
 import { isEspoRecordId } from "@/lib/crm-contact-360-shared";
+import {
+  ESPO_CACHE_TTL,
+  invalidateEspoContactCaches,
+  invalidateEspoListCaches,
+  readThrough,
+} from "@/lib/espocrm-cache";
 
 const PAGE_SIZE = 100;
 const MAX_LIMIT = 100;
@@ -143,6 +149,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           method: "PUT",
           body: JSON.stringify(toEspoContactPayload(contact)),
         });
+        void invalidateEspoContactCaches(existing.id);
         return existing.id;
       }
     }
@@ -155,6 +162,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       return null;
     }
     const created = (await create.json()) as { id: string };
+    void invalidateEspoContactCaches(created.id);
     return created.id;
   } catch (err) {
     console.error("[EspoCRM] upsertContact error:", err);
@@ -227,37 +235,68 @@ function clampLimit(limit: number, fallback = 20): number {
 }
 
 export async function listContacts(limit = 10): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(`/Contact?maxSize=${clampLimit(limit, 10)}`);
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const clamped = clampLimit(limit, 10);
+  const { value } = await readThrough(
+    "espocrm:listContacts",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(`/Contact?maxSize=${clamped}`);
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 export async function getContact(id: string): Promise<Record<string, unknown> | null> {
   if (!isEspoRecordId(id)) return null;
-  try {
-    const res = await espoFetch(`/Contact/${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    return (await res.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  const { value } = await readThrough(
+    "espocrm:getContact",
+    { id },
+    async () => {
+      try {
+        const res = await espoFetch(`/Contact/${encodeURIComponent(id)}`);
+        if (!res.ok) return null;
+        return (await res.json()) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.contact, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 async function listContactLink(contactId: string, link: string): Promise<unknown[]> {
   if (!isEspoRecordId(contactId)) return [];
-  try {
-    const res = await espoFetch(
-      `/Contact/${encodeURIComponent(contactId)}/${link}?maxSize=${MAX_LIMIT}`
-    );
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const pk =
+    link === "opportunities"
+      ? "espocrm:listContactOpportunities"
+      : link === "cases"
+        ? "espocrm:listContactCases"
+        : "espocrm:listContactNotes";
+  const { value } = await readThrough(
+    pk,
+    { id: contactId },
+    async () => {
+      try {
+        const res = await espoFetch(
+          `/Contact/${encodeURIComponent(contactId)}/${link}?maxSize=${MAX_LIMIT}`
+        );
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.contact, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 export async function listContactOpportunities(contactId: string): Promise<unknown[]> {
@@ -273,13 +312,22 @@ export async function listContactNotes(contactId: string): Promise<unknown[]> {
 }
 
 export async function listTickets(limit = 20): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(`/Case?maxSize=${clampLimit(limit)}`);
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const clamped = clampLimit(limit);
+  const { value } = await readThrough(
+    "espocrm:listTickets",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(`/Case?maxSize=${clamped}`);
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 interface TicketData {
@@ -317,6 +365,8 @@ export async function createTicket(
     throw new Error(`EspoCRM Case create failed ${res.status}: ${err.slice(0, 200)}`);
   }
   const created = (await res.json()) as { id: string };
+  void invalidateEspoListCaches();
+  if (contactId) void invalidateEspoContactCaches(contactId);
   return { id: created.id };
 }
 
@@ -343,23 +393,41 @@ export async function getPipelines(_objectType = "deals"): Promise<unknown[]> {
 }
 
 export async function listCompanies(limit = 20): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(`/Account?maxSize=${clampLimit(limit)}`);
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const clamped = clampLimit(limit);
+  const { value } = await readThrough(
+    "espocrm:listCompanies",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(`/Account?maxSize=${clamped}`);
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 export async function listDeals(limit = 20): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(`/Opportunity?maxSize=${clampLimit(limit)}`);
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const clamped = clampLimit(limit);
+  const { value } = await readThrough(
+    "espocrm:listDeals",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(`/Opportunity?maxSize=${clamped}`);
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 export async function listOwners(): Promise<unknown[]> {
@@ -575,6 +643,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
       return null;
     }
     const created = (await res.json()) as { id: string };
+    void invalidateEspoListCaches();
     return created.id;
   } catch (err) {
     console.error("[EspoCRM] createDeal error:", err);
@@ -604,6 +673,7 @@ export async function updateDeal(
     });
     if (!res.ok) return null;
     const j = (await res.json()) as { id: string };
+    void invalidateEspoListCaches();
     return { id: j.id };
   } catch {
     return null;
@@ -615,20 +685,28 @@ export async function moveDealStage(id: string, stageId: string): Promise<{ id: 
 }
 
 export async function getDealsByStage(): Promise<Record<string, unknown[]>> {
-  try {
-    const all = await espoListAll<{ stage: string }>("Opportunity", {
-      select: "name,amount,stage,closeDate,createdAt,probability",
-    });
-    const grouped: Record<string, unknown[]> = {};
-    for (const d of all) {
-      const stage = d.stage ?? "Unknown";
-      if (!grouped[stage]) grouped[stage] = [];
-      grouped[stage].push(d);
-    }
-    return grouped;
-  } catch {
-    return {};
-  }
+  const { value } = await readThrough(
+    "espocrm:getDealsByStage",
+    {},
+    async () => {
+      try {
+        const all = await espoListAll<{ stage: string }>("Opportunity", {
+          select: "name,amount,stage,closeDate,createdAt,probability",
+        });
+        const grouped: Record<string, unknown[]> = {};
+        for (const d of all) {
+          const stage = d.stage ?? "Unknown";
+          if (!grouped[stage]) grouped[stage] = [];
+          grouped[stage].push(d);
+        }
+        return grouped;
+      } catch {
+        return {};
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.pipeline, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 /* ─── Notes ───────────────────────────────────────────────────────────────── */
@@ -647,6 +725,7 @@ export async function createNote(dealId: string, body: string): Promise<{ id: st
     });
     if (!res.ok) return null;
     const j = (await res.json()) as { id: string };
+    void invalidateEspoListCaches();
     return { id: j.id };
   } catch {
     return null;
@@ -670,6 +749,7 @@ export async function createContactNote(
     });
     if (!res.ok) return null;
     const j = (await res.json()) as { id: string };
+    void invalidateEspoContactCaches(contactId);
     return { id: j.id };
   } catch {
     return null;
@@ -696,24 +776,37 @@ export async function getPipelineStats(): Promise<{
   totalValue: number;
   byStage: Record<string, { count: number; value: number }>;
 }> {
-  try {
-    const all = await espoListAll<{ stage: string; amount: number | null }>("Opportunity", {
-      select: "stage,amount",
-    });
-    const byStage: Record<string, { count: number; value: number }> = {};
-    let totalValue = 0;
-    for (const d of all) {
-      const stage = d.stage ?? "Unknown";
-      const val = Number(d.amount ?? 0) || 0;
-      if (!byStage[stage]) byStage[stage] = { count: 0, value: 0 };
-      byStage[stage].count++;
-      byStage[stage].value += val;
-      totalValue += val;
-    }
-    return { totalDeals: all.length, totalValue, byStage };
-  } catch {
-    return { totalDeals: 0, totalValue: 0, byStage: {} };
-  }
+  const empty = {
+    totalDeals: 0,
+    totalValue: 0,
+    byStage: {} as Record<string, { count: number; value: number }>,
+  };
+  const { value } = await readThrough(
+    "espocrm:getPipelineStats",
+    {},
+    async () => {
+      try {
+        const all = await espoListAll<{ stage: string; amount: number | null }>("Opportunity", {
+          select: "stage,amount",
+        });
+        const byStage: Record<string, { count: number; value: number }> = {};
+        let totalValue = 0;
+        for (const d of all) {
+          const stage = d.stage ?? "Unknown";
+          const val = Number(d.amount ?? 0) || 0;
+          if (!byStage[stage]) byStage[stage] = { count: 0, value: 0 };
+          byStage[stage].count++;
+          byStage[stage].value += val;
+          totalValue += val;
+        }
+        return { totalDeals: all.length, totalValue, byStage };
+      } catch {
+        return empty;
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.pipeline, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 /**
