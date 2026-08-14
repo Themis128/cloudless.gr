@@ -8,6 +8,8 @@ const isActiveCampaignConfiguredMock = vi.fn();
 const getPipelineStatsMock = vi.fn();
 const getEmailStatsMock = vi.fn();
 const getConfigMock = vi.fn();
+const buildGoldGscReportSectionMock = vi.fn();
+const buildGoldStripeReportSectionMock = vi.fn();
 
 vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
@@ -21,6 +23,11 @@ vi.mock("@/lib/espocrm", () => ({
 vi.mock("@/lib/activecampaign", () => ({
   isActiveCampaignConfigured: isActiveCampaignConfiguredMock,
   getEmailStats: getEmailStatsMock,
+}));
+
+vi.mock("@/lib/report-gold-sections", () => ({
+  buildGoldGscReportSection: (...a: unknown[]) => buildGoldGscReportSectionMock(...a),
+  buildGoldStripeReportSection: (...a: unknown[]) => buildGoldStripeReportSectionMock(...a),
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
@@ -72,6 +79,8 @@ describe("Admin Reports API routes", () => {
     getPipelineStatsMock.mockResolvedValue({ totalDeals: 5, totalValue: 5000, byStage: {} });
     getEmailStatsMock.mockResolvedValue({ totalContacts: 300, totalCampaigns: 10, totalLists: 2 });
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "" });
+    buildGoldGscReportSectionMock.mockResolvedValue(null);
+    buildGoldStripeReportSectionMock.mockResolvedValue(null);
     const integrations = await import("@/lib/integrations");
     vi.mocked(integrations.getIntegrationsAsync).mockResolvedValue({});
     await clearReports();
@@ -144,6 +153,31 @@ describe("Admin Reports API routes", () => {
       expect(res.status).toBe(201);
       expect(data.report.sections.some((s: { id: string }) => s.id === "pipeline")).toBe(false);
       expect(data.report.sections.some((s: { id: string }) => s.id === "email")).toBe(true);
+    });
+
+    it("includes gold GSC and Stripe sections when builders return data", async () => {
+      buildGoldGscReportSectionMock.mockResolvedValue({
+        id: "gsc",
+        title: "Organic Search (GSC gold)",
+        data: { clicks: 10, source: "datalake_gold" },
+      });
+      buildGoldStripeReportSectionMock.mockResolvedValue({
+        id: "stripe",
+        title: "Revenue (Stripe gold)",
+        data: { revenueEur: 99, source: "datalake_gold" },
+      });
+      const { POST } = await import("@/app/api/admin/reports/generate/route");
+      const res = await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Gold Client",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: ["gsc", "stripe"],
+        })
+      );
+      const data = await res.json();
+      expect(res.status).toBe(201);
+      expect(data.report.sections.map((s: { id: string }) => s.id)).toEqual(["gsc", "stripe"]);
     });
 
     it("generates report and appears in list", async () => {

@@ -7,7 +7,9 @@ import type { Report } from "@/lib/reports";
 
 const SECTION_OPTIONS = [
   { id: "pipeline", label: "Lead Pipeline (EspoCRM)" },
-  { id: "email", label: "Email Marketing (EspoCRM)" },
+  { id: "email", label: "Email Marketing (ActiveCampaign)" },
+  { id: "gsc", label: "Organic Search (GSC gold)" },
+  { id: "stripe", label: "Revenue (Stripe gold)" },
 ];
 
 export default function ReportsPage() {
@@ -19,7 +21,7 @@ export default function ReportsPage() {
     clientName: "",
     dateStart: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
     dateEnd: new Date().toISOString().split("T")[0],
-    includeSections: ["pipeline", "email"] as string[],
+    includeSections: ["pipeline", "email", "gsc", "stripe"] as string[],
   }));
 
   async function loadReports() {
@@ -87,8 +89,9 @@ export default function ReportsPage() {
             Client Reports
           </h1>
           <p className="font-body mt-1 text-slate-400">
-            Generate performance reports combining data from all connected
-            platforms.
+            Generate client reports from EspoCRM / ActiveCampaign live stats plus
+            GSC and Stripe gold snapshots (no live Search Console or Stripe API on
+            generate).
           </p>
         </div>
         <button

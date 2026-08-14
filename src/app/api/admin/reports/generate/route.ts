@@ -6,6 +6,10 @@ import {
   isActiveCampaignConfigured,
   getEmailStats,
 } from "@/lib/activecampaign";
+import {
+  buildGoldGscReportSection,
+  buildGoldStripeReportSection,
+} from "@/lib/report-gold-sections";
 import { getConfig } from "@/lib/ssm-config";
 import { mapIntegrationError } from "@/lib/api-errors";
 
@@ -122,6 +126,26 @@ export async function POST(request: NextRequest) {
       data: emailData as unknown as Record<string, unknown>,
       insights,
     });
+  }
+
+  if (includeSections.includes("gsc")) {
+    const gsc = await buildGoldGscReportSection(dateStart, dateEnd);
+    if (gsc) {
+      const insights = anthropicKey
+        ? await generateInsights(gsc.data, "Organic Search (GSC gold)", period, anthropicKey)
+        : "";
+      sections.push({ ...gsc, insights });
+    }
+  }
+
+  if (includeSections.includes("stripe")) {
+    const stripe = await buildGoldStripeReportSection(dateStart, dateEnd);
+    if (stripe) {
+      const insights = anthropicKey
+        ? await generateInsights(stripe.data, "Revenue (Stripe gold)", period, anthropicKey)
+        : "";
+      sections.push({ ...stripe, insights });
+    }
   }
 
   const updated = await updateReport(report.id, { sections, status: "ready" });
