@@ -776,7 +776,11 @@ export async function getPipelineStats(): Promise<{
   totalValue: number;
   byStage: Record<string, { count: number; value: number }>;
 }> {
-  const empty = { totalDeals: 0, totalValue: 0, byStage: {} as Record<string, { count: number; value: number }> };
+  const empty = {
+    totalDeals: 0,
+    totalValue: 0,
+    byStage: {} as Record<string, { count: number; value: number }>,
+  };
   const { value } = await readThrough(
     "espocrm:getPipelineStats",
     {},

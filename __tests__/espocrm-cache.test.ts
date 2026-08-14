@@ -122,9 +122,8 @@ describe("espocrm-cache", () => {
   it("invalidatePrefix clears list keys", async () => {
     const db = createCacheDb();
     (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = db;
-    const { setCached, invalidatePrefix, getCached, paramsHash } = await import(
-      "@/lib/espocrm-cache"
-    );
+    const { setCached, invalidatePrefix, getCached, paramsHash } =
+      await import("@/lib/espocrm-cache");
     await setCached("espocrm:listContacts", { limit: 10 }, [{ id: "1" }], 45);
     expect(await getCached("espocrm:listContacts", { limit: 10 }, 45)).not.toBeNull();
     await invalidatePrefix("espocrm:listContacts");
