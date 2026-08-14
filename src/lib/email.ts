@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cloudflare";
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
+import { isSuppressed } from "@/lib/ses-suppression-d1";
 
 interface CloudflareEmailBinding {
   send: (message: Record<string, unknown>) => Promise<void>;
@@ -20,6 +21,7 @@ const isWorkers =
  * Send an email using the configured email provider.
  * Node/Pi: Cloudflare Email Service REST (preferred) → Resend fallback.
  * Workers: EMAIL_BINDING when present.
+ * Skips send when the address is on the D1 suppression list.
  */
 export async function sendEmail(options: {
   to: string;
@@ -30,6 +32,11 @@ export async function sendEmail(options: {
   replyTo?: string;
   listUnsubscribeUrl?: string;
 }) {
+  if (await isSuppressed(options.to)) {
+    console.warn("[email] Skipping suppressed address:", options.to);
+    return;
+  }
+
   if (isWorkers) {
     // Cloudflare Workers email binding
     const email = (globalThis as unknown as WorkersGlobal).__ENV__?.EMAIL_BINDING;
