@@ -3,10 +3,7 @@
  * No live GSC / Stripe API — only datalake-serve helpers.
  */
 
-import {
-  getSeoFromLake,
-  getStripeSnapshotFromLake,
-} from "@/lib/datalake-serve";
+import { getSeoFromLake, getStripeSnapshotFromLake } from "@/lib/datalake-serve";
 import type { ReportSection } from "@/lib/reports";
 
 function daysBetween(dateStart: string, dateEnd: string): number {
