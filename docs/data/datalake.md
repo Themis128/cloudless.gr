@@ -109,13 +109,14 @@ R2 datalake-bucket
 
 ## Optional next (Cloudflare Data Platform)
 
-For ad-hoc SQL over silver parquet without Athena:
+Operator ad-hoc SQL over silver parquet **without Athena** is already covered by
+**Lake Explore** (`/admin/analytics/explore` — DuckDB-Wasm + catalog-allowlisted
+parquet). Dashboards stay on **gold snapshots**.
 
-- Enable [R2 Data Catalog](https://developers.cloudflare.com/r2-data-catalog/) on `datalake-bucket`
-- Query with [R2 SQL](https://developers.cloudflare.com/r2-sql/)
-
-Admin dashboards should stay on **gold snapshots** for latency and cost;
-R2 SQL is for explore/operator queries, not every page load.
+Cloudflare [R2 Data Catalog](https://developers.cloudflare.com/r2-data-catalog/) +
+[R2 SQL](https://developers.cloudflare.com/r2-sql/) remain **optional** Iceberg
+platform enablement on `datalake-bucket` when an operator wants CF-managed SQL
+outside the app. Do not route page loads through R2 SQL.
 
 ## Historical (Athena)
 

@@ -102,6 +102,9 @@ function EmptyState({ label }: Readonly<{ label: string }>) {
 interface RoiChannelData {
   channel: string;
   configured: boolean;
+  inGold?: boolean;
+  status?: string;
+  reason?: string;
   spendCents: number;
   impressions: number;
   clicks: number;
@@ -111,6 +114,7 @@ interface RoiChannelData {
 interface RoiData {
   windowDays: number;
   channels: RoiChannelData[];
+  notes?: string[];
   totals: {
     spendCents: number;
     impressions: number;
@@ -142,7 +146,6 @@ function euros(cents: number | null): string {
 
 function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
   if (!roi) return <EmptyState label="ROI" />;
-  const configured = roi.channels.filter((c) => c.configured);
   return (
     <div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -171,46 +174,57 @@ function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
           color="text-neon-green"
         />
       </div>
-      {configured.length > 0 && (
-        <div className="mt-3 overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-4 py-2 text-left font-mono text-xs text-slate-500">Channel</th>
-                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Spend</th>
-                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">
-                  Impressions
-                </th>
-                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Clicks</th>
-                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">
-                  Platform leads
-                </th>
+      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-800">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-800 bg-slate-900/50">
+              <th className="px-4 py-2 text-left font-mono text-xs text-slate-500">Channel</th>
+              <th className="px-4 py-2 text-left font-mono text-xs text-slate-500">Status</th>
+              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Spend</th>
+              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Impressions</th>
+              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Clicks</th>
+              <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Platform leads</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800">
+            {roi.channels.map((c) => (
+              <tr key={c.channel}>
+                <td className="px-4 py-2 font-mono text-xs text-white">
+                  {CHANNEL_LABELS[c.channel] ?? c.channel}
+                </td>
+                <td className="px-4 py-2 font-mono text-xs text-slate-400">
+                  {c.configured
+                    ? "gold"
+                    : c.status === "not_in_gold"
+                      ? "not in gold"
+                      : c.status === "empty_gold"
+                        ? "empty gold"
+                        : "—"}
+                </td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-slate-300">
+                  {c.configured ? euros(c.spendCents) : "—"}
+                </td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                  {c.configured ? c.impressions.toLocaleString() : "—"}
+                </td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                  {c.configured ? c.clicks.toLocaleString() : "—"}
+                </td>
+                <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                  {c.configured ? c.platformLeads.toLocaleString() : "—"}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {configured.map((c) => (
-                <tr key={c.channel}>
-                  <td className="px-4 py-2 font-mono text-xs text-white">
-                    {CHANNEL_LABELS[c.channel] ?? c.channel}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-300">
-                    {euros(c.spendCents)}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
-                    {c.impressions.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
-                    {c.clicks.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
-                    {c.platformLeads.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {roi.notes && roi.notes.length > 0 ? (
+        <ul className="mt-2 space-y-1 font-mono text-[10px] text-slate-600">
+          {roi.notes.map((n) => (
+            <li key={n}>• {n}</li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

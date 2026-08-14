@@ -270,7 +270,8 @@ export function pipelineFromEspocrmGold(rows: Record<string, unknown>[]): {
 
 /**
  * Lake-backed ROI — LinkedIn ads + stripe_revenue gold only.
- * Other ad channels report configured=false until silver ETL lands.
+ * Other ad channels stay `configured: false` with `status: "not_in_gold"`
+ * until a real silver ETL lands. Never calls live `roi.ts` adapters.
  */
 export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>> {
   const linkedin = await getGoldSection("linkedin_ads");
@@ -289,41 +290,40 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
     : stripeRows.reduce((a, r) => a + (Number(r.amount_eur ?? r.revenue ?? r.amount) || 0), 0);
   const revenueCents = Math.round(revenueMajor * 100);
 
+  const linkedinConfigured = !linkedin?.error && linkedinRows.length > 0;
+  const notInGold = (channel: string) => ({
+    channel,
+    configured: false,
+    inGold: false as const,
+    status: "not_in_gold" as const,
+    reason: "no silver parquet / gold section — ETL not wired; live roi.ts adapters stay off admin",
+    spendCents: 0,
+    impressions: 0,
+    clicks: 0,
+    platformLeads: 0,
+  });
+
   const channels = [
     {
       channel: "linkedin",
-      configured: !linkedin?.error && linkedinRows.length > 0,
+      configured: linkedinConfigured,
+      inGold: true as const,
+      status: linkedinConfigured ? ("gold" as const) : ("empty_gold" as const),
+      reason: linkedin?.error
+        ? `linkedin_ads: ${linkedin.error}`
+        : linkedinConfigured
+          ? "Served from gold linkedin_ads"
+          : "Gold section present but empty",
       spendCents,
       impressions,
       clicks,
       platformLeads: linkedinRows.reduce((a, r) => a + (Number(r.leads ?? r.conversions) || 0), 0),
       error: linkedin?.error,
     },
-    {
-      channel: "google",
-      configured: false,
-      spendCents: 0,
-      impressions: 0,
-      clicks: 0,
-      platformLeads: 0,
-    },
-    {
-      channel: "tiktok",
-      configured: false,
-      spendCents: 0,
-      impressions: 0,
-      clicks: 0,
-      platformLeads: 0,
-    },
-    { channel: "x", configured: false, spendCents: 0, impressions: 0, clicks: 0, platformLeads: 0 },
-    {
-      channel: "meta",
-      configured: false,
-      spendCents: 0,
-      impressions: 0,
-      clicks: 0,
-      platformLeads: 0,
-    },
+    notInGold("google"),
+    notInGold("tiktok"),
+    notInGold("x"),
+    notInGold("meta"),
   ];
 
   const totalsSpend = channels.reduce((a, c) => a + c.spendCents, 0);
@@ -335,6 +335,7 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
     windowDays: days,
     generatedAt: new Date().toISOString(),
     source: DATALAKE_GOLD_SOURCE,
+    goldSections: ["linkedin_ads", SECTION_STRIPE_REVENUE],
     channels,
     totals: {
       spendCents: totalsSpend,
@@ -350,7 +351,8 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
           : null,
     },
     notes: [
-      "ROI is lake-backed. Google/TikTok/X/Meta channels appear when their silver ETL lands.",
+      "ROI is lake-backed (LinkedIn + Stripe gold). Google/TikTok/X/Meta show as not_in_gold until their ETL exists.",
+      "Live campaign adapters in roi.ts are not used on admin analytics routes.",
       linkedin?.error ? `linkedin_ads: ${linkedin.error}` : null,
       stripe?.error ? `stripe_revenue: ${stripe.error}` : null,
     ].filter(Boolean),
