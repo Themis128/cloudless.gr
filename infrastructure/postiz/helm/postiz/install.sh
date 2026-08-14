@@ -62,15 +62,34 @@ if command -v aws >/dev/null && aws sts get-caller-identity >/dev/null 2>&1; the
       || true
   }
   args=()
-  for k in FACEBOOK_APP_ID FACEBOOK_APP_SECRET \
-           LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET \
-           X_API_KEY X_API_SECRET \
-           TIKTOK_CLIENT_ID TIKTOK_CLIENT_SECRET; do
-    v="$(read_ssm "$k")"
-    if [ -n "$v" ] && [ "$v" != "None" ]; then
+  # Map SSM aliases → Postiz env names (TikTok historically stored as APP_* / tiktok-client-*).
+  resolve_ssm() {
+    local dest_name="$1"; shift
+    local candidate v=""
+    for candidate in "$@"; do
+      v="$(read_ssm "${candidate}")"
+      if [ -n "${v}" ] && [ "${v}" != "None" ]; then
+        printf '%s' "${v}"
+        return
+      fi
+    done
+    printf ''
+  }
+  set_if() {
+    local k="$1" v="$2"
+    if [ -n "${v}" ]; then
       args+=("--from-literal=${k}=${v}")
     fi
-  done
+  }
+  set_if FACEBOOK_APP_ID "$(resolve_ssm FACEBOOK_APP_ID FACEBOOK_APP_ID)"
+  set_if FACEBOOK_APP_SECRET "$(resolve_ssm FACEBOOK_APP_SECRET FACEBOOK_APP_SECRET)"
+  set_if LINKEDIN_CLIENT_ID "$(resolve_ssm LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_ID)"
+  set_if LINKEDIN_CLIENT_SECRET "$(resolve_ssm LINKEDIN_CLIENT_SECRET LINKEDIN_CLIENT_SECRET)"
+  set_if X_API_KEY "$(resolve_ssm X_API_KEY X_API_KEY)"
+  set_if X_API_SECRET "$(resolve_ssm X_API_SECRET X_API_SECRET)"
+  set_if TIKTOK_CLIENT_ID "$(resolve_ssm TIKTOK_CLIENT_ID TIKTOK_CLIENT_ID TIKTOK_APP_ID tiktok-client-key)"
+  set_if TIKTOK_CLIENT_SECRET "$(resolve_ssm TIKTOK_CLIENT_SECRET TIKTOK_CLIENT_SECRET TIKTOK_APP_SECRET tiktok-client-secret)"
+  set_if POSTIZ_API_KEY "$(resolve_ssm POSTIZ_API_KEY POSTIZ_API_KEY)"
   if [ "${#args[@]}" -gt 0 ]; then
     if kubectl -n "${NAMESPACE}" get secret postiz-providers >/dev/null 2>&1; then
       kubectl -n "${NAMESPACE}" delete secret postiz-providers
