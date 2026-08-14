@@ -158,7 +158,7 @@ function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
         <KpiCard
           label="New leads"
           value={roi.totals.newLeads === null ? "—" : String(roi.totals.newLeads)}
-          sub={roi.totals.newLeads === null ? "EspoCRM not configured" : "EspoCRM contacts"}
+          sub={roi.totals.newLeads === null ? "not in gold ROI" : "EspoCRM contacts"}
           color="text-neon-cyan"
         />
         <KpiCard

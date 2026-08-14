@@ -12,8 +12,9 @@
  *  - `pushConversion()` returns `{ accepted, status }` instead of throwing on
  *    403, so the runtime can degrade cleanly when the operator hasn't yet
  *    created a `CONVERSIONS_API`-typed conversion in Campaign Manager.
- *  - `pullMetrics()` is a Phase-2 stub. Phase 1 only exercises the conversion
- *    path; the digest poll lands in a later PR.
+ *  - `pullMetrics()` uses the same Rest.li `List(urn%3Ali%3A…)` +
+ *    `dateRange=(start:(…),end:(…))` shape as `scripts/etl/linkedin-ads-to-r2.mjs`
+ *    (bracket form `campaigns[0]=` returns empty / non-OK under Rest.li 2.0).
  *
  * Reference: skills/ad-analytics/SKILL.md operating principle #2
  * (the Gilgamesh source-bound CAPI gotcha) + #3 (the version pin).
@@ -251,38 +252,54 @@ interface HeadlineMetrics {
   spendEur: number;
 }
 
-/** LinkedIn wants the date-range params spread across `start.day/month/year`
- *  and `end.day/month/year` — encode here once so both fetch paths reuse it. */
+/** Rest.li dateRange tuple — must match `scripts/etl/linkedin-ads-to-r2.mjs`. */
 function formatDateRange(since: Date, until: Date): string {
   const s = ymd(since);
   const u = ymd(until);
-  return (
-    `dateRange.start.day=${s.day}` +
-    `&dateRange.start.month=${s.month}` +
-    `&dateRange.start.year=${s.year}` +
-    `&dateRange.end.day=${u.day}` +
-    `&dateRange.end.month=${u.month}` +
-    `&dateRange.end.year=${u.year}`
-  );
+  return `dateRange=(start:(year:${s.year},month:${s.month},day:${s.day}),end:(year:${u.year},month:${u.month},day:${u.day}))`;
 }
 
 function ymd(d: Date): { day: number; month: number; year: number } {
   return { day: d.getUTCDate(), month: d.getUTCMonth() + 1, year: d.getUTCFullYear() };
 }
 
+/** Rest.li List() of a sponsoredCampaign URN (colons percent-encoded). */
+function campaignListParam(campaignId: string): string {
+  const id = String(campaignId).replace(/[^\w-]/g, "");
+  return `campaigns=List(urn%3Ali%3AsponsoredCampaign%3A${id})`;
+}
+
+function buildAdAnalyticsPath(opts: {
+  pivot: string;
+  dateRangeParam: string;
+  campaignId: string;
+  fields: string;
+  timeGranularity: "ALL" | "DAILY";
+}): string {
+  return (
+    `/adAnalytics?q=analytics&pivot=${opts.pivot}` +
+    `&timeGranularity=${opts.timeGranularity}` +
+    `&${campaignListParam(opts.campaignId)}` +
+    `&${opts.dateRangeParam}` +
+    `&fields=${opts.fields}`
+  );
+}
+
 async function fetchHeadlineMetrics(
   token: string,
-  accountId: string,
+  _accountId: string,
   campaignId: string,
   dateRangeParam: string
 ): Promise<HeadlineMetrics> {
   const empty: HeadlineMetrics = { impressions: 0, clicks: 0, conversions: 0, spendEur: 0 };
   try {
-    const path =
-      `/adAnalytics?q=analytics&pivot=CAMPAIGN&${dateRangeParam}` +
-      `&campaigns[0]=urn:li:sponsoredCampaign:${encodeURIComponent(campaignId)}` +
-      `&accounts[0]=urn:li:sponsoredAccount:${encodeURIComponent(accountId)}` +
-      `&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`;
+    const path = buildAdAnalyticsPath({
+      pivot: "CAMPAIGN",
+      dateRangeParam,
+      campaignId,
+      timeGranularity: "ALL",
+      fields: "impressions,clicks,costInLocalCurrency,externalWebsiteConversions",
+    });
     const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -290,7 +307,13 @@ async function fetchHeadlineMetrics(
         [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
       },
     });
-    if (!res.ok) return empty;
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn(
+        `[ad-analytics/linkedin] adAnalytics ${res.status} campaign=${campaignId}: ${body}`
+      );
+      return empty;
+    }
     const data = (await res.json()) as {
       elements?: Array<{
         impressions?: number;
@@ -299,31 +322,40 @@ async function fetchHeadlineMetrics(
         externalWebsiteConversions?: number;
       }>;
     };
-    const el = data.elements?.[0] ?? {};
-    return {
-      impressions: el.impressions ?? 0,
-      clicks: el.clicks ?? 0,
-      conversions: el.externalWebsiteConversions ?? 0,
-      spendEur: Number(el.costInLocalCurrency ?? 0),
-    };
-  } catch {
+    const els = data.elements ?? [];
+    return els.reduce<HeadlineMetrics>(
+      (acc, el) => ({
+        impressions: acc.impressions + (el.impressions ?? 0),
+        clicks: acc.clicks + (el.clicks ?? 0),
+        conversions: acc.conversions + (el.externalWebsiteConversions ?? 0),
+        spendEur: acc.spendEur + Number(el.costInLocalCurrency ?? 0),
+      }),
+      empty
+    );
+  } catch (err) {
+    console.warn(
+      `[ad-analytics/linkedin] adAnalytics fetch failed campaign=${campaignId}:`,
+      err instanceof Error ? err.message : err
+    );
     return empty;
   }
 }
 
 async function fetchPivotBreakdown(
   token: string,
-  accountId: string,
+  _accountId: string,
   campaignId: string,
   dateRangeParam: string,
   pivot: DemographicPivot
 ): Promise<DemographicBreakdown> {
   try {
-    const path =
-      `/adAnalytics?q=analytics&pivot=${pivot}&${dateRangeParam}` +
-      `&campaigns[0]=urn:li:sponsoredCampaign:${encodeURIComponent(campaignId)}` +
-      `&accounts[0]=urn:li:sponsoredAccount:${encodeURIComponent(accountId)}` +
-      `&fields=clicks,pivotValues`;
+    const path = buildAdAnalyticsPath({
+      pivot,
+      dateRangeParam,
+      campaignId,
+      timeGranularity: "ALL",
+      fields: "clicks,pivotValues",
+    });
     const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -331,7 +363,13 @@ async function fetchPivotBreakdown(
         [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
       },
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn(
+        `[ad-analytics/linkedin] pivot ${pivot} ${res.status} campaign=${campaignId}: ${body}`
+      );
+      return [];
+    }
     const data = (await res.json()) as {
       elements?: Array<{ clicks?: number; pivotValues?: string[] }>;
     };
