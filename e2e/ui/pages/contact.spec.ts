@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clickNavHref } from "../../helpers/mobile-nav";
 
 /**
  * Contact page — aligned with docs/product/PUBLIC-FORMS-AND-CHECKOUT.md
@@ -85,16 +86,15 @@ test.describe("Contact Page", () => {
   });
 
   test("nav services / store / blog links work", async ({ page }) => {
-    const nav = page.getByTestId("main-nav");
-    await nav.locator('a[href*="/services"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/services");
     await expect(page).toHaveURL(/\/en\/services/);
 
     await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
-    await nav.locator('a[href*="/store"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/store");
     await expect(page).toHaveURL(/\/en\/store/);
 
     await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
-    await nav.locator('a[href*="/blog"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/blog");
     await expect(page).toHaveURL(/\/en\/blog/);
   });
 

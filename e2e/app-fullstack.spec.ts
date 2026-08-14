@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clickNavHref } from "./helpers/mobile-nav";
 
 /**
  * Comprehensive E2E test suite covering 100% of the cloudless.gr application
@@ -219,18 +220,20 @@ test.describe("Authentication Flow", () => {
 test.describe("Admin Routes", () => {
   test("admin routes require authentication", async ({ page }) => {
     await page.goto("/en/admin");
-    // Should show login or access denied, or be a SPA page
-    const loginElements = page.locator(
-      'text=/login|sign in|unauthorized|access denied/i'
-    );
-    const hasLogin = await loginElements.count();
-    const hasRoot = await page.locator("#root").count();
-    
-    // Either we have login elements or it's a SPA page
-    if (hasLogin > 0) {
-      await expect(loginElements.first()).toBeVisible();
-    } else if (hasRoot > 0) {
-      // SPA fallback - just verify body exists
+    await expect
+      .poll(() => page.url(), { timeout: 15_000 })
+      .toMatch(/\/(auth\/login|dashboard|admin)/);
+    const onLogin = /\/auth\/login/.test(page.url());
+    if (onLogin) {
+      await expect(page.locator("#email")).toBeVisible({ timeout: 15_000 });
+      return;
+    }
+    const visibleLogin = page
+      .locator("text=/login|sign in|unauthorized|access denied/i")
+      .filter({ visible: true });
+    if ((await visibleLogin.count()) > 0) {
+      await expect(visibleLogin.first()).toBeVisible();
+    } else {
       await expect(page.locator("body")).toBeVisible();
     }
   });
@@ -259,13 +262,8 @@ test.describe("Redirects and Navigation", () => {
   test("navigation between key pages", async ({ page }) => {
     await page.goto("/en");
     await expect(page.locator("body")).toBeVisible();
-    
-    // For SPA pages, links may not be immediately available
-    const servicesLink = page.getByRole("link", { name: /services/i });
-    if (await servicesLink.count() > 0) {
-      await servicesLink.first().click();
-      await expect(page).toHaveURL(/\/services/);
-    }
+    await clickNavHref(page, "/services");
+    await expect(page).toHaveURL(/\/services/);
   });
 });
 

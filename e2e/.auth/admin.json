@@ -8,7 +8,7 @@
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax",
-      "expires": 1786743332
+      "expires": 1786786043
     }
   ],
   "origins": []

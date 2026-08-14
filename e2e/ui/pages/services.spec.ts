@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clickNavHref } from "../../helpers/mobile-nav";
 
 /**
  * Services page — CTAs must stay locale-aware (`/en/contact`, `/en/store`).
@@ -63,16 +64,15 @@ test.describe("Services Page", () => {
   });
 
   test("nav store / blog / contact", async ({ page }) => {
-    const nav = page.getByTestId("main-nav");
-    await nav.locator('a[href*="/store"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/store");
     await expect(page).toHaveURL(/\/en\/store/);
 
     await page.goto("/en/services", { waitUntil: "domcontentloaded" });
-    await nav.locator('a[href*="/blog"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/blog");
     await expect(page).toHaveURL(/\/en\/blog/);
 
     await page.goto("/en/services", { waitUntil: "domcontentloaded" });
-    await nav.locator('a[href*="/contact"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/contact");
     await expect(page).toHaveURL(/\/en\/contact/);
   });
 

@@ -20,6 +20,32 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
+/**
+ * localePrefix is "always". Unprefixed public paths like /store would otherwise
+ * bind `[locale]=store` and 404 (especially with dynamicParams=false).
+ * Leave /api and /portal on their dedicated App Router trees.
+ */
+function redirectUnprefixedToDefaultLocale(
+  request: NextRequest,
+  pathname: string
+): NextResponse | null {
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/portal") ||
+    pathname.startsWith("/_next")
+  ) {
+    return null;
+  }
+  const first = pathname.split("/")[1] ?? "";
+  if (!first || LOCALES.includes(first)) return null;
+  const last = pathname.split("/").pop() ?? "";
+  if (last.includes(".")) return null;
+  return NextResponse.redirect(
+    appUrl(`/${DEFAULT_LOCALE}${pathname}${request.nextUrl.search}`, request),
+    307
+  );
+}
+
 function isHomepagePath(pathname: string): boolean {
   return pathname === "/" || pathname === ``;
 }
@@ -429,6 +455,11 @@ async function handlePageRoute(
 
   if (Math.random() < 0.01) {
     cleanupStaleEntries(ipRequestMap);
+  }
+
+  const localeRedirect = redirectUnprefixedToDefaultLocale(request, pathname);
+  if (localeRedirect) {
+    return addSecurityHeaders(localeRedirect, nonce);
   }
 
   const isAdminRoute = pathname.startsWith(ADMIN_PATH) || pathname.startsWith(ADMIN_PATH_EN);

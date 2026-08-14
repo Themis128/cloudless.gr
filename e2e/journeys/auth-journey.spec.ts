@@ -67,10 +67,10 @@ test.describe("Authentication Journey", () => {
       await page.locator("#signup-email").fill(`newuser-${Date.now()}@example.com`);
       await page.locator("#signup-password").fill("password12345");
       await page.locator("#signup-confirm-password").fill("different-password");
+      await page.getByRole("button", { name: /create|sign up|register/i }).scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: /create|sign up|register/i }).click();
-      await expect(
-        page.getByText(/passwords? (do )?not match|mismatch/i).first(),
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("alert")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("alert")).toContainText(/passwords? (do )?not match|mismatch/i);
       await expect(page).toHaveURL(/\/auth\/signup/);
     });
 

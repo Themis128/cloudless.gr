@@ -146,4 +146,22 @@ describe("proxy protected routes access", () => {
     expect(dashboard.status).toBe(307);
     expect(dashboard.headers.get("location")).toContain("/en/auth/login");
   });
+
+  it("redirects unprefixed /store to /en/store (localePrefix always)", async () => {
+    const response = await proxy(makeRequest("/store"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/en/store");
+  });
+
+  it("does not locale-prefix /api, /portal, or file-like paths", async () => {
+    const api = await proxy(makeRequest("/api/health"));
+    expect(api.headers.get("location")).toBeNull();
+    const portal = await proxy(makeRequest("/portal/waiting"));
+    expect(portal.status).toBe(200);
+    expect(portal.headers.get("location")).toBeNull();
+    const sitemap = await proxy(makeRequest("/sitemap.xml"));
+    expect(sitemap.headers.get("location")).toBeNull();
+    const robots = await proxy(makeRequest("/robots.txt"));
+    expect(robots.headers.get("location")).toBeNull();
+  });
 });

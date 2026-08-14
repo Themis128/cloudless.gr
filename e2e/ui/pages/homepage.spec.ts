@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createBasePage, createResponsivePage } from "../../helpers/page-helpers";
+import { clickNavHref, openMobileNavIfNeeded } from "../../helpers/mobile-nav";
 
 /**
  * Homepage Test Suite
@@ -28,8 +29,7 @@ test.describe("Homepage", () => {
   test("should have visible navigation", async ({ page: browserPage }) => {
     const nav = browserPage.locator('nav, [data-testid="main-nav"], .main-navigation');
     await expect(nav).toBeVisible();
-    
-    // Check for main navigation links
+    await openMobileNavIfNeeded(browserPage);
     const navLinks = nav.locator('a[href*="/services"], a[href*="/store"], a[href*="/blog"], a[href*="/contact"]');
     await expect(navLinks.first()).toBeVisible();
   });
@@ -64,6 +64,7 @@ test.describe("Homepage", () => {
   });
 
   test("should have accessible navigation", async ({ page: browserPage }) => {
+    await openMobileNavIfNeeded(browserPage);
     const navLinks = browserPage.getByTestId("main-nav").locator("a").filter({ visible: true });
     const firstLink = navLinks.first();
     await expect(firstLink).toBeVisible();
@@ -123,13 +124,7 @@ test.describe("Homepage", () => {
 
   test.describe("Navigation", () => {
     async function clickVisibleNav(browserPage: import("@playwright/test").Page, hrefPart: string) {
-      const link = browserPage
-        .getByTestId("main-nav")
-        .locator(`a[href*="${hrefPart}"]`)
-        .filter({ visible: true })
-        .first();
-      await expect(link).toBeVisible();
-      await link.click();
+      await clickNavHref(browserPage, hrefPart);
     }
 
     test("should navigate to services page", async ({ page: browserPage }) => {

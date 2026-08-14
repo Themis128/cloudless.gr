@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clickNavHref } from "../../helpers/mobile-nav";
 
 /**
  * Store page — product grid + cart affordances for Stripe checkout journey.
@@ -55,12 +56,11 @@ test.describe("Store Page", () => {
   });
 
   test("nav contact / services links", async ({ page }) => {
-    const nav = page.getByTestId("main-nav");
-    await nav.locator('a[href*="/contact"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/contact");
     await expect(page).toHaveURL(/\/en\/contact/);
 
     await page.goto("/en/store", { waitUntil: "domcontentloaded" });
-    await nav.locator('a[href*="/services"]').filter({ visible: true }).first().click();
+    await clickNavHref(page, "/services");
     await expect(page).toHaveURL(/\/en\/services/);
   });
 

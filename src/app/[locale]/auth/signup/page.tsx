@@ -187,7 +187,10 @@ function SignUpForm() {
           {step === "confirm-code" ? (
             <form onSubmit={handleConfirm} className="space-y-5">
               {error && (
-                <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm">
+                <div
+                  role="alert"
+                  className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm"
+                >
                   {error}
                 </div>
               )}
@@ -278,7 +281,10 @@ function SignUpForm() {
           ) : (
             <>
               {error && (
-                <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm">
+                <div
+                  role="alert"
+                  className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm"
+                >
                   {error}
                 </div>
               )}

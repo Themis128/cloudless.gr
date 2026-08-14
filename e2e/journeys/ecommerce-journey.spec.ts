@@ -1,19 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { clickNavHref } from "../helpers/mobile-nav";
 
 /**
  * E-commerce journey — /en/store, Open cart button, resilient to empty Stripe.
  */
 
-async function openMobileNavIfNeeded(page: Page) {
-  const hamburger = page.locator('button[aria-label*="menu" i]').first();
-  if (await hamburger.isVisible().catch(() => false)) {
-    await hamburger.click();
-  }
-}
-
 async function goToStore(page: Page) {
-  await openMobileNavIfNeeded(page);
-  await page.getByRole("link", { name: /^store$/i }).filter({ visible: true }).first().click();
+  await clickNavHref(page, "/store");
   await expect(page).toHaveURL(/\/store/);
   await expect(page.locator("main").first()).toBeVisible({ timeout: 30_000 });
 }

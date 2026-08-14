@@ -62,10 +62,8 @@ export default function Navbar() {
         className="border-b backdrop-blur-xl"
         style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
       >
-        <nav
-          data-testid="main-nav"
-          className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6"
-        >
+        <nav data-testid="main-nav" className="mx-auto max-w-7xl">
+          <div className="flex h-16 items-center justify-between px-6">
           {/* Logo */}
           <Link
             href="/"
@@ -177,27 +175,30 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Hamburger */}
-          <button
-            type="button"
-            className="text-neon-cyan p-2 lg:hidden"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={toggleMenuLabel}
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6l12 12M6 18L18 6" />
-              </svg>
-            ) : (
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </nav>
+          {/* Mobile cart + hamburger — cart stays reachable without opening the drawer */}
+          <div className="flex items-center gap-1 lg:hidden">
+            <CartButton />
+            <button
+              type="button"
+              className="text-neon-cyan p-2"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={toggleMenuLabel}
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? (
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M6 18L18 6" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
+          </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu — inside <nav> so data-testid="main-nav" includes drawer links */}
         <div
           className={`overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
             mobileOpen ? "max-h-[calc(100svh-4rem)] py-4 opacity-100" : "max-h-0 py-0 opacity-0"
@@ -209,6 +210,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-label={translate(locale, link.key, link.fallback)}
                 className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 items-center py-3 font-mono text-sm font-medium transition-all active:scale-95"
                 style={{ color: "var(--ink-body)" }}
                 onClick={() => setMobileOpen(false)}
@@ -319,6 +321,7 @@ export default function Navbar() {
             )}
           </div>
         </div>
+        </nav>
       </div>
     </header>
   );

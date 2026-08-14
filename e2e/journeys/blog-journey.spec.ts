@@ -1,15 +1,9 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { clickNavHref } from "../helpers/mobile-nav";
 
 /**
  * Blog journey — locale /en paths; posts optional when CMS empty.
  */
-
-async function openMobileNavIfNeeded(page: Page) {
-  const hamburger = page.locator('button[aria-label*="menu" i]').first();
-  if (await hamburger.isVisible().catch(() => false)) {
-    await hamburger.click();
-  }
-}
 
 test.describe("Blog User Journey", () => {
   test.beforeEach(async ({ page }) => {
@@ -19,8 +13,7 @@ test.describe("Blog User Journey", () => {
   });
 
   test("browse blog index from homepage nav", async ({ page }) => {
-    await openMobileNavIfNeeded(page);
-    await page.getByRole("link", { name: /^blog$/i }).filter({ visible: true }).first().click();
+    await clickNavHref(page, "/blog");
     await expect(page).toHaveURL(/\/blog/);
     await expect(page.locator("main, h1").first()).toBeVisible({ timeout: 30_000 });
   });

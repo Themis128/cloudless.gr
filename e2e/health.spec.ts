@@ -8,7 +8,19 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Health API", () => {
   test("GET /api/health returns 200 with status payload", async ({ request }) => {
-    const res = await request.get("/api/health");
+    let res;
+    let lastErr: unknown;
+    for (let i = 0; i < 5; i++) {
+      try {
+        res = await request.get("/api/health");
+        lastErr = undefined;
+        break;
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 250 * (i + 1)));
+      }
+    }
+    if (!res) throw lastErr;
     expect(res.status()).toBe(200);
 
     const body = await res.json();
