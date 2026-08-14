@@ -146,6 +146,19 @@ const SECTION_META: Record<
       { key: "value", label: "Value", format: "int" },
     ],
   },
+  rfm_churn: {
+    title: "RFM / churn scores",
+    subtitle: "Gold: R2 snapshot from ml-parquet scores_rfm + scores_churn (email join).",
+    columns: [
+      { key: "email", label: "Email" },
+      { key: "rfm_score", label: "RFM", format: "decimal" },
+      { key: "recency_days", label: "Recency", format: "int" },
+      { key: "frequency", label: "Freq", format: "int" },
+      { key: "monetary", label: "Monetary", format: "money" },
+      { key: "churn_score", label: "Churn", format: "decimal" },
+      { key: "risk_band", label: "Risk" },
+    ],
+  },
   freshness: {
     title: "ETL freshness",
     subtitle: "Gold: last_etl_at / size per silver parquet key (from materialize).",

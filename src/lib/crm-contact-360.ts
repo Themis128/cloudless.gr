@@ -17,6 +17,7 @@ import {
   emptyAttribution,
   isEspoRecordId,
   matchGoldAttributionRows,
+  matchRfmChurnRow,
   normalizeEspoContact,
   summarizeNote,
   summarizeRelated,
@@ -29,7 +30,7 @@ import {
   type Contact360Stripe,
   type Contact360Subscription,
 } from "@/lib/crm-contact-360-shared";
-import { getGoldSection } from "@/lib/datalake-serve";
+import { getGoldDashboard } from "@/lib/datalake-serve";
 
 export type { Contact360 } from "@/lib/crm-contact-360-shared";
 export { isEspoRecordId } from "@/lib/crm-contact-360-shared";
@@ -47,13 +48,13 @@ export async function getContact360(id: string): Promise<Contact360 | null> {
   const contact = normalizeEspoContact(raw);
   const email = contact.email;
 
-  const [opportunities, cases, notes, stripe, accountBundle, goldAttribution] = await Promise.all([
+  const [opportunities, cases, notes, stripe, accountBundle, gold] = await Promise.all([
     listContactOpportunities(id).then((rows) => rows.map(summarizeRelated)),
     listContactCases(id).then((rows) => rows.map(summarizeRelated)),
     listContactNotes(id).then((rows) => rows.map(summarizeNote)),
     loadStripeForEmail(email),
     loadAccountAndEvents(email),
-    loadGoldAttributionSection(),
+    loadGoldLake(),
   ]);
 
   return {
@@ -64,7 +65,8 @@ export async function getContact360(id: string): Promise<Contact360 | null> {
     stripe,
     account: accountBundle.account,
     events: accountBundle.events,
-    attribution: buildAttribution(accountBundle.touches, goldAttribution),
+    attribution: buildAttribution(accountBundle.touches, gold.attribution),
+    scores: matchRfmChurnRow(gold.scores, email),
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -171,14 +173,28 @@ function touchFromEventRow(row: {
   return { source, medium, campaign };
 }
 
-async function loadGoldAttributionSection(): Promise<Record<string, unknown>[]> {
+async function loadGoldLake(): Promise<{
+  attribution: Record<string, unknown>[];
+  scores: Record<string, unknown>[];
+}> {
   try {
-    const section = await getGoldSection("attribution");
-    if (!section?.rows?.length) return [];
-    return section.rows;
+    const dash = await getGoldDashboard();
+    return {
+      attribution: sectionRows(dash.sections, "attribution"),
+      scores: sectionRows(dash.sections, "rfm_churn"),
+    };
   } catch {
-    return [];
+    return { attribution: [], scores: [] };
   }
+}
+
+function sectionRows(
+  sections: { section: string; rows?: Record<string, string | number | null>[] }[],
+  name: string
+): Record<string, unknown>[] {
+  const section = sections.find((s) => s.section === name);
+  if (!section?.rows?.length) return [];
+  return section.rows;
 }
 
 function buildAttribution(

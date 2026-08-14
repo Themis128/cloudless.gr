@@ -85,6 +85,21 @@ function goldSnapshotPayload() {
         rowCount: 1,
       },
       {
+        section: "rfm_churn",
+        rows: [
+          {
+            email: "ada@example.com",
+            rfm_score: 72,
+            recency_days: 12,
+            frequency: 3,
+            monetary: 1800,
+            churn_score: 0.1,
+            risk_band: "low",
+          },
+        ],
+        rowCount: 1,
+      },
+      {
         section: "freshness",
         rows: [{ source: "lake/gsc-keywords/keywords.parquet", exists: 1 }],
         rowCount: 1,

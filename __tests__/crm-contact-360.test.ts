@@ -28,10 +28,10 @@ vi.mock("@/lib/auth-d1", () => ({
   getUserByEmail: (...args: unknown[]) => mockGetUserByEmail(...args),
 }));
 
-const mockGetGoldSection = vi.fn();
+const mockGetGoldDashboard = vi.fn();
 
 vi.mock("@/lib/datalake-serve", () => ({
-  getGoldSection: (...args: unknown[]) => mockGetGoldSection(...args),
+  getGoldDashboard: (...args: unknown[]) => mockGetGoldDashboard(...args),
 }));
 
 vi.mock("@/lib/integrations", () => ({
@@ -58,6 +58,7 @@ import {
   contactDisplayName,
   isEspoRecordId,
   matchGoldAttributionRows,
+  matchRfmChurnRow,
   normalizeEspoContact,
   summarizeNote,
   summarizeRelated,
@@ -154,6 +155,28 @@ describe("crm-contact-360 helpers", () => {
     expect(matches[0]?.utmCampaign).toBe("shop-online");
     expect(matches[0]?.sessions).toBe(12);
   });
+
+  it("matches gold RFM/churn rows by email", () => {
+    const scores = matchRfmChurnRow(
+      [
+        {
+          email: "ADA@example.com",
+          rfm_score: 80,
+          recency_days: 5,
+          frequency: 2,
+          monetary: 900,
+          last_purchase_at: "2026-08-09T00:00:00.000Z",
+          churn_score: 0.1,
+          risk_band: "low",
+        },
+      ],
+      "ada@example.com"
+    );
+    expect(scores.rfmScore).toBe(80);
+    expect(scores.recencyDays).toBe(5);
+    expect(scores.riskBand).toBe("low");
+    expect(matchRfmChurnRow([], "ada@example.com").rfmScore).toBeNull();
+  });
 });
 
 describe("getContact360", () => {
@@ -165,7 +188,12 @@ describe("getContact360", () => {
     mockGetStripe.mockResolvedValue(null);
     mockGetAuthDbFromEnv.mockReturnValue(null);
     mockGetUserByEmail.mockResolvedValue(null);
-    mockGetGoldSection.mockResolvedValue({ section: "attribution", rows: [] });
+    mockGetGoldDashboard.mockResolvedValue({
+      sections: [
+        { section: "attribution", rows: [] },
+        { section: "rfm_churn", rows: [] },
+      ],
+    });
   });
 
   it("returns null when EspoCRM has no contact", async () => {
@@ -235,17 +263,36 @@ describe("getContact360", () => {
       created_at: 1_700_000_000,
     });
 
-    mockGetGoldSection.mockResolvedValue({
-      section: "attribution",
-      rows: [
+    mockGetGoldDashboard.mockResolvedValue({
+      sections: [
         {
-          utm_source: "linkedin",
-          utm_medium: "cpc",
-          utm_campaign: "shop-online",
-          sessions: 9,
-          signups: 1,
-          purchases: 1,
-          revenue: 1800,
+          section: "attribution",
+          rows: [
+            {
+              utm_source: "linkedin",
+              utm_medium: "cpc",
+              utm_campaign: "shop-online",
+              sessions: 9,
+              signups: 1,
+              purchases: 1,
+              revenue: 1800,
+            },
+          ],
+        },
+        {
+          section: "rfm_churn",
+          rows: [
+            {
+              email: "ada@example.com",
+              rfm_score: 72,
+              recency_days: 12,
+              frequency: 3,
+              monetary: 1800,
+              last_purchase_at: "2026-08-01T00:00:00.000Z",
+              churn_score: 0.1,
+              risk_band: "low",
+            },
+          ],
         },
       ],
     });
@@ -260,6 +307,9 @@ describe("getContact360", () => {
     expect(payload?.events[0]?.event).toBe("contact_submit");
     expect(payload?.attribution.firstTouch?.campaign).toBe("shop-online");
     expect(payload?.attribution.goldMatches).toHaveLength(1);
+    expect(payload?.scores.rfmScore).toBe(72);
+    expect(payload?.scores.riskBand).toBe("low");
+    expect(payload?.scores.churnScore).toBe(0.1);
   });
 });
 
@@ -277,7 +327,12 @@ describe("GET /api/admin/crm/contacts/[id]", () => {
     mockListNotes.mockResolvedValue([]);
     mockGetStripe.mockResolvedValue(null);
     mockGetAuthDbFromEnv.mockReturnValue(null);
-    mockGetGoldSection.mockResolvedValue({ section: "attribution", rows: [] });
+    mockGetGoldDashboard.mockResolvedValue({
+      sections: [
+        { section: "attribution", rows: [] },
+        { section: "rfm_churn", rows: [] },
+      ],
+    });
   });
 
   it("rejects unauthenticated requests", async () => {

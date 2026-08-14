@@ -1,15 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { listReports, getReport, createReport, updateReport, deleteReport } from "@/lib/reports";
 
-// Simulate Notion not configured so tests use the in-memory fallback
-vi.mock("@/lib/notion-reports", () => ({
-  notionListReports: vi.fn().mockResolvedValue(null),
-  notionGetReport: vi.fn().mockResolvedValue(null),
-  notionCreateReport: vi.fn().mockResolvedValue(null),
-  notionUpdateReport: vi.fn().mockResolvedValue(false),
-  notionDeleteReport: vi.fn().mockResolvedValue(false),
-}));
-
 vi.mock("@/lib/integrations", () => ({
   getIntegrationsAsync: vi.fn().mockResolvedValue({}),
   isConfiguredAsync: vi.fn().mockResolvedValue(false),

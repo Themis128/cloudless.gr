@@ -58,6 +58,7 @@ export const SECTION_ORDER = [
   "n8n_ops",
   "postiz_ops",
   "appflowy_activity",
+  "rfm_churn",
   "freshness",
 ] as const;
 

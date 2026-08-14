@@ -1,7 +1,7 @@
 /**
  * Tests for pure/deterministic library functions — no mocks needed.
  * Covers: bedrock-shared, rate-limit, content-calendar, store-products,
- *         notion-analytics (pure helpers), escape-html, format-price,
+ *         content-cache, escape-html, format-price,
  *         booking-slots, validation, structured-data, ab-flags, use-locale.
  */
 import { describe, it, expect, beforeEach } from "vitest";
@@ -207,16 +207,6 @@ describe("ab-flags.ts", () => {
   });
 });
 
-// ── notion-analytics.ts (pure export helper) ─────────────────────────────────
-
-describe("notion-analytics.ts — AnalyticsEventType", () => {
-  it("trackEvent signature is callable", async () => {
-    // Just verify import doesn't crash and the function exists
-    const { trackEvent } = await import("@/lib/notion-analytics");
-    expect(typeof trackEvent).toBe("function");
-  });
-});
-
 // ── i18n utilities ────────────────────────────────────────────────────────────
 
 describe("i18n/routing.ts", () => {
@@ -248,18 +238,18 @@ describe("lib/i18n.ts", () => {
   });
 });
 
-// ── notion-cache.ts ───────────────────────────────────────────────────────────
+// ── content-cache.ts ──────────────────────────────────────────────────────────
 
-describe("notion-cache.ts", () => {
+describe("content-cache.ts", () => {
   it("cached executes fetcher and returns result", async () => {
-    const { cached, invalidateCache } = await import("@/lib/notion-cache");
+    const { cached, invalidateCache } = await import("@/lib/content-cache");
     invalidateCache("test-pure-key");
     const result = await cached("test-pure-key", async () => "hello");
     expect(result).toBe("hello");
   });
 
   it("cached returns same value on second call (cached)", async () => {
-    const { cached, invalidateCache } = await import("@/lib/notion-cache");
+    const { cached, invalidateCache } = await import("@/lib/content-cache");
     invalidateCache("test-pure-key2");
     let calls = 0;
     await cached("test-pure-key2", async () => {
@@ -274,7 +264,7 @@ describe("notion-cache.ts", () => {
   });
 
   it("invalidateCache forces re-fetch on next call", async () => {
-    const { cached, invalidateCache } = await import("@/lib/notion-cache");
+    const { cached, invalidateCache } = await import("@/lib/content-cache");
     let calls = 0;
     await cached("test-invalidate-key", async () => {
       calls++;

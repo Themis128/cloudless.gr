@@ -78,11 +78,11 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
   };
 });
 // ---------------------------------------------------------------------------
-// Mock @/lib/notion-cache so we can spy on invalidateCache without touching
+// Mock @/lib/content-cache so we can spy on invalidateCache without touching
 // the real in-memory store.
 // ---------------------------------------------------------------------------
 const mockInvalidateCache = vi.fn();
-vi.mock("@/lib/notion-cache", () => ({
+vi.mock("@/lib/content-cache", () => ({
   invalidateCache: mockInvalidateCache,
   cached: vi.fn(),
 }));
