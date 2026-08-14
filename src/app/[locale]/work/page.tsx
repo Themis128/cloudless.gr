@@ -1,9 +1,9 @@
 export const revalidate = 3600;
 
 import type { Metadata } from "next";
-import { listProjects } from "@/lib/notion-projects";
-import type { Project } from "@/lib/notion-projects";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { listProjects } from "@/lib/appflowy-projects";
+import type { Project } from "@/lib/appflowy-projects";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 async function loadClientProjects(): Promise<Project[]> {
   try {
-    const ok = await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID");
+    const ok = await isAppFlowyConfigured();
     if (!ok) return [];
     const all = await listProjects();
     return all.filter(
