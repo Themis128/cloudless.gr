@@ -141,7 +141,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
           </p>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold delay-100 md:text-5xl">
             Documentation &amp;{" "}
-            <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
+            <span className="from-neon-cyan to-neon-magenta bg-linear-to-r bg-clip-text text-transparent">
               guides
             </span>
           </h1>

@@ -213,7 +213,7 @@ export default function AIAssistantPage() {
       )}
 
       {mode === "chat" && (
-        <div className="bg-void-light/50 flex h-[520px] flex-col rounded-xl border border-slate-800">
+        <div className="bg-void-light/50 flex h-130 flex-col rounded-xl border border-slate-800">
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {chatMessages.length === 0 && (
               <p className="font-mono text-xs text-slate-500">

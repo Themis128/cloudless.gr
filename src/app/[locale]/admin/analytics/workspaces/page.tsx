@@ -169,7 +169,7 @@ export default function WorkspaceAnalyticsPage() {
 
             {data.orgWide && data.orgWide.portals.total + data.orgWide.calendar.total > 0 && (
               <div>
-                <h2 className="font-heading mt-8 mb-2 font-mono text-xs tracking-wider text-slate-500 uppercase">
+                <h2 className="mt-8 mb-2 font-mono text-xs tracking-wider text-slate-500 uppercase">
                   Org-wide (no workspaceId)
                 </h2>
                 <WorkspaceCard a={data.orgWide} />

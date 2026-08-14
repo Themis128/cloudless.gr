@@ -40,7 +40,8 @@ export async function getContact360(id: string): Promise<Contact360 | null> {
   if (!isEspoRecordId(id)) return null;
   const raw = await getContact(id);
   if (!raw) return null;
-  const rawId = typeof raw.id === "string" || typeof raw.id === "number" ? String(raw.id).trim() : "";
+  const rawId =
+    typeof raw.id === "string" || typeof raw.id === "number" ? String(raw.id).trim() : "";
   if (!rawId) return null;
 
   const contact = normalizeEspoContact(raw);
