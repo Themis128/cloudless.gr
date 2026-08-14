@@ -9,10 +9,10 @@
 # Always kills the whole tree on SIGINT/SIGTERM so the next start is clean.
 #
 # Usage:
-#   bash scripts/dev-server.sh [--webpack] [--clean] [--no-heal]
+#   bash scripts/dev-server.sh [--webpack] [--clean] [--no-heal] [-p PORT] [--hostname HOST]
 # Env:
-#   DEV_PORT          listen port (default 4000)
-#   DEV_HOST          hostname (default localhost)
+#   DEV_PORT          listen port (default 4000; overridden by -p)
+#   DEV_HOST          hostname (default localhost; overridden by --hostname)
 #   DEV_HEAL=0        disable probe-based restarts (crash restart still runs)
 #   DEV_HEAL_INTERVAL probe period in seconds (default 5)
 #   DEV_HEAL_FAILS    consecutive probe failures before restart (default 3)
@@ -56,21 +56,38 @@ else
   log "AUTH_DB_USE_HTTP=1 — live Cloudflare D1 user-auth-db (same as cloudless.gr)"
 fi
 
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --webpack) BUNDLER="webpack" ;;
     --clean) CLEAN=1 ;;
     --restart) ;; # start is always a clean bind
     --no-heal) HEAL=0 ;;
+    -p|--port)
+      if [[ -z "${2:-}" ]]; then
+        log "missing port after $1"
+        exit 2
+      fi
+      PORT="$2"
+      shift
+      ;;
+    --hostname)
+      if [[ -z "${2:-}" ]]; then
+        log "missing hostname after $1"
+        exit 2
+      fi
+      HOST="$2"
+      shift
+      ;;
     -h|--help)
       sed -n '2,20p' "$0"
       exit 0
       ;;
     *)
-      log "unknown arg: $arg"
+      log "unknown arg: $1"
       exit 2
       ;;
   esac
+  shift
 done
 
 # Playwright owns the suite lifecycle; do not yank the server mid-run.

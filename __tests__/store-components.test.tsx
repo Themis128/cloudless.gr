@@ -586,13 +586,9 @@ describe("CartSlideOver — Mobile", () => {
       </Wrapper>
     );
 
-    // Close button has min-w-[44px] and min-h-[44px]
-    const closeBtn = within(container)
-      .getAllByRole("button")
-      .find((b) => b.querySelector("svg path[d*='4 4l12 12']"));
-
-    expect(closeBtn?.className).toContain("min-w-[44px]");
-    expect(closeBtn?.className).toContain("min-h-[44px]");
+    const closeBtn = within(container).getByRole("button", { name: "Close cart" });
+    expect(closeBtn.className).toMatch(/min-w-11|min-w-\[44px\]/);
+    expect(closeBtn.className).toMatch(/min-h-11|min-h-\[44px\]/);
   });
 
   it("has 44px+ touch target on checkout button", () => {
@@ -607,7 +603,7 @@ describe("CartSlideOver — Mobile", () => {
     fireEvent.click(view.getByText("Add to Cart"));
 
     const checkoutBtn = view.getByText("Checkout");
-    expect(checkoutBtn.className).toContain("min-h-[48px]");
+    expect(checkoutBtn.className).toMatch(/min-h-12|min-h-\[48px\]/);
   });
 
   it("has active: state on checkout button for mobile tap feedback", () => {

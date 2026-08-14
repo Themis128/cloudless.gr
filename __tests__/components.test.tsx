@@ -227,9 +227,9 @@ describe("Navbar", () => {
 
     fireEvent.click(view.getByLabelText("Toggle menu"));
 
-    // Mobile menu should be visible (opacity-100)
-    const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
-    expect(mobileMenu?.className).toContain("opacity-100");
+    const mobileMenu = view.getByTestId("mobile-menu");
+    expect(mobileMenu).not.toHaveAttribute("hidden");
+    expect(view.getByLabelText("Toggle menu")).toHaveAttribute("aria-expanded", "true");
 
     // Cart row visible in mobile menu
     expect(view.getByText("Cart")).toBeTruthy();
@@ -247,9 +247,9 @@ describe("Navbar", () => {
     const mobileLink = mobileLinks.find((el) => el.closest(".lg\\:hidden"));
     if (mobileLink) fireEvent.click(mobileLink);
 
-    // Menu should be collapsed (opacity-0)
-    const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
-    expect(mobileMenu?.className).toContain("opacity-0");
+    const mobileMenu = view.getByTestId("mobile-menu");
+    expect(mobileMenu).toHaveAttribute("hidden");
+    expect(view.getByLabelText("Toggle menu")).toHaveAttribute("aria-expanded", "false");
   });
 
   it("renders Sign In CTA in both desktop and mobile when unauthenticated", () => {
