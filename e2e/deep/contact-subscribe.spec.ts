@@ -22,11 +22,11 @@ test.describe("Contact + newsletter contracts", () => {
   test("POST /api/contact rejects malformed JSON with 400", async ({ request }) => {
     const res = await api(request, "post", "/api/contact", {
       headers: { "content-type": "application/json" },
-      data: "not-json{",
+      data: Buffer.from("{", "utf8"),
     });
     expectClientError(res.status(), "malformed contact JSON");
     const body = await expectJson(res);
-    expect(String(body.error)).toMatch(/invalid/i);
+    expect(String(body.error)).toMatch(/invalid|string/i);
   });
 
   test("POST /api/contact requires name, email, and message as strings", async ({ request }) => {

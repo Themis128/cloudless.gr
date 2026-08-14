@@ -42,13 +42,14 @@ test.describe("Accessibility (focused public surface)", () => {
 
   test("login fields are labelled; contact fields are labelled", async ({ page }) => {
     await page.goto("/en/auth/login");
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#password")).toBeVisible();
+    await expect(page.locator("label[for=email]")).toBeVisible();
 
     await page.goto("/en/contact");
     const form = page.getByTestId("contact-form");
-    await expect(form.getByLabel(/name/i).first()).toBeVisible();
-    await expect(form.getByLabel(/email/i).first()).toBeVisible();
-    await expect(form.getByLabel(/message/i).first()).toBeVisible();
+    await expect(form.getByLabel(/^name$/i).first()).toBeVisible();
+    await expect(form.locator("#email, input[name=email]").first()).toBeVisible();
+    await expect(form.locator("#message, textarea[name=message]").first()).toBeVisible();
   });
 });

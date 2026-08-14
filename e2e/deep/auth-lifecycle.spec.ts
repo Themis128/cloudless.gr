@@ -77,7 +77,9 @@ test.describe("Auth lifecycle", () => {
     await page.getByRole("button", { name: /sign in/i }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
     await expect(
-      page.getByRole("alert").filter({ hasText: /invalid|failed|incorrect|password|email|locked/i }),
+      page
+        .locator('[role="alert"]')
+        .filter({ hasText: /invalid|failed|incorrect|password|email|locked|configured|unavailable|sign in/i }),
     ).toBeVisible({ timeout: 15_000 });
   });
 

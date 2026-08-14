@@ -131,18 +131,51 @@ function getDb(_request: NextRequest): AuthDatabase | null {
   return db;
 }
 
+function parseLoginCredentials(rawBody: unknown): {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+} {
+  const credentials = LoginBodySchema.parse(rawBody);
+  return {
+    email: credentials.email,
+    password: credentials.password,
+    rememberMe: credentials.rememberMe,
+  };
+}
+
+function loginBodyError(err: unknown): NextResponse {
+  if (err instanceof z.ZodError) {
+    const issue = err.issues[0];
+    const message =
+      issue?.message === "Email is required" || issue?.message === "Password is required"
+        ? issue.message
+        : "Invalid request body";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+  return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+}
+
 export async function POST(req: NextRequest) {
+  let email: string;
+  let password: string;
+  let rememberMe = false;
+  try {
+    const rawBody = await req.json();
+    const credentials = parseLoginCredentials(rawBody);
+    email = credentials.email;
+    password = credentials.password;
+    rememberMe = credentials.rememberMe;
+  } catch (err) {
+    return loginBodyError(err);
+  }
+
   try {
     const db = getDb(req);
     if (!db) {
-      // Cognito Hosted UI is entered via next-auth signIn("cognito") →
-      // /api/auth/signin/cognito, not this D1 email/password endpoint.
-      // A redirect to /api/auth/login/cognito is not a valid Auth.js action
-      // and returns 400 (UnknownAction). Match /api/auth/register.
       return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
     }
 
-    // Validate SESSION_SECRET
     const secretCheck = validateSessionSecret();
     if (!secretCheck.valid) {
       console.warn("[auth/login] SESSION_SECRET validation:", secretCheck.error);
@@ -150,27 +183,6 @@ export async function POST(req: NextRequest) {
 
     const ipRl = rateLimit(`auth-login:ip:${getClientIp(req)}`, 10, 60_000);
     if (!ipRl.ok) return ipRl.response;
-
-    let email: string;
-    let password: string;
-    let rememberMe = false;
-    try {
-      const rawBody = await req.json();
-      const credentials = LoginBodySchema.parse(rawBody);
-      email = credentials.email;
-      password = credentials.password;
-      rememberMe = credentials.rememberMe;
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const issue = err.issues[0];
-        const message =
-          issue?.message === "Email is required" || issue?.message === "Password is required"
-            ? issue.message
-            : "Invalid request body";
-        return NextResponse.json({ error: message }, { status: 400 });
-      }
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
 
     // Check for account lockout
     const lockoutCheck = await checkFailedAttempts(db, email);

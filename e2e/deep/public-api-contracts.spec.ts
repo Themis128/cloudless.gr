@@ -16,7 +16,7 @@ test.describe("Public API method contracts", () => {
     for (const path of ["/api/contact", "/api/subscribe", "/api/checkout", "/api/auth/login"]) {
       const res = await api(request, "post", path, {
         headers: { "content-type": "application/json" },
-        data: "{",
+        data: Buffer.from("{", "utf8"),
       });
       expect(res.status(), path).toBeGreaterThanOrEqual(400);
       expect(res.status(), path).toBeLessThan(500);

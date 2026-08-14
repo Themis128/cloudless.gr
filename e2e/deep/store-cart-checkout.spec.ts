@@ -36,7 +36,7 @@ test.describe("Store, cart, checkout", () => {
     await page.getByRole("button", { name: /add to cart/i }).click();
     await page.getByRole("button", { name: /close cart/i }).click();
     await page.goto("/en/store/srv-growth");
-    await page.getByRole("button", { name: /subscribe/i }).click();
+    await page.locator("main").getByRole("button", { name: /^subscribe$/i }).click();
     const drawer = page.getByTestId("cart-drawer");
     await expect(drawer).toHaveAttribute("data-open", "true");
     await expect(drawer.getByRole("button", { name: /checkout/i })).toBeDisabled();

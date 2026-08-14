@@ -39,15 +39,15 @@ test.describe("i18n routing and primary navigation", () => {
   test("locale switcher changes the prefix without dropping the page", async ({ page }) => {
     await page.goto("/en/services");
     await openMobileNavIfNeeded(page);
-    const greek = page
-      .getByRole("button", { name: /set language to ελληνικά/i })
-      .filter({ visible: true });
-    if (await greek.count()) {
-      await greek.click();
-    } else {
+    const greek = page.getByRole("option", { name: /ελληνικά/i }).or(
+      page.getByRole("button", { name: /set language to ελληνικά/i }).filter({ visible: true }),
+    );
+    if (await page.getByRole("button", { name: /language:/i }).filter({ visible: true }).count()) {
       await page.getByRole("button", { name: /language:/i }).filter({ visible: true }).click();
-      await page.getByRole("button", { name: /set language to ελληνικά/i }).click();
+    } else {
+      await openMobileNavIfNeeded(page);
     }
+    await greek.first().click();
     await expect(page).toHaveURL(/\/el\/services/);
     await expect(page.locator("html")).toHaveAttribute("lang", "el");
   });
