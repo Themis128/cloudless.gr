@@ -18,7 +18,7 @@ import {
   type DatalakeInsightsIndex,
   type InsightDomain,
 } from "@/lib/datalake-insights";
-import { mapGoldRowsForGscDimension } from "@/lib/gsc-dimension-gold";
+import { mapGoldRowsForGscDimension, type GoldSectionRows } from "@/lib/gsc-dimension-gold";
 
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
 const DATALAKE_GOLD_SOURCE = "datalake-gold" as const;
@@ -175,7 +175,7 @@ export async function getGscDimensionFromLake(
   days = 28
 ): Promise<{
   dimension: string;
-  rows: unknown[];
+  rows: GoldSectionRows;
   snapshot: Awaited<ReturnType<typeof getSeoFromLake>>["snapshot"];
   fetchedAt: string;
   source: typeof DATALAKE_GOLD_SOURCE;

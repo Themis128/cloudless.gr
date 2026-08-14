@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig, type AppConfig } from "@/lib/ssm-config";
-import { verifyActiveCampaignToken } from "@/lib/activecampaign";
+import { getLeadAutomationStatus, verifyActiveCampaignToken } from "@/lib/activecampaign";
 
 export type IntegrationStatus = "configured" | "not_configured" | "degraded" | "error";
 
