@@ -7,21 +7,32 @@
  * Must never be imported from edge/proxy or client graphs (loaded via
  * webpackIgnore require from auth-d1.ts).
  */
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { AuthDatabase } from "./auth-d1";
 
-const D1_OBJECT_DIR = join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
+const D1_OBJECT_DIRS = [
+  join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject"),
+  join(process.cwd(), ".wrangler/state/d1"),
+];
 
 function findLocalD1Sqlite(): string | null {
-  if (!existsSync(D1_OBJECT_DIR)) return null;
-  const files = readdirSync(D1_OBJECT_DIR).filter(
-    (f) => f.endsWith(".sqlite") && f !== "metadata.sqlite"
-  );
-  if (files.length === 0) return null;
-  // Prefer the largest non-metadata db (migrations land here).
-  return join(D1_OBJECT_DIR, files[0]!);
+  const override = process.env.AUTH_DB_LOCAL_SQLITE?.trim();
+  if (override && existsSync(override)) return override;
+
+  const candidates: Array<{ path: string; size: number }> = [];
+  for (const dir of D1_OBJECT_DIRS) {
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith(".sqlite") || name === "metadata.sqlite") continue;
+      const path = join(dir, name);
+      candidates.push({ path, size: statSync(path).size });
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.size - a.size);
+  return candidates[0]!.path;
 }
 
 class LocalPreparedStatement {
@@ -60,21 +71,24 @@ class LocalPreparedStatement {
   }
 }
 
-let cached: AuthDatabase | null | undefined;
+let cached: AuthDatabase | null = null;
+
+/** Test hook — drop the cached adapter so a new sqlite path can be picked up. */
+export function resetLocalAuthDbCache(): void {
+  cached = null;
+}
 
 export function getLocalAuthDb(): AuthDatabase | null {
-  if (cached !== undefined) return cached;
-  if (process.env.NODE_ENV !== "development") {
-    cached = null;
-    return null;
-  }
+  if (cached) return cached;
+  const allow =
+    process.env.NODE_ENV === "development" || Boolean(process.env.AUTH_DB_LOCAL_SQLITE?.trim());
+  if (!allow) return null;
 
   const path = findLocalD1Sqlite();
   if (!path) {
     console.warn(
-      "[auth-db-local] No local D1 sqlite under .wrangler/state — run: pnpm exec wrangler d1 migrations apply user-auth-db --local"
+      "[auth-db-local] No local D1 sqlite under .wrangler/state — run: pnpm d1:migrate:local"
     );
-    cached = null;
     return null;
   }
 
@@ -87,11 +101,10 @@ export function getLocalAuthDb(): AuthDatabase | null {
       prepare: (query: string) => new LocalPreparedStatement(db, query),
     };
     cached = adapter;
-    console.warn("[auth-db-local] Using local D1 sqlite");
+    console.warn(`[auth-db-local] Using local D1 sqlite (${path})`);
     return adapter;
   } catch (err) {
     console.warn("[auth-db-local] Failed to open local D1 sqlite:", err);
-    cached = null;
     return null;
   }
 }

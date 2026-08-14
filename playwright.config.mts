@@ -77,10 +77,10 @@ export default defineConfig({
     // while Next 16 is still compiling proxy.
     url: "http://127.0.0.1:4000/api/health",
     timeout: 180_000,
-    // Local: reuse a healthy `pnpm dev`. CI always starts fresh.
-    // Next 16 refuses a second `next dev` when .next/dev/lock exists — if we
-    // spawn anyway and it exits 1, Playwright fails even though the URL is up.
-    reuseExistingServer: !isCi,
+    // Never reuse a foreign `pnpm dev`. That process is started without
+    // E2E_ADMIN_TOKEN / NEXT_PUBLIC_E2E, so admin APIs 401 and the suite lies.
+    // Port 4000 must be free; `scripts/dev-server.sh` will take it over.
+    reuseExistingServer: false,
     env: {
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",

@@ -103,89 +103,56 @@ async function authenticateBearer(
 }
 
 /** Require authentication via D1 session (Bearer or cookie). */
-  export async function requireAuth(request: NextRequest): Promise<AuthResult> {
-    // E2E bypass: only when BOTH env vars are set AND Bearer matches.
-    // Dead in production even if misconfigured (NODE_ENV check).
-    if (
-      process.env.NODE_ENV !== "production" &&
-      process.env.E2E_ADMIN_TOKEN
-    ) {
-      const e2eToken = getTokenFromHeader(request);
-      if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
-        return {
-          ok: true,
-          user: {
-            sub: "e2e-admin",
-            email: "e2e-admin@cloudless.test",
-            email_verified: true,
-            groups: [ADMIN_GROUP],
-          },
-        };
-      }
-    }
-
-    // E2E bypass for checkout GET stub (without token)
-    if (
-      process.env.NODE_ENV !== "production" &&
-      process.env.NEXT_PUBLIC_E2E === "1"
-    ) {
-      const pathname = request.nextUrl.pathname;
-      if (pathname === "/api/checkout" && request.method === "GET") {
-        return {
-          ok: true,
-          user: {
-            sub: "e2e-test",
-            email: "e2e-test@cloudless.test",
-            email_verified: true,
-            groups: [],
-          },
-        };
-      }
-      // E2E bypass for checkout POST (without token)
-      if (pathname === "/api/checkout" && request.method === "POST") {
-        return {
-          ok: true,
-          user: {
-            sub: "e2e-test",
-            email: "e2e-test@cloudless.test",
-            email_verified: true,
-            groups: [],
-          },
-        };
-      }
-    }
-
-    const token = getTokenFromHeader(request);
-    if (token) {
-      const bearerResult = await authenticateBearer(request, token);
-      if (bearerResult) return bearerResult;
-    }
-
-    // Fall through to D1 session cookie auth. When NEXT_PUBLIC_E2E === "1"
-    // without E2E_ADMIN_TOKEN configured, we must still honour valid session
-    // cookies — otherwise admin APIs 401 even for authenticated admin users.
-    const d1User = await readD1SessionCookie(request);
-    if (d1User) return { ok: true, user: d1User };
-
-    // E2E mode without a matching token and without a session cookie — 401.
-    if (process.env.NEXT_PUBLIC_E2E === "1") {
+export async function requireAuth(request: NextRequest): Promise<AuthResult> {
+  // E2E bypass: matching Bearer + E2E_ADMIN_TOKEN. Dead in production (NODE_ENV).
+  if (process.env.NODE_ENV !== "production" && process.env.E2E_ADMIN_TOKEN) {
+    const e2eToken = getTokenFromHeader(request);
+    if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
       return {
-        ok: false,
-        response: NextResponse.json(
-          { error: "Missing authorization token" },
-          { status: 401 },
-        ),
+        ok: true,
+        user: {
+          sub: "e2e-admin",
+          email: "e2e-admin@cloudless.test",
+          email_verified: true,
+          groups: [ADMIN_GROUP],
+        },
       };
     }
-
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Missing authorization token" },
-        { status: 401 },
-      ),
-    };
   }
+
+  // E2E bypass for checkout GET/POST stub (without token)
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1") {
+    const pathname = request.nextUrl.pathname;
+    if (pathname === "/api/checkout" && (request.method === "GET" || request.method === "POST")) {
+      return {
+        ok: true,
+        user: {
+          sub: "e2e-test",
+          email: "e2e-test@cloudless.test",
+          email_verified: true,
+          groups: [],
+        },
+      };
+    }
+  }
+
+  const token = getTokenFromHeader(request);
+  if (token) {
+    const bearerResult = await authenticateBearer(request, token);
+    if (bearerResult) return bearerResult;
+  }
+
+  // Fall through to D1 session cookie auth. When NEXT_PUBLIC_E2E === "1"
+  // without E2E_ADMIN_TOKEN configured, we must still honour valid session
+  // cookies — otherwise admin APIs 401 even for authenticated admin users.
+  const d1User = await readD1SessionCookie(request);
+  if (d1User) return { ok: true, user: d1User };
+
+  return {
+    ok: false,
+    response: NextResponse.json({ error: "Missing authorization token" }, { status: 401 }),
+  };
+}
 
 /**
  * Same as `requireAuth`. D1 sessions are only issued after email activation,

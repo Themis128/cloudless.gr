@@ -4,8 +4,9 @@
  * `register()`). A hanging bind here makes Playwright's `/api/health` probe
  * time out for the full webServer timeout.
  *
- * Local next-dev: optionally bind wrangler D1 (AUTH_DB). Production: Sentry
- * + a SHA-deduped Slack deploy ping.
+ * Local next-dev: always bind AUTH_DB (wrangler local D1 sqlite, or remote
+ * OpenNext context when explicitly requested). Production: Sentry + a
+ * SHA-deduped Slack deploy ping.
  *
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
@@ -27,6 +28,7 @@ export function shouldBindRemoteAuthDb(): boolean {
   if (process.env.CI === "true") return false;
   if (process.env.NEXT_PUBLIC_E2E === "1") return false;
   if (process.env.AUTH_DB_PREFER_LOCAL === "1") return false;
+  if (process.env.AUTH_DB_USE_HTTP === "1") return false;
   if (!process.env.CLOUDFLARE_API_TOKEN) return false;
   return true;
 }
@@ -57,6 +59,24 @@ async function bindRemoteAuthDb(): Promise<void> {
   }
 }
 
+async function bindLocalAuthDb(): Promise<void> {
+  const existing = (globalThis as { __AUTH_DB__?: { prepare?: unknown } }).__AUTH_DB__;
+  if (existing && typeof existing.prepare === "function") {
+    console.warn(`${LOG_PREFIX} AUTH_DB already bound`);
+    return;
+  }
+  const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
+  const db = getAuthDbFromEnv();
+  if (db && typeof db.prepare === "function") {
+    (globalThis as { __AUTH_DB__?: typeof db }).__AUTH_DB__ = db;
+    console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
+    return;
+  }
+  console.error(
+    `${LOG_PREFIX} AUTH_DB unbound — D1 must be bound. Run: pnpm d1:migrate:local`
+  );
+}
+
 async function fireDeployNotification(): Promise<void> {
   const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
   const stage = process.env.SST_STAGE ?? process.env.NODE_ENV ?? "production";
@@ -84,6 +104,9 @@ export async function register() {
           console.warn(`${LOG_PREFIX} Local AUTH_DB bind failed:`, msg);
         }
       }
+    }
+    if (process.env.NEXT_RUNTIME === "nodejs") {
+      await bindLocalAuthDb();
     }
     return;
   }

@@ -41,6 +41,11 @@ PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/cloudless-dev-${PORT}.pid"
 
 log() { printf '[dev-heal] %s\n' "$*"; }
 
+# Local next-dev always binds wrangler D1 sqlite unless HTTP D1 is forced.
+if [[ "${AUTH_DB_USE_HTTP:-}" != "1" ]]; then
+  export AUTH_DB_PREFER_LOCAL="${AUTH_DB_PREFER_LOCAL:-1}"
+fi
+
 for arg in "$@"; do
   case "$arg" in
     --webpack) BUNDLER="webpack" ;;
@@ -197,7 +202,33 @@ takeover_supervisor() {
   echo $$ > "$PIDFILE"
 }
 
-clear_cache() {
+ensure_local_d1() {
+  if [[ "${AUTH_DB_USE_HTTP:-}" == "1" ]]; then
+    log "AUTH_DB_USE_HTTP=1 — skipping local D1 sqlite migrate"
+    return 0
+  fi
+  log "ensuring local D1 (user-auth-db)"
+  if ! bash "$ROOT/scripts/ensure-local-d1.sh"; then
+    log "local D1 migrate failed — AUTH_DB will be unbound"
+    return 1
+  fi
+  return 0
+}
+
+health_ok() {
+  local body
+  body="$(curl -sS --max-time 8 "http://${HOST}:${PORT}/api/health" 2>/dev/null || true)"
+  printf '%s' "$body" | python3 -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    data = json.loads(raw)
+except Exception:
+    raise SystemExit(1)
+ok = data.get("status") == "ok" and data.get("dbConnected") is True
+raise SystemExit(0 if ok else 1)
+'
+}
   log "clearing .next and tmp"
   rm -rf "$ROOT/.next" "$ROOT/tmp"
 }
@@ -228,8 +259,8 @@ wait_ready() {
       return 1
     fi
     code="$(http_code "http://${HOST}:${PORT}/api/health" 8)"
-    if [[ "$code" == "200" ]]; then
-      log "healthy after ${i}s (/api/health 200)"
+    if [[ "$code" == "200" ]] && health_ok; then
+      log "healthy after ${i}s (/api/health ok, D1 bound)"
       return 0
     fi
     sleep 1
@@ -278,9 +309,9 @@ watch_child() {
       continue
     fi
     code="$(http_code "http://${HOST}:${PORT}/api/health")"
-    if [[ "$code" != "200" ]]; then
+    if [[ "$code" != "200" ]] || ! health_ok; then
       fail=$((fail + 1))
-      log "health ${code} (${fail}/${FAILS_NEEDED})"
+      log "health ${code} d1-unbound (${fail}/${FAILS_NEEDED})"
       if [[ "$fail" -ge "$FAILS_NEEDED" ]]; then
         return 1
       fi
@@ -311,6 +342,17 @@ log "auto-heal on (crash restart always; probe restart=$HEAL). Ctrl+C stops the 
 takeover_supervisor
 
 while [[ "$SHUTDOWN" -eq 0 ]]; do
+  if ! ensure_local_d1; then
+    RESTARTS=$((RESTARTS + 1))
+    if [[ "$RESTARTS" -ge "$MAX_RESTARTS" ]]; then
+      log "gave up after ${MAX_RESTARTS} restarts (D1 migrate failed)"
+      stop_child
+      release_pidfile
+      exit 1
+    fi
+    sleep 2
+    continue
+  fi
   if ! free_port; then
     log "could not bind :$PORT — retrying"
     sleep 1

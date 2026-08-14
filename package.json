@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "bash scripts/dev-server.sh",
-    "dev:raw": "next dev -p 4000 --hostname localhost",
+    "dev:raw": "AUTH_DB_PREFER_LOCAL=1 next dev -p 4000 --hostname localhost",
     "dev:info": "bash scripts/wsl-dev-info.sh",
     "dev:restart": "bash scripts/dev-server.sh --restart",
     "dev:restart:clean": "bash scripts/dev-server.sh --restart --clean",
@@ -160,6 +160,7 @@
     "db:refresh-snapshots": "bash scripts/db-sqlite-pull.sh && bash scripts/db-d1-pull.sh",
     "db:ready": "bash scripts/db-port-forward.sh start && bash scripts/db-port-forward.sh status",
     "db:backup:test": "bash scripts/pvc-backup-test.sh",
+    "d1:migrate:local": "bash scripts/ensure-local-d1.sh",
     "d1:retire:cloudless-auth": "bash scripts/d1-retire-cloudless-auth.sh"
   },
   "overrides": {

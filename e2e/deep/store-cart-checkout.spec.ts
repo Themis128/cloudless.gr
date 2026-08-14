@@ -37,6 +37,9 @@ test.describe("Store, cart, checkout", () => {
     await expect(page.getByTestId("cart-drawer")).toContainText(/cloud architecture audit/i);
     await page.getByRole("button", { name: /close cart/i }).click();
     await expect(page.getByTestId("cart-drawer")).toHaveAttribute("data-open", "false");
+    await expect
+      .poll(async () => page.evaluate(() => localStorage.getItem("cloudless-cart") ?? ""))
+      .toMatch(/srv-cloud/);
     await page.goto("/en/store/srv-growth");
     await page.getByTestId("add-to-cart").click();
     const drawer = page.getByTestId("cart-drawer");

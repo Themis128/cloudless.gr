@@ -11,12 +11,24 @@ export async function GET() {
     const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
     const db = getAuthDbFromEnv();
     if (db) {
-      const row = await db.prepare("SELECT 1 as ok").first<{ ok: number }>();
-      dbConnected = row?.ok === 1;
+      const row = await db.prepare("SELECT 1 as ok").first<{ ok?: unknown }>();
+      dbConnected = Number(row?.ok) === 1;
     }
   } catch {
     dbConnected = false;
   }
+
+  return globalThis.Response.json(
+    {
+      status: dbConnected ? "ok" : "degraded",
+      timestamp: new Date().toISOString(),
+      version,
+      authProvider: "d1",
+      dbConnected,
+    },
+    { headers: { "cache-control": "no-store, no-cache, must-revalidate" } }
+  );
+}
 
   return globalThis.Response.json(
     {
