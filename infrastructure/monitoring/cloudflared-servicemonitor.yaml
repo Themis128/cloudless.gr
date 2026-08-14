@@ -69,7 +69,8 @@ spec:
       targetLabel: instance
     - targetLabel: job
       replacement: cloudflared
----apiVersion: monitoring.coreos.com/v1
+---
+apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: cloudflared-tunnel-health
