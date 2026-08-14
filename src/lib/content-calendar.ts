@@ -7,6 +7,18 @@ export { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "./calendar-shared";
 // Resets on every cold start; not durable. Postiz is the social scheduler.
 let store: CalendarItem[] = [];
 
+function newCalendarItemId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return `cal_${globalThis.crypto.randomUUID()}`;
+  }
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(8);
+    globalThis.crypto.getRandomValues(bytes);
+    return `cal_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+  return `cal_${Date.now()}`;
+}
+
 export async function getCalendarItems(
   from?: string,
   to?: string,
@@ -30,7 +42,7 @@ async function readAllItems(from?: string, to?: string): Promise<CalendarItem[]>
 export async function createCalendarItem(input: Omit<CalendarItem, "id">): Promise<CalendarItem> {
   const item: CalendarItem = {
     ...input,
-    id: `cal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    id: newCalendarItemId(),
   };
   store.push(item);
   return item;

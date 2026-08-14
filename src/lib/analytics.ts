@@ -54,7 +54,12 @@ function newEventId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  return `evt_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(8);
+    globalThis.crypto.getRandomValues(bytes);
+    return `evt_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+  return `evt_${Date.now()}`;
 }
 
 /**
