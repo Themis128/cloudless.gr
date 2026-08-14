@@ -11,6 +11,7 @@ export interface CloudflareEmailOptions {
   html: string;
   text: string;
   replyTo?: string[];
+  from?: string;
   fromLabel?: string;
   listUnsubscribeUrl?: string;
 }
@@ -32,9 +33,10 @@ export async function sendEmailCloudflare(options: CloudflareEmailOptions): Prom
     );
   }
 
+  const fromEmail = options.from || "noreply@cloudless.gr";
   const fromAddress = options.fromLabel
-    ? `${options.fromLabel} <noreply@cloudless.gr>`
-    : "Cloudless <noreply@cloudless.gr>";
+    ? `${options.fromLabel} <${fromEmail}>`
+    : `Cloudless <${fromEmail}>`;
 
   const headers: Record<string, string> = {};
   if (options.listUnsubscribeUrl) {
