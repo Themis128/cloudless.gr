@@ -11,11 +11,11 @@ test.describe("Health and API routing pin", () => {
     expect(res.status()).toBe(200);
     expect(res.headers()["cache-control"] ?? "").toMatch(/no-store/i);
     const body = await expectJson(res);
-    expect(["ok", "degraded"]).toContain(body.status);
+    expect(body.status).toBe("ok");
     expect(String(body.timestamp)).toMatch(/^\d{4}-/);
     expect(body.version).toBeTruthy();
     expect(body.authProvider).toBe("d1");
-    expect(typeof body.dbConnected).toBe("boolean");
+    expect(body.dbConnected).toBe(true);
   });
 
   test("/api/auth/session is never an HTML 404 from [locale]", async ({ request }) => {

@@ -229,6 +229,8 @@ ok = data.get("status") == "ok" and data.get("dbConnected") is True
 raise SystemExit(0 if ok else 1)
 '
 }
+
+clear_cache() {
   log "clearing .next and tmp"
   rm -rf "$ROOT/.next" "$ROOT/tmp"
 }
@@ -335,7 +337,7 @@ watch_child() {
 }
 
 if [[ ! -f "$ROOT/.env.local" ]]; then
-  log "warning: .env.local is missing — server will start but auth/CMS may be degraded"
+  log "warning: .env.local is missing — CMS/integrations may be degraded; D1 still binds via local sqlite"
 fi
 
 log "auto-heal on (crash restart always; probe restart=$HEAL). Ctrl+C stops the tree."

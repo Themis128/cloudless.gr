@@ -19,6 +19,7 @@ function stubInteractiveDev(): void {
   vi.stubEnv("CI", "false");
   vi.stubEnv("NEXT_PUBLIC_E2E", "");
   vi.stubEnv("AUTH_DB_PREFER_LOCAL", "");
+  vi.stubEnv("AUTH_DB_USE_HTTP", "");
   vi.stubEnv("CLOUDFLARE_API_TOKEN", "cf-token");
 }
 
@@ -36,6 +37,8 @@ describe("Next.js instrumentation file location", () => {
     expect(source).toContain("sentry.server.config");
     expect(source).toContain("sentry.edge.config");
     expect(source).toContain("getCloudflareContext timed out");
+    expect(source).toContain("AUTH_DB bound (local D1)");
+    expect(source).toContain("pnpm d1:migrate:local");
     expect(source).toContain("slackDeployNotify");
   });
 });
@@ -55,6 +58,12 @@ describe("shouldBindRemoteAuthDb", () => {
   it("skips E2E (local sqlite fallback)", () => {
     stubInteractiveDev();
     vi.stubEnv("NEXT_PUBLIC_E2E", "1");
+    expect(shouldBindRemoteAuthDb()).toBe(false);
+  });
+
+  it("skips when AUTH_DB_USE_HTTP=1 (REST client, not OpenNext remote)", () => {
+    stubInteractiveDev();
+    vi.stubEnv("AUTH_DB_USE_HTTP", "1");
     expect(shouldBindRemoteAuthDb()).toBe(false);
   });
 

@@ -93,7 +93,7 @@
     {
       "label": "d1:migrate:local",
       "type": "shell",
-      "command": "pnpm exec wrangler d1 migrations apply user-auth-db --local",
+      "command": "pnpm d1:migrate:local",
       "problemMatcher": [],
       "presentation": { "reveal": "always" }
     },

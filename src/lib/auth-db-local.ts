@@ -19,7 +19,9 @@ const D1_OBJECT_DIRS = [
 
 function findLocalD1Sqlite(): string | null {
   const override = process.env.AUTH_DB_LOCAL_SQLITE?.trim();
-  if (override && existsSync(override)) return override;
+  if (override) {
+    return existsSync(override) ? override : null;
+  }
 
   const candidates: Array<{ path: string; size: number }> = [];
   for (const dir of D1_OBJECT_DIRS) {
