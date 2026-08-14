@@ -76,3 +76,16 @@ See `docs/aws/EMAIL-SES.md`.
 `__tests__/email.test.ts`, `client-report-email.test.ts`,
 `ses-suppression.test.ts`, `auth-resend-verification-api.test.ts`,
 `admin-email-api.test.ts`.
+
+## Verification (2026-08-14)
+
+| Check | Result |
+| --- | --- |
+| `pnpm exec vitest run __tests__/email.test.ts __tests__/ses-suppression.test.ts` | 20/20 pass (includes skip-when-suppressed) |
+| `admin-email-api` + `client-report-email` + `auth-resend-verification-api` | 26/26 pass |
+| Remote D1 `email_suppression` table on `user-auth-db` | Present (`SELECT` ok; 0 rows at probe time) |
+| `https://webmail.cloudless.gr/` | HTTPS reachable (Roundcube) |
+| Doc consistency | Inbound = Gmail-only; App sync = CF REST → Resend; suppression before send |
+
+Do **not** treat Worker→dovecot LMTP as live. Do **not** confuse omv-ha postfix
+relay (human compose) with `@/lib/email` (API transactional).
