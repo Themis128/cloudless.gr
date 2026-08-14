@@ -18,6 +18,7 @@ import {
   type DatalakeInsightsIndex,
   type InsightDomain,
 } from "@/lib/datalake-insights";
+import { mapGoldRowsForGscDimension } from "@/lib/gsc-dimension-gold";
 
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
 const DATALAKE_GOLD_SOURCE = "datalake-gold" as const;
@@ -167,8 +168,7 @@ export async function getCtrOpportunitiesFromLake(limit = 50): Promise<{
 }
 
 /**
- * Generic GSC dimension stub from gold — dimensions without silver rollups
- * return empty rows + note (never live GSC).
+ * Generic GSC dimension from gold — never live GSC.
  */
 export async function getGscDimensionFromLake(
   dimension: string,
@@ -183,17 +183,41 @@ export async function getGscDimensionFromLake(
   error?: string;
 }> {
   const seo = await getSeoFromLake(days);
+  const [top_pages, gsc_countries, gsc_devices, gsc_query_pages] = await Promise.all([
+    getGoldSection("top_pages"),
+    getGoldSection("gsc_countries"),
+    getGoldSection("gsc_devices"),
+    getGoldSection("gsc_query_pages"),
+  ]);
+  const mapped = mapGoldRowsForGscDimension(dimension, {
+    top_keywords: seo.keywords.map((k) => ({
+      query: k.query,
+      clicks: k.clicks,
+      impressions: k.impressions,
+      ctr: k.ctr,
+      avg_position: k.position,
+    })),
+    top_pages: top_pages?.rows,
+    gsc_countries: gsc_countries?.rows,
+    gsc_devices: gsc_devices?.rows,
+    gsc_query_pages: gsc_query_pages?.rows,
+  });
+  const sectionErrors = [
+    top_pages?.error,
+    gsc_countries?.error,
+    gsc_devices?.error,
+    gsc_query_pages?.error,
+    seo.error,
+  ].filter(Boolean);
   return {
     dimension,
-    rows: dimension === "query" ? seo.keywords : [],
+    rows: mapped.rows,
     snapshot: seo.snapshot,
     fetchedAt: seo.fetchedAt,
     source: DATALAKE_GOLD_SOURCE,
-    note:
-      dimension === "query"
-        ? "Served from gold top_keywords."
-        : `Dimension "${dimension}" not yet in gold — extend materialize-datalake-snapshots. No live GSC.`,
-    error: seo.error,
+    note: mapped.note,
+    error:
+      mapped.rows.length === 0 && sectionErrors.length > 0 ? String(sectionErrors[0]) : seo.error,
   };
 }
 
