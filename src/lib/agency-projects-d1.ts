@@ -228,7 +228,10 @@ export async function listTimeEntries(
       .all<EntryRow>();
     return { bound: true, entries: (result.results ?? []).map(mapEntry) };
   } catch (err) {
-    console.warn("[agency-projects-d1] list time failed:", err instanceof Error ? err.message : err);
+    console.warn(
+      "[agency-projects-d1] list time failed:",
+      err instanceof Error ? err.message : err
+    );
     return { bound: true, entries: [] };
   }
 }
@@ -289,7 +292,10 @@ export async function createTimeEntry(input: {
       createdAt: now,
     };
   } catch (err) {
-    console.warn("[agency-projects-d1] create time failed:", err instanceof Error ? err.message : err);
+    console.warn(
+      "[agency-projects-d1] create time failed:",
+      err instanceof Error ? err.message : err
+    );
     return null;
   }
 }

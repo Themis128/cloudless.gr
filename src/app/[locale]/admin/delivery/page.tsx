@@ -177,28 +177,28 @@ export default function DeliveryPage() {
       </div>
 
       {message && (
-        <p className="rounded-lg border border-slate-800 bg-void-light/50 px-3 py-2 text-sm text-slate-300">
+        <p className="bg-void-light/50 rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-300">
           {message}
         </p>
       )}
 
       <form
         onSubmit={createProject}
-        className="grid gap-3 rounded-xl border border-slate-800 bg-void-light/40 p-4 md:grid-cols-4"
+        className="bg-void-light/40 grid gap-3 rounded-xl border border-slate-800 p-4 md:grid-cols-4"
       >
         <input
           required
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           placeholder="Project name"
-          className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white"
+          className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white"
         />
         <input
           type="email"
           value={form.clientEmail}
           onChange={(e) => setForm((f) => ({ ...f, clientEmail: e.target.value }))}
           placeholder="Client email (optional)"
-          className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white"
+          className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white"
         />
         <input
           type="number"
@@ -207,12 +207,12 @@ export default function DeliveryPage() {
           value={form.hourlyRateEur}
           onChange={(e) => setForm((f) => ({ ...f, hourlyRateEur: e.target.value }))}
           placeholder="€ / hour (optional)"
-          className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white"
+          className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white"
         />
         <button
           type="submit"
           disabled={creating}
-          className="rounded-lg border border-neon-cyan/40 bg-neon-cyan/10 px-3 py-2 text-sm text-neon-cyan disabled:opacity-50"
+          className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
         >
           {creating ? "Creating…" : "Add project"}
         </button>
@@ -225,7 +225,7 @@ export default function DeliveryPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="overflow-x-auto rounded-xl border border-slate-800">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-800 text-xs tracking-wide text-slate-500 uppercase">
                 <tr>
                   <th className="px-3 py-2">Project</th>
                   <th className="px-3 py-2">Hours</th>
@@ -244,7 +244,7 @@ export default function DeliveryPage() {
                   projects.map((p) => (
                     <tr
                       key={p.id}
-                      className={`cursor-pointer border-b border-slate-900/80 hover:bg-void-lighter/40 ${
+                      className={`hover:bg-void-lighter/40 cursor-pointer border-b border-slate-900/80 ${
                         selectedId === p.id ? "bg-void-lighter/60" : ""
                       }`}
                       onClick={() => setSelectedId(p.id)}
@@ -283,7 +283,7 @@ export default function DeliveryPage() {
             </table>
           </div>
 
-          <div className="space-y-4 rounded-xl border border-slate-800 bg-void-light/30 p-4">
+          <div className="bg-void-light/30 space-y-4 rounded-xl border border-slate-800 p-4">
             {!selected ? (
               <p className="text-sm text-slate-500">Select a project to log hours.</p>
             ) : (
@@ -304,7 +304,7 @@ export default function DeliveryPage() {
                     required
                     value={timeForm.workDate}
                     onChange={(e) => setTimeForm((f) => ({ ...f, workDate: e.target.value }))}
-                    className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white"
+                    className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white"
                   />
                   <input
                     type="number"
@@ -314,18 +314,18 @@ export default function DeliveryPage() {
                     value={timeForm.hours}
                     onChange={(e) => setTimeForm((f) => ({ ...f, hours: e.target.value }))}
                     placeholder="Hours"
-                    className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white"
+                    className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white"
                   />
                   <input
                     value={timeForm.description}
                     onChange={(e) => setTimeForm((f) => ({ ...f, description: e.target.value }))}
                     placeholder="What did you work on?"
-                    className="rounded-lg border border-slate-700 bg-void px-3 py-2 text-sm text-white sm:col-span-2"
+                    className="bg-void rounded-lg border border-slate-700 px-3 py-2 text-sm text-white sm:col-span-2"
                   />
                   <button
                     type="submit"
                     disabled={logging}
-                    className="rounded-lg border border-neon-magenta/40 bg-neon-magenta/10 px-3 py-2 text-sm text-neon-magenta disabled:opacity-50 sm:col-span-2"
+                    className="border-neon-magenta/40 bg-neon-magenta/10 text-neon-magenta rounded-lg border px-3 py-2 text-sm disabled:opacity-50 sm:col-span-2"
                   >
                     {logging ? "Logging…" : "Log time"}
                   </button>
@@ -350,7 +350,9 @@ export default function DeliveryPage() {
                               {en.stripeInvoiceId ? ` · ${en.stripeInvoiceId}` : ""}
                             </div>
                           </div>
-                          <span className="font-mono text-slate-300">{formatHours(en.minutes)}</span>
+                          <span className="font-mono text-slate-300">
+                            {formatHours(en.minutes)}
+                          </span>
                         </li>
                       ))
                     )}
