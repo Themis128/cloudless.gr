@@ -260,3 +260,4 @@ test-results.json/
 
 # gh-aw audit downloads (`gh aw audit <run-id>`)
 .github/aw/logs/
+audit-links.zip
