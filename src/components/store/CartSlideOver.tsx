@@ -92,7 +92,7 @@ export default function CartSlideOver() {
             <button
               onClick={closeCart}
               aria-label="Close cart"
-              className="hover:text-neon-cyan active:text-neon-cyan flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-slate-400 transition-colors"
+              className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 min-w-11 items-center justify-center p-2 text-slate-400 transition-colors"
             >
               <svg
                 width="20"
@@ -167,7 +167,7 @@ export default function CartSlideOver() {
 
                         <button
                           onClick={() => removeItem(item.product.id)}
-                          className="text-neon-magenta/60 hover:text-neon-magenta active:text-neon-magenta ml-auto flex min-h-[44px] items-center font-mono text-xs transition-colors"
+                          className="text-neon-magenta/60 hover:text-neon-magenta active:text-neon-magenta ml-auto flex min-h-11 items-center font-mono text-xs transition-colors"
                           disabled={item.product.unknown}
                         >
                           Remove
@@ -206,7 +206,7 @@ export default function CartSlideOver() {
               <button
                 onClick={handleCheckout}
                 disabled={isCheckingOut || hasMixedCart}
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-[48px] w-full rounded-lg border py-3 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-40"
+                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-12 w-full rounded-lg border py-3 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-40"
               >
                 {isCheckingOut ? "Redirecting to Stripe..." : "Checkout"}
               </button>

@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const mockTrackEvent = vi.fn().mockResolvedValue(undefined);
-vi.mock("@/lib/notion-analytics", () => ({
-  trackEvent: (...a: unknown[]) => mockTrackEvent(...a),
+vi.mock("@/lib/analytics", () => ({
+  trackAnalyticsEvent: (...a: unknown[]) => mockTrackEvent(...a),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({

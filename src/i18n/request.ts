@@ -9,6 +9,7 @@ import { getMessages, isSupportedLocale, defaultLocale } from "@/lib/i18n";
  */
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
-  const locale = isSupportedLocale(requested ?? "") ? requested : defaultLocale;
+  const candidate = requested ?? defaultLocale;
+  const locale = isSupportedLocale(candidate) ? candidate : defaultLocale;
   return { locale, messages: getMessages(locale) };
 });

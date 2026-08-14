@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
-import { getWikiDocs, type WikiDocRecord } from "@/lib/notion-docs";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
@@ -59,20 +58,6 @@ function mapAppFlowyDoc(doc: AppFlowyDoc): DocsListItem {
   };
 }
 
-function mapWikiDoc(doc: WikiDocRecord): DocsListItem {
-  return {
-    id: doc.id,
-    slug: doc.slug,
-    title: doc.title,
-    description: doc.description,
-    category: doc.category,
-    order: doc.order,
-    verificationStatus: doc.verificationStatus,
-    owner: doc.owner,
-    lastVerified: doc.lastVerified,
-  };
-}
-
 function groupByCategory(docs: DocsListItem[]): Record<string, DocsListItem[]> {
   return docs.reduce<Record<string, DocsListItem[]>>((acc, doc) => {
     const key = doc.category || "General";
@@ -81,25 +66,13 @@ function groupByCategory(docs: DocsListItem[]): Record<string, DocsListItem[]> {
   }, {});
 }
 
-/** AppFlowy first; Notion wiki only as legacy fallback when AppFlowy is empty/unbound. */
 async function loadPublicDocs(): Promise<DocsListItem[]> {
-  if (await isAppFlowyConfigured()) {
-    try {
-      const docs = await getAppFlowyDocs();
-      const published = docs.filter((d) => d.published);
-      if (published.length > 0) {
-        return published.map(mapAppFlowyDoc);
-      }
-    } catch (err) {
-      console.error("[Docs] AppFlowy fetch failed:", err);
-    }
-  }
-
+  if (!(await isAppFlowyConfigured())) return [];
   try {
-    const wiki = await getWikiDocs();
-    return wiki.map(mapWikiDoc);
+    const docs = await getAppFlowyDocs();
+    return docs.filter((d) => d.published).map(mapAppFlowyDoc);
   } catch (err) {
-    console.error("[Docs] Notion wiki fetch failed:", err);
+    console.error("[Docs] AppFlowy fetch failed:", err);
     return [];
   }
 }
@@ -168,7 +141,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
           </p>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold delay-100 md:text-5xl">
             Documentation &amp;{" "}
-            <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
+            <span className="from-neon-cyan to-neon-magenta bg-linear-to-r bg-clip-text text-transparent">
               guides
             </span>
           </h1>

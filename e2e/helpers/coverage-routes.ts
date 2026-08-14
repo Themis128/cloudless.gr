@@ -53,6 +53,7 @@ export const ADMIN_PAGES = [
   "/en/admin/ai-generator",
   "/en/admin/analytics",
   "/en/admin/analytics/seo",
+  "/en/admin/analytics/funnel",
   "/en/admin/analytics/unified",
   "/en/admin/blog",
   "/en/admin/calendar",
@@ -250,6 +251,10 @@ export const ADMIN_API_DYNAMIC = [
   },
   { template: "/api/admin/reports/[id]", sample: "/api/admin/reports/sample-id" },
   { template: "/api/admin/reports/[id]/pdf", sample: "/api/admin/reports/sample-id/pdf" },
+  {
+    template: "/api/admin/crm/contacts/[id]",
+    sample: "/api/admin/crm/contacts/abcdefghijklmnopq",
+  },
 ] as const;
 
 export const AUTH_API = "/api/auth/session"; // NextAuth handler

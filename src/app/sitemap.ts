@@ -3,21 +3,11 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { posts } from "@/lib/blog";
 import { defaultProducts } from "@/lib/store-products";
-import { getCaseStudies, staticCaseStudies } from "@/lib/notion-case-studies";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { getCaseStudies, staticCaseStudies } from "@/lib/appflowy-case-studies";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 
-// ISR-cache sitemap.xml so the Notion → Sitemap Sync workflow
-// (notion-docs-sitemap.yml) still takes effect without a redeploy, but
-// crawler requests don't pay the Notion fetch latency on every hit.
-//
-// Previously declared `dynamic = "force-dynamic"` alongside
-// `revalidate = 3600`, which is contradictory — `force-dynamic` opts
-// out of all caching and makes `revalidate` a no-op. Result: the
-// `/sitemap.xml` route did the full Notion + TSV walk on every crawler
-// hit and clocked ~1.75 s vs ~600 ms for `/api/health`. With
-// `force-dynamic` removed, Next.js emits `s-maxage=3600`, the CDN
-// caches the response, and only one request per hour pays the build
-// cost.
+// ISR-cache sitemap.xml so crawler requests don't pay CMS fetch latency
+// on every hit. `revalidate = 3600` emits s-maxage=3600.
 export const revalidate = 3600;
 
 // ---------------------------------------------------------------------------
@@ -107,11 +97,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  // Case studies (Notion-backed with static fallback)
+  // Case studies (AppFlowy with static fallback)
   let caseStudyList = staticCaseStudies;
   try {
-    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
-    if (configured) caseStudyList = await getCaseStudies();
+    if (await isAppFlowyConfigured()) caseStudyList = await getCaseStudies();
   } catch {
     // fall back to static list
   }

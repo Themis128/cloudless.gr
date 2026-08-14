@@ -3,12 +3,7 @@ import {
   getDocBySlug as getAppFlowyDocBySlug,
   getDocContentWithToc as getAppFlowyDocContentWithToc,
 } from "@/lib/appflowy-docs";
-import {
-  getDocBySlug as getNotionDocBySlug,
-  getDocContent as getNotionDocContent,
-} from "@/lib/notion-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
-import { isConfiguredAsync } from "@/lib/integrations";
 
 /**
  * GET /api/docs/[slug]
@@ -20,44 +15,27 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const appFlowyConfigured = await isAppFlowyConfigured();
-  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
 
-  if (!appFlowyConfigured && !notionConfigured) {
+  if (!appFlowyConfigured) {
     return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
   }
 
   const { slug } = await params;
 
   try {
-    if (appFlowyConfigured) {
-      const appFlowyDoc = await getAppFlowyDocBySlug(slug);
-      if (appFlowyDoc) {
-        const content = await getAppFlowyDocContentWithToc(appFlowyDoc.id);
-        return NextResponse.json(
-          {
-            ...appFlowyDoc,
-            html: content.html,
-            toc: content.toc,
-            source: "appflowy",
-          },
-          { headers: { "x-cms-source": "appflowy" } }
-        );
-      }
-    }
-
-    const doc = await getNotionDocBySlug(slug);
-    if (!doc) {
+    const appFlowyDoc = await getAppFlowyDocBySlug(slug);
+    if (!appFlowyDoc) {
       return NextResponse.json({ error: "Doc not found" }, { status: 404 });
     }
-
-    const content = await getNotionDocContent(doc.id);
-    if (!content) {
-      return NextResponse.json({ error: "Failed to load doc content" }, { status: 500 });
-    }
-
+    const content = await getAppFlowyDocContentWithToc(appFlowyDoc.id);
     return NextResponse.json(
-      { ...content, source: "notion" },
-      { headers: { "x-cms-source": "notion" } }
+      {
+        ...appFlowyDoc,
+        html: content.html,
+        toc: content.toc,
+        source: "appflowy",
+      },
+      { headers: { "x-cms-source": "appflowy" } }
     );
   } catch (err) {
     console.error("[Docs API] Failed to fetch doc:", err);

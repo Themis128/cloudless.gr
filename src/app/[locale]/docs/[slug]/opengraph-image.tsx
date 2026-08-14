@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getDocBySlug } from "@/lib/notion-docs";
+import { getDocBySlug } from "@/lib/appflowy-docs";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

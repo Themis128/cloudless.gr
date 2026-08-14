@@ -11,10 +11,10 @@ import { getBreadcrumbSchema } from "@/lib/structured-data";
 import {
   getCaseStudyBySlug,
   staticCaseStudies,
-  getAllCaseStudySlugs,
+  getCaseStudies,
   type CaseStudyWithContent,
-} from "@/lib/notion-case-studies";
-import { isConfiguredAsync } from "@/lib/integrations";
+} from "@/lib/appflowy-case-studies";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 
 const BASE_URL = "https://cloudless.gr";
 
@@ -24,8 +24,10 @@ const BASE_URL = "https://cloudless.gr";
 
 export async function generateStaticParams() {
   try {
-    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
-    const slugs = configured ? await getAllCaseStudySlugs() : staticCaseStudies.map((c) => c.slug);
+    const configured = await isAppFlowyConfigured();
+    const slugs = configured
+      ? (await getCaseStudies()).map((c) => c.slug)
+      : staticCaseStudies.map((c) => c.slug);
     return slugs.map((slug) => ({ slug }));
   } catch {
     return staticCaseStudies.map((c) => ({ slug: c.slug }));
@@ -75,7 +77,7 @@ export async function generateMetadata({
 
 async function loadCaseStudy(slug: string): Promise<CaseStudyWithContent | null> {
   try {
-    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
+    const configured = await isAppFlowyConfigured();
     if (configured) return await getCaseStudyBySlug(slug);
     const cs = staticCaseStudies.find((c) => c.slug === slug);
     return cs ? { ...cs, html: "" } : null;

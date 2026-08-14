@@ -1,8 +1,10 @@
 # Notion Integration
 
-cloudless.gr uses **Notion as a workspace hub** with 12 databases powering the blog CMS, contact form storage, project tracking, task management, internal documentation, site analytics, content calendar, client reports, and four public-facing CMS content types (testimonials, case studies, services, FAQs). The integration includes **search**, **comments**, **wiki features**, **sprint management**, **block building**, **content calendar**, **report persistence**, and **live CMS** utilities. All integrations degrade gracefully when Notion is not configured.
+> **ARCHIVE (August 2026):** Live CMS is **AppFlowy** (`src/lib/appflowy-*.ts`, `/admin/appflowy`, `/admin/cms/*`). There is **no** `src/app/api/admin/notion/**`. Do not grow Notion adapters, admin routes, or webhooks from this inventory. Residual `src/lib/notion-*.ts` and `/admin/notion/*` pages are debt (cleanup todo). GSC archive / analytics history that still say “Notion” are R2 gold.
 
-> **Status:** Optional integration — all features fall back to empty/static data when `NOTION_API_KEY` is missing.
+cloudless.gr **used** Notion as a workspace hub. The body of this file is a historical map of that stack, not the operating CMS.
+
+> **Status:** Archived. Public content prefers AppFlowy helpers; static fallbacks when AppFlowy is unbound. `NOTION_API_KEY` must not be treated as required for the live site.
 
 ---
 

@@ -8,7 +8,7 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
-vi.mock("@/lib/notion-gsc-reports", () => ({
+vi.mock("@/lib/gsc-weekly-archive", () => ({
   getGscReports: getGscReportsMock,
 }));
 

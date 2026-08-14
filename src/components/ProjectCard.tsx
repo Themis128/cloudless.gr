@@ -1,4 +1,4 @@
-import type { Project } from "@/lib/notion-projects";
+import type { Project } from "@/lib/appflowy-projects";
 
 const STATUS_STYLES: Record<string, { badge: string; bar: string }> = {
   Planning: {
@@ -58,7 +58,7 @@ function formatDate(iso: string) {
 
 interface ProjectCardProps {
   project: Project;
-  /** Render as an anchor tag linking to the Notion page */
+  /** Render as an anchor tag linking to the project URL */
   linkToNotion?: boolean;
   className?: string;
 }

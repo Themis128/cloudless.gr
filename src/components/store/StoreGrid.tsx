@@ -89,7 +89,7 @@ function ProductCard({
           <>
             <button
               type="button"
-              className="bg-void/70 text-neon-cyan absolute right-3 bottom-3 z-10 min-h-11 rounded-lg border border-neon-cyan/40 px-3 py-2 font-mono text-[10px] font-semibold lg:hidden"
+              className="bg-void/70 text-neon-cyan border-neon-cyan/40 absolute right-3 bottom-3 z-10 min-h-11 rounded-lg border px-3 py-2 font-mono text-[10px] font-semibold lg:hidden"
               aria-expanded={featuresOpen}
               onClick={() => setFeaturesOpen((o) => !o)}
             >

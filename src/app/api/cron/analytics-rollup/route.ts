@@ -2,24 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
-import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
+import { getWeeklyAnalyticsRollup } from "@/lib/analytics-events-d1";
 
 export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) {
     return cronUnauthorized();
   }
 
-  const [rollupId, archiveResult] = await Promise.all([createWeeklyRollup(), archiveOldEvents(30)]);
+  const summary = await getWeeklyAnalyticsRollup(7);
+  const typeLines = Object.entries(summary.byType)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([event, n]) => `• ${event}: ${n}`);
 
   const lines = [
-    `*Rollup:* ${rollupId ? "created" : "skipped (Notion not configured)"}`,
-    `*Archived:* ${archiveResult.archived} event(s)`,
-    ...(archiveResult.errors > 0 ? [`*Errors:* ${archiveResult.errors}`] : []),
+    summary.bound
+      ? `*D1 events (7d):* ${summary.eventCount}`
+      : "*D1:* AUTH_DB unbound — rollup skipped",
+    ...(typeLines.length > 0 ? typeLines : []),
   ];
 
   const client = new SlackClient();
   await client.post({
-    text: `Weekly analytics rollup complete (archived ${archiveResult.archived} events)`,
+    text: `Weekly analytics rollup: ${summary.eventCount} D1 events`,
     blocks: [
       {
         type: "header",
@@ -38,7 +43,7 @@ export async function GET(request: NextRequest) {
         elements: [
           {
             type: "mrkdwn",
-            text: `Run at ${new Date().toISOString()}`,
+            text: `Run at ${new Date().toISOString()} · gold GSC archive is ETL, not this cron`,
           },
         ],
       },
@@ -48,9 +53,9 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({
-    rollupId,
-    archived: archiveResult.archived,
-    errors: archiveResult.errors,
+    bound: summary.bound,
+    eventCount: summary.eventCount,
+    byType: summary.byType,
   });
 }
 

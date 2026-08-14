@@ -1,11 +1,12 @@
 /**
- * GSC Weekly Reports — Cloudflare R2 snapshot only.
+ * GSC weekly archive — R2 gold snapshot only.
  *
  * Reads pre-aggregated weekly rollups from
  * `lake/snapshots/gsc-weekly.json` (written by
  * scripts/etl/materialize-datalake-snapshots.mjs from GSC parquet).
  *
  * Returns `null` when DATALAKE_BUCKET is unbound or the snapshot is missing.
+ * Admin SEO pages must not call live `gsc.ts`.
  */
 
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
@@ -31,7 +32,7 @@ export interface GscWeeklyReport {
   topKeywords: GscTopKeyword[];
   topCountry: string;
   mobilePct: number;
-  /** Queries with impressions ≥ 20 and ctr < 2 (Notion baseline definition). */
+  /** Queries with impressions ≥ 20 and ctr < 2. */
   ctrOpportunities: number;
 }
 
@@ -58,7 +59,7 @@ export async function getGscReports(limit = 26): Promise<GscWeeklyReport[] | nul
     return reports.slice(0, cap);
   } catch (err) {
     console.warn(
-      "[notion-gsc-reports] R2 snapshot read failed:",
+      "[gsc-weekly-archive] R2 snapshot read failed:",
       err instanceof Error ? err.message : err
     );
     return null;

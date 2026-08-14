@@ -323,13 +323,12 @@ describe("GET /api/admin/autologin — appflowy", () => {
     expect(mockFetch).toHaveBeenCalledOnce();
     const [calledUrl, calledInit] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(calledUrl).toContain("gotrue/token");
-    // Modern GoTrue takes grant_type in the JSON body (query form is deprecated).
+    // AppFlowy GoTrue rejects body-only grant_type; the grant lives on the query string.
+    expect(calledUrl).toContain("grant_type=password");
     const body = JSON.parse(calledInit.body as string) as {
-      grant_type: string;
       email: string;
       password: string;
     };
-    expect(body.grant_type).toBe("password");
     expect(body.email).toBe("admin@cloudless.gr");
     // Don't assert the password value to avoid having it appear in test output.
     expect(typeof body.password).toBe("string");

@@ -1,22 +1,14 @@
 /**
- * CMS provider selection for the Notion → AppFlowy dual-run cutover.
- *
- * Order: AppFlowy (primary) → Notion (temporary fallback) → static/empty.
+ * CMS provider selection. Live CMS is AppFlowy; static fallbacks when unbound.
+ * Notion is not a runtime source — do not revive Notion admin/webhooks.
  */
 
-import { isConfiguredAsync, type IntegrationConfig } from "@/lib/integrations";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 
-export type CmsSource = "appflowy" | "notion" | "static";
+export type CmsSource = "appflowy" | "static";
 
 export async function isAppFlowyCmsConfigured(): Promise<boolean> {
   return isAppFlowyConfigured();
-}
-
-export async function isNotionCmsConfigured(
-  ...dbKeys: (keyof IntegrationConfig)[]
-): Promise<boolean> {
-  return isConfiguredAsync(...dbKeys);
 }
 
 export function cmsSourceHeaders(source: CmsSource): HeadersInit {

@@ -35,4 +35,6 @@ When suggesting changes:
 2. Check if the change touches persistent k3s storage (prefer sda1 k3s disk).
 3. Check if the change requires secret rotation or new env / D1 config keys.
 4. Propose tests and rollback steps.
-5. Canonical docs: `docs/ARCHITECTURE.md`, `docs/CLOUDFLARE-ARCHITECTURE.md`, `docs/HA-ARCHITECTURE.md`.
+5. Canonical docs: `docs/current-source-of-truth-checklist.md`,
+   `docs/ARCHITECTURE.md`, `docs/ARCHITECTURE-MAP.md`,
+   `docs/DOCUMENTATION-SUMMARY.md`, `.cursor/rules/cloudless2-pi-proxy.mdc`.

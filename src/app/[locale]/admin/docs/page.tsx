@@ -45,7 +45,7 @@ export default function AdminDocsPage() {
             <span className="text-neon-cyan font-mono text-xs">DOCS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Documentation</h1>
-          <p className="font-body mt-1 text-slate-400">All docs from your Notion docs database.</p>
+          <p className="font-body mt-1 text-slate-400">All docs from AppFlowy.</p>
         </div>
         <button
           type="button"
@@ -104,7 +104,7 @@ export default function AdminDocsPage() {
       {!loading && !error && filtered.length === 0 && (
         <div className="bg-void-light/30 rounded-xl border border-slate-800 py-12 text-center">
           <p className="font-mono text-sm text-slate-500">
-            {docs.length === 0 ? "No docs in Notion yet." : "No docs to show."}
+            {docs.length === 0 ? "No docs in AppFlowy yet." : "No docs to show."}
           </p>
         </div>
       )}
@@ -166,7 +166,7 @@ export default function AdminDocsPage() {
                             rel="noopener noreferrer"
                             className="text-neon-cyan/60 hover:text-neon-cyan font-mono text-[10px] transition-colors"
                           >
-                            Notion →
+                            Open →
                           </a>
                         )}
                       </div>

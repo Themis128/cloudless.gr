@@ -15,6 +15,8 @@ on:
   - cron: 0 */6 * * *            # every 6 hours
   workflow_dispatch:
   push:
+    # Restrict to main so Release tags do not fire this path-filtered job.
+    branches: [main]
     paths:
     - scripts/probe-selfhosted-admin.sh
     - .github/workflows/admin-login-probe.yml

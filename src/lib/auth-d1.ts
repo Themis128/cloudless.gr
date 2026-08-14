@@ -588,6 +588,17 @@ export async function getUserById(db: AuthDatabase, userId: string): Promise<D1U
     .first<D1User>();
 }
 
+export async function getUserByEmail(db: AuthDatabase, email: string): Promise<D1User | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  return db
+    .prepare(
+      "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE lower(email) = ? LIMIT 1"
+    )
+    .bind(normalized)
+    .first<D1User>();
+}
+
 function readPreferenceFlag(
   preferencesJson: string | null | undefined,
   key: "disabled" | "email_verified"

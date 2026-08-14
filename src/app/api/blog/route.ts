@@ -10,7 +10,6 @@
 import { NextResponse } from "next/server";
 import { getBlogPostsWithSource } from "@/lib/blog-source";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
-import { isConfiguredAsync } from "@/lib/integrations";
 
 export const runtime = "nodejs";
 
@@ -19,9 +18,8 @@ export async function GET(request: Request) {
   const limit = searchParams.get("limit") ? Number(searchParams.get("limit")) : undefined;
 
   const appFlowyConfigured = await isAppFlowyConfigured();
-  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
-  if (!appFlowyConfigured && !notionConfigured) {
+  if (!appFlowyConfigured) {
     const { posts: staticPosts } = await import("@/lib/blog");
     let posts = staticPosts;
     if (limit) {

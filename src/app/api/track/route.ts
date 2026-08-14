@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { trackEvent, type AnalyticsEventType } from "@/lib/notion-analytics";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
-const ALLOWED_TYPES: AnalyticsEventType[] = ["page_view", "blog_view", "doc_view", "form_submit"];
+const ALLOWED_TYPES = ["page_view", "blog_view", "doc_view", "form_submit"] as const;
+type TrackEventType = (typeof ALLOWED_TYPES)[number];
+
+function isTrackEventType(value: unknown): value is TrackEventType {
+  return typeof value === "string" && (ALLOWED_TYPES as readonly string[]).includes(value);
+}
 
 /**
  * POST /api/track
  *
  * Public endpoint for client-side event tracking.
- * Writes directly to the Notion Analytics database.
+ * Writes to D1 `analytics_events` (same sink as `/api/analytics/track`).
  *
  * Body:
- *   { type: AnalyticsEventType, page?: string, source?: string }
+ *   { type: TrackEventType, page?: string, source?: string }
  *
- * Responds 202 so callers can fire-and-forget without waiting on Notion.
+ * Responds 202 so callers can fire-and-forget without waiting on D1.
  */
 export async function POST(request: NextRequest) {
   // Rate limit: 30 events per IP per minute
@@ -29,8 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const type = body.type as AnalyticsEventType;
-  if (!ALLOWED_TYPES.includes(type)) {
+  if (!isTrackEventType(body.type)) {
     return NextResponse.json(
       { error: `Unsupported event type. Allowed: ${ALLOWED_TYPES.join(", ")}` },
       { status: 400 }
@@ -41,23 +45,11 @@ export async function POST(request: NextRequest) {
   const source = typeof body.source === "string" ? body.source.slice(0, 200) : undefined;
   const referer = request.headers.get("referer") ?? undefined;
 
-  // Build a human-readable event name
-  const eventName =
-    type === "page_view"
-      ? `Page: ${page ?? "/"}`
-      : type === "blog_view"
-        ? `Blog: ${page ?? "unknown"}`
-        : type === "doc_view"
-          ? `Doc: ${page ?? "unknown"}`
-          : `Form: ${page ?? "unknown"}`;
-
-  // Fire-and-forget — don't block the response on the Notion write
-  trackEvent({
-    event: eventName,
-    type,
+  trackAnalyticsEvent({
+    event: body.type,
     page,
     source: source ?? referer,
-    count: 1,
+    referrer: referer,
   }).catch(() => {
     // Swallow — tracking failures must never affect the user experience
   });

@@ -2,6 +2,9 @@ name: Fix Self-Hosted App Tunnels
 
 on:
   push:
+    # branches: required — GitHub ignores `paths` on tag pushes, so every
+    # Release tag (v*-build.N) would otherwise SSH the Pi and fail.
+    branches: [main]
     paths:
       - .github/workflows/fix-selfhosted-tunnels.yml
   workflow_dispatch:
@@ -118,15 +121,15 @@ jobs:
           "$PI_USER@$PI_HOST" \
           "$KUBECMD create -f -" < /tmp/cf-read-pod.yaml 2>&1
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=90s" 2>&1
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD logs -n default cf-read-omv" 2>&1 | tee /tmp/cf-config-current.txt
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD delete pod -n default cf-read-omv --ignore-not-found" 2>&1 || true
 
@@ -200,14 +203,14 @@ jobs:
       env:
         KUBECMD: sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml
       run: |
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD delete pod cf-apply-omv -n default --ignore-not-found --wait=true" 2>&1 || true
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD -n default create configmap cf-patch --from-file=config.yml=/tmp/cf-config-new.txt --dry-run=client -o yaml" 2>&1 | \
-          ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" "$KUBECMD apply -f -" 2>&1
 
         cat <<'PODEOF' > /tmp/cf-apply-pod.yaml
@@ -256,19 +259,19 @@ jobs:
                   echo "cloudflared OK on omv"
         PODEOF
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD create -f -" < /tmp/cf-apply-pod.yaml 2>&1
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s" 2>&1
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD logs -n default cf-apply-omv" 2>&1
 
-        ssh -i $.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
           "$KUBECMD delete pod -n default cf-apply-omv --ignore-not-found" 2>&1 || true
 

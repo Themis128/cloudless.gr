@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getBlogPostsWithSourceMock = vi.fn();
 const getBlogPostBySlugMock = vi.fn();
 const isAppFlowyConfiguredMock = vi.fn();
-const isConfiguredAsyncMock = vi.fn();
 
 vi.mock("@/lib/blog-source", () => ({
   getBlogPostsWithSource: (...a: unknown[]) => getBlogPostsWithSourceMock(...a),
@@ -12,11 +11,6 @@ vi.mock("@/lib/blog-source", () => ({
 
 vi.mock("@/lib/appflowy", () => ({
   isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfiguredMock(...a),
-}));
-
-vi.mock("@/lib/integrations", () => ({
-  isConfiguredAsync: (...a: unknown[]) => isConfiguredAsyncMock(...a),
-  resetIntegrationCache: vi.fn(),
 }));
 
 vi.mock("@/lib/blog", () => ({
@@ -34,7 +28,6 @@ describe("Blog API dual-run fallbacks", () => {
     vi.clearAllMocks();
     vi.resetModules();
     isAppFlowyConfiguredMock.mockResolvedValue(false);
-    isConfiguredAsyncMock.mockResolvedValue(false);
   });
 
   it("GET /api/blog/posts returns static posts when CMS is not configured", async () => {
@@ -51,10 +44,10 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/posts returns CMS source metadata when upstream succeeds", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostsWithSourceMock.mockResolvedValueOnce({
-      posts: [{ slug: "from-notion" }],
-      source: "notion",
+      posts: [{ slug: "from-appflowy" }],
+      source: "appflowy",
     });
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -63,13 +56,13 @@ describe("Blog API dual-run fallbacks", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.source).toBe("notion");
+    expect(data.source).toBe("appflowy");
     expect(data.fallbackReason).toBeUndefined();
-    expect(response.headers.get("x-blog-source")).toBe("notion");
+    expect(response.headers.get("x-blog-source")).toBe("appflowy");
   });
 
   it("GET /api/blog/posts falls back to static with cms-error when fetch throws", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostsWithSourceMock.mockRejectedValueOnce(new Error("cms down"));
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -84,7 +77,7 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] falls back to static when blog-source fetch throws", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostBySlugMock.mockRejectedValueOnce(new Error("cms timeout"));
 
     const { GET } = await import("@/app/api/blog/[slug]/route");
@@ -100,7 +93,7 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] uses static fallback when blog-source returns null", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostBySlugMock.mockResolvedValueOnce(null);
 
     const { GET } = await import("@/app/api/blog/[slug]/route");

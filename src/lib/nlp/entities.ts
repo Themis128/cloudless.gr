@@ -1,7 +1,6 @@
 import type { LeadNlpEntities } from "./types";
 
-const BUDGET_RE =
-  /(?:€|\$|eur|usd|budget|προϋπολογισμ)[^\d]{0,12}(\d[\d.,]*\s*[kκ]?)/i;
+const BUDGET_RE = /(?:€|\$|eur|usd|budget|προϋπολογισμ)[^\d]{0,12}(\d[\d.,]*\s*[kκ]?)/i;
 const TIMELINE_RE =
   /\b(asap|urgent|this\s+week|next\s+month|q[1-4]|by\s+\w+|άμεσα|επείγον|μέσα\s+στον?\s+\w+)\b/i;
 const PRODUCT_RE =

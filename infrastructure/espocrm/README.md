@@ -184,23 +184,15 @@ records automatically. Free, no extension needed — built into the core.
    from the Case detail view land in the customer's inbox under the right
    threading. Same Admin → Outbound Emails settings.
 
-## ETL: EspoCRM → Data Lake (already wired by PR 5)
+## ETL: EspoCRM → R2 Data Lake
 
-`scripts/etl/espocrm-to-lake.mjs` runs hourly via
-`.github/workflows/etl-espocrm-to-lake.yml`, pulling Contact / Account /
-Opportunity / Case / Campaign into S3 Parquet files. Athena tables +
-three views (`v_espocrm_pipeline`, `v_espocrm_lead_to_customer`,
-`v_espocrm_campaign_summary`) are defined in
-[`docs/analytics-athena.sql`](../../docs/analytics-athena.sql).
+`scripts/etl/espocrm-to-r2.mjs` pulls Contact / Account / Opportunity /
+Case / Campaign into **R2 parquet** (`datalake-bucket`). Admin analytics
+read gold snapshots via `datalake-serve.ts` — not Athena and not live
+EspoCRM on page load.
 
-One-time bootstrap — run each `CREATE EXTERNAL TABLE` block once in the
-Athena `primary` workgroup before the first ETL run:
-
-```sql
--- in Athena: copy from docs/analytics-athena.sql, "EspoCRM tables" section
--- then verify:
-SELECT COUNT(*) FROM cloudless_analytics.espocrm_contacts;
-```
+Athena SQL in `docs/analytics-athena.sql` is historical. Do not stand
+Athena back up from this inventory.
 
 ## Backups (set up after first month of production data)
 

@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { getBlogPostsWithSource } from "@/lib/blog-source";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
-import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET() {
-  const appFlowyConfigured = await isAppFlowyConfigured();
-  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
-
-  if (!appFlowyConfigured && !notionConfigured) {
+  if (!(await isAppFlowyConfigured())) {
     const { posts: blogPosts } = await import("@/lib/blog");
     return NextResponse.json(
       { posts: blogPosts, source: "static", fallbackReason: "not-configured" },

@@ -619,7 +619,7 @@ const adminLinks = [
   { href: "/admin/email", label: "Email", icon: "📧", section: "Marketing" },
   { href: "/admin/pipeline", label: "Pipeline", icon: "🔀", section: "Marketing" },
   { href: "/admin/calendar", label: "Calendar", icon: "📅", section: "Marketing" },
-  { href: "/admin/reports", label: "Reports", icon: "📋", section: "Marketing" },
+  { href: "/admin/kpi", label: "KPI", icon: "📊", section: "Overview" },
   { href: "/admin/ai-assistant", label: "AI Assistant", icon: "🤖", section: "Marketing" },
 
   // Existing

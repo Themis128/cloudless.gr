@@ -54,15 +54,17 @@ function newEventId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  return `evt_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(8);
+    globalThis.crypto.getRandomValues(bytes);
+    return `evt_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+  return `evt_${Date.now()}`;
 }
 
 /**
  * Persist a generic analytics event to D1.
  * Returns true when written, false when D1 unavailable or invalid.
- *
- * @deprecated Name kept as trackS3Event for call-site compatibility during migration;
- *           no longer writes to S3.
  */
 export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean> {
   const event = typeof evt.event === "string" ? evt.event.trim().slice(0, 100) : "";

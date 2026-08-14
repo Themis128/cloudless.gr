@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
-import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/notion-case-studies";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/appflowy-case-studies";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 
 const BASE_URL = "https://cloudless.gr";
 const canonical = `${BASE_URL}/case-studies`;
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {
   try {
-    const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
+    const configured = await isAppFlowyConfigured();
     return configured ? await getCaseStudies() : staticCaseStudies;
   } catch {
     return staticCaseStudies;

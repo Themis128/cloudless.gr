@@ -299,7 +299,7 @@ export default function WorkspacesPage() {
               onChange={(v) => setForm((f) => ({ ...f, postizGroupId: v }))}
               groups={postizGroups}
             />
-            <NotionTagField
+            <WorkspaceTagField
               id="ws-notion"
               value={form.notionTag}
               onChange={(v) => setForm((f) => ({ ...f, notionTag: v }))}
@@ -394,7 +394,7 @@ export default function WorkspacesPage() {
                       onChange={(v) => setEditForm((f) => ({ ...f, postizGroupId: v }))}
                       groups={postizGroups}
                     />
-                    <NotionTagField
+                    <WorkspaceTagField
                       id={`ws-notion-${ws.id}`}
                       value={editForm.notionTag}
                       onChange={(v) => setEditForm((f) => ({ ...f, notionTag: v }))}
@@ -540,10 +540,8 @@ function PostizGroupField({
   );
 }
 
-/** Notion workspace tag — written into the WorkspaceID rich-text column on
- *  calendar items so the calendar GET can filter by it. Free text — usually
- *  matches the workspace slug. */
-function NotionTagField({
+/** Workspace tag on calendar items so GET can filter by workspaceId. */
+function WorkspaceTagField({
   id,
   value,
   onChange,
@@ -551,7 +549,7 @@ function NotionTagField({
   return (
     <div>
       <label htmlFor={id} className="mb-1 block font-mono text-xs text-slate-500">
-        Notion tag (optional)
+        Workspace tag (optional)
       </label>
       <input
         id={id}
@@ -562,7 +560,7 @@ function NotionTagField({
         className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
       />
       <p className="mt-1 font-mono text-[10px] text-slate-600">
-        Tag written to the Notion calendar WorkspaceID column for filtering.
+        Tag written to calendar workspaceId for filtering.
       </p>
     </div>
   );

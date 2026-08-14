@@ -21,6 +21,7 @@
  * `/cloudless/production/`; getIntegrationsAsync() reads them.
  */
 import { getIntegrationsAsync } from "@/lib/integrations";
+import { isEspoRecordId } from "@/lib/crm-contact-360-shared";
 
 const PAGE_SIZE = 100;
 const MAX_LIMIT = 100;
@@ -235,6 +236,42 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
   }
 }
 
+export async function getContact(id: string): Promise<Record<string, unknown> | null> {
+  if (!isEspoRecordId(id)) return null;
+  try {
+    const res = await espoFetch(`/Contact/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+async function listContactLink(contactId: string, link: string): Promise<unknown[]> {
+  if (!isEspoRecordId(contactId)) return [];
+  try {
+    const res = await espoFetch(
+      `/Contact/${encodeURIComponent(contactId)}/${link}?maxSize=${MAX_LIMIT}`
+    );
+    if (!res.ok) return [];
+    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+  } catch {
+    return [];
+  }
+}
+
+export async function listContactOpportunities(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "opportunities");
+}
+
+export async function listContactCases(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "cases");
+}
+
+export async function listContactNotes(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "notes");
+}
+
 export async function listTickets(limit = 20): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Case?maxSize=${clampLimit(limit)}`);
@@ -289,7 +326,6 @@ export async function createTicket(
  * Opportunity module has one pipeline backed by the `stage` enum.
  */
 export async function getPipelines(_objectType = "deals"): Promise<unknown[]> {
-  void _objectType;
   return [
     {
       id: "default",

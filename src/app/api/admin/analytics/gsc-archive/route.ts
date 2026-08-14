@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getGscReports } from "@/lib/notion-gsc-reports";
+import { getGscReports } from "@/lib/gsc-weekly-archive";
 
 /**
  * Persisted weekly GSC archive (R2 snapshot at lake/snapshots/gsc-weekly.json,
- * written by scripts/etl/materialize-datalake-snapshots.mjs). Distinct from
- * /api/admin/analytics/history, which queries the GSC API live.
+ * written by scripts/etl/materialize-datalake-snapshots.mjs). Admin GSC
+ * surfaces are gold (`datalake-serve`); `gsc.ts` is ETL/cache only — this
+ * route does not query GSC live. History is also gold (empty until ETL
+ * lands country/device/page dimensions).
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);

@@ -127,7 +127,7 @@ export default function KpiDashboard() {
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">KPI Dashboard</h1>
           <p className="font-body mt-1 text-slate-400">
-            Consolidated view — GSC · Notion analytics · Projects · Tasks
+            Consolidated view — GSC gold · D1 events · AppFlowy activity
           </p>
         </div>
         <button
@@ -193,7 +193,7 @@ export default function KpiDashboard() {
             )}
           </section>
 
-          {/* Notion site analytics */}
+          {/* Site events (gold / D1 — Notion analytics retired) */}
           <section>
             <SectionHeader
               title="Site Events (7 days)"
@@ -245,7 +245,7 @@ export default function KpiDashboard() {
                 )}
               </>
             ) : (
-              <p className="font-mono text-sm text-slate-600">Notion Analytics not configured.</p>
+              <p className="font-mono text-sm text-slate-600">No site-event snapshot in gold.</p>
             )}
           </section>
 

@@ -68,40 +68,57 @@ jobs:
           E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
         run: |
           echo "Starting next-dev against live D1..."
-          setsid pnpm dev -p 4000 < /dev/null > /tmp/dev-server.log 2>&1 &
+          # scripts/dev-server.sh reads DEV_PORT / DEV_HOST. Do not pass
+          # `next dev -p` flags — unknown args used to exit 2 before listen.
+          export DEV_PORT=4000
+          export DEV_HOST=127.0.0.1
+          setsid pnpm dev < /dev/null > /tmp/dev-server.log 2>&1 &
           DEV_PID=$!
 
-          for i in $(seq 1 45); do
-            if curl -sf -m 2 http://localhost:4000/api/health > /dev/null 2>&1; then
+          dump_dev_log() {
+            echo "==== /tmp/dev-server.log ===="
+            cat /tmp/dev-server.log || true
+          }
+
+          for i in $(seq 1 90); do
+            if curl -sf -m 2 http://127.0.0.1:4000/api/health > /dev/null 2>&1; then
               echo "Dev server ready"
               break
+            fi
+            if ! kill -0 "$DEV_PID" 2>/dev/null; then
+              echo "Dev server exited before ready"
+              dump_dev_log
+              exit 1
             fi
             sleep 2
           done
 
-          HEALTH="$(curl -sS -m 8 http://localhost:4000/api/health || true)"
+          HEALTH="$(curl -sS -m 8 http://127.0.0.1:4000/api/health || true)"
           echo "health: $HEALTH"
-          echo "$HEALTH" | python3 -c '
+          if ! echo "$HEALTH" | python3 -c '
           import json, sys
           body = json.load(sys.stdin)
           assert body.get("dbConnected") is True, body
           assert body.get("authDb") == "d1-http", body
-          '
+          '; then
+            dump_dev_log
+            exit 1
+          fi
           echo "Seeding admin user on live user-auth-db (idempotent)..."
-          curl -sS -X POST http://localhost:4000/api/auth/register-d1 \
+          curl -sS -X POST http://127.0.0.1:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
             -d '{"email":"testadmin@cloudless.gr","password":"AdminPass123!","name":"Test Admin"}' \
             || echo "Admin register soft-failed (may already exist)"
 
           echo "Promoting test admin..."
-          curl -sS -X POST http://localhost:4000/api/admin/users \
+          curl -sS -X POST http://127.0.0.1:4000/api/admin/users \
             -H "Authorization: Bearer e2e-admin-token-do-not-use-in-prod" \
             -H "Content-Type: application/json" \
             -d '{"action":"promote","username":"testadmin@cloudless.gr"}' \
             || echo "Promotion soft-failed"
 
           echo "Seeding test user..."
-          curl -sS -X POST http://localhost:4000/api/auth/register-d1 \
+          curl -sS -X POST http://127.0.0.1:4000/api/auth/register-d1 \
             -H "Content-Type: application/json" \
             -d '{"email":"testuser@cloudless.gr","password":"TestPass123!","name":"Test User"}' \
             || echo "User register soft-failed (may already exist)"
