@@ -235,6 +235,47 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
   }
 }
 
+/** EspoCRM record ids are short alphanumeric tokens (typically 17 chars). */
+export function isEspoRecordId(id: string): boolean {
+  return /^[a-zA-Z0-9]{8,24}$/.test(id);
+}
+
+export async function getContact(id: string): Promise<Record<string, unknown> | null> {
+  if (!isEspoRecordId(id)) return null;
+  try {
+    const res = await espoFetch(`/Contact/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+async function listContactLink(contactId: string, link: string): Promise<unknown[]> {
+  if (!isEspoRecordId(contactId)) return [];
+  try {
+    const res = await espoFetch(
+      `/Contact/${encodeURIComponent(contactId)}/${link}?maxSize=${MAX_LIMIT}`
+    );
+    if (!res.ok) return [];
+    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+  } catch {
+    return [];
+  }
+}
+
+export async function listContactOpportunities(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "opportunities");
+}
+
+export async function listContactCases(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "cases");
+}
+
+export async function listContactNotes(contactId: string): Promise<unknown[]> {
+  return listContactLink(contactId, "notes");
+}
+
 export async function listTickets(limit = 20): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Case?maxSize=${clampLimit(limit)}`);
