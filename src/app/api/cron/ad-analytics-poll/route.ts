@@ -7,10 +7,12 @@
  *
  * Behaviour: iterate every live campaign × every `adPlatforms[]` entry, pull
  * a rolling 1-hour window of metrics + demographic pivots (industry,
- * seniority, job title, company size), diff against the DynamoDB bookmark,
+ * seniority, job title, company size), diff against the D1
+ * `ad_analytics_bookmark` row (in-memory store when AUTH_DB is unbound),
  * and post a Block Kit digest to every `notifyChannels[].level === "digest"`
- * target. Bookmarks advance only when at least one channel accepts the post
- * so an outage doesn't silently drop a window.
+ * target. Implemented adapter/channel: LinkedIn + Slack only. Bookmarks
+ * advance only when at least one channel accepts the post so an outage
+ * doesn't silently drop a window.
  *
  * Security: rejects requests without a matching `CRON_SECRET` using the
  * existing `isCronAuthorized()` (timing-safe). Reuses the same shape as

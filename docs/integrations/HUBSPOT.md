@@ -1,8 +1,10 @@
 # EspoCRM CRM Integration
 
-cloudless.gr integrates with EspoCRM CRM to automatically capture leads from the contact form and provide contact management, search, and ticket creation capabilities.
+> **Archive banner (August 2026):** HubSpot is **gone**. Live CRM is self-hosted **EspoCRM** (`src/lib/espocrm.ts`, `ESPOCRM_BASE_URL` + `ESPOCRM_API_KEY`). Do not revive `hubspot.ts`, `HUBSPOT_API_KEY`, or HubSpot admin/webhook surfaces. Diagrams below that still say HubSpot are historical.
 
-> **Status:** Optional integration — degrades gracefully when `HUBSPOT_API_KEY` is not configured. The contact form continues to work (email + Slack) even without EspoCRM.
+cloudless.gr integrates with EspoCRM to capture leads from the contact form and provide contact management, search, and ticket creation.
+
+> **Status:** Optional integration — degrades gracefully when `ESPOCRM_API_KEY` is not configured. The contact form continues to work (email + Slack) even without EspoCRM. Opportunity create from `/api/contact` is gated on lead score ≥ 65.
 
 ---
 

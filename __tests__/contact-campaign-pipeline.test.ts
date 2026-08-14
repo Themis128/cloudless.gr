@@ -61,6 +61,18 @@ vi.mock("@/lib/ssm-config-d1", () => ({
   getConfig: vi.fn().mockResolvedValue({ SES_TO_EMAIL: "team@cloudless.gr" }),
 }));
 
+// Deterministic NLP so campaign payload stays warm (< 65) unless HOT_PAYLOAD is used.
+vi.mock("@/lib/nlp", () => ({
+  analyzeLeadMessage: vi.fn().mockResolvedValue({
+    intent: "general_inquiry",
+    locale: "en",
+    confidence: 0.2,
+    source: "fallback",
+    entities: {},
+    reasons: ["mocked"],
+  }),
+}));
+
 // Campaign tier payload (matches what TierTable inline form submits)
 const CAMPAIGN_PAYLOAD = {
   name: "Γιώργος Παπαδόπουλος",
@@ -68,6 +80,15 @@ const CAMPAIGN_PAYLOAD = {
   phone: "+30 6945123456",
   service: "shop-online — E-shop Launch",
   message: "Tier: E-shop Launch\nPrice: €1.800\nCampaign: shop-online",
+};
+
+/** Bundle + company + detailed commercial message → score ≥ 65 (hot). */
+const HOT_PAYLOAD = {
+  ...CAMPAIGN_PAYLOAD,
+  company: "Shop Hellas",
+  service: "Full-Stack Growth Engine (Bundle)",
+  message:
+    "We want to launch the Full-Stack Growth Engine this quarter. Budget is €12,000 and the timeline is end of September. Please send a proposal and pricing for the migration plus rebuild. Our store needs a redesign and we are ready to invest in growth this year with a clear deadline.",
 };
 
 describe("POST /api/contact — campaign tier pipeline", () => {
@@ -147,11 +168,25 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     );
   });
 
-  it("creates EspoCRM deal with campaign tier context", async () => {
+  it("does not create an EspoCRM Opportunity for a warm campaign submit", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(CAMPAIGN_PAYLOAD),
+    });
+
+    await POST(request);
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateDeal).not.toHaveBeenCalled();
+    expect(mockAssociateDealWithContact).not.toHaveBeenCalled();
+  });
+
+  it("creates EspoCRM Opportunity only when lead score is hot (≥ 65)", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(HOT_PAYLOAD),
     });
 
     await POST(request);
@@ -162,21 +197,9 @@ describe("POST /api/contact — campaign tier pipeline", () => {
         dealname: expect.stringContaining("Γιώργος Παπαδόπουλος"),
         dealstage: "qualifiedtobuy",
         lead_source: "contact_form",
-        description: expect.stringContaining("E-shop Launch"),
+        description: expect.stringContaining("Budget"),
       })
     );
-  });
-
-  it("associates deal with contact in EspoCRM", async () => {
-    const request = new Request("http://localhost/api/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(CAMPAIGN_PAYLOAD),
-    });
-
-    await POST(request);
-    await new Promise((r) => setTimeout(r, 50));
-
     expect(mockAssociateDealWithContact).toHaveBeenCalledWith("deal-456", "contact-123");
   });
 

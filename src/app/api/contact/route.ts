@@ -259,15 +259,18 @@ export async function POST(request: Request) {
           ];
           await createContactNote(contactId, noteLines.join("\n"));
         }
-        const dealId = await createDeal({
-          dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
-          dealstage: "qualifiedtobuy",
-          lead_source: "contact_form",
-          description: messageText.slice(0, 500),
-          service_interest: serviceSlug,
-        });
-        if (dealId && contactId) {
-          await associateDealWithContact(dealId, contactId);
+        // Slack + notes + ActiveCampaign run for every inbound; Opportunity only for hot.
+        if (lead.band === "hot") {
+          const dealId = await createDeal({
+            dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
+            dealstage: "qualifiedtobuy",
+            lead_source: "contact_form",
+            description: messageText.slice(0, 500),
+            service_interest: serviceSlug,
+          });
+          if (dealId && contactId) {
+            await associateDealWithContact(dealId, contactId);
+          }
         }
       })(),
       saveSubmission({

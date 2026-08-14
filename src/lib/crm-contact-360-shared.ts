@@ -72,6 +72,27 @@ export interface Contact360Event {
   date: string;
 }
 
+export interface Contact360AttributionTouch {
+  source: string;
+  medium: string;
+  campaign: string;
+}
+
+export interface Contact360GoldAttributionRow {
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  sessions: number;
+  signups: number;
+  purchases: number;
+  revenue: number;
+}
+
+export interface Contact360Attribution {
+  firstTouch: Contact360AttributionTouch | null;
+  goldMatches: Contact360GoldAttributionRow[];
+}
+
 export interface Contact360 {
   contact: Contact360Person;
   opportunities: Contact360Related[];
@@ -80,7 +101,53 @@ export interface Contact360 {
   stripe: Contact360Stripe;
   account: Contact360Account | null;
   events: Contact360Event[];
+  attribution: Contact360Attribution;
   fetchedAt: string;
+}
+
+export function emptyAttribution(): Contact360Attribution {
+  return { firstTouch: null, goldMatches: [] };
+}
+
+function normSource(value: string): string {
+  return value.trim() || "(direct)";
+}
+
+function normMedium(value: string): string {
+  return value.trim() || "(none)";
+}
+
+function normCampaign(value: string): string {
+  return value.trim() || "(none)";
+}
+
+export function matchGoldAttributionRows(
+  goldRows: Record<string, unknown>[],
+  touches: Contact360AttributionTouch[]
+): Contact360GoldAttributionRow[] {
+  if (goldRows.length === 0 || touches.length === 0) return [];
+  const keys = new Set(
+    touches.map(
+      (t) => `${normSource(t.source)}|${normMedium(t.medium)}|${normCampaign(t.campaign)}`
+    )
+  );
+  const out: Contact360GoldAttributionRow[] = [];
+  for (const raw of goldRows) {
+    const utmSource = normSource(asString(raw.utm_source ?? raw.utmSource));
+    const utmMedium = normMedium(asString(raw.utm_medium ?? raw.utmMedium));
+    const utmCampaign = normCampaign(asString(raw.utm_campaign ?? raw.utmCampaign));
+    if (!keys.has(`${utmSource}|${utmMedium}|${utmCampaign}`)) continue;
+    out.push({
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      sessions: asNumber(raw.sessions),
+      signups: asNumber(raw.signups),
+      purchases: asNumber(raw.purchases),
+      revenue: asNumber(raw.revenue),
+    });
+  }
+  return out;
 }
 
 export function contactDisplayName(c: {
@@ -133,6 +200,11 @@ export function summarizeNote(raw: unknown): Contact360Note {
 function asString(value: unknown): string {
   if (value == null) return "";
   return String(value).trim();
+}
+
+function asNumber(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

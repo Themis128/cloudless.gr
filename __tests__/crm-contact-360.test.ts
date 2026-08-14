@@ -28,8 +28,10 @@ vi.mock("@/lib/auth-d1", () => ({
   getUserByEmail: (...args: unknown[]) => mockGetUserByEmail(...args),
 }));
 
-vi.mock("@/lib/integrations", () => ({
-  isConfiguredAsync: (...args: unknown[]) => mockIsConfiguredAsync(...args),
+const mockGetGoldSection = vi.fn();
+
+vi.mock("@/lib/datalake-serve", () => ({
+  getGoldSection: (...args: unknown[]) => mockGetGoldSection(...args),
 }));
 
 vi.mock("@/lib/api-auth", () => ({
@@ -51,6 +53,7 @@ vi.mock("@/lib/api-auth", () => ({
 import {
   contactDisplayName,
   isEspoRecordId,
+  matchGoldAttributionRows,
   normalizeEspoContact,
   summarizeNote,
   summarizeRelated,
@@ -118,6 +121,35 @@ describe("crm-contact-360 helpers", () => {
       "Called"
     );
   });
+
+  it("matches gold attribution rows by source/medium/campaign", () => {
+    const matches = matchGoldAttributionRows(
+      [
+        {
+          utm_source: "linkedin",
+          utm_medium: "cpc",
+          utm_campaign: "shop-online",
+          sessions: 12,
+          signups: 2,
+          purchases: 1,
+          revenue: 1800,
+        },
+        {
+          utm_source: "google",
+          utm_medium: "organic",
+          utm_campaign: "(none)",
+          sessions: 40,
+          signups: 0,
+          purchases: 0,
+          revenue: 0,
+        },
+      ],
+      [{ source: "linkedin", medium: "cpc", campaign: "shop-online" }]
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.utmCampaign).toBe("shop-online");
+    expect(matches[0]?.sessions).toBe(12);
+  });
 });
 
 describe("getContact360", () => {
@@ -129,6 +161,7 @@ describe("getContact360", () => {
     mockGetStripe.mockResolvedValue(null);
     mockGetAuthDbFromEnv.mockReturnValue(null);
     mockGetUserByEmail.mockResolvedValue(null);
+    mockGetGoldSection.mockResolvedValue({ section: "attribution", rows: [] });
   });
 
   it("returns null when EspoCRM has no contact", async () => {
@@ -179,7 +212,10 @@ describe("getContact360", () => {
               id: "evt_1",
               event: "contact_submit",
               page: "/contact",
-              source: "web",
+              source: "linkedin",
+              medium: "cpc",
+              campaign: "shop-online",
+              properties_json: null,
               created_at: 1_700_000_200,
             },
           ],
@@ -195,6 +231,21 @@ describe("getContact360", () => {
       created_at: 1_700_000_000,
     });
 
+    mockGetGoldSection.mockResolvedValue({
+      section: "attribution",
+      rows: [
+        {
+          utm_source: "linkedin",
+          utm_medium: "cpc",
+          utm_campaign: "shop-online",
+          sessions: 9,
+          signups: 1,
+          purchases: 1,
+          revenue: 1800,
+        },
+      ],
+    });
+
     const payload = await getContact360(CONTACT_ID);
     expect(payload).not.toBeNull();
     expect(payload?.contact.email).toBe("ada@example.com");
@@ -203,6 +254,8 @@ describe("getContact360", () => {
     expect(payload?.stripe.purchases[0]?.amount).toBe(1800);
     expect(payload?.account?.id).toBe("user_1");
     expect(payload?.events[0]?.event).toBe("contact_submit");
+    expect(payload?.attribution.firstTouch?.campaign).toBe("shop-online");
+    expect(payload?.attribution.goldMatches).toHaveLength(1);
   });
 });
 

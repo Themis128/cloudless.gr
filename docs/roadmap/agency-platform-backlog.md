@@ -1,6 +1,14 @@
 # Agency platform backlog
 
-Filter applied to [Cloudless Platform Assessment rev. 2](https://claude.ai/code/artifact/7c1b2cf7-4f30-449d-acad-32aff8c37109) (August 2026). Treat that artifact as a **backlog filter**, not a build plan.
+Filters (August 2026) — treat as **backlog filters**, not build plans:
+
+- [Cloudless Platform Assessment rev. 2](https://claude.ai/code/artifact/7c1b2cf7-4f30-449d-acad-32aff8c37109)
+- [Datalake and analytics architecture](../data/datalake-architecture-report.md)
+- [Admin analytics UI — operator visibility](../data/admin-analytics-ui-report.md)
+- [Structured documentation summary](../DOCUMENTATION-SUMMARY.md)
+- [Current source of truth checklist](../current-source-of-truth-checklist.md)
+- [Architecture map](../ARCHITECTURE-MAP.md)
+- [Integration / data-flow / business logic](../BUSINESS-LOGIC-REPORT.md)
 
 **Scope:** Cloudless is an agency operating system (marketing + CRM + light delivery). Do not build general-purpose ERP (HR, payroll, inventory, warehouse).
 
@@ -17,9 +25,9 @@ Percentages in the artifact (~75% marketing, ~60% CRM, ~15% ERP) are a snapshot,
 | Status          | Item                                                                                            | Why                                                                                                       | Notes                                                                |
 | --------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Done (this branch)** | Unified admin contact page `/admin/crm/[id]`                                             | Highest-leverage CRM gap: EspoCRM, Stripe, and D1 are already populated; nothing joins them               | Join by email. No new database.                                      |
-| Todo            | Gate EspoCRM Opportunity create on lead score ≥ 65                                              | Contact form already scores leads and Slack already shows the score; every inbound currently opens a deal | Keep Slack + ActiveCampaign `enrollLeadInAutomation` for all inbound |
+| **Done (this branch)** | Gate EspoCRM Opportunity create on lead score ≥ 65                                              | Contact form already scores leads and Slack already shows the score; every inbound currently opens a deal | Keep Slack + ActiveCampaign `enrollLeadInAutomation` for all inbound |
 | Todo            | Delete residual `src/lib/notion-*.ts` adapters and Notion fallback in `src/lib/cms-provider.ts` | CMS is AppFlowy; do not revive Notion admin/webhooks                                                      | Orphan unit suites → `vitest.config.mts` `test.exclude` or delete    |
-| Todo            | Attribution dashboard (2–3d)                                                                    | UTM / campaign data already lands on contact notes and EspoCRM description                                | Read-only admin view first                                           |
+| Todo            | Surface gold `attribution` on the contact 360 page                                              | D1 UTM attribution already materializes in `admin-datalake.json`; no new dashboard                        | Join by email / campaign — do not build a CDP                        |
 
 ## Do next (after the contact page proves matching)
 
@@ -56,3 +64,120 @@ Joins, all optional except EspoCRM contact:
 4. D1 `analytics_events` where `user_id` matches or `properties_json.email` matches
 
 Matching is email-only. If that fails in production, _then_ consider a CDP.
+
+---
+
+## Datalake / analytics — filter
+
+Architecture: [`docs/data/datalake-architecture-report.md`](../data/datalake-architecture-report.md).
+The lake already exists (ETL → R2 parquet → gold JSON → `datalake-serve.ts`).
+Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo from admin pages.
+
+### Do now (lake hygiene)
+
+| Status | Item | Why | Notes |
+| --- | --- | --- | --- |
+| Todo | Expand DuckDB explore catalog to remaining bronze keys | Parquet already lands for n8n executions, Postiz, AppFlowy, churn, portals; explore UI only allowlists 9 datasets | `src/lib/lake-parquet-catalog.ts` |
+| Todo | Retire Notion from `/api/cron/analytics-rollup` | Still imports `createWeeklyRollup` / `archiveOldEvents` from `notion-analytics.ts` | Same sweep as Notion adapter cleanup |
+| Todo | Rename `notion-gsc-reports.ts` (R2 `gsc-weekly.json` reader) | Filename and SEO page comments still say Notion | Gold archive is already R2 |
+| **Done (this branch)** | Fix stale comments: DynamoDB bookmarks, S3 fallback, “live GSC” on gsc-archive | Ad poll uses D1 `ad_analytics_bookmark`; `analytics-r2.ts` has no S3 path | Docs only unless a code path still hits AWS |
+
+### Do next (after contact 360)
+
+| Status | Item | Why | Notes |
+| --- | --- | --- | --- |
+| Wait | Overlay RFM / churn parquet on `/admin/crm/[id]` | Scores are already keyed by email in `ml-parquet/` | Join-only; still not a CDP |
+| Wait | GSC dimension ETL (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs are stubs | Hide empty tabs until ETL exists |
+| Wait | LinkedIn-only ROI → other ad channels in gold | `getRoiFromLake` reports `configured=false` for Google/TikTok/X/Meta | Keep `roi.ts` live adapters off admin routes |
+| Wait | R2 Data Catalog / R2 SQL | Optional explore SQL without Athena | Dashboards stay on gold snapshots (`datalake.md`) |
+
+### Lake out of scope
+
+- A dedicated silver rewrite layer (bronze parquet already is silver)
+- QuickSight / Power BI / Tableau / Looker / Metabase as operated products (orchestrator payloads only)
+- Athena, Glue, or live vendor APIs on `/admin/analytics` page load
+- DynamoDB bookmarks (already D1)
+- AWS S3 fallback for events or ETL
+
+---
+
+## Admin analytics UI — filter
+
+Operator map: [`docs/data/admin-analytics-ui-report.md`](../data/admin-analytics-ui-report.md).
+The dashboards already exist. Prefer wiring data the APIs already return over new pages.
+
+### Do now (operator visibility)
+
+| Status | Item | Why | Notes |
+| --- | --- | --- | --- |
+| **Done (this branch)** | Fix admin nav: remove or restore `/admin/reports`; link `/admin/kpi` and `/admin/cost` | Reports is a dead link; KPI and Cost pages exist but are not in `AdminLayoutClient` | No new dashboards |
+| Todo | Relabel SEO weekly archive + workspace calendar away from Notion | Archive is R2 gold; calendar still falls through to `notion-calendar` when configured | Same sweep as Notion cleanup |
+| Todo | Add a thin admin view for `GET /api/admin/analytics/search-funnel` | Funnel events land in D1; only `getFunnelSummary()` exists — no page | Table of event_type × ab_variant; not a real-time firehose |
+
+### Do next (charts on existing payloads)
+
+| Status | Item | Why | Notes |
+| --- | --- | --- | --- |
+| Wait | Sparkline / daily bars on Unified + Stripe `dailyTrend` | `stripe-analytics-read.ts` already computes per-day revenue; unified is point-in-time cards | Reuse History-tab SVG pattern |
+| Wait | Anomaly history table in admin | Five rules already fire to Slack only | Read D1 bookmarks / a small log; no alerting-config UI |
+| Wait | CSV export on datalake section tables | Operators already have gold tables with no download | After contact 360 |
+| Wait | Funnel `ab_variant` comparison | `/admin/ab-tests` toggles flags; it does not show funnel results | Distinct from flag admin |
+| Wait | Restore client reports with gold sections (GSC / Stripe) | Only if `/admin/reports` is restored | Do not invent a report product first |
+
+### UI out of scope
+
+- Drag-and-drop / customizable widgets / period-over-period builder
+- Cohort and retention product analytics
+- Real-time event stream
+- Discord or email notification channels (Slack is the channel)
+- Admin forms for GSC secrets, LinkedIn CAPI IDs, or anomaly thresholds
+- Unfreezing AWS Cost Explorer
+- Per-workspace ad spend + SEO warehouse
+
+---
+
+## Documentation — filter
+
+Inventory: [`docs/DOCUMENTATION-SUMMARY.md`](../DOCUMENTATION-SUMMARY.md).
+Live checklist: [`docs/current-source-of-truth-checklist.md`](../current-source-of-truth-checklist.md).
+Prefer `.cursor/rules/` over AWS-primary / Cognito / HubSpot / Notion-CMS runbooks.
+
+### Do now (doc hygiene)
+
+| Status | Item | Why | Notes |
+| --- | --- | --- | --- |
+| **Done (this branch)** | Add `docs/current-source-of-truth-checklist.md` | Architecture skill and `CLAUDE.md` linked a missing file | Points at `cloudless2` → Pi, AppFlowy, D1, EspoCRM |
+| **Done (this branch)** | Banner `docs/integrations/HUBSPOT.md` + integrations README as EspoCRM | File still documents `hubspot.ts` / `HUBSPOT_API_KEY` | Do not revive HubSpot |
+| **Done (this branch)** | Banner `docs/integrations/NOTION-CMS.md` as archive | Live CMS is AppFlowy | Keep file; do not rewrite as a Notion how-to |
+| Todo | Redirect or remove leftover `/admin/notion/*` pages | Parallel Notion admin UI still exists; **no** `src/app/api/admin/notion/**` | Same sweep as `notion-*.ts` cleanup |
+| **Done (this branch)** | Fix EspoCRM README “ETL to S3” → R2 parquet | `scripts/etl/espocrm-to-r2.mjs` is the path | `infrastructure/espocrm/README.md` |
+| **Done (this branch)** | Replace `search_notion` in `ANTHROPIC.md` / `AGENTS_ROADMAP.md` | Admin assistant is AppFlowy | Same CMS rule |
+
+### Doc out of scope
+
+- Recreating `CLOUDFLARE-ARCHITECTURE.md` / `HA-ARCHITECTURE.md` as long essays (`ARCHITECTURE.md` is a stub; use the map + checklist)
+- Operating from `docs/deploy/pi-cloud-sync.md` (AWS dual-home) or Cognito `docs/auth/`
+- Restarting `ROADMAP-ONE-STOP-SHOP.md` as a greenfield 4-phase build
+- Expanding AWS from migration skills except to retire leftovers
+- Treating OpenNext / Workers as the Next.js origin (map overview is wrong; production is `cloudless2` proxy → Pi)
+- Growing `/api/auth/[...nextauth]` or `/admin/notion/*`
+
+---
+
+## Business logic — filter
+
+Flows: [`docs/BUSINESS-LOGIC-REPORT.md`](../BUSINESS-LOGIC-REPORT.md).
+The capabilities already exist. Do not rebuild CRM, Stripe, lake, or AI from
+that inventory.
+
+Corrections vs the raw report:
+
+- Public `/api/chat` is **Workers AI**, not Anthropic
+- CMS is **AppFlowy primary**, not Notion primary
+- Ad poll adapter registry is **LinkedIn + Slack only**
+- Admin analytics GSC is **gold**, not live `gsc.ts`
+- Contact form already scores + NLP + Slack; Opportunity is created when `lead.band === "hot"` (score ≥ 65)
+- Client Reports **cron/lib exist**; admin Reports UI does not (nav link removed; KPI + Cost are in Overview)
+
+No new product work from this report beyond todos already listed (contact 360
+attribution, Notion cleanup, deal gating, lake/UI hygiene).

@@ -13,7 +13,7 @@
  *    later polls in the same process post in-memory deltas.
  *
  * See `skills/ad-analytics/SKILL.md` operating principle #8 (idempotent
- * bookmarks) and the Notion architecture page §3.
+ * bookmarks). Store is D1 `ad_analytics_bookmark`, not DynamoDB.
  */
 
 import type { AdMetrics, Bookmark, AdPlatformId } from "./types";

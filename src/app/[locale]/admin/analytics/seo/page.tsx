@@ -4,7 +4,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 
-/* Shapes mirror src/lib/gsc.ts (served by /api/admin/analytics/*). */
+/* Shapes match gold SEO payloads from /api/admin/analytics/* (not live gsc.ts). */
 interface SeoSnapshot {
   clicks: number;
   impressions: number;
@@ -119,8 +119,8 @@ export default function SeoAnalyticsPage() {
         fetchWithAuth("/api/admin/analytics/search-intent"),
         fetchWithAuth("/api/admin/analytics/countries?limit=20"),
         fetchWithAuth("/api/admin/analytics/devices"),
-        // Notion-backed weekly archive — optional; absent when the DB isn't
-        // configured (503). Never block the live GSC view on it.
+        // R2 gold weekly archive (gsc-weekly.json). Optional; 503 when unbound.
+        // Do not treat this page as a live GSC console.
         fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
       ]);
       if (seoRes.status === 503) {

@@ -419,10 +419,10 @@ export default function CampaignsDashboard() {
             Content Calendar →
           </Link>
           <Link
-            href="/admin/reports"
+            href="/admin/kpi"
             className="font-mono text-xs text-slate-400 transition-colors hover:text-white"
           >
-            Reports →
+            KPI Dashboard →
           </Link>
           <Link
             href="/admin/ai-assistant"

@@ -1,14 +1,22 @@
 # Anthropic / Claude AI Integration
 
-cloudless.gr uses Claude on two distinct surfaces with different backends:
-
-1. **Public chatbot agent** — `ChatWidget` on every page; calls `/api/chat`. Backed by **AWS Bedrock Converse API** (IAM auth, no API key) with a tool-use loop and three tools (`lookup_product`, `check_calendar_availability`, `book_slot`). The final response is delivered as SSE so the widget keeps its existing event handling.
-2. **Admin AI tools** — copy generation, campaign strategy, audience targeting, and report insights under `/api/admin/ai/*`. Uses the **Anthropic Messages API** directly via `src/lib/anthropic.ts`.
-3. **Admin assistant** — multi-tool chat agent on `/admin/assistant`; calls `/api/admin/ai/assistant`. Tool-use loop (max 4 iterations) with `search_notion`, `get_recent_orders`, `draft_email` tools. See [Phase 2c in AGENTS_ROADMAP.md](../roadmap/AGENTS_ROADMAP.md).
-
-> **Status:** `/api/chat` returns 503 when `AccessDeniedException` is thrown by Bedrock (IAM misconfiguration) or 502 on transient failures. Admin AI routes return 503 when `ANTHROPIC_API_KEY` is absent. The rest of the site is unaffected.
+> **Correction (August 2026):** this file is historical. Live paths:
 >
-> **Last verified:** 2026-05-17 — `/api/chat` uses AWS Bedrock Converse API (IAM auth). Admin AI routes use `ANTHROPIC_API_KEY`. See log patterns table in the tool-use loop section for CloudWatch monitoring.
+> - Public `/api/chat` is **Workers AI** (`src/lib/workers-ai-chat.ts`), not Bedrock / Anthropic.
+> - Admin generate (`/api/admin/ai/*`) is **Workers AI → Gemini** (`src/lib/admin-ai.ts`). `anthropic.ts` is leftover, not the primary path.
+> - Admin assistant (`/api/admin/ai/assistant`) uses Workers AI tool protocol then Gemini. Tool name `search_notion` is a **legacy identifier** — the executor searches lake-synced **AppFlowy** / Vectorize RAG + gold SEO, not live Notion. Do not grow Notion from this inventory.
+>
+> Do not put LangGraph on Workers from this inventory. Production origin is Pi behind `cloudless2`, not OpenNext.
+
+cloudless.gr uses Claude on two distinct surfaces with different backends **(historical — see banner)**:
+
+1. **Public chatbot agent** — `ChatWidget` on every page; calls `/api/chat`. Live: Workers AI tool loop. Historical text below still says Bedrock.
+2. **Admin AI tools** — copy generation, campaign strategy, audience targeting, and report insights under `/api/admin/ai/*`. Live: Workers AI → Gemini.
+3. **Admin assistant** — multi-tool chat agent on `/admin/ai-assistant`; calls `/api/admin/ai/assistant`. Tools: `search_notion` (AppFlowy RAG, legacy name), `get_datalake_section`, `get_lake_insight`, `get_recent_orders` (gold Stripe, not live), `draft_email`. See [Phase 2c in AGENTS_ROADMAP.md](../roadmap/AGENTS_ROADMAP.md).
+
+> **Status:** `/api/chat` returns 503 when Workers AI is unconfigured. Admin AI returns 503 when Workers AI and Gemini are both absent. The rest of the site is unaffected.
+>
+> **Last verified:** 2026-08-14 — public chat = Workers AI; admin AI = Workers AI → Gemini. Sections below that mention Bedrock / `ANTHROPIC_API_KEY` as the live path are stale.
 
 ---
 

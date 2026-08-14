@@ -1,10 +1,12 @@
 # Google Search Console Integration
 
-cloudless.gr integrates with Google Search Console (GSC) to power the SEO analytics dashboard in the admin area. All data is fetched via the GSC Search Analytics API using the same service account credentials shared with Google Calendar.
+> **Correction (August 2026):** admin SEO/analytics pages are **gold** via `datalake-serve.ts` (R2 snapshots). They do **not** call live `gsc.ts` on page load. `gsc.ts` is the ETL/cache client used by rollup jobs. `/api/admin/analytics/gsc-archive` reads `lake/snapshots/gsc-weekly.json` from R2, not Notion and not live GSC.
 
-> **Status:** Optional integration — all endpoints return 503 when credentials are not configured. Admin dashboard degrades gracefully.
+cloudless.gr integrates with Google Search Console (GSC) to power the SEO **ETL** path. Admin dashboards read gold JSON, not the Search Analytics API at request time.
+
+> **Status:** Optional integration — gold endpoints return empty/503 when the lake snapshot is unbound. Live GSC credentials are for ETL only.
 >
-> **Last verified:** 2026-05-01 — 29 unit tests pass (auth, snapshot, keywords, pages, history, devices, countries, CTR opportunities, query-page mapping, search intent, web analytics, error handling)
+> **Last verified:** 2026-08-14 — admin GSC = gold; `gsc.ts` = ETL. Architecture diagram below that wires every admin route to `gsc.ts` is stale.
 
 ---
 

@@ -141,9 +141,9 @@ export interface AdMetrics {
   cpcEur?: number;
   cpaEur?: number;
   /** Optional demographic breakdowns of clickers for this window — used by
-   *  the digest's "ICP signal" block (Notion architecture §9). One entry
-   *  per enabled pivot. Empty when the enrichment fetch returned no data
-   *  (privacy threshold / suppressed / not requested). */
+   *  the digest's "ICP signal" block. One entry per enabled pivot. Empty
+   *  when the enrichment fetch returned no data (privacy threshold /
+   *  suppressed / not requested). */
   demographics?: Partial<Record<DemographicPivot, DemographicBreakdown>>;
 }
 

@@ -27,7 +27,7 @@ Cost: zero (runs locally inside Claude Code sessions). Reversible: delete the fi
 
 ## Phase 2 — Runtime AI agents in the product
 
-Today `/api/chat` is a single-turn proxy to Claude Haiku for pre-sales chat. Real agents would let it (and a few new endpoints) take actions.
+Today `/api/chat` is a Workers AI tool-use loop (`workers-ai-chat.ts`) for pre-sales chat — not Anthropic/Bedrock. Real agents would let it (and a few new endpoints) take actions. Do not move LangGraph onto Workers from this inventory.
 
 ### Phase 2a — chatbot tool use — SHIPPED
 
@@ -40,9 +40,9 @@ Implementation: replaced the single-turn streaming proxy with a non-streaming to
 
 Trade-off: lost the typewriter streaming effect on responses that _use_ a tool — text now arrives as one SSE event after the tool round trip completes. Direct text responses with no tool call still chunk in real time.
 
-**Tests** (19 added): see `docs/ANTHROPIC.md` for the full table. Covers tool round-trip with `tool_result`, iteration-cap fallback, schema declarations, and per-tool match / no-match / no-config / throw paths.
+**Tests** (19 added): see `docs/integrations/ANTHROPIC.md` (banner first — Bedrock diagrams in that file are stale). Covers tool round-trip with `tool_result`, iteration-cap fallback, schema declarations, and per-tool match / no-match / no-config / throw paths.
 
-Detail: see [`docs/ANTHROPIC.md`](../integrations/ANTHROPIC.md#tools-phase-2a-of-docsagents_roadmapmd) for the loop diagram and tool table.
+Detail: `src/lib/workers-ai-chat.ts` + `src/lib/chat-tools.ts`. The ANTHROPIC.md loop diagram still describes the retired Bedrock path.
 
 ### Phase 2b — booking agent — SHIPPED
 
@@ -61,9 +61,9 @@ Implementation: `src/lib/agent-book.ts` + `src/app/api/agent/book/route.ts`. Tes
 
 ### Phase 2c — admin assistant — SHIPPED
 
-`/admin/assistant` page hosts a multi-tool agent: `search_notion`, `get_recent_orders`, `draft_email`. Admin-only, lower stakes than the public chat.
+`/admin/ai-assistant` page hosts a multi-tool agent. Tool **names** keep legacy ids (`search_notion`, `get_recent_orders`) for prompt compatibility; executors are lake / Vectorize / AppFlowy — not live Notion or live Stripe. Also: `get_datalake_section`, `get_lake_insight`, `draft_email`. Admin-only, lower stakes than the public chat.
 
-Implementation: `src/lib/admin-assistant-tools.ts` (tool definitions + executors) + `src/app/api/admin/ai/assistant/route.ts` (Anthropic Messages API tool-use loop, max 4 iterations, `requireAdmin` guard) + chat UI on `src/app/[locale]/admin/ai-assistant/page.tsx`. Tests (7 specs) in `__tests__/admin-assistant-api.test.ts`.
+Implementation: `src/lib/admin-assistant-tools.ts` + `src/app/api/admin/ai/assistant/route.ts` (Workers AI tool protocol, Gemini fallback, max 4 iterations, `requireAdmin` guard) + UI on `src/app/[locale]/admin/ai-assistant/page.tsx`. Tests in `__tests__/admin-assistant-api.test.ts`.
 
 **Cost model**: bursty — only used by admins. Probably under $5/month even at heavy use.
 

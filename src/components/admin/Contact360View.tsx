@@ -3,6 +3,7 @@
 import { Link } from "@/i18n/navigation";
 import type {
   Contact360,
+  Contact360Attribution,
   Contact360Event,
   Contact360Note,
   Contact360Related,
@@ -91,6 +92,42 @@ function EventsList({ events }: { events: Contact360Event[] }) {
   );
 }
 
+function AttributionBlock({ attribution }: { attribution: Contact360Attribution }) {
+  const { firstTouch, goldMatches } = attribution;
+  if (!firstTouch && goldMatches.length === 0) {
+    return <Empty>No UTM match for this email in D1 or gold attribution</Empty>;
+  }
+  return (
+    <div className="space-y-3">
+      {firstTouch ? (
+        <p className="font-mono text-xs text-slate-300">
+          First touch: {firstTouch.source || "(direct)"} / {firstTouch.medium || "(none)"} /{" "}
+          {firstTouch.campaign || "(none)"}
+        </p>
+      ) : null}
+      {goldMatches.length > 0 ? (
+        <ul className="divide-y divide-slate-800/80">
+          {goldMatches.map((row) => (
+            <li
+              key={`${row.utmSource}|${row.utmMedium}|${row.utmCampaign}`}
+              className="flex justify-between gap-3 py-2 font-mono text-xs"
+            >
+              <span className="text-slate-300">
+                {row.utmSource} · {row.utmMedium} · {row.utmCampaign}
+              </span>
+              <span className="text-slate-500">
+                {row.sessions} sess · {row.purchases} buy
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty>No matching gold attribution row</Empty>
+      )}
+    </div>
+  );
+}
+
 export function Contact360View({ data }: { data: Contact360 }) {
   const { contact, stripe, account } = data;
   const name = contactDisplayName(contact);
@@ -126,6 +163,11 @@ export function Contact360View({ data }: { data: Contact360 }) {
           <p className="mt-1 text-white">{contact.leadSource || "—"}</p>
         </div>
       </div>
+
+      <section className={CARD}>
+        <h2 className="font-heading mb-3 text-sm font-semibold text-white">Attribution</h2>
+        <AttributionBlock attribution={data.attribution} />
+      </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className={CARD}>

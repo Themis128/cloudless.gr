@@ -2,6 +2,13 @@
 
 Topic-oriented documentation for cloudless.gr. Pick a folder by subject; each folder has its own `README.md`.
 
+**Start here:** [current-source-of-truth-checklist.md](current-source-of-truth-checklist.md) ·
+[ARCHITECTURE.md](ARCHITECTURE.md) ·
+[ARCHITECTURE-MAP.md](ARCHITECTURE-MAP.md) ·
+[BUSINESS-LOGIC-REPORT.md](BUSINESS-LOGIC-REPORT.md) ·
+[DOCUMENTATION-SUMMARY.md](DOCUMENTATION-SUMMARY.md) ·
+[roadmap/agency-platform-backlog.md](roadmap/agency-platform-backlog.md)
+
 | Folder | Topic |
 |--------|--------|
 | [ai/](ai/) | Workers AI, agents, analytics orchestration |
