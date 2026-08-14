@@ -1,37 +1,14 @@
 import { getRequestConfig } from "next-intl/server";
-import { routing } from "./routing";
+import { getMessages, isSupportedLocale, defaultLocale } from "@/lib/i18n";
 
-function isValidLocale(value: string | undefined): value is (typeof routing.locales)[number] {
-  return typeof value === "string" && (routing.locales as readonly string[]).includes(value);
-}
-
+/**
+ * next-intl runs this for every request, including `/` (src/app/page.tsx).
+ * Load locale JSON via static imports (see src/lib/i18n.ts). A dynamic
+ * locale JSON import races Turbopack's first compile and throws
+ * `SyntaxError: Unexpected end of JSON input` on GET /.
+ */
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
-  const locale = isValidLocale(requested) ? requested : routing.defaultLocale;
-
-  // Static imports avoid dynamic-import issues with Turbopack.
-  // AbstractIntlMessages was removed in next-intl v4; cast through unknown
-  // since JSON arrays (e.g. typingTexts: string[]) don't satisfy the index
-  // signature expected by getRequestConfig.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let messages: any;
-
-  // Use try-catch to handle potential import errors gracefully
-  try {
-    if (locale === "el") {
-      messages = (await import("../locales/el.json")).default;
-    } else if (locale === "fr") {
-      messages = (await import("../locales/fr.json")).default;
-    } else if (locale === "de") {
-      messages = (await import("../locales/de.json")).default;
-    } else {
-      messages = (await import("../locales/en.json")).default;
-    }
-  } catch (error) {
-    // Fallback to English if locale file can't be loaded
-    console.warn(`Failed to load locale ${locale}, falling back to English`, error);
-    messages = (await import("../locales/en.json")).default;
-  }
-
-  return { locale, messages };
+  const locale = isSupportedLocale(requested ?? "") ? requested : defaultLocale;
+  return { locale, messages: getMessages(locale) };
 });

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { locales, defaultLocale, isSupportedLocale, type Locale } from "@/lib/i18n";
 
@@ -39,5 +41,11 @@ describe("i18n utilities", () => {
     locales.forEach((locale) => {
       expect(isSupportedLocale(locale)).toBe(true);
     });
+  });
+
+  it("loads next-intl messages from static locale JSON (no Turbopack dynamic import)", () => {
+    const source = readFileSync(resolve(__dirname, "../src/i18n/request.ts"), "utf-8");
+    expect(source).toContain('from "@/lib/i18n"');
+    expect(source).not.toMatch(/import\(\s*["'][^"']*locales\/[^"']+\.json["']\s*\)/);
   });
 });
