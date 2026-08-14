@@ -6,7 +6,7 @@
 
 This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHub workflows**, **MCP/tools**, and **online docs**. Prefer the listed skill/script before inventing a new path.
 
-### Live snapshot (updated 2026-08-14 ~02:32 EEST — playbook executed)
+## Live snapshot (updated 2026-08-14 ~02:32 EEST — playbook executed)
 
 | Signal | Value |
 | --- | --- |
@@ -40,7 +40,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 | [notion-migrate](#2-notion-migrate--notion--appflowy-content) | High | Semi | `appflowy-operator` | `node scripts/migrate-notion-to-appflowy.mjs --dry-run` |
 | [meta](#3-meta--ad-account-disabled) | Medium | Human-only | `meta-business-help` | Business Support Home → Account Quality → appeal |
 | [tiktok](#4-tiktok--oauth--advertiser) | Medium | Human OAuth + script | `integration-activation` | `pnpm tsx scripts/tiktok-oauth.ts` |
-| [x-ads](#5-x-ads--xadaccountid--oauth) | Medium | Human (Ads API gate) | `x-ads-api` | Apply Ads API access → `scripts/x-ads-setup.ts` |
+| [x-ads](#5-x-ads--oauth) | Medium | Human (Ads API gate) | `x-ads-api` | Apply Ads API access → `scripts/x-ads-setup.ts` |
 | [activecampaign](#6-activecampaign--unset) | Low | Semi | `activecampaign` | Mint token → `activate-integration.sh set …` |
 | [turnstile](#7-turnstile--unset) | Low | Human + env | (docs / CF dashboard) | Create widget → set site/secret keys |
 | [ai-gateway](#8-ai-gateway--unset) | Low | Semi | `workers-ai` | Set `CLOUDFLARE_AI_GATEWAY_ID=default` (or create gateway) |
@@ -231,7 +231,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 ---
 
-## 5. x-ads — `X_AD_ACCOUNT_ID` / OAuth
+## 5. x-ads — OAuth
 
 **Priority:** Medium · **Mostly human** — Ads API access must be approved at X first (`UNAUTHORIZED_CLIENT_APPLICATION` historically)
 
