@@ -1,7 +1,7 @@
 /**
  * Admin - Analytics page
  *
- * Five-tab Google Search Console dashboard backed by the /api/admin/analytics/*
+ * Four-tab Google Search Console dashboard backed by the /api/admin/analytics/*
  * family of endpoints. Each tab fetches independently so slow tabs do not block
  * the rest of the UI.
  *
@@ -9,9 +9,11 @@
  * ----
  * - Overview      - headline KPIs (clicks, impressions, CTR, position)
  * - Keywords      - top search queries sortable by any metric
- * - Pages         - top landing pages by clicks
  * - History       - 16-week click/impression trend chart (SVG sparkline)
  * - CTR Opps      - pages with high impressions but below-average CTR
+ *
+ * Top Pages is omitted until GSC page-dimension ETL lands in gold
+ * (`getGscDimensionFromLake("page")` is an empty stub today).
  *
  * All requests carry the access token via fetchWithAuth.
  *
@@ -72,14 +74,6 @@ interface SeoSnapshot {
 
 interface Keyword {
   keyword: string;
-  clicks: number | null | undefined;
-  impressions: number | null | undefined;
-  ctr: number | null | undefined;
-  position: number | null | undefined;
-}
-
-interface Page {
-  page: string;
   clicks: number | null | undefined;
   impressions: number | null | undefined;
   ctr: number | null | undefined;
@@ -266,7 +260,7 @@ function OverviewTab({
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
         <p className="mb-3 font-mono text-xs text-slate-500">Explore deeper</p>
         <div className="flex flex-wrap gap-2">
-          {(["keywords", "pages", "history", "ctr"] as Tab[]).map((t) => (
+          {(["keywords", "history", "ctr"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -283,12 +277,11 @@ function OverviewTab({
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "keywords" | "pages" | "history" | "ctr";
+type Tab = "overview" | "keywords" | "history" | "ctr";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "keywords", label: "Keywords" },
-  { id: "pages", label: "Top Pages" },
   { id: "history", label: "History" },
   { id: "ctr", label: "CTR Opportunities" },
 ];
@@ -374,7 +367,6 @@ export default function AdminAnalyticsPage() {
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
   const [web, setWeb] = useState<WebAnalytics | null>(null);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
-  const [pages, setPages] = useState<Page[]>([]);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [opportunities, setOpportunities] = useState<CtrOpportunity[]>([]);
 
@@ -382,14 +374,12 @@ export default function AdminAnalyticsPage() {
   const [loadingTab, setLoadingTab] = useState<Record<Tab, boolean>>({
     overview: false,
     keywords: false,
-    pages: false,
     history: false,
     ctr: false,
   });
   const [errors, setErrors] = useState<Record<Tab, string | null>>({
     overview: null,
     keywords: null,
-    pages: null,
     history: null,
     ctr: null,
   });
@@ -426,20 +416,6 @@ export default function AdminAnalyticsPage() {
         (v) => setError("keywords", v),
         () => markFetched("keywords"),
         (j) => (j.keywords ?? []) as Keyword[]
-      ),
-    [days]
-  );
-
-  const fetchPages = useCallback(
-    () =>
-      handleTabFetch(
-        "pages",
-        `/api/admin/analytics/pages?limit=25&days=${days}`,
-        setPages as (d: unknown) => void,
-        (v) => setLoading("pages", v),
-        (v) => setError("pages", v),
-        () => markFetched("pages"),
-        (j) => (j.pages ?? []) as Page[]
       ),
     [days]
   );
@@ -495,13 +471,12 @@ export default function AdminAnalyticsPage() {
       const fetchers: Record<Tab, () => void> = {
         overview: fetchOverview,
         keywords: fetchKeywords,
-        pages: fetchPages,
         history: fetchHistory,
         ctr: fetchCtr,
       };
       fetchers[tab]();
     }
-  }, [tab, fetchedTabs, fetchOverview, fetchKeywords, fetchPages, fetchHistory, fetchCtr]);
+  }, [tab, fetchedTabs, fetchOverview, fetchKeywords, fetchHistory, fetchCtr]);
 
   const currentPreset = useMemo(() => presetForDays(days), [days]);
   const isFiltered = days !== DEFAULT_RANGE.days;
@@ -527,8 +502,6 @@ export default function AdminAnalyticsPage() {
         return <OverviewTab snapshot={snapshot} web={web} setTab={setTab} tabs={TABS} />;
       case "keywords":
         return <KeywordsTab keywords={keywords} />;
-      case "pages":
-        return <PagesTab pages={pages} />;
       case "history":
         return <HistoryTab history={history} />;
       case "ctr":
@@ -690,97 +663,6 @@ function KeywordsTab({ keywords }: { readonly keywords: Keyword[] }) {
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
                   No keyword data available
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ─── Pages Tab ────────────────────────────────────────────────────────────────
-
-function formatPageUrl(page: string): string {
-  try {
-    return new URL(page).pathname || "/";
-  } catch {
-    return page;
-  }
-}
-
-function PagesTab({ pages }: { readonly pages: Page[] }) {
-  return (
-    <div className="bg-void-light/50 overflow-hidden rounded-xl border border-slate-800">
-      <div className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
-        <h3 className="font-mono text-xs font-medium text-slate-400">
-          Top {pages.length} Pages by Clicks
-        </h3>
-        <span className="font-mono text-[10px] text-slate-600">Google Search Console</span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-800">
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                #
-              </th>
-              <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                Page
-              </th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
-                Clicks
-              </th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
-                Impr.
-              </th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
-                CTR
-              </th>
-              <th className="px-6 py-3 text-right font-mono text-xs font-medium text-slate-500">
-                Pos.
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pages.map((pg, i) => (
-              <tr
-                key={`page-${i}`}
-                className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-              >
-                <td className="px-6 py-3 font-mono text-xs text-slate-600">{i + 1}</td>
-                <td className="px-6 py-3">
-                  <a
-                    href={pg.page}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-neon-cyan truncate font-mono text-xs hover:underline"
-                    title={pg.page}
-                  >
-                    {formatPageUrl(pg.page)}
-                  </a>
-                </td>
-                <td className="px-6 py-3 text-right font-mono text-sm text-white">
-                  {(pg.clicks ?? 0).toLocaleString()}
-                </td>
-                <td className="px-6 py-3 text-right font-mono text-xs text-slate-400">
-                  {(pg.impressions ?? 0).toLocaleString()}
-                </td>
-                <td className={`px-6 py-3 text-right font-mono text-xs ${ctrColor(pg.ctr)}`}>
-                  {pct(pg.ctr)}
-                </td>
-                <td
-                  className={`px-6 py-3 text-right font-mono text-sm font-semibold ${positionColor(pg.position)}`}
-                >
-                  #{pg.position != null ? pg.position.toFixed(1) : "—"}
-                </td>
-              </tr>
-            ))}
-            {pages.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center font-mono text-slate-600">
-                  No page data available
                 </td>
               </tr>
             )}

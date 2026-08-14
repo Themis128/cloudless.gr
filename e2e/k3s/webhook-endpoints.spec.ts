@@ -18,7 +18,7 @@ const WEBHOOK_ENDPOINTS = [
   // here so a future "EspoCRM webhook accidentally deleted" regression is caught.
   { name: "EspoCRM webhook", path: "/api/webhooks/espocrm", expectedStatus: [401, 403, 400, 405] },
   { name: "Stripe webhook", path: "/api/webhooks/stripe", expectedStatus: [400, 401, 403] },
-  { name: "Notion webhook", path: "/api/webhooks/notion", expectedStatus: [400, 401, 403, 405] },
+  { name: "CMS content webhook", path: "/api/webhooks/content", expectedStatus: [401, 403, 400] },
 ];
 
 test.describe("Webhook endpoints — route existence and auth rejection", () => {

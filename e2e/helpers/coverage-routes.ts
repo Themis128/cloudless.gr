@@ -127,7 +127,6 @@ export const PUBLIC_API_POST_FORM = [
   "/api/track",
   "/api/csp-report",
   "/api/crm/contact",
-  "/api/notion-image",
   "/api/agent/book",
   "/api/chat",
   "/api/portal/enroll",
@@ -136,7 +135,7 @@ export const PUBLIC_API_POST_FORM = [
 
 export const WEBHOOK_APIS = [
   "/api/webhooks/stripe",
-  "/api/webhooks/notion",
+  "/api/webhooks/content",
   "/api/webhooks/espocrm",
 ] as const;
 

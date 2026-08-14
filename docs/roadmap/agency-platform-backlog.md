@@ -86,7 +86,8 @@ Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo fro
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
 | **Done (this branch)** | Overlay RFM / churn parquet on `/admin/crm/[id]` | Scores are already keyed by email in `ml-parquet/` | Gold `rfm_churn` section + email join; still not a CDP |
-| Wait | GSC dimension ETL (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs are stubs | Hide empty tabs until ETL exists |
+| **Done (this branch)** | Hide empty GSC dimension UI (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs were empty stubs | APIs stay wired; restore UI when ETL exists |
+| Wait | GSC dimension ETL (country / device / page) | Silver parquet is query-only today | Do not un-hide those tables until gold has rows |
 | Wait | LinkedIn-only ROI → other ad channels in gold | `getRoiFromLake` reports `configured=false` for Google/TikTok/X/Meta | Keep `roi.ts` live adapters off admin routes |
 | Wait | R2 Data Catalog / R2 SQL | Optional explore SQL without Athena | Dashboards stay on gold snapshots (`datalake.md`) |
 

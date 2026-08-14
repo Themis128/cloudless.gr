@@ -23,36 +23,11 @@ interface KeywordRow {
   position: number;
 }
 
-interface QueryPageRow {
-  query: string;
-  page: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
-}
-
 interface IntentBreakdown {
   brand: KeywordRow[];
   product: KeywordRow[];
   informational: KeywordRow[];
   navigational: KeywordRow[];
-}
-
-interface CountryRow {
-  country: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  avgPosition: number;
-}
-
-interface DeviceRow {
-  device: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  avgPosition: number;
 }
 
 /** One persisted weekly snapshot from the R2 GSC archive. */
@@ -77,20 +52,8 @@ interface SeoResponse {
   keywords: KeywordRow[];
 }
 
-interface QueryPageResponse {
-  mappings: QueryPageRow[];
-}
-
 interface IntentResponse {
   intent: IntentBreakdown;
-}
-
-interface CountryResponse {
-  countries: CountryRow[];
-}
-
-interface DeviceResponse {
-  devices: DeviceRow[];
 }
 
 interface ArchiveResponse {
@@ -100,10 +63,7 @@ interface ArchiveResponse {
 export default function SeoAnalyticsPage() {
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
-  const [mappings, setMappings] = useState<QueryPageRow[]>([]);
   const [intent, setIntent] = useState<IntentBreakdown | null>(null);
-  const [countries, setCountries] = useState<CountryRow[]>([]);
-  const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [archive, setArchive] = useState<ArchiveRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
@@ -113,12 +73,9 @@ export default function SeoAnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [seoRes, qpRes, intentRes, countryRes, deviceRes, archiveRes] = await Promise.all([
+      const [seoRes, intentRes, archiveRes] = await Promise.all([
         fetchWithAuth("/api/admin/analytics/seo"),
-        fetchWithAuth("/api/admin/analytics/query-pages?limit=50"),
         fetchWithAuth("/api/admin/analytics/search-intent"),
-        fetchWithAuth("/api/admin/analytics/countries?limit=20"),
-        fetchWithAuth("/api/admin/analytics/devices"),
         // R2 gold weekly archive (gsc-weekly.json). Optional; 503 when unbound.
         // Do not treat this page as a live GSC console.
         fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
@@ -134,21 +91,9 @@ export default function SeoAnalyticsPage() {
       setSnapshot(seo.snapshot ?? null);
       setKeywords(seo.keywords ?? []);
 
-      if (qpRes.ok) {
-        const qpData = (await qpRes.json()) as QueryPageResponse;
-        setMappings(qpData?.mappings ?? []);
-      }
       if (intentRes.ok) {
         const intentData = (await intentRes.json()) as IntentResponse;
         setIntent(intentData?.intent ?? null);
-      }
-      if (countryRes.ok) {
-        const countryData = (await countryRes.json()) as CountryResponse;
-        setCountries(countryData?.countries ?? []);
-      }
-      if (deviceRes.ok) {
-        const deviceData = (await deviceRes.json()) as DeviceResponse;
-        setDevices(deviceData?.devices ?? []);
       }
       if (archiveRes.ok) {
         const archiveData = (await archiveRes.json()) as ArchiveResponse;
@@ -191,7 +136,10 @@ export default function SeoAnalyticsPage() {
           <span className="font-mono text-xs text-emerald-400">GOOGLE SEARCH CONSOLE</span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">SEO Deep Dive</h1>
-        <p className="mt-1 font-mono text-xs text-slate-500">Organic search — last 28 days</p>
+        <p className="mt-1 font-mono text-xs text-slate-500">
+          Organic search from gold GSC snapshots — last 28 days. Country / device / page
+          dimensions stay hidden until that ETL lands.
+        </p>
       </div>
 
       {loading && <Spinner />}
@@ -246,56 +194,6 @@ export default function SeoAnalyticsPage() {
               ])}
             />
           </section>
-
-          <section>
-            <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
-              QUERY → PAGE MAPPING
-            </h2>
-            <SeoTable
-              head={["Query", "Landing page", "Clicks", "Impressions", "CTR"]}
-              empty="No query-page data."
-              rows={mappings.map((m) => [
-                m.query,
-                m.page,
-                m.clicks.toLocaleString(),
-                m.impressions.toLocaleString(),
-                `${m.ctr}%`,
-              ])}
-            />
-          </section>
-
-          <div className="grid gap-10 lg:grid-cols-2">
-            <section>
-              <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
-                COUNTRIES
-              </h2>
-              <SeoTable
-                head={["Country", "Clicks", "Impressions", "CTR"]}
-                empty="No country data."
-                rows={countries.map((c) => [
-                  c.country,
-                  c.clicks.toLocaleString(),
-                  c.impressions.toLocaleString(),
-                  `${c.ctr}%`,
-                ])}
-              />
-            </section>
-            <section>
-              <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
-                DEVICES
-              </h2>
-              <SeoTable
-                head={["Device", "Clicks", "Impressions", "CTR"]}
-                empty="No device data."
-                rows={devices.map((d) => [
-                  d.device,
-                  d.clicks.toLocaleString(),
-                  d.impressions.toLocaleString(),
-                  `${d.ctr}%`,
-                ])}
-              />
-            </section>
-          </div>
 
           {archive.length > 0 && (
             <section>
