@@ -54,7 +54,7 @@ jobs:
     - name: Wait for runner memory headroom
       run: |
         set -euo pipefail
-        MIN_MB=2500
+        MIN_MB=1500
         for i in $(seq 1 24); do
           FREE_MB=$(awk '/MemAvailable/ { printf "%d", $2/1024 }' /proc/meminfo)
           LOAD1=$(cut -d' ' -f1 /proc/loadavg)
