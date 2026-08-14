@@ -257,3 +257,6 @@ RUN-MIGRATION.md
 .tools/
 test-results.json/
 .lighthouseci/
+
+# gh-aw audit downloads (`gh aw audit <run-id>`)
+.github/aw/logs/
