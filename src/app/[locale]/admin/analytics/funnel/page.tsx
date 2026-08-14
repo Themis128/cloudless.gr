@@ -138,8 +138,7 @@ export default function SearchFunnelPage() {
     };
   }, [days, load]);
 
-  const compare =
-    data?.configured && data.rows.length > 0 ? buildFunnelAbCompare(data.rows) : null;
+  const compare = data?.configured && data.rows.length > 0 ? buildFunnelAbCompare(data.rows) : null;
 
   return (
     <div className="space-y-6">
