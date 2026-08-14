@@ -7,10 +7,10 @@ import {
   resolveOrCreateCustomerByEmail,
   type AdminInvoiceSummary,
 } from "@/lib/stripe";
+import { isValidEmail } from "@/lib/validation";
 
 export type { AdminInvoiceSummary };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CUS_RE = /^cus_[a-zA-Z0-9]+$/;
 const INV_RE = /^in_[a-zA-Z0-9]+$/;
 
@@ -81,8 +81,11 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Invalid customerId format" }, { status: 400 });
         }
       } else {
-        if (!EMAIL_RE.test(email)) {
-          return NextResponse.json({ error: "Valid email or customerId required" }, { status: 400 });
+        if (!isValidEmail(email)) {
+          return NextResponse.json(
+            { error: "Valid email or customerId required" },
+            { status: 400 }
+          );
         }
         const resolved = await resolveOrCreateCustomerByEmail(email);
         if (!resolved) {

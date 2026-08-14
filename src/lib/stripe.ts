@@ -141,12 +141,8 @@ export interface AdminInvoiceSummary {
 }
 
 function mapInvoice(inv: Stripe.Invoice): AdminInvoiceSummary {
-  const customer = inv.customer as
-    | string
-    | { id?: string; email?: string | null }
-    | null;
-  const customerId =
-    typeof customer === "string" ? customer : (customer?.id ?? null);
+  const customer = inv.customer as string | { id?: string; email?: string | null } | null;
+  const customerId = typeof customer === "string" ? customer : (customer?.id ?? null);
   const customerEmail =
     inv.customer_email ??
     (typeof customer === "object" && customer ? (customer.email ?? null) : null);
@@ -174,9 +170,7 @@ export async function listRecentInvoices(
 
   const list = await stripe.invoices.list({
     limit: Math.min(Math.max(limit, 1), 50),
-    ...(status && status !== "all"
-      ? { status: status as Stripe.InvoiceListParams.Status }
-      : {}),
+    ...(status && status !== "all" ? { status: status as Stripe.InvoiceListParams.Status } : {}),
     expand: ["data.customer"],
   });
 

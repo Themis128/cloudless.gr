@@ -164,7 +164,7 @@ export default function InvoicesPage() {
           <button
             type="submit"
             disabled={creating}
-            className="border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan whitespace-nowrap rounded-lg border px-3 py-2 font-mono text-xs disabled:opacity-50"
+            className="border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan rounded-lg border px-3 py-2 font-mono text-xs whitespace-nowrap disabled:opacity-50"
           >
             {creating ? "…" : "Draft"}
           </button>
@@ -223,7 +223,7 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-4 py-2">
                       <span
-                        className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${STATUS_COLORS[inv.status] ?? "text-slate-400 border-slate-700"}`}
+                        className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${STATUS_COLORS[inv.status] ?? "border-slate-700 text-slate-400"}`}
                       >
                         {inv.status}
                       </span>
