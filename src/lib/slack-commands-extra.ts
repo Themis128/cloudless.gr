@@ -439,13 +439,13 @@ export async function buildSubscribersBlocks(userId: string): Promise<unknown[]>
 }
 
 // ---------------------------------------------------------------------------
-// /cloudless-cache — flush Notion cache
+// /cloudless-cache — flush CMS cache
 // ---------------------------------------------------------------------------
 
 export async function buildCacheFlushBlocks(userId: string, prefix?: string): Promise<unknown[]> {
   try {
-    const { invalidateCache } = await import("@/lib/notion-cache");
-    const flushed = invalidateCache(prefix);
+    const { invalidateCache } = await import("@/lib/content-cache");
+    invalidateCache(prefix);
     return [
       {
         type: "header",
@@ -461,7 +461,7 @@ export async function buildCacheFlushBlocks(userId: string, prefix?: string): Pr
           type: "mrkdwn",
           text: prefix
             ? `Flushed cache keys matching \`${prefix}\`.`
-            : "Flushed all Notion cache keys.",
+            : "Flushed all CMS cache keys.",
         },
       },
       {

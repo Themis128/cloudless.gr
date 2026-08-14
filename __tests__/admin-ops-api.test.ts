@@ -2,7 +2,6 @@
  * Unit tests for admin ops routes:
  *   GET  /api/admin/ops/monitor
  *   PUT  /api/admin/ops/errors/[id]
- *   GET  /api/admin/notion/search
  *   GET  /api/admin/crm/tickets
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -135,81 +134,6 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     );
     expect(res.status).toBe(200);
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith("abc", "resolved");
-  });
-});
-
-// ── /api/admin/notion/search ──────────────────────────────────────────────────
-
-const mockSearchPages = vi.fn();
-const mockSearchDatabases = vi.fn();
-const mockListUsers = vi.fn();
-const mockGetDatabaseSchema = vi.fn();
-vi.mock("@/lib/notion-search", () => ({
-  searchPages: (...a: unknown[]) => mockSearchPages(...a),
-  searchDatabases: (...a: unknown[]) => mockSearchDatabases(...a),
-  listUsers: (...a: unknown[]) => mockListUsers(...a),
-  getDatabaseSchema: (...a: unknown[]) => mockGetDatabaseSchema(...a),
-}));
-vi.mock("@/lib/api-errors", () => ({
-  mapIntegrationError: () => null,
-}));
-
-describe("GET /api/admin/notion/search", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it("returns 401 when not admin", async () => {
-    adminFail();
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?q=test"));
-    expect(res.status).toBe(401);
-  });
-
-  it("returns users list when type=users", async () => {
-    adminOk();
-    mockListUsers.mockResolvedValue([{ id: "u1", name: "Alice" }]);
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=users"));
-    const data = await res.json();
-    expect(data.users).toHaveLength(1);
-  });
-
-  it("returns 400 when type=schema without database_id", async () => {
-    adminOk();
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=schema"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns database schema when type=schema with database_id", async () => {
-    adminOk();
-    mockGetDatabaseSchema.mockResolvedValue({ properties: {} });
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/notion/search?type=schema&database_id=db-123")
-    );
-    const data = await res.json();
-    expect(data.schema).toBeDefined();
-  });
-
-  it("returns database results when type=database", async () => {
-    adminOk();
-    mockSearchDatabases.mockResolvedValue([]);
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/notion/search?type=database&q=test")
-    );
-    expect(res.status).toBe(200);
-  });
-
-  it("defaults to searching all pages", async () => {
-    adminOk();
-    mockSearchPages.mockResolvedValue([]);
-    const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?q=test"));
-    expect(res.status).toBe(200);
   });
 });
 

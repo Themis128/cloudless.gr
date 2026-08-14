@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cached, invalidateCache } from "@/lib/notion-cache";
+import { cached, invalidateCache } from "@/lib/content-cache";
 
-describe("notion-cache.ts", () => {
+describe("content-cache.ts", () => {
   beforeEach(() => {
     invalidateCache();
   });
@@ -111,12 +111,12 @@ describe("notion-cache.ts", () => {
 
     it("clears keys matching a prefix", async () => {
       const fetcher = vi.fn().mockResolvedValue("v");
-      await cached("notion:blog:1", fetcher);
-      await cached("notion:blog:2", fetcher);
+      await cached("cms:blog:1", fetcher);
+      await cached("cms:blog:2", fetcher);
       await cached("stripe:products", fetcher);
-      invalidateCache("notion:blog");
-      await cached("notion:blog:1", fetcher);
-      await cached("notion:blog:2", fetcher);
+      invalidateCache("cms:blog");
+      await cached("cms:blog:1", fetcher);
+      await cached("cms:blog:2", fetcher);
       await cached("stripe:products", fetcher);
       expect(fetcher).toHaveBeenCalledTimes(5);
     });

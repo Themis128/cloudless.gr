@@ -7,6 +7,7 @@ import type {
   Contact360Event,
   Contact360Note,
   Contact360Related,
+  Contact360Scores,
 } from "@/lib/crm-contact-360-shared";
 import { contactDisplayName } from "@/lib/crm-contact-360-shared";
 
@@ -128,6 +129,65 @@ function AttributionBlock({ attribution }: { attribution: Contact360Attribution 
   );
 }
 
+function hasScores(scores: Contact360Scores): boolean {
+  return (
+    scores.rfmScore != null ||
+    scores.churnScore != null ||
+    Boolean(scores.riskBand) ||
+    scores.frequency != null ||
+    scores.monetary != null
+  );
+}
+
+function ScoresBlock({ scores }: { scores: Contact360Scores }) {
+  if (!hasScores(scores)) {
+    return <Empty>No RFM/churn row for this email in gold parquet</Empty>;
+  }
+  const band = scores.riskBand || "—";
+  const bandClass =
+    band === "at_risk" || band === "high"
+      ? "text-neon-magenta"
+      : band === "medium"
+        ? "text-yellow-400"
+        : "text-neon-green";
+  return (
+    <dl className="grid grid-cols-2 gap-3 font-mono text-xs text-slate-300 sm:grid-cols-3">
+      <div>
+        <dt className={LABEL}>RFM</dt>
+        <dd className="mt-1 text-white">{scores.rfmScore ?? "—"}</dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Recency</dt>
+        <dd className="mt-1 text-white">
+          {scores.recencyDays != null ? `${scores.recencyDays}d` : "—"}
+        </dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Frequency</dt>
+        <dd className="mt-1 text-white">{scores.frequency ?? "—"}</dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Monetary</dt>
+        <dd className="mt-1 text-white">{formatMoney(scores.monetary)}</dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Churn</dt>
+        <dd className="mt-1 text-white">
+          {scores.churnScore != null ? scores.churnScore.toFixed(2) : "—"}
+        </dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Risk</dt>
+        <dd className={`mt-1 ${bandClass}`}>{band}</dd>
+      </div>
+      <div>
+        <dt className={LABEL}>Last purchase</dt>
+        <dd className="mt-1 text-white">{formatDate(scores.lastPurchaseAt)}</dd>
+      </div>
+    </dl>
+  );
+}
+
 export function Contact360View({ data }: { data: Contact360 }) {
   const { contact, stripe, account } = data;
   const name = contactDisplayName(contact);
@@ -167,6 +227,11 @@ export function Contact360View({ data }: { data: Contact360 }) {
       <section className={CARD}>
         <h2 className="font-heading mb-3 text-sm font-semibold text-white">Attribution</h2>
         <AttributionBlock attribution={data.attribution} />
+      </section>
+
+      <section className={CARD}>
+        <h2 className="font-heading mb-3 text-sm font-semibold text-white">RFM / churn</h2>
+        <ScoresBlock scores={data.scores} />
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

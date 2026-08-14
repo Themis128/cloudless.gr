@@ -272,6 +272,54 @@ function appflowyActivity(workspaces, users) {
 	];
 }
 
+function rfmChurn(rfmRows, churnRows) {
+	const churnByEmail = new Map();
+	for (const row of churnRows || []) {
+		const email = String(row.email ?? "")
+			.toLowerCase()
+			.trim();
+		if (!email) continue;
+		churnByEmail.set(email, row);
+	}
+
+	const seen = new Set();
+	const out = [];
+	for (const row of rfmRows || []) {
+		const email = String(row.email ?? "")
+			.toLowerCase()
+			.trim();
+		if (!email) continue;
+		seen.add(email);
+		const churn = churnByEmail.get(email);
+		out.push({
+			email,
+			recency_days: Number(row.recency_days) || 0,
+			frequency: Number(row.frequency) || 0,
+			monetary: Number(row.monetary) || 0,
+			rfm_score: Number(row.rfm_score) || 0,
+			last_purchase_at: String(row.last_purchase_at ?? ""),
+			churn_score: churn ? Number(churn.churn_score) || 0 : null,
+			risk_band: churn ? String(churn.risk_band ?? "") : "",
+		});
+	}
+
+	for (const [email, churn] of churnByEmail) {
+		if (seen.has(email)) continue;
+		out.push({
+			email,
+			recency_days: Number(churn.recency_days) || 0,
+			frequency: null,
+			monetary: null,
+			rfm_score: null,
+			last_purchase_at: "",
+			churn_score: Number(churn.churn_score) || 0,
+			risk_band: String(churn.risk_band ?? ""),
+		});
+	}
+
+	return out.sort((a, b) => (Number(b.monetary) || 0) - (Number(a.monetary) || 0));
+}
+
 async function buildFreshness(keys) {
 	const { r2Head } = await import("./_r2-config.mjs");
 	const sources = {};
@@ -375,6 +423,14 @@ async function main() {
 			: sectionErr("appflowy_activity", "missing appflowy parquet")
 	);
 
+	const rfm = await safeParquet("ml-parquet/scores_rfm.parquet");
+	const churn = await safeParquet("ml-parquet/scores_churn.parquet");
+	sections.push(
+		rfm || churn
+			? sectionOk("rfm_churn", rfmChurn(rfm, churn))
+			: sectionErr("rfm_churn", "missing rfm/churn parquet")
+	);
+
 	const freshnessKeys = [
 		"lake/gsc-keywords/keywords.parquet",
 		"lake/transactions/transactions.parquet",
@@ -385,6 +441,7 @@ async function main() {
 		"lake/postiz-posts/posts.parquet",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",
+		"ml-parquet/scores_churn.parquet",
 		"lake/clients/clients.parquet",
 	];
 	const sources = await buildFreshness(freshnessKeys);

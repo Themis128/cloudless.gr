@@ -25,7 +25,7 @@ Percentages in the artifact (~75% marketing, ~60% CRM, ~15% ERP) are a snapshot,
 | --------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Done (this branch)** | Unified admin contact page `/admin/crm/[id]`                                             | Highest-leverage CRM gap: EspoCRM, Stripe, and D1 are already populated; nothing joins them               | Join by email. No new database.                                      |
 | **Done (this branch)** | Gate EspoCRM Opportunity create on lead score ≥ 65                                              | Contact form already scores leads and Slack already shows the score; every inbound currently opens a deal | Keep Slack + ActiveCampaign `enrollLeadInAutomation` for all inbound |
-| **Done (this branch)** | Delete residual Notion fallback in `cms-provider.ts` and public CMS routes | CMS is AppFlowy; do not revive Notion admin/webhooks | `notion-*.ts` type files remain as AppFlowy re-export sources; leftover `/admin/notion/*` pages still a Wait |
+| **Done (this branch)** | Delete residual Notion fallback in `cms-provider.ts` and public CMS routes | CMS is AppFlowy; do not revive Notion admin/webhooks | Adapters deleted; types/static live in `cms-static.ts`; `/admin/notion/*` redirects to AppFlowy |
 | **Done (this branch)** | Surface gold `attribution` on the contact 360 page                                              | D1 UTM attribution already materializes in `admin-datalake.json`; no new dashboard                        | Join by email / campaign — do not build a CDP                        |
 
 ## Do next (after the contact page proves matching)
@@ -85,7 +85,7 @@ Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo fro
 
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
-| Wait | Overlay RFM / churn parquet on `/admin/crm/[id]` | Scores are already keyed by email in `ml-parquet/` | Join-only; still not a CDP |
+| **Done (this branch)** | Overlay RFM / churn parquet on `/admin/crm/[id]` | Scores are already keyed by email in `ml-parquet/` | Gold `rfm_churn` section + email join; still not a CDP |
 | Wait | GSC dimension ETL (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs are stubs | Hide empty tabs until ETL exists |
 | Wait | LinkedIn-only ROI → other ad channels in gold | `getRoiFromLake` reports `configured=false` for Google/TikTok/X/Meta | Keep `roi.ts` live adapters off admin routes |
 | Wait | R2 Data Catalog / R2 SQL | Optional explore SQL without Athena | Dashboards stay on gold snapshots (`datalake.md`) |

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { invalidateCache } from "@/lib/notion-cache";
+import { invalidateCache } from "@/lib/content-cache";
 
 import { mapIntegrationError } from "@/lib/api-errors";
 
 /**
  * POST /api/admin/cache
  *
- * Flushes the in-memory Notion cache. Pass an optional `prefix` in the JSON body
+ * Flushes the in-memory CMS cache. Pass an optional `prefix` in the JSON body
  * to target a specific cache namespace (e.g. "blog", "forms").
  * Without a prefix, the entire cache is cleared.
  *

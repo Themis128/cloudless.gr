@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { invalidateCache } from "@/lib/notion-cache";
+import { invalidateCache } from "@/lib/content-cache";
 
 import { mapIntegrationError } from "@/lib/api-errors";
 

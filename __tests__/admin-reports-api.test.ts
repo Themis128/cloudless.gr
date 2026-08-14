@@ -28,14 +28,6 @@ vi.mock("@/lib/ssm-config", () => ({
   resetSsmCache: vi.fn(),
 }));
 
-vi.mock("@/lib/notion-reports", () => ({
-  notionListReports: vi.fn().mockResolvedValue(null),
-  notionGetReport: vi.fn().mockResolvedValue(null),
-  notionCreateReport: vi.fn().mockResolvedValue(null),
-  notionUpdateReport: vi.fn().mockResolvedValue(false),
-  notionDeleteReport: vi.fn().mockResolvedValue(false),
-}));
-
 vi.mock("@/lib/integrations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/integrations")>();
   return {
@@ -80,13 +72,6 @@ describe("Admin Reports API routes", () => {
     getPipelineStatsMock.mockResolvedValue({ totalDeals: 5, totalValue: 5000, byStage: {} });
     getEmailStatsMock.mockResolvedValue({ totalContacts: 300, totalCampaigns: 10, totalLists: 2 });
     getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "" });
-    // Re-apply Notion/integrations mocks after clearAllMocks
-    const notionReports = await import("@/lib/notion-reports");
-    vi.mocked(notionReports.notionListReports).mockResolvedValue(null);
-    vi.mocked(notionReports.notionGetReport).mockResolvedValue(null);
-    vi.mocked(notionReports.notionCreateReport).mockResolvedValue(null);
-    vi.mocked(notionReports.notionUpdateReport).mockResolvedValue(false);
-    vi.mocked(notionReports.notionDeleteReport).mockResolvedValue(false);
     const integrations = await import("@/lib/integrations");
     vi.mocked(integrations.getIntegrationsAsync).mockResolvedValue({});
     await clearReports();

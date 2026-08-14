@@ -1,9 +1,7 @@
 /**
  * Unit tests for remaining uncovered API routes:
  *   GET      /api/admin/esp32
- *   GET/POST /api/admin/esp32/notion-sync
  *   GET      /api/cron/slack-digest
- *   GET      /api/notion-image
  *   GET      /api/user/purchases
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -55,55 +53,6 @@ describe("GET /api/admin/esp32", () => {
     expect(res.status).toBe(404);
     expect(data.offline).toBe(true);
     delete process.env.ALERT_API_URL;
-  });
-});
-
-// ── /api/admin/esp32/notion-sync ─────────────────────────────────────────────
-
-const mockIsEsp32NotionConfigured = vi.fn();
-const mockGetEsp32NotionConfig = vi.fn();
-const mockReadEsp32DevicesFromNotion = vi.fn();
-const mockUpsertEsp32DeviceInNotion = vi.fn();
-vi.mock("@/lib/notion-esp32", () => ({
-  isEsp32NotionConfigured: (...a: unknown[]) => mockIsEsp32NotionConfigured(...a),
-  getEsp32NotionConfig: (...a: unknown[]) => mockGetEsp32NotionConfig(...a),
-  readEsp32DevicesFromNotion: (...a: unknown[]) => mockReadEsp32DevicesFromNotion(...a),
-  upsertEsp32DeviceInNotion: (...a: unknown[]) => mockUpsertEsp32DeviceInNotion(...a),
-}));
-describe("GET /api/admin/esp32/notion-sync", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it("returns 401 when not admin", async () => {
-    adminFail();
-    const { GET } = await import("@/app/api/admin/esp32/notion-sync/route");
-    const res = await GET(req("http://localhost/api/admin/esp32/notion-sync"));
-    expect(res.status).toBe(401);
-  });
-
-  it("returns configured:false when not configured", async () => {
-    adminOk();
-    mockGetEsp32NotionConfig.mockResolvedValue({});
-    mockIsEsp32NotionConfigured.mockReturnValue(false);
-    const { GET } = await import("@/app/api/admin/esp32/notion-sync/route");
-    const res = await GET(req("http://localhost/api/admin/esp32/notion-sync"));
-    const data = await res.json();
-    expect(data.configured).toBe(false);
-    expect(data.devices).toEqual([]);
-  });
-
-  it("returns devices from Notion when configured", async () => {
-    adminOk();
-    mockGetEsp32NotionConfig.mockResolvedValue({ NOTION_ESP32_DEVICES_DB_ID: "db-1" });
-    mockIsEsp32NotionConfigured.mockReturnValue(true);
-    mockReadEsp32DevicesFromNotion.mockResolvedValue([{ id: "d1", name: "ESP32-01" }]);
-    const { GET } = await import("@/app/api/admin/esp32/notion-sync/route");
-    const res = await GET(req("http://localhost/api/admin/esp32/notion-sync"));
-    const data = await res.json();
-    expect(data.configured).toBe(true);
-    expect(data.devices).toHaveLength(1);
   });
 });
 
@@ -165,81 +114,6 @@ describe("GET /api/cron/slack-digest", () => {
     const res = await GET(req("http://localhost/api/cron/slack-digest"));
     const data = await res.json();
     expect(data.ok).toBe(true);
-  });
-});
-
-// ── /api/notion-image ─────────────────────────────────────────────────────────
-
-const mockNotionFetch = vi.fn();
-vi.mock("@/lib/notion", async (orig) => ({
-  ...(await orig<typeof import("@/lib/notion")>()),
-  notionFetch: (...a: unknown[]) => mockNotionFetch(...a),
-}));
-
-describe("GET /api/notion-image", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it("returns 400 when id missing", async () => {
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 for invalid id format", async () => {
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image?id=not-a-uuid"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 for invalid type", async () => {
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(
-      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012&type=invalid")
-    );
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 404 when no file URL found in block", async () => {
-    mockNotionFetch.mockResolvedValue({ type: "paragraph", paragraph: {} });
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(
-      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
-    );
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 403 for untrusted file URL", async () => {
-    mockNotionFetch.mockResolvedValue({
-      type: "image",
-      image: { file: { url: "https://evil.com/image.jpg" } },
-    });
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(
-      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
-    );
-    expect(res.status).toBe(403);
-  });
-
-  it("proxies image for valid trusted URL", async () => {
-    mockNotionFetch.mockResolvedValue({
-      type: "image",
-      image: { file: { url: "https://files.notion.so/image.jpg?sig=abc" } },
-    });
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(new Uint8Array([1, 2, 3]), {
-        status: 200,
-        headers: { "Content-Type": "image/jpeg" },
-      })
-    );
-    const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(
-      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
-    );
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
   });
 });
 
