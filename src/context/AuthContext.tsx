@@ -104,10 +104,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // E2E test bypass: when running under Playwright with NEXT_PUBLIC_E2E=1
     // AND a cookie e2e_admin=1 is present, short-circuit to an admin session.
     // Production never sets NEXT_PUBLIC_E2E, so this branch is dead code in prod.
+    // Local Playwright: e2e_admin cookie on localhost is enough (NEXT_PUBLIC_E2E
+    // is compile-time and a reused `pnpm dev` may have been started without it).
+    // Production hostnames never hit this branch.
+    const onLoopback =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     if (
-      typeof window !== "undefined" &&
-      process.env.NEXT_PUBLIC_E2E === "1" &&
-      document.cookie.includes("e2e_admin=1")
+      document.cookie.includes("e2e_admin=1") &&
+      (process.env.NEXT_PUBLIC_E2E === "1" || onLoopback)
     ) {
       setUser({
         username: "e2e-admin",

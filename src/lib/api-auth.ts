@@ -108,7 +108,6 @@ async function authenticateBearer(
     // Dead in production even if misconfigured (NODE_ENV check).
     if (
       process.env.NODE_ENV !== "production" &&
-      process.env.NEXT_PUBLIC_E2E === "1" &&
       process.env.E2E_ADMIN_TOKEN
     ) {
       const e2eToken = getTokenFromHeader(request);

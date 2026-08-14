@@ -30,10 +30,8 @@ test.describe("CMS, campaigns, legal", () => {
     const res = await page.goto("/en/campaigns/shop-online");
     expect(res?.status()).toBeLessThan(400);
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 20_000 });
-    const cta = page.locator('a[href*="checkout"], a[href*="contact"], button').filter({
-      hasText: /starter|choose|shop|contact|fit/i,
-    });
-    await expect(cta.first()).toBeVisible();
+    const cta = page.locator(".cl-cam-page a[href*='checkout'], .cl-tier__cta, .cl-cam-foot a");
+    await expect(cta.filter({ visible: true }).first()).toBeVisible();
   });
 
   test("legal pages have a heading and a main landmark", async ({ page }) => {

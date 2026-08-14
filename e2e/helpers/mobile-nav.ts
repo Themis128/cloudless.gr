@@ -22,5 +22,8 @@ export async function clickNavHref(page: Page, hrefPart: string): Promise<void> 
     .filter({ visible: true })
     .first();
   await expect(link).toBeVisible({ timeout: 10_000 });
-  await link.click({ force: true });
+  await Promise.all([
+    page.waitForURL((url) => url.pathname.includes(hrefPart), { timeout: 15_000 }),
+    link.click({ force: true }),
+  ]);
 }

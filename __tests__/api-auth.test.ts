@@ -286,6 +286,17 @@ describe("requireAuth E2E_ADMIN_TOKEN bypass (test-only)", () => {
     delete process.env.E2E_ADMIN_TOKEN;
   });
 
+  it("bypasses with a matching E2E_ADMIN_TOKEN even when NEXT_PUBLIC_E2E is unset", async () => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_E2E;
+    process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
+    const { requireAuth } = await import("@/lib/api-auth");
+    const result = await requireAuth(makeRequest("e2e-secret-abc"));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.user.sub).toBe("e2e-admin");
+    delete process.env.E2E_ADMIN_TOKEN;
+  });
+
   it("does NOT bypass when Bearer token doesn't match E2E_ADMIN_TOKEN", async () => {
     vi.resetModules();
     process.env.NEXT_PUBLIC_E2E = "1";

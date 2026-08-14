@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import type { StoreProduct } from "@/lib/store-products";
 
 // --- Types ---
@@ -114,13 +114,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     items: [],
     isOpen: false,
   });
-
-  // Hydrate from localStorage on mount, then persist. The persist effect
-  // must not run on the empty initial state — that would wipe a saved cart
-  // before hydrate reads it (and on locale-layout remounts).
   const [hydrated, setHydrated] = useState(false);
+  const hydratedRef = useRef(false);
+  const pendingRef = useRef<Exclude<CartAction, { type: "HYDRATE" }>[]>([]);
+
+  const run = useCallback((action: Exclude<CartAction, { type: "HYDRATE" }>) => {
+    if (!hydratedRef.current) {
+      pendingRef.current.push(action);
+      return;
+    }
+    dispatch(action);
+  }, []);
+
+  // Hydrate from localStorage first. Mutations that arrive before that
+  // (Playwright click on a full page.goto, locale-layout remount) queue so
+  // they cannot be overwritten by HYDRATE or wipe storage via persist.
   useEffect(() => {
     dispatch({ type: "HYDRATE", items: loadCart() });
+    hydratedRef.current = true;
+    const queued = pendingRef.current;
+    pendingRef.current = [];
+    for (const action of queued) dispatch(action);
     setHydrated(true);
   }, []);
   useEffect(() => {
@@ -133,13 +147,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value: CartContextType = {
     ...state,
-    addItem: (product) => dispatch({ type: "ADD_ITEM", product }),
-    removeItem: (productId) => dispatch({ type: "REMOVE_ITEM", productId }),
-    updateQuantity: (productId, quantity) =>
-      dispatch({ type: "UPDATE_QUANTITY", productId, quantity }),
-    clearCart: () => dispatch({ type: "CLEAR_CART" }),
-    toggleCart: () => dispatch({ type: "TOGGLE_CART" }),
-    closeCart: () => dispatch({ type: "CLOSE_CART" }),
+    addItem: (product) => run({ type: "ADD_ITEM", product }),
+    removeItem: (productId) => run({ type: "REMOVE_ITEM", productId }),
+    updateQuantity: (productId, quantity) => run({ type: "UPDATE_QUANTITY", productId, quantity }),
+    clearCart: () => run({ type: "CLEAR_CART" }),
+    toggleCart: () => run({ type: "TOGGLE_CART" }),
+    closeCart: () => run({ type: "CLOSE_CART" }),
     totalItems,
     totalPrice,
   };

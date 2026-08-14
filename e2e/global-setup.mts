@@ -129,4 +129,16 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     }
   }
   console.log("[e2e:preflight] Warmed admin API compile paths.");
+
+  const e2eToken = process.env.E2E_ADMIN_TOKEN || "e2e-admin-token-do-not-use-in-prod";
+  const adminProbe = await fetch(`${BASE_URL}/api/admin/users`, {
+    headers: { Authorization: `Bearer ${e2eToken}`, Accept: "application/json" },
+  });
+  if (adminProbe.status === 401 || adminProbe.status === 403) {
+    throw new Error(
+      `[e2e:preflight] GET /api/admin/users returned ${adminProbe.status} with the e2e admin token.\n` +
+        `The process on :4000 was not started with E2E_ADMIN_TOKEN (a leftover \`pnpm dev\`).\n` +
+        `Fix: lsof -ti:4000 | xargs -r kill && let Playwright start the server.`
+    );
+  }
 }
