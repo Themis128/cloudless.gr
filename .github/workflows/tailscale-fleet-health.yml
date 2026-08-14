@@ -1,0 +1,167 @@
+# Inventory Tailscale devices, remediate managed Linux hosts, upgrade to latest.
+#
+# Inventory (API) runs on ubuntu-latest.
+# Fix/upgrade SSH runs on the omv self-hosted runner (LAN to both Pis) because
+# GH-hosted Tailscale SSH has been unreliable for OMV_SSH_KEY / ACL paths.
+name: Tailscale fleet health + upgrade
+
+on:
+  schedule:
+    # Weekly Sunday 04:15 UTC — check + upgrade Pis to latest stable.
+    - cron: '15 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: Restart inactive tailscaled on managed hosts
+        required: false
+        default: true
+        type: boolean
+      upgrade:
+        description: apt-upgrade Tailscale to latest stable on managed hosts
+        required: false
+        default: true
+        type: boolean
+      dry_run:
+        description: Print plan only (no restart / apt)
+        required: false
+        default: false
+        type: boolean
+      fail_on_issues:
+        description: Fail inventory job if managed hosts are offline/outdated
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tailscale-fleet-health
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      managed_offline: ${{ steps.summary.outputs.managed_offline }}
+      managed_outdated: ${{ steps.summary.outputs.managed_outdated }}
+      latest: ${{ steps.summary.outputs.latest }}
+    env:
+      TS_CLIENT_ID: ${{ secrets.TS_CLIENT_ID }}
+      TS_CLIENT_SECRET: ${{ secrets.TS_CLIENT_SECRET }}
+      TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+      TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+      TS_API_KEY: ${{ secrets.TS_API_KEY }}
+      TAILSCALE_TAILNET: tail4ecae1.ts.net
+      FAIL_ON_ISSUES: ${{ inputs.fail_on_issues && '1' || '0' }}
+      JSON_OUT: ${{ github.workspace }}/tailscale-fleet-report.json
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Install jq
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+    - name: Check Tailscale OAuth / API secrets
+      run: |
+        if [ -z "${TS_API_KEY:-}" ] && { [ -z "${TS_CLIENT_ID:-}${TAILSCALE_OAUTH_CLIENT_ID:-}" ] || [ -z "${TS_CLIENT_SECRET:-}${TAILSCALE_OAUTH_CLIENT_SECRET:-}${TAILSCALE_OAUTH_SECRET:-}" ]; }; then
+          echo "::error::Need TS_API_KEY or TS_CLIENT_ID+TS_CLIENT_SECRET (OAuth) in repo secrets"
+          exit 1
+        fi
+        echo "Tailscale API credentials present"
+
+    - name: Inventory fleet
+      id: health
+      run: bash scripts/tailscale-fleet-health.sh
+
+    - name: Summarize
+      id: summary
+      run: |
+        REPORT="${JSON_OUT}"
+        echo "latest=$(jq -r .latest "$REPORT")" >> "$GITHUB_OUTPUT"
+        echo "managed_offline=$(jq -r '.managedOffline | join(",")' "$REPORT")" >> "$GITHUB_OUTPUT"
+        echo "managed_outdated=$(jq -r '.managedOutdated | join(",")' "$REPORT")" >> "$GITHUB_OUTPUT"
+        {
+          echo "### Tailscale fleet inventory"
+          echo ""
+          echo "- Latest stable: \`$(jq -r .latest "$REPORT")\`"
+          echo "- Managed offline: \`$(jq -r '.managedOffline | join(", ") // "none"' "$REPORT")\`"
+          echo "- Managed outdated: \`$(jq -r '.managedOutdated | join(", ") // "none"' "$REPORT")\`"
+          echo ""
+          echo '```'
+          jq -r '.devices[] | "\(.hostname)\t\(.os)\t\(.online)\t\(.version)\t\(.tags)"' "$REPORT"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a         # v7.0.1
+      with:
+        name: tailscale-fleet-report
+        path: tailscale-fleet-report.json
+        if-no-files-found: error
+        retention-days: 14
+
+  remediate:
+    needs: inventory
+    # Must run on omv — LAN SSH to both Pis; GH-hosted TS SSH is flaky.
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 20
+    # Schedule always remediates + upgrades. Dispatch uses inputs.
+    if: |
+      github.event_name == 'schedule' ||
+      inputs.fix == true ||
+      inputs.upgrade == true
+    env:
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+      FIX: ${{ github.event_name == 'schedule' && '1' || (inputs.fix && '1' || '0') }}
+      UPGRADE: ${{ github.event_name == 'schedule' && '1' || (inputs.upgrade && '1' || '0') }}
+      SSH_USER: tbaltzakis
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Remediating / upgrading managed hosts
+      run: |
+        echo "Inventory said offline=[${{ needs.inventory.outputs.managed_offline }}] outdated=[${{ needs.inventory.outputs.managed_outdated }}] latest=${{ needs.inventory.outputs.latest }}"
+        bash scripts/tailscale-fleet-upgrade.sh
+
+    - name: Post-upgrade local status
+      if: always()
+      run: |
+        echo "=== Local (omv runner) ==="
+        systemctl is-active tailscaled || true
+        tailscale version | head -3 || true
+        tailscale status --self || true
+        echo "=== Peer ping omv-ha ==="
+        tailscale ping -c 2 --timeout=5s omv-ha 2>&1 || true
+
+  notify:
+    needs: [inventory, remediate]
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Comment tracking issue on failure
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        INV="${{ needs.inventory.result }}"
+        REM="${{ needs.remediate.result }}"
+        if [ "$INV" = "success" ] && { [ "$REM" = "success" ] || [ "$REM" = "skipped" ]; }; then
+          echo "Fleet health OK — no issue comment"
+          exit 0
+        fi
+        BODY=$(cat <<EOF
+        ## Tailscale fleet health failed
+
+        - Inventory: \`$INV\`
+        - Remediates: \`$REM\`
+        - Offline: \`${{ needs.inventory.outputs.managed_offline }}\`
+        - Outdated: \`${{ needs.inventory.outputs.managed_outdated }}\`
+        - Latest: \`${{ needs.inventory.outputs.latest }}\`
+
+        Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        Manual: \`FIX=1 UPGRADE=1 bash scripts/tailscale-fleet-upgrade.sh\` on omv.
+        EOF
+        )
+        gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body "$BODY" || true
