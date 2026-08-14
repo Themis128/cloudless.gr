@@ -326,7 +326,6 @@ export async function createTicket(
  * Opportunity module has one pipeline backed by the `stage` enum.
  */
 export async function getPipelines(_objectType = "deals"): Promise<unknown[]> {
-  void _objectType;
   return [
     {
       id: "default",

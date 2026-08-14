@@ -60,9 +60,6 @@ function newEventId(): string {
 /**
  * Persist a generic analytics event to D1.
  * Returns true when written, false when D1 unavailable or invalid.
- *
- * @deprecated Name kept as trackS3Event for call-site compatibility during migration;
- *           no longer writes to S3.
  */
 export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean> {
   const event = typeof evt.event === "string" ? evt.event.trim().slice(0, 100) : "";

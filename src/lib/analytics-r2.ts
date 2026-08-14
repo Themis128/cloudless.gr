@@ -1,8 +1,8 @@
 /**
  * Analytics R2 Adapter
  *
- * Writes NDJSON to R2 (`DATALAKE_BUCKET`). There is no S3 fallback —
- * if the binding is missing the event is dropped with a warning.
+ * Writes NDJSON to R2 for Cloudflare Workers environment.
+ * Falls back to S3 for AWS Lambda environment.
  */
 
 import type { R2Bucket } from "@cloudflare/workers-types";

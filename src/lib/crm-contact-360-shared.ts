@@ -198,8 +198,9 @@ export function summarizeNote(raw: unknown): Contact360Note {
 }
 
 function asString(value: unknown): string {
-  if (value == null) return "";
-  return String(value).trim();
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
 }
 
 function asNumber(value: unknown): number {

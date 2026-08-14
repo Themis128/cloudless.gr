@@ -39,7 +39,9 @@ const EVENT_LIMIT = 40;
 export async function getContact360(id: string): Promise<Contact360 | null> {
   if (!isEspoRecordId(id)) return null;
   const raw = await getContact(id);
-  if (!raw || !String(raw.id ?? "").trim()) return null;
+  if (!raw) return null;
+  const rawId = typeof raw.id === "string" || typeof raw.id === "number" ? String(raw.id).trim() : "";
+  if (!rawId) return null;
 
   const contact = normalizeEspoContact(raw);
   const email = contact.email;
@@ -139,6 +141,12 @@ async function listEventsForEmail(
   return { events, touches };
 }
 
+function primitiveString(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}
+
 function touchFromEventRow(row: {
   source: string | null;
   medium: string | null;
@@ -151,9 +159,9 @@ function touchFromEventRow(row: {
   if (row.properties_json) {
     try {
       const props = JSON.parse(row.properties_json) as Record<string, unknown>;
-      if (!source) source = String(props.utm_source ?? props.source ?? "").trim();
-      if (!medium) medium = String(props.utm_medium ?? props.medium ?? "").trim();
-      if (!campaign) campaign = String(props.utm_campaign ?? props.campaign ?? "").trim();
+      if (!source) source = primitiveString(props.utm_source ?? props.source);
+      if (!medium) medium = primitiveString(props.utm_medium ?? props.medium);
+      if (!campaign) campaign = primitiveString(props.utm_campaign ?? props.campaign);
     } catch {
       // properties_json is best-effort
     }

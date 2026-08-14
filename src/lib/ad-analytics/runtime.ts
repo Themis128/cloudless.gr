@@ -13,12 +13,12 @@
  *        rendered as Block Kit / `NotificationBlock`.
  *
  * The orchestrator never imports a concrete adapter or channel directly.
- * Registered implementations: LinkedIn adapter + Slack channel only.
- * Other `AdPlatformId` / notify-channel ids are types, not implementations —
- * do not add Google/TikTok/X/Meta pollers or Discord/email notifiers from
- * the agency-platform inventory.
+ * Adding a new ad platform = implement `AdPlatformAdapter`, register in
+ * `ADAPTERS`. Adding a new notification surface = implement
+ * `NotificationChannel`, register in `CHANNELS`.
  *
- * See `skills/ad-analytics/SKILL.md` for the operating playbook.
+ * See `skills/ad-analytics/SKILL.md` for the operating playbook and the
+ * Notion architecture page for the design rationale.
  */
 
 import { getCampaign, campaigns as allCampaigns } from "@/data/campaigns";
