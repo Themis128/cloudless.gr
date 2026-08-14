@@ -83,6 +83,13 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     "/api/admin/appflowy/docs",
     "/api/admin/appflowy/submissions",
     "/api/admin/appflowy/tasks",
+    "/api/admin/appflowy/faqs",
+    "/api/admin/appflowy/case-studies",
+    "/api/admin/appflowy/services",
+    "/api/admin/appflowy/testimonials",
+    "/api/admin/users",
+    "/api/admin/client-portals",
+    "/api/admin/workspaces",
     "/api/admin/integrations/status",
     "/api/admin/ops/monitor",
     "/api/admin/analytics/datalake",
@@ -91,6 +98,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     "/api/admin/cost",
     "/api/admin/insights",
     "/api/admin/insights/revenue",
+    "/en/auth/login",
+    "/en/auth/signup",
   ];
   for (const pathname of warmPaths) {
     for (let attempt = 0; attempt < 8; attempt++) {

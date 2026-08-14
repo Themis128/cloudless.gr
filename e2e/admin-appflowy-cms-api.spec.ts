@@ -28,6 +28,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { adminRequest, ADMIN_TOKEN } from "./_internal/admin-fixture";
+import { requestUntilCompiled } from "./_internal/request-until-compiled";
 
 interface Endpoint {
   url: string;
@@ -70,40 +71,35 @@ const endpoints: Endpoint[] = [
 test.describe("Admin AppFlowy CMS APIs — unauthenticated", () => {
   for (const ep of endpoints) {
     test(`GET ${ep.url} rejects anon`, async ({ request }) => {
-      const r = await request.get(ep.url, { failOnStatusCode: false });
+      const r = await requestUntilCompiled(request, "get", ep.url);
       expect([401, 403]).toContain(r.status());
     });
 
     test(`POST ${ep.url} rejects anon`, async ({ request }) => {
-      const r = await request.post(ep.url, {
+      const r = await requestUntilCompiled(request, "post", ep.url, {
         data: ep.validPost,
-        failOnStatusCode: false,
       });
       // requireAdmin runs before any 501 "Create via AppFlowy UI" stub.
       expect([401, 403]).toContain(r.status());
     });
 
     test(`PATCH ${ep.url} rejects anon`, async ({ request }) => {
-      const r = await request.patch(ep.url, {
+      const r = await requestUntilCompiled(request, "patch", ep.url, {
         data: { pageId: "x" },
-        failOnStatusCode: false,
       });
       // Auth gate before write stubs — anon must never get ok:true.
       expect([401, 403]).toContain(r.status());
     });
 
     test(`DELETE ${ep.url} rejects anon`, async ({ request }) => {
-      const r = await request.delete(`${ep.url}?pageId=x`, {
-        failOnStatusCode: false,
-      });
+      const r = await requestUntilCompiled(request, "delete", `${ep.url}?pageId=x`);
       expect([401, 403]).toContain(r.status());
     });
   }
 
   test("Bearer with garbage token still rejected", async ({ request }) => {
-    const r = await request.get("/api/admin/appflowy/case-studies", {
+    const r = await requestUntilCompiled(request, "get", "/api/admin/appflowy/case-studies", {
       headers: { Authorization: "Bearer garbage" },
-      failOnStatusCode: false,
     });
     expect([401, 403]).toContain(r.status());
   });
@@ -134,7 +130,7 @@ test.describe("Admin AppFlowy CMS APIs — authenticated", () => {
     });
 
     test(`POST ${ep.url} rejects invalid JSON (AppFlowy admin contract)`, async ({ request }) => {
-      const r = await request.post(ep.url, {
+      const r = await requestUntilCompiled(request, "post", ep.url, {
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${ADMIN_TOKEN}`,
@@ -143,7 +139,6 @@ test.describe("Admin AppFlowy CMS APIs — authenticated", () => {
         // when Content-Type is application/json (which would yield a JSON string
         // and hit the required-field 400 instead of Invalid JSON).
         data: Buffer.from("{not-json", "utf8"),
-        failOnStatusCode: false,
       });
       // Auth + AppFlowy config gate first; then Invalid JSON → 400, or 503 if unbound.
       expect([400, 501, 503]).toContain(r.status());

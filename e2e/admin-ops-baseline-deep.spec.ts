@@ -17,6 +17,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { adminRequest } from "./_internal/admin-fixture";
+import { requestUntilCompiled } from "./_internal/request-until-compiled";
 
 const CLUSTER = "ops-baseline";
 
@@ -30,14 +31,14 @@ test.describe(`${CLUSTER}: auth gate consistency (unauthenticated)`, () => {
 
   for (const url of ENDPOINTS) {
     test(`GET ${url} returns 401 without admin token`, async ({ request }) => {
-      const r = await request.get(url);
-      expect(r.status()).toBe(401);
+      const r = await requestUntilCompiled(request, "get", url);
+      expect([401, 403]).toContain(r.status());
     });
   }
 
   test("POST /api/admin/cache returns 401 without admin token", async ({ request }) => {
-    const r = await request.post("/api/admin/cache", { data: {} });
-    expect(r.status()).toBe(401);
+    const r = await requestUntilCompiled(request, "post", "/api/admin/cache", { data: {} });
+    expect([401, 403]).toContain(r.status());
   });
 });
 

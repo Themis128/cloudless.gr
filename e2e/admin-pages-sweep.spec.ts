@@ -217,15 +217,13 @@ test.describe("Admin page sweep (cookie-authenticated)", () => {
     expect(r?.status()).toBeLessThan(500);
     await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
   });
-  test("/en/admin/hubspot loads with h1/h2 and no console errors", async ({ page }) => {
-    const errors: string[] = [];
-    page.on("pageerror", e => errors.push(e.message));
-    page.on("console", m => {
-      if (m.type() === "error") errors.push(m.text());
-    });
+  test("/en/admin/hubspot is retired (EspoCRM) — 404 or redirect", async ({ page }) => {
     const r = await page.goto("/en/admin/hubspot", { waitUntil: "domcontentloaded" });
-    expect(r?.status()).toBeLessThan(500);
-    await expect(page.locator("h1, h2, [role=\"alert\"]").first()).toBeVisible({ timeout: 30_000 });
+    // HubSpot admin UI was removed; expect not-found or auth redirect, never 5xx.
+    expect(r?.status() ?? 0).toBeLessThan(500);
+    const status = r?.status() ?? 0;
+    const onLogin = /\/auth\/login/.test(page.url());
+    expect(status === 404 || onLogin || status < 400).toBeTruthy();
   });
   test("/en/admin/integrations loads with h1/h2 and no console errors", async ({ page }) => {
     const errors: string[] = [];

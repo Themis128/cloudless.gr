@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { ADMIN_TOKEN } from "../_internal/admin-fixture";
 import { createAPIHelper, assertAdminRouteWired } from "../helpers/api-helpers";
+import { requestUntilCompiled } from "../_internal/request-until-compiled";
 
 /**
  * Comprehensive Admin API Test Suite
@@ -17,12 +18,7 @@ test.describe("Admin API - Comprehensive Testing", () => {
   // Test authentication requirements
   test.describe("Authentication Requirements", () => {
     test("should reject unauthenticated requests to admin endpoints", async ({ request }) => {
-      const unauthHelper = createAPIHelper(request, "http://localhost:4000", "Unauth Admin Test");
-      
-      const response = await unauthHelper.get("/api/admin/ab-tests", {
-        expectedStatus: [401, 403]
-      });
-      
+      const response = await requestUntilCompiled(request, "get", "/api/admin/ab-tests");
       expect([401, 403]).toContain(response.status());
     });
   });

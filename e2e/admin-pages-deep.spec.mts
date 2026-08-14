@@ -71,17 +71,27 @@ test.describe("Admin authenticated", () => {
     test(`auth ${route} — renders without 5xx`, async ({ page }) => {
       const fivexx: string[] = [];
       page.on("response", (r) => {
-        if (r.status() >= 500) fivexx.push(`${r.status()} ${r.url()}`);
+        // Document navigations only — admin pages fan out to Stripe/Postiz/etc.
+        // and those API 5xx/timeouts must not fail the page-render contract.
+        if (r.request().resourceType() === "document" && r.status() >= 500) {
+          fivexx.push(`${r.status()} ${r.url()}`);
+        }
       });
 
-      const resp = await page.goto(route, { waitUntil: "domcontentloaded" });
+      const resp = await page.goto(route, {
+        waitUntil: "domcontentloaded",
+        timeout: 45_000,
+      });
       expect(resp?.status(), `${route} returned ${resp?.status()}`).toBeLessThan(500);
 
-      await page.waitForLoadState("networkidle").catch(() => {});
-      await expect(page.locator("body")).toBeVisible();
+      // Do not wait for networkidle — Stripe/CMS polling can keep the page "busy"
+      // past the test budget (seen on /en/admin/subscriptions).
+      await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator("h1, h2, main, [role='alert']").first()).toBeVisible({
+        timeout: 30_000,
+      });
 
-      // Allow same-origin 5xx from optional sub-requests; only fail if the page itself errored
-      expect(fivexx.filter((s) => !s.includes("/api/"))).toEqual([]);
+      expect(fivexx).toEqual([]);
     });
   }
 });

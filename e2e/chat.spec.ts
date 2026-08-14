@@ -40,10 +40,19 @@ test.describe("Chat Widget", () => {
 });
 
 test.describe("Workers AI Integration", () => {
-  test("Workers AI doctor endpoint exists", async ({ request }) => {
-    const response = await request.get(
-      `${process.env.PLAYWRIGHT_BASE_URL || "http://localhost:4000"}/api/admin/ai/generate`
+  test("Workers AI generate endpoint is wired (POST-only)", async ({ request }) => {
+    // Route is POST /api/admin/ai/generate — GET proves the path exists (405)
+    // or auth gate (401/403). Missing route → 404.
+    const getRes = await request.get(
+      `${process.env.PLAYWRIGHT_BASE_URL || "http://localhost:4000"}/api/admin/ai/generate`,
     );
-    expect([200, 401, 403, 404]).toContain(response.status());
+    expect([401, 403, 404, 405]).toContain(getRes.status());
+
+    const postRes = await request.post(
+      `${process.env.PLAYWRIGHT_BASE_URL || "http://localhost:4000"}/api/admin/ai/generate`,
+      { data: { prompt: "ping" } },
+    );
+    // Unauth → 401/403; configured admin → 200/400; unbound Workers AI → 503.
+    expect([200, 400, 401, 403, 503]).toContain(postRes.status());
   });
 });

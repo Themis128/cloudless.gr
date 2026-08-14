@@ -19,8 +19,12 @@ interface RateLimitStore {
 
 const store = new Map<string, RateLimitStore>();
 
-// In dev, multiply limits by 100 so testing forms/APIs isn't frustrating.
-const DEV_MULTIPLIER = process.env.NODE_ENV === "development" ? 100 : 1;
+// In development, multiply limits by 100 so manual form testing isn't frustrating.
+// Playwright sets E2E_STRICT_RATE_LIMIT=1 so e2e can still assert 429 behavior.
+const DEV_MULTIPLIER =
+  process.env.NODE_ENV === "development" && process.env.E2E_STRICT_RATE_LIMIT !== "1"
+    ? 100
+    : 1;
 
 // Prune expired entries periodically to avoid memory growth.
 // Only runs when rate limiter is actually called.

@@ -78,6 +78,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { adminRequest } from "./_internal/admin-fixture";
+import { requestUntilCompiled } from "./_internal/request-until-compiled";
 
 const SENTINEL_ID = "sample-e2e-id";
 const SENTINEL_SLUG = "sample-e2e-slug";
@@ -206,16 +207,16 @@ test.describe("Admin API gap sweep — extra DELETEs (Postiz)", () => {
 test.describe("Postiz cron endpoints (unauthenticated — reject without 5xx)", () => {
   for (const url of ["/api/cron/postiz-sync", "/api/cron/postiz-oauth-check"] as const) {
     test(`GET ${url} unauthenticated`, async ({ request }) => {
-      const r = await request.get(url);
-      // Cron auth uses Bearer CRON_SECRET → 401 expected without it.
-      expect(r.status()).toBeGreaterThanOrEqual(200);
+      const r = await requestUntilCompiled(request, "get", url);
+      // Cron auth uses Bearer CRON_SECRET → 401/403 expected without it.
+      expect([401, 403, 405]).toContain(r.status());
     });
   }
 });
 
 test.describe("Postiz webhook receiver", () => {
   test("POST /api/webhooks/postiz unsigned → 401 unauthorized", async ({ request }) => {
-    const r = await request.post("/api/webhooks/postiz", {
+    const r = await requestUntilCompiled(request, "post", "/api/webhooks/postiz", {
       data: { event: "post.published", post: { id: "x" } },
     });
     // The verifier returns false on missing signature header AND on missing
@@ -227,7 +228,7 @@ test.describe("Postiz webhook receiver", () => {
 
 test.describe("Admin OAuth entry point", () => {
   test("GET /api/admin/oauth/tiktok — does not 5xx unauthenticated", async ({ request }) => {
-    const r = await request.get("/api/admin/oauth/tiktok", {
+    const r = await requestUntilCompiled(request, "get", "/api/admin/oauth/tiktok", {
       maxRedirects: 0,
     });
     // The OAuth entry point either redirects to TikTok (3xx) or rejects
@@ -246,14 +247,8 @@ test.describe("Cron endpoints (unauthenticated — should reject, never 5xx sile
 
   for (const url of CRON_GAPS) {
     test(`GET ${url} unauthenticated`, async ({ request }) => {
-      const r = await request.get(url);
-      // Cron routes are protected by Vercel Cron secret or similar.
-      // Unauthenticated must reject (401/403) or accept-and-noop (200);
-      // a 5xx without a clean rejection means the auth check itself threw.
-      expect(r.status()).toBeGreaterThanOrEqual(200);
-      // Allow 5xx because some handlers run the work and only fail at the
-      // backing-service call when creds are missing — same contract the
-      // existing cron specs use.
+      const r = await requestUntilCompiled(request, "get", url);
+      expect([401, 403, 405]).toContain(r.status());
     });
   }
 });
@@ -269,7 +264,7 @@ test.describe("Public dynamic API routes (sentinel slugs)", () => {
 
   for (const url of DYNAMIC_GETS) {
     test(`GET ${url} resolves cleanly`, async ({ request }) => {
-      const r = await request.get(url);
+      const r = await requestUntilCompiled(request, "get", url);
       // 200 (lucky guess), 404 (not found — expected), 401 (portal token
       // auth) are all acceptable. We only fail on no response at all.
       expect(r.status()).toBeGreaterThanOrEqual(200);
@@ -279,24 +274,24 @@ test.describe("Public dynamic API routes (sentinel slugs)", () => {
 
 test.describe("Public auth POST endpoints", () => {
   test("POST /api/auth/register with empty body returns 4xx", async ({ request }) => {
-    const r = await request.post("/api/auth/register", { data: {} });
+    const r = await requestUntilCompiled(request, "post", "/api/auth/register", { data: {} });
     expect(r.status()).toBeGreaterThanOrEqual(400);
     // 5xx is acceptable if Cognito isn't reachable in dev — we only need
     // the route to be wired and reject empty input.
   });
 
   test("POST /api/auth/resend-verification with empty body returns 4xx", async ({ request }) => {
-    const r = await request.post("/api/auth/resend-verification", { data: {} });
+    const r = await requestUntilCompiled(request, "post", "/api/auth/resend-verification", {
+      data: {},
+    });
     expect(r.status()).toBeGreaterThanOrEqual(400);
   });
 });
 
 test.describe("User profile API (unauthenticated)", () => {
-  test("GET /api/user/profile — unauth returns 401/403/404, never 5xx", async ({ request }) => {
-    const r = await request.get("/api/user/profile");
-    // Unauthenticated must be rejected by auth — 401/403. 404 is also
-    // acceptable when the route isn't exposed in the current build.
-    // 5xx here would mean the auth helper itself crashed before gating.
-    expect([401, 403, 404]).toContain(r.status());
+  test("GET /api/user/profile — unauth returns 401/403, never 5xx", async ({ request }) => {
+    const r = await requestUntilCompiled(request, "get", "/api/user/profile");
+    // Retry past Turbopack 404 — then auth gate must reject.
+    expect([401, 403]).toContain(r.status());
   });
 });

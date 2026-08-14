@@ -16,8 +16,10 @@ import { isNetworkError, isOriginDown } from "./k3s/_helpers";
 const runInfra = !!process.env.INFRA_SMOKE;
 const BASE_URL = process.env.CF_WORKERS_URL ?? "https://cloudless.gr";
 
-// Cloudflare Workers health check
+// Cloudflare Workers health check — production only (INFRA_SMOKE=1)
 test.describe("Cloudflare Workers health", () => {
+  test.skip(!runInfra, "Set INFRA_SMOKE=1 to run infrastructure tests");
+
    test("Workers health endpoint returns 200 with valid payload", async ({ request }) => {
      const response = await request.get(`${BASE_URL}/api/health`, {
        failOnStatusCode: false,

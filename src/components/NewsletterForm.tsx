@@ -69,6 +69,7 @@ export default function NewsletterForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={translate(locale, "newsletter.placeholder", "your@email.com")}
+            aria-label={translate(locale, "newsletter.placeholder", "your@email.com")}
             required
             className="bg-void focus:border-neon-cyan/50 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />

@@ -7,33 +7,32 @@
  */
 import { test, expect } from "./coverage";
 import { CRON_APIS } from "./helpers/coverage-routes";
+import { requestUntilCompiled } from "./_internal/request-until-compiled";
 
 const CRON_SECRET = process.env.CRON_SECRET || "";
 
 for (const api of CRON_APIS) {
   test(`${api} — without auth rejected`, async ({ request }) => {
-    const r = await request.get(api, { failOnStatusCode: false });
+    const r = await requestUntilCompiled(request, "get", api);
     expect([401, 403, 405]).toContain(r.status());
   });
 
   test(`${api} — wrong Bearer rejected`, async ({ request }) => {
-    const r = await request.get(api, {
+    const r = await requestUntilCompiled(request, "get", api, {
       headers: { Authorization: "Bearer wrong-token-12345" },
-      failOnStatusCode: false,
     });
     expect([401, 403, 405]).toContain(r.status());
   });
 
   test(`${api} — empty Bearer rejected`, async ({ request }) => {
-    const r = await request.get(api, {
+    const r = await requestUntilCompiled(request, "get", api, {
       headers: { Authorization: "Bearer " },
-      failOnStatusCode: false,
     });
     expect([401, 403, 405]).toContain(r.status());
   });
 
   test(`${api} — POST without auth rejected`, async ({ request }) => {
-    const r = await request.post(api, { data: {}, failOnStatusCode: false });
+    const r = await requestUntilCompiled(request, "post", api, { data: {} });
     expect([401, 403, 405]).toContain(r.status());
   });
 }
@@ -47,9 +46,8 @@ test.describe("Cron with valid CRON_SECRET", () => {
 
   for (const api of CRON_APIS) {
     test(`${api} — valid Bearer accepted`, async ({ request }) => {
-      const r = await request.get(api, {
+      const r = await requestUntilCompiled(request, "get", api, {
         headers: { Authorization: `Bearer ${CRON_SECRET}` },
-        failOnStatusCode: false,
       });
       // Valid auth: 200 (ran), 202 (queued), 204 (no work), 503 (downstream down) — never 401/403
       expect(r.status(), `${api} returned ${r.status()} with valid CRON_SECRET`).not.toBe(401);
