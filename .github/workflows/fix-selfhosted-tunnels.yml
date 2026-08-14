@@ -283,22 +283,41 @@ jobs:
         echo "Waiting 20s for cloudflared to propagate..."
         sleep 20
 
+        # Public curls hit Cloudflare Access for most self-hosted apps.
+        # 302 → Access login means DNS + tunnel ingress are healthy.
+        # 200/301/307 = app responded. 502/522/530 = tunnel/origin broken.
         check() {
           local name=$1 url=$2
-          CODE=$(curl -4 -sSL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null || echo "ERR")
-          echo "  [$name] $CODE  ($url)"
+          CODE=$(curl -4 -sS -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null || echo "ERR")
+          case "$CODE" in
+            200|301|302|303|307|401|403)
+              echo "  OK  [$name] $CODE  ($url)"
+              ;;
+            *)
+              echo "  BAD [$name] $CODE  ($url)"
+              return 1
+              ;;
+          esac
         }
 
-        echo "=== Self-hosted app health ==="
-        check "grafana  " "https://grafana.cloudless.gr/api/health"
-        check "kuma     " "https://kuma.cloudless.gr/"
-        check "n8n      " "https://n8n.cloudless.gr/"
-        check "ntfy     " "https://ntfy.cloudless.gr/"
-        check "espocrm  " "https://espocrm.cloudless.gr/"
-        check "postiz   " "https://postiz.cloudless.gr/"
-        check "appflowy " "https://appflowy.cloudless.gr/"
-        check "docs     " "https://docs.cloudless.gr/"
-        check "meili    " "https://meili.cloudless.gr/health"
+        fail=0
+        echo "=== Self-hosted app edge (Access 302 = tunnel OK) ==="
+        check "grafana  " "https://grafana.cloudless.gr/api/health" || fail=1
+        check "kuma     " "https://kuma.cloudless.gr/" || fail=1
+        check "n8n      " "https://n8n.cloudless.gr/" || fail=1
+        check "ntfy     " "https://ntfy.cloudless.gr/" || fail=1
+        check "espocrm  " "https://espocrm.cloudless.gr/" || fail=1
+        check "postiz   " "https://postiz.cloudless.gr/" || fail=1
+        check "appflowy " "https://appflowy.cloudless.gr/" || fail=1
+        check "docs     " "https://docs.cloudless.gr/" || fail=1
+        check "meili    " "https://meili.cloudless.gr/health" || fail=1
+        check "logs     " "https://logs.cloudless.gr/health" || fail=1
+        check "webmail  " "https://webmail.cloudless.gr/" || fail=1
+        check "pi-origin" "https://pi-origin.cloudless.gr/api/health" || fail=1
+        if [ "$fail" -ne 0 ]; then
+          echo "::error::One or more self-hosted tunnel edges returned a bad status"
+          exit 1
+        fi
 
       # ------------------------------------------------------------------
       # Step 6: Report
@@ -313,7 +332,7 @@ jobs:
         - **ntfy** service patched to NodePort 30080
         - Config applied to **omv**
 
-        **Verify:**
+        **Verify (Access 302 = tunnel OK):**
         - https://grafana.cloudless.gr/api/health
         - https://kuma.cloudless.gr/
         - https://n8n.cloudless.gr/
@@ -323,5 +342,8 @@ jobs:
         - https://appflowy.cloudless.gr/
         - https://docs.cloudless.gr/
         - https://meili.cloudless.gr/health
+        - https://logs.cloudless.gr/health
+        - https://webmail.cloudless.gr/
+        - https://pi-origin.cloudless.gr/api/health
 
         Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
