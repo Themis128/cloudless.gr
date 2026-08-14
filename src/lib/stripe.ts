@@ -122,5 +122,113 @@ export async function listStripeProducts(): Promise<StripeProduct[] | null> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Invoices — agency one-off Stripe Invoicing (no custom ledger)
+// ---------------------------------------------------------------------------
+
+export interface AdminInvoiceSummary {
+  id: string;
+  number: string | null;
+  customerId: string | null;
+  customerEmail: string | null;
+  status: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  created: number;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
+}
+
+function mapInvoice(inv: Stripe.Invoice): AdminInvoiceSummary {
+  const customer = inv.customer as string | { id?: string; email?: string | null } | null;
+  const customerId = typeof customer === "string" ? customer : (customer?.id ?? null);
+  const customerEmail =
+    inv.customer_email ??
+    (typeof customer === "object" && customer ? (customer.email ?? null) : null);
+  return {
+    id: inv.id,
+    number: inv.number,
+    customerId,
+    customerEmail,
+    status: inv.status ?? "unknown",
+    amountDue: inv.amount_due ?? 0,
+    amountPaid: inv.amount_paid ?? 0,
+    currency: (inv.currency ?? "eur").toUpperCase(),
+    created: inv.created,
+    hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+    invoicePdf: inv.invoice_pdf ?? null,
+  };
+}
+
+export async function listRecentInvoices(
+  limit = 50,
+  status?: string
+): Promise<{ invoices: AdminInvoiceSummary[]; hasMore: boolean }> {
+  const stripe = await getStripe();
+  if (!stripe) return { invoices: [], hasMore: false };
+
+  const list = await stripe.invoices.list({
+    limit: Math.min(Math.max(limit, 1), 50),
+    ...(status && status !== "all" ? { status: status as Stripe.InvoiceListParams.Status } : {}),
+    expand: ["data.customer"],
+  });
+
+  return {
+    invoices: list.data.map(mapInvoice),
+    hasMore: list.has_more,
+  };
+}
+
+/** Find Stripe customer by email or create one. */
+export async function resolveOrCreateCustomerByEmail(
+  email: string,
+  name?: string
+): Promise<string | null> {
+  const stripe = await getStripe();
+  if (!stripe) return null;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.includes("@")) return null;
+
+  const existing = await stripe.customers.list({ email: normalized, limit: 1 });
+  if (existing.data[0]?.id) return existing.data[0].id;
+
+  const created = await stripe.customers.create({
+    email: normalized,
+    ...(name?.trim() ? { name: name.trim() } : {}),
+  });
+  return created.id;
+}
+
+export async function createDraftInvoice(input: {
+  customerId: string;
+  description: string;
+  amountCents: number;
+  currency?: string;
+  daysUntilDue?: number;
+}): Promise<AdminInvoiceSummary | null> {
+  const stripe = await getStripe();
+  if (!stripe) return null;
+  const currency = (input.currency ?? "eur").toLowerCase();
+  const description = input.description.trim().slice(0, 500);
+  if (!description || input.amountCents < 1) return null;
+
+  await stripe.invoiceItems.create({
+    customer: input.customerId,
+    amount: input.amountCents,
+    currency,
+    description,
+  });
+
+  const invoice = await stripe.invoices.create({
+    customer: input.customerId,
+    collection_method: "send_invoice",
+    days_until_due: input.daysUntilDue ?? 14,
+    auto_advance: false,
+  });
+
+  return mapInvoice(invoice);
+}
+
 // Re-export for server-side callers; client components should import from '@/lib/format-price'
 export { formatPrice } from "./format-price";
