@@ -24,75 +24,10 @@ import {
   requireIntegrationAsync,
 } from "@/lib/integrations";
 import { cached, invalidateCache } from "@/lib/notion-cache";
+import { staticFaqs, type Faq, type FaqCategory, type FaqInput } from "@/lib/cms-static";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type FaqCategory = "general" | "pricing" | "technical" | "process";
-
-export interface Faq {
-  id: string;
-  question: string;
-  answer: string;
-  category: FaqCategory;
-  locales: string[]; // empty = all locales
-}
-
-// ---------------------------------------------------------------------------
-// Static fallback
-// ---------------------------------------------------------------------------
-
-export const staticFaqs: Faq[] = [
-  {
-    id: "f1",
-    question: "How long does a cloud audit take?",
-    answer:
-      "A standard cloud audit is delivered within 5 business days. Complex multi-account organisations may require 7–10 days. You'll receive a full written report plus a 60-minute debrief call.",
-    category: "process",
-    locales: [],
-  },
-  {
-    id: "f2",
-    question: "Do you work with other cloud providers besides AWS?",
-    answer:
-      "Our core expertise is AWS, but we can advise on GCP and Azure architectures. Most engagements involve AWS as the primary cloud, often alongside Cloudflare for edge and CDN.",
-    category: "technical",
-    locales: [],
-  },
-  {
-    id: "f3",
-    question: "What is the minimum engagement size?",
-    answer:
-      "The smallest engagement is the Cloud Audit at €1,500. There's no minimum contract length for the monthly retainer — you can cancel at any time.",
-    category: "pricing",
-    locales: [],
-  },
-  {
-    id: "f4",
-    question: "Can you help us pass a SOC 2 or ISO 27001 audit?",
-    answer:
-      "Yes. Cloud Audits cover security misconfigurations and produce evidence artefacts. We can work alongside your compliance team to close gaps before a formal certification audit.",
-    category: "technical",
-    locales: [],
-  },
-  {
-    id: "f5",
-    question: "Do you sign NDAs?",
-    answer:
-      "Yes, we sign mutual NDAs before any engagement. Your architecture diagrams, cost data, and business context stay strictly confidential.",
-    category: "general",
-    locales: [],
-  },
-  {
-    id: "f6",
-    question: "How does the monthly retainer work?",
-    answer:
-      "You get up to 20 hours of senior cloud architecture support per month, a monthly infrastructure review call, unlimited async questions via email or Slack, and on-call incident support. Unused hours do not roll over.",
-    category: "pricing",
-    locales: [],
-  },
-];
+export type { Faq, FaqCategory, FaqInput } from "@/lib/cms-static";
+export { staticFaqs } from "@/lib/cms-static";
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -118,15 +53,6 @@ function mapPage(page: any): Faq {
 // ---------------------------------------------------------------------------
 // Admin write API
 // ---------------------------------------------------------------------------
-
-export interface FaqInput {
-  question: string;
-  answer?: string;
-  category?: FaqCategory;
-  locales?: string[];
-  published?: boolean;
-  order?: number;
-}
 
 /**
  * List ALL FAQs (published + unpublished) for the admin panel.

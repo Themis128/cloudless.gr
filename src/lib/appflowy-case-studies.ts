@@ -19,15 +19,14 @@ import {
   type CaseStudyMetric,
   type CaseStudyWithContent,
   type CaseStudyInput,
-} from "./notion-case-studies";
+} from "./cms-static";
 
-// Re-export types from Notion adapter (single source of truth)
 export type {
   CaseStudy,
   CaseStudyWithContent,
   CaseStudyMetric,
   CaseStudyInput,
-} from "./notion-case-studies";
+} from "./cms-static";
 
 function slugify(name: string): string {
   return name

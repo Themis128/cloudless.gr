@@ -245,7 +245,7 @@ test.describe("Local k3s System (Standby App)", () => {
     if (r.status() === 200) {
       const body = await r.json();
       expect(Array.isArray(body.posts)).toBe(true);
-      expect(body.source).toMatch(/notion|static/);
+      expect(body.source).toMatch(/appflowy|static/);
     }
   });
 
