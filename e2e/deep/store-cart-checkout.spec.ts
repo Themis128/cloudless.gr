@@ -34,11 +34,14 @@ test.describe("Store, cart, checkout", () => {
   test("mixed one-time + subscription cart blocks checkout in the UI", async ({ page }) => {
     await page.goto("/en/store/srv-cloud");
     await page.getByRole("button", { name: /add to cart/i }).click();
+    await expect(page.getByTestId("cart-drawer")).toContainText(/cloud architecture audit/i);
     await page.getByRole("button", { name: /close cart/i }).click();
     await page.goto("/en/store/srv-growth");
     await page.locator("main").getByRole("button", { name: /^subscribe$/i }).click();
     const drawer = page.getByTestId("cart-drawer");
     await expect(drawer).toHaveAttribute("data-open", "true");
+    await expect(drawer).toContainText(/cloud architecture audit/i);
+    await expect(drawer).toContainText(/ai growth engine/i);
     await expect(drawer.getByRole("button", { name: /checkout/i })).toBeDisabled();
     await expect(drawer).toContainText(/can't be purchased together|cannot be purchased together/i);
   });

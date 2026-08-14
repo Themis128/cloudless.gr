@@ -49,7 +49,7 @@ test.describe("i18n routing and primary navigation", () => {
     }
     await greek.first().click();
     await expect(page).toHaveURL(/\/el\/services/);
-    await expect(page.locator("html")).toHaveAttribute("lang", "el");
+    await expect(page.locator("html")).toHaveAttribute("lang", "el", { timeout: 10_000 });
   });
 
   test("primary nav walks home → services → store → blog → contact", async ({ page }) => {

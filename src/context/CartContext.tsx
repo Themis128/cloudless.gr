@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
 import type { StoreProduct } from "@/lib/store-products";
 
 // --- Types ---
@@ -115,18 +115,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     isOpen: false,
   });
 
-  // Hydrate from localStorage on mount (single dispatch instead of N×quantity)
+  // Hydrate from localStorage on mount, then persist. The persist effect
+  // must not run on the empty initial state — that would wipe a saved cart
+  // before hydrate reads it (and on locale-layout remounts).
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const saved = loadCart();
-    if (saved.length > 0) {
-      dispatch({ type: "HYDRATE", items: saved });
-    }
+    dispatch({ type: "HYDRATE", items: loadCart() });
+    setHydrated(true);
   }, []);
-
-  // Persist to localStorage on change
   useEffect(() => {
+    if (!hydrated) return;
     saveCart(state.items);
-  }, [state.items]);
+  }, [hydrated, state.items]);
 
   const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);

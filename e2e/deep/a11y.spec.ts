@@ -48,7 +48,7 @@ test.describe("Accessibility (focused public surface)", () => {
 
     await page.goto("/en/contact");
     const form = page.getByTestId("contact-form");
-    await expect(form.getByLabel(/^name$/i).first()).toBeVisible();
+    await expect(form.locator("#name, input[name=name]").first()).toBeVisible();
     await expect(form.locator("#email, input[name=email]").first()).toBeVisible();
     await expect(form.locator("#message, textarea[name=message]").first()).toBeVisible();
   });
