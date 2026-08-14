@@ -325,7 +325,10 @@ export default function DatalakeDashboardPage() {
                   {meta.subtitle}
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-xs" style={{ color: "var(--ink-muted)" }}>
+              <div
+                className="flex items-center gap-3 text-xs"
+                style={{ color: "var(--ink-muted)" }}
+              >
                 {s.error ? "error" : `${s.rowCount ?? s.rows?.length ?? 0} rows`}
                 {s.fromCache && !s.error && (
                   <span

@@ -19,9 +19,7 @@ export function rowsToCsv(
   rows: ReadonlyArray<Record<string, CsvCell>>
 ): string {
   const header = columns.map((c) => escapeCsvCell(c.label)).join(",");
-  const body = rows.map((row) =>
-    columns.map((c) => escapeCsvCell(row[c.key])).join(",")
-  );
+  const body = rows.map((row) => columns.map((c) => escapeCsvCell(row[c.key])).join(","));
   return [header, ...body].join("\r\n");
 }
 
