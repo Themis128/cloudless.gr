@@ -25,6 +25,16 @@ export type AuthResult = AuthSuccess | AuthError;
 
 const ADMIN_GROUP = "admin";
 
+/**
+ * Next inlines `process.env.FOO` at compile time. E2E tokens are injected when
+ * Playwright starts `pnpm dev`, so a leftover `.next` compile from a normal
+ * `pnpm dev` would bake in `undefined` and every admin API would 401.
+ * Bracket access stays a runtime lookup.
+ */
+function runtimeEnv(name: string): string | undefined {
+  return globalThis.process?.env?.[name];
+}
+
 /** Extract a token from the Authorization header (Bearer scheme). */
 export function getTokenFromHeader(request: NextRequest): string | null {
   const authHeader = request.headers.get("authorization");
@@ -104,10 +114,14 @@ async function authenticateBearer(
 
 /** Require authentication via D1 session (Bearer or cookie). */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
+  const nodeEnv = runtimeEnv("NODE_ENV");
+  const e2eAdminToken = runtimeEnv("E2E_ADMIN_TOKEN");
+  const publicE2e = runtimeEnv("NEXT_PUBLIC_E2E");
+
   // E2E bypass: matching Bearer + E2E_ADMIN_TOKEN. Dead in production (NODE_ENV).
-  if (process.env.NODE_ENV !== "production" && process.env.E2E_ADMIN_TOKEN) {
+  if (nodeEnv !== "production" && e2eAdminToken) {
     const e2eToken = getTokenFromHeader(request);
-    if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
+    if (e2eToken && e2eToken === e2eAdminToken) {
       return {
         ok: true,
         user: {
@@ -121,7 +135,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   }
 
   // E2E bypass for checkout GET/POST stub (without token)
-  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1") {
+  if (nodeEnv !== "production" && publicE2e === "1") {
     const pathname = request.nextUrl.pathname;
     if (pathname === "/api/checkout" && (request.method === "GET" || request.method === "POST")) {
       return {

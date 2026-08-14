@@ -60,33 +60,46 @@ async function bindRemoteAuthDb(): Promise<void> {
 }
 
 async function bindLocalAuthDb(): Promise<void> {
-  const existing = (globalThis as { __AUTH_DB__?: { prepare?: unknown } }).__AUTH_DB__;
-  if (existing && typeof existing.prepare === "function") {
-    console.warn(`${LOG_PREFIX} AUTH_DB already bound`);
-    return;
+  try {
+    const existing = (globalThis as { __AUTH_DB__?: { prepare?: unknown } }).__AUTH_DB__;
+    if (existing && typeof existing.prepare === "function") {
+      console.warn(`${LOG_PREFIX} AUTH_DB already bound`);
+      return;
+    }
+
+    let local: { prepare: (q: string) => unknown } | null = null;
+    try {
+      const { pathToFileURL } = await import("node:url");
+      const { join } = await import("node:path");
+      const href = pathToFileURL(join(process.cwd(), "src/lib/auth-db-local.ts")).href;
+      const mod = (await import(/* webpackIgnore: true */ href)) as {
+        getLocalAuthDb: () => { prepare: (q: string) => unknown } | null;
+      };
+      local = mod.getLocalAuthDb();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`${LOG_PREFIX} local sqlite adapter load skipped:`, msg);
+    }
+    if (local && typeof local.prepare === "function") {
+      (globalThis as { __AUTH_DB__?: typeof local }).__AUTH_DB__ = local;
+      console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
+      return;
+    }
+
+    const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
+    const db = getAuthDbFromEnv();
+    if (db && typeof db.prepare === "function") {
+      (globalThis as { __AUTH_DB__?: typeof db }).__AUTH_DB__ = db;
+      console.warn(`${LOG_PREFIX} AUTH_DB bound`);
+      return;
+    }
+    console.error(
+      `${LOG_PREFIX} AUTH_DB unbound — D1 must be bound. Run: pnpm d1:migrate:local`
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`${LOG_PREFIX} AUTH_DB bind failed:`, msg);
   }
-  // Node-only: createRequire so Turbopack does not pull node:sqlite into
-  // Edge Instrumentation (a static import of auth-db-local does that).
-  const { createRequire } = await import("node:module");
-  const { join } = await import("node:path");
-  const req = createRequire(join(process.cwd(), "src/instrumentation.ts"));
-  const { getLocalAuthDb } = req("./lib/auth-db-local") as typeof import("@/lib/auth-db-local");
-  const local = getLocalAuthDb();
-  if (local && typeof local.prepare === "function") {
-    (globalThis as { __AUTH_DB__?: typeof local }).__AUTH_DB__ = local;
-    console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
-    return;
-  }
-  const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
-  const db = getAuthDbFromEnv();
-  if (db && typeof db.prepare === "function") {
-    (globalThis as { __AUTH_DB__?: typeof db }).__AUTH_DB__ = db;
-    console.warn(`${LOG_PREFIX} AUTH_DB bound`);
-    return;
-  }
-  console.error(
-    `${LOG_PREFIX} AUTH_DB unbound — D1 must be bound. Run: pnpm d1:migrate:local`
-  );
 }
 
 async function fireDeployNotification(): Promise<void> {
