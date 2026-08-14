@@ -32,6 +32,16 @@ data:
           valid_status_codes: [200, 401]
           method: GET
           preferred_ip_protocol: "ip4"
+      http_tunnel_edge:
+        prober: http
+        timeout: 10s
+        http:
+          # Public tunnel hostnames sit behind Cloudflare Access.
+          # 302/401/403 prove DNS + tunnel ingress are up.
+          valid_status_codes: [200, 301, 302, 303, 307, 401, 403]
+          method: GET
+          preferred_ip_protocol: "ip4"
+          no_follow_redirects: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -200,3 +210,150 @@ spec:
       annotations:
         summary: Self-hosted app {{ $labels.app }} probe failing
         description: '{{ $labels.instance }} has been unreachable for 5+ minutes.'
+---
+# Public Cloudflare Tunnel edge probes (Access 302 = healthy).
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-grafana
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-grafana
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://grafana.cloudless.gr/api/health]
+      labels: {app: grafana, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-n8n
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-n8n
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://n8n.cloudless.gr/]
+      labels: {app: n8n, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-ntfy
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-ntfy
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://ntfy.cloudless.gr/]
+      labels: {app: ntfy, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-espocrm
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-espocrm
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://espocrm.cloudless.gr/]
+      labels: {app: espocrm, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-postiz
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-postiz
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://postiz.cloudless.gr/]
+      labels: {app: postiz, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-appflowy
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-appflowy
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://appflowy.cloudless.gr/]
+      labels: {app: appflowy, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-pi-origin
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-pi-origin
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://pi-origin.cloudless.gr/api/health]
+      labels: {app: pi-origin, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-webmail
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-webmail
+  interval: 60s
+  module: http_tunnel_edge
+  prober: {url: blackbox-exporter.monitoring.svc.cluster.local:9115}
+  targets:
+    staticConfig:
+      static: [https://webmail.cloudless.gr/]
+      labels: {app: webmail, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tunnel-edge-health
+  namespace: monitoring
+  labels: {release: kube-prom}
+spec:
+  groups:
+  - name: tunnel.rules
+    rules:
+    - alert: CloudflareTunnelEdgeDown
+      expr: probe_success{scope="tunnel"} == 0
+      for: 5m
+      labels: {severity: warning}
+      annotations:
+        summary: Tunnel edge down for {{ $labels.app }}
+        description: '{{ $labels.instance }} failed blackbox tunnel probe for 5+ minutes.'

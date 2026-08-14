@@ -1,0 +1,103 @@
+# Scrape host cloudflared Prometheus metrics (default :20241).
+# Requires cloudflared listening on 0.0.0.0:20241 (see
+# infrastructure/monitoring/host-fabric-metrics/ and
+# infrastructure/cloudflare-tunnels/cloudflared-config.yml `metrics:`).
+#
+# Apply: kubectl apply -f infrastructure/monitoring/cloudflared-servicemonitor.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflared-metrics
+  namespace: monitoring
+  labels:
+    app: cloudflared
+    component: metrics
+    release: kube-prom
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 20241
+    targetPort: 20241
+    protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: cloudflared-metrics
+  namespace: monitoring
+  labels:
+    app: cloudflared
+    component: metrics
+subsets:
+- addresses:
+  - ip: 192.168.1.128
+    hostname: omv
+  - ip: 192.168.1.130
+    hostname: omv-ha
+  ports:
+  - name: metrics
+    port: 20241
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cloudflared
+  namespace: monitoring
+  labels:
+    release: kube-prom
+    cluster-protection.io/health: 'true'
+    app: cloudflared
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared
+      component: metrics
+  namespaceSelector:
+    matchNames: [monitoring]
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_endpoint_hostname]
+      targetLabel: host
+    - sourceLabels: [__meta_kubernetes_endpoint_hostname]
+      targetLabel: instance
+    - targetLabel: job
+      replacement: cloudflared
+---apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cloudflared-tunnel-health
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+  - name: cloudflared.rules
+    rules:
+    - alert: CloudflaredMetricsAbsent
+      expr: absent(cloudflared_tunnel_ha_connections) == 1
+      for: 10m
+      labels: {severity: warning}
+      annotations:
+        summary: cloudflared metrics not scraped
+        description: No cloudflared_tunnel_ha_connections series for 10m — check host metrics bind + ServiceMonitor.
+    - alert: CloudflaredNoHAConnections
+      expr: cloudflared_tunnel_ha_connections == 0
+      for: 5m
+      labels: {severity: critical}
+      annotations:
+        summary: cloudflared has zero HA connections on {{ $labels.instance }}
+        description: Tunnel connector lost edge connections.
+    - alert: CloudflaredRequestErrors
+      expr: increase(cloudflared_tunnel_request_errors[15m]) > 20
+      for: 10m
+      labels: {severity: warning}
+      annotations:
+        summary: Elevated cloudflared request errors on {{ $labels.instance }}
+        description: "More than 20 request errors in 15m."

@@ -11,6 +11,8 @@
 tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
 credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
 no-autoupdate: true
+# Prometheus metrics (also set via systemd drop-in --metrics 0.0.0.0:20241)
+metrics: 0.0.0.0:20241
 
 ingress:
 - hostname: webmail.cloudless.gr

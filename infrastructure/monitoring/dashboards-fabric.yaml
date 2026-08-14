@@ -1,0 +1,340 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-cloudflare-tunnel
+  namespace: monitoring
+  labels: {grafana_dashboard: '1'}
+data:
+  cloudflare-tunnel.json: |
+    {
+      "title": "Cloudflare Tunnel Status",
+      "uid": "cloudflare-tunnel",
+      "tags": ["cloudflare", "tunnel", "cloudless"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "HA connections (per connector)",
+          "id": 1,
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "cloudflared_tunnel_ha_connections",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "green", "value": 2 }
+              ]},
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+        },
+        {
+          "type": "stat",
+          "title": "Tunnel edge probes (Access OK)",
+          "id": 2,
+          "gridPos": { "h": 5, "w": 16, "x": 8, "y": 0 },
+          "targets": [{
+            "expr": "probe_success{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+                { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "green", "value": 1 }
+              ]},
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Requests / sec",
+          "id": 3,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+          "targets": [{
+            "expr": "sum by (instance) (rate(cloudflared_tunnel_total_requests[5m]))",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request errors / sec",
+          "id": 4,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+          "targets": [{
+            "expr": "sum by (instance) (rate(cloudflared_tunnel_request_errors[5m]))",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Responses by HTTP code",
+          "id": 5,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+          "targets": [{
+            "expr": "sum by (status_code) (rate(cloudflared_tunnel_response_by_code[5m]))",
+            "legendFormat": "{{status_code}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "QUIC smoothed RTT (s)",
+          "id": 6,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "targets": [{
+            "expr": "quic_client_smoothed_rtt",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Tunnel edge probe duration (s)",
+          "id": 7,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+          "targets": [{
+            "expr": "probe_duration_seconds{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Tunnel edge HTTP status",
+          "id": 8,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+          "targets": [{
+            "expr": "probe_http_status_code{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "stat",
+          "title": "Active TCP / UDP sessions",
+          "id": 9,
+          "gridPos": { "h": 5, "w": 12, "x": 0, "y": 29 },
+          "targets": [
+            {
+              "expr": "sum(cloudflared_tcp_active_sessions)",
+              "legendFormat": "tcp",
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "sum(cloudflared_udp_active_sessions)",
+              "legendFormat": "udp",
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "type": "stat",
+          "title": "Config version",
+          "id": 10,
+          "gridPos": { "h": 5, "w": 12, "x": 12, "y": 29 },
+          "targets": [{
+            "expr": "cloudflared_orchestration_config_version",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-tailscale-status
+  namespace: monitoring
+  labels: {grafana_dashboard: '1'}
+data:
+  tailscale-status.json: |
+    {
+      "title": "Tailscale Status",
+      "uid": "tailscale-status",
+      "tags": ["tailscale", "cloudless"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Exporter up",
+          "id": 1,
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "tailscale_exporter_up",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+                { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "green", "value": 1 }
+              ]},
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+        },
+        {
+          "type": "stat",
+          "title": "Health warnings",
+          "id": 2,
+          "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+          "targets": [{
+            "expr": "tailscaled_health_messages{type=\"warning\"}",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "red", "value": 1 }
+              ]},
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+        },
+        {
+          "type": "stat",
+          "title": "Advertised / approved routes",
+          "id": 3,
+          "gridPos": { "h": 5, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "tailscaled_advertised_routes",
+              "legendFormat": "adv {{instance}}",
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "tailscaled_approved_routes",
+              "legendFormat": "ok {{instance}}",
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Inbound bytes / sec by path",
+          "id": 4,
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+          "targets": [{
+            "expr": "sum by (instance, path) (rate(tailscaled_inbound_bytes_total[5m]))",
+            "legendFormat": "{{instance}} {{path}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Outbound bytes / sec by path",
+          "id": 5,
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+          "targets": [{
+            "expr": "sum by (instance, path) (rate(tailscaled_outbound_bytes_total[5m]))",
+            "legendFormat": "{{instance}} {{path}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Inbound packets / sec",
+          "id": 6,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "targets": [{
+            "expr": "sum by (instance, path) (rate(tailscaled_inbound_packets_total[5m]))",
+            "legendFormat": "{{instance}} {{path}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Outbound packets / sec",
+          "id": 7,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "targets": [{
+            "expr": "sum by (instance, path) (rate(tailscaled_outbound_packets_total[5m]))",
+            "legendFormat": "{{instance}} {{path}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "stat",
+          "title": "Home DERP region",
+          "id": 8,
+          "gridPos": { "h": 5, "w": 12, "x": 0, "y": 22 },
+          "targets": [{
+            "expr": "tailscaled_home_derp_region_id",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Dropped inbound packets / sec",
+          "id": 9,
+          "gridPos": { "h": 5, "w": 12, "x": 12, "y": 22 },
+          "targets": [{
+            "expr": "sum by (instance) (rate(tailscaled_inbound_dropped_packets_total[5m]))",
+            "legendFormat": "{{instance}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        }
+      ]
+    }
