@@ -49,7 +49,13 @@ export default function SearchFunnelPage() {
   }, []);
 
   useEffect(() => {
-    load(days).catch(() => {});
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load(days).catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [days, load]);
 
   return (

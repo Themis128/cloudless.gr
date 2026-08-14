@@ -36,7 +36,13 @@ export default function AdminCrmContactPage() {
   }, [id]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) load().catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   if (loading) {

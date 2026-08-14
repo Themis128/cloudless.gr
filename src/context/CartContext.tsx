@@ -135,7 +135,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const queued = pendingRef.current;
     pendingRef.current = [];
     for (const action of queued) dispatch(action);
-    setHydrated(true);
+    queueMicrotask(() => setHydrated(true));
   }, []);
   useEffect(() => {
     if (!hydrated) return;
