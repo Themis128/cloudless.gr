@@ -60,11 +60,25 @@ interface ArchiveResponse {
   reports: ArchiveRow[];
 }
 
+interface DimensionMetricRow {
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position?: number;
+  avgPosition?: number;
+  page?: string;
+  country?: string;
+  device?: string;
+}
+
 export default function SeoAnalyticsPage() {
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
   const [intent, setIntent] = useState<IntentBreakdown | null>(null);
   const [archive, setArchive] = useState<ArchiveRow[]>([]);
+  const [pages, setPages] = useState<DimensionMetricRow[]>([]);
+  const [countries, setCountries] = useState<DimensionMetricRow[]>([]);
+  const [devices, setDevices] = useState<DimensionMetricRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,20 +87,22 @@ export default function SeoAnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [seoRes, intentRes, archiveRes] = await Promise.all([
-        fetchWithAuth("/api/admin/analytics/seo"),
-        fetchWithAuth("/api/admin/analytics/search-intent"),
-        // R2 gold weekly archive (gsc-weekly.json). Optional; 503 when unbound.
-        // Do not treat this page as a live GSC console.
-        fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
-      ]);
+      const [seoRes, intentRes, archiveRes, pagesRes, countriesRes, devicesRes] = await Promise.all(
+        [
+          fetchWithAuth("/api/admin/analytics/seo"),
+          fetchWithAuth("/api/admin/analytics/search-intent"),
+          fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
+          fetchWithAuth("/api/admin/analytics/pages?limit=25&days=28"),
+          fetchWithAuth("/api/admin/analytics/countries?days=28"),
+          fetchWithAuth("/api/admin/analytics/devices?days=28"),
+        ]
+      );
       if (seoRes.status === 503) {
         setNotConfigured(true);
         return;
       }
       if (!seoRes.ok) throw new Error("Failed to load SEO snapshot");
 
-      // Type-safe response handling
       const seo = (await seoRes.json()) as SeoResponse;
       setSnapshot(seo.snapshot ?? null);
       setKeywords(seo.keywords ?? []);
@@ -98,6 +114,18 @@ export default function SeoAnalyticsPage() {
       if (archiveRes.ok) {
         const archiveData = (await archiveRes.json()) as ArchiveResponse;
         setArchive(archiveData?.reports ?? []);
+      }
+      if (pagesRes.ok) {
+        const data = (await pagesRes.json()) as { pages?: DimensionMetricRow[] };
+        setPages(data.pages ?? []);
+      }
+      if (countriesRes.ok) {
+        const data = (await countriesRes.json()) as { countries?: DimensionMetricRow[] };
+        setCountries(data.countries ?? []);
+      }
+      if (devicesRes.ok) {
+        const data = (await devicesRes.json()) as { devices?: DimensionMetricRow[] };
+        setDevices(data.devices ?? []);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -137,8 +165,8 @@ export default function SeoAnalyticsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">SEO Deep Dive</h1>
         <p className="mt-1 font-mono text-xs text-slate-500">
-          Organic search from gold GSC snapshots — last 28 days. Country / device / page dimensions
-          stay hidden until that ETL lands.
+          Organic search from gold GSC snapshots — last 28 days (keywords, pages, countries,
+          devices).
         </p>
       </div>
 
@@ -191,6 +219,57 @@ export default function SeoAnalyticsPage() {
                 k.impressions.toLocaleString(),
                 `${k.ctr}%`,
                 k.position.toFixed(1),
+              ])}
+            />
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+              TOP PAGES
+            </h2>
+            <SeoTable
+              head={["Page", "Clicks", "Impressions", "CTR", "Position"]}
+              empty="No page gold yet — run gsc-to-r2 + materialize."
+              rows={pages.map((r) => [
+                r.page ?? "—",
+                r.clicks.toLocaleString(),
+                r.impressions.toLocaleString(),
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
+                (r.position ?? r.avgPosition ?? 0).toFixed(1),
+              ])}
+            />
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+              COUNTRIES
+            </h2>
+            <SeoTable
+              head={["Country", "Clicks", "Impressions", "CTR", "Avg Pos"]}
+              empty="No country gold yet — next gsc-to-r2 run writes countries.parquet."
+              rows={countries.map((r) => [
+                r.country ?? "—",
+                r.clicks.toLocaleString(),
+                r.impressions.toLocaleString(),
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
+                (r.avgPosition ?? r.position ?? 0).toFixed(1),
+              ])}
+            />
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+              DEVICES
+            </h2>
+            <SeoTable
+              head={["Device", "Clicks", "Impressions", "CTR", "Avg Pos"]}
+              empty="No device gold yet — next gsc-to-r2 run writes devices.parquet."
+              rows={devices.map((r) => [
+                r.device ?? "—",
+                r.clicks.toLocaleString(),
+                r.impressions.toLocaleString(),
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
+                (r.avgPosition ?? r.position ?? 0).toFixed(1),
               ])}
             />
           </section>
