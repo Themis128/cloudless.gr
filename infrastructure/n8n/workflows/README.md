@@ -10,6 +10,7 @@ two app-side automations wired in PR R2:
 | `lead-enrich.json` | EspoCRM `Lead.create` → `POST /api/webhooks/n8n/trigger` (name=`lead-enrich`) | Assigns owner via round-robin from a hardcoded list, PUTs the assignment back to EspoCRM, and Slack-DMs the assignee. (Apollo enrich was dropped 2026-06-21 — see the note below if you want it back.) |
 | `newsletter-nurture.json` | `/api/subscribe` → `POST /api/webhooks/n8n/trigger` (name=`newsletter-nurture`) | Tags the new EspoCRM contact with `newsletter_signup_<source>`, adds them to the `Newsletter Nurture` sequence in EspoCRM. |
 | `postiz-rss-multichannel.json` | Schedule (every 6h) | Reads RSS → builds a caption → lists Postiz channels in-cluster → `POST /api/public/v1/posts` to matching platforms. No Next.js involvement. |
+| `postiz-utm-guard.json` | Postiz webhook (or manual) | Ensures outbound social URLs carry UTM params before / alongside Postiz publish. Pair with app webhook `https://cloudless.gr/api/webhooks/postiz?secret=…`. |
 
 ## Operator bootstrap (one-time per workflow)
 
@@ -54,6 +55,14 @@ want enrichment back.)_
    - `POSTIZ_RSS_FEED_URL` — default `https://cloudless.gr/en/blog/rss.xml`.
    - `POSTIZ_CHANNEL_IDENTIFIERS` — comma list, default `linkedin,linkedin-page,x,bluesky`.
 5. Connect at least one matching channel in the Postiz UI, then Activate the workflow.
+
+### Postiz UTM guard
+
+1. Import `postiz-utm-guard.json` the same way.
+2. Wire its webhook URL into Postiz Settings → Webhooks **or** use the app
+   receiver (`scripts/postiz-register-webhook.sh` →
+   `https://cloudless.gr/api/webhooks/postiz?secret=<POSTIZ_WEBHOOK_SECRET>`).
+3. Activate once channels exist.
 
 Optional: install the community node `n8n-nodes-postiz` (Settings → Community Nodes) and
 swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/api`
