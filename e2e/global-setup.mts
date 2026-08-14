@@ -13,8 +13,9 @@
  * immediately with one clear message if either is wrong. Fail fast, fail loud.
  */
 import type { FullConfig } from "@playwright/test";
+import { E2E_ORIGIN } from "./_port";
 
-const BASE_URL = "http://localhost:4000";
+const BASE_URL = E2E_ORIGIN;
 
 async function probe(
   pathname: string,
@@ -137,8 +138,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   if (adminProbe.status === 401 || adminProbe.status === 403) {
     throw new Error(
       `[e2e:preflight] GET /api/admin/users returned ${adminProbe.status} with the e2e admin token.\n` +
-        `The process on :4000 was not started with E2E_ADMIN_TOKEN (a leftover \`pnpm dev\`).\n` +
-        `Fix: lsof -ti:4000 | xargs -r kill && let Playwright start the server.`
+        `The process on ${BASE_URL} was not started with E2E_ADMIN_TOKEN (a leftover \`pnpm dev\`).\n` +
+        `Fix: stop that server (or use E2E_PORT=4010) and let Playwright start the suite server.`
     );
   }
 }

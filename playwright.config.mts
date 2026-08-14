@@ -1,5 +1,6 @@
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_ORIGIN, E2E_PORT } from "./e2e/_port";
 
 const rootDir = import.meta.dirname ?? path.resolve();
 const isCi = !!process.env.CI;
@@ -64,7 +65,7 @@ export default defineConfig({
   expect: { timeout: 20_000 },
 
   use: {
-    baseURL: "http://localhost:4000/en/",
+    baseURL: `${E2E_ORIGIN}/en/`,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -75,13 +76,14 @@ export default defineConfig({
     command: "pnpm dev",
     // Hit a real route — bare `/` can 308 and confuse the readiness probe
     // while Next 16 is still compiling proxy.
-    url: "http://127.0.0.1:4000/api/health",
+    url: `${E2E_ORIGIN}/api/health`,
     timeout: 180_000,
-    // Never reuse a foreign `pnpm dev`. That process is started without
-    // E2E_ADMIN_TOKEN / NEXT_PUBLIC_E2E, so admin APIs 401 and the suite lies.
-    // Port 4000 must be free; `scripts/dev-server.sh` will take it over.
+    // Never reuse a foreign `pnpm dev` — it lacks E2E_ADMIN_TOKEN.
+    // Local default port is 4010 (see e2e/_port.ts) so :4000 can stay for
+    // interactive `pnpm dev`. CI uses 4000.
     reuseExistingServer: false,
     env: {
+      DEV_PORT: E2E_PORT,
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
       // Prefer local wrangler sqlite for signup/login in e2e (no remote D1 required).

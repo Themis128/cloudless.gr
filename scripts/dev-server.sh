@@ -37,6 +37,7 @@ SHUTDOWN=0
 RESTARTS=0
 BOOT_FAILURES=0
 CLEANED_FOR_STALE=0
+D1_READY=0
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/cloudless-dev-${PORT}.pid"
 
 log() { printf '[dev-heal] %s\n' "$*"; }
@@ -207,11 +208,15 @@ ensure_local_d1() {
     log "AUTH_DB_USE_HTTP=1 — skipping local D1 sqlite migrate"
     return 0
   fi
+  if [[ "${D1_READY:-0}" -eq 1 ]]; then
+    return 0
+  fi
   log "ensuring local D1 (user-auth-db)"
   if ! bash "$ROOT/scripts/ensure-local-d1.sh"; then
     log "local D1 migrate failed — AUTH_DB will be unbound"
     return 1
   fi
+  D1_READY=1
   return 0
 }
 

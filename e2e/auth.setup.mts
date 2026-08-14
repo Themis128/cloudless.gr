@@ -13,12 +13,13 @@ import { test as setup, expect, type Page } from "@playwright/test";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { E2E_ORIGIN } from "./_port";
 
 const __filename = fileURLToPath(import.meta.url);
 const HERE = path.dirname(__filename);
 const USER_STORAGE = path.join(HERE, ".auth", "user.json");
 const ADMIN_STORAGE = path.join(HERE, ".auth", "admin.json");
-const ORIGIN = "http://localhost:4000";
+const ORIGIN = E2E_ORIGIN;
 
 function emptyState(filePath: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
