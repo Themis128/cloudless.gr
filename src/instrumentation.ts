@@ -61,7 +61,8 @@ async function bindRemoteAuthDb(): Promise<void> {
 
 async function bindLocalAuthDb(): Promise<void> {
   try {
-    const { bindNodeAuthDb } = await import("./instrumentation-node-d1");
+    const spec = "./instrumentation-node-d1";
+    const { bindNodeAuthDb } = (await import(spec)) as typeof import("./instrumentation-node-d1");
     await bindNodeAuthDb();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -349,6 +349,11 @@ log "auto-heal on (crash restart always; probe restart=$HEAL). Ctrl+C stops the 
 takeover_supervisor
 
 while [[ "$SHUTDOWN" -eq 0 ]]; do
+  if ! free_port; then
+    log "could not bind :$PORT — retrying"
+    sleep 1
+    continue
+  fi
   if ! ensure_local_d1; then
     RESTARTS=$((RESTARTS + 1))
     if [[ "$RESTARTS" -ge "$MAX_RESTARTS" ]]; then
@@ -358,11 +363,6 @@ while [[ "$SHUTDOWN" -eq 0 ]]; do
       exit 1
     fi
     sleep 2
-    continue
-  fi
-  if ! free_port; then
-    log "could not bind :$PORT — retrying"
-    sleep 1
     continue
   fi
 

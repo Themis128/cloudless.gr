@@ -34,12 +34,14 @@ describe("Next.js instrumentation file location", () => {
 
   it("loads Sentry in production and times out the remote D1 bind", () => {
     const source = readFileSync(SRC_INSTRUMENTATION, "utf-8");
+    const nodeD1 = readFileSync(resolve(__dirname, "../src/instrumentation-node-d1.ts"), "utf-8");
     expect(source).toContain("sentry.server.config");
     expect(source).toContain("sentry.edge.config");
     expect(source).toContain("getCloudflareContext timed out");
-    expect(source).toContain("AUTH_DB bound (local D1)");
-    expect(source).toContain("pnpm d1:migrate:local");
+    expect(source).toContain("instrumentation-node-d1");
     expect(source).toContain("slackDeployNotify");
+    expect(nodeD1).toContain("AUTH_DB bound (local D1)");
+    expect(nodeD1).toContain("pnpm d1:migrate:local");
   });
 });
 
