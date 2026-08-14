@@ -216,7 +216,8 @@ export async function getGscDimensionFromLake(
     fetchedAt: seo.fetchedAt,
     source: DATALAKE_GOLD_SOURCE,
     note: mapped.note,
-    error: mapped.rows.length === 0 && sectionErrors.length > 0 ? String(sectionErrors[0]) : seo.error,
+    error:
+      mapped.rows.length === 0 && sectionErrors.length > 0 ? String(sectionErrors[0]) : seo.error,
   };
 }
 

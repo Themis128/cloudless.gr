@@ -87,15 +87,16 @@ export default function SeoAnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [seoRes, intentRes, archiveRes, pagesRes, countriesRes, devicesRes] =
-        await Promise.all([
+      const [seoRes, intentRes, archiveRes, pagesRes, countriesRes, devicesRes] = await Promise.all(
+        [
           fetchWithAuth("/api/admin/analytics/seo"),
           fetchWithAuth("/api/admin/analytics/search-intent"),
           fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
           fetchWithAuth("/api/admin/analytics/pages?limit=25&days=28"),
           fetchWithAuth("/api/admin/analytics/countries?days=28"),
           fetchWithAuth("/api/admin/analytics/devices?days=28"),
-        ]);
+        ]
+      );
       if (seoRes.status === 503) {
         setNotConfigured(true);
         return;
@@ -233,7 +234,7 @@ export default function SeoAnalyticsPage() {
                 r.page ?? "—",
                 r.clicks.toLocaleString(),
                 r.impressions.toLocaleString(),
-                `${((r.ctr <= 1 ? r.ctr * 100 : r.ctr)).toFixed(1)}%`,
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
                 (r.position ?? r.avgPosition ?? 0).toFixed(1),
               ])}
             />
@@ -250,7 +251,7 @@ export default function SeoAnalyticsPage() {
                 r.country ?? "—",
                 r.clicks.toLocaleString(),
                 r.impressions.toLocaleString(),
-                `${((r.ctr <= 1 ? r.ctr * 100 : r.ctr)).toFixed(1)}%`,
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
                 (r.avgPosition ?? r.position ?? 0).toFixed(1),
               ])}
             />
@@ -267,7 +268,7 @@ export default function SeoAnalyticsPage() {
                 r.device ?? "—",
                 r.clicks.toLocaleString(),
                 r.impressions.toLocaleString(),
-                `${((r.ctr <= 1 ? r.ctr * 100 : r.ctr)).toFixed(1)}%`,
+                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
                 (r.avgPosition ?? r.position ?? 0).toFixed(1),
               ])}
             />
