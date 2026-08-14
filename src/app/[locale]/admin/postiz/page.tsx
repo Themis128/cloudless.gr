@@ -495,7 +495,7 @@ function ComposeTab({
                 key={img.id}
                 className="flex items-center gap-2 rounded border bg-gray-50 px-2 py-1 text-xs"
               >
-                <span className="max-w-[200px] truncate">
+                <span className="max-w-50 truncate">
                   {img.path.split("/").pop() ?? img.id}
                 </span>
                 <button type="button" onClick={() => removeImage(img.id)} className="text-red-600">
