@@ -34,14 +34,24 @@ describe("Next.js instrumentation file location", () => {
 
   it("loads Sentry in production and times out the remote D1 bind", () => {
     const source = readFileSync(SRC_INSTRUMENTATION, "utf-8");
-    const nodeD1 = readFileSync(resolve(__dirname, "../src/instrumentation-node-d1.ts"), "utf-8");
-    expect(source).toContain("sentry.server.config");
+    const nodeSource = readFileSync(resolve(__dirname, "../src/instrumentation.node.ts"), "utf-8");
+    // Documented split: inline NEXT_RUNTIME check, Node APIs in the other file.
+    // https://nextjs.org/docs/app/guides/instrumentation#importing-runtime-specific-code
+    // https://github.com/vercel/next.js/issues/61728
+    expect(source).toMatch(
+      /NEXT_RUNTIME === ["']nodejs["'][\s\S]{0,120}import\(["']\.\/instrumentation\.node["']\)/
+    );
     expect(source).toContain("sentry.edge.config");
-    expect(source).toContain("getCloudflareContext timed out");
-    expect(source).toContain("instrumentation-node-d1");
-    expect(source).toContain("slackDeployNotify");
-    expect(nodeD1).toContain("AUTH_DB bound (local D1)");
-    expect(nodeD1).toContain("pnpm d1:migrate:local");
+    expect(source).not.toContain("sentry.server.config");
+    expect(source).not.toContain("getCloudflareContext");
+    expect(source).not.toMatch(/from\s+["'][^"']*auth-db-local/);
+    expect(source).not.toMatch(/import\(["']\.\/instrumentation\.node["']\)[\s\S]*auth-db-local/);
+    expect(source).not.toMatch(/node:sqlite/);
+    expect(nodeSource).toContain("sentry.server.config");
+    expect(nodeSource).toContain("getCloudflareContext timed out");
+    expect(nodeSource).toContain("slackDeployNotify");
+    expect(nodeSource).toContain("AUTH_DB bound (local D1)");
+    expect(nodeSource).toContain("pnpm d1:migrate:local");
   });
 });
 
@@ -83,7 +93,9 @@ describe("Pi D1 HTTP auth bundling", () => {
     // webpackIgnore on ./d1-http strips it from standalone → dbConnected:false on Pi.
     expect(source).toMatch(/require\(\s*["']\.\/d1-http["']\s*\)/);
     expect(source).not.toMatch(/webpackIgnore:[\s\S]{0,80}\.\/d1-http/);
-    expect(source).toMatch(/webpackIgnore:[\s\S]{0,80}\.\/auth-db-local/);
+    expect(source).not.toMatch(/require\([\s\S]{0,120}["']\.\/auth-db-local["']/);
+    expect(source).not.toMatch(/typeof import\(["'][^"']*auth-db-local["']\)/);
+    expect(source).toMatch(/NEXT_RUNTIME === ["']edge["']/);
   });
 });
 

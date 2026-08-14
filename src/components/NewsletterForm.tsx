@@ -71,12 +71,12 @@ export default function NewsletterForm() {
             placeholder={translate(locale, "newsletter.placeholder", "your@email.com")}
             aria-label={translate(locale, "newsletter.placeholder", "your@email.com")}
             required
-            className="bg-void focus:border-neon-cyan/50 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
+            className="bg-void focus:border-neon-cyan/50 min-h-11 min-w-0 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />
           <button
             type="submit"
             disabled={status === STATUS_LOADING}
-            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {status === STATUS_LOADING
               ? translate(locale, "newsletter.subscribing", "Subscribing...")

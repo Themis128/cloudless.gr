@@ -3,12 +3,12 @@
     {
       "name": "e2e_admin",
       "value": "1",
-      "domain": "localhost",
+      "domain": "127.0.0.1",
       "path": "/",
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax",
-      "expires": 1786791541
+      "expires": 1786800891
     }
   ],
   "origins": []

@@ -133,19 +133,24 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — lifts above cookie banner via --cookie-banner-h */}
       <button
         type="button"
         aria-label={open ? "Close chat" : "Open chat assistant"}
         onClick={() => setOpen((o) => !o)}
-        className="border-neon-green/30 bg-void shadow-neon-green/10 hover:border-neon-green/60 hover:shadow-neon-green/20 fixed right-6 bottom-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border shadow-lg transition-all"
+        className="border-neon-green/30 bg-void shadow-neon-green/10 hover:border-neon-green/60 hover:shadow-neon-green/20 fixed right-4 bottom-[calc(1.5rem+var(--cookie-banner-h,0px))] z-50 flex h-14 w-14 min-h-14 min-w-14 items-center justify-center rounded-full border shadow-lg transition-all sm:right-6"
       >
-        <span className="text-xl">{open ? "✕" : "💬"}</span>
+        <span className="text-xl" aria-hidden="true">
+          {open ? "\u2715" : "\u{1F4AC}"}
+        </span>
       </button>
 
       {/* Chat panel */}
       {open && (
-        <div className="bg-void fixed right-6 bottom-24 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-slate-800 shadow-2xl sm:w-96">
+        <div
+          data-testid="chat-panel"
+          className="bg-void fixed right-4 bottom-[calc(5.5rem+var(--cookie-banner-h,0px))] left-4 z-50 flex max-h-[min(28rem,70dvh)] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-800 shadow-2xl sm:left-auto sm:right-6 sm:w-96"
+        >
           {/* Header */}
           <div className="bg-void-light flex items-center gap-3 border-b border-slate-800 px-4 py-3">
             <span className="bg-neon-green h-2.5 w-2.5 animate-pulse rounded-full" />
@@ -153,7 +158,7 @@ export default function ChatWidget() {
               <div className="font-heading text-sm font-semibold text-white">
                 Cloudless Assistant
               </div>
-              <div className="font-mono text-xs text-slate-500">Powered by Claude</div>
+              <div className="font-mono text-xs text-slate-500">Powered by Workers AI</div>
             </div>
           </div>
 
@@ -202,7 +207,7 @@ export default function ChatWidget() {
                   key={s}
                   type="button"
                   onClick={() => send(s)}
-                  className="hover:border-neon-green/40 rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-400 transition hover:text-white"
+                  className="hover:border-neon-green/40 min-h-11 rounded-full border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition hover:text-white"
                 >
                   {s}
                 </button>
@@ -220,14 +225,14 @@ export default function ChatWidget() {
               onKeyDown={handleKeyDown}
               disabled={streaming}
               placeholder="Ask anything…"
-              className="flex-1 bg-transparent font-mono text-sm text-white placeholder-slate-600 outline-none disabled:opacity-50"
+              className="min-h-11 flex-1 bg-transparent font-mono text-sm text-white placeholder-slate-600 outline-none disabled:opacity-50"
               maxLength={500}
             />
             <button
               type="button"
               onClick={() => send(input)}
               disabled={!input.trim() || streaming}
-              className="border-neon-green/30 text-neon-green hover:border-neon-green/60 shrink-0 rounded-lg border px-3 py-1.5 font-mono text-xs transition disabled:opacity-30"
+              className="border-neon-green/30 text-neon-green hover:border-neon-green/60 min-h-11 shrink-0 rounded-lg border px-3 py-2 font-mono text-xs transition disabled:opacity-30"
             >
               Send
             </button>

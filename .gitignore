@@ -28,6 +28,7 @@ yarn.lock
 
 # Next.js
 .next
+.next-e2e
 .open-next
 out
 

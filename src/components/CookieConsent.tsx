@@ -42,6 +42,19 @@ export default function CookieConsent() {
   // Local toggle state for the settings modal
   const [localPrefs, setLocalPrefs] = useState<CookiePreferences>(preferences);
 
+  // Reserve bottom chrome so chat FAB / push prompt sit above the banner.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (mounted && bannerVisible) {
+      root.style.setProperty("--cookie-banner-h", "12rem");
+    } else {
+      root.style.setProperty("--cookie-banner-h", "0px");
+    }
+    return () => {
+      root.style.setProperty("--cookie-banner-h", "0px");
+    };
+  }, [mounted, bannerVisible]);
+
   // Sync local prefs when settings modal opens
   const handleOpenFromBanner = () => {
     setLocalPrefs(preferences);

@@ -189,6 +189,7 @@ function SignUpForm() {
               {error && (
                 <div
                   role="alert"
+                  data-testid="auth-error"
                   className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm"
                 >
                   {error}
@@ -283,6 +284,7 @@ function SignUpForm() {
               {error && (
                 <div
                   role="alert"
+                  data-testid="auth-error"
                   className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm"
                 >
                   {error}

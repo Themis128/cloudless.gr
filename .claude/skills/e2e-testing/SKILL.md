@@ -5,14 +5,16 @@ description: End-to-end Playwright testing suite for cloudless.gr. Use this skil
 
 # E2E Testing — cloudless.gr
 
+**Current local suite:** `e2e/deep/**` (Playwright port **4010**, dist `.next-e2e`, `reuseExistingServer: false`). k3s specs use `playwright.k3s.config.mts` only. Fragile failures: `.cursor/skills/e2e-deep-triage/SKILL.md` + `pnpm e2e:deep-triage`.
+
 ## Overview
 
 Playwright test suite covering the full cloudless.gr surface: public pages, API routes, auth, store, admin panel, i18n, PWA manifest, security headers, accessibility, infrastructure smoke tests, and k3s cluster health.
 
-**Two configs:**
+**Configs:**
 
-- `playwright.config.mts` — local dev (spins up `pnpm dev` on port 4000)
-- `playwright.production.config.mts` — production smoke tests against live cloudless.gr + pi-origin.cloudless.gr
+- `playwright.config.mts` — local (`http://127.0.0.1:4010` unless `CI`, then 4000)
+- `playwright.production.config.mts` — production smoke against live cloudless.gr + pi-origin.cloudless.gr
 
 ---
 

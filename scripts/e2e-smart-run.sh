@@ -67,8 +67,12 @@ case "$MODE" in
     pnpm exec playwright test --config=playwright.production.config.mts --reporter=line
     ;;
 
+  deep-triage)
+    bash scripts/e2e-deep-triage.sh
+    ;;
+
   *)
-    echo "Usage: $0 {smoke|full|k3s|k3s-smoke|prod}"
+    echo "Usage: $0 {smoke|full|k3s|k3s-smoke|prod|deep-triage}"
     exit 1
     ;;
 esac

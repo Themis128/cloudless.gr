@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Shared theme-preference plumbing.
  *

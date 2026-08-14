@@ -9,7 +9,11 @@ export async function GET() {
   let dbConnected = false;
   try {
     const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
-    const db = getAuthDbFromEnv();
+    let db = getAuthDbFromEnv();
+    if (!db && process.env.NODE_ENV === "development") {
+      const { getLocalAuthDb } = await import("@/lib/auth-db-local");
+      db = getLocalAuthDb();
+    }
     if (db) {
       const row = await db.prepare("SELECT 1 as ok").first<{ ok?: unknown }>();
       dbConnected = Number(row?.ok) === 1;

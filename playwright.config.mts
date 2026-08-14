@@ -1,6 +1,6 @@
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ORIGIN, E2E_PORT } from "./e2e/_port";
+import { E2E_ORIGIN, E2E_PORT, E2E_HOST } from "./e2e/_port";
 
 const rootDir = import.meta.dirname ?? path.resolve();
 const isCi = !!process.env.CI;
@@ -84,6 +84,9 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       DEV_PORT: E2E_PORT,
+      DEV_HOST: E2E_HOST,
+      // Isolate Turbopack cache from interactive `pnpm dev` on :4000.
+      NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || (isCi ? ".next" : ".next-e2e"),
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
       // Prefer local wrangler sqlite for signup/login in e2e (no remote D1 required).

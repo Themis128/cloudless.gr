@@ -7,11 +7,9 @@
  * - Custom password reset flow
  * - JWT-like session tokens (stored server-side, referenced by cookie)
  */
-// Lazy-loaded Node-only modules (d1-http, auth-db-local). Using literal
-// require() strings lets webpack statically resolve these via tsconfig paths
-// at build time — a computed variable name would produce webpackEmptyContext
-// at runtime. The modules are only invoked on the server (never the edge /
-// client), so bundling them is safe.
+// Lazy-loaded Node-only modules. `d1-http` uses a literal require() so webpack
+// keeps it in the Pi standalone graph. Local sqlite is loaded with a computed
+// specifier so Edge proxy cannot statically pull node:fs / node:sqlite.
 
 // Token expiry constants
 const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days (default)
@@ -554,18 +552,15 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
 }
 
 function tryLoadLocalAuthDb(): AuthDatabase | null {
+  if (process.env.NEXT_RUNTIME === "edge") return null;
   try {
-    // Do NOT let webpack/turbopack statically bundle this into proxy/edge.
-    // auth-db-local imports node:fs / node:sqlite — bundling it causes
-    // UnhandledSchemeError (webpack) or an indefinite "Compiling proxy…"
-    // hang (turbopack). Runtime Node still resolves the module fine.
+    // Computed specifier: a literal sqlite-adapter require is traced into
+    // Edge proxy even with webpackIgnore. Module-scoped require() still
+    // resolves in Turbopack Node (eval/new Function require does not).
+    const spec = "." + "/" + ["auth", "db", "local"].join("-");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getLocalAuthDb } = require(
-      /* webpackIgnore: true */
-      /* turbopackIgnore: true */
-      "./auth-db-local"
-    ) as typeof import("./auth-db-local");
-    return getLocalAuthDb();
+    const mod = require(spec) as { getLocalAuthDb?: () => AuthDatabase | null };
+    return mod.getLocalAuthDb?.() ?? null;
   } catch {
     return null;
   }
@@ -576,8 +571,8 @@ function tryLoadHttpAuthDb(): AuthDatabase | null {
     // Must be a bundler-visible require (no webpackIgnore). On Pi standalone,
     // webpackIgnore left ./d1-http unresolved → getAuthDbFromEnv() null →
     // /api/health dbConnected:false even when CLOUDFLARE_* creds work via REST.
-    // d1-http is fetch-only (safe for server chunks); auth-db-local still uses
-    // webpackIgnore because it pulls node:fs / node:sqlite into proxy/edge.
+    // d1-http is fetch-only (safe for server chunks). Local sqlite is loaded
+    // with a computed specifier in tryLoadLocalAuthDb so Edge never traces it.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
     return getHttpAuthDb() ?? null;

@@ -64,9 +64,8 @@ test.describe("Auth lifecycle", () => {
     await page.locator("#signup-password").fill("LongEnough1!");
     await page.locator("#signup-confirm-password").fill("DifferentPass1!");
     await page.getByRole("button", { name: /create account|sign up/i }).click();
-    await expect(
-      page.getByRole("alert").filter({ hasText: /passwords? (do )?not match/i }),
-    ).toBeVisible();
+    await expect(page.getByTestId("auth-error")).toBeVisible();
+    await expect(page.getByTestId("auth-error")).toContainText(/passwords? (do )?not match/i);
   });
 
   test("login form shows an accessible error for bad credentials", async ({ page }) => {
@@ -76,11 +75,10 @@ test.describe("Auth lifecycle", () => {
     await page.locator("#password").fill("WrongPass123!");
     await page.getByRole("button", { name: /sign in/i }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(
-      page
-        .locator('[role="alert"]')
-        .filter({ hasText: /invalid|failed|incorrect|password|email|locked|configured|unavailable|sign in/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("auth-error")).toContainText(
+      /invalid|failed|incorrect|password|email|locked|configured|unavailable|sign in/i,
+    );
   });
 
   test("forgot-password link from login is locale-aware", async ({ page }) => {

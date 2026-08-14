@@ -13,7 +13,7 @@ import { test as setup, expect, type Page } from "@playwright/test";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { E2E_ORIGIN } from "./_port";
+import { E2E_ORIGIN, E2E_HOST } from "./_port";
 
 const __filename = fileURLToPath(import.meta.url);
 const HERE = path.dirname(__filename);
@@ -36,7 +36,7 @@ function adminBypassState(filePath: string) {
           {
             name: "e2e_admin",
             value: "1",
-            domain: "localhost",
+            domain: E2E_HOST,
             path: "/",
             httpOnly: false,
             secure: false,

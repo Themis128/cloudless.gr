@@ -26,6 +26,8 @@
     "e2e:full": "bash scripts/e2e-smart-run.sh full",
     "e2e:k3s": "bash scripts/e2e-smart-run.sh k3s",
     "e2e:prod": "bash scripts/e2e-smart-run.sh prod",
+    "e2e:deep-triage": "bash scripts/e2e-deep-triage.sh",
+    "instrumentation:doctor": "node scripts/instrumentation-edge-doctor.mjs",
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "eslint src",

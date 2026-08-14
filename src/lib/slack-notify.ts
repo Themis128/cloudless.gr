@@ -416,6 +416,9 @@ export async function slackContactNotify(data: {
   leadBand?: string;
   /** One-line attribution summary (UTM/referrer/landing page). */
   attributionSummary?: string;
+  /** NLP intent label when contact NLP ran. */
+  nlpIntent?: string;
+  nlpLocale?: string;
 }): Promise<boolean> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -432,6 +435,11 @@ export async function slackContactNotify(data: {
   if (typeof data.leadScore === "number") {
     const band = data.leadBand ? ` (${slackEscape(data.leadBand)})` : "";
     detailLines.push(`*Lead score:* ${data.leadScore}/100${band}`);
+  }
+  if (data.nlpIntent) {
+    detailLines.push(
+      `*NLP:* ${slackEscape(data.nlpIntent)}${data.nlpLocale ? ` (${slackEscape(data.nlpLocale)})` : ""}`
+    );
   }
   if (data.attributionSummary) {
     detailLines.push(`*Attribution:* ${slackEscape(data.attributionSummary).slice(0, 500)}`);

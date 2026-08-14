@@ -63,15 +63,15 @@ function ProductCard({
   product: StoreProduct;
   onNavigate?: (productId: string) => void;
 }) {
-  const { addItem } = useCart();
-  const [hovered, setHovered] = useState(false);
+  const { addItem, toggleCart } = useCart();
+  const [featuresOpen, setFeaturesOpen] = useState(false);
 
   return (
     <div
       data-testid="product-card"
       className="group neon-border bg-void-light/50 overflow-hidden rounded-lg backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setFeaturesOpen(true)}
+      onMouseLeave={() => setFeaturesOpen(false)}
     >
       {/* Product infographic */}
       <div className="bg-void-lighter relative aspect-4/3 overflow-hidden">
@@ -84,30 +84,40 @@ function ProductCard({
           {categoryLabels[product.category]}
         </span>
 
-        {/* Hover feature preview */}
+        {/* Feature preview — hover on desktop, tap/focus on touch */}
         {product.features && product.features.length > 0 && (
-          <div
-            className={`bg-void/90 absolute inset-0 flex flex-col justify-center px-6 backdrop-blur-sm transition-opacity duration-300 ${
-              hovered ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          >
-            <p className="text-neon-cyan/60 mb-3 font-mono text-[10px] font-medium tracking-[0.3em]">
-              INCLUDES
-            </p>
-            <ul className="space-y-2">
-              {product.features.slice(0, 4).map((f) => (
-                <li key={f} className="flex items-start gap-2 text-xs text-slate-300">
-                  <span className="text-neon-cyan mt-0.5 shrink-0">&#x25B8;</span>
-                  {f}
-                </li>
-              ))}
-              {product.features.length > 4 && (
-                <li className="font-mono text-xs text-slate-400">
-                  +{product.features.length - 4} more
-                </li>
-              )}
-            </ul>
-          </div>
+          <>
+            <button
+              type="button"
+              className="bg-void/70 text-neon-cyan absolute right-3 bottom-3 z-10 min-h-11 rounded-lg border border-neon-cyan/40 px-3 py-2 font-mono text-[10px] font-semibold lg:hidden"
+              aria-expanded={featuresOpen}
+              onClick={() => setFeaturesOpen((o) => !o)}
+            >
+              {featuresOpen ? "Hide" : "Includes"}
+            </button>
+            <div
+              className={`bg-void/90 absolute inset-0 z-[1] flex flex-col justify-center px-6 backdrop-blur-sm transition-opacity duration-300 ${
+                featuresOpen ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+            >
+              <p className="text-neon-cyan/60 mb-3 font-mono text-[10px] font-medium tracking-[0.3em]">
+                INCLUDES
+              </p>
+              <ul className="space-y-2">
+                {product.features.slice(0, 4).map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-slate-300">
+                    <span className="text-neon-cyan mt-0.5 shrink-0">&#x25B8;</span>
+                    {f}
+                  </li>
+                ))}
+                {product.features.length > 4 && (
+                  <li className="font-mono text-xs text-slate-400">
+                    +{product.features.length - 4} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          </>
         )}
       </div>
 
@@ -130,7 +140,11 @@ function ProductCard({
             )}
           </div>
           <button
-            onClick={() => addItem(product)}
+            type="button"
+            onClick={() => {
+              addItem(product);
+              toggleCart();
+            }}
             className="bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-11 rounded-lg border px-4 py-2.5 font-mono text-xs font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] active:scale-[0.98]"
           >
             {product.recurring ? "Subscribe" : "Add to Cart"}
@@ -262,7 +276,7 @@ export default function StoreGrid() {
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search products"
             data-search-source={searchSource ?? undefined}
-            className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 py-2.5 pr-4 pl-10 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
+            className="bg-void-light focus:border-neon-cyan/50 min-h-11 w-full rounded-lg border border-slate-800 py-2.5 pr-4 pl-10 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />
         </div>
         <select

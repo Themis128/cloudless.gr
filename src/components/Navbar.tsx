@@ -54,7 +54,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? "[box-shadow:var(--shadow-md)]" : ""}`}
+      className={`sticky top-0 z-60 transition-shadow duration-200${scrolled ? "[box-shadow:var(--shadow-md)]" : ""}`}
     >
       {/* Top accent stripe */}
       <div className="bg-neon-cyan h-0.5" />
@@ -201,8 +201,11 @@ export default function Navbar() {
 
         {/* Mobile Menu — inside <nav> so data-testid="main-nav" includes drawer links */}
         <div
-          className={`overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden ${
-            mobileOpen ? "max-h-[calc(100svh-4rem)] py-4 opacity-100" : "max-h-0 py-0 opacity-0"
+          data-testid="mobile-menu"
+          hidden={!mobileOpen}
+          inert={!mobileOpen}
+          className={`overflow-x-hidden overflow-y-auto border-t px-6 backdrop-blur-xl lg:hidden ${
+            mobileOpen ? "max-h-[calc(100svh-4rem)] py-4" : "max-h-0 py-0"
           }`}
           style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
         >

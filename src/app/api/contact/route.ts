@@ -18,6 +18,7 @@ import { generateEventId } from "@/lib/meta-pixel";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
+import { analyzeLeadMessage } from "@/lib/nlp";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
@@ -168,14 +169,40 @@ export async function POST(request: Request) {
 
     const nameParts = String(name).trim().split(" ");
 
-    // Lead engine: deterministic score + first-touch attribution summary.
+    // Lead engine: NLP enrichment (local / Workers AI) + deterministic score.
     const attributionData = attribution ? JSON.parse(attribution) : undefined;
+    const bodyLocale =
+      typeof (parsed as { locale?: unknown }).locale === "string"
+        ? (parsed as { locale: string }).locale
+        : undefined;
+    const referer = request.headers.get("referer") ?? "";
+    const refererLocale = referer.match(/\/(en|el|fr|de)(?:\/|$)/)?.[1];
+    const pageLocale = bodyLocale || refererLocale || "en";
+
+    let nlp;
+    try {
+      nlp = await analyzeLeadMessage({
+        message: messageText,
+        service,
+        pageLocale,
+      });
+    } catch {
+      nlp = {
+        intent: "general_inquiry" as const,
+        locale: (pageLocale === "el" ? "el" : "en") as "en" | "el",
+        entities: {},
+        confidence: 0,
+        reasons: ["nlp threw — rules-only score"],
+        source: "fallback" as const,
+      };
+    }
     const lead = scoreLead({
       email,
       service,
       company,
       message: messageText,
       attribution: attributionData,
+      nlp,
     });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
@@ -190,6 +217,8 @@ export async function POST(request: Request) {
         leadScore: lead.score,
         leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
         attributionSummary,
+        nlpIntent: nlp.intent,
+        nlpLocale: nlp.locale,
       }),
       recordNotification({
         category: "contact",
@@ -203,6 +232,8 @@ export async function POST(request: Request) {
           service: service || null,
           leadScore: lead.score,
           leadBand: lead.band,
+          nlpIntent: nlp.intent,
+          nlpLocale: nlp.locale,
         },
       }),
       (async () => {
@@ -221,6 +252,9 @@ export async function POST(request: Request) {
             `Message: ${messageText.slice(0, 500)}`,
             ...(company ? [`Company: ${company}`] : []),
             `Lead score: ${lead.score}/100 (${lead.band}) — ${lead.reasons.join("; ")}`,
+            `NLP: intent=${nlp.intent} locale=${nlp.locale} confidence=${nlp.confidence.toFixed(2)} source=${nlp.source}`,
+            ...(nlp.entities.budget ? [`NLP budget: ${nlp.entities.budget}`] : []),
+            ...(nlp.entities.timeline ? [`NLP timeline: ${nlp.entities.timeline}`] : []),
             ...(attributionSummary ? [`Attribution: ${attributionSummary}`] : []),
           ];
           await createContactNote(contactId, noteLines.join("\n"));

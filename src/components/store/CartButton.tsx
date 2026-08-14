@@ -3,14 +3,15 @@
 import { useCart } from "@/context/CartContext";
 
 export default function CartButton() {
-  const { toggleCart, totalItems } = useCart();
+  const { toggleCart, totalItems, isOpen } = useCart();
 
   return (
     <button
       onClick={toggleCart}
       data-testid="cart"
-      className="relative p-2 text-slate-300 transition-colors hover:text-white"
-      aria-label="Open cart"
+      className="relative flex min-h-11 min-w-11 items-center justify-center p-2 text-slate-300 transition-colors hover:text-white"
+      aria-label={isOpen ? "Close cart" : "Open cart"}
+      aria-expanded={isOpen}
     >
       <svg
         width="22"

@@ -20,12 +20,25 @@ vi.mock("@/lib/ssm-config-d1", () => ({
   }),
 }));
 
+const mockAnalyzeLeadMessage = vi.fn();
+
+vi.mock("@/lib/nlp", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/nlp")>();
+  mockAnalyzeLeadMessage.mockImplementation(actual.analyzeLeadMessage);
+  return {
+    ...actual,
+    analyzeLeadMessage: (...args: unknown[]) => mockAnalyzeLeadMessage(...args),
+  };
+});
+
 describe("POST /api/contact", () => {
   let POST: (request: Request) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     mockSendEmailResend.mockResolvedValue(undefined);
+    const actual = await vi.importActual<typeof import("@/lib/nlp")>("@/lib/nlp");
+    mockAnalyzeLeadMessage.mockImplementation(actual.analyzeLeadMessage);
     const { isResendConfigured } = await import("@/lib/email-resend");
     vi.mocked(isResendConfigured).mockReturnValue(true);
     const mod = await import("@/app/api/contact/route");
@@ -91,6 +104,24 @@ describe("POST /api/contact", () => {
         company: "Cloudless",
         service: "Cloud Architecture",
         message: "I need an audit",
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  it("still returns 200 when NLP analysis throws", async () => {
+    mockAnalyzeLeadMessage.mockRejectedValueOnce(new Error("nlp boom"));
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Themis",
+        email: "themis@test.com",
+        message: "Hello even if NLP fails",
       }),
     });
 
