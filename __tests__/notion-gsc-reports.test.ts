@@ -1,12 +1,9 @@
 /**
- * notion-gsc-reports tests removed 2026-06-21.
- *
- * src/lib/notion-gsc-reports.ts now reads from Athena (PR #1050) instead
- * of the deleted NOTION_GSC_REPORTS_DB_ID database. The previous tests
- * asserted Notion fetch calls that no longer happen.
+ * GSC weekly archive tests: live coverage is in admin-gsc-archive-api.test.ts
+ * (`src/lib/gsc-weekly-archive.ts` reads R2 `gsc-weekly.json`).
  */
 import { describe, it } from "vitest";
 
-describe.skip("notion-gsc-reports (decommissioned)", () => {
+describe.skip("gsc-weekly-archive (covered by admin-gsc-archive-api)", () => {
   it("placeholder", () => {});
 });

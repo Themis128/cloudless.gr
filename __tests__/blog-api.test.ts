@@ -100,7 +100,7 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] uses static fallback when blog-source returns null", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostBySlugMock.mockResolvedValueOnce(null);
 
     const { GET } = await import("@/app/api/blog/[slug]/route");
