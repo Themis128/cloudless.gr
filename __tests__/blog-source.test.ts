@@ -1,39 +1,42 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { posts as staticPosts } from "@/lib/blog";
-import { resetIntegrationCache } from "@/lib/integrations";
 
-const getNotionPostsMock = vi.fn();
-const getNotionPostBySlugMock = vi.fn();
+const getAppFlowyPostsMock = vi.fn();
+const getAppFlowyPostBySlugMock = vi.fn();
+const isAppFlowyConfiguredMock = vi.fn();
 
-vi.mock("@/lib/notion-blog", () => ({
-  getPosts: getNotionPostsMock,
-  getPostBySlug: getNotionPostBySlugMock,
+vi.mock("@/lib/appflowy-blog", () => ({
+  getPosts: (...a: unknown[]) => getAppFlowyPostsMock(...a),
+  getPostBySlug: (...a: unknown[]) => getAppFlowyPostBySlugMock(...a),
+}));
+
+vi.mock("@/lib/appflowy", () => ({
+  isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfiguredMock(...a),
 }));
 
 describe("blog-source", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    isAppFlowyConfiguredMock.mockResolvedValue(false);
   });
 
-  it("returns static posts when Notion is not configured", async () => {
-    process.env.NOTION_API_KEY = "";
-    resetIntegrationCache();
+  it("returns static posts when AppFlowy is not configured", async () => {
     const { getBlogPosts } = await import("@/lib/blog-source");
-
     await expect(getBlogPosts()).resolves.toEqual(staticPosts);
   });
 
-  it("maps Notion listing posts into the frontend blog shape", async () => {
-    getNotionPostsMock.mockResolvedValueOnce([
+  it("maps AppFlowy listing posts into the frontend blog shape", async () => {
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
+    getAppFlowyPostsMock.mockResolvedValueOnce([
       {
-        id: "notion-1",
-        slug: "notion-post",
-        title: "Notion Post",
-        excerpt: "Fetched from Notion",
+        slug: "appflowy-post",
+        title: "AppFlowy Post",
+        excerpt: "Fetched from AppFlowy",
         date: "2026-04-10",
-        author: "Cloudless Team",
-        tags: ["Analytics"],
+        category: "Analytics",
         published: true,
+        readTime: "3 min read",
+        html: "<p>hi</p>",
       },
     ]);
 
@@ -42,71 +45,46 @@ describe("blog-source", () => {
 
     expect(posts).toHaveLength(1);
     expect(posts[0]).toMatchObject({
-      slug: "notion-post",
-      title: "Notion Post",
-      excerpt: "Fetched from Notion",
+      slug: "appflowy-post",
+      title: "AppFlowy Post",
+      excerpt: "Fetched from AppFlowy",
       date: "2026-04-10",
       category: "Analytics",
     });
-    expect(posts[0].readTime).toMatch(/min read/);
   });
 
-  it("maps a Notion post into renderable markdown-like content", async () => {
-    getNotionPostBySlugMock.mockResolvedValueOnce({
-      id: "notion-2",
-      slug: "notion-detail",
-      title: "Detailed Notion Post",
+  it("maps an AppFlowy post into plain text content", async () => {
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
+    getAppFlowyPostBySlugMock.mockResolvedValueOnce({
+      slug: "detail",
+      title: "Detailed Post",
       excerpt: "Long form content",
       date: "2026-04-11",
-      author: "Cloudless Team",
-      tags: ["Cloud"],
+      category: "Cloud",
       published: true,
-      content: [
-        {
-          id: "b1",
-          type: "paragraph",
-          paragraph: { rich_text: [{ plain_text: "Intro paragraph" }] },
-        },
-        {
-          id: "b2",
-          type: "heading_2",
-          heading_2: { rich_text: [{ plain_text: "Section Title" }] },
-        },
-        {
-          id: "b3",
-          type: "bulleted_list_item",
-          bulleted_list_item: { rich_text: [{ plain_text: "First item" }] },
-        },
-        {
-          id: "b4",
-          type: "bulleted_list_item",
-          bulleted_list_item: { rich_text: [{ plain_text: "Second item" }] },
-        },
-      ],
+      readTime: "4 min read",
+      html: "<p>Intro paragraph</p><h2>Section Title</h2>",
     });
 
     const { getBlogPostBySlug } = await import("@/lib/blog-source");
-    const post = await getBlogPostBySlug("notion-detail");
+    const post = await getBlogPostBySlug("detail");
 
     expect(post).toBeDefined();
     expect(post?.content).toContain("Intro paragraph");
-    expect(post?.content).toContain("## Section Title");
-    expect(post?.content).toContain("- First item\n- Second item");
-    expect(post?.readTime).toMatch(/min read/);
+    expect(post?.content).toContain("Section Title");
   });
 
-  it("falls back to static when Notion returns an empty list", async () => {
-    process.env.NOTION_API_KEY = "test-key";
-    process.env.NOTION_BLOG_DB_ID = "test-db";
-    resetIntegrationCache();
-    getNotionPostsMock.mockResolvedValueOnce([]);
+  it("falls back to static when AppFlowy returns an empty list", async () => {
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
+    getAppFlowyPostsMock.mockResolvedValueOnce([]);
 
     const { getBlogPosts } = await import("@/lib/blog-source");
     await expect(getBlogPosts()).resolves.toEqual(staticPosts);
   });
 
-  it("falls back to static content when Notion lookup fails", async () => {
-    getNotionPostBySlugMock.mockRejectedValueOnce(new Error("notion down"));
+  it("falls back to static content when AppFlowy lookup fails", async () => {
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
+    getAppFlowyPostBySlugMock.mockRejectedValueOnce(new Error("cms down"));
 
     const { getBlogPostBySlug } = await import("@/lib/blog-source");
     const post = await getBlogPostBySlug(staticPosts[0].slug);

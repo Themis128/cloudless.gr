@@ -26,8 +26,8 @@ Percentages in the artifact (~75% marketing, ~60% CRM, ~15% ERP) are a snapshot,
 | --------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Done (this branch)** | Unified admin contact page `/admin/crm/[id]`                                             | Highest-leverage CRM gap: EspoCRM, Stripe, and D1 are already populated; nothing joins them               | Join by email. No new database.                                      |
 | **Done (this branch)** | Gate EspoCRM Opportunity create on lead score ≥ 65                                              | Contact form already scores leads and Slack already shows the score; every inbound currently opens a deal | Keep Slack + ActiveCampaign `enrollLeadInAutomation` for all inbound |
-| Todo            | Delete residual `src/lib/notion-*.ts` adapters and Notion fallback in `src/lib/cms-provider.ts` | CMS is AppFlowy; do not revive Notion admin/webhooks                                                      | Orphan unit suites → `vitest.config.mts` `test.exclude` or delete    |
-| Todo            | Surface gold `attribution` on the contact 360 page                                              | D1 UTM attribution already materializes in `admin-datalake.json`; no new dashboard                        | Join by email / campaign — do not build a CDP                        |
+| **Done (this branch)** | Delete residual Notion fallback in `cms-provider.ts` and public CMS routes | CMS is AppFlowy; do not revive Notion admin/webhooks | `notion-*.ts` type files remain as AppFlowy re-export sources; leftover `/admin/notion/*` pages still a Wait |
+| **Done (this branch)** | Surface gold `attribution` on the contact 360 page                                              | D1 UTM attribution already materializes in `admin-datalake.json`; no new dashboard                        | Join by email / campaign — do not build a CDP                        |
 
 ## Do next (after the contact page proves matching)
 
@@ -77,9 +77,9 @@ Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo fro
 
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
-| Todo | Expand DuckDB explore catalog to remaining bronze keys | Parquet already lands for n8n executions, Postiz, AppFlowy, churn, portals; explore UI only allowlists 9 datasets | `src/lib/lake-parquet-catalog.ts` |
-| Todo | Retire Notion from `/api/cron/analytics-rollup` | Still imports `createWeeklyRollup` / `archiveOldEvents` from `notion-analytics.ts` | Same sweep as Notion adapter cleanup |
-| Todo | Rename `notion-gsc-reports.ts` (R2 `gsc-weekly.json` reader) | Filename and SEO page comments still say Notion | Gold archive is already R2 |
+| **Done (this branch)** | Expand DuckDB explore catalog to remaining bronze keys | Parquet already lands for n8n executions, Postiz, AppFlowy, churn, portals; explore UI only allowlists 9 datasets | `src/lib/lake-parquet-catalog.ts` |
+| **Done (this branch)** | Retire Notion from `/api/cron/analytics-rollup` | Still imports `createWeeklyRollup` / `archiveOldEvents` from `notion-analytics.ts` | Cron now summarizes D1 `analytics_events` |
+| **Done (this branch)** | Rename `notion-gsc-reports.ts` (R2 `gsc-weekly.json` reader) | Filename and SEO page comments still say Notion | Now `gsc-weekly-archive.ts` |
 | **Done (this branch)** | Fix stale comments: DynamoDB bookmarks, S3 fallback, “live GSC” on gsc-archive | Ad poll uses D1 `ad_analytics_bookmark`; `analytics-r2.ts` has no S3 path | Docs only unless a code path still hits AWS |
 
 ### Do next (after contact 360)
@@ -111,8 +111,8 @@ The dashboards already exist. Prefer wiring data the APIs already return over ne
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
 | **Done (this branch)** | Fix admin nav: remove or restore `/admin/reports`; link `/admin/kpi` and `/admin/cost` | Reports is a dead link; KPI and Cost pages exist but are not in `AdminLayoutClient` | No new dashboards |
-| Todo | Relabel SEO weekly archive + workspace calendar away from Notion | Archive is R2 gold; calendar still falls through to `notion-calendar` when configured | Same sweep as Notion cleanup |
-| Todo | Add a thin admin view for `GET /api/admin/analytics/search-funnel` | Funnel events land in D1; only `getFunnelSummary()` exists — no page | Table of event_type × ab_variant; not a real-time firehose |
+| **Done (this branch)** | Relabel SEO weekly archive + workspace calendar away from Notion | Archive is R2 gold; calendar is in-memory (no Notion fallback) | Calendar no longer writes to Notion |
+| **Done (this branch)** | Add a thin admin view for `GET /api/admin/analytics/search-funnel` | Funnel events land in D1; only `getFunnelSummary()` exists — no page | `/admin/analytics/funnel` |
 
 ### Do next (charts on existing payloads)
 

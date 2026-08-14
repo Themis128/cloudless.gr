@@ -128,7 +128,7 @@ with **no dedicated admin page**.
 | --- | --- | --- |
 | GSC (admin UI) | Gold via `datalake-serve` | ETL snapshot, not live API |
 | GSC (ETL / `gsc.ts`) | Search Console API + D1 cache (`gsc-cache.ts`, 1h / 24h stale) | Cron-warmed; not page load |
-| GSC weekly archive | R2 `gsc-weekly.json` (`notion-gsc-reports.ts` name is leftover) | Weekly materialize |
+| GSC weekly archive | R2 `gsc-weekly.json` (`gsc-weekly-archive.ts`) | Weekly materialize |
 | Stripe (admin unified) | Gold `stripe_revenue` | ETL |
 | Stripe (D1 read helper) | `stripe-analytics-read.ts` (`dailyTrend` computed, **no admin chart**) | Live D1 if used |
 | Search funnel | D1 `search_funnel_events` / `getFunnelSummary` | Live writes; API only |

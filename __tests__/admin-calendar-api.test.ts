@@ -8,13 +8,6 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
-vi.mock("@/lib/notion-calendar", () => ({
-  notionGetCalendarItems: vi.fn().mockResolvedValue(null),
-  notionCreateCalendarItem: vi.fn().mockResolvedValue(null),
-  notionUpdateCalendarItem: vi.fn().mockResolvedValue(false),
-  notionDeleteCalendarItem: vi.fn().mockResolvedValue(false),
-}));
-
 vi.mock("@/lib/integrations", () => ({
   getIntegrationsAsync: vi.fn().mockResolvedValue({}),
   isConfiguredAsync: vi.fn().mockResolvedValue(false),
@@ -58,14 +51,6 @@ describe("Admin Calendar API routes", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
-    // Re-apply mocks after clearAllMocks
-    const notionCalendar = await import("@/lib/notion-calendar");
-    vi.mocked(notionCalendar.notionGetCalendarItems).mockResolvedValue(null);
-    vi.mocked(notionCalendar.notionCreateCalendarItem).mockResolvedValue(null);
-    vi.mocked(notionCalendar.notionUpdateCalendarItem).mockResolvedValue(false);
-    vi.mocked(notionCalendar.notionDeleteCalendarItem).mockResolvedValue(false);
-    const integrations = await import("@/lib/integrations");
-    vi.mocked(integrations.getIntegrationsAsync).mockResolvedValue({});
     await clearCalendar();
   });
 

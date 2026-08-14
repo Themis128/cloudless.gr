@@ -6,14 +6,6 @@ import {
   deleteCalendarItem,
 } from "@/lib/content-calendar";
 
-// Simulate Notion not configured so tests use the in-memory fallback
-vi.mock("@/lib/notion-calendar", () => ({
-  notionGetCalendarItems: vi.fn().mockResolvedValue(null),
-  notionCreateCalendarItem: vi.fn().mockResolvedValue(null),
-  notionUpdateCalendarItem: vi.fn().mockResolvedValue(false),
-  notionDeleteCalendarItem: vi.fn().mockResolvedValue(false),
-}));
-
 vi.mock("@/lib/integrations", () => ({
   getIntegrationsAsync: vi.fn().mockResolvedValue({}),
   isConfiguredAsync: vi.fn().mockResolvedValue(false),

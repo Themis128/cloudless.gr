@@ -51,10 +51,10 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/posts returns CMS source metadata when upstream succeeds", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostsWithSourceMock.mockResolvedValueOnce({
-      posts: [{ slug: "from-notion" }],
-      source: "notion",
+      posts: [{ slug: "from-appflowy" }],
+      source: "appflowy",
     });
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -63,13 +63,13 @@ describe("Blog API dual-run fallbacks", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.source).toBe("notion");
+    expect(data.source).toBe("appflowy");
     expect(data.fallbackReason).toBeUndefined();
-    expect(response.headers.get("x-blog-source")).toBe("notion");
+    expect(response.headers.get("x-blog-source")).toBe("appflowy");
   });
 
   it("GET /api/blog/posts falls back to static with cms-error when fetch throws", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostsWithSourceMock.mockRejectedValueOnce(new Error("cms down"));
 
     const { GET } = await import("@/app/api/blog/posts/route");
@@ -84,7 +84,7 @@ describe("Blog API dual-run fallbacks", () => {
   });
 
   it("GET /api/blog/[slug] falls back to static when blog-source fetch throws", async () => {
-    isConfiguredAsyncMock.mockResolvedValue(true);
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostBySlugMock.mockRejectedValueOnce(new Error("cms timeout"));
 
     const { GET } = await import("@/app/api/blog/[slug]/route");

@@ -1,5 +1,5 @@
 /**
- * Unit tests for CMS API routes under dual-run (#1361):
+ * Unit tests for CMS API routes (AppFlowy → static).
  *   GET /api/services
  *   GET /api/faqs
  *   GET /api/testimonials
@@ -7,10 +7,6 @@
  *   GET /api/case-studies/[slug]
  *   GET /api/docs
  *   GET /api/docs/[slug]
- *
- * Expectations match current production shapes: wrapped objects for services/docs
- * (with source + fallbackReason), bare arrays + x-cms-source for faqs/testimonials/
- * case-studies list, and cms-error (not notion-error) on CMS failures.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -25,13 +21,6 @@ vi.mock("@/lib/cms-provider", () => ({
 vi.mock("@/lib/appflowy", () => ({
   isAppFlowyConfigured: (...a: unknown[]) => mockIsAppFlowyConfigured(...a),
 }));
-
-vi.mock("@/lib/integrations", () => ({
-  isConfiguredAsync: (...a: unknown[]) => mockIsConfiguredAsync(...a),
-  isConfigured: vi.fn(),
-}));
-
-// ── /api/services ─────────────────────────────────────────────────────────────
 
 const mockGetAppFlowyServices = vi.fn();
 const STATIC_SERVICES = [
@@ -93,12 +82,8 @@ describe("GET /api/services", () => {
   });
 });
 
-// ── /api/faqs ─────────────────────────────────────────────────────────────────
-
 const mockGetAppFlowyFaqs = vi.fn();
 const mockGetAppFlowyFaqsByCategory = vi.fn();
-const mockGetNotionFaqs = vi.fn();
-const mockGetNotionFaqsByCategory = vi.fn();
 const STATIC_FAQS = [
   { id: "f1", question: "Q1", answer: "A1", category: "General", locales: [] },
   { id: "f2", question: "Q2", answer: "A2", category: "Billing", locales: ["en"] },
@@ -107,12 +92,6 @@ const STATIC_FAQS = [
 vi.mock("@/lib/appflowy-faqs", () => ({
   getFaqs: (...a: unknown[]) => mockGetAppFlowyFaqs(...a),
   getFaqsByCategory: (...a: unknown[]) => mockGetAppFlowyFaqsByCategory(...a),
-  staticFaqs: STATIC_FAQS,
-}));
-
-vi.mock("@/lib/notion-faqs", () => ({
-  getFaqs: (...a: unknown[]) => mockGetNotionFaqs(...a),
-  getFaqsByCategory: (...a: unknown[]) => mockGetNotionFaqsByCategory(...a),
   staticFaqs: STATIC_FAQS,
 }));
 
@@ -140,32 +119,28 @@ describe("GET /api/faqs", () => {
     expect(data.every((f: { category: string }) => f.category === "Billing")).toBe(true);
   });
 
-  it("returns bare notion array when Notion is configured", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionFaqs.mockResolvedValue([{ id: "f3", question: "Q3", answer: "A3" }]);
+  it("returns AppFlowy array when configured", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFaqs.mockResolvedValue([{ id: "f3", question: "Q3", answer: "A3" }]);
     const { GET } = await import("@/app/api/faqs/route");
     const res = await GET(new Request("http://localhost/api/faqs"));
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data).toHaveLength(1);
-    expect(res.headers.get("x-cms-source")).toBe("notion");
+    expect(res.headers.get("x-cms-source")).toBe("appflowy");
   });
 
-  it("uses Notion getFaqsByCategory when category param given and configured", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionFaqsByCategory.mockResolvedValue([]);
+  it("uses AppFlowy getFaqsByCategory when category param given", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFaqsByCategory.mockResolvedValue([{ id: "f1" }]);
     const { GET } = await import("@/app/api/faqs/route");
     await GET(new Request("http://localhost/api/faqs?category=General"));
-    expect(mockGetNotionFaqsByCategory).toHaveBeenCalledWith("General", undefined);
+    expect(mockGetAppFlowyFaqsByCategory).toHaveBeenCalledWith("General", undefined);
   });
 });
 
-// ── /api/testimonials ─────────────────────────────────────────────────────────
-
 const mockGetAppFlowyTestimonials = vi.fn();
 const mockGetAppFlowyFeatured = vi.fn();
-const mockGetNotionTestimonials = vi.fn();
-const mockGetNotionFeatured = vi.fn();
 const STATIC_TESTIMONIALS = [
   { id: "t1", name: "Alice", text: "Great!", featured: true },
   { id: "t2", name: "Bob", text: "Good", featured: false },
@@ -174,12 +149,6 @@ const STATIC_TESTIMONIALS = [
 vi.mock("@/lib/appflowy-testimonials", () => ({
   getTestimonials: (...a: unknown[]) => mockGetAppFlowyTestimonials(...a),
   getFeaturedTestimonials: (...a: unknown[]) => mockGetAppFlowyFeatured(...a),
-  staticTestimonials: STATIC_TESTIMONIALS,
-}));
-
-vi.mock("@/lib/notion-testimonials", () => ({
-  getTestimonials: (...a: unknown[]) => mockGetNotionTestimonials(...a),
-  getFeaturedTestimonials: (...a: unknown[]) => mockGetNotionFeatured(...a),
   staticTestimonials: STATIC_TESTIMONIALS,
 }));
 
@@ -207,34 +176,29 @@ describe("GET /api/testimonials", () => {
     expect(data.every((t: { featured: boolean }) => t.featured)).toBe(true);
   });
 
-  it("returns bare notion array when Notion is configured", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionTestimonials.mockResolvedValue([{ id: "t3", name: "Cara", featured: false }]);
+  it("returns AppFlowy array when configured", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyTestimonials.mockResolvedValue([{ id: "t3", name: "Cara", featured: false }]);
     const { GET } = await import("@/app/api/testimonials/route");
     const res = await GET(new Request("http://localhost/api/testimonials"));
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data).toHaveLength(1);
-    expect(res.headers.get("x-cms-source")).toBe("notion");
+    expect(res.headers.get("x-cms-source")).toBe("appflowy");
   });
 
-  it("calls Notion getFeaturedTestimonials when ?featured=true and configured", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionFeatured.mockResolvedValue([]);
+  it("calls getFeaturedTestimonials when ?featured=true and configured", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFeatured.mockResolvedValue([{ id: "t1", featured: true }]);
     const { GET } = await import("@/app/api/testimonials/route");
     await GET(new Request("http://localhost/api/testimonials?featured=true"));
-    expect(mockGetNotionFeatured).toHaveBeenCalled();
+    expect(mockGetAppFlowyFeatured).toHaveBeenCalled();
   });
 });
-
-// ── /api/case-studies ─────────────────────────────────────────────────────────
 
 const mockGetAppFlowyCaseStudies = vi.fn();
 const mockGetAppFlowyFeaturedCs = vi.fn();
 const mockGetAppFlowyCsBySlug = vi.fn();
-const mockGetNotionCaseStudies = vi.fn();
-const mockGetNotionFeaturedCs = vi.fn();
-const mockGetNotionCsBySlug = vi.fn();
 const STATIC_CASE_STUDIES = [
   { id: "cs1", slug: "sample", title: "Case 1", featured: true },
   { id: "cs2", slug: "other", title: "Case 2", featured: false },
@@ -244,13 +208,6 @@ vi.mock("@/lib/appflowy-case-studies", () => ({
   getCaseStudies: (...a: unknown[]) => mockGetAppFlowyCaseStudies(...a),
   getFeaturedCaseStudies: (...a: unknown[]) => mockGetAppFlowyFeaturedCs(...a),
   getCaseStudyBySlug: (...a: unknown[]) => mockGetAppFlowyCsBySlug(...a),
-  staticCaseStudies: STATIC_CASE_STUDIES,
-}));
-
-vi.mock("@/lib/notion-case-studies", () => ({
-  getCaseStudies: (...a: unknown[]) => mockGetNotionCaseStudies(...a),
-  getFeaturedCaseStudies: (...a: unknown[]) => mockGetNotionFeaturedCs(...a),
-  getCaseStudyBySlug: (...a: unknown[]) => mockGetNotionCsBySlug(...a),
   staticCaseStudies: STATIC_CASE_STUDIES,
 }));
 
@@ -270,15 +227,15 @@ describe("GET /api/case-studies", () => {
     expect(res.headers.get("x-cms-source")).toBe("static");
   });
 
-  it("returns bare notion array when Notion is configured", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionCaseStudies.mockResolvedValue([{ id: "cs3", slug: "live", title: "Live" }]);
+  it("returns AppFlowy array when configured", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyCaseStudies.mockResolvedValue([{ id: "cs3", slug: "live", title: "Live" }]);
     const { GET } = await import("@/app/api/case-studies/route");
     const res = await GET(new Request("http://localhost/api/case-studies"));
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data).toHaveLength(1);
-    expect(res.headers.get("x-cms-source")).toBe("notion");
+    expect(res.headers.get("x-cms-source")).toBe("appflowy");
   });
 });
 
@@ -307,9 +264,9 @@ describe("GET /api/case-studies/[slug]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns notion data when configured and found", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionCsBySlug.mockResolvedValue({
+  it("returns AppFlowy data when configured and found", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyCsBySlug.mockResolvedValue({
       id: "cs1",
       slug: "sample",
       title: "Case 1",
@@ -320,13 +277,13 @@ describe("GET /api/case-studies/[slug]", () => {
       params: Promise.resolve({ slug: "sample" }),
     });
     const data = await res.json();
-    expect(data.source).toBe("notion");
+    expect(data.source).toBe("appflowy");
     expect(data.caseStudy.slug).toBe("sample");
   });
 
-  it("returns 404 when notion returns null", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionCsBySlug.mockResolvedValue(null);
+  it("returns 404 when AppFlowy and static miss", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyCsBySlug.mockResolvedValue(null);
     const { GET } = await import("@/app/api/case-studies/[slug]/route");
     const res = await GET(new Request("http://localhost/api/case-studies/gone"), {
       params: Promise.resolve({ slug: "gone" }),
@@ -335,16 +292,10 @@ describe("GET /api/case-studies/[slug]", () => {
   });
 });
 
-// ── /api/docs ─────────────────────────────────────────────────────────────────
-
 const mockGetAppFlowyDocs = vi.fn();
 const mockGroupAppFlowyDocs = vi.fn();
-const mockGetNotionDocs = vi.fn();
-const mockGroupNotionDocs = vi.fn();
 const mockGetAppFlowyDocBySlug = vi.fn();
 const mockGetAppFlowyDocContent = vi.fn();
-const mockGetNotionDocBySlug = vi.fn();
-const mockGetNotionDocContent = vi.fn();
 
 vi.mock("@/lib/appflowy-docs", () => ({
   getDocs: (...a: unknown[]) => mockGetAppFlowyDocs(...a),
@@ -353,19 +304,11 @@ vi.mock("@/lib/appflowy-docs", () => ({
   getDocContentWithToc: (...a: unknown[]) => mockGetAppFlowyDocContent(...a),
 }));
 
-vi.mock("@/lib/notion-docs", () => ({
-  getDocs: (...a: unknown[]) => mockGetNotionDocs(...a),
-  groupDocsByCategory: (...a: unknown[]) => mockGroupNotionDocs(...a),
-  getDocBySlug: (...a: unknown[]) => mockGetNotionDocBySlug(...a),
-  getDocContent: (...a: unknown[]) => mockGetNotionDocContent(...a),
-}));
-
 describe("GET /api/docs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyConfigured.mockResolvedValue(false);
-    mockIsConfiguredAsync.mockResolvedValue(false);
   });
 
   it("returns empty docs when not configured", async () => {
@@ -378,21 +321,21 @@ describe("GET /api/docs", () => {
     expect(res.headers.get("x-cms-source")).toBe("static");
   });
 
-  it("returns docs from notion when configured", async () => {
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetNotionDocs.mockResolvedValue([{ id: "d1", slug: "intro", title: "Intro" }]);
-    mockGroupNotionDocs.mockReturnValue({ General: [{ id: "d1" }] });
+  it("returns docs from AppFlowy when configured", async () => {
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocs.mockResolvedValue([{ id: "d1", slug: "intro", title: "Intro" }]);
+    mockGroupAppFlowyDocs.mockResolvedValue({ General: [{ id: "d1" }] });
     const { GET } = await import("@/app/api/docs/route");
     const res = await GET();
     const data = await res.json();
-    expect(data.source).toBe("notion");
+    expect(data.source).toBe("appflowy");
     expect(data.docs).toHaveLength(1);
     expect(data.grouped).toBeDefined();
   });
 
   it("falls back to empty on cms error", async () => {
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetNotionDocs.mockRejectedValue(new Error("API down"));
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocs.mockRejectedValue(new Error("API down"));
     const { GET } = await import("@/app/api/docs/route");
     const res = await GET();
     const data = await res.json();
@@ -406,7 +349,6 @@ describe("GET /api/docs/[slug]", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyConfigured.mockResolvedValue(false);
-    mockIsConfiguredAsync.mockResolvedValue(false);
   });
 
   it("returns 503 when not configured", async () => {
@@ -419,8 +361,8 @@ describe("GET /api/docs/[slug]", () => {
   });
 
   it("returns 404 when doc not found", async () => {
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetNotionDocBySlug.mockResolvedValue(null);
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocBySlug.mockResolvedValue(null);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
     const res = await GET(new NextRequest("http://localhost/api/docs/missing"), {
@@ -429,10 +371,10 @@ describe("GET /api/docs/[slug]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 500 when content fetch fails", async () => {
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetNotionDocBySlug.mockResolvedValue({ id: "d1", slug: "intro" });
-    mockGetNotionDocContent.mockResolvedValue(null);
+  it("returns 500 when content fetch throws", async () => {
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocBySlug.mockResolvedValue({ id: "d1", slug: "intro" });
+    mockGetAppFlowyDocContent.mockRejectedValue(new Error("toc fail"));
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
     const res = await GET(new NextRequest("http://localhost/api/docs/intro"), {
@@ -442,13 +384,11 @@ describe("GET /api/docs/[slug]", () => {
   });
 
   it("returns doc content when found", async () => {
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetNotionDocBySlug.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro" });
-    mockGetNotionDocContent.mockResolvedValue({
-      id: "d1",
-      slug: "intro",
-      title: "Intro",
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocBySlug.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro" });
+    mockGetAppFlowyDocContent.mockResolvedValue({
       html: "<p>content</p>",
+      toc: [],
     });
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
