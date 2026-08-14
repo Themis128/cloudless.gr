@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
-import type { CloudlessService, ServiceInput, ServiceCategory } from "@/lib/notion-services";
+import type { CloudlessService, ServiceInput, ServiceCategory } from "@/lib/appflowy-services";
 
 const SERVICE_CATEGORIES: ServiceCategory[] = ["audit", "devops", "consulting", "training"];
 

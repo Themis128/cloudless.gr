@@ -15,13 +15,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockIsAppFlowyCmsConfigured = vi.fn();
-const mockIsNotionCmsConfigured = vi.fn();
 const mockIsAppFlowyConfigured = vi.fn();
-const mockIsConfiguredAsync = vi.fn();
 
 vi.mock("@/lib/cms-provider", () => ({
   isAppFlowyCmsConfigured: (...a: unknown[]) => mockIsAppFlowyCmsConfigured(...a),
-  isNotionCmsConfigured: (...a: unknown[]) => mockIsNotionCmsConfigured(...a),
   cmsSourceHeaders: (source: string) => ({ "x-cms-source": source }),
 }));
 
@@ -37,7 +34,6 @@ vi.mock("@/lib/integrations", () => ({
 // ── /api/services ─────────────────────────────────────────────────────────────
 
 const mockGetAppFlowyServices = vi.fn();
-const mockGetNotionServices = vi.fn();
 const STATIC_SERVICES = [
   { id: "s1", title: "Web Dev", category: "Development", description: "", featured: true },
   { id: "s2", title: "SEO", category: "Marketing", description: "", featured: false },
@@ -48,17 +44,11 @@ vi.mock("@/lib/appflowy-services", () => ({
   staticServices: STATIC_SERVICES,
 }));
 
-vi.mock("@/lib/notion-services", () => ({
-  getServices: (...a: unknown[]) => mockGetNotionServices(...a),
-  staticServices: STATIC_SERVICES,
-}));
-
 describe("GET /api/services", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyCmsConfigured.mockResolvedValue(false);
-    mockIsNotionCmsConfigured.mockResolvedValue(false);
   });
 
   it("returns static fallback when not configured", async () => {
@@ -79,22 +69,22 @@ describe("GET /api/services", () => {
     expect(data.services.every((s: { category: string }) => s.category === "Marketing")).toBe(true);
   });
 
-  it("returns notion data when Notion is configured and AppFlowy is not", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionServices.mockResolvedValue([
+  it("returns AppFlowy data when configured", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyServices.mockResolvedValue([
       { id: "s3", title: "Cloud", category: "Dev", description: "", featured: true },
     ]);
     const { GET } = await import("@/app/api/services/route");
     const res = await GET(new Request("http://localhost/api/services"));
     const data = await res.json();
-    expect(data.source).toBe("notion");
+    expect(data.source).toBe("appflowy");
     expect(data.services).toHaveLength(1);
-    expect(res.headers.get("x-cms-source")).toBe("notion");
+    expect(res.headers.get("x-cms-source")).toBe("appflowy");
   });
 
   it("falls back to static on cms error", async () => {
-    mockIsNotionCmsConfigured.mockResolvedValue(true);
-    mockGetNotionServices.mockRejectedValue(new Error("API error"));
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyServices.mockRejectedValue(new Error("API error"));
     const { GET } = await import("@/app/api/services/route");
     const res = await GET(new Request("http://localhost/api/services"));
     const data = await res.json();
@@ -131,7 +121,6 @@ describe("GET /api/faqs", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyCmsConfigured.mockResolvedValue(false);
-    mockIsNotionCmsConfigured.mockResolvedValue(false);
   });
 
   it("returns bare static array + x-cms-source when not configured", async () => {
@@ -199,7 +188,6 @@ describe("GET /api/testimonials", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyCmsConfigured.mockResolvedValue(false);
-    mockIsNotionCmsConfigured.mockResolvedValue(false);
   });
 
   it("returns bare static array when not configured", async () => {
@@ -271,7 +259,6 @@ describe("GET /api/case-studies", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyCmsConfigured.mockResolvedValue(false);
-    mockIsNotionCmsConfigured.mockResolvedValue(false);
   });
 
   it("returns bare static array when not configured", async () => {
@@ -300,7 +287,6 @@ describe("GET /api/case-studies/[slug]", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockIsAppFlowyCmsConfigured.mockResolvedValue(false);
-    mockIsNotionCmsConfigured.mockResolvedValue(false);
   });
 
   it("returns static case study when not configured", async () => {

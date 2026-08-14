@@ -53,6 +53,7 @@ export const ADMIN_PAGES = [
   "/en/admin/ai-generator",
   "/en/admin/analytics",
   "/en/admin/analytics/seo",
+  "/en/admin/analytics/funnel",
   "/en/admin/analytics/unified",
   "/en/admin/blog",
   "/en/admin/calendar",

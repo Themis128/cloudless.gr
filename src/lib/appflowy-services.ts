@@ -102,4 +102,5 @@ export async function getServices(): Promise<CloudlessService[]> {
   }
 }
 
+export type { CloudlessService, ServiceInput, ServiceCategory } from "./notion-services";
 export { staticServices };

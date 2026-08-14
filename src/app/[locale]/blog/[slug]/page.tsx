@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { posts as staticPosts, formatDate } from "@/lib/blog";
 import { getBlogPostBySlug, getBlogPosts } from "@/lib/blog-source";
-import { trackEvent } from "@/lib/notion-analytics";
+import { trackEvent } from "@/lib/appflowy-analytics";
 import JsonLd from "@/components/JsonLd";
 import { getBlogPostSchema, getBreadcrumbSchema } from "@/lib/structured-data";
 import React from "react";
@@ -120,10 +120,8 @@ export default async function BlogPostPage({ params }: Props) {
 
   // Track blog view (fire-and-forget — never blocks render)
   trackEvent({
-    event: `blog_view:${slug}`,
-    type: "blog_view",
-    page: `/blog/${slug}`,
-    source: "organic",
+    event: "blog_view",
+    path: `/blog/${slug}`,
   }).catch(() => {});
 
   const post = await getBlogPostBySlug(slug);

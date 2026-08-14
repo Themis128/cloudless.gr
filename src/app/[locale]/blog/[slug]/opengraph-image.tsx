@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getPostBySlug } from "@/lib/notion-blog";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { getBlogPostBySlug } from "@/lib/blog-source";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

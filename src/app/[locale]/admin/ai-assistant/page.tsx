@@ -217,7 +217,7 @@ export default function AIAssistantPage() {
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {chatMessages.length === 0 && (
               <p className="font-mono text-xs text-slate-500">
-                Ask me anything — I can search Notion, look up recent orders, or draft a team email.
+                Ask me anything — I can search AppFlowy docs, look up lake metrics, or draft a team email.
               </p>
             )}
             {chatMessages.map((msg, i) => (
@@ -252,7 +252,7 @@ export default function AIAssistantPage() {
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Search Notion, check orders, draft an email…"
+              placeholder="Search docs, check orders, draft an email…"
               disabled={loading}
               className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none disabled:opacity-50"
             />

@@ -55,7 +55,7 @@ interface DeviceRow {
   avgPosition: number;
 }
 
-/** One persisted weekly snapshot from the Notion GSC archive. */
+/** One persisted weekly snapshot from the R2 GSC archive. */
 interface ArchiveRow {
   id: string;
   week: string;
@@ -301,7 +301,7 @@ export default function SeoAnalyticsPage() {
             <section>
               <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
                 WEEKLY ARCHIVE{" "}
-                <span className="text-slate-600">— persisted snapshots (Notion)</span>
+                <span className="text-slate-600">— R2 gold snapshots</span>
               </h2>
               <SeoTable
                 head={[
