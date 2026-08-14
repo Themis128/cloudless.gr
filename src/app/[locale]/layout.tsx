@@ -33,6 +33,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// Only en|el|fr|de are valid `[locale]` values. Without this, Turbopack can
+// bind `/api/auth/session` as locale=`api` + missing `auth/session` page → HTML 404.
+export const dynamicParams = false;
+
 const BASE_URL = "https://cloudless.gr";
 
 export async function generateMetadata({
