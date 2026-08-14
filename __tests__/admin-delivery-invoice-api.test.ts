@@ -123,18 +123,24 @@ describe("POST /api/admin/delivery/projects/[id]/invoice", () => {
 
   it("returns 401 without auth", async () => {
     const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
-    const res = await POST(new NextRequest("http://localhost/api/admin/delivery/projects/ap_abc/invoice"), {
-      params: Promise.resolve({ id: "ap_abc" }),
-    });
+    const res = await POST(
+      new NextRequest("http://localhost/api/admin/delivery/projects/ap_abc/invoice"),
+      {
+        params: Promise.resolve({ id: "ap_abc" }),
+      }
+    );
     expect(res.status).toBe(401);
   });
 
   it("returns 503 when Stripe missing", async () => {
     mockGetStripe.mockResolvedValueOnce(null);
     const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
-    const res = await POST(adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }), {
-      params: Promise.resolve({ id: "ap_abc" }),
-    });
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      {
+        params: Promise.resolve({ id: "ap_abc" }),
+      }
+    );
     expect(res.status).toBe(503);
   });
 
@@ -144,17 +150,23 @@ describe("POST /api/admin/delivery/projects/[id]/invoice", () => {
       project: { ...project, hourlyRateCents: null },
     });
     const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
-    const res = await POST(adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }), {
-      params: Promise.resolve({ id: "ap_abc" }),
-    });
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      {
+        params: Promise.resolve({ id: "ap_abc" }),
+      }
+    );
     expect(res.status).toBe(400);
   });
 
   it("creates a draft and stamps entries", async () => {
     const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
-    const res = await POST(adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }), {
-      params: Promise.resolve({ id: "ap_abc" }),
-    });
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      {
+        params: Promise.resolve({ id: "ap_abc" }),
+      }
+    );
     const data = await res.json();
     expect(res.status).toBe(201);
     expect(data.invoice.id).toBe("in_1");
@@ -173,11 +185,16 @@ describe("POST /api/admin/delivery/projects/[id]/invoice", () => {
       project: { ...project, stripeCustomerId: "cus_existing" },
     });
     const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
-    const res = await POST(adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }), {
-      params: Promise.resolve({ id: "ap_abc" }),
-    });
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      {
+        params: Promise.resolve({ id: "ap_abc" }),
+      }
+    );
     expect(res.status).toBe(201);
     expect(mockResolveCustomer).not.toHaveBeenCalled();
-    expect(mockCreateDraft).toHaveBeenCalledWith(expect.objectContaining({ customerId: "cus_existing" }));
+    expect(mockCreateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: "cus_existing" })
+    );
   });
 });

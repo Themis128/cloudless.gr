@@ -6,11 +6,7 @@ import {
   markTimeEntriesInvoiced,
   setAgencyProjectStripeCustomer,
 } from "@/lib/agency-projects-d1";
-import {
-  createDraftInvoice,
-  getStripe,
-  resolveOrCreateCustomerByEmail,
-} from "@/lib/stripe";
+import { createDraftInvoice, getStripe, resolveOrCreateCustomerByEmail } from "@/lib/stripe";
 
 const AP_RE = /^ap_[a-zA-Z0-9-]+$/;
 

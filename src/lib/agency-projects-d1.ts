@@ -411,9 +411,7 @@ export async function setAgencyProjectStripeCustomer(
   const now = Math.floor(Date.now() / 1000);
   try {
     const res = await db
-      .prepare(
-        `UPDATE agency_project SET stripe_customer_id = ?, updated_at = ? WHERE id = ?`
-      )
+      .prepare(`UPDATE agency_project SET stripe_customer_id = ?, updated_at = ? WHERE id = ?`)
       .bind(stripeCustomerId, now, projectId)
       .run();
     return (res.meta?.changes ?? 0) > 0;
