@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getGscReports } from "@/lib/notion-gsc-reports";
+import { getGscReports } from "@/lib/gsc-weekly-archive";
 
 /**
  * Persisted weekly GSC archive (R2 snapshot at lake/snapshots/gsc-weekly.json,

@@ -273,6 +273,7 @@ describe("GET /api/admin/crm/contacts/[id]", () => {
     mockListNotes.mockResolvedValue([]);
     mockGetStripe.mockResolvedValue(null);
     mockGetAuthDbFromEnv.mockReturnValue(null);
+    mockGetGoldSection.mockResolvedValue({ section: "attribution", rows: [] });
   });
 
   it("rejects unauthenticated requests", async () => {

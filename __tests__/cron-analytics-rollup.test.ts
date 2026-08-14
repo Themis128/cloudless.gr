@@ -5,14 +5,10 @@ const { mockSlackPost } = vi.hoisted(() => ({
   mockSlackPost: vi.fn(),
 }));
 
-const mockCreateWeeklyRollup = vi.fn();
-const mockArchiveOldEvents = vi.fn();
-const mockFlushEventQueue = vi.fn();
+const mockGetWeeklyAnalyticsRollup = vi.fn();
 
-vi.mock("@/lib/notion-analytics", () => ({
-  createWeeklyRollup: () => mockCreateWeeklyRollup(),
-  archiveOldEvents: (...args: unknown[]) => mockArchiveOldEvents(...args),
-  flushEventQueue: () => mockFlushEventQueue(),
+vi.mock("@/lib/analytics-events-d1", () => ({
+  getWeeklyAnalyticsRollup: (...args: unknown[]) => mockGetWeeklyAnalyticsRollup(...args),
 }));
 
 vi.mock("@/lib/slack-notify", () => ({
@@ -34,9 +30,11 @@ describe("GET /api/cron/analytics-rollup", () => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = CRON_SECRET;
     mockSlackPost.mockResolvedValue(true);
-    mockCreateWeeklyRollup.mockResolvedValue("rollup-page-id-123");
-    mockArchiveOldEvents.mockResolvedValue({ archived: 42, errors: 0 });
-    mockFlushEventQueue.mockResolvedValue({ written: 0, errors: 0 });
+    mockGetWeeklyAnalyticsRollup.mockResolvedValue({
+      bound: true,
+      eventCount: 42,
+      byType: { page_view: 30, contact_submit: 12 },
+    });
   });
 
   it("returns 401 when authorization header is missing", async () => {
@@ -46,8 +44,7 @@ describe("GET /api/cron/analytics-rollup", () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Unauthorized");
-    expect(mockCreateWeeklyRollup).not.toHaveBeenCalled();
-    expect(mockArchiveOldEvents).not.toHaveBeenCalled();
+    expect(mockGetWeeklyAnalyticsRollup).not.toHaveBeenCalled();
   });
 
   it("returns 401 when secret is wrong", async () => {
@@ -55,75 +52,52 @@ describe("GET /api/cron/analytics-rollup", () => {
     const res = await GET(makeRequest("bad-secret"));
 
     expect(res.status).toBe(401);
-    expect(mockCreateWeeklyRollup).not.toHaveBeenCalled();
+    expect(mockGetWeeklyAnalyticsRollup).not.toHaveBeenCalled();
   });
 
-  it("runs rollup and archive then sends Slack notification", async () => {
+  it("summarizes D1 events then sends Slack notification", async () => {
     const { GET } = await import("@/app/api/cron/analytics-rollup/route");
     const res = await GET(makeRequest(CRON_SECRET));
 
     expect(res.status).toBe(200);
-    expect(mockCreateWeeklyRollup).toHaveBeenCalledOnce();
-    expect(mockArchiveOldEvents).toHaveBeenCalledWith(30);
+    expect(mockGetWeeklyAnalyticsRollup).toHaveBeenCalledWith(7);
     expect(mockSlackPost).toHaveBeenCalledOnce();
   });
 
-  it("returns rollupId and archive counts in response body", async () => {
+  it("returns event counts in the response body", async () => {
     const { GET } = await import("@/app/api/cron/analytics-rollup/route");
     const res = await GET(makeRequest(CRON_SECRET));
     const body = await res.json();
 
-    expect(body.rollupId).toBe("rollup-page-id-123");
-    expect(body.archived).toBe(42);
-    expect(body.errors).toBe(0);
+    expect(body.bound).toBe(true);
+    expect(body.eventCount).toBe(42);
+    expect(body.byType.page_view).toBe(30);
   });
 
-  it("returns null rollupId when Notion is not configured", async () => {
-    mockCreateWeeklyRollup.mockResolvedValueOnce(null);
-    mockArchiveOldEvents.mockResolvedValueOnce({ archived: 0, errors: 0 });
+  it("still posts Slack when AUTH_DB is unbound", async () => {
+    mockGetWeeklyAnalyticsRollup.mockResolvedValueOnce({
+      bound: false,
+      eventCount: 0,
+      byType: {},
+    });
 
     const { GET } = await import("@/app/api/cron/analytics-rollup/route");
     const res = await GET(makeRequest(CRON_SECRET));
     const body = await res.json();
 
-    expect(body.rollupId).toBeNull();
+    expect(body.bound).toBe(false);
     expect(mockSlackPost).toHaveBeenCalledOnce();
-  });
-
-  it("includes error count in Slack message when archive has errors", async () => {
-    mockArchiveOldEvents.mockResolvedValueOnce({ archived: 10, errors: 3 });
-
-    const { GET } = await import("@/app/api/cron/analytics-rollup/route");
-    await GET(makeRequest(CRON_SECRET));
-
     const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
-    expect(section.text.text).toContain("Errors:");
-    expect(section.text.text).toContain("3");
+    expect(payload.blocks.find((b: { type: string }) => b.type === "section").text.text).toContain(
+      "unbound"
+    );
   });
 
-  it("does not include errors line when archive has no errors", async () => {
-    const { GET } = await import("@/app/api/cron/analytics-rollup/route");
-    await GET(makeRequest(CRON_SECRET));
-
-    const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
-    expect(section.text.text).not.toContain("Errors:");
-  });
-
-  it("Slack message includes archived count", async () => {
+  it("Slack message includes the D1 event count", async () => {
     const { GET } = await import("@/app/api/cron/analytics-rollup/route");
     await GET(makeRequest(CRON_SECRET));
 
     const payload = mockSlackPost.mock.calls[0][0];
     expect(payload.text).toContain("42");
-  });
-
-  it("runs rollup and archive in parallel (both always called)", async () => {
-    const { GET } = await import("@/app/api/cron/analytics-rollup/route");
-    await GET(makeRequest(CRON_SECRET));
-
-    expect(mockCreateWeeklyRollup).toHaveBeenCalledOnce();
-    expect(mockArchiveOldEvents).toHaveBeenCalledOnce();
   });
 });
