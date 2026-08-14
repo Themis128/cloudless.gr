@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { downloadCsvFile, rowsToCsv } from "@/lib/csv-export";
 
 type Row = Record<string, string | number | null>;
 
@@ -324,15 +325,36 @@ export default function DatalakeDashboardPage() {
                   {meta.subtitle}
                 </p>
               </div>
-              <div className="text-xs" style={{ color: "var(--ink-muted)" }}>
+              <div
+                className="flex items-center gap-3 text-xs"
+                style={{ color: "var(--ink-muted)" }}
+              >
                 {s.error ? "error" : `${s.rowCount ?? s.rows?.length ?? 0} rows`}
                 {s.fromCache && !s.error && (
                   <span
-                    className="ml-2 rounded px-1.5 py-0.5"
+                    className="rounded px-1.5 py-0.5"
                     style={{ background: "var(--surface-subtle)" }}
                   >
                     gold
                   </span>
+                )}
+                {!s.error && (s.rows?.length ?? 0) > 0 && meta.columns.length > 0 && (
+                  <button
+                    type="button"
+                    className="rounded-md px-2 py-1 font-mono disabled:opacity-50"
+                    style={{
+                      border: "1px solid var(--border-strong)",
+                      background: "var(--surface-subtle)",
+                      color: "var(--ink-primary)",
+                    }}
+                    onClick={() => {
+                      const csv = rowsToCsv(meta.columns, s.rows ?? []);
+                      const day = (data?.generated_at ?? new Date().toISOString()).slice(0, 10);
+                      downloadCsvFile(`datalake-${s.section}-${day}.csv`, csv);
+                    }}
+                  >
+                    Download CSV
+                  </button>
                 )}
               </div>
             </header>
