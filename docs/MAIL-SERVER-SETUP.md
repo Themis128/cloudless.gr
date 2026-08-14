@@ -23,14 +23,14 @@ your public IP, proxy mail through Cloudflare's orange cloud" is **wrong for thi
 environment** — Cloudflare's proxy only carries HTTP, and there is no reachable
 public IP anyway.
 
-The working design routes *around* both constraints:
+The working design routes _around_ both constraints:
 
-| Piece            | How                                                                 | Self-hosted? |
-| ---------------- | ------------------------------------------------------------------- | ------------ |
-| Mailbox + IMAP   | **dovecot** on omv-ha (Maildir virtual user)                        | ✅           |
-| Webmail UI       | **Roundcube** on omv-ha, HTTPS via **Cloudflare Tunnel**            | ✅           |
-| Outbound send    | **postfix** relays via `smtp.resend.com:587` (Resend)               | relay        |
-| Inbound receive  | **Cloudflare Email Routing** → forward to Gmail (not dovecot)       | ✅           |
+| Piece           | How                                                           | Self-hosted? |
+| --------------- | ------------------------------------------------------------- | ------------ |
+| Mailbox + IMAP  | **dovecot** on omv-ha (Maildir virtual user)                  | ✅           |
+| Webmail UI      | **Roundcube** on omv-ha, HTTPS via **Cloudflare Tunnel**      | ✅           |
+| Outbound send   | **postfix** relays via `smtp.resend.com:587` (Resend)         | relay        |
+| Inbound receive | **Cloudflare Email Routing** → forward to Gmail (not dovecot) | ✅           |
 
 No port 25, no inbound reachability required — outbound uses :587 (Resend);
 inbound uses Cloudflare Email Routing (MX on Cloudflare). Roundcube compose
@@ -51,11 +51,11 @@ still goes through local postfix → Resend. Reading inbound mail is via Gmail
 
 Resend sender verification (added 2026-08-08):
 
-| Type | Name                        | Value                                            |
-| ---- | --------------------------- | ------------------------------------------------ |
-| TXT  | `resend._domainkey`         | `p=…` (Resend DKIM public key)                   |
-| MX   | `send`                      | `feedback-smtp.eu-west-1.amazonses.com` (prio 10)|
-| TXT  | `send`                      | `v=spf1 include:amazonses.com ~all`              |
+| Type | Name                | Value                                             |
+| ---- | ------------------- | ------------------------------------------------- |
+| TXT  | `resend._domainkey` | `p=…` (Resend DKIM public key)                    |
+| MX   | `send`              | `feedback-smtp.eu-west-1.amazonses.com` (prio 10) |
+| TXT  | `send`              | `v=spf1 include:amazonses.com ~all`               |
 
 Inbound (Cloudflare Email Routing — **live**): root `MX` points at Cloudflare's
 mail servers. Catch-all and `tbaltzakis@` forward to Gmail. DMARC is live (see
@@ -81,7 +81,7 @@ DMARC status below) — do not treat this section as pending.
     (then `postmap lmdb:/etc/postfix/sasl_passwd`). **Requires the
     `postfix-lmdb` package** — without it you get
     `unsupported dictionary type: lmdb` → `local data error talking to
-    smtp.resend.com`.
+smtp.resend.com`.
 
 ## Verify
 
@@ -128,7 +128,7 @@ Cloudflare Email Routing is **enabled** on `cloudless.gr` with:
 - `tbaltzakis@cloudless.gr` → forward to `themis.baltzakis@gmail.com`
 - catch-all → forward to `themis.baltzakis@gmail.com`
 
-So all mail *to* `@cloudless.gr` reaches Gmail. This deliberately does NOT
+So all mail _to_ `@cloudless.gr` reaches Gmail. This deliberately does NOT
 land in the dovecot mailbox — building a CF Email Worker → tunnel → LMTP
 bridge would just duplicate mail into Roundcube for zero benefit (you'd
 read the same message twice). If you want inbound in Roundcube specifically,
@@ -165,5 +165,5 @@ dovecot + postfix relay stack idempotently (reads `RESEND_API_KEY` and the
 mailbox password from the environment; never hard-codes secrets). Roundcube
 
 - nginx + php-fpm are apt packages and can be reinstalled by running the
-script's package list and re-applying the vhost / `config.inc.php` snippets
-above.
+  script's package list and re-applying the vhost / `config.inc.php` snippets
+  above.

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockSendEmailCloudflare = vi.fn();
 const mockSendEmailResend = vi.fn();
+const mockIsSuppressed = vi.fn();
 
 vi.mock("@/lib/email-cloudflare", () => ({
   isCloudflareEmailConfigured: vi.fn(() => true),
@@ -11,6 +12,10 @@ vi.mock("@/lib/email-cloudflare", () => ({
 vi.mock("@/lib/email-resend", () => ({
   isResendConfigured: vi.fn(() => false),
   sendEmailResend: (...args: unknown[]) => mockSendEmailResend(...args),
+}));
+
+vi.mock("@/lib/ses-suppression-d1", () => ({
+  isSuppressed: (...args: unknown[]) => mockIsSuppressed(...args),
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
@@ -25,6 +30,7 @@ describe("email.ts", () => {
     vi.clearAllMocks();
     mockSendEmailCloudflare.mockResolvedValue(undefined);
     mockSendEmailResend.mockResolvedValue(undefined);
+    mockIsSuppressed.mockResolvedValue(false);
     const { isCloudflareEmailConfigured } = await import("@/lib/email-cloudflare");
     const { isResendConfigured } = await import("@/lib/email-resend");
     vi.mocked(isCloudflareEmailConfigured).mockReturnValue(true);
@@ -32,6 +38,19 @@ describe("email.ts", () => {
   });
 
   describe("sendEmail()", () => {
+    it("skips send when the address is suppressed", async () => {
+      mockIsSuppressed.mockResolvedValue(true);
+      const { sendEmail } = await import("@/lib/email");
+      await sendEmail({
+        to: "blocked@example.com",
+        subject: "Nope",
+        html: "<p>x</p>",
+        text: "x",
+      });
+      expect(mockSendEmailCloudflare).not.toHaveBeenCalled();
+      expect(mockSendEmailResend).not.toHaveBeenCalled();
+    });
+
     it("calls Cloudflare Email with correct recipient and subject", async () => {
       const { sendEmail } = await import("@/lib/email");
       await sendEmail({
