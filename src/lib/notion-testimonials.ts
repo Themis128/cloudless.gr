@@ -25,62 +25,14 @@ import {
   isConfiguredAsync,
 } from "@/lib/integrations";
 import { cached, invalidateCache } from "@/lib/notion-cache";
+import {
+  staticTestimonials,
+  type Testimonial,
+  type TestimonialInput,
+} from "@/lib/cms-static";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface Testimonial {
-  id: string;
-  name: string;
-  company: string;
-  role: string;
-  quote: string;
-  avatar?: string;
-  service?: string;
-  rating?: number;
-  featured: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Static fallback — shown before any Notion database is created
-// ---------------------------------------------------------------------------
-
-export const staticTestimonials: Testimonial[] = [
-  {
-    id: "t1",
-    name: "Alexandros Papadopoulos",
-    company: "TechFlow Athens",
-    role: "CTO",
-    quote:
-      "Cloudless cut our AWS bill by 55% in the first month. Themis understood our architecture immediately and had a plan within 24 hours.",
-    service: "Cloud Audit",
-    rating: 5,
-    featured: true,
-  },
-  {
-    id: "t2",
-    name: "Maria Stavridou",
-    company: "Retail Plus",
-    role: "Head of Engineering",
-    quote:
-      "We migrated a monolith to serverless in 6 weeks with zero downtime. The result is 10× faster deployments and half the infrastructure cost.",
-    service: "Architecture Migration",
-    rating: 5,
-    featured: true,
-  },
-  {
-    id: "t3",
-    name: "Nikos Theodorakis",
-    company: "FinStart GR",
-    role: "Founder & CEO",
-    quote:
-      "The monthly retainer gives us a senior cloud architect on call without the full-time hire cost. Invaluable for a startup.",
-    service: "Monthly Retainer",
-    rating: 5,
-    featured: false,
-  },
-];
+export type { Testimonial, TestimonialInput } from "@/lib/cms-static";
+export { staticTestimonials } from "@/lib/cms-static";
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -111,19 +63,6 @@ function mapPage(page: any): Testimonial {
 // ---------------------------------------------------------------------------
 // Admin write API
 // ---------------------------------------------------------------------------
-
-export interface TestimonialInput {
-  name: string;
-  company?: string;
-  role?: string;
-  quote: string;
-  avatar?: string;
-  service?: string;
-  rating?: number;
-  featured?: boolean;
-  published?: boolean;
-  order?: number;
-}
 
 /**
  * List ALL testimonials (published + unpublished) for the admin panel.

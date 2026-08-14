@@ -17,10 +17,10 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import { staticFaqs, type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
+import { staticFaqs, type Faq, type FaqCategory, type FaqInput } from "./cms-static";
 
-// Re-export types from Notion adapter (single source of truth)
-export { type Faq, type FaqCategory, type FaqInput } from "./notion-faqs";
+export type { Faq, FaqCategory, FaqInput } from "./cms-static";
+export { staticFaqs } from "./cms-static";
 
 /** AppFlowy FAQ entry — Notion `Faq` plus AppFlowy-specific editorial fields. */
 interface AppFlowyFaq extends Faq {

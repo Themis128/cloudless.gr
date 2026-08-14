@@ -44,92 +44,21 @@ import {
   isConfiguredAsync,
 } from "@/lib/integrations";
 import { cached, invalidateCache } from "@/lib/notion-cache";
+import {
+  staticCaseStudies,
+  type CaseStudy,
+  type CaseStudyMetric,
+  type CaseStudyWithContent,
+  type CaseStudyInput,
+} from "@/lib/cms-static";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface CaseStudyMetric {
-  label: string;
-  value: string;
-}
-
-export interface CaseStudy {
-  id: string;
-  slug: string;
-  title: string;
-  client: string;
-  industry: string;
-  services: string[];
-  summary: string;
-  challenge: string;
-  solution: string;
-  results: string;
-  metrics: CaseStudyMetric[];
-  coverImage?: string;
-  tags: string[];
-  featured: boolean;
-  date: string;
-}
-
-export interface CaseStudyWithContent extends CaseStudy {
-  html: string;
-}
-
-// ---------------------------------------------------------------------------
-// Static fallback
-// ---------------------------------------------------------------------------
-
-export const staticCaseStudies: CaseStudy[] = [
-  {
-    id: "cs1",
-    slug: "techflow-aws-cost-reduction",
-    title: "55% AWS Cost Reduction for a SaaS Startup",
-    client: "TechFlow Athens",
-    industry: "SaaS",
-    services: ["Cloud Audit", "Cost Optimization"],
-    summary:
-      "Cloudless identified over-provisioned resources and redesigned the data pipeline architecture, cutting AWS spend by 55% in 30 days.",
-    challenge:
-      "TechFlow was spending €8,000/month on AWS with no clear understanding of where the money was going. Engineers had accumulated EC2 instances, over-sized RDS databases, and unused Elastic IPs over two years.",
-    solution:
-      "A full infrastructure audit mapped every resource to its cost. Right-sizing EC2 instances, migrating batch jobs to Lambda, and switching to Aurora Serverless v2 eliminated idle spend immediately.",
-    results:
-      "Monthly AWS bill dropped from €8,000 to €3,600 within 30 days. The team now has a cost dashboard and automated alerts for anomalies.",
-    metrics: [
-      { label: "Cost reduction", value: "55%" },
-      { label: "Time to results", value: "30 days" },
-      { label: "Monthly savings", value: "€4,400" },
-    ],
-    tags: ["AWS", "Cost optimization", "SaaS"],
-    featured: true,
-    date: "2026-03-01",
-  },
-  {
-    id: "cs2",
-    slug: "retail-plus-serverless-migration",
-    title: "Monolith to Serverless in 6 Weeks",
-    client: "Retail Plus",
-    industry: "E-commerce",
-    services: ["Architecture Migration", "DevOps"],
-    summary:
-      "A 4-year-old Django monolith was decomposed into serverless microservices with zero downtime, enabling 10× faster deployments.",
-    challenge:
-      "Retail Plus had outgrown their monolithic application. Each deployment took 45 minutes, required manual database migrations, and caused brief downtime during peak trading hours.",
-    solution:
-      "Critical business domains (orders, inventory, notifications) were extracted into Lambda functions behind API Gateway. A strangler-fig migration allowed the old and new systems to run in parallel during the transition.",
-    results:
-      "Deployment time fell from 45 minutes to under 4 minutes. Infrastructure cost dropped 40% due to pay-per-use Lambda pricing. Zero downtime migrations are now standard.",
-    metrics: [
-      { label: "Deploy time", value: "−90%" },
-      { label: "Infrastructure cost", value: "−40%" },
-      { label: "Migration duration", value: "6 weeks" },
-    ],
-    tags: ["Serverless", "Lambda", "Migration", "E-commerce"],
-    featured: true,
-    date: "2026-01-15",
-  },
-];
+export type {
+  CaseStudy,
+  CaseStudyMetric,
+  CaseStudyWithContent,
+  CaseStudyInput,
+} from "@/lib/cms-static";
+export { staticCaseStudies } from "@/lib/cms-static";
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -176,24 +105,6 @@ function mapPage(page: any): CaseStudy {
 // ---------------------------------------------------------------------------
 // Admin write API
 // ---------------------------------------------------------------------------
-
-export interface CaseStudyInput {
-  title: string;
-  slug?: string;
-  client?: string;
-  industry?: string;
-  services?: string[];
-  summary?: string;
-  challenge?: string;
-  solution?: string;
-  results?: string;
-  metrics?: CaseStudyMetric[];
-  coverImage?: string;
-  tags?: string[];
-  published?: boolean;
-  featured?: boolean;
-  date?: string;
-}
 
 /**
  * List ALL case studies (published + unpublished) for the admin panel.

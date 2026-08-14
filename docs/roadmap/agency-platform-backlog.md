@@ -148,7 +148,7 @@ Prefer `.cursor/rules/` over AWS-primary / Cognito / HubSpot / Notion-CMS runboo
 | **Done (this branch)** | Add `docs/current-source-of-truth-checklist.md` | Architecture skill and `CLAUDE.md` linked a missing file | Points at `cloudless2` → Pi, AppFlowy, D1, EspoCRM |
 | **Done (this branch)** | Banner `docs/integrations/HUBSPOT.md` + integrations README as EspoCRM | File still documents `hubspot.ts` / `HUBSPOT_API_KEY` | Do not revive HubSpot |
 | **Done (this branch)** | Banner `docs/integrations/NOTION-CMS.md` as archive | Live CMS is AppFlowy | Keep file; do not rewrite as a Notion how-to |
-| Todo | Redirect or remove leftover `/admin/notion/*` pages | Parallel Notion admin UI still exists; **no** `src/app/api/admin/notion/**` | Same sweep as `notion-*.ts` cleanup |
+| **Done (this branch)** | Redirect leftover `/admin/notion/*` pages | Parallel Notion admin UI still exists; **no** `src/app/api/admin/notion/**` | Redirects to `/admin/appflowy/*`; CMS types/static live in `cms-static.ts` |
 | **Done (this branch)** | Fix EspoCRM README “ETL to S3” → R2 parquet | `scripts/etl/espocrm-to-r2.mjs` is the path | `infrastructure/espocrm/README.md` |
 | **Done (this branch)** | Replace `search_notion` in `ANTHROPIC.md` / `AGENTS_ROADMAP.md` | Admin assistant is AppFlowy | Same CMS rule |
 

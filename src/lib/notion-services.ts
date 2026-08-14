@@ -29,104 +29,15 @@ import {
   requireIntegrationAsync,
 } from "@/lib/integrations";
 import { cached, invalidateCache } from "@/lib/notion-cache";
+import {
+  staticServices,
+  type CloudlessService,
+  type ServiceCategory,
+  type ServiceInput,
+} from "@/lib/cms-static";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type ServiceCategory = "audit" | "devops" | "consulting" | "training";
-
-export interface CloudlessService {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  price: string;
-  category: ServiceCategory;
-  features: string[];
-  cta: string;
-  icon: string;
-  stripePriceId?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Static fallback — mirrors the hard-coded services page content
-// ---------------------------------------------------------------------------
-
-export const staticServices: CloudlessService[] = [
-  {
-    id: "cloud-audit",
-    slug: "cloud-audit",
-    name: "Cloud Audit",
-    description:
-      "A deep-dive into your AWS infrastructure to uncover hidden costs, security gaps, and performance bottlenecks. Delivered within 5 business days.",
-    price: "From €1,500",
-    category: "audit",
-    icon: "🔍",
-    features: [
-      "Full cost breakdown by service and team",
-      "Security misconfiguration report",
-      "Performance & latency analysis",
-      "Prioritised remediation roadmap",
-      "90-day follow-up check",
-    ],
-    cta: "Book an audit",
-  },
-  {
-    id: "architecture-review",
-    slug: "architecture-review",
-    name: "Architecture Review",
-    description:
-      "Expert evaluation of your system design against AWS Well-Architected Framework pillars: reliability, security, performance, and cost.",
-    price: "From €2,000",
-    category: "consulting",
-    icon: "🏗️",
-    features: [
-      "Well-Architected Framework assessment",
-      "Scalability & reliability analysis",
-      "Disaster recovery evaluation",
-      "Written recommendations report",
-      "60-min debrief call",
-    ],
-    cta: "Request a review",
-  },
-  {
-    id: "serverless-migration",
-    slug: "serverless-migration",
-    name: "Serverless Migration",
-    description:
-      "End-to-end migration from VMs or containers to serverless architecture, with zero-downtime cutover and full monitoring from day one.",
-    price: "From €5,000",
-    category: "devops",
-    icon: "⚡",
-    features: [
-      "Strangler-fig or big-bang migration strategy",
-      "Lambda + API Gateway + EventBridge wiring",
-      "CI/CD pipeline setup (GitHub Actions / CodePipeline)",
-      "Observability from day one (CloudWatch / Sentry)",
-      "Knowledge transfer & runbook",
-    ],
-    cta: "Start a migration",
-  },
-  {
-    id: "monthly-retainer",
-    slug: "monthly-retainer",
-    name: "Monthly Retainer",
-    description:
-      "A senior AWS-certified cloud architect on your team — available for design reviews, incident response, and ongoing cost optimisation.",
-    price: "€1,500/mo",
-    category: "consulting",
-    icon: "🤝",
-    features: [
-      "Up to 20 hours/month cloud architecture support",
-      "Unlimited async questions (email / Slack)",
-      "Monthly infrastructure review",
-      "On-call incident support",
-      "Cancel any time",
-    ],
-    cta: "Start a retainer",
-  },
-];
+export type { CloudlessService, ServiceCategory, ServiceInput } from "@/lib/cms-static";
+export { staticServices } from "@/lib/cms-static";
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -163,20 +74,6 @@ function mapPage(page: any): CloudlessService {
 // ---------------------------------------------------------------------------
 // Admin write API
 // ---------------------------------------------------------------------------
-
-export interface ServiceInput {
-  name: string;
-  slug?: string;
-  description?: string;
-  price?: string;
-  category?: ServiceCategory;
-  features?: string[];
-  cta?: string;
-  icon?: string;
-  stripePriceId?: string;
-  published?: boolean;
-  order?: number;
-}
 
 /**
  * List ALL services (published + unpublished) for the admin panel.

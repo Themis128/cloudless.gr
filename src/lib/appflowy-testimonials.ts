@@ -19,11 +19,10 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import type { Testimonial, TestimonialInput } from "./notion-testimonials";
-import { staticTestimonials } from "./notion-testimonials";
+import type { Testimonial, TestimonialInput } from "./cms-static";
+import { staticTestimonials } from "./cms-static";
 
-// Re-export types from Notion adapter (single source of truth)
-export { type Testimonial, type TestimonialInput } from "./notion-testimonials";
+export type { Testimonial, TestimonialInput } from "./cms-static";
 
 function stripPrefix(name: string): string {
   return name.replace(/^\[Testimonial\]\s*/i, "").trim();

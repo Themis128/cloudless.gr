@@ -1,2 +1,6 @@
-/** Legacy path — AppFlowy projects UI. */
-export { default } from "../../appflowy/projects/page";
+import { redirect } from "@/i18n/navigation";
+
+/** Legacy /admin/notion/projects → AppFlowy projects. */
+export default function LegacyNotionProjectsPage() {
+  redirect("/admin/appflowy/projects");
+}

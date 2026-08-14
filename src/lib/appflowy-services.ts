@@ -19,8 +19,8 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import type { CloudlessService, ServiceCategory } from "./notion-services";
-import { staticServices } from "./notion-services";
+import type { CloudlessService, ServiceCategory } from "./cms-static";
+import { staticServices } from "./cms-static";
 
 function slugify(name: string): string {
   return name
@@ -102,5 +102,5 @@ export async function getServices(): Promise<CloudlessService[]> {
   }
 }
 
-export type { CloudlessService, ServiceInput, ServiceCategory } from "./notion-services";
+export type { CloudlessService, ServiceInput, ServiceCategory } from "./cms-static";
 export { staticServices };
