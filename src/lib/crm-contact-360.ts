@@ -30,6 +30,7 @@ import {
   type Contact360Stripe,
   type Contact360Subscription,
 } from "@/lib/crm-contact-360-shared";
+import { buildContact360MatchHints } from "@/lib/contact-360-match-hints";
 import { getGoldDashboard } from "@/lib/datalake-serve";
 
 export type { Contact360 } from "@/lib/crm-contact-360-shared";
@@ -57,6 +58,19 @@ export async function getContact360(id: string): Promise<Contact360 | null> {
     loadGoldLake(),
   ]);
 
+  const attribution = buildAttribution(accountBundle.touches, gold.attribution);
+  const scores = matchRfmChurnRow(gold.scores, email);
+  const matchHints = buildContact360MatchHints({
+    email,
+    hasD1User: Boolean(accountBundle.account),
+    stripeConfigured: stripe.configured,
+    hasStripeCustomer: Boolean(stripe.customer),
+    eventCount: accountBundle.events.length,
+    hasRfm: scores.rfmScore != null || scores.churnScore != null,
+    hasFirstTouch: Boolean(attribution.firstTouch),
+    goldMatchCount: attribution.goldMatches.length,
+  });
+
   return {
     contact,
     opportunities,
@@ -65,8 +79,9 @@ export async function getContact360(id: string): Promise<Contact360 | null> {
     stripe,
     account: accountBundle.account,
     events: accountBundle.events,
-    attribution: buildAttribution(accountBundle.touches, gold.attribution),
-    scores: matchRfmChurnRow(gold.scores, email),
+    attribution,
+    scores,
+    matchHints,
     fetchedAt: new Date().toISOString(),
   };
 }

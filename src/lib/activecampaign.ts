@@ -282,6 +282,18 @@ export async function enrollLeadInAutomation(lead: {
   }
 }
 
+/** Operator visibility: is the inbound lead automation ID set? */
+export async function getLeadAutomationStatus(): Promise<{
+  apiConfigured: boolean;
+  leadAutomationIdSet: boolean;
+}> {
+  const cfg = await getConfig();
+  return {
+    apiConfigured: await isActiveCampaignConfigured(),
+    leadAutomationIdSet: Boolean(cfg.ACTIVECAMPAIGN_LEAD_AUTOMATION_ID?.trim()),
+  };
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 export async function getEmailStats(): Promise<{

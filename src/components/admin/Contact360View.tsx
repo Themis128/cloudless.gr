@@ -5,6 +5,7 @@ import type {
   Contact360,
   Contact360Attribution,
   Contact360Event,
+  Contact360MatchHints,
   Contact360Note,
   Contact360Related,
   Contact360Scores,
@@ -188,6 +189,32 @@ function ScoresBlock({ scores }: { scores: Contact360Scores }) {
   );
 }
 
+function MatchHintsBlock({ hints }: { hints: Contact360MatchHints }) {
+  const rows: { label: string; state: string }[] = [
+    { label: "D1 user", state: hints.d1User },
+    { label: "Stripe", state: hints.stripeCustomer },
+    { label: "D1 events", state: hints.d1Events },
+    { label: "RFM / churn", state: hints.rfmScores },
+    { label: "Attribution", state: hints.attribution },
+  ];
+  return (
+    <div className="space-y-2">
+      <p className="font-body text-sm text-slate-300">{hints.summary}</p>
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {rows.map((row) => (
+          <li key={row.label} className="bg-void/40 rounded-lg border border-slate-800 px-2 py-1.5">
+            <p className={LABEL}>{row.label}</p>
+            <p className="mt-0.5 font-mono text-[11px] text-slate-300">{row.state}</p>
+          </li>
+        ))}
+      </ul>
+      {!hints.hasEmail ? (
+        <Empty>Add a primary email on the Espo contact to enable joins — not a CDP problem.</Empty>
+      ) : null}
+    </div>
+  );
+}
+
 export function Contact360View({ data }: { data: Contact360 }) {
   const { contact, stripe, account } = data;
   const name = contactDisplayName(contact);
@@ -208,6 +235,13 @@ export function Contact360View({ data }: { data: Contact360 }) {
         <h1 className="font-heading text-2xl font-bold text-white">{name}</h1>
         <p className="text-neon-cyan mt-1 font-mono text-sm">{contact.email || "No email"}</p>
       </div>
+
+      <section className={CARD}>
+        <h2 className="font-heading mb-3 text-sm font-semibold text-white">
+          Email join diagnostics
+        </h2>
+        <MatchHintsBlock hints={data.matchHints} />
+      </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className={CARD}>

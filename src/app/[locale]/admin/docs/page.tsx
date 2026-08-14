@@ -45,7 +45,12 @@ export default function AdminDocsPage() {
             <span className="text-neon-cyan font-mono text-xs">DOCS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Documentation</h1>
-          <p className="font-body mt-1 text-slate-400">All docs from AppFlowy.</p>
+          <p className="font-body mt-1 text-slate-400">
+            AppFlowy docs and contracts. Name pages{" "}
+            <span className="font-mono text-xs text-slate-300">[Docs][Contracts] Title</span> or{" "}
+            <span className="font-mono text-xs text-slate-300">[Docs] Contracts / Title</span> — no
+            separate docs-db.
+          </p>
         </div>
         <button
           type="button"

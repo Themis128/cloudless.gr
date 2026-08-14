@@ -30,6 +30,8 @@ All requests use the `Api-Token` header for authentication. The base URL is read
 ```bash
 ACTIVECAMPAIGN_API_URL=https://myaccount.api-us1.com
 ACTIVECAMPAIGN_API_TOKEN=your-api-token-here
+# Automation ID used by POST /api/contact via enrollLeadInAutomation (silent no-op if unset)
+ACTIVECAMPAIGN_LEAD_AUTOMATION_ID=123
 ```
 
 ### Production (AWS SSM Parameter Store)
@@ -38,6 +40,7 @@ ACTIVECAMPAIGN_API_TOKEN=your-api-token-here
 |---|---|
 | `/cloudless/production/ACTIVECAMPAIGN_API_URL` | String |
 | `/cloudless/production/ACTIVECAMPAIGN_API_TOKEN` | SecureString |
+| `/cloudless/production/ACTIVECAMPAIGN_LEAD_AUTOMATION_ID` | String |
 
 Both values are found in your ActiveCampaign account under **Settings → Developer → API Access**.
 
