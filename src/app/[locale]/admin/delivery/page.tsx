@@ -31,6 +31,7 @@ export default function DeliveryPage() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [billing, setBilling] = useState(false);
   const [form, setForm] = useState({
     name: "",
     clientEmail: "",
@@ -166,6 +167,36 @@ export default function DeliveryPage() {
     await loadProjects();
   }
 
+  async function billUnbilled() {
+    if (!selectedId) return;
+    setBilling(true);
+    setMessage(null);
+    try {
+      const res = await fetchWithAuth(`/api/admin/delivery/projects/${selectedId}/invoice`, {
+        method: "POST",
+      });
+      const data = (await res.json()) as {
+        invoice?: { id: string };
+        amountCents?: number;
+        totalMinutes?: number;
+        error?: string;
+      };
+      if (!res.ok) {
+        setMessage(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      const euros = data.amountCents != null ? (data.amountCents / 100).toFixed(2) : "?";
+      setMessage(
+        `Draft ${data.invoice?.id} created (€${euros} for ${formatHours(data.totalMinutes ?? 0)}). Finalize/send under System → Invoices.`
+      );
+      await Promise.all([loadProjects(), loadEntries(selectedId)]);
+    } catch {
+      setMessage("Failed to create draft invoice");
+    } finally {
+      setBilling(false);
+    }
+  }
+
   const selected = projects.find((p) => p.id === selectedId) ?? null;
 
   return (
@@ -174,7 +205,8 @@ export default function DeliveryPage() {
         <h1 className="font-heading text-2xl tracking-tight text-white">Delivery</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-400">
           Agency projects and billable hours on D1. CMS portfolio stays under Content → Projects
-          (AppFlowy). Invoice unbilled hours from System → Invoices when ready.
+          (AppFlowy). Bill unbilled hours here to a Stripe draft; finalize/send under System →
+          Invoices.
         </p>
       </div>
 
@@ -290,15 +322,33 @@ export default function DeliveryPage() {
               <p className="text-sm text-slate-500">Select a project to log hours.</p>
             ) : (
               <>
-                <div>
-                  <h2 className="font-heading text-lg text-white">{selected.name}</h2>
-                  <p className="text-xs text-slate-500">
-                    Rate{" "}
-                    {selected.hourlyRateCents != null
-                      ? `${(selected.hourlyRateCents / 100).toFixed(2)} ${selected.currency}/h`
-                      : "unset"}{" "}
-                    · unbilled {formatHours(selected.unbilledMinutes)}
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-heading text-lg text-white">{selected.name}</h2>
+                    <p className="text-xs text-slate-500">
+                      Rate{" "}
+                      {selected.hourlyRateCents != null
+                        ? `${(selected.hourlyRateCents / 100).toFixed(2)} ${selected.currency}/h`
+                        : "unset"}{" "}
+                      · unbilled {formatHours(selected.unbilledMinutes)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={
+                      billing ||
+                      selected.unbilledMinutes < 1 ||
+                      selected.hourlyRateCents == null ||
+                      selected.hourlyRateCents < 1 ||
+                      (!selected.clientEmail && !selected.stripeCustomerId)
+                    }
+                    onClick={() => {
+                      billUnbilled().catch(() => {});
+                    }}
+                    className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+                  >
+                    {billing ? "Billing…" : "Bill unbilled → draft"}
+                  </button>
                 </div>
                 <form onSubmit={logTime} className="grid gap-2 sm:grid-cols-2">
                   <input
