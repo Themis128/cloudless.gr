@@ -4,6 +4,8 @@ name: Copilot Setup Steps
 on:
   workflow_dispatch:
   push:
+    # Restrict to main so Release tags do not fire this path-filtered job.
+    branches: [main]
     paths:
     - .github/workflows/copilot-setup-steps.yml
 
