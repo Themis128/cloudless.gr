@@ -36,7 +36,7 @@ Percentages in the artifact (~75% marketing, ~60% CRM, ~15% ERP) are a snapshot,
 | Wait   | Marketing automation beyond ActiveCampaign            | Phase 2 in the artifact                                          | Use existing AC automations until the contact page shows gaps               |
 | **Done (this branch)** | Invoicing                                             | Agency-only finance                                              | Stripe Invoicing admin list/create/finalize/send — no finance-db            |
 | Wait   | Projects + time tracking                              | Agency delivery, not ERP                                         | After invoicing has a real operator workflow                                |
-| Wait   | EspoCRM D1 cache                                      | Latency, not a new CRM                                           | After Notion adapters are gone                                              |
+| **Done (this branch)** | EspoCRM D1 cache                                      | Latency, not a new CRM                                           | `espocrm_cache` + 45–60s read-through; write-path invalidate; not a CDP     |
 | Wait   | Docs / contracts                                      | Phase 6                                                          | AppFlowy already hosts docs; do not add `docs-db` as a Worker               |
 | Wait   | AI agents on Cloudflare Workers                       | Artifact Phase 7                                                 | Keep LangGraph / Bedrock on the Pi app path                                 |
 
