@@ -105,3 +105,53 @@ describe("linkedinAdapter.pushConversion", () => {
     expect(headers.Authorization).toBe("Bearer capi_only_token");
   });
 });
+
+describe("linkedinAdapter.pullMetrics", () => {
+  it("uses Rest.li List(urn%3Ali%3AsponsoredCampaign%3A…) like the ETL path", async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          elements: [
+            {
+              impressions: 10,
+              clicks: 2,
+              costInLocalCurrency: "3.5",
+              externalWebsiteConversions: 1,
+            },
+          ],
+        }),
+        { status: 200 }
+      )
+    );
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    const rows = await linkedinAdapter.pullMetrics({
+      accountId: "511588554",
+      campaignIds: ["123456789"],
+      since: new Date("2026-08-01T00:00:00Z"),
+      until: new Date("2026-08-14T00:00:00Z"),
+    });
+
+    expect(fetchSpy).toHaveBeenCalled();
+    const url = fetchSpy.mock.calls[0][0] as string;
+    expect(url).toContain("campaigns=List(urn%3Ali%3AsponsoredCampaign%3A123456789)");
+    expect(url).toContain("timeGranularity=ALL");
+    expect(url).toContain("dateRange=(start:(year:2026,month:8,day:1)");
+    expect(url).not.toContain("campaigns[0]=");
+    expect(rows[0]?.impressions).toBe(10);
+    expect(rows[0]?.spendEur).toBe(3.5);
+  });
+
+  it("logs and returns zeros when LinkedIn rejects the query", async () => {
+    fetchSpy.mockResolvedValue(new Response("bad query", { status: 400 }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    const rows = await linkedinAdapter.pullMetrics({
+      accountId: "511588554",
+      campaignIds: ["123456789"],
+      since: new Date("2026-08-01T00:00:00Z"),
+      until: new Date("2026-08-14T00:00:00Z"),
+    });
+    expect(rows[0]?.impressions).toBe(0);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+});

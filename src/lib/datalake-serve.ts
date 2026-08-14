@@ -298,9 +298,16 @@ export function pipelineFromEspocrmGold(rows: Record<string, unknown>[]): {
  * until a real silver ETL lands. Never calls live `roi.ts` adapters.
  */
 export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>> {
+  const windowDays = Math.min(Math.max(Math.floor(days) || 30, 1), 365);
   const linkedin = await getGoldSection("linkedin_ads");
   const stripe = await getGoldSection(SECTION_STRIPE_REVENUE);
-  const linkedinRows = linkedin?.rows ?? [];
+  const cutoffMs = Date.now() - windowDays * 86_400_000;
+  const linkedinRows = (linkedin?.rows ?? []).filter((r) => {
+    const day = String(r.day ?? r.date ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return true;
+    const t = Date.parse(`${day}T00:00:00Z`);
+    return Number.isFinite(t) && t >= cutoffMs;
+  });
   const spendCents = linkedinRows.reduce(
     (a, r) => a + Math.round((Number(r.spend ?? r.cost) || 0) * 100),
     0
@@ -336,8 +343,8 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
       reason: linkedin?.error
         ? `linkedin_ads: ${linkedin.error}`
         : linkedinConfigured
-          ? "Served from gold linkedin_ads"
-          : "Gold section present but empty",
+          ? `Served from gold linkedin_ads (last ${windowDays}d)`
+          : "Gold section present but empty for window",
       spendCents,
       impressions,
       clicks,
@@ -356,7 +363,7 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
   const platformLeads = channels.reduce((a, c) => a + c.platformLeads, 0);
 
   return {
-    windowDays: days,
+    windowDays,
     generatedAt: new Date().toISOString(),
     source: DATALAKE_GOLD_SOURCE,
     goldSections: ["linkedin_ads", SECTION_STRIPE_REVENUE],
@@ -377,6 +384,7 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
     notes: [
       "ROI is lake-backed (LinkedIn + Stripe gold). Google/TikTok/X/Meta show as not_in_gold until their ETL exists.",
       "Live campaign adapters in roi.ts are not used on admin analytics routes.",
+      "newLeads is not in gold ROI (EspoCRM funnel is a separate gold section).",
       linkedin?.error ? `linkedin_ads: ${linkedin.error}` : null,
       stripe?.error ? `stripe_revenue: ${stripe.error}` : null,
     ].filter(Boolean),
