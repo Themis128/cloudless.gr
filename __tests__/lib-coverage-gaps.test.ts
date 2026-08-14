@@ -1,6 +1,5 @@
 /**
  * Unit tests for lib files with low/zero coverage:
- *   src/lib/notion-esp32.ts
  *   src/lib/store-products.ts
  *   src/lib/stripe-transactions.ts
  *   src/lib/ssm-config.ts (additional branches)
@@ -8,15 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// ── notion-esp32.ts ───────────────────────────────────────────────────────────
-
-const mockNotionFetch = vi.fn();
 const mockGetIntegrationsAsync = vi.fn();
-
-vi.mock("@/lib/notion", () => ({
-  notionFetch: (...a: unknown[]) => mockNotionFetch(...a),
-  notionFetchAll: vi.fn().mockResolvedValue([]),
-}));
 
 vi.mock("@/lib/integrations", () => ({
   getIntegrationsAsync: (...a: unknown[]) => mockGetIntegrationsAsync(...a),
@@ -24,73 +15,6 @@ vi.mock("@/lib/integrations", () => ({
   isConfigured: vi.fn().mockReturnValue(true),
   requireIntegrationAsync: vi.fn().mockResolvedValue({}),
 }));
-
-describe("notion-esp32.ts", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  describe("isEsp32NotionConfigured", () => {
-    it("returns false when devicesDbId missing", async () => {
-      const { isEsp32NotionConfigured } = await import("@/lib/notion-esp32");
-      expect(isEsp32NotionConfigured({})).toBe(false);
-    });
-
-    it("returns true when devicesDbId present", async () => {
-      const { isEsp32NotionConfigured } = await import("@/lib/notion-esp32");
-      expect(isEsp32NotionConfigured({ devicesDbId: "db-1" })).toBe(true);
-    });
-  });
-
-  describe("getEsp32NotionConfig", () => {
-    it("returns config from env vars when set", async () => {
-      process.env.NOTION_ESP32_DEVICES_DB_ID = "db-env-1";
-      const { getEsp32NotionConfig } = await import("@/lib/notion-esp32");
-      const cfg = await getEsp32NotionConfig();
-      expect(cfg.devicesDbId).toBe("db-env-1");
-      delete process.env.NOTION_ESP32_DEVICES_DB_ID;
-    });
-
-    it("returns empty config when nothing configured", async () => {
-      delete process.env.NOTION_ESP32_DEVICES_DB_ID;
-      delete process.env.NOTION_ESP32_TELEMETRY_DB_ID;
-      mockGetIntegrationsAsync.mockResolvedValue({});
-      const { getEsp32NotionConfig } = await import("@/lib/notion-esp32");
-      const cfg = await getEsp32NotionConfig();
-      expect(cfg.devicesDbId).toBeUndefined();
-    });
-  });
-
-  describe("readEsp32DevicesFromNotion", () => {
-    it("returns empty array when DB not configured", async () => {
-      delete process.env.NOTION_ESP32_DEVICES_DB_ID;
-      mockGetIntegrationsAsync.mockResolvedValue({});
-      const { readEsp32DevicesFromNotion } = await import("@/lib/notion-esp32");
-      const result = await readEsp32DevicesFromNotion();
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe("upsertEsp32DeviceInNotion", () => {
-    it("returns null when DB not configured", async () => {
-      delete process.env.NOTION_ESP32_DEVICES_DB_ID;
-      mockGetIntegrationsAsync.mockResolvedValue({});
-      const { upsertEsp32DeviceInNotion } = await import("@/lib/notion-esp32");
-      const result = await upsertEsp32DeviceInNotion({
-        ip: "192.168.1.1",
-        rssi: -60,
-        firmware_ver: "1.0",
-        uptime_s: 3600,
-        free_ram_bytes: 50000,
-        last_heartbeat: new Date().toISOString(),
-        device_id: "esp32-01",
-        stale: false,
-      });
-      expect(result).toBeNull();
-    });
-  });
-});
 
 // ── store-products.ts ─────────────────────────────────────────────────────────
 

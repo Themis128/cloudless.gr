@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cached, invalidateCache } from "@/lib/notion-cache";
+import { cached, invalidateCache } from "@/lib/content-cache";
 
-describe("notion-cache.ts", () => {
+describe("content-cache.ts", () => {
   beforeEach(() => {
     invalidateCache();
   });
