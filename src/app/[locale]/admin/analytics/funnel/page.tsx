@@ -2,11 +2,16 @@
 
 /**
  * Thin operator view for GET /api/admin/analytics/search-funnel.
- * Table of event_type × ab_variant from D1 — not a real-time firehose.
+ * Flat event×variant table + side-by-side A/B comparison (not flag toggles).
  */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import {
+  buildFunnelAbCompare,
+  formatFunnelRate,
+  type FunnelAbCompare,
+} from "@/lib/funnel-ab-compare";
 import { Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
 
 interface FunnelRow {
@@ -20,6 +25,81 @@ interface FunnelResponse {
   days: number;
   rows: FunnelRow[];
   message?: string;
+}
+
+function VariantCompareTables({ compare }: { compare: FunnelAbCompare }) {
+  if (compare.variants.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="font-heading text-lg font-semibold text-white">A/B variant comparison</h2>
+        <p className="font-body mt-1 text-sm text-slate-400">
+          Side-by-side counts and conversion rates from the same D1 window. Flag toggles stay on{" "}
+          <Link href="/admin/ab-tests" className="text-neon-cyan hover:underline">
+            A/B Tests
+          </Link>
+          .
+        </p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <table className="w-full text-left">
+          <thead className="bg-void-light font-mono text-[10px] tracking-wider text-slate-500 uppercase">
+            <tr>
+              <th className="px-4 py-3">Event</th>
+              {compare.variants.map((v) => (
+                <th key={v} className="px-4 py-3 text-right">
+                  {v}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {compare.eventTypes.map((event) => (
+              <tr key={event} className="border-t border-slate-800/80">
+                <td className="text-neon-cyan px-4 py-2 font-mono text-xs">{event}</td>
+                {compare.variants.map((v) => (
+                  <td key={v} className="px-4 py-2 text-right font-mono text-xs text-white">
+                    {(compare.counts[event]?.[v] ?? 0).toLocaleString()}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {compare.rates.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full text-left">
+            <thead className="bg-void-light font-mono text-[10px] tracking-wider text-slate-500 uppercase">
+              <tr>
+                <th className="px-4 py-3">Conversion</th>
+                {compare.variants.map((v) => (
+                  <th key={v} className="px-4 py-3 text-right">
+                    {v}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {compare.rates.map((rate) => (
+                <tr key={`${rate.from}->${rate.to}`} className="border-t border-slate-800/80">
+                  <td className="px-4 py-2 font-mono text-xs text-slate-300">{rate.label}</td>
+                  {compare.variants.map((v) => (
+                    <td key={v} className="px-4 py-2 text-right font-mono text-xs text-white">
+                      {formatFunnelRate(rate.byVariant[v] ?? null)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function SearchFunnelPage() {
@@ -57,6 +137,9 @@ export default function SearchFunnelPage() {
       cancelled = true;
     };
   }, [days, load]);
+
+  const compare =
+    data?.configured && data.rows.length > 0 ? buildFunnelAbCompare(data.rows) : null;
 
   return (
     <div className="space-y-6">
@@ -98,41 +181,51 @@ export default function SearchFunnelPage() {
           {data.message || "D1 AUTH_DB not bound — funnel ingest is off."}
         </p>
       ) : null}
+
+      {data?.configured && compare && compare.variants.length > 1 ? (
+        <VariantCompareTables compare={compare} />
+      ) : null}
+
       {data?.configured ? (
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-left">
-            <thead className="bg-void-light font-mono text-[10px] tracking-wider text-slate-500 uppercase">
-              <tr>
-                <th className="px-4 py-3">Event</th>
-                <th className="px-4 py-3">A/B variant</th>
-                <th className="px-4 py-3 text-right">Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.length === 0 ? (
+        <div className="space-y-3">
+          <h2 className="font-heading text-lg font-semibold text-white">Raw event × variant</h2>
+          <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <table className="w-full text-left">
+              <thead className="bg-void-light font-mono text-[10px] tracking-wider text-slate-500 uppercase">
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 font-mono text-xs text-slate-600">
-                    No funnel events in this window.
-                  </td>
+                  <th className="px-4 py-3">Event</th>
+                  <th className="px-4 py-3">A/B variant</th>
+                  <th className="px-4 py-3 text-right">Count</th>
                 </tr>
-              ) : (
-                data.rows.map((row) => (
-                  <tr
-                    key={`${row.event_type}|${row.ab_variant ?? ""}`}
-                    className="border-t border-slate-800/80"
-                  >
-                    <td className="text-neon-cyan px-4 py-2 font-mono text-xs">{row.event_type}</td>
-                    <td className="px-4 py-2 font-mono text-xs text-slate-400">
-                      {row.ab_variant || "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right font-mono text-xs text-white">
-                      {row.count.toLocaleString()}
+              </thead>
+              <tbody>
+                {data.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 font-mono text-xs text-slate-600">
+                      No funnel events in this window.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  data.rows.map((row) => (
+                    <tr
+                      key={`${row.event_type}|${row.ab_variant ?? ""}`}
+                      className="border-t border-slate-800/80"
+                    >
+                      <td className="text-neon-cyan px-4 py-2 font-mono text-xs">
+                        {row.event_type}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs text-slate-400">
+                        {row.ab_variant || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-xs text-white">
+                        {row.count.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
     </div>
