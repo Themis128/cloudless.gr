@@ -104,7 +104,7 @@ Phase 1 as a greenfield. Filter through the agency backlog instead.
 
 | Area | Docs |
 | --- | --- |
-| Mail | `docs/MAIL-SERVER-SETUP.md` — omv-ha dovecot + postfix/Resend + Roundcube; inbound CF Email Routing → Gmail |
+| Mail | `docs/EMAIL-INFRASTRUCTURE.md` (map) + `docs/MAIL-SERVER-SETUP.md` (omv-ha runbook) — inbound CF Email Routing → Gmail |
 | EspoCRM | `infrastructure/espocrm/README.md` — k3s, MariaDB, tunnel `espocrm.cloudless.gr` |
 | Cluster | `docs/cluster/` — hw-list, capacity, overload, Prometheus/Grafana |
 | Self-hosted | `docs/self-hosted/` — AppFlowy deploy + health audit |
