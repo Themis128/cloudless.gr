@@ -33,7 +33,7 @@ case "$MODE" in
     echo "==> Verifying dev server is healthy..."
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:4000/api/health)
     if [[ "$code" != "200" ]]; then
-      echo "✗ Dev server returns $code on /api/health. Run dev-server-restart.sh first."
+      echo "✗ Dev server returns $code on /api/health. Run pnpm dev (auto-heals) or pnpm dev:restart:clean."
       exit 1
     fi
 

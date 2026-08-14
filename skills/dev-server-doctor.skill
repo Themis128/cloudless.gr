@@ -6,6 +6,8 @@ triggers: when the user mentions "dev server", "localhost:4000 not working", "ER
 
 # Dev Server Doctor
 
+`pnpm dev` is a supervisor (`scripts/dev-server.sh`). It frees port 4000, restarts on crash / hung `/api/health` / stale auth 404s, and kills the whole Next tree on Ctrl+C so the next start is not `EADDRINUSE`. Escape hatch: `pnpm dev:raw`. Cache wipe: `pnpm dev:restart:clean`. Probe restarts are off when `NEXT_PUBLIC_E2E=1` or `CI=1` so Playwright is not yanked mid-suite.
+
 ## Quick diagnosis (in order)
 
 ```bash

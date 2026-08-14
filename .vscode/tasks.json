@@ -11,8 +11,8 @@
         "pattern": { "regexp": "^$" },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": ".*(starting|Ready|Local:).*",
-          "endsPattern": ".*(Ready in|Local:).*|"
+          "beginsPattern": ".*(starting|Ready|Local:|dev-heal).*",
+          "endsPattern": ".*(Ready in|Local:|healthy after).*|"
         }
       },
       "presentation": { "reveal": "always", "panel": "dedicated", "focus": false },

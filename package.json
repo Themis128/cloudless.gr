@@ -8,10 +8,11 @@
     "pnpm": ">=10"
   },
   "scripts": {
-    "dev": "next dev -p 4000 --hostname localhost",
+    "dev": "bash scripts/dev-server.sh",
+    "dev:raw": "next dev -p 4000 --hostname localhost",
     "dev:info": "bash scripts/wsl-dev-info.sh",
-    "dev:restart": "bash scripts/dev-server-restart.sh",
-    "dev:restart:clean": "bash scripts/dev-server-restart.sh --clean",
+    "dev:restart": "bash scripts/dev-server.sh --restart",
+    "dev:restart:clean": "bash scripts/dev-server.sh --restart --clean",
     "cluster:health": "bash scripts/cluster-health-snapshot.sh",
     "cluster:doctor": "bash scripts/cluster-doctor.sh",
     "litellm:start": "bash scripts/litellm.sh start",
@@ -117,7 +118,7 @@
     "pnpm:outdated": "pnpm outdated",
     "pnpm:clean": "pnpm store prune && rm -rf node_modules/.cache",
     "pnpm:rebuild": "pnpm rebuild && pnpm run typecheck",
-    "dev:webpack": "next dev -p 4000 --webpack --hostname localhost",
+    "dev:webpack": "bash scripts/dev-server.sh --webpack",
     "dev:bigmem": "NODE_OPTIONS=--max-old-space-size=8192 next dev -p 4000 --webpack --hostname localhost",
     "cf:types": "wrangler types",
     "cf:typecheck": "tsc --noEmit -p tsconfig.worker.json",
