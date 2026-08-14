@@ -1,6 +1,8 @@
-import { redirect } from "@/i18n/navigation";
+import { redirectLegacyNotionPage } from "../redirect-legacy";
 
 /** Legacy /admin/notion/analytics → AppFlowy analytics. */
-export default function LegacyNotionAnalyticsPage() {
-  redirect("/admin/appflowy/analytics");
+export default async function LegacyNotionAnalyticsPage({
+  params,
+}: Readonly<{ params: Promise<{ locale: string }> }>) {
+  await redirectLegacyNotionPage(params, "/admin/appflowy/analytics");
 }

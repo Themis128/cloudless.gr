@@ -1,6 +1,8 @@
-import { redirect } from "@/i18n/navigation";
+import { redirectLegacyNotionPage } from "../redirect-legacy";
 
 /** Legacy /admin/notion/status → AppFlowy CMS status. */
-export default function LegacyNotionStatusPage() {
-  redirect("/admin/appflowy/status");
+export default async function LegacyNotionStatusPage({
+  params,
+}: Readonly<{ params: Promise<{ locale: string }> }>) {
+  await redirectLegacyNotionPage(params, "/admin/appflowy/status");
 }

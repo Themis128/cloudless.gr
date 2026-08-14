@@ -187,5 +187,3 @@ export async function getAllFaqsAdmin(): Promise<AppFlowyFaq[]> {
     }));
   }
 }
-
-export { staticFaqs };

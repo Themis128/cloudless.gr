@@ -25,11 +25,7 @@ import {
   isConfiguredAsync,
 } from "@/lib/integrations";
 import { cached, invalidateCache } from "@/lib/notion-cache";
-import {
-  staticTestimonials,
-  type Testimonial,
-  type TestimonialInput,
-} from "@/lib/cms-static";
+import { staticTestimonials, type Testimonial, type TestimonialInput } from "@/lib/cms-static";
 
 export type { Testimonial, TestimonialInput } from "@/lib/cms-static";
 export { staticTestimonials } from "@/lib/cms-static";
