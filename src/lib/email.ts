@@ -4,6 +4,20 @@ import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cl
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 import { isSuppressed } from "@/lib/ses-suppression-d1";
 
+
+export const SENDERS = {
+  noreply: "noreply@cloudless.gr",
+  info: "info@cloudless.gr",
+  orders: "orders@cloudless.gr",
+  newsletter: "newsletter@cloudless.gr",
+  admin: "admin@cloudless.gr",
+  bookings: "bookings@cloudless.gr",
+  sales: "sales@cloudless.gr",
+  tbaltzakis: "tbaltzakis@cloudless.gr",
+} as const;
+
+export type SenderAddress = (typeof SENDERS)[keyof typeof SENDERS];
+
 interface CloudflareEmailBinding {
   send: (message: Record<string, unknown>) => Promise<void>;
 }
@@ -28,6 +42,7 @@ export async function sendEmail(options: {
   subject: string;
   html: string;
   text: string;
+  from?: string;
   fromLabel?: string;
   replyTo?: string;
   listUnsubscribeUrl?: string;
@@ -52,7 +67,7 @@ export async function sendEmail(options: {
       }
 
       await email.send({
-        from: `${options.fromLabel || "Cloudless"} <noreply@cloudless.gr>`,
+        from: `${options.fromLabel || "Cloudless"} <${options.from || SENDERS.noreply}>`,
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -71,6 +86,7 @@ export async function sendEmail(options: {
     subject: options.subject,
     html: options.html,
     text: options.text,
+    from: options.from,
     fromLabel: options.fromLabel,
     replyTo: options.replyTo ? [options.replyTo] : undefined,
     listUnsubscribeUrl: options.listUnsubscribeUrl,
@@ -98,6 +114,7 @@ export async function sendEmail(options: {
 export async function sendSubscriberWelcome(email: string) {
   await sendEmail({
     to: email,
+    from: SENDERS.newsletter,
     subject: "Welcome to the Cloudless newsletter!",
     html: `
       <!DOCTYPE html>
@@ -163,6 +180,7 @@ export async function sendOrderConfirmation(
   const safeSessionId = sessionId.replace(/[<>&']/g, "");
   const payload = {
     to: email,
+    from: SENDERS.orders,
     subject: `Order Confirmation #${safeSessionId}`,
     html: `
       <!DOCTYPE html>
@@ -213,6 +231,7 @@ We appreciate your business and look forward to serving you again.
 export async function sendPaymentFailureNotice(email: string, invoiceId: string) {
   await sendEmail({
     to: email,
+    from: SENDERS.orders,
     subject: "Payment Failed",
     html: `
       <!DOCTYPE html>
@@ -263,6 +282,7 @@ export async function notifyTeam(subject: string, body: string) {
   const cfg = await getConfig();
   await sendEmail({
     to: cfg.SES_TO_EMAIL,
+    from: SENDERS.admin,
     subject: `[Team] ${subject}`,
     html: body,
     text: htmlToPlainText(body),
@@ -297,6 +317,7 @@ export async function sendActivationEmail(
 
   await sendEmail({
     to,
+    from: SENDERS.noreply,
     subject: "Activate your Cloudless account",
     fromLabel: "Cloudless",
     html: `
@@ -341,6 +362,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string): P
   const safeUrl = escapeHtml(resetUrl);
   await sendEmail({
     to: email,
+    from: SENDERS.noreply,
     subject: "Password Reset Request",
     html: `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
@@ -381,6 +403,7 @@ export async function sendContactAcknowledgment(opts: {
     : "";
   await sendEmail({
     to: opts.email,
+    from: SENDERS.info,
     subject: "We received your message — Cloudless",
     html: `
       <p>Hi ${safeName},</p>
@@ -420,6 +443,7 @@ export async function sendBookingConfirmation(opts: {
     : "";
   await sendEmail({
     to: opts.email,
+    from: SENDERS.bookings,
     subject: `Consultation confirmed — ${opts.slotLabel}`,
     html: `
       <p>Hi ${escapeHtml(opts.name)},</p>
@@ -451,6 +475,7 @@ export async function sendBookingConfirmation(opts: {
 export async function sendUnsubscribeConfirmation(email: string): Promise<void> {
   await sendEmail({
     to: email,
+    from: SENDERS.newsletter,
     subject: "You've been unsubscribed — Cloudless",
     fromLabel: "Cloudless",
     html: `

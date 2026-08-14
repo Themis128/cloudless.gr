@@ -230,6 +230,10 @@ spec:
               # Admin account exists (creds in SSM POSTIZ_ADMIN_EMAIL/PASSWORD,
               # created 2026-06-12) — registration stays locked.
           value: 'true'
+        # Public API rate limit (req/hour). Default Postiz value is too low
+        # for admin console + MCP + n8n bursts during social-hub automation.
+        - name: API_LIMIT
+          value: '100'
         - name: STORAGE_PROVIDER
           value: local
         - name: UPLOAD_DIRECTORY

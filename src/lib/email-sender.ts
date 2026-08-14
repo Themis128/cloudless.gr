@@ -13,6 +13,7 @@ export interface SendEmailPayload {
   html: string;
   text: string;
   replyTo?: string[];
+  from?: string;
   fromLabel?: string;
   listUnsubscribeUrl?: string;
 }
@@ -117,7 +118,7 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
 
   const fromAddress = getFromAddress(
     payload.fromLabel,
-    cfg.SES_FROM_EMAIL || "noreply@cloudless.gr"
+    payload.from || cfg.SES_FROM_EMAIL || "noreply@cloudless.gr"
   );
 
   // 1. Workers binding — primary

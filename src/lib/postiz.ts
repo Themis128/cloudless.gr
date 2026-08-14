@@ -176,6 +176,8 @@ export interface SchedulePostInput {
   /** ISO timestamp. Posts immediately when omitted or in the past. */
   scheduleAt?: string;
   asDraft?: boolean;
+  /** Postiz tags (value+label). Used for idempotency / filtering. */
+  tags?: Array<{ value: string; label: string }>;
 }
 
 export interface SchedulePostResult {
@@ -183,6 +185,66 @@ export interface SchedulePostResult {
   /** Postiz post IDs, one per channel. */
   postIds: string[];
   error?: string;
+}
+
+/**
+ * Append standard cloudless social UTMs to a URL (or leave non-URLs alone).
+ * Campaign defaults to `social_hub`; pass a stable slug for attribution.
+ */
+export function withSocialUtm(
+  url: string,
+  platform: string,
+  campaign = "social_hub"
+): string {
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return trimmed;
+  try {
+    const u = new URL(trimmed);
+    if (!u.searchParams.has("utm_source")) {
+      u.searchParams.set("utm_source", platform || "social");
+    }
+    if (!u.searchParams.has("utm_medium")) {
+      u.searchParams.set("utm_medium", "social");
+    }
+    if (!u.searchParams.has("utm_campaign")) {
+      u.searchParams.set("utm_campaign", campaign);
+    }
+    return u.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
+/** Minimal settings object so Postiz validators accept the create-post body. */
+function defaultSettingsForIdentifier(
+  identifier: string
+): { __type: string } & Record<string, unknown> {
+  switch (identifier) {
+    case "x":
+      return { __type: "x", who_can_reply_post: "everyone" };
+    case "linkedin":
+      return { __type: "linkedin", post_as_images_carousel: false };
+    case "linkedin-page":
+      return { __type: "linkedin-page", post_as_images_carousel: false };
+    case "instagram":
+      return { __type: "instagram", post_type: "post" };
+    case "instagram-standalone":
+      return { __type: "instagram-standalone", post_type: "post" };
+    case "tiktok":
+      return {
+        __type: "tiktok",
+        privacy_level: "PUBLIC_TO_EVERYONE",
+        duet: true,
+        stitch: true,
+        comment: true,
+        autoAddMusic: "no",
+        brand_content_toggle: false,
+        brand_organic_toggle: false,
+        content_posting_method: "DIRECT_POST",
+      };
+    default:
+      return { __type: identifier || "x" };
+  }
 }
 
 /** Create a scheduled (or immediate/draft) post on the given Postiz channels. */
@@ -203,6 +265,9 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
     type = Number.isNaN(scheduleTime) || scheduleTime <= now ? "now" : "schedule";
   }
 
+  const integrations = await listPostizIntegrations();
+  const byId = new Map(integrations.map((i) => [i.id, i]));
+
   try {
     const res = await postizFetch("/posts", {
       method: "POST",
@@ -210,14 +275,18 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
         type,
         date: new Date(Number.isNaN(scheduleTime) ? now : scheduleTime).toISOString(),
         shortLink: false,
-        tags: [],
-        posts: input.integrationIds.map((id) => ({
-          integration: { id },
-          // `image` must always be present as an array — the live Postiz
-          // v2.11.2 validator rejects value items without it
-          // ("posts.0.value.0.image must be an array", verified 2026-06-12).
-          value: [{ content: input.content, image: [] }],
-        })),
+        tags: input.tags ?? [],
+        posts: input.integrationIds.map((id) => {
+          const identifier = byId.get(id)?.identifier ?? "x";
+          return {
+            integration: { id },
+            // `image` must always be present as an array — the live Postiz
+            // v2.11.2 validator rejects value items without it
+            // ("posts.0.value.0.image must be an array", verified 2026-06-12).
+            value: [{ content: input.content, image: [] }],
+            settings: defaultSettingsForIdentifier(identifier),
+          };
+        }),
       }),
     });
     if (!res.ok) {
@@ -339,6 +408,55 @@ export function createPost(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/** One successful or failed entry from {@link createPostsBulk}. */
+export type BulkCreatePostResult =
+  | {
+      index: number;
+      ok: true;
+      result: Array<{ postId: string; integration: string }>;
+    }
+  | {
+      index: number;
+      ok: false;
+      error: string;
+      status?: number;
+    };
+
+/**
+ * Schedule / draft / publish many posts sequentially.
+ *
+ * Postiz's create-post endpoint takes a single top-level `date`, so multi-day
+ * calendars need one request per date (or per content row). We keep going after
+ * individual failures so a bad mid-list item doesn't abort the rest. Cap the
+ * batch size in the route layer — create-post is rate-limited (~90/hr, tunable
+ * via `API_LIMIT` on the Postiz pod).
+ */
+export async function createPostsBulk(bodies: CreatePostBody[]): Promise<BulkCreatePostResult[]> {
+  const out: BulkCreatePostResult[] = [];
+  for (let index = 0; index < bodies.length; index++) {
+    try {
+      const result = await createPost(bodies[index]!);
+      out.push({ index, ok: true, result });
+    } catch (err) {
+      if (err instanceof PostizApiError) {
+        out.push({
+          index,
+          ok: false,
+          error: err.body.slice(0, 300) || err.message,
+          status: err.status,
+        });
+        continue;
+      }
+      out.push({
+        index,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return out;
 }
 
 /** Delete a post.

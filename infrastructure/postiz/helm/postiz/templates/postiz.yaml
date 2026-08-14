@@ -65,6 +65,8 @@ spec:
               value: {{ .Values.postiz.isGeneral | quote }}
             - name: DISABLE_REGISTRATION
               value: {{ .Values.postiz.disableRegistration | quote }}
+            - name: API_LIMIT
+              value: {{ .Values.postiz.apiLimit | default "100" | quote }}
             - name: STORAGE_PROVIDER
               value: {{ .Values.postiz.storageProvider | quote }}
             - name: UPLOAD_DIRECTORY
