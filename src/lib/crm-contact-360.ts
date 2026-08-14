@@ -1,0 +1,303 @@
+/**
+ * Join EspoCRM + Stripe + D1 for a single admin contact view.
+ * Matching is email-only — no new identity graph.
+ */
+
+import type Stripe from "stripe";
+import { getAuthDbFromEnv, getUserByEmail, type AuthDatabase } from "@/lib/auth-d1";
+import {
+  getContact,
+  isEspoRecordId,
+  listContactCases,
+  listContactNotes,
+  listContactOpportunities,
+} from "@/lib/espocrm";
+import { getStripe } from "@/lib/stripe";
+
+export { isEspoRecordId };
+
+const EVENT_LIMIT = 40;
+
+export interface Contact360Person {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  company: string;
+  accountId: string | null;
+  leadSource: string;
+  description: string;
+  createdAt: string;
+  modifiedAt: string;
+}
+
+export interface Contact360Related {
+  id: string;
+  name: string;
+  status: string;
+  amount: number | null;
+  createdAt: string;
+}
+
+export interface Contact360Note {
+  id: string;
+  post: string;
+  createdAt: string;
+}
+
+export interface Contact360Purchase {
+  id: string;
+  status: string;
+  amount: number;
+  currency: string;
+  date: string;
+}
+
+export interface Contact360Subscription {
+  id: string;
+  status: string;
+  currentPeriodEnd: string | null;
+}
+
+export interface Contact360Stripe {
+  configured: boolean;
+  customer: { id: string; email: string | null; created: string } | null;
+  purchases: Contact360Purchase[];
+  subscriptions: Contact360Subscription[];
+}
+
+export interface Contact360Account {
+  id: string;
+  email: string;
+  name: string | null;
+  company: string | null;
+  createdAt: string | null;
+}
+
+export interface Contact360Event {
+  id: string;
+  event: string;
+  page: string;
+  source: string;
+  date: string;
+}
+
+export interface Contact360 {
+  contact: Contact360Person;
+  opportunities: Contact360Related[];
+  cases: Contact360Related[];
+  notes: Contact360Note[];
+  stripe: Contact360Stripe;
+  account: Contact360Account | null;
+  events: Contact360Event[];
+  fetchedAt: string;
+}
+
+export function contactDisplayName(c: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}): string {
+  const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
+  return name || c.email || "—";
+}
+
+export function normalizeEspoContact(raw: Record<string, unknown>): Contact360Person {
+  return {
+    id: asString(raw.id),
+    email: asString(raw.emailAddress),
+    firstName: asString(raw.firstName),
+    lastName: asString(raw.lastName),
+    phone: asString(raw.phoneNumber),
+    company: asString(raw.accountName),
+    accountId: raw.accountId ? asString(raw.accountId) : null,
+    leadSource: asString(raw.leadSource ?? raw.source),
+    description: asString(raw.description),
+    createdAt: asString(raw.createdAt),
+    modifiedAt: asString(raw.modifiedAt),
+  };
+}
+
+export function summarizeRelated(raw: unknown): Contact360Related {
+  const row = asRecord(raw);
+  const amountRaw = row.amount;
+  const amount = typeof amountRaw === "number" ? amountRaw : Number(amountRaw);
+  return {
+    id: asString(row.id),
+    name: asString(row.name),
+    status: asString(row.stage ?? row.status),
+    amount: Number.isFinite(amount) ? amount : null,
+    createdAt: asString(row.createdAt),
+  };
+}
+
+export function summarizeNote(raw: unknown): Contact360Note {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id),
+    post: asString(row.post ?? row.data),
+    createdAt: asString(row.createdAt),
+  };
+}
+
+export async function getContact360(id: string): Promise<Contact360 | null> {
+  if (!isEspoRecordId(id)) return null;
+  const raw = await getContact(id);
+  if (!raw || !asString(raw.id)) return null;
+
+  const contact = normalizeEspoContact(raw);
+  const email = contact.email;
+
+  const [opportunities, cases, notes, stripe, accountBundle] = await Promise.all([
+    listContactOpportunities(id).then((rows) => rows.map(summarizeRelated)),
+    listContactCases(id).then((rows) => rows.map(summarizeRelated)),
+    listContactNotes(id).then((rows) => rows.map(summarizeNote)),
+    loadStripeForEmail(email),
+    loadAccountAndEvents(email),
+  ]);
+
+  return {
+    contact,
+    opportunities,
+    cases,
+    notes,
+    stripe,
+    account: accountBundle.account,
+    events: accountBundle.events,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+async function loadAccountAndEvents(email: string): Promise<{
+  account: Contact360Account | null;
+  events: Contact360Event[];
+}> {
+  if (!email) return { account: null, events: [] };
+  const db = getAuthDbFromEnv();
+  if (!db) return { account: null, events: [] };
+
+  const user = await getUserByEmail(db, email).catch(() => null);
+  const account = user
+    ? {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? null,
+        company: user.company ?? null,
+        createdAt: user.created_at ? new Date(user.created_at * 1000).toISOString() : null,
+      }
+    : null;
+
+  const events = await listEventsForEmail(db, email, user?.id ?? null).catch(() => []);
+  return { account, events };
+}
+
+async function listEventsForEmail(
+  db: AuthDatabase,
+  email: string,
+  userId: string | null
+): Promise<Contact360Event[]> {
+  type EventRow = {
+    id: string;
+    event: string;
+    page: string | null;
+    source: string | null;
+    created_at: number;
+  };
+
+  const result = await db
+    .prepare(
+      `SELECT id, event, page, source, created_at
+       FROM analytics_events
+       WHERE (? IS NOT NULL AND user_id = ?)
+          OR lower(json_extract(properties_json, '$.email')) = lower(?)
+       ORDER BY created_at DESC
+       LIMIT ?`
+    )
+    .bind(userId, userId, email, EVENT_LIMIT)
+    .all<EventRow>();
+
+  return (result.results ?? []).map((r) => ({
+    id: String(r.id),
+    event: String(r.event ?? ""),
+    page: String(r.page ?? ""),
+    source: String(r.source ?? ""),
+    date: new Date(r.created_at * 1000).toISOString(),
+  }));
+}
+
+async function loadStripeForEmail(email: string): Promise<Contact360Stripe> {
+  const empty: Contact360Stripe = {
+    configured: false,
+    customer: null,
+    purchases: [],
+    subscriptions: [],
+  };
+  if (!email) return empty;
+
+  try {
+    const stripe = await getStripe();
+    if (!stripe) return empty;
+
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    const customer = customers.data[0];
+    if (!customer) {
+      return { configured: true, customer: null, purchases: [], subscriptions: [] };
+    }
+
+    const [sessions, subscriptions] = await Promise.all([
+      stripe.checkout.sessions.list({
+        customer: customer.id,
+        limit: 20,
+      }),
+      stripe.subscriptions.list({
+        customer: customer.id,
+        limit: 20,
+        status: "all",
+      }),
+    ]);
+
+    return {
+      configured: true,
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        created: new Date(customer.created * 1000).toISOString(),
+      },
+      purchases: sessions.data.map(mapCheckoutSession),
+      subscriptions: subscriptions.data.map(mapSubscription),
+    };
+  } catch (err) {
+    console.warn("[crm-contact-360] Stripe lookup failed:", err instanceof Error ? err.message : err);
+    return { configured: true, customer: null, purchases: [], subscriptions: [] };
+  }
+}
+
+function mapCheckoutSession(s: Stripe.Checkout.Session): Contact360Purchase {
+  return {
+    id: s.id,
+    status: s.payment_status,
+    amount: (s.amount_total ?? 0) / 100,
+    currency: (s.currency ?? "eur").toUpperCase(),
+    date: new Date(s.created * 1000).toISOString(),
+  };
+}
+
+function mapSubscription(sub: Stripe.Subscription): Contact360Subscription {
+  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
+  return {
+    id: sub.id,
+    status: sub.status,
+    currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+  };
+}
+
+function asString(value: unknown): string {
+  if (value == null) return "";
+  return String(value).trim();
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object") return value as Record<string, unknown>;
+  return {};
+}
