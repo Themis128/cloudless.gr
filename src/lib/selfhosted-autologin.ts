@@ -5,6 +5,11 @@
  * Apps that support token-based or credential-based auto-login get a
  * server-side injected auth; all others get a canonical admin URL.
  *
+ * Browser launch URLs ALWAYS use the public `*.cloudless.gr` hosts.
+ * SSM/env may still hold in-cluster Service DNS for pod→pod API calls
+ * (e.g. `http://nginx.appflowy.svc.cluster.local`) — those must never be
+ * returned to Windows/Tailscale browsers (`ERR_NAME_NOT_RESOLVED`).
+ *
  * Security notes:
  * - Tokens/credentials are fetched server-side and never logged.
  * - URLs containing secrets are never stored and are only returned to
@@ -12,22 +17,62 @@
  * - This module is server-only; never import it from client components.
  */
 import { getConfig } from "@/lib/ssm-config";
+import {
+  SELFHOSTED_APP_NAMES,
+  SELFHOSTED_PUBLIC_URLS,
+  type SelfhostedApp,
+} from "@/lib/selfhosted-apps";
 
-export type SelfhostedApp = "appflowy" | "espocrm" | "n8n" | "postiz" | "grafana" | "kuma";
-
-export const SELFHOSTED_APP_NAMES: Record<SelfhostedApp, string> = {
-  appflowy: "AppFlowy",
-  espocrm: "EspoCRM",
-  n8n: "n8n",
-  postiz: "Postiz",
-  grafana: "Grafana",
-  kuma: "Uptime Kuma",
-};
+export type { SelfhostedApp } from "@/lib/selfhosted-apps";
+export { SELFHOSTED_APP_NAMES, SELFHOSTED_PUBLIC_URLS } from "@/lib/selfhosted-apps";
 
 export interface AutologinResult {
   url: string;
   /** true = URL contains an injected token/credential and should not be stored */
   hasToken: boolean;
+}
+
+/**
+ * True when a configured base is only reachable inside the cluster / LAN
+ * and must not be handed to a desktop browser.
+ */
+export function isInternalOnlyBaseUrl(raw: string): boolean {
+  const s = raw.trim();
+  if (!s) return false;
+  try {
+    const u = new URL(s.includes("://") ? s : `http://${s}`);
+    const host = u.hostname.toLowerCase();
+    if (host.endsWith(".svc.cluster.local") || host === "kubernetes.default") return true;
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+    if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+    if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
+    return false;
+  } catch {
+    return /\.svc\.cluster\.local/i.test(s);
+  }
+}
+
+/**
+ * Resolve the URL a browser should open. Prefer the public cloudless.gr
+ * origin whenever the configured value is missing or cluster/LAN-only.
+ */
+export function publicUrlForApp(app: SelfhostedApp, configured?: string | null): string {
+  const fallback = SELFHOSTED_PUBLIC_URLS[app];
+  const raw = (configured ?? "").trim().replace(/\/$/, "");
+  if (!raw || isInternalOnlyBaseUrl(raw)) return fallback;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return fallback;
+    const host = u.hostname.toLowerCase();
+    if (host === "cloudless.gr" || host.endsWith(".cloudless.gr")) {
+      return `${u.protocol}//${u.host}`.replace(/\/$/, "");
+    }
+  } catch {
+    return fallback;
+  }
+  // Unknown external host — still prefer our known public map for these tiles.
+  return fallback;
 }
 
 // ---------------------------------------------------------------------------
@@ -36,20 +81,19 @@ export interface AutologinResult {
 
 /**
  * AppFlowy: POST to GoTrue password-grant endpoint → get access_token →
- * construct deep-link `{base}/web#access_token=…` so the SPA logs in on load.
+ * construct deep-link `{public}/web#access_token=…` so the SPA logs in on load.
  *
- * The access_token returned is short-lived (GoTrue default: 1 hour, but we
- * request a fresh one immediately before redirect so it's effectively brand-new).
- * We do NOT use APPFLOWY_JWT_SECRET here — that's for the service-role API
- * path. This is a real user login via the GoTrue password grant.
+ * GoTrue may be reached via an in-cluster APPFLOWY_API_URL; the redirect
+ * URL handed to the browser is always the public origin.
  */
 async function buildAppFlowyUrl(): Promise<AutologinResult> {
   const cfg = await getConfig();
-  const base = (cfg.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
+  const apiBase = (cfg.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
   const email = cfg.APPFLOWY_EMAIL ?? "";
   const password = cfg.APPFLOWY_PASSWORD ?? "";
+  const browserBase = publicUrlForApp("appflowy", apiBase);
 
-  if (!base || !email || !password) {
+  if (!apiBase || !email || !password) {
     throw new Error(
       "AppFlowy not configured: APPFLOWY_API_URL / APPFLOWY_EMAIL / APPFLOWY_PASSWORD missing"
     );
@@ -57,7 +101,7 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
 
   // GoTrue on AppFlowy Cloud rejects body-only grant_type with
   // unsupported_grant_type; the grant must be in the query string.
-  const grantUrl = `${base}/gotrue/token?grant_type=password`;
+  const grantUrl = `${apiBase}/gotrue/token?grant_type=password`;
 
   let res: Response;
   try {
@@ -89,7 +133,7 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
   }
 
   // AppFlowy web SPA reads the access_token from the URL hash on initial load.
-  const redirectUrl = `${base}/web#access_token=${encodeURIComponent(token)}`;
+  const redirectUrl = `${browserBase}/web#access_token=${encodeURIComponent(token)}`;
   return { url: redirectUrl, hasToken: true };
 }
 
@@ -105,7 +149,7 @@ function buildEspoCrmUrl(cfg: {
   apiUser?: string;
   apiPassword?: string;
 }): AutologinResult {
-  const base = (cfg.baseUrl || "https://espocrm.cloudless.gr").replace(/\/$/, "");
+  const base = publicUrlForApp("espocrm", cfg.baseUrl);
   const user = cfg.apiUser || "";
   const password = cfg.apiPassword || "";
 
@@ -129,7 +173,7 @@ function buildEspoCrmUrl(cfg: {
  * Return the direct admin URL.
  */
 function buildN8nUrl(base: string): AutologinResult {
-  const b = base.replace(/\/$/, "");
+  const b = publicUrlForApp("n8n", base);
   return { url: `${b}/signin`, hasToken: false };
 }
 
@@ -139,17 +183,15 @@ function buildN8nUrl(base: string): AutologinResult {
  * Return the direct admin URL.
  */
 function buildPostizUrl(base: string): AutologinResult {
-  const b = base.replace(/\/$/, "");
+  const b = publicUrlForApp("postiz", base);
   return { url: `${b}/`, hasToken: false };
 }
 
 /**
- * Grafana: no URL-based token auth for the web UI.
- * API tokens work for the REST API but UI login requires username/password.
- * Return the direct admin URL.
+ * Grafana: public via Cloudflare Access (no Tailscale required for the UI).
  */
 function buildGrafanaUrl(base: string): AutologinResult {
-  const b = (base || "https://grafana.cloudless.gr").replace(/\/$/, "");
+  const b = publicUrlForApp("grafana", base);
   return { url: `${b}/`, hasToken: false };
 }
 
@@ -158,7 +200,7 @@ function buildGrafanaUrl(base: string): AutologinResult {
  * Return the dashboard URL.
  */
 function buildKumaUrl(base: string): AutologinResult {
-  const b = (base || "https://kuma.cloudless.gr").replace(/\/$/, "");
+  const b = publicUrlForApp("kuma", base);
   return { url: `${b}/dashboard`, hasToken: false };
 }
 
@@ -180,16 +222,16 @@ export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResu
 
     case "espocrm":
       return buildEspoCrmUrl({
-        baseUrl: cfg.ESPOCRM_BASE_URL || "https://espocrm.cloudless.gr",
+        baseUrl: cfg.ESPOCRM_BASE_URL || SELFHOSTED_PUBLIC_URLS.espocrm,
         apiUser: cfg.ESPOCRM_API_USER,
         apiPassword: cfg.ESPOCRM_API_PASSWORD,
       });
 
     case "n8n":
-      return buildN8nUrl(cfg.N8N_API_URL || "https://n8n.cloudless.gr");
+      return buildN8nUrl(cfg.N8N_API_URL || SELFHOSTED_PUBLIC_URLS.n8n);
 
     case "postiz":
-      return buildPostizUrl(cfg.POSTIZ_API_URL || "https://postiz.cloudless.gr");
+      return buildPostizUrl(cfg.POSTIZ_API_URL || SELFHOSTED_PUBLIC_URLS.postiz);
 
     case "grafana":
       return buildGrafanaUrl(cfg.GRAFANA_BASE_URL);
