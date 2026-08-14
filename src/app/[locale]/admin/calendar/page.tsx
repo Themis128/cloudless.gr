@@ -190,7 +190,7 @@ export default function CalendarPage() {
             return (
               <div
                 key={idx}
-                className={`bg-void min-h-[80px] p-1.5 ${day ? "cursor-pointer transition-colors hover:bg-slate-800/30" : ""}`}
+                className={`bg-void min-h-20 p-1.5 ${day ? "cursor-pointer transition-colors hover:bg-slate-800/30" : ""}`}
                 onClick={() => {
                   if (!day || !dateStr) return;
                   setSelectedDate(dateStr);
