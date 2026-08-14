@@ -57,6 +57,25 @@ function isDocPage(name: string): boolean {
   return /^\[Docs\]\s/i.test(name);
 }
 
+/**
+ * Category from AppFlowy page name:
+ * - `[Docs][Contracts] MSA` → Contracts / MSA
+ * - `[Docs] Contracts / MSA` → Contracts / MSA
+ * - `[Docs] Getting started` → General
+ */
+export function parseAppFlowyDocCategory(name: string): { title: string; category: string } {
+  const stripped = stripDocPrefix(name);
+  const bracket = stripped.match(/^\[([^\]]{1,80})\]\s+(.+)$/);
+  if (bracket) {
+    return { category: bracket[1].trim() || "General", title: bracket[2].trim() };
+  }
+  const slash = stripped.match(/^([^/]{1,80})\s*\/\s*(.+)$/);
+  if (slash) {
+    return { category: slash[1].trim() || "General", title: slash[2].trim() };
+  }
+  return { category: "General", title: stripped || name };
+}
+
 async function getPrimaryWorkspaceId(): Promise<string | null> {
   try {
     const workspaces = await listAllWorkspaces();
@@ -71,13 +90,13 @@ function mapViewToDoc(view: {
   name: string;
   last_edited_time: string;
 }): Omit<AppFlowyDoc, "html"> {
-  const raw = stripDocPrefix(view.name);
+  const { title, category } = parseAppFlowyDocCategory(view.name);
   return {
     id: view.view_id,
-    slug: slugify(raw),
-    title: raw,
+    slug: slugify(title),
+    title,
     description: "",
-    category: "General",
+    category,
     order: 0,
     published: isDocPage(view.name),
     verificationStatus: "Unverified",

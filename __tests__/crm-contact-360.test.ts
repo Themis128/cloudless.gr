@@ -310,6 +310,11 @@ describe("getContact360", () => {
     expect(payload?.scores.rfmScore).toBe(72);
     expect(payload?.scores.riskBand).toBe("low");
     expect(payload?.scores.churnScore).toBe(0.1);
+    expect(payload?.matchHints.hasEmail).toBe(true);
+    expect(payload?.matchHints.d1User).toBe("hit");
+    expect(payload?.matchHints.stripeCustomer).toBe("hit");
+    expect(payload?.matchHints.attribution).toBe("hit");
+    expect(payload?.matchHints.summary).toContain("hit every wired source");
   });
 });
 
@@ -386,5 +391,7 @@ describe("GET /api/admin/crm/contacts/[id]", () => {
     expect(data.contact.email).toBe("ada@example.com");
     expect(Array.isArray(data.opportunities)).toBe(true);
     expect(typeof data.fetchedAt).toBe("string");
+    expect(data.matchHints).toBeDefined();
+    expect(data.matchHints.hasEmail).toBe(true);
   });
 });

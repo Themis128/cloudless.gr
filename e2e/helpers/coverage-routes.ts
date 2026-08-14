@@ -50,6 +50,7 @@ export const ADMIN_PAGES = [
   "/en/admin",
   "/en/admin/ab-tests",
   "/en/admin/ai-assistant",
+  "/en/admin/langgraph",
   "/en/admin/ai-generator",
   "/en/admin/analytics",
   "/en/admin/analytics/seo",

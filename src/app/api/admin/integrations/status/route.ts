@@ -409,6 +409,7 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     slackResult,
     notionResult,
     acResult,
+    acLead,
     postizResult,
     appflowyResult,
     n8nResult,
@@ -421,6 +422,7 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
     cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
     verifyActiveCampaignToken(),
+    getLeadAutomationStatus(),
     cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY
       ? pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
       : Promise.resolve(NOT_CONFIGURED),
@@ -443,9 +445,15 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     acResult.status === "not_configured" &&
     cfg.ACTIVECAMPAIGN_API_URL &&
     !cfg.ACTIVECAMPAIGN_API_TOKEN;
-  const acMessage = acMissingToken
+  let acMessage = acMissingToken
     ? "URL configured but API token missing. Renew account then get token from Settings > Developer > API Access."
     : acResult.message;
+  if (acResult.status === "valid" && !acLead.leadAutomationIdSet) {
+    acMessage =
+      "API OK, but ACTIVECAMPAIGN_LEAD_AUTOMATION_ID is unset — contact form enrollments are a no-op.";
+  } else if (acResult.status === "valid" && acLead.leadAutomationIdSet) {
+    acMessage = `${acResult.message} Lead automation ID is set.`;
+  }
 
   return [
     {
@@ -480,7 +488,10 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       id: "activecampaign",
       name: "ActiveCampaign",
       category: "email_marketing",
-      status: acStatusMap[acResult.status] ?? "error",
+      status:
+        acResult.status === "valid" && !acLead.leadAutomationIdSet
+          ? "degraded"
+          : (acStatusMap[acResult.status] ?? "error"),
       message: acMessage,
       setupUrl: "https://www.activecampaign.com",
     },
