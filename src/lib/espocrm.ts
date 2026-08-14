@@ -21,6 +21,7 @@
  * `/cloudless/production/`; getIntegrationsAsync() reads them.
  */
 import { getIntegrationsAsync } from "@/lib/integrations";
+import { isEspoRecordId } from "@/lib/crm-contact-360-shared";
 
 const PAGE_SIZE = 100;
 const MAX_LIMIT = 100;
@@ -233,11 +234,6 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
   } catch {
     return [];
   }
-}
-
-/** EspoCRM record ids are short alphanumeric tokens (typically 17 chars). */
-export function isEspoRecordId(id: string): boolean {
-  return /^[a-zA-Z0-9]{8,24}$/.test(id);
 }
 
 export async function getContact(id: string): Promise<Record<string, unknown> | null> {

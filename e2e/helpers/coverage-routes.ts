@@ -250,6 +250,10 @@ export const ADMIN_API_DYNAMIC = [
   },
   { template: "/api/admin/reports/[id]", sample: "/api/admin/reports/sample-id" },
   { template: "/api/admin/reports/[id]/pdf", sample: "/api/admin/reports/sample-id/pdf" },
+  {
+    template: "/api/admin/crm/contacts/[id]",
+    sample: "/api/admin/crm/contacts/abcdefghijklmnopq",
+  },
 ] as const;
 
 export const AUTH_API = "/api/auth/session"; // NextAuth handler
