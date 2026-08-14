@@ -119,11 +119,15 @@ const nextConfig: NextConfig = {
   }
 };
 
-// Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
-// in the App Router before next/manifest.ts can handle them.
+// Bypass Turbopack / App Router matching where `[locale]` can steal paths
+// that are not locale pages:
+// - `/manifest.webmanifest` (metadata route) → PWA API handler
+// - `/api/:path*` identity rewrite claims API routes before `[locale]=api`
+//   can 404 `/api/auth/session` (and sibling auth handlers) as HTML
 nextConfig.rewrites = async () => ({
   beforeFiles: [
     { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
+    { source: "/api/:path*", destination: "/api/:path*" },
   ],
   afterFiles: [],
   fallback: [],
