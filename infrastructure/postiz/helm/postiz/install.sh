@@ -81,8 +81,8 @@ if command -v aws >/dev/null && aws sts get-caller-identity >/dev/null 2>&1; the
       args+=("--from-literal=${k}=${v}")
     fi
   }
-  set_if FACEBOOK_APP_ID "$(resolve_ssm FACEBOOK_APP_ID FACEBOOK_APP_ID)"
-  set_if FACEBOOK_APP_SECRET "$(resolve_ssm FACEBOOK_APP_SECRET FACEBOOK_APP_SECRET)"
+  set_if FACEBOOK_APP_ID "$(resolve_ssm FACEBOOK_APP_ID FACEBOOK_APP_ID meta-app-id)"
+  set_if FACEBOOK_APP_SECRET "$(resolve_ssm FACEBOOK_APP_SECRET FACEBOOK_APP_SECRET meta-app-secret)"
   set_if LINKEDIN_CLIENT_ID "$(resolve_ssm LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_ID)"
   set_if LINKEDIN_CLIENT_SECRET "$(resolve_ssm LINKEDIN_CLIENT_SECRET LINKEDIN_CLIENT_SECRET)"
   set_if X_API_KEY "$(resolve_ssm X_API_KEY X_API_KEY)"
