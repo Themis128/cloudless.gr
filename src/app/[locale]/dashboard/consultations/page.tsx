@@ -100,7 +100,7 @@ export default function ConsultationsPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
+            className={`min-h-9 rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
               tab === t
                 ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 border"
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
