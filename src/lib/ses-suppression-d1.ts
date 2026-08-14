@@ -8,6 +8,7 @@
  */
 
 import type { AuthDatabase } from "@/lib/auth-d1";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 
 const TTL_DAYS = 365 * 5; // 5 years retention (typical for suppression lists)
 
@@ -30,7 +31,7 @@ function getProcessEnv(): ProcessWithAuthDb["env"] {
 function getD1Binding(): AuthDatabase | null {
   const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
   if (db && typeof db.prepare === "function") return db;
-  return null;
+  return getAuthDbFromEnv();
 }
 
 /**

@@ -30,10 +30,12 @@ The working design routes *around* both constraints:
 | Mailbox + IMAP   | **dovecot** on omv-ha (Maildir virtual user)                        | ✅           |
 | Webmail UI       | **Roundcube** on omv-ha, HTTPS via **Cloudflare Tunnel**            | ✅           |
 | Outbound send    | **postfix** relays via `smtp.resend.com:587` (Resend)               | relay        |
-| Inbound receive  | **Cloudflare Email Routing** (CF runs the MX) → Email **Worker** → tunnel → dovecot LMTP | ✅ |
+| Inbound receive  | **Cloudflare Email Routing** → forward to Gmail (not dovecot)       | ✅           |
 
-No port 25, no inbound reachability required — mail flows over :587 (out) and
-Cloudflare (in).
+No port 25, no inbound reachability required — outbound uses :587 (Resend);
+inbound uses Cloudflare Email Routing (MX on Cloudflare). Roundcube compose
+still goes through local postfix → Resend. Reading inbound mail is via Gmail
+(see Inbound section) — not a Worker→dovecot LMTP bridge.
 
 ## Components & credentials
 
@@ -55,10 +57,9 @@ Resend sender verification (added 2026-08-08):
 | MX   | `send`                      | `feedback-smtp.eu-west-1.amazonses.com` (prio 10)|
 | TXT  | `send`                      | `v=spf1 include:amazonses.com ~all`              |
 
-Inbound (Cloudflare Email Routing — pending): enabling Email Routing sets the
-root `MX` to Cloudflare's mail servers automatically. A `DMARC` TXT
-(`_dmarc` → `v=DMARC1; p=none; rua=mailto:…`) should be added once both
-directions are live.
+Inbound (Cloudflare Email Routing — **live**): root `MX` points at Cloudflare's
+mail servers. Catch-all and `tbaltzakis@` forward to Gmail. DMARC is live (see
+DMARC status below) — do not treat this section as pending.
 
 ## omv-ha config (what's on the box)
 
@@ -151,9 +152,11 @@ opens Roundcube in a new tab. Access is gated only by Roundcube's own login
 
 ## App sync
 
-`RESEND_API_KEY` is set in the k8s Secret `cloudless-secrets` (namespace
-`cloudless`), so the cloudless.gr app sends transactional email via Resend
-using the same relay. See `src/lib/email-resend.ts`.
+Transactional mail from the Next app uses `src/lib/email.ts`: Cloudflare Email
+Sending REST when `CLOUDFLARE_ACCOUNT_ID` + email API token are set, otherwise
+Resend (`RESEND_API_KEY` in the k8s Secret `cloudless-secrets`). Both send as
+`noreply@cloudless.gr`. The omv-ha postfix relay is only for Roundcube human
+compose — not the app API path. See `docs/EMAIL-INFRASTRUCTURE.md`.
 
 ## Reproduce / recover
 
