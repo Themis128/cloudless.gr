@@ -78,7 +78,79 @@ function topKeywords(rows) {
 		.slice(0, 25);
 }
 
-function gscWeeklyReports(rows) {
+function topPages(rows) {
+	const byPage = new Map();
+	for (const row of rows) {
+		const page = String(row.page ?? "(unknown)");
+		const cur = byPage.get(page) || { page, clicks: 0, impressions: 0, position_sum: 0, n: 0 };
+		cur.clicks += Number(row.clicks) || 0;
+		cur.impressions += Number(row.impressions) || 0;
+		cur.position_sum += Number(row.position) || 0;
+		cur.n += 1;
+		byPage.set(page, cur);
+	}
+	return [...byPage.values()]
+		.map((r) => ({
+			page: r.page,
+			clicks: r.clicks,
+			impressions: r.impressions,
+			ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
+			avg_position: r.n > 0 ? Math.round((r.position_sum / r.n) * 10) / 10 : 0,
+		}))
+		.sort((a, b) => b.clicks - a.clicks)
+		.slice(0, 25);
+}
+
+function gscQueryPages(rows) {
+	return [...rows]
+		.map((r) => ({
+			query: String(r.query ?? ""),
+			page: String(r.page ?? ""),
+			clicks: Number(r.clicks) || 0,
+			impressions: Number(r.impressions) || 0,
+			ctr: Number(r.impressions) > 0 ? (Number(r.clicks) || 0) / (Number(r.impressions) || 1) : Number(r.ctr) || 0,
+			position: Math.round((Number(r.position) || 0) * 10) / 10,
+		}))
+		.sort((a, b) => b.clicks - a.clicks)
+		.slice(0, 50);
+}
+
+function gscCountries(rows) {
+	return [...rows]
+		.map((r) => ({
+			country: String(r.country ?? "(unknown)"),
+			clicks: Number(r.clicks) || 0,
+			impressions: Number(r.impressions) || 0,
+			ctr: Number(r.impressions) > 0 ? (Number(r.clicks) || 0) / (Number(r.impressions) || 1) : Number(r.ctr) || 0,
+			avg_position: Math.round((Number(r.position) || 0) * 10) / 10,
+		}))
+		.sort((a, b) => b.clicks - a.clicks)
+		.slice(0, 50);
+}
+
+function gscDevices(rows) {
+	return [...rows]
+		.map((r) => ({
+			device: String(r.device ?? "(unknown)"),
+			clicks: Number(r.clicks) || 0,
+			impressions: Number(r.impressions) || 0,
+			ctr: Number(r.impressions) > 0 ? (Number(r.clicks) || 0) / (Number(r.impressions) || 1) : Number(r.ctr) || 0,
+			avg_position: Math.round((Number(r.position) || 0) * 10) / 10,
+		}))
+		.sort((a, b) => b.clicks - a.clicks);
+}
+
+function gscWeeklyReports(rows, countryRows = [], deviceRows = []) {
+	const topCountry =
+		[...countryRows].sort((a, b) => (Number(b.clicks) || 0) - (Number(a.clicks) || 0))[0]
+			?.country ?? "";
+	const deviceClicks = deviceRows.reduce((a, r) => a + (Number(r.clicks) || 0), 0);
+	const mobileClicks = deviceRows
+		.filter((r) => String(r.device ?? "").toUpperCase() === "MOBILE")
+		.reduce((a, r) => a + (Number(r.clicks) || 0), 0);
+	const mobilePct =
+		deviceClicks > 0 ? Math.round((100 * mobileClicks) / deviceClicks * 10) / 10 : 0;
+
 	const byWeek = new Map();
 
 	for (const row of rows) {
@@ -137,8 +209,8 @@ function gscWeeklyReports(rows) {
 						: 0,
 				keywords: week.keywords.size,
 				topKeywords,
-				topCountry: "",
-				mobilePct: 0,
+				topCountry: String(topCountry),
+				mobilePct,
 				ctrOpportunities: week.ctr_opportunities,
 			};
 		});
@@ -342,12 +414,32 @@ async function main() {
 	console.log(`Materializing datalake snapshot → R2://${BUCKET}/${SNAPSHOT_KEY}`);
 	const sections = [];
 	const gsc = await safeParquet("lake/gsc-keywords/keywords.parquet");
+	const gscCountry = await safeParquet("lake/gsc-countries/countries.parquet");
+	const gscDevice = await safeParquet("lake/gsc-devices/devices.parquet");
 	sections.push(
 		gsc ? sectionOk("top_keywords", topKeywords(gsc)) : sectionErr("top_keywords", "missing gsc parquet")
 	);
+	sections.push(
+		gsc ? sectionOk("top_pages", topPages(gsc)) : sectionErr("top_pages", "missing gsc parquet")
+	);
+	sections.push(
+		gsc
+			? sectionOk("gsc_query_pages", gscQueryPages(gsc))
+			: sectionErr("gsc_query_pages", "missing gsc parquet")
+	);
+	sections.push(
+		gscCountry
+			? sectionOk("gsc_countries", gscCountries(gscCountry))
+			: sectionErr("gsc_countries", "missing gsc countries parquet")
+	);
+	sections.push(
+		gscDevice
+			? sectionOk("gsc_devices", gscDevices(gscDevice))
+			: sectionErr("gsc_devices", "missing gsc devices parquet")
+	);
 
 	if (gsc) {
-		const reports = gscWeeklyReports(gsc);
+		const reports = gscWeeklyReports(gsc, gscCountry ?? [], gscDevice ?? []);
 		const kw = topKeywords(gsc);
 		const totalClicks = reports.reduce((a, r) => a + r.clicks, 0);
 		const totalImpr = reports.reduce((a, r) => a + r.impressions, 0);
@@ -433,6 +525,8 @@ async function main() {
 
 	const freshnessKeys = [
 		"lake/gsc-keywords/keywords.parquet",
+		"lake/gsc-countries/countries.parquet",
+		"lake/gsc-devices/devices.parquet",
 		"lake/transactions/transactions.parquet",
 		"lake/sentry-issues/issues.parquet",
 		"lake/linkedin-ads/insights.parquet",

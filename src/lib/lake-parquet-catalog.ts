@@ -2,6 +2,8 @@
 
 export const LAKE_PARQUET_CATALOG = [
   { id: "gsc", label: "GSC keywords", path: "lake/gsc-keywords/keywords.parquet" },
+  { id: "gsc-countries", label: "GSC countries", path: "lake/gsc-countries/countries.parquet" },
+  { id: "gsc-devices", label: "GSC devices", path: "lake/gsc-devices/devices.parquet" },
   { id: "stripe", label: "Stripe transactions", path: "lake/transactions/transactions.parquet" },
   {
     id: "espocrm-contacts",

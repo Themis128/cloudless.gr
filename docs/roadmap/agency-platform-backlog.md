@@ -86,8 +86,8 @@ Do **not** rebuild medallion, stand up BI SaaS, or call live GSC/Stripe/Espo fro
 | Status | Item | Why | Notes |
 | --- | --- | --- | --- |
 | **Done (this branch)** | Overlay RFM / churn parquet on `/admin/crm/[id]` | Scores are already keyed by email in `ml-parquet/` | Gold `rfm_churn` section + email join; still not a CDP |
-| **Done (this branch)** | Hide empty GSC dimension UI (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs were empty stubs | APIs stay wired; restore UI when ETL exists |
-| Wait | GSC dimension ETL (country / device / page) | Silver parquet is query-only today | Do not un-hide those tables until gold has rows |
+| **Done (this branch)** | Hide empty GSC dimension UI (country / device / page) | `getGscDimensionFromLake` only has `query` rows; SEO tabs were empty stubs | Un-hidden after dimension ETL |
+| **Done (this branch)** | GSC dimension ETL (country / device / page) | Silver parquet already had query+page; country/device were never fetched | `gsc-to-r2` + gold sections; SEO/Analytics UI un-hidden |
 | **Done (this branch)** | LinkedIn-only ROI → other ad channels in gold | `getRoiFromLake` reports `configured=false` for Google/TikTok/X/Meta | Honest `not_in_gold` status + unified UI; no live `roi.ts`; real ETL later per channel with spend |
 | **Done (this branch)** | R2 Data Catalog / R2 SQL | Optional explore SQL without Athena | Lake Explore is the operator SQL path; CF R2 Catalog/SQL stays optional Iceberg enablement |
 

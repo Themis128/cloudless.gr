@@ -77,6 +77,51 @@ const SECTION_META: Record<
       { key: "avg_position", label: "Avg pos", format: "decimal" },
     ],
   },
+  top_pages: {
+    title: "GSC top pages",
+    subtitle: "Gold: rolled up from keywords parquet page column.",
+    columns: [
+      { key: "page", label: "Page" },
+      { key: "clicks", label: "Clicks", format: "int" },
+      { key: "impressions", label: "Impressions", format: "int" },
+      { key: "ctr", label: "CTR", format: "pct" },
+      { key: "avg_position", label: "Avg pos", format: "decimal" },
+    ],
+  },
+  gsc_countries: {
+    title: "GSC countries",
+    subtitle: "Gold: R2 snapshot from gsc-to-r2 countries parquet.",
+    columns: [
+      { key: "country", label: "Country" },
+      { key: "clicks", label: "Clicks", format: "int" },
+      { key: "impressions", label: "Impressions", format: "int" },
+      { key: "ctr", label: "CTR", format: "pct" },
+      { key: "avg_position", label: "Avg pos", format: "decimal" },
+    ],
+  },
+  gsc_devices: {
+    title: "GSC devices",
+    subtitle: "Gold: R2 snapshot from gsc-to-r2 devices parquet.",
+    columns: [
+      { key: "device", label: "Device" },
+      { key: "clicks", label: "Clicks", format: "int" },
+      { key: "impressions", label: "Impressions", format: "int" },
+      { key: "ctr", label: "CTR", format: "pct" },
+      { key: "avg_position", label: "Avg pos", format: "decimal" },
+    ],
+  },
+  gsc_query_pages: {
+    title: "GSC query × page",
+    subtitle: "Gold: top query+page pairs from keywords parquet.",
+    columns: [
+      { key: "query", label: "Query" },
+      { key: "page", label: "Page" },
+      { key: "clicks", label: "Clicks", format: "int" },
+      { key: "impressions", label: "Impressions", format: "int" },
+      { key: "ctr", label: "CTR", format: "pct" },
+      { key: "position", label: "Pos", format: "decimal" },
+    ],
+  },
   linkedin_ads: {
     title: "LinkedIn ads — per-campaign 90d",
     subtitle: "Gold: R2 snapshot from linkedin-ads-to-r2 parquet.",
