@@ -122,7 +122,7 @@ The dashboards already exist. Prefer wiring data the APIs already return over ne
 | **Done (this branch)** | Anomaly history table in admin | Five rules already fire to Slack only | D1 `ad_analytics_anomaly_event` + bookmark fallback; `/admin/campaigns/anomalies` |
 | Wait | CSV export on datalake section tables | Operators already have gold tables with no download | After contact 360 |
 | **Done (this branch)** | Funnel `ab_variant` comparison | `/admin/ab-tests` toggles flags; it does not show funnel results | Pivot + rates on `/admin/analytics/funnel` (`funnel-ab-compare.ts`) |
-| Wait | Restore client reports with gold sections (GSC / Stripe) | Only if `/admin/reports` is restored | Do not invent a report product first |
+| **Done (this branch)** | Restore client reports with gold sections (GSC / Stripe) | Only if `/admin/reports` is restored | Nav + generate sections from `report-gold-sections.ts` |
 
 ### UI out of scope
 
