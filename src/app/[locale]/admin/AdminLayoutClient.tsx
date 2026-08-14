@@ -122,6 +122,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/postiz", label: "Postiz", Icon: Megaphone },
       { href: "/admin/ai-assistant", label: "AI Assistant", Icon: Bot },
       { href: "/admin/ai-generator", label: "AI Generator", Icon: Bot },
+      { href: "/admin/langgraph", label: "LangGraph (Pi)", Icon: Bot },
       { href: "/admin/product-descriptions", label: "Product Copy", Icon: Package },
       { href: "/admin/voice-brief", label: "Voice Brief", Icon: Mic },
     ],

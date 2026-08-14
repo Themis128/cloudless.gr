@@ -3,6 +3,10 @@
  * I/O lives in crm-contact-360.ts (server only).
  */
 
+import type { Contact360MatchHints } from "@/lib/contact-360-match-hints";
+
+export type { Contact360MatchHints } from "@/lib/contact-360-match-hints";
+
 export function isEspoRecordId(id: string): boolean {
   return /^[a-zA-Z0-9]{8,24}$/.test(id);
 }
@@ -113,6 +117,7 @@ export interface Contact360 {
   events: Contact360Event[];
   attribution: Contact360Attribution;
   scores: Contact360Scores;
+  matchHints: Contact360MatchHints;
   fetchedAt: string;
 }
 
