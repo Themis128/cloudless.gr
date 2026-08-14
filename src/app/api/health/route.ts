@@ -29,15 +29,3 @@ export async function GET() {
     { headers: { "cache-control": "no-store, no-cache, must-revalidate" } }
   );
 }
-
-  return globalThis.Response.json(
-    {
-      status: dbConnected ? "ok" : "degraded",
-      timestamp: new Date().toISOString(),
-      version,
-      authProvider: "d1",
-      dbConnected,
-    },
-    { headers: { "cache-control": "no-store, no-cache, must-revalidate" } }
-  );
-}
