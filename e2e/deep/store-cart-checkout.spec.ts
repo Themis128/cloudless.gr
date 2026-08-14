@@ -35,12 +35,13 @@ test.describe("Store, cart, checkout", () => {
     await page.goto("/en/store/srv-cloud");
     await page.getByTestId("add-to-cart").click();
     await expect(page.getByTestId("cart-drawer")).toContainText(/cloud architecture audit/i);
-    await page.getByRole("button", { name: /close cart/i }).click();
+    await page.getByTestId("cart-drawer").getByRole("button", { name: /close cart/i }).click();
     await expect(page.getByTestId("cart-drawer")).toHaveAttribute("data-open", "false");
     await expect
       .poll(async () => page.evaluate(() => localStorage.getItem("cloudless-cart") ?? ""))
       .toMatch(/srv-cloud/);
     await page.goto("/en/store/srv-growth");
+    await expect(page.getByTestId("add-to-cart")).toBeVisible();
     await page.getByTestId("add-to-cart").click();
     const drawer = page.getByTestId("cart-drawer");
     await expect(drawer).toHaveAttribute("data-open", "true");

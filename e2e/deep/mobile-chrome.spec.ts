@@ -1,8 +1,13 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, devices } from "@playwright/test";
 import { GUEST_STORAGE } from "./_helpers";
 import { openMobileNavIfNeeded } from "../helpers/mobile-nav";
 
-test.use({ storageState: GUEST_STORAGE });
+// CI e2e-full-coverage only runs --project=chromium (desktop). This file is
+// mobile chrome smoke, so pin Pixel 7 or the hamburger stays lg:hidden.
+test.use({
+  ...devices["Pixel 7"],
+  storageState: GUEST_STORAGE,
+});
 
 test.describe("Mobile chrome smoke", () => {
   test("hamburger, cart tap target, and chat panel fit the viewport", async ({ page }) => {
