@@ -209,7 +209,13 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
   const attribution = byName.get("attribution");
 
   const stripeRows = stripe?.rows ?? [];
-  const revenue = stripeRows.reduce((a, r) => a + (Number(r.revenue ?? r.amount) || 0), 0);
+  const paidOrders = stripeRows.find((r) => String(r.metric) === "paid_orders");
+  const revenue = paidOrders
+    ? Number(paidOrders.amount_eur ?? paidOrders.revenue ?? paidOrders.amount) || 0
+    : stripeRows.reduce((a, r) => a + (Number(r.amount_eur ?? r.revenue ?? r.amount) || 0), 0);
+  const totalOrders = paidOrders
+    ? Number(paidOrders.value ?? paidOrders.count) || 0
+    : (stripe?.rowCount ?? 0);
 
   return {
     days,
@@ -218,24 +224,47 @@ export async function getUnifiedFromLake(days = 28): Promise<Record<string, unkn
     lakeSource: dash.source,
     seo: seo.error ? null : seo.snapshot,
     keywords: seo.keywords.slice(0, 10),
-    pipeline: espocrm?.error
-      ? null
-      : {
-          stages: espocrm?.rows ?? [],
-          rowCount: espocrm?.rowCount ?? 0,
-        },
+    pipeline: espocrm?.error ? null : pipelineFromEspocrmGold(espocrm?.rows ?? []),
     email: null,
     stripe: stripe?.error
       ? null
       : {
-          totalOrders: stripe?.rowCount ?? 0,
+          totalOrders,
           revenue,
           activeSubscriptions: null,
           mrr: null,
           rows: stripeRows.slice(0, 30),
+          dailyTrend: [],
         },
     attribution: attribution?.error ? null : (attribution?.rows ?? []),
     sectionsMissing: dash.sections.filter((s) => s.error).map((s) => s.section),
+  };
+}
+
+/** Map gold espocrm_funnel (by lead source) into the Unified pipeline card shape. */
+export function pipelineFromEspocrmGold(rows: Record<string, unknown>[]): {
+  totalDeals: number;
+  totalValue: number;
+  byStage: Record<string, { count: number; value: number }>;
+} {
+  const byStage: Record<string, { count: number; value: number }> = {};
+  let totalDeals = 0;
+  let totalValue = 0;
+  let totalContacts = 0;
+  for (const r of rows) {
+    const stage = String(r.lead_source ?? r.lifecycle_stage ?? "(none)");
+    const deals = Number(r.closed_won_deals) || 0;
+    const contacts = Number(r.contact_count) || 0;
+    const value = Number(r.closed_won_revenue) || 0;
+    byStage[stage] = { count: deals > 0 ? deals : contacts, value };
+    totalDeals += deals;
+    totalValue += value;
+    totalContacts += contacts;
+  }
+  return {
+    totalDeals: totalDeals > 0 ? totalDeals : totalContacts,
+    totalValue,
+    byStage,
   };
 }
 
@@ -254,9 +283,11 @@ export async function getRoiFromLake(days = 30): Promise<Record<string, unknown>
   const impressions = linkedinRows.reduce((a, r) => a + (Number(r.impressions) || 0), 0);
   const clicks = linkedinRows.reduce((a, r) => a + (Number(r.clicks) || 0), 0);
   const stripeRows = stripe?.rows ?? [];
-  const revenueCents = Math.round(
-    stripeRows.reduce((a, r) => a + (Number(r.revenue ?? r.amount) || 0), 0) * 100
-  );
+  const paidOrders = stripeRows.find((r) => String(r.metric) === "paid_orders");
+  const revenueMajor = paidOrders
+    ? Number(paidOrders.amount_eur ?? paidOrders.revenue ?? paidOrders.amount) || 0
+    : stripeRows.reduce((a, r) => a + (Number(r.amount_eur ?? r.revenue ?? r.amount) || 0), 0);
+  const revenueCents = Math.round(revenueMajor * 100);
 
   const channels = [
     {

@@ -62,8 +62,9 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
 const ANALYTICS_URL = "http://localhost/api/admin/analytics/unified";
 const ALG_RS256 = "RS256";
 
-const { mockGetUnifiedFromLake } = vi.hoisted(() => ({
+const { mockGetUnifiedFromLake, mockGetStripeAnalyticsSnapshot } = vi.hoisted(() => ({
   mockGetUnifiedFromLake: vi.fn(),
+  mockGetStripeAnalyticsSnapshot: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -82,6 +83,10 @@ vi.mock("jose", async () => {
 
 vi.mock("@/lib/datalake-serve", () => ({
   getUnifiedFromLake: (...a: unknown[]) => mockGetUnifiedFromLake(...a),
+}));
+
+vi.mock("@/lib/stripe-analytics-read", () => ({
+  getStripeAnalyticsSnapshot: (...a: unknown[]) => mockGetStripeAnalyticsSnapshot(...a),
 }));
 
 function makeAdminToken(): string {
@@ -107,23 +112,42 @@ const SAMPLE_UNIFIED = {
   lakeSource: "r2",
   seo: { clicks: 400, impressions: 8000, ctr: 0.05, position: 12, days: 28 },
   keywords: [{ query: "cloudless", clicks: 40 }],
-  pipeline: { stages: [{ stage: "Qualified", count: 3 }], rowCount: 1 },
+  pipeline: {
+    totalDeals: 3,
+    totalValue: 9000,
+    byStage: { LinkedIn: { count: 2, value: 5000 }, Direct: { count: 1, value: 4000 } },
+  },
   email: null,
   stripe: {
     totalOrders: 2,
     revenue: 150,
     activeSubscriptions: null,
     mrr: null,
-    rows: [{ day: "2026-08-01", revenue: 150 }],
+    rows: [{ metric: "paid_orders", value: 2, amount_eur: 150 }],
+    dailyTrend: [],
   },
   attribution: [{ channel: "organic", sessions: 10 }],
   sectionsMissing: [],
+};
+
+const SAMPLE_DAILY = {
+  windowDays: 28,
+  generatedAt: "2026-08-14T12:00:00.000Z",
+  totals: { events: 2, revenueMinor: 15000, processed: 2, failed: 0 },
+  byCategory: {},
+  byStatus: {},
+  byCurrency: {},
+  dailyTrend: [
+    { day: "2026-08-01", revenueMinor: 5000, events: 1, processed: 1, failed: 0 },
+    { day: "2026-08-02", revenueMinor: 10000, events: 1, processed: 1, failed: 0 },
+  ],
 };
 
 describe("GET /api/admin/analytics/unified", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUnifiedFromLake.mockResolvedValue(SAMPLE_UNIFIED);
+    mockGetStripeAnalyticsSnapshot.mockResolvedValue(SAMPLE_DAILY);
   });
 
   it("returns 401 without token", async () => {
@@ -140,14 +164,17 @@ describe("GET /api/admin/analytics/unified", () => {
     expect(mockGetUnifiedFromLake).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with lake-composed sources", async () => {
+  it("returns 200 with lake-composed sources and D1 dailyTrend", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(mockGetUnifiedFromLake).toHaveBeenCalledWith(28);
+    expect(mockGetStripeAnalyticsSnapshot).toHaveBeenCalledWith(28);
     expect(data.source).toBe("datalake-gold");
     expect(data).toHaveProperty("stripe");
+    expect(data.stripe.dailyTrend).toHaveLength(2);
+    expect(data.stripe.dailyTrendSource).toBe("d1-stripe-transaction");
     expect(data).toHaveProperty("seo");
     expect(data).toHaveProperty("pipeline");
     expect(data).toHaveProperty("email");
@@ -158,10 +185,11 @@ describe("GET /api/admin/analytics/unified", () => {
     expect(data._filters).toEqual({ days: 28 });
   });
 
-  it("passes days query to getUnifiedFromLake", async () => {
+  it("passes days query to getUnifiedFromLake and Stripe snapshot", async () => {
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     await GET(adminReq(`${ANALYTICS_URL}?days=14`));
     expect(mockGetUnifiedFromLake).toHaveBeenCalledWith(14);
+    expect(mockGetStripeAnalyticsSnapshot).toHaveBeenCalledWith(14);
   });
 
   it("surfaces null seo from the lake payload", async () => {
@@ -188,11 +216,22 @@ describe("GET /api/admin/analytics/unified", () => {
     expect(data.email).toBeNull();
   });
 
-  it("surfaces null stripe from the lake payload", async () => {
+  it("surfaces null stripe from the lake payload without calling D1", async () => {
     mockGetUnifiedFromLake.mockResolvedValue({ ...SAMPLE_UNIFIED, stripe: null });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     const data = await res.json();
     expect(data.stripe).toBeNull();
+    expect(mockGetStripeAnalyticsSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("keeps empty dailyTrend when AUTH_DB is unbound", async () => {
+    mockGetStripeAnalyticsSnapshot.mockRejectedValue(new Error("AUTH_DB is not configured"));
+    const { GET } = await import("@/app/api/admin/analytics/unified/route");
+    const res = await GET(adminReq(ANALYTICS_URL));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.stripe.dailyTrend).toEqual([]);
+    expect(data.stripe.dailyTrendSource).toBe("unavailable");
   });
 });

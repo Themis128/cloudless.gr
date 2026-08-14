@@ -10,6 +10,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
+import { AdminDailyBars } from "@/components/admin/AdminDailyBars";
 
 interface CostByServiceRow {
   service: string;
@@ -78,7 +79,6 @@ export default function CostAdminPage() {
     load();
   }, []);
 
-  const maxDaily = data ? Math.max(...data.dailyTrend.map((d) => d.total_usd), 0.01) : 0;
   const maxService = data ? Math.max(...data.topServices.map((s) => s.total_usd), 0.01) : 0;
   const sevenDayAvg = data
     ? data.dailyTrend.slice(-7).reduce((sum, d) => sum + d.total_usd, 0) /
@@ -162,29 +162,14 @@ export default function CostAdminPage() {
             </div>
           </div>
 
-          {/* Daily trend bar chart */}
-          <div className="mb-8 rounded-xl border border-slate-800 bg-slate-900/40 p-6">
-            <div className="mb-3 flex items-baseline justify-between">
-              <div className="font-mono text-sm text-white">Daily spend (last 30 days)</div>
-              <div className="font-mono text-[10px] text-slate-500">USD</div>
-            </div>
-            <div className="flex h-32 items-end gap-1">
-              {data.dailyTrend.map((d) => {
-                const heightPct = Math.max((d.total_usd / maxDaily) * 100, 1);
-                return (
-                  <div
-                    key={d.cost_date}
-                    className="flex-1 rounded-t bg-emerald-500/60 transition-colors hover:bg-emerald-500/90"
-                    style={{ height: `${heightPct}%` }}
-                    title={`${d.cost_date}: ${fmtUsd(d.total_usd)}`}
-                  />
-                );
-              })}
-            </div>
-            <div className="mt-2 flex justify-between font-mono text-[10px] text-slate-500">
-              <span>{data.dailyTrend[0]?.cost_date ?? ""}</span>
-              <span>{data.dailyTrend[data.dailyTrend.length - 1]?.cost_date ?? ""}</span>
-            </div>
+          <div className="mb-8">
+            <AdminDailyBars
+              title="Daily spend (last 30 days)"
+              unitLabel="USD"
+              points={data.dailyTrend.map((d) => ({ day: d.cost_date, value: d.total_usd }))}
+              formatValue={fmtUsd}
+              barClassName="bg-emerald-500/60 hover:bg-emerald-500/90"
+            />
           </div>
 
           {/* Top services bar chart */}

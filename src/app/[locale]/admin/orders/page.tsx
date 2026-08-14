@@ -166,7 +166,7 @@ export default function AdminOrdersPage() {
                       {order.id.slice(0, 20)}…
                     </td>
                     <td className="px-6 py-4 font-mono text-white">{order.email}</td>
-                    <td className="max-w-[200px] truncate px-6 py-4 text-slate-300">
+                    <td className="max-w-50 truncate px-6 py-4 text-slate-300">
                       {order.items.map((i) => i.description).join(", ") || "—"}
                     </td>
                     <td className="px-6 py-4 font-mono text-white">

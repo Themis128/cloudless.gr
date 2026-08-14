@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
+import { AdminDailyBars } from "@/components/admin/AdminDailyBars";
 
 interface SeoData {
   clicks: number;
@@ -24,11 +25,21 @@ interface EmailData {
   avgClickRate?: number;
 }
 
+interface StripeDailyPoint {
+  day: string;
+  revenueMinor: number;
+  events: number;
+  processed: number;
+  failed: number;
+}
+
 interface StripeData {
   totalOrders: number;
   revenue: number;
-  activeSubscriptions: number;
-  mrr: number;
+  activeSubscriptions: number | null;
+  mrr: number | null;
+  dailyTrend?: StripeDailyPoint[];
+  dailyTrendSource?: string;
 }
 
 interface UnifiedData {
@@ -120,9 +131,13 @@ const CHANNEL_LABELS: Record<string, string> = {
   meta: "Meta",
 };
 
+function eurosMajor(amount: number): string {
+  return `€${amount.toLocaleString("en-IE", { maximumFractionDigits: 2 })}`;
+}
+
 function euros(cents: number | null): string {
   if (cents === null) return "—";
-  return `€${(cents / 100).toLocaleString("en-IE", { maximumFractionDigits: 2 })}`;
+  return eurosMajor(cents / 100);
 }
 
 function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
@@ -289,27 +304,42 @@ export default function UnifiedAnalyticsPage() {
           <div>
             <SectionHeader title="Revenue" icon="💳" href="/admin/orders" />
             {data.stripe ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <KpiCard
-                  label="Total Revenue"
-                  value={`€${data.stripe.revenue.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-                  color="text-neon-green"
-                />
-                <KpiCard
-                  label="Total Orders"
-                  value={String(data.stripe.totalOrders)}
-                  color="text-neon-green"
-                />
-                <KpiCard
-                  label="Active Subscriptions"
-                  value={String(data.stripe.activeSubscriptions)}
-                  color="text-neon-blue"
-                />
-                <KpiCard
-                  label="MRR"
-                  value={`€${data.stripe.mrr.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-                  sub="monthly recurring"
-                  color="text-neon-blue"
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <KpiCard
+                    label="Total Revenue"
+                    value={eurosMajor(data.stripe.revenue)}
+                    color="text-neon-green"
+                  />
+                  <KpiCard
+                    label="Total Orders"
+                    value={String(data.stripe.totalOrders)}
+                    color="text-neon-green"
+                  />
+                  <KpiCard
+                    label="Active Subscriptions"
+                    value={
+                      data.stripe.activeSubscriptions == null
+                        ? "—"
+                        : String(data.stripe.activeSubscriptions)
+                    }
+                    color="text-neon-blue"
+                  />
+                  <KpiCard
+                    label="MRR"
+                    value={data.stripe.mrr == null ? "—" : eurosMajor(data.stripe.mrr)}
+                    sub="monthly recurring"
+                    color="text-neon-blue"
+                  />
+                </div>
+                <AdminDailyBars
+                  title="Daily revenue"
+                  unitLabel="EUR · D1 stripe_transaction"
+                  points={(data.stripe.dailyTrend ?? []).map((d) => ({
+                    day: d.day,
+                    value: d.revenueMinor / 100,
+                  }))}
+                  formatValue={eurosMajor}
                 />
               </div>
             ) : (
@@ -366,7 +396,7 @@ export default function UnifiedAnalyticsPage() {
                 />
                 <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
                   <div className="font-heading mb-2 text-xs font-semibold tracking-widest text-slate-500 uppercase">
-                    By Stage
+                    By lead source
                   </div>
                   <div className="space-y-1">
                     {Object.entries(data.pipeline.byStage).map(([stage, { count }]) => (
