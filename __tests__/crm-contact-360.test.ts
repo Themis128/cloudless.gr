@@ -34,6 +34,10 @@ vi.mock("@/lib/datalake-serve", () => ({
   getGoldSection: (...args: unknown[]) => mockGetGoldSection(...args),
 }));
 
+vi.mock("@/lib/integrations", () => ({
+  isConfiguredAsync: (...args: unknown[]) => mockIsConfiguredAsync(...args),
+}));
+
 vi.mock("@/lib/api-auth", () => ({
   requireAdmin: async (request: NextRequest) => {
     const token = request.headers.get("authorization");

@@ -15,9 +15,11 @@ const { mockCustomersList, mockInvoicesList, mockSubsList } = vi.hoisted(() => (
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: vi.fn().mockResolvedValue({
     STRIPE_SECRET_KEY: "sk_test_x",
-    NOTION_API_KEY: "",
-    NOTION_PROJECTS_DB_ID: "",
   }),
+}));
+
+vi.mock("@/lib/appflowy", () => ({
+  isAppFlowyConfigured: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("@/lib/stripe", () => ({

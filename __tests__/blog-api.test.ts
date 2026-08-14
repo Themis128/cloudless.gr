@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getBlogPostsWithSourceMock = vi.fn();
 const getBlogPostBySlugMock = vi.fn();
 const isAppFlowyConfiguredMock = vi.fn();
-const isConfiguredAsyncMock = vi.fn();
 
 vi.mock("@/lib/blog-source", () => ({
   getBlogPostsWithSource: (...a: unknown[]) => getBlogPostsWithSourceMock(...a),
@@ -12,11 +11,6 @@ vi.mock("@/lib/blog-source", () => ({
 
 vi.mock("@/lib/appflowy", () => ({
   isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfiguredMock(...a),
-}));
-
-vi.mock("@/lib/integrations", () => ({
-  isConfiguredAsync: (...a: unknown[]) => isConfiguredAsyncMock(...a),
-  resetIntegrationCache: vi.fn(),
 }));
 
 vi.mock("@/lib/blog", () => ({
@@ -34,7 +28,6 @@ describe("Blog API dual-run fallbacks", () => {
     vi.clearAllMocks();
     vi.resetModules();
     isAppFlowyConfiguredMock.mockResolvedValue(false);
-    isConfiguredAsyncMock.mockResolvedValue(false);
   });
 
   it("GET /api/blog/posts returns static posts when CMS is not configured", async () => {
