@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  createTimeEntry,
-  listTimeEntries,
-  type TimeEntry,
-} from "@/lib/agency-projects-d1";
+import { createTimeEntry, listTimeEntries, type TimeEntry } from "@/lib/agency-projects-d1";
 
 export type { TimeEntry };
 

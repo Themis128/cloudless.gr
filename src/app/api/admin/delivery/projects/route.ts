@@ -7,10 +7,10 @@ import {
   updateAgencyProjectStatus,
   type AgencyProject,
 } from "@/lib/agency-projects-d1";
+import { isValidEmail } from "@/lib/validation";
 
 export type { AgencyProject };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const AP_RE = /^ap_[a-zA-Z0-9-]+$/;
 
 export async function GET(request: NextRequest) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       if (!name) {
         return NextResponse.json({ error: "name required" }, { status: 400 });
       }
-      if (clientEmail && !EMAIL_RE.test(clientEmail)) {
+      if (clientEmail && !isValidEmail(clientEmail)) {
         return NextResponse.json({ error: "Invalid clientEmail" }, { status: 400 });
       }
 

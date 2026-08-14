@@ -24,19 +24,14 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
   };
 });
 
-const {
-  mockListProjects,
-  mockCreateProject,
-  mockUpdateStatus,
-  mockListTime,
-  mockCreateTime,
-} = vi.hoisted(() => ({
-  mockListProjects: vi.fn(),
-  mockCreateProject: vi.fn(),
-  mockUpdateStatus: vi.fn(),
-  mockListTime: vi.fn(),
-  mockCreateTime: vi.fn(),
-}));
+const { mockListProjects, mockCreateProject, mockUpdateStatus, mockListTime, mockCreateTime } =
+  vi.hoisted(() => ({
+    mockListProjects: vi.fn(),
+    mockCreateProject: vi.fn(),
+    mockUpdateStatus: vi.fn(),
+    mockListTime: vi.fn(),
+    mockCreateTime: vi.fn(),
+  }));
 
 vi.mock("@/lib/agency-projects-d1", () => ({
   listAgencyProjects: (...a: unknown[]) => mockListProjects(...a),
@@ -44,8 +39,7 @@ vi.mock("@/lib/agency-projects-d1", () => ({
   updateAgencyProjectStatus: (...a: unknown[]) => mockUpdateStatus(...a),
   listTimeEntries: (...a: unknown[]) => mockListTime(...a),
   createTimeEntry: (...a: unknown[]) => mockCreateTime(...a),
-  isAgencyProjectStatus: (v: string) =>
-    ["active", "on_hold", "done", "cancelled"].includes(v),
+  isAgencyProjectStatus: (v: string) => ["active", "on_hold", "done", "cancelled"].includes(v),
 }));
 
 function adminReq(url: string, init?: RequestInit) {
@@ -207,10 +201,9 @@ describe("GET/POST /api/admin/delivery/projects/[id]/time", () => {
       ],
     });
     const { GET } = await import("@/app/api/admin/delivery/projects/[id]/time/route");
-    const res = await GET(
-      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/time"),
-      { params: Promise.resolve({ id: "ap_abc" }) }
-    );
+    const res = await GET(adminReq("http://localhost/api/admin/delivery/projects/ap_abc/time"), {
+      params: Promise.resolve({ id: "ap_abc" }),
+    });
     expect(res.status).toBe(200);
     expect((await res.json()).entries).toHaveLength(1);
   });
