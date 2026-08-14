@@ -13,12 +13,17 @@ vi.mock("@/lib/ssm-config", () => ({
 const mockCheckoutSessionsList = vi.fn();
 const mockCustomersList = vi.fn();
 const mockSubscriptionsList = vi.fn();
+const mockInvoicesCreate = vi.fn();
+const mockInvoicesRetrieve = vi.fn();
+const mockInvoiceItemsCreate = vi.fn();
 
 vi.mock("stripe", () => {
   class MockStripe {
     checkout = { sessions: { list: mockCheckoutSessionsList } };
     customers = { list: mockCustomersList };
     subscriptions = { list: mockSubscriptionsList };
+    invoices = { create: mockInvoicesCreate, retrieve: mockInvoicesRetrieve };
+    invoiceItems = { create: mockInvoiceItemsCreate };
   }
   return { default: MockStripe };
 });
@@ -93,6 +98,90 @@ describe("stripe.ts", () => {
       const { listStripeProducts } = await import("@/lib/stripe");
       const products = await listStripeProducts();
       expect(products).toBeNull();
+    });
+  });
+
+  describe("createDraftInvoice", () => {
+    it("returns null when Stripe is not configured", async () => {
+      mockGetConfig.mockResolvedValue({});
+      const { createDraftInvoice } = await import("@/lib/stripe");
+      await expect(
+        createDraftInvoice({
+          customerId: "cus_1",
+          description: "Work",
+          amountCents: 15000,
+        })
+      ).resolves.toBeNull();
+    });
+
+    it("returns null for empty description or non-positive amount", async () => {
+      mockGetConfig.mockResolvedValue({ STRIPE_SECRET_KEY: "sk_test_123" });
+      const { createDraftInvoice } = await import("@/lib/stripe");
+      await expect(
+        createDraftInvoice({ customerId: "cus_1", description: "  ", amountCents: 100 })
+      ).resolves.toBeNull();
+      await expect(
+        createDraftInvoice({ customerId: "cus_1", description: "Work", amountCents: 0 })
+      ).resolves.toBeNull();
+      expect(mockInvoicesCreate).not.toHaveBeenCalled();
+    });
+
+    it("creates the draft first, attaches the line item to that invoice, then retrieves", async () => {
+      mockGetConfig.mockResolvedValue({ STRIPE_SECRET_KEY: "sk_test_123" });
+      mockInvoicesCreate.mockResolvedValue({ id: "in_draft" });
+      mockInvoiceItemsCreate.mockResolvedValue({ id: "ii_1" });
+      mockInvoicesRetrieve.mockResolvedValue({
+        id: "in_draft",
+        number: null,
+        customer: "cus_1",
+        customer_email: "a@b.com",
+        status: "draft",
+        amount_due: 15000,
+        amount_paid: 0,
+        currency: "eur",
+        created: 1_700_000_000,
+        hosted_invoice_url: null,
+        invoice_pdf: null,
+      });
+
+      const { createDraftInvoice } = await import("@/lib/stripe");
+      const invoice = await createDraftInvoice({
+        customerId: "cus_1",
+        description: "OpVal — 1.5h",
+        amountCents: 15000,
+        currency: "EUR",
+      });
+
+      expect(mockInvoicesCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: "cus_1",
+          collection_method: "send_invoice",
+          auto_advance: false,
+          pending_invoice_items_behavior: "exclude",
+        })
+      );
+      expect(mockInvoiceItemsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: "cus_1",
+          invoice: "in_draft",
+          amount: 15000,
+          currency: "eur",
+          description: "OpVal — 1.5h",
+        })
+      );
+      const createOrder = mockInvoicesCreate.mock.invocationCallOrder[0];
+      const itemOrder = mockInvoiceItemsCreate.mock.invocationCallOrder[0];
+      const retrieveOrder = mockInvoicesRetrieve.mock.invocationCallOrder[0];
+      expect(createOrder).toBeLessThan(itemOrder);
+      expect(itemOrder).toBeLessThan(retrieveOrder);
+      expect(invoice).toEqual(
+        expect.objectContaining({
+          id: "in_draft",
+          amountDue: 15000,
+          status: "draft",
+          currency: "EUR",
+        })
+      );
     });
   });
 });

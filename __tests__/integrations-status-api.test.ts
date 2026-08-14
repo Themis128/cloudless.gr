@@ -6,11 +6,13 @@ import { NextRequest } from "next/server";
 const requireAdminMock = vi.fn();
 const getConfigMock = vi.fn();
 const verifyACTokenMock = vi.fn();
+const getLeadAutomationStatusMock = vi.fn();
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: requireAdminMock }));
 vi.mock("@/lib/ssm-config", () => ({ getConfig: getConfigMock }));
 vi.mock("@/lib/activecampaign", () => ({
   verifyActiveCampaignToken: verifyACTokenMock,
+  getLeadAutomationStatus: getLeadAutomationStatusMock,
 }));
 
 // fetch is used for live pings (EspoCRM, Slack, Notion, Stripe)
@@ -62,6 +64,10 @@ describe("GET /api/admin/integrations/status", () => {
     requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
     getConfigMock.mockResolvedValue({ ...baseConfig });
     verifyACTokenMock.mockResolvedValue({ status: "valid" });
+    getLeadAutomationStatusMock.mockResolvedValue({
+      apiConfigured: true,
+      leadAutomationIdSet: true,
+    });
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
@@ -154,6 +160,19 @@ describe("GET /api/admin/integrations/status", () => {
     const ac = data.integrations.find((i: { id: string }) => i.id === "activecampaign");
     expect(ac.status).toBe("degraded");
     expect(ac.message).toContain("expired");
+  });
+
+  it("reports ActiveCampaign as degraded when lead automation ID is unset", async () => {
+    getLeadAutomationStatusMock.mockResolvedValueOnce({
+      apiConfigured: true,
+      leadAutomationIdSet: false,
+    });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const ac = data.integrations.find((i: { id: string }) => i.id === "activecampaign");
+    expect(ac.status).toBe("degraded");
+    expect(ac.message).toContain("ACTIVECAMPAIGN_LEAD_AUTOMATION_ID");
   });
 
   it("reports Sentry as degraded when DSN set but auth token missing", async () => {

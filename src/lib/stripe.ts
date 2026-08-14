@@ -213,20 +213,27 @@ export async function createDraftInvoice(input: {
   const description = input.description.trim().slice(0, 500);
   if (!description || input.amountCents < 1) return null;
 
+  // Create the draft first, then attach the line item to that invoice.
+  // Newer Stripe API versions default pending_invoice_items_behavior to
+  // "exclude", so a pre-created pending item never lands on the invoice
+  // (amount_due stays 0 and finalize can mark it paid immediately).
+  const draft = await stripe.invoices.create({
+    customer: input.customerId,
+    collection_method: "send_invoice",
+    days_until_due: input.daysUntilDue ?? 14,
+    auto_advance: false,
+    pending_invoice_items_behavior: "exclude",
+  });
+
   await stripe.invoiceItems.create({
     customer: input.customerId,
+    invoice: draft.id,
     amount: input.amountCents,
     currency,
     description,
   });
 
-  const invoice = await stripe.invoices.create({
-    customer: input.customerId,
-    collection_method: "send_invoice",
-    days_until_due: input.daysUntilDue ?? 14,
-    auto_advance: false,
-  });
-
+  const invoice = await stripe.invoices.retrieve(draft.id);
   return mapInvoice(invoice);
 }
 
