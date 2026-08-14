@@ -72,25 +72,29 @@ Enable in the Postiz UI once channels exist:
 
 ## Hub implementation order (do in order)
 
-1. Restore `postiz-providers` OAuth keys; connect **P0**: LinkedIn Page, X, FB/IG, Bluesky.
-2. Confirm MCP `integrationList` and `/admin/postiz` Channels are non-empty.
+1. Restore `postiz-providers` OAuth keys (`scripts/postiz-restore-providers.sh`); connect **P0**: LinkedIn Page, X, FB/IG, Bluesky — see `docs/integrations/POSTIZ-CONNECT.md`.
+2. Confirm MCP `integrationList` and `/admin/postiz` Channels are non-empty (`scripts/postiz-connect-ready.sh`).
 3. Install `postiz` CLI with Tailscale `POSTIZ_API_URL` (`postiz-agent-cli`).
-4. Import + activate `postiz-rss-multichannel.json`; optionally install `n8n-nodes-postiz`.
-5. Turn on Plugs for X + LinkedIn Page; register Postiz webhook → n8n UTM guard.
-6. Optional: agent-media MCP for short-form video creatives, then publish via Postiz.
-7. Optional: `OPENAI_API_KEY` + R2 on the Postiz pod for in-app AI/media.
+4. Import + activate `postiz-rss-multichannel.json` + `postiz-utm-guard.json`; optionally install `n8n-nodes-postiz`. In-cluster API base: `http://postiz.postiz.svc.cluster.local:5000/api`.
+5. Register Postiz → app webhook (`scripts/postiz-register-webhook.sh`) and Plugs for X + LinkedIn Page.
+6. Keep `AUTO_POST_BLOG_TO_SOCIAL` **unset** on cloudless-app unless you want AppFlowy Published → social fan-out (default = vet-before-post).
+7. Optional: agent-media MCP for short-form video creatives, then publish via Postiz.
+8. Optional: `OPENAI_API_KEY` + R2 on the Postiz pod for in-app AI/media.
 
 ## cloudless.gr surfaces that already talk to Postiz
 
-- `src/lib/postiz.ts` — Public API client (incl. bulk + analytics)
+- `src/lib/postiz.ts` — Public API client (incl. bulk, analytics, `withSocialUtm`)
 - `src/app/[locale]/admin/postiz` — compose / bulk / analytics UI
-- `src/lib/postiz-blog.ts` — blog → social
+- `src/lib/postiz-blog.ts` — AppFlowy/CMS Published → social (opt-in flag)
 - `src/app/api/webhooks/postiz` — inbound webhooks
+- `src/app/api/webhooks/content` + `setEditorialStatus(Published)` — trigger share
 - `infrastructure/n8n/workflows/postiz-*.json` — automation starters
 - Cursor MCP server `postiz`
+- `docs/integrations/POSTIZ-CONNECT.md` — operator connect checklist
 
 ## Do not
 
 - Upgrade past v2.11.2 without a Temporal plan
 - Commit API keys or put them in repo `mcp.json`
 - Use public `https://postiz.cloudless.gr` from headless agents without CF Access service token — prefer Tailscale NodePort or Access headers
+- Enable `AUTO_POST_BLOG_TO_SOCIAL=1` without connected channels + vetted copy

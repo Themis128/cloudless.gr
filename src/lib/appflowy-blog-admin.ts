@@ -249,7 +249,7 @@ export async function setEditorialStatus(
     // Fire-and-forget so Slack/admin status flips stay fast; gated by
     // AUTO_POST_BLOG_TO_SOCIAL inside scheduleBlogShare.
     if (status === "Published") {
-      triggerBlogSocialShare(workspaceId, pageId, view.name).catch((err) =>
+      void triggerBlogSocialShare(workspaceId, pageId, view.name).catch((err) =>
         console.error("[appflowy-blog-admin] postiz share threw:", err)
       );
     }

@@ -22,8 +22,6 @@ import {
 } from "@/lib/postiz";
 
 const TAG_PREFIX = "blog-";
-const PLATFORM_LINKEDIN = "linkedin";
-const PLATFORM_TIKTOK = "tiktok";
 
 export interface BlogShareInput {
   /** AppFlowy / CMS page id. Used as the idempotency tag. */
@@ -45,16 +43,18 @@ export interface BlogShareResult {
   error?: string;
 }
 
-function platformUtmSource(platform: "linkedin" | "x" | "meta" | "tiktok"): string {
+function platformUtmSource(
+  platform: "linkedin" | "x" | "meta" | "tiktok"
+): string {
   switch (platform) {
-    case PLATFORM_LINKEDIN:
-      return PLATFORM_LINKEDIN;
+    case "linkedin":
+      return "linkedin";
     case "x":
       return "x";
     case "meta":
       return "facebook";
-    case PLATFORM_TIKTOK:
-      return PLATFORM_TIKTOK;
+    case "tiktok":
+      return "tiktok";
     default:
       return "social";
   }
@@ -81,7 +81,7 @@ export async function scheduleBlogShare(input: BlogShareInput): Promise<BlogShar
   }
 
   const integrations = await listPostizIntegrations();
-  const platforms = input.platforms ?? [PLATFORM_LINKEDIN, "x", "meta", PLATFORM_TIKTOK];
+  const platforms = input.platforms ?? ["linkedin", "x", "meta", "tiktok"];
   const campaign = `blog_${input.pageId.slice(0, 12)}`;
   const allPostIds: string[] = [];
   let lastError: string | undefined;

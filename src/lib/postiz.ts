@@ -28,14 +28,6 @@ import type { CalendarPlatform } from "@/lib/content-calendar";
  * Both share the same `postizFetch` / `getPostizConfig` plumbing.
  */
 
-// Platform identifier constants — used in PLATFORM_TO_POSTIZ_IDENTIFIERS and
-// defaultSettingsForIdentifier so the same literal isn't repeated 3+ times.
-const POSTIZ_ID_LINKEDIN = "linkedin";
-const POSTIZ_ID_LINKEDIN_PAGE = "linkedin-page";
-const POSTIZ_ID_INSTAGRAM = "instagram";
-const POSTIZ_ID_INSTAGRAM_STANDALONE = "instagram-standalone";
-const POSTIZ_ID_TIKTOK = "tiktok";
-
 // Cloudflare Access service tokens are an opaque (id, secret) pair — not JWTs.
 // The pair can be provided one of two ways:
 //   - two env vars (POSTIZ_CF_ACCESS_CLIENT_ID + POSTIZ_SERVICE_TOKEN)
@@ -162,9 +154,9 @@ export async function listPostizIntegrations(groupId?: string): Promise<PostizIn
 
 /** Calendar platform → Postiz integration identifiers it should publish to. */
 export const PLATFORM_TO_POSTIZ_IDENTIFIERS: Partial<Record<CalendarPlatform, string[]>> = {
-  meta: ["facebook", POSTIZ_ID_INSTAGRAM],
-  linkedin: [POSTIZ_ID_LINKEDIN, POSTIZ_ID_LINKEDIN_PAGE],
-  tiktok: [POSTIZ_ID_TIKTOK],
+  meta: ["facebook", "instagram"],
+  linkedin: ["linkedin", "linkedin-page"],
+  tiktok: ["tiktok"],
   x: ["x"],
 };
 
@@ -199,7 +191,11 @@ export interface SchedulePostResult {
  * Append standard cloudless social UTMs to a URL (or leave non-URLs alone).
  * Campaign defaults to `social_hub`; pass a stable slug for attribution.
  */
-export function withSocialUtm(url: string, platform: string, campaign = "social_hub"): string {
+export function withSocialUtm(
+  url: string,
+  platform: string,
+  campaign = "social_hub"
+): string {
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) return trimmed;
   try {
@@ -226,17 +222,17 @@ function defaultSettingsForIdentifier(
   switch (identifier) {
     case "x":
       return { __type: "x", who_can_reply_post: "everyone" };
-    case POSTIZ_ID_LINKEDIN:
-      return { __type: POSTIZ_ID_LINKEDIN, post_as_images_carousel: false };
-    case POSTIZ_ID_LINKEDIN_PAGE:
-      return { __type: POSTIZ_ID_LINKEDIN_PAGE, post_as_images_carousel: false };
-    case POSTIZ_ID_INSTAGRAM:
-      return { __type: POSTIZ_ID_INSTAGRAM, post_type: "post" };
-    case POSTIZ_ID_INSTAGRAM_STANDALONE:
-      return { __type: POSTIZ_ID_INSTAGRAM_STANDALONE, post_type: "post" };
-    case POSTIZ_ID_TIKTOK:
+    case "linkedin":
+      return { __type: "linkedin", post_as_images_carousel: false };
+    case "linkedin-page":
+      return { __type: "linkedin-page", post_as_images_carousel: false };
+    case "instagram":
+      return { __type: "instagram", post_type: "post" };
+    case "instagram-standalone":
+      return { __type: "instagram-standalone", post_type: "post" };
+    case "tiktok":
       return {
-        __type: POSTIZ_ID_TIKTOK,
+        __type: "tiktok",
         privacy_level: "PUBLIC_TO_EVERYONE",
         duet: true,
         stitch: true,
