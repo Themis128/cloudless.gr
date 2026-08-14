@@ -365,6 +365,12 @@ export default function CampaignsDashboard() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
+          <Link
+            href="/admin/campaigns/anomalies"
+            className="rounded-lg border border-amber-500/30 px-3 py-1.5 font-mono text-xs text-amber-300 transition hover:bg-amber-500/10"
+          >
+            Anomaly history
+          </Link>
           <button
             onClick={refresh}
             disabled={refreshing}
