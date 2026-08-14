@@ -79,7 +79,7 @@ function CellValue({ value }: { value: unknown }) {
     );
   const str = String(value);
   return (
-    <span className="inline-block max-w-[200px] truncate align-bottom" title={str}>
+    <span className="inline-block max-w-50 truncate align-bottom" title={str}>
       {str.length > 60 ? str.slice(0, 57) + "..." : str}
     </span>
   );
@@ -257,7 +257,7 @@ export default function AppFlowyStatusPage() {
       <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
+          <h1 className="from-neon-cyan to-neon-magenta bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent">
             AppFlowy Integration Status
           </h1>
           <p className="mt-2 text-slate-400">
