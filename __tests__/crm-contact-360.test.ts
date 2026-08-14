@@ -213,11 +213,9 @@ describe("getContact360", () => {
     ]);
     mockGetStripe.mockResolvedValue({
       customers: {
-        list: vi
-          .fn()
-          .mockResolvedValue({
-            data: [{ id: "cus_1", email: "ada@example.com", created: 1_700_000_000 }],
-          }),
+        list: vi.fn().mockResolvedValue({
+          data: [{ id: "cus_1", email: "ada@example.com", created: 1_700_000_000 }],
+        }),
       },
       checkout: {
         sessions: {
