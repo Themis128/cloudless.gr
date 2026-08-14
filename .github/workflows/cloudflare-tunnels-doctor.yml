@@ -39,7 +39,8 @@ permissions:
   issues: write
 
 concurrency:
-  group: cloudflare-tunnels-doctor
+  # Shared with deploy-fabric-metrics — both restart cloudflared on the Pis.
+  group: cloudflare-host-fabric
   cancel-in-progress: false
 
 jobs:
