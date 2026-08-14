@@ -2,9 +2,12 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
-type AppKey = "appflowy" | "espocrm" | "n8n" | "postiz" | "grafana" | "kuma";
-type AuthMode = "auto" | "link" | "vpn";
+import { SELFHOSTED_PUBLIC_URLS, type SelfhostedApp } from "@/lib/selfhosted-apps";
+
+type AppKey = SelfhostedApp;
+type AuthMode = "auto" | "link";
 type HealthStatus = "up" | "down" | "pending" | "unknown";
+
 interface AppDef {
   key: AppKey;
   name: string;
@@ -12,7 +15,9 @@ interface AppDef {
   icon: string;
   authMode: AuthMode;
   detail: string;
+  publicUrl: string;
 }
+
 interface KumaMonitor {
   id: number;
   name: string;
@@ -21,9 +26,11 @@ interface KumaMonitor {
   lastHeartbeatAt: string | null;
   groupName: string;
 }
+
 interface KumaSummary {
   monitors: KumaMonitor[];
 }
+
 const APPS: AppDef[] = [
   {
     key: "espocrm",
@@ -32,6 +39,7 @@ const APPS: AppDef[] = [
     icon: "◉",
     authMode: "auto",
     detail: "Auto-login via API credentials",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.espocrm,
   },
   {
     key: "appflowy",
@@ -40,6 +48,7 @@ const APPS: AppDef[] = [
     icon: "📝",
     authMode: "auto",
     detail: "Auto-login via GoTrue token",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.appflowy,
   },
   {
     key: "n8n",
@@ -48,6 +57,7 @@ const APPS: AppDef[] = [
     icon: "🔀",
     authMode: "link",
     detail: "Trigger and inspect workflows",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.n8n,
   },
   {
     key: "postiz",
@@ -56,14 +66,16 @@ const APPS: AppDef[] = [
     icon: "📨",
     authMode: "link",
     detail: "Schedule and review posts",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.postiz,
   },
   {
     key: "grafana",
     name: "Grafana",
     description: "Dashboards · Metrics",
     icon: "📊",
-    authMode: "vpn",
-    detail: "Requires VPN / Tailscale",
+    authMode: "link",
+    detail: "Cloudflare Access gated",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.grafana,
   },
   {
     key: "kuma",
@@ -72,13 +84,15 @@ const APPS: AppDef[] = [
     icon: "🟢",
     authMode: "link",
     detail: "Monitor status and alerts",
+    publicUrl: SELFHOSTED_PUBLIC_URLS.kuma,
   },
 ];
+
 const AUTH_BADGE: Record<AuthMode, { label: string; klass: string }> = {
   auto: { label: "AUTO-LOGIN", klass: "border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan" },
   link: { label: "DIRECT LINK", klass: "border-slate-700 bg-slate-800/50 text-slate-400" },
-  vpn: { label: "VPN ONLY", klass: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400" },
 };
+
 function HealthBadge({ status, pingMs }: { status: HealthStatus; pingMs?: number | null }) {
   if (status === "unknown") return null;
   const cfg = {
@@ -88,24 +102,34 @@ function HealthBadge({ status, pingMs }: { status: HealthStatus; pingMs?: number
   }[status];
   return (
     <div className="flex items-center gap-1.5">
-      {" "}
-      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />{" "}
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
       <span className={`font-mono text-[10px] ${cfg.klass}`}>
-        {" "}
-        {cfg.label} {status === "up" && pingMs != null ? ` · ${pingMs}ms` : ""}{" "}
-      </span>{" "}
+        {cfg.label}
+        {status === "up" && pingMs != null ? ` · ${pingMs}ms` : ""}
+      </span>
     </div>
   );
 }
+
+function publicHostLabel(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url.replace(/^https?:\/\//, "");
+  }
+}
+
 interface AppCardProps {
   app: AppDef;
   health: HealthStatus;
   pingMs: number | null;
 }
+
 function AppCard({ app, health, pingMs }: AppCardProps) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const authBadge = AUTH_BADGE[app.authMode];
+
   const handleOpen = useCallback(async () => {
     setBusy(true);
     setErr(null);
@@ -124,59 +148,61 @@ function AppCard({ app, health, pingMs }: AppCardProps) {
       setBusy(false);
     }
   }, [app.key]);
+
   return (
     <div className="group bg-void-light/50 flex flex-col rounded-xl border border-slate-800 p-5 transition-all hover:border-slate-700">
-      {" "}
       <div className="mb-4 flex items-start justify-between gap-3">
-        {" "}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/60 text-xl">
-          {" "}
-          {app.icon}{" "}
-        </div>{" "}
+          {app.icon}
+        </div>
         <div className="flex flex-col items-end gap-1.5">
-          {" "}
           <span
             className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${authBadge.klass}`}
           >
-            {" "}
-            {authBadge.label}{" "}
-          </span>{" "}
-          <HealthBadge status={health} pingMs={pingMs} />{" "}
-        </div>{" "}
-      </div>{" "}
+            {authBadge.label}
+          </span>
+          <HealthBadge status={health} pingMs={pingMs} />
+        </div>
+      </div>
       <div className="flex-1">
-        {" "}
-        <h3 className="font-heading mb-0.5 text-base font-semibold text-white">{app.name}</h3>{" "}
-        <p className="font-body mb-1 text-xs text-slate-400">{app.description}</p>{" "}
-        <p className="font-mono text-[10px] text-slate-600">{app.detail}</p>{" "}
-      </div>{" "}
+        <h3 className="font-heading mb-0.5 text-base font-semibold text-white">{app.name}</h3>
+        <p className="font-body mb-1 text-xs text-slate-400">{app.description}</p>
+        <p className="font-mono text-[10px] text-slate-600">{app.detail}</p>
+        <a
+          href={app.publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-neon-cyan/80 hover:text-neon-cyan mt-2 inline-block font-mono text-[11px] underline-offset-2 hover:underline"
+        >
+          {publicHostLabel(app.publicUrl)} ↗
+        </a>
+      </div>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-800 pt-4">
-        {" "}
         {err ? (
           <span className="flex-1 truncate font-mono text-[10px] text-red-400">{err}</span>
         ) : (
           <span className="flex-1" />
-        )}{" "}
+        )}
         <button
+          type="button"
           onClick={handleOpen}
           disabled={busy}
           className="hover:border-neon-cyan/40 flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 font-mono text-xs font-medium text-slate-300 transition-all group-hover:border-slate-600 hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {" "}
           {busy ? (
             <>
-              {" "}
-              <span className="h-3 w-3 animate-spin rounded-full border border-slate-600 border-t-slate-300" />{" "}
-              Opening…{" "}
+              <span className="h-3 w-3 animate-spin rounded-full border border-slate-600 border-t-slate-300" />
+              Opening…
             </>
           ) : (
             <>Open →</>
-          )}{" "}
-        </button>{" "}
-      </div>{" "}
+          )}
+        </button>
+      </div>
     </div>
   );
 }
+
 function matchMonitorToApp(name: string): AppKey | null {
   const lower = name.toLowerCase();
   if (lower.includes("espocrm") || lower.includes("espo")) return "espocrm";
@@ -187,6 +213,7 @@ function matchMonitorToApp(name: string): AppKey | null {
   if (lower.includes("kuma")) return "kuma";
   return null;
 }
+
 export default function SelfhostedPortalPage() {
   const [healthMap, setHealthMap] = useState<Record<AppKey, HealthStatus>>({
     appflowy: "unknown",
@@ -205,6 +232,7 @@ export default function SelfhostedPortalPage() {
     kuma: null,
   });
   const [kumaLoaded, setKumaLoaded] = useState(false);
+
   useEffect(() => {
     async function loadHealth() {
       try {
@@ -248,63 +276,56 @@ export default function SelfhostedPortalPage() {
     }
     loadHealth();
   }, []);
+
   const allUp =
     kumaLoaded && APPS.every((a) => healthMap[a.key] === "up" || healthMap[a.key] === "unknown");
   const anyDown = APPS.some((a) => healthMap[a.key] === "down");
+
   return (
     <div>
-      {" "}
       <div className="mb-6">
-        {" "}
         <Link href="/admin" className="font-mono text-xs text-slate-500 hover:text-slate-300">
-          {" "}
-          ← Admin{" "}
-        </Link>{" "}
-      </div>{" "}
+          ← Admin
+        </Link>
+      </div>
       <div className="mb-8">
-        {" "}
         <div className="border-neon-cyan/20 bg-neon-cyan/10 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
-          {" "}
-          <span className="bg-neon-cyan h-2 w-2 rounded-full" />{" "}
-          <span className="text-neon-cyan font-mono text-xs">SELF-HOSTED PORTAL</span>{" "}
-        </div>{" "}
-        <h1 className="font-heading text-2xl font-bold text-white">Self-hosted Apps</h1>{" "}
+          <span className="bg-neon-cyan h-2 w-2 rounded-full" />
+          <span className="text-neon-cyan font-mono text-xs">SELF-HOSTED PORTAL</span>
+        </div>
+        <h1 className="font-heading text-2xl font-bold text-white">Self-hosted Apps</h1>
         <p className="font-body mt-2 text-sm text-slate-400">
-          {" "}
-          One-click admin ingress to every app running on the Pi cluster.{" "}
-        </p>{" "}
+          One-click admin ingress via public{" "}
+          <span className="font-mono text-slate-300">*.cloudless.gr</span> hosts (Cloudflare
+          Access). Never use <span className="font-mono text-slate-500">*.svc.cluster.local</span>{" "}
+          in a browser.
+        </p>
         {kumaLoaded && (
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5">
-            {" "}
             <span
               className={`h-1.5 w-1.5 rounded-full ${anyDown ? "animate-pulse bg-red-400" : "bg-neon-green"}`}
-            />{" "}
+            />
             <span className="font-mono text-[10px] text-slate-400">
-              {" "}
               {anyDown
                 ? `${APPS.filter((a) => healthMap[a.key] === "down").length} app(s) down`
                 : allUp
                   ? "All apps up"
-                  : "Cluster health loading…"}{" "}
-            </span>{" "}
+                  : "Cluster health loading…"}
+            </span>
           </div>
-        )}{" "}
-      </div>{" "}
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {" "}
         {APPS.map((app) => (
           <AppCard key={app.key} app={app} health={healthMap[app.key]} pingMs={pingMap[app.key]} />
-        ))}{" "}
-      </div>{" "}
+        ))}
+      </div>
       <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/30 p-4">
-        {" "}
         <p className="font-mono text-[10px] text-slate-500">
-          {" "}
-          <span className="text-neon-cyan">AUTO-LOGIN</span> apps inject a fresh server-side token.{" "}
-          <span className="text-yellow-400">VPN ONLY</span> apps require Tailscale. Health badges
-          from Uptime Kuma.{" "}
-        </p>{" "}
-      </div>{" "}
+          <span className="text-neon-cyan">AUTO-LOGIN</span> apps inject a fresh server-side token
+          and open the public URL. Health badges from Uptime Kuma.
+        </p>
+      </div>
     </div>
   );
 }

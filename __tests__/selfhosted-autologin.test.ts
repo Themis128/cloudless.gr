@@ -42,8 +42,14 @@ vi.stubGlobal("fetch", mockFetch);
 // ---------------------------------------------------------------------------
 // Import SUT after mocks are in place
 // ---------------------------------------------------------------------------
-const { getAutologinUrl, supportsAutoLogin, SELFHOSTED_APP_NAMES } =
-  await import("@/lib/selfhosted-autologin");
+const {
+  getAutologinUrl,
+  supportsAutoLogin,
+  SELFHOSTED_APP_NAMES,
+  SELFHOSTED_PUBLIC_URLS,
+  isInternalOnlyBaseUrl,
+  publicUrlForApp,
+} = await import("@/lib/selfhosted-autologin");
 
 // ---------------------------------------------------------------------------
 describe("supportsAutoLogin", () => {
@@ -64,6 +70,36 @@ describe("SELFHOSTED_APP_NAMES", () => {
       expect(typeof SELFHOSTED_APP_NAMES[k]).toBe("string");
       expect(SELFHOSTED_APP_NAMES[k].length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("publicUrlForApp / isInternalOnlyBaseUrl", () => {
+  it("flags cluster DNS and LAN hosts as internal-only", () => {
+    expect(isInternalOnlyBaseUrl("http://nginx.appflowy.svc.cluster.local")).toBe(true);
+    expect(isInternalOnlyBaseUrl("http://kube-prom-grafana.monitoring.svc.cluster.local")).toBe(
+      true
+    );
+    expect(isInternalOnlyBaseUrl("http://192.168.1.128:30850")).toBe(true);
+    expect(isInternalOnlyBaseUrl("https://appflowy.cloudless.gr")).toBe(false);
+  });
+
+  it("rewrites cluster-local config to the public cloudless.gr origin", () => {
+    expect(publicUrlForApp("appflowy", "http://nginx.appflowy.svc.cluster.local")).toBe(
+      SELFHOSTED_PUBLIC_URLS.appflowy
+    );
+    expect(publicUrlForApp("grafana", "http://kube-prom-grafana.monitoring.svc.cluster.local")).toBe(
+      SELFHOSTED_PUBLIC_URLS.grafana
+    );
+    expect(publicUrlForApp("postiz", "http://postiz.postiz.svc.cluster.local:5000")).toBe(
+      SELFHOSTED_PUBLIC_URLS.postiz
+    );
+    expect(publicUrlForApp("kuma", "http://uptime-kuma.uptime-kuma.svc.cluster.local:3001")).toBe(
+      SELFHOSTED_PUBLIC_URLS.kuma
+    );
+  });
+
+  it("keeps an already-public cloudless.gr base", () => {
+    expect(publicUrlForApp("n8n", "https://n8n.cloudless.gr")).toBe("https://n8n.cloudless.gr");
   });
 });
 
@@ -102,8 +138,19 @@ describe("getAutologinUrl — non-AppFlowy apps (smart links)", () => {
 
 // ---------------------------------------------------------------------------
 describe("getAutologinUrl — AppFlowy (GoTrue password-grant)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockFetch.mockReset();
+    const { getConfig } = await import("@/lib/ssm-config");
+    vi.mocked(getConfig).mockResolvedValue({
+      APPFLOWY_API_URL: "https://appflowy.cloudless.gr",
+      APPFLOWY_EMAIL: "admin@cloudless.gr",
+      APPFLOWY_PASSWORD: "test-password",
+      ESPOCRM_BASE_URL: "https://espocrm.cloudless.gr",
+      N8N_API_URL: "https://n8n.cloudless.gr",
+      POSTIZ_API_URL: "https://postiz.cloudless.gr",
+      GRAFANA_BASE_URL: "https://grafana.cloudless.gr",
+      KUMA_BASE_URL: "https://kuma.cloudless.gr",
+    } as never);
   });
 
   it("returns a token-injected URL on successful GoTrue grant", async () => {
@@ -119,6 +166,28 @@ describe("getAutologinUrl — AppFlowy (GoTrue password-grant)", () => {
     expect(result.url).toContain("appflowy.cloudless.gr");
     // Token is embedded in the URL hash, not the path
     expect(result.url).toContain("#access_token=");
+  });
+
+  it("rewrites in-cluster APPFLOWY_API_URL to the public web redirect", async () => {
+    const { getConfig } = await import("@/lib/ssm-config");
+    vi.mocked(getConfig).mockResolvedValue({
+      APPFLOWY_API_URL: "http://nginx.appflowy.svc.cluster.local",
+      APPFLOWY_EMAIL: "admin@cloudless.gr",
+      APPFLOWY_PASSWORD: "test-password",
+    } as never);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "tok-cluster" }),
+    });
+
+    const result = await getAutologinUrl("appflowy");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://nginx.appflowy.svc.cluster.local/gotrue/token?grant_type=password",
+      expect.any(Object)
+    );
+    expect(result.url.startsWith("https://appflowy.cloudless.gr/web#access_token=")).toBe(true);
+    expect(result.url).not.toContain("svc.cluster.local");
   });
 
   it("calls the GoTrue password-grant endpoint with correct params", async () => {
