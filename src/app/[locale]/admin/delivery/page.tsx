@@ -79,14 +79,16 @@ export default function DeliveryPage() {
   }, [loadProjects]);
 
   useEffect(() => {
-    if (!selectedId) {
-      setEntries([]);
-      return;
-    }
+    if (!selectedId) return;
     queueMicrotask(() => {
       loadEntries(selectedId).catch(() => {});
     });
   }, [selectedId, loadEntries]);
+
+  function selectProject(id: string) {
+    setSelectedId(id);
+    setEntries([]);
+  }
 
   async function createProject(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +113,7 @@ export default function DeliveryPage() {
       setForm({ name: "", clientEmail: "", hourlyRateEur: "" });
       setMessage(`Created ${data.project?.name}`);
       await loadProjects();
-      if (data.project?.id) setSelectedId(data.project.id);
+      if (data.project?.id) selectProject(data.project.id);
     } catch {
       setMessage("Failed to create project");
     } finally {
@@ -247,7 +249,7 @@ export default function DeliveryPage() {
                       className={`hover:bg-void-lighter/40 cursor-pointer border-b border-slate-900/80 ${
                         selectedId === p.id ? "bg-void-lighter/60" : ""
                       }`}
-                      onClick={() => setSelectedId(p.id)}
+                      onClick={() => selectProject(p.id)}
                     >
                       <td className="px-3 py-2">
                         <div className="font-medium text-white">{p.name}</div>
