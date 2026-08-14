@@ -1,0 +1,167 @@
+name: Postiz — restore provider OAuth secrets
+
+# One-shot workflow: rebuilds the postiz-providers k8s Secret from SSM.
+# Triggered by pushing a change to this file (on/push/paths), so the operator
+# just edits any whitespace line and merges — no workflow_dispatch token needed.
+#
+# Sources keys from /cloudless/production/* SSM, covering:
+#   Facebook/Meta: meta-app-id, meta-app-secret
+#   LinkedIn:      LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
+#   X (Twitter):   X_API_KEY, X_API_SECRET
+#   TikTok:        TIKTOK_APP_ID / tiktok-client-key, TIKTOK_APP_SECRET / tiktok-client-secret
+#   Postiz:        POSTIZ_API_KEY, POSTIZ_WEBHOOK_SECRET
+# Posts result as comment on issue #382.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/postiz-restore-providers.yml
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: "382"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Rebuild postiz-providers secret
+        id: rebuild
+        run: |
+          set -euo pipefail
+
+          NAMESPACE=postiz
+
+          read_ssm() {
+            aws ssm get-parameter --name "/cloudless/production/$1" \
+              --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || true
+          }
+
+          # Try multiple SSM aliases in order, return first non-empty value
+          resolve() {
+            local v=""
+            for key in "$@"; do
+              v="$(read_ssm "$key")"
+              if [ -n "$v" ] && [ "$v" != "None" ]; then
+                printf '%s' "$v"
+                return
+              fi
+            done
+          }
+
+          args=()
+          set_if() {
+            local k="$1" v="$2"
+            [ -n "$v" ] && args+=("--from-literal=${k}=${v}")
+          }
+
+          # Facebook / Meta (stored as meta-app-id / meta-app-secret in SSM)
+          set_if FACEBOOK_APP_ID     "$(resolve FACEBOOK_APP_ID meta-app-id)"
+          set_if FACEBOOK_APP_SECRET "$(resolve FACEBOOK_APP_SECRET meta-app-secret)"
+
+          # LinkedIn
+          set_if LINKEDIN_CLIENT_ID     "$(resolve LINKEDIN_CLIENT_ID)"
+          set_if LINKEDIN_CLIENT_SECRET "$(resolve LINKEDIN_CLIENT_SECRET)"
+
+          # X / Twitter
+          set_if X_API_KEY    "$(resolve X_API_KEY)"
+          set_if X_API_SECRET "$(resolve X_API_SECRET)"
+
+          # TikTok (production keys — not sandbox)
+          set_if TIKTOK_CLIENT_ID     "$(resolve TIKTOK_CLIENT_ID TIKTOK_APP_ID tiktok-client-key)"
+          set_if TIKTOK_CLIENT_SECRET "$(resolve TIKTOK_CLIENT_SECRET TIKTOK_APP_SECRET tiktok-client-secret)"
+
+          # Postiz internal
+          set_if POSTIZ_API_KEY       "$(resolve POSTIZ_API_KEY)"
+          set_if POSTIZ_WEBHOOK_SECRET "$(resolve POSTIZ_WEBHOOK_SECRET)"
+
+          echo "Resolved ${#args[@]} keys"
+
+          if [ "${#args[@]}" -eq 0 ]; then
+            echo "ERROR: no keys resolved from SSM" >&2
+            exit 1
+          fi
+
+          # Upsert the secret
+          kubectl -n "$NAMESPACE" delete secret postiz-providers --ignore-not-found
+          kubectl -n "$NAMESPACE" create secret generic postiz-providers "${args[@]}"
+          echo "postiz-providers secret created with ${#args[@]} keys"
+
+          # Bounce the pod to pick up new env
+          kubectl -n "$NAMESPACE" rollout restart deploy/postiz
+          kubectl -n "$NAMESPACE" rollout status deploy/postiz --timeout=120s
+
+          # Verify channels via API
+          POSTIZ_API_KEY_VAL="$(resolve POSTIZ_API_KEY)"
+          echo ""
+          echo "=== Integrations (channels) after restart ==="
+          curl -sf \
+            -H "Authorization: Bearer ${POSTIZ_API_KEY_VAL}" \
+            "https://postiz.cloudless.gr/api/public/v1/integrations" \
+            | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          integrations = data if isinstance(data, list) else data.get('integrations', data.get('data', []))
+          if not integrations:
+              print('No integrations yet — connect channels in the Postiz UI')
+          else:
+              for i in integrations:
+                  print(f\"  {i.get('name','?')} [{i.get('type','?')}] enabled={i.get('inUse', i.get('disabled','?'))}\")
+          " 2>/dev/null || echo "  (could not parse integrations response)"
+
+          echo "KEYS_COUNT=${#args[@]}" >> "$GITHUB_OUTPUT"
+
+      - name: Report to issue #382
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          KEYS="${{ steps.rebuild.outputs.KEYS_COUNT || '0' }}"
+          if [ "$STATUS" = "success" ]; then
+            BODY="## ✅ postiz-providers secret restored (${KEYS} keys)
+
+          Provider OAuth credentials loaded from SSM into \`postiz-providers\` k8s Secret.
+
+          **Keys restored:**
+          - \`FACEBOOK_APP_ID\` / \`FACEBOOK_APP_SECRET\` (from \`meta-app-id\` / \`meta-app-secret\`)
+          - \`LINKEDIN_CLIENT_ID\` / \`LINKEDIN_CLIENT_SECRET\`
+          - \`X_API_KEY\` / \`X_API_SECRET\`
+          - \`TIKTOK_CLIENT_ID\` / \`TIKTOK_CLIENT_SECRET\`
+          - \`POSTIZ_API_KEY\` / \`POSTIZ_WEBHOOK_SECRET\`
+
+          **Next steps:**
+          1. Open https://postiz.cloudless.gr → Settings → Channels
+          2. Connect LinkedIn Page, X, Facebook/Instagram (OAuth)
+          3. Connect Bluesky via user dialog (no env vars needed)
+          4. Run: \`curl -H 'Authorization: Bearer \$POSTIZ_API_KEY' https://postiz.cloudless.gr/api/public/v1/integrations\`
+
+          Triggered by: ${{ github.sha }}"
+          else
+            BODY="## ❌ postiz-providers restore FAILED
+
+          Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body "$BODY"
