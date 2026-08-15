@@ -17,6 +17,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/postiz-restore-providers.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
