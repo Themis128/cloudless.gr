@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { BackLink, MetricCard, Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface LinkedInCampaign {
   id: string;
@@ -95,6 +96,8 @@ export default function LinkedInPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">LinkedIn Campaigns</h1>
       </div>
+
+      <InsightPanel domain="ads" />
 
       {insights && (
         <div className="mb-8 grid grid-cols-4 gap-4">

@@ -4,6 +4,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { AdminDailyBars } from "@/components/admin/AdminDailyBars";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface SeoData {
   clicks: number;
@@ -281,15 +282,25 @@ export default function UnifiedAnalyticsPage() {
             All KPIs in one view — SEO, revenue, pipeline, and email.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setRefreshKey((k) => k + 1)}
-          disabled={loading}
-          className="mt-2 rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-300 transition-all hover:border-slate-600 hover:text-white disabled:opacity-50"
-        >
-          {loading ? "Loading…" : "Refresh"}
-        </button>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            disabled={loading}
+            className="rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-300 transition-all hover:border-slate-600 hover:text-white disabled:opacity-50"
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+          <Link
+            href="/admin/reports"
+            className="rounded-lg border border-neon-green/30 bg-neon-green/10 px-4 py-2 font-mono text-xs text-neon-green transition-all hover:bg-neon-green/20"
+          >
+            ↓ PDF Reports
+          </Link>
+        </div>
       </div>
+
+      <InsightPanel domain="executive" />
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-xs text-red-400">

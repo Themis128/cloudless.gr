@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { contactDisplayName } from "@/lib/crm-contact-360-shared";
 import { useVisiblePoll } from "@/lib/use-visible-poll";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Contact {
   id: string;
@@ -186,6 +187,8 @@ export default function AdminCRMPage() {
         <h1 className="font-heading text-2xl font-bold text-white">CRM Contacts</h1>
         <p className="font-body mt-1 text-slate-400">Leads and contacts synced from EspoCRM.</p>
       </div>
+
+      <InsightPanel domain="crm_funnel" />
 
       {/* RFM quick links */}
       <div className="mb-6 flex flex-wrap gap-2">
