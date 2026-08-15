@@ -112,7 +112,7 @@ jobs:
 
           # Bounce the pod to pick up new env
           kubectl -n "$NAMESPACE" rollout restart deploy/postiz
-          kubectl -n "$NAMESPACE" rollout status deploy/postiz --timeout=120s
+          kubectl -n "$NAMESPACE" rollout status deploy/postiz --timeout=360s
 
           # Verify channels via API
           POSTIZ_API_KEY_VAL="$(resolve POSTIZ_API_KEY)"
