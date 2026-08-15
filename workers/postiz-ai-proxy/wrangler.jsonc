@@ -17,8 +17,8 @@
     "NVIDIA_BASE_URL": "https://integrate.api.nvidia.com/v1",
     // Postiz captions: "gpt-4.1" is swapped to this model before forwarding.
     // Chatbot: called directly via callNvidiaProxyChat with thinking enabled.
-    "NVIDIA_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "NVIDIA_MODEL": "nvidia/nemotron-3-super-120b-a12b",
     // Postiz uses a fixed model for captions (no thinking needed, cheaper).
-    "NVIDIA_POSTIZ_MODEL": "meta/llama-3.3-70b-instruct",
+    "NVIDIA_POSTIZ_MODEL": "nvidia/nemotron-3-super-120b-a12b",
   },
 }
