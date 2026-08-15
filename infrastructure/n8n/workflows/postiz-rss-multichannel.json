@@ -74,7 +74,7 @@
       "position": [1100, 300],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "REPLACE_WITH_POSTIZ_HEADER_AUTH_CREDENTIAL_ID",
+          "id": "postiz-api-key",
           "name": "Postiz API Key"
         }
       }
@@ -121,7 +121,7 @@
       "position": [1760, 220],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "REPLACE_WITH_POSTIZ_HEADER_AUTH_CREDENTIAL_ID",
+          "id": "postiz-api-key",
           "name": "Postiz API Key"
         }
       }
