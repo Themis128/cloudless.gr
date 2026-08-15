@@ -37,15 +37,21 @@ jobs:
           # Set both OPENAI_* vars directly — avoids kubectl apply on PVCs (immutable)
           kubectl -n postiz set env deployment/postiz \
             OPENAI_BASE_URL=https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1
-          # OPENAI_API_KEY from the secret key we just added
-          kubectl -n postiz patch deployment postiz --type=json -p='[{
-            "op": "add",
-            "path": "/spec/template/spec/containers/0/env/-",
-            "value": {
-              "name": "OPENAI_API_KEY",
-              "valueFrom": {"secretKeyRef": {"name": "postiz-providers", "key": "POSTIZ_AI_PROXY_TOKEN"}}
-            }
-          }]'
+          # OPENAI_API_KEY from the secret key we just added (idempotent: skip if already present)
+          POSTIZ_ENV=$(kubectl -n postiz get deployment postiz -o jsonpath='{.spec.template.spec.containers[0].env}')
+          if ! echo "$POSTIZ_ENV" | jq -e '.[] | select(.name == "OPENAI_API_KEY" and .valueFrom.secretKeyRef.name == "postiz-providers")' >/dev/null 2>&1; then
+            kubectl -n postiz patch deployment postiz --type=json -p='[{
+              "op": "add",
+              "path": "/spec/template/spec/containers/0/env/-",
+              "value": {
+                "name": "OPENAI_API_KEY",
+                "valueFrom": {"secretKeyRef": {"name": "postiz-providers", "key": "POSTIZ_AI_PROXY_TOKEN"}}
+              }
+            }]'
+            echo "  added OPENAI_API_KEY secretKeyRef"
+          else
+            echo "  OPENAI_API_KEY secretKeyRef already present — skipping"
+          fi
           echo "✓ OPENAI_BASE_URL + OPENAI_API_KEY set on deployment/postiz"
 
       - name: Restart Postiz and wait

@@ -117,6 +117,36 @@ jobs:
           echo "cloudless-app is ready — no restart needed"
         fi
 
+    - name: Post-fix pod diagnostics
+      if: always()
+      run: |
+        echo "=== pods after fix ==="
+        sudo k3s kubectl get pods -n cloudless -o wide
+        echo ""
+        POD=$(sudo k3s kubectl get pods -n cloudless -l app=cloudless-app \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+        if [ -n "$POD" ]; then
+          echo "=== pod $POD describe (last 30 lines) ==="
+          sudo k3s kubectl describe pod "$POD" -n cloudless | tail -30
+          echo ""
+          echo "=== pod $POD status phase ==="
+          sudo k3s kubectl get pod "$POD" -n cloudless -o jsonpath='{.status.phase}' && echo ""
+          echo "=== container statuses ==="
+          sudo k3s kubectl get pod "$POD" -n cloudless -o json \
+            | jq -r '.status.containerStatuses[]? | "  \(.name): \(.state | keys[0]) — \(.state | to_entries[0].value)"' \
+            2>/dev/null || echo "(no container statuses)"
+        fi
+        echo ""
+        echo "=== deployment image ==="
+        sudo k3s kubectl get deployment cloudless-app -n cloudless \
+          -o jsonpath='{.spec.template.spec.containers[0].image}' && echo ""
+        echo ""
+        echo "=== hostPath symlink target ==="
+        ls -la /home/tbaltzakis/cloudless-standalone 2>/dev/null || echo "(not found)"
+        echo ""
+        echo "=== recent k3s events (cloudless namespace, last 5) ==="
+        sudo k3s kubectl get events -n cloudless --sort-by='.lastTimestamp' 2>/dev/null | tail -5
+
     - name: Health check via NodePort
       run: |
         echo "=== health via NodePort 30300 ==="

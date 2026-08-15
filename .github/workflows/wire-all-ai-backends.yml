@@ -8,9 +8,7 @@ name: Wire All AI Backends
 #   3. Ollama        — qwen2.5-coder:latest @ 100.121.191.7:11434 (Tailscale)
 #   4. Gemini        — last resort (503 if key absent)
 on:
-  push:
-    paths:
-      - .github/workflows/wire-all-ai-backends.yml
+  workflow_dispatch:
 
 jobs:
   wire:
@@ -48,34 +46,45 @@ jobs:
             NVIDIA_PROXY_URL=https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1 \
             NVIDIA_PROXY_TOKEN=69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19
 
-          # 2. Workers AI — dedicated AI token from k8s secret
-          kubectl patch deployment cloudless-app -n cloudless --type=json -p='[
-            {
-              "op": "add",
-              "path": "/spec/template/spec/containers/0/env/-",
-              "value": {
-                "name": "CLOUDFLARE_WORKERS_AI_TOKEN",
-                "valueFrom": {"secretKeyRef": {"name": "cloudless-ai-backends", "key": "CLOUDFLARE_WORKERS_AI_TOKEN"}}
+          # 2. Workers AI — dedicated AI token from k8s secret (idempotent: skip if already present)
+          ENV_JSON=$(kubectl get deployment cloudless-app -n cloudless -o jsonpath='{.spec.template.spec.containers[0].env}')
+          if ! echo "$ENV_JSON" | jq -e '.[] | select(.name == "CLOUDFLARE_WORKERS_AI_TOKEN" and .valueFrom.secretKeyRef.name == "cloudless-ai-backends")' >/dev/null 2>&1; then
+            kubectl patch deployment cloudless-app -n cloudless --type=json -p='[
+              {
+                "op": "add",
+                "path": "/spec/template/spec/containers/0/env/-",
+                "value": {
+                  "name": "CLOUDFLARE_WORKERS_AI_TOKEN",
+                  "valueFrom": {"secretKeyRef": {"name": "cloudless-ai-backends", "key": "CLOUDFLARE_WORKERS_AI_TOKEN"}}
+                }
               }
-            }
-          ]' 2>/dev/null || true
+            ]'
+            echo "  added CLOUDFLARE_WORKERS_AI_TOKEN secretKeyRef"
+          else
+            echo "  CLOUDFLARE_WORKERS_AI_TOKEN secretKeyRef already present — skipping"
+          fi
 
           # 3. Ollama — WSL host Tailscale IP (already bound to 0.0.0.0 via systemd service)
           kubectl set env deployment/cloudless-app -n cloudless \
             OLLAMA_BASE_URL=http://100.121.191.7:11434 \
             OLLAMA_MODEL=qwen2.5-coder:latest
 
-          # 4. Gemini — optional last resort
-          kubectl patch deployment cloudless-app -n cloudless --type=json -p='[
-            {
-              "op": "add",
-              "path": "/spec/template/spec/containers/0/env/-",
-              "value": {
-                "name": "GEMINI_API_KEY",
-                "valueFrom": {"secretKeyRef": {"name": "cloudless-ai-backends", "key": "GEMINI_API_KEY", "optional": true}}
+          # 4. Gemini — optional last resort (idempotent: skip if already present)
+          if ! echo "$ENV_JSON" | jq -e '.[] | select(.name == "GEMINI_API_KEY" and .valueFrom.secretKeyRef.name == "cloudless-ai-backends")' >/dev/null 2>&1; then
+            kubectl patch deployment cloudless-app -n cloudless --type=json -p='[
+              {
+                "op": "add",
+                "path": "/spec/template/spec/containers/0/env/-",
+                "value": {
+                  "name": "GEMINI_API_KEY",
+                  "valueFrom": {"secretKeyRef": {"name": "cloudless-ai-backends", "key": "GEMINI_API_KEY", "optional": true}}
+                }
               }
-            }
-          ]' 2>/dev/null || true
+            ]'
+            echo "  added GEMINI_API_KEY secretKeyRef"
+          else
+            echo "  GEMINI_API_KEY secretKeyRef already present — skipping"
+          fi
 
           echo "✓ all AI backend env vars patched"
 
