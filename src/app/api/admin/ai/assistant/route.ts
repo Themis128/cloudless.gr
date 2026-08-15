@@ -6,9 +6,11 @@ import {
   buildWorkersAiToolProtocol,
   callWorkersAiChat,
   callNvidiaProxyChat,
+  callOllamaChat,
   parseWorkersAiToolCall,
   isWorkersAiConfigured,
   isNvidiaProxyConfigured,
+  isOllamaConfigured,
 } from "@/lib/workers-ai-client";
 import { generateAdminAiText } from "@/lib/admin-ai";
 import { retrieveAdminRagContext } from "@/lib/admin-rag";
@@ -62,16 +64,19 @@ export async function POST(req: NextRequest) {
   const rag = await retrieveAdminRagContext(query).catch(() => "");
   const systemWithRag = rag ? `${SYSTEM_PROMPT}\n\nRelevant site content:\n${rag}` : SYSTEM_PROMPT;
 
-  // Tool loop — NVIDIA proxy preferred (nemotron + thinking), Workers AI fallback
+  // Tool loop — pick first available backend: NVIDIA → Workers AI → Ollama
   const useNvidia = isNvidiaProxyConfigured();
   const useWorkersAi = !useNvidia && isWorkersAiConfigured();
+  const useOllama = !useNvidia && !useWorkersAi && isOllamaConfigured();
 
-  if (useNvidia || useWorkersAi) {
-    const provider = useNvidia ? "nvidia-proxy" : "workers-ai";
+  if (useNvidia || useWorkersAi || useOllama) {
+    const provider = useNvidia ? "nvidia-proxy" : useWorkersAi ? "workers-ai" : "ollama";
     const callBackend = (msgs: { role: string; content: string }[]) =>
       useNvidia
         ? callNvidiaProxyChat(msgs, { maxTokens: 2000 })
-        : callWorkersAiChat(msgs, { maxTokens: 2000 });
+        : useWorkersAi
+          ? callWorkersAiChat(msgs, { maxTokens: 2000 })
+          : callOllamaChat(msgs, { maxTokens: 2000 });
 
     const loopMessages: { role: string; content: string }[] = [
       {
@@ -106,7 +111,7 @@ export async function POST(req: NextRequest) {
         provider,
       });
     } catch (err) {
-      console.warn(`[assistant] ${provider} loop failed, falling back to Gemini:`, err);
+      console.warn(`[assistant] ${provider} tool loop failed, falling back to Gemini:`, err);
     }
   }
 

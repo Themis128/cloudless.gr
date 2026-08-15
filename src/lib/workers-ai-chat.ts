@@ -17,7 +17,10 @@ import {
   buildWorkersAiToolProtocol,
   callNvidiaProxyChat,
   callWorkersAiChat,
+  callOllamaChat,
   isNvidiaProxyConfigured,
+  isWorkersAiConfigured,
+  isOllamaConfigured,
   parseWorkersAiToolCall,
 } from "@/lib/workers-ai-client";
 
@@ -30,7 +33,15 @@ async function callChatBackend(
   if (isNvidiaProxyConfigured()) {
     return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
   }
-  return callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+  if (isWorkersAiConfigured()) {
+    return callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+  }
+  if (isOllamaConfigured()) {
+    return callOllamaChat(messages, { maxTokens: MAX_TOKENS });
+  }
+  const err = new Error("No chat backend configured");
+  err.name = "UnauthorizedException";
+  throw err;
 }
 
 /**
