@@ -35,10 +35,21 @@ jobs:
 
           echo "✓ POSTIZ_AI_PROXY_TOKEN added to postiz-providers secret"
 
-      - name: Apply updated Postiz manifest
+      - name: Set AI env vars on Postiz Deployment
         run: |
-          kubectl apply -f infrastructure/postiz/k8s/postiz.yaml
-          echo "✓ manifest applied"
+          # Set both OPENAI_* vars directly — avoids kubectl apply on PVCs (immutable)
+          kubectl -n postiz set env deployment/postiz \
+            OPENAI_BASE_URL=https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1
+          # OPENAI_API_KEY from the secret key we just added
+          kubectl -n postiz patch deployment postiz --type=json -p='[{
+            "op": "add",
+            "path": "/spec/template/spec/containers/0/env/-",
+            "value": {
+              "name": "OPENAI_API_KEY",
+              "valueFrom": {"secretKeyRef": {"name": "postiz-providers", "key": "POSTIZ_AI_PROXY_TOKEN"}}
+            }
+          }]'
+          echo "✓ OPENAI_BASE_URL + OPENAI_API_KEY set on deployment/postiz"
 
       - name: Restart Postiz and wait
         run: |
