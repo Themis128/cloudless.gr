@@ -9,16 +9,11 @@ on:
 
 jobs:
   wire:
-    runs-on: ubuntu-latest
+    # Self-hosted runner is already on the tailnet — no VPN step needed and
+    # kubectl reaches 100.74.191.58:6443 directly without i/o timeout.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Join Tailscale
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3  # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:ci
 
       - name: Configure kubectl
         run: |
