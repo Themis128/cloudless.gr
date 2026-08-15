@@ -32,6 +32,25 @@
       },
       "autoStart": true
     },
+    "prompt-to-asset": {
+      "command": "npx",
+      "args": ["-y", "prompt-to-asset"],
+      "autoStart": false
+    },
+    "postlint": {
+      "command": "npx",
+      "args": ["-y", "postlint-mcp"],
+      "autoStart": false
+    },
+    "bluesky": {
+      "command": "npx",
+      "args": ["-y", "@morinokami/mcp-server-bluesky"],
+      "env": {
+        "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
+        "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}"
+      },
+      "autoStart": false
+    },
     "postiz": {
       "command": "postiz-mcp",
       "env": {
