@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "postiz-ai-proxy",
+  "main": "src/index.ts",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "compatibility_date": "2026-08-15",
+  "minify": true,
+  // Deployed as a Workers subdomain — no custom domain needed.
+  // Postiz pod points OPENAI_BASE_URL at:
+  //   https://postiz-ai-proxy.<account>.workers.dev/v1
+  // NVIDIA key is stored as a secret (never in this file):
+  //   wrangler secret put NVIDIA_API_KEY --config workers/postiz-ai-proxy/wrangler.jsonc
+  // PROXY_TOKEN is a shared secret the Postiz pod sends as its "API key"
+  // so random internet callers can't use our NVIDIA credits:
+  //   wrangler secret put PROXY_TOKEN --config workers/postiz-ai-proxy/wrangler.jsonc
+  "vars": {
+    "NVIDIA_BASE_URL": "https://integrate.api.nvidia.com/v1",
+    // Best NVIDIA model for caption/copy generation (free tier).
+    // Postiz hardcodes "gpt-4.1" — this Worker swaps it before forwarding.
+    "NVIDIA_MODEL": "meta/llama-3.3-70b-instruct",
+  },
+}
