@@ -9,9 +9,9 @@ on:
 
 jobs:
   wire:
-    # Self-hosted runner is already on the tailnet — no VPN step needed and
-    # kubectl reaches 100.74.191.58:6443 directly without i/o timeout.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    # Pi self-hosted runner is already on the tailnet — kubectl reaches
+    # 100.74.191.58:6443 directly. GH-hosted runners time out on that IP.
+    runs-on: [self-hosted, omv, pi, build]
     steps:
       - uses: actions/checkout@v4
 
