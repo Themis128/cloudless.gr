@@ -160,6 +160,55 @@ curl -sk -X POST \
   https://cloudless.gr/api/webhooks/n8n/trigger
 ```
 
+## Postiz Plugs (UI-only, no API)
+
+Plugs are Postiz's built-in auto-repost / auto-comment automation engine.
+They are configured entirely through the Postiz UI — **no Public API**.
+
+### Global Plugs (account-wide)
+
+1. Open `postiz.cloudless.gr` → Settings → Plugs → **Global Plugs**.
+2. Create rules like:
+   - "When a post hits 10 likes, repost it from LinkedIn Page"
+   - "Auto-comment a follow-up CTA 2 hours after publish"
+   - "Repost from X account to Bluesky account after 4 hours"
+
+### Post Plugs (per-post)
+
+1. When composing/scheduling a post, click the **Plugs** tab.
+2. Add per-post automation:
+   - "Repost from other connected account in 6 hours"
+   - "Add follow-up comment with link after 1 hour"
+
+### Recommended setup for cloudless.gr
+
+| Plug | Type | Config |
+|------|------|--------|
+| LinkedIn → X repost | Global | When LinkedIn post > 5 likes, repost to X after 2h |
+| X → Bluesky cross-post | Global | Auto-repost X posts to Bluesky after 1h |
+| CTA follow-up | Global | Auto-comment with services link 3h after publish |
+| Blog amplify | Post | Repost blog shares from personal → page account after 4h |
+
+### agent-media (AI UGC video generation)
+
+[gitroomhq/agent-media](https://github.com/gitroomhq/agent-media) is an
+MCP server from the Postiz team that generates AI UGC videos from text
+descriptions or photos + scripts. It produces captioned, lip-synced vertical
+video ready for TikTok/Instagram/X Reels.
+
+To evaluate, add to `mcp.json`:
+```json
+"agent-media": {
+  "command": "npx",
+  "args": ["-y", "agent-media"],
+  "env": { "POSTIZ_API_KEY": "..." }
+}
+```
+
+Pipeline: blog publish → agent-media generates 30s vertical video →
+Postiz schedules it to TikTok + IG Reels + X. Requires GPU-backed API
+credits; evaluate cost before enabling.
+
 ## Why workflows-as-JSON
 
 Importing JSON keeps the workflows reviewable in git (you can diff
