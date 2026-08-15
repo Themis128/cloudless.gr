@@ -10,7 +10,7 @@
  *      reasoning_content can be stripped before returning.
  *
  * Other handled paths:
- *   POST /v1/images/generations — 501 (NVIDIA NIM hosted API has no DALL-E)
+ *   POST /v1/images/generations — proxied to Pollinations.ai (free Flux)
  *   GET  /v1/models             — synthetic list so Postiz health checks pass
  *   *                           — 404
  *
@@ -27,6 +27,10 @@ interface Env {
   /** Postiz caption model — nemotron-3-super-120b-a12b (no thinking) */
   NVIDIA_POSTIZ_MODEL: string;
   PROXY_TOKEN: string;
+  /** Optional Pollinations API key for higher rate limits (free tier works without) */
+  POLLINATIONS_API_KEY?: string;
+  /** Image model for Pollinations (default: flux) */
+  POLLINATIONS_IMAGE_MODEL?: string;
 }
 
 const CORS_HEADERS: Record<string, string> = {
@@ -170,17 +174,48 @@ export default {
       return unauthorized();
     }
 
-    // POST /v1/images/generations — NVIDIA hosted API has no DALL-E
+    // POST /v1/images/generations — proxy to Pollinations.ai free URL endpoint
     if (request.method === "POST" && path === "/images/generations") {
-      return json(
-        {
-          error: {
-            message: "Image generation is not available via the NVIDIA proxy.",
-            type: "not_implemented",
-          },
-        },
-        501
-      );
+      let imgBody: Record<string, unknown>;
+      try {
+        imgBody = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return json({ error: { message: "invalid_json", type: "invalid_request_error" } }, 400);
+      }
+
+      const prompt = String(imgBody.prompt ?? "");
+      if (!prompt) {
+        return json({ error: { message: "prompt is required", type: "invalid_request_error" } }, 400);
+      }
+
+      const sizeStr = String(imgBody.size ?? "1024x1024");
+      const [w, h] = sizeStr.split("x").map(Number);
+      const width = w && w > 0 ? Math.min(w, 1280) : 1024;
+      const height = h && h > 0 ? Math.min(h, 1280) : 1024;
+      const model = env.POLLINATIONS_IMAGE_MODEL ?? "flux";
+      const seed = Math.floor(Math.random() * 2_147_483_647);
+
+      const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
+        `?width=${width}&height=${height}&model=${model}&nologo=true&seed=${seed}`;
+
+      const imgResp = await fetch(imgUrl);
+      if (!imgResp.ok) {
+        return json({
+          error: { message: `Image generation failed: ${imgResp.status}`, type: "server_error" },
+        }, 502);
+      }
+
+      const imgBytes = new Uint8Array(await imgResp.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < imgBytes.length; i++) {
+        binary += String.fromCharCode(imgBytes[i]);
+      }
+      const b64 = btoa(binary);
+
+      return json({
+        created: Math.floor(Date.now() / 1000),
+        data: [{ b64_json: b64, revised_prompt: prompt }],
+      });
     }
 
     if (request.method === "POST" && path === "/chat/completions") {

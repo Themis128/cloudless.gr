@@ -20,5 +20,8 @@
     "NVIDIA_MODEL": "nvidia/nemotron-3-super-120b-a12b",
     // Postiz uses a fixed model for captions (no thinking needed, cheaper).
     "NVIDIA_POSTIZ_MODEL": "nvidia/nemotron-3-super-120b-a12b",
+    // Image generation — proxied to Pollinations.ai (free Flux model).
+    // Optional: set POLLINATIONS_API_KEY as a secret for higher rate limits.
+    "POLLINATIONS_IMAGE_MODEL": "flux",
   },
 }
