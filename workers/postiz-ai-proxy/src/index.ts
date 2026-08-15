@@ -1,28 +1,36 @@
 /**
- * postiz-ai-proxy — OpenAI-compatible proxy for Postiz AI features.
+ * postiz-ai-proxy — OpenAI-compatible proxy for two use cases:
  *
- * Postiz hardcodes "gpt-4.1" as the model name. This Worker replaces it
- * with NVIDIA_MODEL (meta/llama-3.3-70b-instruct) and forwards to NVIDIA's
- * OpenAI-compatible API. The NVIDIA key never touches k8s — it lives as a
- * Worker secret. Postiz sends PROXY_TOKEN as its "API key" so random callers
- * can't consume NVIDIA credits.
+ *   1. Postiz caption generation (POST /v1/chat/completions, no thinking)
+ *      Swaps Postiz's hardcoded "gpt-4.1" for NVIDIA_POSTIZ_MODEL.
  *
- * Handled paths:
- *   POST /v1/chat/completions   — model swap + proxy to NVIDIA
+ *   2. Cloudless chatbot (POST /v1/chat/completions?thinking=1)
+ *      Uses NVIDIA_MODEL (nemotron-3.5-lightning-30b-a3b) with extended
+ *      thinking enabled. reasoning_content is stripped before returning
+ *      so visitors never see the internal monologue.
+ *
+ * Other handled paths:
  *   POST /v1/images/generations — 501 (NVIDIA has no DALL-E equivalent)
  *   GET  /v1/models             — synthetic list so Postiz health checks pass
  *   *                           — 404
+ *
+ * NVIDIA key never touches k8s — it lives as a Worker secret.
+ * PROXY_TOKEN is a shared secret callers send as their "API key"
+ * so random internet callers can't consume NVIDIA credits.
  */
 
 interface Env {
   NVIDIA_API_KEY: string;
   NVIDIA_BASE_URL: string;
+  /** Chatbot model — nemotron-3.5-lightning-30b-a3b (with thinking) */
   NVIDIA_MODEL: string;
+  /** Postiz caption model — llama-3.3-70b-instruct (no thinking) */
+  NVIDIA_POSTIZ_MODEL: string;
   PROXY_TOKEN: string;
 }
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://postiz.cloudless.gr",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
 };
@@ -44,6 +52,35 @@ function verifyToken(request: Request, env: Env): boolean {
   return token === env.PROXY_TOKEN;
 }
 
+/**
+ * Strip reasoning_content from an OpenAI-compatible non-streaming response.
+ * nemotron-3.5 returns both fields at the top level of message when thinking
+ * is enabled; visitors should only see content.
+ */
+function stripReasoningContent(responseBody: unknown): unknown {
+  if (
+    typeof responseBody !== "object" ||
+    responseBody === null ||
+    !Array.isArray((responseBody as { choices?: unknown }).choices)
+  ) {
+    return responseBody;
+  }
+  const body = responseBody as {
+    choices: Array<{
+      message?: { reasoning_content?: unknown; content?: string };
+    }>;
+  };
+  return {
+    ...body,
+    choices: body.choices.map((c) => {
+      if (!c.message) return c;
+      const { reasoning_content: _dropped, ...rest } = c.message;
+      void _dropped;
+      return { ...c, message: rest };
+    }),
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -52,10 +89,9 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Strip /v1 prefix to get the path segment
     const path = url.pathname.replace(/^\/v1/, "");
 
-    // GET /v1/models — synthetic response so Postiz startup checks don't fail
+    // GET /v1/models — synthetic list so Postiz startup checks pass
     if (request.method === "GET" && path === "/models") {
       return json({
         object: "list",
@@ -66,11 +102,16 @@ export default {
             created: 1_700_000_000,
             owned_by: "nvidia",
           },
+          {
+            id: env.NVIDIA_POSTIZ_MODEL,
+            object: "model",
+            created: 1_700_000_000,
+            owned_by: "nvidia",
+          },
         ],
       });
     }
 
-    // All write paths require auth
     if (!verifyToken(request, env)) {
       return unauthorized();
     }
@@ -88,7 +129,6 @@ export default {
       );
     }
 
-    // POST /v1/chat/completions — swap model, forward to NVIDIA
     if (request.method === "POST" && path === "/chat/completions") {
       let body: Record<string, unknown>;
       try {
@@ -97,8 +137,21 @@ export default {
         return json({ error: { message: "invalid_json", type: "invalid_request_error" } }, 400);
       }
 
-      // Always use the configured NVIDIA model regardless of what Postiz sent
-      body.model = env.NVIDIA_MODEL;
+      // ?thinking=1 → chatbot path: use nemotron with extended thinking
+      const wantThinking = url.searchParams.get("thinking") === "1";
+
+      if (wantThinking) {
+        // Chatbot: nemotron-3.5-lightning with reasoning budget
+        body.model = env.NVIDIA_MODEL;
+        body.stream = false;
+        body.extra_body = {
+          chat_template_kwargs: { enable_thinking: true },
+          reasoning_budget: 4096,
+        };
+      } else {
+        // Postiz: swap hardcoded gpt-4.1 for the caption model (no thinking)
+        body.model = env.NVIDIA_POSTIZ_MODEL;
+      }
 
       const upstream = await fetch(`${env.NVIDIA_BASE_URL}/chat/completions`, {
         method: "POST",
@@ -109,13 +162,21 @@ export default {
         body: JSON.stringify(body),
       });
 
-      const responseBody = await upstream.text();
-      return new Response(responseBody, {
-        status: upstream.status,
-        headers: {
-          "Content-Type": upstream.headers.get("Content-Type") ?? "application/json",
-          ...CORS_HEADERS,
-        },
+      if (!upstream.ok) {
+        const errorText = await upstream.text();
+        return new Response(errorText, {
+          status: upstream.status,
+          headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+        });
+      }
+
+      const responseBody = await upstream.json();
+
+      const cleaned = wantThinking ? stripReasoningContent(responseBody) : responseBody;
+
+      return new Response(JSON.stringify(cleaned), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
       });
     }
 

@@ -16,6 +16,8 @@ import { ADMIN_TOKEN, api } from "./_helpers";
 
 const WORKER = "https://postiz-ai-proxy.baltzakis-themis.workers.dev";
 const PROXY_TOKEN = "69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19";
+const CHATBOT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
+const POSTIZ_MODEL = "meta/llama-3.3-70b-instruct";
 const authHeaders = { authorization: `Bearer ${ADMIN_TOKEN}` };
 
 // ── 1. Worker: unauthenticated paths ─────────────────────────────────────────
@@ -29,7 +31,9 @@ test.describe("postiz-ai-proxy Worker — public", () => {
     const data = body.data as Array<{ id: string }>;
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
-    expect(data[0].id).toContain("llama-3.3-70b");
+    const ids = data.map((m: { id: string }) => m.id);
+    expect(ids.some((id: string) => id.includes("nemotron-3.5-lightning"))).toBe(true);
+    expect(ids.some((id: string) => id.includes("llama-3.3-70b"))).toBe(true);
   });
 
   test("OPTIONS /v1/chat/completions returns CORS headers", async ({ request }) => {
@@ -60,8 +64,8 @@ test.describe("postiz-ai-proxy Worker — model swap", () => {
     });
     expect(res.status()).toBe(200);
     const body = await res.json() as Record<string, unknown>;
-    // Confirm the upstream model used is llama, not gpt-4.1
-    expect(body.model as string).toContain("llama-3.3-70b");
+    // Confirm the upstream model is the Postiz caption model, not gpt-4.1
+    expect(body.model as string).toBe(POSTIZ_MODEL);
     const choices = body.choices as Array<{ message: { content: string } }>;
     expect(choices.length).toBeGreaterThan(0);
     expect(typeof choices[0].message.content).toBe("string");
@@ -79,6 +83,29 @@ test.describe("postiz-ai-proxy Worker — model swap", () => {
     expect(res.status()).toBe(400);
   });
 });
+
+  test("POST /v1/chat/completions?thinking=1 uses nemotron model and strips reasoning_content", async ({ request }) => {
+    const res = await request.post(`${WORKER}/v1/chat/completions?thinking=1`, {
+      headers: {
+        Authorization: `Bearer ${PROXY_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      data: {
+        model: "gpt-4.1",
+        messages: [{ role: "user", content: "Reply with exactly one word: cloud" }],
+        max_tokens: 20,
+        temperature: 0.6,
+      },
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.model as string).toBe(CHATBOT_MODEL);
+    const choices = body.choices as Array<{ message: Record<string, unknown> }>;
+    expect(choices.length).toBeGreaterThan(0);
+    // reasoning_content must be stripped — only content survives
+    expect(choices[0].message.reasoning_content).toBeUndefined();
+    expect(typeof choices[0].message.content).toBe("string");
+  });
 
 // ── 4. Worker: image gen 501 ──────────────────────────────────────────────────
 

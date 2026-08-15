@@ -1,23 +1,40 @@
 /**
- * Cloudflare Workers AI chat loop — replaces Bedrock Converse for /api/chat.
+ * Chat loop for /api/chat (Cloudless Assistant).
  *
- * Uses the same REST pattern as /api/admin/ai/generate. Tool calling is done
- * via a lightweight JSON protocol in the model reply (TOOL_CALL / TOOL_RESULT)
- * so we do not depend on Bedrock-specific Converse APIs.
+ * Primary backend: NVIDIA postiz-ai-proxy Worker (nemotron-3.5-lightning-30b-a3b
+ * with extended thinking). Reasoning content is stripped in the Worker before
+ * returning, so visitors only see the final reply.
+ *
+ * Fallback: Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct) when
+ * NVIDIA_PROXY_URL / NVIDIA_PROXY_TOKEN are not set in the pod env.
+ *
+ * Tool calling uses the same lightweight JSON protocol (TOOL_CALL/TOOL_RESULT)
+ * regardless of which backend is active.
  */
 
 import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 import {
   buildWorkersAiToolProtocol,
+  callNvidiaProxyChat,
   callWorkersAiChat,
+  isNvidiaProxyConfigured,
   parseWorkersAiToolCall,
 } from "@/lib/workers-ai-client";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
+async function callChatBackend(
+  messages: { role: string; content: string }[]
+): Promise<string> {
+  if (isNvidiaProxyConfigured()) {
+    return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
+  }
+  return callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+}
+
 /**
- * Run the chat-tool loop against Cloudflare Workers AI.
+ * Run the chat-tool loop.
  * May throw on config/API errors; caller maps them to HTTP status codes.
  */
 export async function runWorkersAiChatLoop(
@@ -33,7 +50,7 @@ export async function runWorkersAiChatLoop(
   ];
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const reply = await callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+    const reply = await callChatBackend(messages);
     const toolCall = parseWorkersAiToolCall(reply);
     if (!toolCall) return reply || "Sorry — I could not generate a reply.";
 

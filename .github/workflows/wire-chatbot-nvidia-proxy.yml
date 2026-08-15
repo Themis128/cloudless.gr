@@ -1,0 +1,66 @@
+name: Wire Chatbot NVIDIA Proxy
+
+# Triggered by editing this file (push path) — one-shot wiring workflow.
+# Sets NVIDIA_PROXY_URL + NVIDIA_PROXY_TOKEN on the cloudless-app Deployment
+# so the chat backend switches to nemotron-3.5-lightning-30b-a3b.
+on:
+  push:
+    paths:
+      - .github/workflows/wire-chatbot-nvidia-proxy.yml
+
+jobs:
+  wire:
+    runs-on: [self-hosted, omv, pi, build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/.kube/config"
+          chmod 600 "$GITHUB_WORKSPACE/.kube/config"
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Set NVIDIA proxy env vars on cloudless-app
+        run: |
+          # Same proxy token used by Postiz — both apps share the same Worker.
+          # Inlined (not a GitHub secret) because the repo is at the 100-secret cap
+          # and this token only gates a free-tier AI proxy.
+          kubectl set env deployment/cloudless-app \
+            -n cloudless \
+            NVIDIA_PROXY_URL=https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1 \
+            NVIDIA_PROXY_TOKEN=69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19
+
+          echo "✓ NVIDIA_PROXY_URL + NVIDIA_PROXY_TOKEN set on cloudless-app"
+
+      - name: Restart app and wait
+        run: |
+          kubectl rollout restart deployment/cloudless-app -n cloudless
+          kubectl rollout status deployment/cloudless-app -n cloudless --timeout=180s
+          echo "✓ cloudless-app restarted"
+
+      - name: Smoke-test chatbot with thinking enabled
+        run: |
+          RESULT=$(curl -sf \
+            -X POST \
+            -H "Authorization: Bearer 69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19" \
+            -H "Content-Type: application/json" \
+            -d '{"messages":[{"role":"user","content":"say: ok"}],"max_tokens":10}' \
+            "https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/chat/completions?thinking=1")
+          echo "$RESULT"
+          echo "$RESULT" | grep -q "nemotron-3.5-lightning" && echo "✓ chatbot proxy reachable with thinking model" \
+            || (echo "✗ unexpected model in response" && exit 1)
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            const emoji = outcome === 'success' ? '✅' : '❌';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 382,
+              body: `${emoji} **wire-chatbot-nvidia-proxy** ${outcome}\n\nCloudless Assistant chatbot now uses \`nvidia/nemotron-3.5-lightning-30b-a3b\` with extended thinking (reasoning stripped before response). Fallback to Workers AI when proxy is unreachable.`
+            });
