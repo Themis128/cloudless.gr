@@ -99,9 +99,9 @@ jobs:
           > /tmp/dep-patched.json
         echo "=== env var count after patch ==="
         jq '.spec.template.spec.containers[0].env | length' /tmp/dep-patched.json
-        echo "--- applying patched deployment ---"
-        sudo k3s kubectl apply -f /tmp/dep-patched.json
-        echo "✓ deployment patched — broken secretKeyRef removed"
+        echo "--- replacing deployment (not apply — avoids three-way merge re-adding old entries) ---"
+        sudo k3s kubectl replace -f /tmp/dep-patched.json
+        echo "✓ deployment replaced — broken secretKeyRef removed"
         rm -f /tmp/dep-patched.json
 
     - name: Force restart cloudless-app if not Running
