@@ -3,10 +3,9 @@ name: Wire Ollama Fallback
 # Sets OLLAMA_BASE_URL (+ optional OLLAMA_MODEL) on the cloudless-app
 # Deployment so Ollama (qwen2.5-coder on the WSL host, reachable over
 # Tailscale) becomes the AI fallback after NVIDIA proxy and Workers AI.
+# Superseded by wire-all-ai-backends.yml — kept for manual re-run only.
 on:
-  push:
-    paths:
-      - .github/workflows/wire-ollama-fallback.yml
+  workflow_dispatch:
 
 jobs:
   wire:
