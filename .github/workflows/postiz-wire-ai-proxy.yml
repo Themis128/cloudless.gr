@@ -1,11 +1,8 @@
 name: Wire Postiz AI Proxy
 
-# Triggered by editing this file (push path) — the standard incident-response
-# pattern for this repo. Runs once then stays idle.
+# Superseded by deploy-postiz-ai-proxy.yml — kept for manual re-run only.
 on:
-  push:
-    paths:
-      - .github/workflows/postiz-wire-ai-proxy.yml
+  workflow_dispatch:
 
 jobs:
   wire:
