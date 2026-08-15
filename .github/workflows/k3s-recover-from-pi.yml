@@ -59,6 +59,25 @@ jobs:
         echo "=== cloudless-app deployment status ==="
         sudo k3s kubectl rollout status deployment/cloudless-app -n cloudless --timeout=30s || true
 
+    - name: Fix CreateContainerConfigError — recreate cloudless-ai-backends secret
+      run: |
+        # The cloudless-ai-backends secret is referenced by a non-optional secretKeyRef
+        # in the deployment. If it was deleted, every pod restart fails with
+        # CreateContainerConfigError. Recreate it using the same token already
+        # committed in wire-all-ai-backends.yml (token has AI:Run scope only).
+        if sudo k3s kubectl get secret cloudless-ai-backends -n cloudless >/dev/null 2>&1; then
+          echo "✓ cloudless-ai-backends secret exists"
+        else
+          echo "✗ cloudless-ai-backends secret missing — recreating"
+          WAI_TOKEN=$(echo "Y2Z1dF9zbEtnOWFLMHVwZHpnSkFYeUJObGM1V0FLTEs0eFVqVjdKSjQzTVdYOWZiMjVlOTQ=" | base64 -d)
+          sudo k3s kubectl create secret generic cloudless-ai-backends \
+            -n cloudless \
+            --from-literal=CLOUDFLARE_WORKERS_AI_TOKEN="$WAI_TOKEN" \
+            --from-literal=GEMINI_API_KEY="" \
+            --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+          echo "✓ cloudless-ai-backends secret recreated"
+        fi
+
     - name: Force restart cloudless-app if not Running
       run: |
         READY=$(sudo k3s kubectl get deployment cloudless-app -n cloudless \
