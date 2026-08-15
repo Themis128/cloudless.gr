@@ -35,6 +35,11 @@ export function normalizeGooglePrivateKeyPem(raw: string): string {
     key = key.slice(1, -1).trim();
   }
 
+  // Base64-encoded PEM (common in GH Actions / k8s secrets)
+  if (!key.includes("-----") && /^[A-Za-z0-9+/=\s]+$/.test(key) && key.length > 100) {
+    key = Buffer.from(key, "base64").toString("utf8").trim();
+  }
+
   key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
 
   if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key)) {
