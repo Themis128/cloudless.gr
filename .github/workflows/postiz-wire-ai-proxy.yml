@@ -1,0 +1,79 @@
+name: Wire Postiz AI Proxy
+
+# Triggered by editing this file (push path) — the standard incident-response
+# pattern for this repo. Runs once then stays idle.
+on:
+  push:
+    paths:
+      - .github/workflows/postiz-wire-ai-proxy.yml
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Join Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Patch postiz-providers secret — add AI proxy token
+        env:
+          PROXY_TOKEN: ${{ secrets.POSTIZ_AI_PROXY_TOKEN }}
+        run: |
+          # Read existing secret values to preserve them
+          EXISTING=$(kubectl -n postiz get secret postiz-providers -o json 2>/dev/null || echo '{"data":{}}')
+
+          # Base64-encode the new token
+          TOKEN_B64=$(printf '%s' "$PROXY_TOKEN" | base64 -w0)
+
+          # Patch — adds POSTIZ_AI_PROXY_TOKEN without touching existing keys
+          kubectl -n postiz patch secret postiz-providers \
+            --type=json \
+            -p="[{\"op\":\"add\",\"path\":\"/data/POSTIZ_AI_PROXY_TOKEN\",\"value\":\"${TOKEN_B64}\"}]"
+
+          echo "✓ POSTIZ_AI_PROXY_TOKEN added to postiz-providers secret"
+
+      - name: Apply updated Postiz manifest
+        run: |
+          kubectl apply -f infrastructure/postiz/k8s/postiz.yaml
+          echo "✓ manifest applied"
+
+      - name: Restart Postiz and wait
+        run: |
+          kubectl -n postiz rollout restart deploy/postiz
+          kubectl -n postiz rollout status deploy/postiz --timeout=120s
+          echo "✓ Postiz restarted and healthy"
+
+      - name: Smoke-test AI endpoint
+        run: |
+          # Verify the pod can reach the Worker and get a model list back
+          POD=$(kubectl -n postiz get pod -l app=postiz -o jsonpath='{.items[0].metadata.name}')
+          RESULT=$(kubectl -n postiz exec "$POD" -- \
+            curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
+          echo "$RESULT"
+          echo "$RESULT" | grep -q "llama-3.3-70b" && echo "✓ AI proxy reachable from pod" \
+            || (echo "✗ AI proxy not reachable" && exit 1)
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            const emoji = outcome === 'success' ? '✅' : '❌';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 382,
+              body: `${emoji} **postiz-wire-ai-proxy** ${outcome}\n\nPostiz AI caption generation via NVIDIA \`meta/llama-3.3-70b-instruct\` is ${outcome === 'success' ? 'live' : 'FAILED — check workflow logs'}.`
+            });
