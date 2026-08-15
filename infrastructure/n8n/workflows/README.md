@@ -14,6 +14,8 @@ two app-side automations wired in PR R2:
 | `postiz-blog-ai-caption.json` | Webhook (`POST /webhook/postiz-blog-share`) | Receives blog publish event → fetches page → extracts text → lists Postiz channels → creates a draft post with UTM-tagged link. Wire from AppFlowy publish hook or manually. |
 | `postiz-content-recycler.json` | Schedule (every 3 days) | Fetches published posts → scores by engagement → randomly picks from top 5 → reschedules 6h out. Evergreen content recycling. |
 | `postiz-analytics-digest.json` | Schedule (Monday 09:00) | Weekly digest of Postiz analytics → Slack webhook. Shows post count, impressions, likes, comments, and top 3 performers. Requires `SLACK_WEBHOOK_URL` env var. |
+| `postiz-video-distribute.json` | Webhook (`POST /webhook/postiz-video-distribute`) | Downloads video from URL → uploads to Postiz → fans out to all video-capable channels (X, LinkedIn, FB, IG, TikTok, YT, Threads, Bluesky). |
+| `postiz-ai-multicaption.json` | Webhook (`POST /webhook/postiz-ai-multicaption`) | Blog publish → fetches page → Claude generates per-platform captions (X: 280char punchy, LinkedIn: professional 2-3 para, IG: emoji + hashtags, etc.) → creates draft posts per channel. Requires `ANTHROPIC_API_KEY` env var. |
 
 ## Operator bootstrap (one-time per workflow)
 
@@ -95,13 +97,37 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 2. Set `SLACK_WEBHOOK_URL` env var in the n8n deployment (or as a workflow variable).
 3. Fires every Monday at 09:00 — posts a summary of the past 7 days to Slack.
 
+### Video distribution (webhook-triggered)
+
+1. Import `postiz-video-distribute.json`.
+2. Trigger via webhook with a video URL:
+   ```bash
+   curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-video-distribute \
+     -H 'Content-Type: application/json' \
+     -d '{"videoUrl":"https://example.com/video.mp4","title":"Demo","caption":"Check this out","hashtags":"#cloud #tech","scheduleAt":"2026-08-16T10:00:00Z"}'
+   ```
+3. Downloads the video, uploads to Postiz storage, then schedules across all video-capable channels (X, LinkedIn, FB, IG, TikTok, YT, Threads, Bluesky).
+
+### AI per-platform captions (webhook-triggered)
+
+1. Import `postiz-ai-multicaption.json`.
+2. Set `ANTHROPIC_API_KEY` env var on the n8n deployment.
+3. Optionally set `AI_MODEL` (default: `claude-sonnet-4-20250514`) and `AI_API_URL`.
+4. Trigger via webhook:
+   ```bash
+   curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-ai-multicaption \
+     -H 'Content-Type: application/json' \
+     -d '{"title":"Cloud Hosting Guide","url":"https://cloudless.gr/en/blog/cloud-hosting","locale":"en"}'
+   ```
+5. Claude generates a different caption for each platform (X: 280-char punchy, LinkedIn: professional 2-3 paragraphs, IG: emoji-heavy, Bluesky: conversational, etc.). Posts are created as **drafts** for review.
+
 ## Bulk CLI import (from omv)
 
 To import all Postiz workflows at once via the n8n CLI:
 
 ```bash
 N8N_POD=$(kubectl get pods -n n8n -l app=n8n -o jsonpath='{.items[0].metadata.name}')
-for f in postiz-rss-multichannel postiz-blog-ai-caption postiz-content-recycler postiz-analytics-digest; do
+for f in postiz-rss-multichannel postiz-blog-ai-caption postiz-content-recycler postiz-analytics-digest postiz-video-distribute postiz-ai-multicaption; do
   # Add a UUID id field (required by n8n import) and strip tags
   python3 -c "
 import json, uuid, sys

@@ -1,0 +1,143 @@
+{
+  "name": "Postiz — AI per-platform captions (blog → Claude → schedule)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postiz-ai-multicaption",
+        "options": {}
+      },
+      "name": "Blog publish webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "postiz-ai-multicaption"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.body.url || $json.body.link }}",
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      },
+      "name": "Fetch blog page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nconst webhook = $('Blog publish webhook').first().json.body;\nconst title = (webhook.title || '').trim();\nconst url = (webhook.url || webhook.link || '').trim();\nconst locale = (webhook.locale || 'en').trim();\nconst text = html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').substring(0, 3000);\nreturn [{ json: { title, url, locale, text } }];"
+      },
+      "name": "Extract text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/integrations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "List channels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst list = Array.isArray(raw) ? raw : (raw.integrations || []);\nconst allow = ['x', 'linkedin', 'linkedin-page', 'facebook', 'instagram', 'threads', 'bluesky'];\nconst channels = list.filter(i => allow.includes(i.identifier) && !i.disabled);\nconst extract = $('Extract text').first().json;\nif (!channels.length) return [{ json: { skip: true, reason: 'no_channels' } }];\nreturn channels.map(c => ({ json: { ...extract, channelId: c.id, platform: c.identifier } }));"
+      },
+      "name": "Fan out per channel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_API_URL || 'https://api.anthropic.com/v1/messages' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL || 'claude-sonnet-4-20250514', max_tokens: 300, messages: [{ role: 'user', content: 'You are a social media copywriter for cloudless.gr, a cloud services company in Greece. Write a ' + $json.platform + ' post promoting this blog article. Title: \"' + $json.title + '\". Content summary: ' + $json.text.substring(0, 1500) + '\\n\\nRules:\\n- ' + ($json.platform === 'x' ? 'Max 280 chars. Punchy, 1-2 hashtags.' : $json.platform === 'linkedin' || $json.platform === 'linkedin-page' ? '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.' : $json.platform === 'instagram' || $json.platform === 'threads' ? 'Casual, engaging, use emojis, 5-10 hashtags at end.' : $json.platform === 'bluesky' ? 'Max 300 chars, conversational, 1-2 hashtags.' : 'Medium length, engaging, 2-3 hashtags.') + '\\n- Language: ' + ($json.locale === 'el' ? 'Greek' : 'English') + '\\n- Do NOT include the URL (it is added automatically).\\n- Output ONLY the post text, no explanation.' }] }) }}",
+        "options": {}
+      },
+      "name": "Claude generate caption",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nconst caption = (aiResponse.content?.[0]?.text || '').trim();\nconst prev = $('Fan out per channel').first().json;\nconst url = prev.url;\nconst utm = url + (url.includes('?') ? '&' : '?') + 'utm_source=postiz&utm_medium=social&utm_campaign=blog&utm_content=' + prev.platform;\nconst fullCaption = caption + '\\n\\n' + utm;\nreturn [{ json: { caption: fullCaption, channelId: prev.channelId, platform: prev.platform, title: prev.title } }];"
+      },
+      "name": "Append UTM link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'draft', posts: [{ integration: { id: $json.channelId }, value: [{ content: $json.caption, image: [] }], settings: { __type: $json.platform } }] }) }}",
+        "options": {}
+      },
+      "name": "Create Postiz draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Blog publish webhook": {
+      "main": [[{ "node": "Fetch blog page", "type": "main", "index": 0 }]]
+    },
+    "Fetch blog page": {
+      "main": [[{ "node": "Extract text", "type": "main", "index": 0 }]]
+    },
+    "Extract text": {
+      "main": [[{ "node": "List channels", "type": "main", "index": 0 }]]
+    },
+    "List channels": {
+      "main": [[{ "node": "Fan out per channel", "type": "main", "index": 0 }]]
+    },
+    "Fan out per channel": {
+      "main": [[{ "node": "Claude generate caption", "type": "main", "index": 0 }]]
+    },
+    "Claude generate caption": {
+      "main": [[{ "node": "Append UTM link", "type": "main", "index": 0 }]]
+    },
+    "Append UTM link": {
+      "main": [[{ "node": "Create Postiz draft", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
