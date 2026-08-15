@@ -206,7 +206,13 @@ spec:
             # inside the container — without this the frontend fetches
             # "undefined/auth/..." and renders errors.
         - name: BACKEND_INTERNAL_URL
-          value: http://localhost:3002
+          value: http://localhost:3000
+        # The orchestrator backend defaults to port 3002 since v2.20.x, but the
+        # bundled nginx hardcodes /api/ → localhost:3000. Pin the orchestrator
+        # to 3000 so nginx and the SSR frontend agree. See
+        # apps/orchestrator/dist/apps/orchestrator/src/main.js:17.
+        - name: ORCHESTRATOR_PORT
+          value: '3000'
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
