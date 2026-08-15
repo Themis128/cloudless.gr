@@ -1,5 +1,5 @@
 {
-  "name": "Postiz — AI per-platform captions (blog → Claude → schedule)",
+  "name": "Postiz — AI per-platform captions (blog → NIM → schedule)",
   "nodes": [
     {
       "parameters": {
@@ -63,33 +63,12 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.AI_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions' }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Authorization", "value": "Bearer {{ $env.NVIDIA_API_KEY }}" },
-            { "name": "content-type", "value": "application/json" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b', max_tokens: 300, temperature: 0.7, messages: [{ role: 'system', content: 'You are a social media copywriter for cloudless.gr, a cloud services company in Greece. Output ONLY the post text, no explanation or preamble.' }, { role: 'user', content: 'Write a ' + $json.platform + ' post promoting this blog article. Title: \"' + $json.title + '\". Content summary: ' + $json.text.substring(0, 1500) + '\\n\\nRules:\\n- ' + ($json.platform === 'x' ? 'Max 280 chars. Punchy, 1-2 hashtags.' : $json.platform === 'linkedin' || $json.platform === 'linkedin-page' ? '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.' : $json.platform === 'instagram' || $json.platform === 'threads' ? 'Casual, engaging, use emojis, 5-10 hashtags at end.' : $json.platform === 'bluesky' ? 'Max 300 chars, conversational, 1-2 hashtags.' : 'Medium length, engaging, 2-3 hashtags.') + '\\n- Language: ' + ($json.locale === 'el' ? 'Greek' : 'English') + '\\n- Do NOT include the URL (it is added automatically).' }] }) }}",
-        "options": {}
+        "jsCode": "const d = $input.first().json;\nif (d.skip) return [{ json: { skip: true, reason: d.reason } }];\nconst apiUrl = $env.AI_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions';\nconst apiKey = $env.NVIDIA_API_KEY;\nconst model = $env.AI_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';\n\nconst rules = {\n  x: 'Max 280 chars. Punchy, 1-2 hashtags.',\n  linkedin: '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.',\n  'linkedin-page': '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.',\n  instagram: 'Casual, engaging, use emojis, 5-10 hashtags at end.',\n  threads: 'Casual, engaging, use emojis, 5-10 hashtags at end.',\n  bluesky: 'Max 300 chars, conversational, 1-2 hashtags.',\n  facebook: 'Medium length, engaging, 2-3 hashtags.'\n};\nconst lang = d.locale === 'el' ? 'Greek' : 'English';\nconst rule = rules[d.platform] || 'Medium length, engaging, 2-3 hashtags.';\n\nconst body = {\n  model,\n  max_tokens: 300,\n  temperature: 0.7,\n  messages: [\n    { role: 'system', content: 'You are a social media copywriter for cloudless.gr, a cloud services company in Greece. Output ONLY the post text, no explanation or preamble.' },\n    { role: 'user', content: `Write a ${d.platform} post promoting this blog article. Title: \"${d.title}\". Content summary: ${d.text.substring(0, 1500)}\\n\\nRules:\\n- ${rule}\\n- Language: ${lang}\\n- Do NOT include the URL (it is added automatically).` }\n  ]\n};\n\nconst resp = await fetch(apiUrl, {\n  method: 'POST',\n  headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify(body)\n});\nconst result = await resp.json();\nif (!resp.ok) return [{ json: { error: true, status: resp.status, detail: result } }];\n\nconst caption = (result.choices?.[0]?.message?.content || '').trim();\nconst utm = d.url + (d.url.includes('?') ? '&' : '?') + 'utm_source=postiz&utm_medium=social&utm_campaign=blog&utm_content=' + d.platform;\nconst fullCaption = caption + '\\n\\n' + utm;\n\nreturn [{ json: { caption: fullCaption, channelId: d.channelId, platform: d.platform, title: d.title } }];"
       },
       "name": "AI generate caption",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1320, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const aiResponse = $input.first().json;\nconst caption = (aiResponse.choices?.[0]?.message?.content || aiResponse.content?.[0]?.text || '').trim();\nconst prev = $('Fan out per channel').first().json;\nconst url = prev.url;\nconst utm = url + (url.includes('?') ? '&' : '?') + 'utm_source=postiz&utm_medium=social&utm_campaign=blog&utm_content=' + prev.platform;\nconst fullCaption = caption + '\\n\\n' + utm;\nreturn [{ json: { caption: fullCaption, channelId: prev.channelId, platform: prev.platform, title: prev.title } }];"
-      },
-      "name": "Append UTM link",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 300]
+      "position": [1320, 300]
     },
     {
       "parameters": {
@@ -99,19 +78,49 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ type: 'draft', posts: [{ integration: { id: $json.channelId }, value: [{ content: $json.caption, image: [] }], settings: { __type: $json.platform } }] }) }}",
+        "jsonBody": "={{ $json.skip ? '{}' : JSON.stringify({ type: 'draft', posts: [{ integration: { id: $json.channelId }, value: [{ content: $json.caption, image: [] }], settings: { __type: $json.platform } }] }) }}",
         "options": {}
       },
       "name": "Create Postiz draft",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 300],
+      "position": [1760, 220],
       "credentials": {
         "httpHeaderAuth": {
           "id": "postiz-api-key",
           "name": "Postiz API Key"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !$json.skip && !$json.error }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Has caption?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "note", "value": "={{ $json.reason || $json.detail?.message || 'skipped' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1760, 400]
     }
   ],
   "connections": {
@@ -131,10 +140,13 @@
       "main": [[{ "node": "AI generate caption", "type": "main", "index": 0 }]]
     },
     "AI generate caption": {
-      "main": [[{ "node": "Append UTM link", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Has caption?", "type": "main", "index": 0 }]]
     },
-    "Append UTM link": {
-      "main": [[{ "node": "Create Postiz draft", "type": "main", "index": 0 }]]
+    "Has caption?": {
+      "main": [
+        [{ "node": "Create Postiz draft", "type": "main", "index": 0 }],
+        [{ "node": "Skipped", "type": "main", "index": 0 }]
+      ]
     }
   },
   "settings": { "executionOrder": "v1" },
