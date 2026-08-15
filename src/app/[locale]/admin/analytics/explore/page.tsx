@@ -64,21 +64,25 @@ const QUICK_QUERY_MAP: Record<string, { dataset: string; sql: string }> = Object
 
 export default function LakeExplorePage() {
   const searchParams = useSearchParams();
-  const [catalogId, setCatalogId] = useState<string>(LAKE_PARQUET_CATALOG[0]?.id ?? "gsc");
-  const [sql, setSql] = useState(DEFAULT_SQL);
-
-  useEffect(() => {
+  const [catalogId, setCatalogId] = useState<string>(() => {
+    const dataset = searchParams.get("dataset");
+    return dataset ?? LAKE_PARQUET_CATALOG[0]?.id ?? "gsc";
+  });
+  const [sql, setSql] = useState(() => {
     const dataset = searchParams.get("dataset");
     const qKey = searchParams.get("q");
-    if (dataset) setCatalogId(dataset);
     if (qKey) {
-      const match = QUICK_QUERIES.find(
-        (q) => q.dataset === (dataset ?? catalogId) && q.label.toLowerCase().replace(/\s+/g, "-").includes(qKey)
-      ) ?? QUICK_QUERY_MAP[qKey];
-      if (match) { setCatalogId(match.dataset); setSql(match.sql); }
+      const defaultDataset = dataset ?? LAKE_PARQUET_CATALOG[0]?.id ?? "gsc";
+      const match =
+        QUICK_QUERIES.find(
+          (q) =>
+            q.dataset === defaultDataset &&
+            q.label.toLowerCase().replace(/\s+/g, "-").includes(qKey)
+        ) ?? QUICK_QUERY_MAP[qKey];
+      if (match) return match.sql;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return DEFAULT_SQL;
+  });
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

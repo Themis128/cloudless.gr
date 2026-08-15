@@ -305,19 +305,15 @@ function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | nu
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedId && integrations && integrations.length > 0) {
-      setSelectedId(integrations[0]!.id);
-    }
-  }, [integrations, selectedId]);
+  const effectiveId = selectedId || integrations?.[0]?.id || "";
 
   const load = async () => {
-    if (!selectedId) return;
+    if (!effectiveId) return;
     setBusy(true);
     setErr(null);
     try {
       const res = await fetch(
-        `/api/admin/postiz/analytics/integration/${encodeURIComponent(selectedId)}?date=${lookback}`
+        `/api/admin/postiz/analytics/integration/${encodeURIComponent(effectiveId)}?date=${lookback}`
       );
       if (!res.ok) {
         setErr(`analytics: ${res.status}`);
@@ -349,7 +345,7 @@ function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | nu
           </label>
           <select
             id="postiz-analytics-channel"
-            value={selectedId}
+            value={effectiveId}
             onChange={(e) => setSelectedId(e.target.value)}
             className="rounded border border-gray-300 p-2 text-sm"
           >

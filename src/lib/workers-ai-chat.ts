@@ -15,14 +15,11 @@
 import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 import {
   buildWorkersAiToolProtocol,
-  callNvidiaProxyChat,
   callWorkersAiChat,
-  callOllamaChat,
-  isNvidiaProxyConfigured,
-  isWorkersAiConfigured,
-  isOllamaConfigured,
   parseWorkersAiToolCall,
 } from "@/lib/workers-ai-client";
+import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
+import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
@@ -33,8 +30,12 @@ async function callChatBackend(
   if (isNvidiaProxyConfigured()) {
     return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
   }
-  if (isWorkersAiConfigured()) {
-    return callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+  // Try Workers AI directly; if credentials are absent it throws UnauthorizedException
+  // which we catch to fall through to the next backend.
+  try {
+    return await callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+  } catch (e) {
+    if (!(e instanceof Error && e.name === "UnauthorizedException")) throw e;
   }
   if (isOllamaConfigured()) {
     return callOllamaChat(messages, { maxTokens: MAX_TOKENS });

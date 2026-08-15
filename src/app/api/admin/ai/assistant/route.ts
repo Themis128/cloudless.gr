@@ -5,13 +5,11 @@ import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
 import {
   buildWorkersAiToolProtocol,
   callWorkersAiChat,
-  callNvidiaProxyChat,
-  callOllamaChat,
   parseWorkersAiToolCall,
   isWorkersAiConfigured,
-  isNvidiaProxyConfigured,
-  isOllamaConfigured,
 } from "@/lib/workers-ai-client";
+import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
+import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 import { generateAdminAiText } from "@/lib/admin-ai";
 import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
