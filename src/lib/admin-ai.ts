@@ -3,14 +3,20 @@
  * Used by Marketing Hub routes that previously required ANTHROPIC_API_KEY.
  */
 
-import { callWorkersAiChat, isWorkersAiConfigured } from "@/lib/workers-ai-client";
+import {
+  callWorkersAiChat,
+  callNvidiaProxyChat,
+  isWorkersAiConfigured,
+  isNvidiaProxyConfigured,
+} from "@/lib/workers-ai-client";
 import { callGemini, getGeminiApiKey } from "@/lib/gemini-admin";
 
 export function isAdminAiConfigured(): boolean {
-  return isWorkersAiConfigured() || Boolean(process.env.GEMINI_API_KEY);
+  return isNvidiaProxyConfigured() || isWorkersAiConfigured() || Boolean(process.env.GEMINI_API_KEY);
 }
 
 export async function isAdminAiConfiguredAsync(): Promise<boolean> {
+  if (isNvidiaProxyConfigured()) return true;
   if (isWorkersAiConfigured()) return true;
   return Boolean(await getGeminiApiKey());
 }
@@ -18,18 +24,19 @@ export async function isAdminAiConfiguredAsync(): Promise<boolean> {
 export type AdminAiGenerateOpts = {
   maxTokens?: number;
   system?: string;
-  /** Prefer Workers AI model override */
+  /** Workers AI model override (ignored when NVIDIA proxy is active) */
   model?: string;
 };
 
 /**
- * Single-turn admin generation. Tries Workers AI first, then Gemini.
- * Throws if neither backend is configured or both fail.
+ * Single-turn admin generation.
+ * Priority: NVIDIA proxy (nemotron + thinking) → Workers AI → Gemini.
+ * Throws if no backend is configured or all fail.
  */
 export async function generateAdminAiText(
   prompt: string,
   opts: AdminAiGenerateOpts = {}
-): Promise<{ text: string; provider: "workers-ai" | "gemini" }> {
+): Promise<{ text: string; provider: "nvidia-proxy" | "workers-ai" | "gemini" }> {
   const maxTokens = opts.maxTokens ?? 1000;
   const messages: { role: string; content: string }[] = [];
   if (opts.system?.trim()) {
@@ -37,12 +44,21 @@ export async function generateAdminAiText(
   }
   messages.push({ role: "user", content: prompt });
 
+  if (isNvidiaProxyConfigured()) {
+    try {
+      const text = await callNvidiaProxyChat(messages, { maxTokens });
+      if (text.trim()) return { text, provider: "nvidia-proxy" };
+    } catch (err) {
+      console.warn(
+        "[admin-ai] NVIDIA proxy failed, trying Workers AI:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
+
   if (isWorkersAiConfigured()) {
     try {
-      const text = await callWorkersAiChat(messages, {
-        maxTokens,
-        model: opts.model,
-      });
+      const text = await callWorkersAiChat(messages, { maxTokens, model: opts.model });
       if (text.trim()) return { text, provider: "workers-ai" };
     } catch (err) {
       console.warn(
@@ -60,7 +76,7 @@ export async function generateAdminAiText(
   }
 
   const err = new Error(
-    "Admin AI not configured — set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (Workers AI) or GEMINI_API_KEY"
+    "Admin AI not configured — set NVIDIA_PROXY_URL + NVIDIA_PROXY_TOKEN, or CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN, or GEMINI_API_KEY"
   );
   err.name = "AdminAiNotConfigured";
   throw err;
