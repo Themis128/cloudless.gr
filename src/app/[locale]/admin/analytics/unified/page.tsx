@@ -310,6 +310,75 @@ export default function UnifiedAnalyticsPage() {
 
       {data && (
         <div className="space-y-10">
+          {/* Growth Funnel — GSC clicks → leads → revenue */}
+          {(data.seo || data.pipeline || data.stripe) && (
+            <div>
+              <SectionHeader title="Growth Funnel" icon="📊" href="/admin/analytics/funnel" />
+              <div className="flex items-stretch gap-0 overflow-x-auto rounded-xl border border-slate-800">
+                {[
+                  {
+                    label: "Impressions",
+                    value: data.seo ? data.seo.impressions.toLocaleString() : "—",
+                    sub: "GSC (28d)",
+                    color: "text-slate-400",
+                    bg: "bg-void-light/30",
+                  },
+                  {
+                    label: "Clicks",
+                    value: data.seo ? data.seo.clicks.toLocaleString() : "—",
+                    sub: `CTR ${data.seo ? data.seo.ctr.toFixed(1) + "%" : "—"}`,
+                    color: "text-neon-blue",
+                    bg: "bg-void-light/40",
+                  },
+                  {
+                    label: "Open Deals",
+                    value: data.pipeline ? String(data.pipeline.totalDeals) : "—",
+                    sub: "EspoCRM pipeline",
+                    color: "text-neon-magenta",
+                    bg: "bg-void-light/50",
+                  },
+                  {
+                    label: "Pipeline Value",
+                    value: data.pipeline
+                      ? `€${data.pipeline.totalValue.toLocaleString("en", { maximumFractionDigits: 0 })}`
+                      : "—",
+                    sub: "open opportunities",
+                    color: "text-neon-magenta",
+                    bg: "bg-void-light/60",
+                  },
+                  {
+                    label: "Revenue",
+                    value: data.stripe ? eurosMajor(data.stripe.revenue) : "—",
+                    sub: `${data.stripe ? data.stripe.totalOrders : "—"} orders`,
+                    color: "text-neon-green",
+                    bg: "bg-void-light/70",
+                  },
+                ].map((step, i, arr) => (
+                  <div
+                    key={step.label}
+                    className={`${step.bg} relative flex min-w-32 flex-1 flex-col justify-center px-5 py-5`}
+                  >
+                    {i > 0 && (
+                      <span className="absolute -left-2 top-1/2 z-10 -translate-y-1/2 font-mono text-xs text-slate-600">
+                        →
+                      </span>
+                    )}
+                    <p className="font-mono text-[10px] tracking-widest text-slate-500 uppercase">
+                      {step.label}
+                    </p>
+                    <p className={`font-heading mt-1 text-xl font-bold ${step.color}`}>
+                      {step.value}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10px] text-slate-600">{step.sub}</p>
+                    {i < arr.length - 1 && (
+                      <div className="absolute right-0 top-0 h-full w-px bg-slate-800" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ROI — spend → leads → revenue */}
           <div>
             <SectionHeader title="Campaign ROI" icon="🎯" href="/admin/campaigns" />

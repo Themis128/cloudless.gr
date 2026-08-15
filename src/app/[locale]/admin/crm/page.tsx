@@ -187,6 +187,28 @@ export default function AdminCRMPage() {
         <p className="font-body mt-1 text-slate-400">Leads and contacts synced from EspoCRM.</p>
       </div>
 
+      {/* RFM quick links */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Link
+          href="/admin/analytics/explore?dataset=rfm&q=champions"
+          className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/70 hover:bg-neon-cyan/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
+        >
+          🏆 RFM Champions →
+        </Link>
+        <Link
+          href="/admin/analytics/explore?dataset=churn&q=high-risk"
+          className="border-red-500/20 bg-red-500/5 rounded-full border px-3 py-1 font-mono text-[10px] text-red-400/70 transition-colors hover:bg-red-500/10"
+        >
+          ⚠ High Churn Risk →
+        </Link>
+        <Link
+          href="/admin/analytics/explore?dataset=espocrm-opps&q=pipeline"
+          className="border-neon-magenta/20 bg-neon-magenta/5 text-neon-magenta/70 hover:bg-neon-magenta/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
+        >
+          🔀 Open Pipeline →
+        </Link>
+      </div>
+
       {/* Stats */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
