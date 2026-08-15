@@ -64,28 +64,27 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AI_API_URL || 'https://api.anthropic.com/v1/messages' }}",
+        "url": "={{ $env.AI_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
-            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Authorization", "value": "Bearer {{ $env.NVIDIA_API_KEY }}" },
             { "name": "content-type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL || 'claude-sonnet-4-20250514', max_tokens: 300, messages: [{ role: 'user', content: 'You are a social media copywriter for cloudless.gr, a cloud services company in Greece. Write a ' + $json.platform + ' post promoting this blog article. Title: \"' + $json.title + '\". Content summary: ' + $json.text.substring(0, 1500) + '\\n\\nRules:\\n- ' + ($json.platform === 'x' ? 'Max 280 chars. Punchy, 1-2 hashtags.' : $json.platform === 'linkedin' || $json.platform === 'linkedin-page' ? '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.' : $json.platform === 'instagram' || $json.platform === 'threads' ? 'Casual, engaging, use emojis, 5-10 hashtags at end.' : $json.platform === 'bluesky' ? 'Max 300 chars, conversational, 1-2 hashtags.' : 'Medium length, engaging, 2-3 hashtags.') + '\\n- Language: ' + ($json.locale === 'el' ? 'Greek' : 'English') + '\\n- Do NOT include the URL (it is added automatically).\\n- Output ONLY the post text, no explanation.' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL || 'meta/llama-3.3-70b-instruct', max_tokens: 300, temperature: 0.7, messages: [{ role: 'system', content: 'You are a social media copywriter for cloudless.gr, a cloud services company in Greece. Output ONLY the post text, no explanation or preamble.' }, { role: 'user', content: 'Write a ' + $json.platform + ' post promoting this blog article. Title: \"' + $json.title + '\". Content summary: ' + $json.text.substring(0, 1500) + '\\n\\nRules:\\n- ' + ($json.platform === 'x' ? 'Max 280 chars. Punchy, 1-2 hashtags.' : $json.platform === 'linkedin' || $json.platform === 'linkedin-page' ? '2-3 paragraphs, professional tone, 3-5 hashtags. Include a call-to-action.' : $json.platform === 'instagram' || $json.platform === 'threads' ? 'Casual, engaging, use emojis, 5-10 hashtags at end.' : $json.platform === 'bluesky' ? 'Max 300 chars, conversational, 1-2 hashtags.' : 'Medium length, engaging, 2-3 hashtags.') + '\\n- Language: ' + ($json.locale === 'el' ? 'Greek' : 'English') + '\\n- Do NOT include the URL (it is added automatically).' }] }) }}",
         "options": {}
       },
-      "name": "Claude generate caption",
+      "name": "AI generate caption",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1320, 300]
     },
     {
       "parameters": {
-        "jsCode": "const aiResponse = $input.first().json;\nconst caption = (aiResponse.content?.[0]?.text || '').trim();\nconst prev = $('Fan out per channel').first().json;\nconst url = prev.url;\nconst utm = url + (url.includes('?') ? '&' : '?') + 'utm_source=postiz&utm_medium=social&utm_campaign=blog&utm_content=' + prev.platform;\nconst fullCaption = caption + '\\n\\n' + utm;\nreturn [{ json: { caption: fullCaption, channelId: prev.channelId, platform: prev.platform, title: prev.title } }];"
+        "jsCode": "const aiResponse = $input.first().json;\nconst caption = (aiResponse.choices?.[0]?.message?.content || aiResponse.content?.[0]?.text || '').trim();\nconst prev = $('Fan out per channel').first().json;\nconst url = prev.url;\nconst utm = url + (url.includes('?') ? '&' : '?') + 'utm_source=postiz&utm_medium=social&utm_campaign=blog&utm_content=' + prev.platform;\nconst fullCaption = caption + '\\n\\n' + utm;\nreturn [{ json: { caption: fullCaption, channelId: prev.channelId, platform: prev.platform, title: prev.title } }];"
       },
       "name": "Append UTM link",
       "type": "n8n-nodes-base.code",
@@ -129,9 +128,9 @@
       "main": [[{ "node": "Fan out per channel", "type": "main", "index": 0 }]]
     },
     "Fan out per channel": {
-      "main": [[{ "node": "Claude generate caption", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "AI generate caption", "type": "main", "index": 0 }]]
     },
-    "Claude generate caption": {
+    "AI generate caption": {
       "main": [[{ "node": "Append UTM link", "type": "main", "index": 0 }]]
     },
     "Append UTM link": {
