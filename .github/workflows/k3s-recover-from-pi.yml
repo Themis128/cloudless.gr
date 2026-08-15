@@ -59,6 +59,36 @@ jobs:
         echo "=== cloudless-app deployment status ==="
         sudo k3s kubectl rollout status deployment/cloudless-app -n cloudless --timeout=30s || true
 
+    - name: Diagnose CreateContainerConfigError
+      run: |
+        POD=$(sudo k3s kubectl get pods -n cloudless -l app=cloudless-app \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+        if [ -n "$POD" ]; then
+          echo "=== pod describe (reason for CreateContainerConfigError) ==="
+          sudo k3s kubectl describe pod "$POD" -n cloudless | grep -A 5 "Warning\|Error\|Reason\|secretKeyRef\|configMapKey"
+        fi
+        echo ""
+        echo "=== all secretKeyRef env vars in deployment ==="
+        sudo k3s kubectl get deployment cloudless-app -n cloudless \
+          -o jsonpath='{.spec.template.spec.containers[0].env[*]}' 2>/dev/null \
+          | python3 -c "
+import sys, json
+text = sys.stdin.read().strip()
+# env array elements are space-separated JSON objects
+import re
+objects = re.findall(r'\{[^{}]+\}', text)
+for o in objects:
+    try:
+        d = json.loads(o)
+        if 'valueFrom' in d and 'secretKeyRef' in d.get('valueFrom', {}):
+            print(f\"secretKeyRef: {d['name']} <- secret={d['valueFrom']['secretKeyRef']['name']} key={d['valueFrom']['secretKeyRef']['key']}\")
+    except Exception as e:
+        pass
+" || true
+        echo ""
+        echo "=== existing secrets in cloudless namespace ==="
+        sudo k3s kubectl get secrets -n cloudless
+
     - name: Fix CreateContainerConfigError — recreate cloudless-ai-backends secret
       run: |
         # The cloudless-ai-backends secret is referenced by a non-optional secretKeyRef
