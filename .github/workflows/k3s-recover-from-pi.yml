@@ -83,54 +83,39 @@ jobs:
         # added CLOUDFLARE_API_TOKEN as a secretKeyRef from cloudless-ai-backends.
         # The 09:06 run then recreated that secret with key CLOUDFLARE_WORKERS_AI_TOKEN
         # (not CLOUDFLARE_API_TOKEN), leaving a broken reference → CreateContainerConfigError.
-        #
-        # Fix: patch the deployment JSON to remove all env entries that reference
-        # cloudless-ai-backends with the key CLOUDFLARE_API_TOKEN, and deduplicate
-        # any other env entries from cloudless-ai-backends.
-        sudo k3s kubectl get deployment cloudless-app -n cloudless -o json > /tmp/dep-raw.json
-        python3 - <<'PYEOF'
+        cat > /tmp/fix-dep.py << 'SCRIPTEOF'
 import json, sys
-
 with open('/tmp/dep-raw.json') as f:
     dep = json.load(f)
-
 env = dep['spec']['template']['spec']['containers'][0]['env']
-
-# Remove broken entries:
-#   1. CLOUDFLARE_API_TOKEN from cloudless-ai-backends (key not in secret)
-#   2. Duplicate CLOUDFLARE_WORKERS_AI_TOKEN / GEMINI_API_KEY from cloudless-ai-backends
 seen = set()
 clean = []
 for e in env:
     skr = e.get('valueFrom', {}).get('secretKeyRef', {})
     sname = skr.get('name', '')
-    skey  = skr.get('key', '')
-    name  = e['name']
-
-    # Drop CLOUDFLARE_API_TOKEN secretKeyRef from cloudless-ai-backends (key missing)
+    skey = skr.get('key', '')
+    name = e['name']
     if name == 'CLOUDFLARE_API_TOKEN' and sname == 'cloudless-ai-backends':
-        print(f'REMOVING: {name} <- {sname}/{skey}')
+        print('REMOVING: {} <- {}/{}'.format(name, sname, skey))
         continue
-
-    # Deduplicate: keep first occurrence of any secretKeyRef from cloudless-ai-backends
     if sname == 'cloudless-ai-backends':
         dedup_key = (name, sname, skey)
         if dedup_key in seen:
-            print(f'DEDUP removing: {name} <- {sname}/{skey}')
+            print('DEDUP removing: {} <- {}/{}'.format(name, sname, skey))
             continue
         seen.add(dedup_key)
-
     clean.append(e)
-
 dep['spec']['template']['spec']['containers'][0]['env'] = clean
 with open('/tmp/dep-patched.json', 'w') as f:
     json.dump(dep, f)
-print(f'Env vars before: {len(env)}, after: {len(clean)}')
-PYEOF
+print('Env vars before: {}, after: {}'.format(len(env), len(clean)))
+SCRIPTEOF
+        sudo k3s kubectl get deployment cloudless-app -n cloudless -o json > /tmp/dep-raw.json
+        python3 /tmp/fix-dep.py
         echo "--- applying patched deployment ---"
         sudo k3s kubectl apply -f /tmp/dep-patched.json
         echo "✓ deployment patched — broken secretKeyRef removed"
-        rm -f /tmp/dep-raw.json /tmp/dep-patched.json
+        rm -f /tmp/dep-raw.json /tmp/dep-patched.json /tmp/fix-dep.py
 
     - name: Force restart cloudless-app if not Running
       run: |
