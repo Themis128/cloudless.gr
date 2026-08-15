@@ -34,10 +34,11 @@ jobs:
 
     - name: Connect to tailnet
       id: tailscale
-      uses: tailscale/github-action@v0.3.0
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
       with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:k8s
       continue-on-error: true
 
 
