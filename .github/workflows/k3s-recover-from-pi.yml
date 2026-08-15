@@ -79,43 +79,30 @@ jobs:
 
     - name: Fix CreateContainerConfigError — remove broken CLOUDFLARE_API_TOKEN secretKeyRef
       run: |
-        # Root cause: the 09:00 UTC run of wire-all-ai-backends.yml (old commit e3d98ac4)
-        # added CLOUDFLARE_API_TOKEN as a secretKeyRef from cloudless-ai-backends.
-        # The 09:06 run then recreated that secret with key CLOUDFLARE_WORKERS_AI_TOKEN
-        # (not CLOUDFLARE_API_TOKEN), leaving a broken reference → CreateContainerConfigError.
-        cat > /tmp/fix-dep.py << 'SCRIPTEOF'
-import json, sys
-with open('/tmp/dep-raw.json') as f:
-    dep = json.load(f)
-env = dep['spec']['template']['spec']['containers'][0]['env']
-seen = set()
-clean = []
-for e in env:
-    skr = e.get('valueFrom', {}).get('secretKeyRef', {})
-    sname = skr.get('name', '')
-    skey = skr.get('key', '')
-    name = e['name']
-    if name == 'CLOUDFLARE_API_TOKEN' and sname == 'cloudless-ai-backends':
-        print('REMOVING: {} <- {}/{}'.format(name, sname, skey))
-        continue
-    if sname == 'cloudless-ai-backends':
-        dedup_key = (name, sname, skey)
-        if dedup_key in seen:
-            print('DEDUP removing: {} <- {}/{}'.format(name, sname, skey))
-            continue
-        seen.add(dedup_key)
-    clean.append(e)
-dep['spec']['template']['spec']['containers'][0]['env'] = clean
-with open('/tmp/dep-patched.json', 'w') as f:
-    json.dump(dep, f)
-print('Env vars before: {}, after: {}'.format(len(env), len(clean)))
-SCRIPTEOF
-        sudo k3s kubectl get deployment cloudless-app -n cloudless -o json > /tmp/dep-raw.json
-        python3 /tmp/fix-dep.py
+        # Root cause: wire-all-ai-backends.yml (commit e3d98ac4, ran 09:00 UTC) added
+        # CLOUDFLARE_API_TOKEN as a secretKeyRef from cloudless-ai-backends. The 09:06
+        # run recreated the secret with key CLOUDFLARE_WORKERS_AI_TOKEN only, leaving
+        # the CLOUDFLARE_API_TOKEN reference broken → CreateContainerConfigError.
+        # Fix: jq removes the broken entry and deduplicates remaining ones.
+        sudo k3s kubectl get deployment cloudless-app -n cloudless -o json \
+          | jq 'del(
+              .spec.template.spec.containers[0].env[]
+              | select(
+                  .name == "CLOUDFLARE_API_TOKEN" and
+                  (.valueFrom.secretKeyRef.name // "") == "cloudless-ai-backends"
+                )
+            )
+            | .spec.template.spec.containers[0].env |= (
+                group_by(.name + ":" + (.valueFrom.secretKeyRef.name // "") + ":" + (.valueFrom.secretKeyRef.key // ""))
+                | map(.[0])
+              )' \
+          > /tmp/dep-patched.json
+        echo "=== env var count after patch ==="
+        jq '.spec.template.spec.containers[0].env | length' /tmp/dep-patched.json
         echo "--- applying patched deployment ---"
         sudo k3s kubectl apply -f /tmp/dep-patched.json
         echo "✓ deployment patched — broken secretKeyRef removed"
-        rm -f /tmp/dep-raw.json /tmp/dep-patched.json /tmp/fix-dep.py
+        rm -f /tmp/dep-patched.json
 
     - name: Force restart cloudless-app if not Running
       run: |
