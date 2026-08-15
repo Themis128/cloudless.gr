@@ -14,10 +14,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Join Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3  # v3.2.4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
           tags: tag:ci
 
       - name: Configure kubectl
