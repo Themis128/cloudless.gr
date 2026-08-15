@@ -25,25 +25,21 @@ permissions:
 
 jobs:
   restore:
-    runs-on: ubuntu-latest
+    # Pi runner is already on the tailnet — kubectl reaches 100.74.191.58:6443
+    # directly. No Tailscale step needed. AWS OIDC works on self-hosted too.
+    runs-on: [self-hosted, omv, pi, build]
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: "382"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
-
       - name: Configure kubectl
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p "$GITHUB_WORKSPACE/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/.kube/config"
+          chmod 600 "$GITHUB_WORKSPACE/.kube/config"
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/.kube/config" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
