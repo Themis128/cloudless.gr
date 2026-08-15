@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface AnalyticsSummary {
   totalEvents: number;
@@ -138,6 +139,8 @@ export default function KpiDashboard() {
           {loading ? "Loading…" : "↺ Refresh"}
         </button>
       </div>
+
+      <InsightPanel domain="executive" />
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">

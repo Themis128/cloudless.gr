@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Deal {
   id: string;
@@ -110,6 +111,8 @@ export default function PipelinePage() {
         <h1 className="font-heading text-2xl font-bold text-white">Lead Pipeline</h1>
         <p className="font-body mt-1 text-slate-400">EspoCRM deal pipeline kanban board.</p>
       </div>
+
+      <InsightPanel domain="crm_funnel" />
 
       {stats && (
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
