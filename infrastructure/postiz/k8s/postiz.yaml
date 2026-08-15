@@ -253,7 +253,7 @@ spec:
         # PROXY_TOKEN must match the secret set via:
         #   wrangler secret put PROXY_TOKEN --config workers/postiz-ai-proxy/wrangler.jsonc
         - name: OPENAI_BASE_URL
-          value: https://postiz-ai-proxy.cloudless.workers.dev/v1
+          value: https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
