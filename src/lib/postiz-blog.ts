@@ -43,9 +43,7 @@ export interface BlogShareResult {
   error?: string;
 }
 
-function platformUtmSource(
-  platform: "linkedin" | "x" | "meta" | "tiktok"
-): string {
+function platformUtmSource(platform: "linkedin" | "x" | "meta" | "tiktok"): string {
   switch (platform) {
     case "linkedin":
       return "linkedin";

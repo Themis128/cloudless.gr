@@ -29,8 +29,7 @@ export function requireWorkersAiConfig(): { accountId: string; apiToken: string 
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   // CLOUDFLARE_WORKERS_AI_TOKEN is a scoped Workers AI-only token (preferred).
   // Falls back to the broad CLOUDFLARE_API_TOKEN if only that is set.
-  const apiToken =
-    process.env.CLOUDFLARE_WORKERS_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+  const apiToken = process.env.CLOUDFLARE_WORKERS_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !apiToken) {
     const err = new Error("Workers AI not configured");
     err.name = "UnauthorizedException";

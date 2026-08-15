@@ -191,11 +191,7 @@ export interface SchedulePostResult {
  * Append standard cloudless social UTMs to a URL (or leave non-URLs alone).
  * Campaign defaults to `social_hub`; pass a stable slug for attribution.
  */
-export function withSocialUtm(
-  url: string,
-  platform: string,
-  campaign = "social_hub"
-): string {
+export function withSocialUtm(url: string, platform: string, campaign = "social_hub"): string {
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) return trimmed;
   try {

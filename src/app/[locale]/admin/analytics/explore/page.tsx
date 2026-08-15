@@ -154,7 +154,10 @@ export default function LakeExplorePage() {
             <button
               key={q.label}
               type="button"
-              onClick={() => { setCatalogId(q.dataset); setSql(q.sql); }}
+              onClick={() => {
+                setCatalogId(q.dataset);
+                setSql(q.sql);
+              }}
               className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/80 hover:bg-neon-cyan/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
             >
               {q.label}

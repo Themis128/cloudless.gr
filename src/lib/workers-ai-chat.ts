@@ -24,9 +24,7 @@ import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
-async function callChatBackend(
-  messages: { role: string; content: string }[]
-): Promise<string> {
+async function callChatBackend(messages: { role: string; content: string }[]): Promise<string> {
   if (isNvidiaProxyConfigured()) {
     return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
   }

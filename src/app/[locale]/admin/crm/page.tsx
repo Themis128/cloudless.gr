@@ -200,7 +200,7 @@ export default function AdminCRMPage() {
         </Link>
         <Link
           href="/admin/analytics/explore?dataset=churn&q=high-risk"
-          className="border-red-500/20 bg-red-500/5 rounded-full border px-3 py-1 font-mono text-[10px] text-red-400/70 transition-colors hover:bg-red-500/10"
+          className="rounded-full border border-red-500/20 bg-red-500/5 px-3 py-1 font-mono text-[10px] text-red-400/70 transition-colors hover:bg-red-500/10"
         >
           ⚠ High Churn Risk →
         </Link>

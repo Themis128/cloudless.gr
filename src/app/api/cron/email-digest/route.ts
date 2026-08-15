@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
       </tr>`;
   };
 
-  const execSummary = executive?.summary ?? "No executive insight available yet — run the analytics orchestration job to generate one.";
+  const execSummary =
+    executive?.summary ??
+    "No executive insight available yet — run the analytics orchestration job to generate one.";
   const execBullets = (executive?.bullets ?? [])
     .map((b) => `<li style="margin-bottom:6px;color:#8b949e;font-size:13px">${escapeHtml(b)}</li>`)
     .join("");
@@ -133,9 +135,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[email-digest] send failed:", err);
-    return NextResponse.json(
-      { ok: false, error: String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

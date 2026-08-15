@@ -41,14 +41,12 @@ export function InsightPanel({ domain }: Props) {
   if (!insight) return null;
 
   return (
-    <div className="mb-6 rounded-xl border border-neon-green/20 bg-neon-green/5 px-5 py-4">
+    <div className="border-neon-green/20 bg-neon-green/5 mb-6 rounded-xl border px-5 py-4">
       <div className="mb-2 flex items-center gap-2">
-        <span className="font-mono text-[10px] tracking-widest text-neon-green/70 uppercase">
+        <span className="text-neon-green/70 font-mono text-[10px] tracking-widest uppercase">
           AI Insight
         </span>
-        {age && (
-          <span className="font-mono text-[10px] text-slate-600">{age}</span>
-        )}
+        {age && <span className="font-mono text-[10px] text-slate-600">{age}</span>}
         {insight.confidence && (
           <span
             className={`rounded-full px-2 py-0.5 font-mono text-[9px] ${
@@ -68,7 +66,7 @@ export function InsightPanel({ domain }: Props) {
         <ul className="space-y-1">
           {insight.bullets.map((b, i) => (
             <li key={i} className="flex gap-2 font-mono text-xs text-slate-400">
-              <span className="mt-0.5 shrink-0 text-neon-green/50">▸</span>
+              <span className="text-neon-green/50 mt-0.5 shrink-0">▸</span>
               {b}
             </li>
           ))}
@@ -78,7 +76,8 @@ export function InsightPanel({ domain }: Props) {
         <div className="mt-3 flex flex-wrap gap-3">
           {insight.metrics_cited.slice(0, 5).map((m) => (
             <span key={m.key} className="font-mono text-[10px] text-slate-600">
-              {m.key.replace(/_/g, " ")}: <span className="text-slate-400">{String(m.value ?? "—")}</span>
+              {m.key.replace(/_/g, " ")}:{" "}
+              <span className="text-slate-400">{String(m.value ?? "—")}</span>
             </span>
           ))}
         </div>

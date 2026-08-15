@@ -293,7 +293,7 @@ export default function UnifiedAnalyticsPage() {
           </button>
           <Link
             href="/admin/reports"
-            className="rounded-lg border border-neon-green/30 bg-neon-green/10 px-4 py-2 font-mono text-xs text-neon-green transition-all hover:bg-neon-green/20"
+            className="border-neon-green/30 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 rounded-lg border px-4 py-2 font-mono text-xs transition-all"
           >
             ↓ PDF Reports
           </Link>
@@ -370,7 +370,7 @@ export default function UnifiedAnalyticsPage() {
                     className={`${step.bg} relative flex min-w-32 flex-1 flex-col justify-center px-5 py-5`}
                   >
                     {i > 0 && (
-                      <span className="absolute -left-2 top-1/2 z-10 -translate-y-1/2 font-mono text-xs text-slate-600">
+                      <span className="absolute top-1/2 -left-2 z-10 -translate-y-1/2 font-mono text-xs text-slate-600">
                         →
                       </span>
                     )}
@@ -382,7 +382,7 @@ export default function UnifiedAnalyticsPage() {
                     </p>
                     <p className="mt-0.5 font-mono text-[10px] text-slate-600">{step.sub}</p>
                     {i < arr.length - 1 && (
-                      <div className="absolute right-0 top-0 h-full w-px bg-slate-800" />
+                      <div className="absolute top-0 right-0 h-full w-px bg-slate-800" />
                     )}
                   </div>
                 ))}
