@@ -17,9 +17,10 @@ jobs:
 
       - name: Configure kubectl
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p "$GITHUB_WORKSPACE/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/.kube/config"
+          chmod 600 "$GITHUB_WORKSPACE/.kube/config"
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/.kube/config" >> "$GITHUB_ENV"
 
       - name: Patch postiz-providers secret — add AI proxy token
         run: |
