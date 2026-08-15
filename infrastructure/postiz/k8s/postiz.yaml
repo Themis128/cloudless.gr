@@ -178,10 +178,12 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: postiz
-          # Updated to v2.23.0 (2026-08-04 release) — runs with nginx :5000,
-          # frontend next-server :4200, and backend node :3002 inside one
-          # container (no separate Temporal service needed in this build).
-        image: ghcr.io/gitroomhq/postiz-app:v2.23.0
+          # Rolled back to v2.11.2 (2026-08-15) — v2.12.0+ requires a Temporal
+          # workflow server + extra DB (too heavy for 8GB Pi), and v2.23.0's
+          # container only starts the orchestrator worker + frontend, not the
+          # backend API server, without Temporal_ADDRESS. v2.11.2 is the last
+          # single-process build that serves /api/public/v1/* correctly.
+        image: ghcr.io/gitroomhq/postiz-app:v2.11.2
         ports:
         - containerPort: 5000
           # Social-provider OAuth app credentials (FACEBOOK_APP_ID/SECRET,
@@ -207,12 +209,6 @@ spec:
             # "undefined/auth/..." and renders errors.
         - name: BACKEND_INTERNAL_URL
           value: http://localhost:3000
-        # The orchestrator backend defaults to port 3002 since v2.20.x, but the
-        # bundled nginx hardcodes /api/ → localhost:3000. Pin the orchestrator
-        # to 3000 so nginx and the SSR frontend agree. See
-        # apps/orchestrator/dist/apps/orchestrator/src/main.js:17.
-        - name: ORCHESTRATOR_PORT
-          value: '3000'
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
