@@ -26,17 +26,19 @@ export function InsightPanel({ domain }: Props) {
       .finally(() => setLoading(false));
   }, [domain]);
 
+  const [now] = useState<number>(() => Date.now());
+
+  const ts = insight?.generated_at;
+  let age: string | null = null;
+  if (ts) {
+    const mins = Math.round((now - new Date(ts).getTime()) / 60000);
+    if (mins < 60) age = `${mins}m ago`;
+    else if (mins < 1440) age = `${Math.round(mins / 60)}h ago`;
+    else age = `${Math.round(mins / 1440)}d ago`;
+  }
+
   if (loading) return null;
   if (!insight) return null;
-
-  const age = insight.generated_at
-    ? (() => {
-        const mins = Math.round((Date.now() - new Date(insight.generated_at).getTime()) / 60000);
-        if (mins < 60) return `${mins}m ago`;
-        if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
-        return `${Math.round(mins / 1440)}d ago`;
-      })()
-    : null;
 
   return (
     <div className="mb-6 rounded-xl border border-neon-green/20 bg-neon-green/5 px-5 py-4">

@@ -6,14 +6,9 @@
  *   4. Gemini external API (last resort)
  */
 
-import {
-  callWorkersAiChat,
-  callNvidiaProxyChat,
-  callOllamaChat,
-  isWorkersAiConfigured,
-  isNvidiaProxyConfigured,
-  isOllamaConfigured,
-} from "@/lib/workers-ai-client";
+import { callWorkersAiChat, isWorkersAiConfigured } from "@/lib/workers-ai-client";
+import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
+import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 import { callGemini, getGeminiApiKey } from "@/lib/gemini-admin";
 
 export function isAdminAiConfigured(): boolean {
