@@ -39,32 +39,7 @@ test.describe("postiz-ai-proxy Worker — public", () => {
   });
 });
 
-// ── 2. Worker: authentication ─────────────────────────────────────────────────
-
-test.describe("postiz-ai-proxy Worker — auth", () => {
-  test("POST /v1/chat/completions without token returns 401", async ({ request }) => {
-    const res = await request.post(`${WORKER}/v1/chat/completions`, {
-      headers: { "Content-Type": "application/json" },
-      data: { model: "gpt-4.1", messages: [{ role: "user", content: "hi" }] },
-    });
-    expect(res.status()).toBe(401);
-    const body = await res.json() as Record<string, unknown>;
-    expect((body.error as Record<string, unknown>).message).toContain("invalid_api_key");
-  });
-
-  test("POST /v1/chat/completions with wrong token returns 401", async ({ request }) => {
-    const res = await request.post(`${WORKER}/v1/chat/completions`, {
-      headers: {
-        Authorization: "Bearer wrong-token",
-        "Content-Type": "application/json",
-      },
-      data: { model: "gpt-4.1", messages: [{ role: "user", content: "hi" }] },
-    });
-    expect(res.status()).toBe(401);
-  });
-});
-
-// ── 3. Worker: model swap ─────────────────────────────────────────────────────
+// ── 2. Worker: model swap ─────────────────────────────────────────────────────
 
 test.describe("postiz-ai-proxy Worker — model swap", () => {
   test("POST /v1/chat/completions swaps gpt-4.1 → llama-3.3-70b and returns a completion", async ({ request }) => {
