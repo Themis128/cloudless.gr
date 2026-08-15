@@ -31,6 +31,37 @@
         "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
       },
       "autoStart": true
+    },
+    "postiz": {
+      "command": "postiz-mcp",
+      "env": {
+        "POSTIZ_URL": "http://100.74.191.58:30500",
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}",
+        "POSTIZ_ENABLE_WRITE": "true",
+        "POSTIZ_ENABLE_DELETE": "false"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "postiz_list_integrations",
+        "postiz_check_integration",
+        "postiz_find_next_slot",
+        "postiz_list_posts",
+        "postiz_get_missing_content",
+        "postiz_get_integration_settings",
+        "postiz_list_notifications",
+        "postiz_get_platform_analytics",
+        "postiz_get_post_analytics",
+        "postiz_list_voices",
+        "postiz_get_provider_settings_schema",
+        "postiz_create_post",
+        "postiz_connect_integration",
+        "postiz_invoke_integration_tool",
+        "postiz_update_post_status",
+        "postiz_update_post_release_id",
+        "postiz_upload_file",
+        "postiz_upload_from_url",
+        "postiz_generate_video"
+      ]
     }
   }
 }
