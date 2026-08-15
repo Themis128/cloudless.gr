@@ -59,13 +59,16 @@ jobs:
 
       - name: Smoke-test AI endpoint
         run: |
-          # Verify the pod can reach the Worker and get a model list back
-          POD=$(kubectl -n postiz get pod -l app=postiz -o jsonpath='{.items[0].metadata.name}')
-          RESULT=$(kubectl -n postiz exec "$POD" -- \
-            curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
+          # Test from the runner (same network as the cluster) — Postiz container
+          # has no curl, so we test the Worker URL directly from the Pi runner.
+          RESULT=$(curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
           echo "$RESULT"
-          echo "$RESULT" | grep -q "llama-3.3-70b" && echo "✓ AI proxy reachable from pod" \
+          echo "$RESULT" | grep -q "llama-3.3-70b" && echo "✓ AI proxy reachable" \
             || (echo "✗ AI proxy not reachable" && exit 1)
+          # Verify the env var landed in the deployment
+          kubectl -n postiz get deployment postiz -o jsonpath='{.spec.template.spec.containers[0].env}' \
+            | grep -q "OPENAI_BASE_URL" && echo "✓ OPENAI_BASE_URL set in deployment" \
+            || (echo "✗ env var missing" && exit 1)
 
       - name: Report result
         if: always()
