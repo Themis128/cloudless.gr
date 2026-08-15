@@ -16,7 +16,7 @@ name: Postiz crons
 on:
   schedule:
   - cron: '*/15 * * * *'       # postiz-sync — every 15 min
-  - cron: 5 * * * *       # postiz-oauth-check — 5 min past the hour
+  - cron: '5 * * * *'     # postiz-oauth-check — 5 min past the hour
   workflow_dispatch:
     inputs:
       target:
