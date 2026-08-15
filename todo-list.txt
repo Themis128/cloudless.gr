@@ -4,3 +4,4 @@
 - [ ] Add bcrypt password hashing to auth (upgrade from PBKDF2)
 - [ ] Optimize resource allocation for existing pods
 - [ ] Clean up AWS resources after final verification
+- [x] Create workflow to apply OMV security updates (apt-listchanges: unzip, zip, util-linux)

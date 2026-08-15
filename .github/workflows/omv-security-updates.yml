@@ -1,0 +1,133 @@
+name: OMV Security Updates
+
+# Checks for and optionally applies Debian security updates on the omv host.
+# Connects via Tailscale + SSH using OMV_SSH_KEY. Following the established
+# repo pattern (see fix-health-check-log.yml, k3s-restart.yml).
+#
+# Trigger: workflow_dispatch with dry-run default.
+# Scheduled: Weekly check on Monday 07:00 UTC.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply security updates (default: dry-run check only)'
+        required: false
+        type: boolean
+        default: false
+      packages:
+        description: 'Comma-separated package list to update (default: all security updates)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 7 * * 1'  # Weekly Monday 07:00 UTC
+
+concurrency:
+  group: omv-security-updates-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  security-updates:
+    name: OMV Security Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_HOST: 100.74.191.58
+      PI_USER: tbaltzakis
+      ISSUE: '382'
+      APPLY_UPDATES: ${{ github.event.inputs.apply == true }}
+      PKG_FILTER: ${{ github.event.inputs.packages || '' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+
+      - name: Wait for tailnet + install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Wait until the Pi is reachable over the tailnet before attempting SSH
+          for i in $(seq 1 30); do
+            if nc -zv -w3 "$PI_HOST" 22 2>/dev/null; then
+              echo "tailnet ready after ${i}×2s"
+              break
+            fi
+            echo "waiting for tailnet... ($i/30)"
+            sleep 2
+          done
+
+      - name: Security update check / apply
+        id: updates
+        run: |
+          set -euo pipefail
+
+          # Upload the script to the remote host
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            scripts/omv-security-update.sh \
+            "$PI_USER@$PI_HOST:/tmp/omv-security-update.sh"
+
+          # Build remote command
+          REMOTE_ARGS=""
+          if [[ "$APPLY_UPDATES" == "true" ]]; then
+            REMOTE_ARGS="--apply"
+            if [[ -n "$PKG_FILTER" ]]; then
+              REMOTE_ARGS="$REMOTE_ARGS --only=$PKG_FILTER"
+            fi
+          fi
+
+          echo "Running remote: bash /tmp/omv-security-update.sh $REMOTE_ARGS"
+
+          # Execute on the omv host
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "chmod +x /tmp/omv-security-update.sh && sudo bash /tmp/omv-security-update.sh $REMOTE_ARGS" \
+            2>&1 | tee /tmp/security-update-output.txt
+
+          # Extract summary values
+          if [[ -s /tmp/security-update-output.txt ]]; then
+            echo "output_captured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "output_captured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post results to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# OMV Security Updates — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            if [[ "$APPLY_UPDATES" == "true" ]]; then
+              echo "**Mode:** APPLY (packages installed)"
+            else
+              echo "**Mode:** CHECK (dry-run, no changes made)"
+            fi
+            [[ -n "$PKG_FILTER" ]] && echo "**Package filter:** $PKG_FILTER"
+            echo ""
+            echo '```'
+            cat /tmp/security-update-output.txt 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } > /tmp/security-update-report.md
+
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+            --body-file /tmp/security-update-report.md
+
+      - name: Cleanup remote temp files
+        if: always()
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "rm -f /tmp/omv-security-update.sh /tmp/apt-update.log /tmp/apt-upgrade.log /tmp/apt-simulate.log /tmp/security-update-summary.txt /tmp/needrestart.log 2>/dev/null || true" \
+            2>/dev/null || true
