@@ -15,7 +15,7 @@ two app-side automations wired in PR R2:
 | `postiz-content-recycler.json` | Schedule (every 3 days) | Fetches published posts → scores by engagement → randomly picks from top 5 → reschedules 6h out. Evergreen content recycling. |
 | `postiz-analytics-digest.json` | Schedule (Monday 09:00) | Weekly digest of Postiz analytics → Slack webhook. Shows post count, impressions, likes, comments, and top 3 performers. Requires `SLACK_WEBHOOK_URL` env var. |
 | `postiz-video-distribute.json` | Webhook (`POST /webhook/postiz-video-distribute`) | Downloads video from URL → uploads to Postiz → fans out to all video-capable channels (X, LinkedIn, FB, IG, TikTok, YT, Threads, Bluesky). |
-| `postiz-ai-multicaption.json` | Webhook (`POST /webhook/postiz-ai-multicaption`) | Blog publish → fetches page → AI generates per-platform captions (X: 280char punchy, LinkedIn: professional 2-3 para, IG: emoji + hashtags, etc.) → creates draft posts per channel. Default: NVIDIA NIM free endpoint (`meta/llama-3.3-70b-instruct`). Requires `NVIDIA_API_KEY` env var. |
+| `postiz-ai-multicaption.json` | Webhook (`POST /webhook/postiz-ai-multicaption`) | Blog publish → fetches page → AI generates per-platform captions (X: 280char punchy, LinkedIn: professional 2-3 para, IG: emoji + hashtags, etc.) → creates draft posts per channel. Default: NVIDIA NIM free endpoint (`nvidia/nemotron-3.5-lightning-30b-a3b`). Requires `NVIDIA_API_KEY` env var. |
 
 ## Operator bootstrap (one-time per workflow)
 
@@ -112,7 +112,7 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 
 1. Import `postiz-ai-multicaption.json`.
 2. Set `NVIDIA_API_KEY` env var on the n8n deployment (free key from [build.nvidia.com](https://build.nvidia.com)).
-3. Optionally set `AI_MODEL` (default: `meta/llama-3.3-70b-instruct`) and `AI_API_URL` (default: `https://integrate.api.nvidia.com/v1/chat/completions`). Any OpenAI-compatible endpoint works.
+3. Optionally set `AI_MODEL` (default: `nvidia/nemotron-3.5-lightning-30b-a3b`) and `AI_API_URL` (default: `https://integrate.api.nvidia.com/v1/chat/completions`). Any OpenAI-compatible endpoint works.
 4. Trigger via webhook:
    ```bash
    curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-ai-multicaption \
