@@ -151,7 +151,7 @@ test.describe("POST /api/admin/ai/copy", () => {
     expect(AI_OK).toContain(res.status());
     if (res.status() === 200) {
       const body = await expectJson(res);
-      expect(typeof body.text ?? body.result ?? body.copy).toBe("string");
+      expect(typeof (body.text ?? body.result ?? body.copy)).toBe("string");
     }
   });
 

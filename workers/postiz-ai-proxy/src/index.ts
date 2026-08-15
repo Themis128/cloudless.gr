@@ -141,13 +141,14 @@ export default {
       const wantThinking = url.searchParams.get("thinking") === "1";
 
       if (wantThinking) {
-        // Chatbot: nemotron-3.5-lightning with reasoning budget
+        // Chatbot: nemotron-3.5-lightning with extended thinking.
+        // NVIDIA's API does NOT support the OpenAI `extra_body` field
+        // (returns 400 "Unsupported parameter(s): extra_body"). Use
+        // top-level `reasoning_budget` instead — NVIDIA accepts this for
+        // extended-thinking models like Nemotron-3.5 Lightning.
         body.model = env.NVIDIA_MODEL;
         body.stream = false;
-        body.extra_body = {
-          chat_template_kwargs: { enable_thinking: true },
-          reasoning_budget: 4096,
-        };
+        body.reasoning_budget = 4096;
       } else {
         // Postiz: swap hardcoded gpt-4.1 for the caption model (no thinking)
         body.model = env.NVIDIA_POSTIZ_MODEL;
