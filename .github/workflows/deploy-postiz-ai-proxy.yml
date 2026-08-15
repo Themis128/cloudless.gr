@@ -40,12 +40,9 @@ jobs:
         run: |
           RESULT=$(curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
           echo "$RESULT"
-          echo "$RESULT" | grep -q "nemotron-3.5-lightning" \
-            && echo "✓ chatbot model present" \
-            || (echo "✗ chatbot model missing" && exit 1)
-          echo "$RESULT" | grep -q "llama-3.3-70b" \
-            && echo "✓ postiz model present" \
-            || (echo "✗ postiz model missing" && exit 1)
+          echo "$RESULT" | grep -q "nemotron-3-super-120b" \
+            && echo "✓ model present" \
+            || (echo "✗ model missing" && exit 1)
 
       - name: Report result
         if: always()
