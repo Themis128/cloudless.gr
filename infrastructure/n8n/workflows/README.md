@@ -11,6 +11,9 @@ two app-side automations wired in PR R2:
 | `newsletter-nurture.json` | `/api/subscribe` → `POST /api/webhooks/n8n/trigger` (name=`newsletter-nurture`) | Tags the new EspoCRM contact with `newsletter_signup_<source>`, adds them to the `Newsletter Nurture` sequence in EspoCRM. |
 | `postiz-rss-multichannel.json` | Schedule (every 6h) | Reads RSS → builds a caption → lists Postiz channels in-cluster → `POST /api/public/v1/posts` to matching platforms. No Next.js involvement. |
 | `postiz-utm-guard.json` | Postiz webhook (or manual) | Ensures outbound social URLs carry UTM params before / alongside Postiz publish. Pair with app webhook `https://cloudless.gr/api/webhooks/postiz?secret=…`. |
+| `postiz-blog-ai-caption.json` | Webhook (`POST /webhook/postiz-blog-share`) | Receives blog publish event → fetches page → extracts text → lists Postiz channels → creates a draft post with UTM-tagged link. Wire from AppFlowy publish hook or manually. |
+| `postiz-content-recycler.json` | Schedule (every 3 days) | Fetches published posts → scores by engagement → randomly picks from top 5 → reschedules 6h out. Evergreen content recycling. |
+| `postiz-analytics-digest.json` | Schedule (Monday 09:00) | Weekly digest of Postiz analytics → Slack webhook. Shows post count, impressions, likes, comments, and top 3 performers. Requires `SLACK_WEBHOOK_URL` env var. |
 
 ## Operator bootstrap (one-time per workflow)
 
@@ -67,6 +70,51 @@ want enrichment back.)_
 Optional: install the community node `n8n-nodes-postiz` (Settings → Community Nodes) and
 swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/api`
 (e.g. `http://postiz.postiz.svc.cluster.local:5000/api`).
+
+### Blog AI caption (webhook-triggered)
+
+1. Import `postiz-blog-ai-caption.json`.
+2. Copy the production webhook URL (`/webhook/postiz-blog-share`).
+3. Wire it as the target in the AppFlowy publish hook or call manually:
+   ```bash
+   curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-blog-share \
+     -H 'Content-Type: application/json' \
+     -d '{"title":"My Post","url":"https://cloudless.gr/en/blog/my-post"}'
+   ```
+4. Posts are created as **drafts** — review in Postiz UI before publishing.
+
+### Content recycler
+
+1. Import `postiz-content-recycler.json`. Activate.
+2. Runs every 3 days. Picks a random top-5 performer and reschedules it 6h out.
+3. Requires at least one published post with analytics data to function.
+
+### Weekly analytics digest
+
+1. Import `postiz-analytics-digest.json`.
+2. Set `SLACK_WEBHOOK_URL` env var in the n8n deployment (or as a workflow variable).
+3. Fires every Monday at 09:00 — posts a summary of the past 7 days to Slack.
+
+## Bulk CLI import (from omv)
+
+To import all Postiz workflows at once via the n8n CLI:
+
+```bash
+N8N_POD=$(kubectl get pods -n n8n -l app=n8n -o jsonpath='{.items[0].metadata.name}')
+for f in postiz-rss-multichannel postiz-blog-ai-caption postiz-content-recycler postiz-analytics-digest; do
+  # Add a UUID id field (required by n8n import) and strip tags
+  python3 -c "
+import json, uuid, sys
+wf = json.load(sys.stdin)
+wf['id'] = str(uuid.uuid4())
+wf.pop('tags', None)
+json.dump(wf, sys.stdout)
+" < "infrastructure/n8n/workflows/${f}.json" > "/tmp/${f}-import.json"
+  kubectl cp "/tmp/${f}-import.json" "n8n/${N8N_POD}:/tmp/${f}.json"
+  kubectl exec -n n8n "$N8N_POD" -- n8n import:workflow --input="/tmp/${f}.json"
+  echo "Imported ${f}"
+done
+```
 
 ## Verify
 

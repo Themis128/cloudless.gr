@@ -1,0 +1,71 @@
+{
+  "name": "Postiz — Weekly analytics digest → Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }]
+        }
+      },
+      "name": "Monday 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts?status=published&limit=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Fetch all published",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst posts = Array.isArray(raw) ? raw : (raw.posts || []);\nconst weekAgo = new Date(Date.now() - 7 * 86400000);\nconst recent = posts.filter(p => new Date(p.publishDate || p.createdAt) >= weekAgo);\nlet totalLikes = 0, totalComments = 0, totalImpressions = 0;\nfor (const p of recent) {\n  if (p.analytics) {\n    totalLikes += p.analytics.likes || 0;\n    totalComments += p.analytics.comments || 0;\n    totalImpressions += p.analytics.impressions || 0;\n  }\n}\nconst top = recent\n  .filter(p => p.analytics)\n  .sort((a, b) => ((b.analytics.likes||0)*3+(b.analytics.impressions||0)*0.01) - ((a.analytics.likes||0)*3+(a.analytics.impressions||0)*0.01))\n  .slice(0, 3)\n  .map(p => ({ content: (p.posts?.[0]?.value?.[0]?.content || '').substring(0, 80), likes: p.analytics.likes || 0, impressions: p.analytics.impressions || 0 }));\nconst topText = top.map((t,i) => `${i+1}. ${t.content}... (${t.likes} likes, ${t.impressions} imp)`).join('\\n');\nreturn [{ json: {\n  postCount: recent.length,\n  totalLikes, totalComments, totalImpressions,\n  topText: topText || 'No analytics data yet',\n  hasData: recent.length > 0\n} }];"
+      },
+      "name": "Compute digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '*Postiz Weekly Digest*\\n\\nPosts published: ' + $json.postCount + '\\nTotal impressions: ' + $json.totalImpressions + '\\nTotal likes: ' + $json.totalLikes + '\\nTotal comments: ' + $json.totalComments + '\\n\\n*Top performers:*\\n' + $json.topText }) }}",
+        "options": {}
+      },
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300]
+    }
+  ],
+  "connections": {
+    "Monday 09:00": {
+      "main": [[{ "node": "Fetch all published", "type": "main", "index": 0 }]]
+    },
+    "Fetch all published": {
+      "main": [[{ "node": "Compute digest", "type": "main", "index": 0 }]]
+    },
+    "Compute digest": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
