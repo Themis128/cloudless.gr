@@ -14,6 +14,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface SentryIssue {
   id: string;
@@ -160,6 +161,8 @@ export default function AdminErrorsPage() {
           </button>
         </div>
       </div>
+
+      <InsightPanel domain="ops_errors" />
 
       {/* Stats Bar */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
