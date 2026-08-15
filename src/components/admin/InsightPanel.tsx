@@ -9,7 +9,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import type { DatalakeInsight } from "@/lib/datalake-insights";
 
 interface Props {
-  domain: "seo" | "revenue" | "crm_funnel" | "ads" | "ops_errors" | "executive";
+  domain: "seo" | "revenue" | "crm_funnel" | "ads" | "ops_errors" | "executive" | "orchestration";
 }
 
 export function InsightPanel({ domain }: Props) {

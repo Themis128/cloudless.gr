@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
 import type { AdminInvoiceSummary } from "@/app/api/admin/invoices/route";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 type StatusFilter = "all" | "draft" | "open" | "paid" | "void" | "uncollectible";
 
@@ -130,6 +131,8 @@ export default function InvoicesPage() {
           Agency one-off invoices via Stripe Invoicing. Stripe is the ledger — no custom finance-db.
         </p>
       </div>
+
+      <InsightPanel domain="revenue" />
 
       <form
         onSubmit={createDraft}
