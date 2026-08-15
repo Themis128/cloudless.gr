@@ -62,11 +62,16 @@ X_API_SECRET="$(resolve X_API_SECRET X_API_SECRET)"
 TIKTOK_CLIENT_ID="$(resolve TIKTOK_CLIENT_ID TIKTOK_CLIENT_ID TIKTOK_APP_ID tiktok-client-key)"
 TIKTOK_CLIENT_SECRET="$(resolve TIKTOK_CLIENT_SECRET TIKTOK_CLIENT_SECRET TIKTOK_APP_SECRET tiktok-client-secret)"
 POSTIZ_API_KEY="$(resolve POSTIZ_API_KEY POSTIZ_API_KEY)"
+POSTIZ_AI_PROXY_TOKEN="$(resolve POSTIZ_AI_PROXY_TOKEN POSTIZ_AI_PROXY_TOKEN)"
 
-# Preserve existing POSTIZ_API_KEY from the live secret if SSM/env missing.
+# Preserve existing keys from the live secret if SSM/env missing.
 if [[ -z "${POSTIZ_API_KEY}" ]]; then
   POSTIZ_API_KEY="$(kubectl -n "${NAMESPACE}" get secret "${SECRET_NAME}" \
     -o jsonpath='{.data.POSTIZ_API_KEY}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+fi
+if [[ -z "${POSTIZ_AI_PROXY_TOKEN}" ]]; then
+  POSTIZ_AI_PROXY_TOKEN="$(kubectl -n "${NAMESPACE}" get secret "${SECRET_NAME}" \
+    -o jsonpath='{.data.POSTIZ_AI_PROXY_TOKEN}' 2>/dev/null | base64 -d 2>/dev/null || true)"
 fi
 
 args=()
@@ -91,6 +96,7 @@ add X_API_SECRET "${X_API_SECRET}"
 add TIKTOK_CLIENT_ID "${TIKTOK_CLIENT_ID}"
 add TIKTOK_CLIENT_SECRET "${TIKTOK_CLIENT_SECRET}"
 add POSTIZ_API_KEY "${POSTIZ_API_KEY}"
+add POSTIZ_AI_PROXY_TOKEN "${POSTIZ_AI_PROXY_TOKEN}"
 
 if [[ ${#found[@]} -eq 0 ]]; then
   echo "ERROR: no provider keys resolved." >&2
@@ -109,7 +115,7 @@ kubectl -n "${NAMESPACE}" rollout status "deploy/postiz" --timeout=180s
 
 echo "Verify env keys present in pod (names only):"
 kubectl -n "${NAMESPACE}" exec deploy/postiz -- sh -c \
-  'for k in FACEBOOK_APP_ID FACEBOOK_APP_SECRET LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET X_API_KEY X_API_SECRET TIKTOK_CLIENT_ID TIKTOK_CLIENT_SECRET POSTIZ_API_KEY; do
+  'for k in FACEBOOK_APP_ID FACEBOOK_APP_SECRET LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET X_API_KEY X_API_SECRET TIKTOK_CLIENT_ID TIKTOK_CLIENT_SECRET POSTIZ_API_KEY POSTIZ_AI_PROXY_TOKEN; do
      if [ -n "$(printenv "$k")" ]; then echo "  OK $k"; else echo "  MISSING $k"; fi
    done'
 
