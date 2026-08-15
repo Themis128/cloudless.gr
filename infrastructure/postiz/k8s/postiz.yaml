@@ -247,9 +247,9 @@ spec:
             # list will be fetched by Postiz; everything else is rejected.
         - name: RESTRICT_UPLOAD_DOMAINS
           value: cloudless.gr,uploads.postiz.cloudless.gr
-        # AI caption generation — routed through postiz-ai-proxy Cloudflare Worker
-        # which swaps the hardcoded "gpt-4.1" model for meta/llama-3.3-70b-instruct
-        # on NVIDIA's free-tier API. NVIDIA key lives as a Worker secret only.
+        # AI — routed through postiz-ai-proxy Cloudflare Worker which swaps
+        # Postiz's hardcoded "gpt-4.1" for nvidia/nemotron-3-super-120b-a12b
+        # on NVIDIA's free-tier NIM API. NVIDIA key lives as a Worker secret.
         # PROXY_TOKEN must match the secret set via:
         #   wrangler secret put PROXY_TOKEN --config workers/postiz-ai-proxy/wrangler.jsonc
         - name: OPENAI_BASE_URL

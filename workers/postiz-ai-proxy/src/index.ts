@@ -1,16 +1,16 @@
 /**
  * postiz-ai-proxy — OpenAI-compatible proxy for two use cases:
  *
- *   1. Postiz caption generation (POST /v1/chat/completions, no thinking)
+ *   1. Postiz AI (POST /v1/chat/completions — captions, copilot, content gen)
  *      Swaps Postiz's hardcoded "gpt-4.1" for NVIDIA_POSTIZ_MODEL.
+ *      Supports both streaming (SSE passthrough) and non-streaming.
  *
  *   2. Cloudless chatbot (POST /v1/chat/completions?thinking=1)
- *      Uses NVIDIA_MODEL (nemotron-3.5-lightning-30b-a3b) with extended
- *      thinking enabled. reasoning_content is stripped before returning
- *      so visitors never see the internal monologue.
+ *      Uses NVIDIA_MODEL with extended thinking. Forces non-streaming so
+ *      reasoning_content can be stripped before returning.
  *
  * Other handled paths:
- *   POST /v1/images/generations — 501 (NVIDIA has no DALL-E equivalent)
+ *   POST /v1/images/generations — 501 (NVIDIA NIM hosted API has no DALL-E)
  *   GET  /v1/models             — synthetic list so Postiz health checks pass
  *   *                           — 404
  *
@@ -22,14 +22,14 @@
 interface Env {
   NVIDIA_API_KEY: string;
   NVIDIA_BASE_URL: string;
-  /** Chatbot model — nemotron-3.5-lightning-30b-a3b (with thinking) */
+  /** Chatbot model — nemotron-3-super-120b-a12b (with thinking) */
   NVIDIA_MODEL: string;
-  /** Postiz caption model — llama-3.3-70b-instruct (no thinking) */
+  /** Postiz caption model — nemotron-3-super-120b-a12b (no thinking) */
   NVIDIA_POSTIZ_MODEL: string;
   PROXY_TOKEN: string;
 }
 
-const CORS_HEADERS = {
+const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type",
@@ -53,9 +53,9 @@ function verifyToken(request: Request, env: Env): boolean {
 }
 
 /**
- * Strip reasoning_content from an OpenAI-compatible non-streaming response.
- * nemotron-3.5 returns both fields at the top level of message when thinking
- * is enabled; visitors should only see content.
+ * Strip reasoning_content from a non-streaming response.
+ * NVIDIA models return both reasoning_content and content; callers
+ * should only see content.
  */
 function stripReasoningContent(responseBody: unknown): unknown {
   if (
@@ -79,6 +79,60 @@ function stripReasoningContent(responseBody: unknown): unknown {
       return { ...c, message: rest };
     }),
   };
+}
+
+/**
+ * Transform an SSE stream to strip reasoning_content from delta chunks.
+ * Each SSE line `data: {...}` may contain `choices[].delta.reasoning_content`.
+ */
+function stripReasoningFromStream(readable: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+
+  return new ReadableStream({
+    async start(controller) {
+      const reader = readable.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (buffer.length > 0) {
+              controller.enqueue(encoder.encode(buffer));
+            }
+            controller.close();
+            return;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ") && line !== "data: [DONE]") {
+              try {
+                const chunk = JSON.parse(line.slice(6));
+                if (chunk.choices) {
+                  for (const c of chunk.choices) {
+                    if (c.delta) {
+                      delete c.delta.reasoning_content;
+                    }
+                  }
+                }
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n`));
+                continue;
+              } catch {
+                // not valid JSON — pass through as-is
+              }
+            }
+            controller.enqueue(encoder.encode(line + "\n"));
+          }
+        }
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
 }
 
 export default {
@@ -116,7 +170,7 @@ export default {
       return unauthorized();
     }
 
-    // POST /v1/images/generations — NVIDIA has no DALL-E; return 501
+    // POST /v1/images/generations — NVIDIA hosted API has no DALL-E
     if (request.method === "POST" && path === "/images/generations") {
       return json(
         {
@@ -137,20 +191,14 @@ export default {
         return json({ error: { message: "invalid_json", type: "invalid_request_error" } }, 400);
       }
 
-      // ?thinking=1 → chatbot path: use nemotron with extended thinking
       const wantThinking = url.searchParams.get("thinking") === "1";
+      const wantStream = body.stream === true;
 
       if (wantThinking) {
-        // Chatbot: nemotron-3.5-lightning with extended thinking.
-        // NVIDIA's API does NOT support the OpenAI `extra_body` field
-        // (returns 400 "Unsupported parameter(s): extra_body"). Use
-        // top-level `reasoning_budget` instead — NVIDIA accepts this for
-        // extended-thinking models like Nemotron-3.5 Lightning.
         body.model = env.NVIDIA_MODEL;
         body.stream = false;
         body.reasoning_budget = 4096;
       } else {
-        // Postiz: swap hardcoded gpt-4.1 for the caption model (no thinking)
         body.model = env.NVIDIA_POSTIZ_MODEL;
       }
 
@@ -171,9 +219,23 @@ export default {
         });
       }
 
-      const responseBody = await upstream.json();
+      // Streaming: pass the SSE stream through, stripping reasoning_content
+      if (wantStream && !wantThinking && upstream.body) {
+        const cleaned = stripReasoningFromStream(upstream.body);
+        return new Response(cleaned, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+            ...CORS_HEADERS,
+          },
+        });
+      }
 
-      const cleaned = wantThinking ? stripReasoningContent(responseBody) : responseBody;
+      // Non-streaming: parse, strip reasoning_content, return
+      const responseBody = await upstream.json();
+      const cleaned = stripReasoningContent(responseBody);
 
       return new Response(JSON.stringify(cleaned), {
         status: 200,
