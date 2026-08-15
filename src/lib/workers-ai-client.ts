@@ -11,7 +11,10 @@ import { recordAdminAiCall } from "@/lib/admin-ai-usage";
 const DEFAULT_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 export function isWorkersAiConfigured(): boolean {
-  return Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN);
+  return Boolean(
+    process.env.CLOUDFLARE_ACCOUNT_ID &&
+    (process.env.CLOUDFLARE_WORKERS_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN)
+  );
 }
 
 export function isAiGatewayConfigured(): boolean {
@@ -24,7 +27,10 @@ export function isAiGatewayConfigured(): boolean {
 
 export function requireWorkersAiConfig(): { accountId: string; apiToken: string } {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  // CLOUDFLARE_WORKERS_AI_TOKEN is a scoped Workers AI-only token (preferred).
+  // Falls back to the broad CLOUDFLARE_API_TOKEN if only that is set.
+  const apiToken =
+    process.env.CLOUDFLARE_WORKERS_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !apiToken) {
     const err = new Error("Workers AI not configured");
     err.name = "UnauthorizedException";
