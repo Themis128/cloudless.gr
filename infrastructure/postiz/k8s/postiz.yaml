@@ -178,12 +178,10 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: postiz
-          # Pinned to v2.11.2 — the last release before Postiz made the Temporal
-          # workflow server mandatory (v2.12.0+ needs temporal + its own DB +
-          # optional Elasticsearch, too heavy for the Pi cluster). Upgrading past
-          # this tag requires deploying Temporal alongside; see
-          # https://docs.postiz.com/installation/migration
-        image: ghcr.io/gitroomhq/postiz-app:v2.11.2
+          # Updated to v2.23.0 (2026-08-04 release) — runs with nginx :5000,
+          # frontend next-server :4200, and backend node :3002 inside one
+          # container (no separate Temporal service needed in this build).
+        image: ghcr.io/gitroomhq/postiz-app:v2.23.0
         ports:
         - containerPort: 5000
           # Social-provider OAuth app credentials (FACEBOOK_APP_ID/SECRET,
@@ -208,7 +206,7 @@ spec:
             # inside the container — without this the frontend fetches
             # "undefined/auth/..." and renders errors.
         - name: BACKEND_INTERNAL_URL
-          value: http://localhost:3000
+          value: http://localhost:3002
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
