@@ -80,10 +80,6 @@ interface AppConfig {
   NEWSLETTER_SLACK_BOT_TOKEN: string;
   NEWSLETTER_SLACK_SIGNING_SECRET: string;
   NEWSLETTER_SLACK_CHANNEL_ID: string;
-  /** @deprecated HubSpot decommissioned — use ESPOCRM_*. */
-  HUBSPOT_API_KEY: string;
-  /** @deprecated HubSpot decommissioned — use ESPOCRM_*. */
-  HUBSPOT_CLIENT_SECRET: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -194,8 +190,6 @@ function buildConfigFromEnv(): AppConfig {
     NEWSLETTER_SLACK_BOT_TOKEN: process.env.NEWSLETTER_SLACK_BOT_TOKEN || "",
     NEWSLETTER_SLACK_SIGNING_SECRET: process.env.NEWSLETTER_SLACK_SIGNING_SECRET || "",
     NEWSLETTER_SLACK_CHANNEL_ID: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "",
-    HUBSPOT_API_KEY: "",
-    HUBSPOT_CLIENT_SECRET: "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
