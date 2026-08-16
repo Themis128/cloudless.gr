@@ -176,11 +176,11 @@ export default function SeoAnalyticsPage() {
         <div className="space-y-10">
           {snapshot && (
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-              <MetricCard label="Organic Clicks" value={snapshot.clicks.toLocaleString()} />
-              <MetricCard label="Impressions" value={snapshot.impressions.toLocaleString()} />
-              <MetricCard label="CTR" value={`${snapshot.ctr}%`} />
-              <MetricCard label="Avg Position" value={snapshot.avgPosition.toFixed(1)} />
-              <MetricCard label="Keywords" value={snapshot.organicKeywords.toLocaleString()} />
+              <MetricCard label="Organic Clicks" value={(snapshot.clicks ?? 0).toLocaleString()} />
+              <MetricCard label="Impressions" value={(snapshot.impressions ?? 0).toLocaleString()} />
+              <MetricCard label="CTR" value={`${snapshot.ctr ?? 0}%`} />
+              <MetricCard label="Avg Position" value={(snapshot.avgPosition ?? 0).toFixed(1)} />
+              <MetricCard label="Keywords" value={(snapshot.organicKeywords ?? 0).toLocaleString()} />
             </div>
           )}
 
@@ -215,10 +215,10 @@ export default function SeoAnalyticsPage() {
               empty="No keyword data."
               rows={keywords.map((k) => [
                 k.keyword,
-                k.clicks.toLocaleString(),
-                k.impressions.toLocaleString(),
-                `${k.ctr}%`,
-                k.position.toFixed(1),
+                (k.clicks ?? 0).toLocaleString(),
+                (k.impressions ?? 0).toLocaleString(),
+                `${k.ctr ?? 0}%`,
+                (k.position ?? 0).toFixed(1),
               ])}
             />
           </section>
@@ -230,13 +230,16 @@ export default function SeoAnalyticsPage() {
             <SeoTable
               head={["Page", "Clicks", "Impressions", "CTR", "Position"]}
               empty="No page gold yet — run gsc-to-r2 + materialize."
-              rows={pages.map((r) => [
-                r.page ?? "—",
-                r.clicks.toLocaleString(),
-                r.impressions.toLocaleString(),
-                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
-                (r.position ?? r.avgPosition ?? 0).toFixed(1),
-              ])}
+              rows={pages.map((r) => {
+                const ctr = r.ctr ?? 0;
+                return [
+                  r.page ?? "—",
+                  (r.clicks ?? 0).toLocaleString(),
+                  (r.impressions ?? 0).toLocaleString(),
+                  `${(ctr <= 1 ? ctr * 100 : ctr).toFixed(1)}%`,
+                  (r.position ?? r.avgPosition ?? 0).toFixed(1),
+                ];
+              })}
             />
           </section>
 
@@ -247,13 +250,16 @@ export default function SeoAnalyticsPage() {
             <SeoTable
               head={["Country", "Clicks", "Impressions", "CTR", "Avg Pos"]}
               empty="No country gold yet — next gsc-to-r2 run writes countries.parquet."
-              rows={countries.map((r) => [
-                r.country ?? "—",
-                r.clicks.toLocaleString(),
-                r.impressions.toLocaleString(),
-                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
-                (r.avgPosition ?? r.position ?? 0).toFixed(1),
-              ])}
+              rows={countries.map((r) => {
+                const ctr = r.ctr ?? 0;
+                return [
+                  r.country ?? "—",
+                  (r.clicks ?? 0).toLocaleString(),
+                  (r.impressions ?? 0).toLocaleString(),
+                  `${(ctr <= 1 ? ctr * 100 : ctr).toFixed(1)}%`,
+                  (r.avgPosition ?? r.position ?? 0).toFixed(1),
+                ];
+              })}
             />
           </section>
 
@@ -264,13 +270,16 @@ export default function SeoAnalyticsPage() {
             <SeoTable
               head={["Device", "Clicks", "Impressions", "CTR", "Avg Pos"]}
               empty="No device gold yet — next gsc-to-r2 run writes devices.parquet."
-              rows={devices.map((r) => [
-                r.device ?? "—",
-                r.clicks.toLocaleString(),
-                r.impressions.toLocaleString(),
-                `${(r.ctr <= 1 ? r.ctr * 100 : r.ctr).toFixed(1)}%`,
-                (r.avgPosition ?? r.position ?? 0).toFixed(1),
-              ])}
+              rows={devices.map((r) => {
+                const ctr = r.ctr ?? 0;
+                return [
+                  r.device ?? "—",
+                  (r.clicks ?? 0).toLocaleString(),
+                  (r.impressions ?? 0).toLocaleString(),
+                  `${(ctr <= 1 ? ctr * 100 : ctr).toFixed(1)}%`,
+                  (r.avgPosition ?? r.position ?? 0).toFixed(1),
+                ];
+              })}
             />
           </section>
 
@@ -294,14 +303,14 @@ export default function SeoAnalyticsPage() {
                 empty="No archived snapshots yet."
                 rows={archive.map((a) => [
                   a.week,
-                  a.clicks.toLocaleString(),
-                  a.impressions.toLocaleString(),
-                  `${a.ctrPct}%`,
-                  a.avgPosition.toFixed(1),
-                  a.keywords.toLocaleString(),
-                  `${a.mobilePct}%`,
+                  (a.clicks ?? 0).toLocaleString(),
+                  (a.impressions ?? 0).toLocaleString(),
+                  `${a.ctrPct ?? 0}%`,
+                  (a.avgPosition ?? 0).toFixed(1),
+                  (a.keywords ?? 0).toLocaleString(),
+                  `${a.mobilePct ?? 0}%`,
                   a.topCountry || "—",
-                  a.ctrOpportunities.toLocaleString(),
+                  (a.ctrOpportunities ?? 0).toLocaleString(),
                 ])}
               />
             </section>
