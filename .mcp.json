@@ -173,6 +173,22 @@
         "get_file_info",
         "list_allowed_directories"
       ]
+    },
+    "openshorts-mcp": {
+      "command": "npx",
+      "args": ["-y", "@mutonby/openshorts-mcp"],
+      "env": {
+        "OPENSHORTS_API_URL": "http://cluster.local"
+      },
+      "disabled": false
+    },
+    "postiz-mcp": {
+      "command": "npx",
+      "args": ["-y", "@antoniolg/postiz-mcp"],
+      "env": {
+        "POSTIZ_API_URL": "http://cluster.local"
+      },
+      "disabled": false
     }
   }
 }

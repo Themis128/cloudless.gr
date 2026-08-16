@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openshorts-secrets
+  namespace: default
+type: Opaque
+stringData:
+  GEMINI_API_KEY: "your_gemini_api_key_here"
+  ELEVENLABS_API_KEY: "your_elevenlabs_api_key_here"
+  FAL_AI_API_KEY: "your_fal_ai_api_key_here"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openshorts
+  namespace: default
+  labels:
+    app: openshorts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openshorts
+  template:
+    metadata:
+      labels:
+        app: openshorts
+    spec:
+       containers:
+         - name: openshorts-app
+           image: mutonby/openshorts:latest
+           imagePullPolicy: IfNotPresent
+           ports:
+           - containerPort: 3000
+             name: http
+           env:
+           - name: GEMINI_API_KEY
+             valueFrom:
+               secretKeyRef:
+                 name: openshorts-secrets
+                 key: GEMINI_API_KEY
+           - name: ELEVENLABS_API_KEY
+             valueFrom:
+               secretKeyRef:
+                 name: openshorts-secrets
+                 key: ELEVENLABS_API_KEY
+           - name: FAL_AI_API_KEY
+             valueFrom:
+               secretKeyRef:
+                 name: openshorts-secrets
+                 key: FAL_AI_API_KEY
+           resources:
+             limits:
+               memory: 2Gi
+               cpu: "2"
+             requests:
+               memory: 512Mi
+               cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openshorts-service
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: openshorts
