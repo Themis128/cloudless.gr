@@ -8,12 +8,14 @@
 # SafeDeploy watchdog — install-safedeploy-watchdog.sh populates that file).
 #
 # Behaviour:
-#   root ≥ 85%  → trigger cleanup (max once per 6h), then re-check
-#   root ≥ 90%  → alert via ntfy + Slack + Resend email (max once per 1h)
-#   sda1 ≥ 80%  → warning alert
-#   sda1 ≥ 90%  → critical alert
-#   sdb1 ≥ 80%  → warning alert
-#   sdb1 ≥ 92%  → critical alert (user data; less urgent)
+#   root crosses 50% ↑  → immediate cleanup (edge-triggered, no cooldown)
+#   root ≥ 50% + 3h     → retry cleanup if still above threshold
+#   root ≥ 85%          → warning alert (max once per 1h)
+#   root ≥ 90%          → critical alert
+#   sda1 ≥ 80%          → warning alert
+#   sda1 ≥ 90%          → critical alert
+#   sdb1 ≥ 80%          → warning alert
+#   sdb1 ≥ 92%          → critical alert (user data; less urgent)
 #
 # Install: sudo bash infrastructure/omv/install-omv-main-monitor.sh
 
@@ -67,13 +69,28 @@ check_disk() {
   fi
 }
 
-# ── Root: auto-trigger cleanup at 50% (proactive), alert at 85%/90% ─────────
+# ── Root: edge-triggered cleanup at 50%, alert at 85%/90% ───────────────────
 ROOT_PCT=$(_pct /)
-if [ "$ROOT_PCT" -ge 50 ] && [ "$(_stamp_age cleanup-root)" -ge "$COOLDOWN_CLEANUP" ]; then
-  log "Root ${ROOT_PCT}% ≥ 50% — triggering proactive cleanup (next allowed in 3h)"
+PREV_PCT_FILE="$STAMP_DIR/root-pct-prev"
+PREV_PCT=$(cat "$PREV_PCT_FILE" 2>/dev/null || echo 0)
+printf '%s\n' "$ROOT_PCT" > "$PREV_PCT_FILE"
+
+# Cleanup fires immediately when root crosses the 50% threshold going up.
+# If cleanup didn't drop below 50%, the 3h cooldown allows a retry.
+RUN_CLEANUP=0
+if [ "$ROOT_PCT" -ge 50 ]; then
+  if [ "${PREV_PCT:-0}" -lt 50 ]; then
+    log "Root crossed 50% (${PREV_PCT}% → ${ROOT_PCT}%) — immediate cleanup"
+    RUN_CLEANUP=1
+  elif [ "$(_stamp_age cleanup-root)" -ge "$COOLDOWN_CLEANUP" ]; then
+    log "Root ${ROOT_PCT}% ≥ 50% — periodic cleanup (cooldown elapsed)"
+    RUN_CLEANUP=1
+  fi
+fi
+
+if [ "$RUN_CLEANUP" = "1" ]; then
   _stamp_set cleanup-root
   bash "$CLEANUP_SCRIPT" >> /var/log/cloudless-cleanup.log 2>&1 || true
-  # Re-read after cleanup
   ROOT_PCT=$(_pct /)
   log "Root after cleanup: ${ROOT_PCT}%"
 fi
