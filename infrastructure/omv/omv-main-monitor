@@ -23,7 +23,7 @@ ALERT_SCRIPT=/usr/local/bin/omv-main-alert
 CLEANUP_SCRIPT=/usr/local/sbin/cloudless-cleanup.sh
 STAMP_DIR=/run/omv-monitor
 COOLDOWN_ALERT=3600    # seconds between repeated alerts for the same device
-COOLDOWN_CLEANUP=21600 # seconds between auto-triggered cleanups (6h)
+COOLDOWN_CLEANUP=10800 # seconds between auto-triggered cleanups (3h)
 
 SDB1_MOUNT=/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
 
@@ -67,10 +67,10 @@ check_disk() {
   fi
 }
 
-# ── Root: auto-trigger cleanup at 85% before alerting at 90% ────────────────
+# ── Root: auto-trigger cleanup at 50% (proactive), alert at 85%/90% ─────────
 ROOT_PCT=$(_pct /)
-if [ "$ROOT_PCT" -ge 85 ] && [ "$(_stamp_age cleanup-root)" -ge "$COOLDOWN_CLEANUP" ]; then
-  log "Root ${ROOT_PCT}% ≥ 85% — triggering cleanup (next allowed in 6h)"
+if [ "$ROOT_PCT" -ge 50 ] && [ "$(_stamp_age cleanup-root)" -ge "$COOLDOWN_CLEANUP" ]; then
+  log "Root ${ROOT_PCT}% ≥ 50% — triggering proactive cleanup (next allowed in 3h)"
   _stamp_set cleanup-root
   bash "$CLEANUP_SCRIPT" >> /var/log/cloudless-cleanup.log 2>&1 || true
   # Re-read after cleanup
