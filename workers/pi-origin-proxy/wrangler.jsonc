@@ -30,6 +30,12 @@
   "triggers": {
     "crons": [],
   },
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "cloudless_analytics",
+    },
+  ],
   "vars": {
     "PI_ORIGIN_HOST": "pi-origin.cloudless.gr",
     "PI_TIMEOUT_MS": "30000",

@@ -29,6 +29,14 @@ export async function queryAnalyticsEngineSql(
     }
   );
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      `Analytics Engine SQL returned ${res.status} (${contentType || "no content-type"}) — ` +
+        "check that CLOUDFLARE_API_TOKEN has Analytics:Read scope"
+    );
+  }
+
   const data = (await res.json()) as {
     data?: Record<string, unknown>[];
     meta?: unknown;
@@ -49,7 +57,9 @@ SELECT
   blob1 AS path,
   double1 AS latency_ms,
   blob2 AS status,
-  _sample_interval
+  blob3 AS method,
+  _sample_interval,
+  timestamp
 FROM ${name}
 WHERE timestamp > NOW() - INTERVAL '1' DAY
 ORDER BY timestamp DESC
