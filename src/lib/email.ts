@@ -92,8 +92,18 @@ export async function sendEmail(options: {
   };
 
   if (isCloudflareEmailConfigured()) {
-    await sendEmailCloudflare(payload);
-    return;
+    try {
+      await sendEmailCloudflare(payload);
+      return;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("sending_disabled")) {
+        console.warn("[email] Cloudflare Email Sending not enabled — falling through to Resend");
+        // fall through to Resend below
+      } else {
+        throw err;
+      }
+    }
   }
 
   if (isResendConfigured()) {
@@ -102,7 +112,7 @@ export async function sendEmail(options: {
   }
 
   throw new Error(
-    "Email is not configured — set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (Email Sending) or RESEND_API_KEY"
+    "Email is not configured — set CLOUDFLARE_EMAIL_API_TOKEN (Email Sending scope) or RESEND_API_KEY"
   );
 }
 
