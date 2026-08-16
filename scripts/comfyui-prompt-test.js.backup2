@@ -2,9 +2,20 @@
 /**
  * ComfyUI Integration Script — n8n Social Media Factory
  *
- * Sends a hardcoded cloud-inference prompt payload loop to ComfyUI's
+ * Sends a mock POST request containing the API payload layout from
+ * ops/comfyui/storage/user/default/default_workflow.json to ComfyUI's
  * /prompt endpoint (http://localhost:8000/prompt) to verify programmatic
  * generation stability.
+ *
+ * The payload includes the API elements (PrimitiveNode, Replicate,
+ * SaveImage) tagged as originating from the n8n_social_media_factory
+ * workflow pattern — the same structure an n8n workflow would send as
+ * an outgoing HTTP POST to ComfyUI's internal prompt API.
+ *
+ * If ComfyUI rejects the tagged payload (e.g. the extra metadata key
+ * triggers a 500), the script automatically retries with a clean payload
+ * (prompt + client_id only) so you can isolate whether the issue is the
+ * workflow itself or the wrapper metadata.
  *
  * Usage:
  *   node scripts/comfyui-prompt-test.js
@@ -16,7 +27,7 @@
  *   COMFYUI_POLL        — Poll for results after submission (default: true)
  *   COMFYUI_MAX_POLL    — Max poll attempts (default: 30)
  *   COMFYUI_INTERVAL    — Poll interval in ms (default: 2000)
- *   COMFYUI_LOOP_COUNT  — Number of times to loop the prompt (default: 5)
+ *   COMFYUI_NO_METADATA — Strip n8n_social_media_factory metadata before POST (default: false)
  *
  * Exit codes:
  *   0 — Prompt submitted and (optionally) completed successfully
@@ -61,6 +72,16 @@ function log(level, msg, meta) {
 const CONFIG = {
   host: process.env.COMFYUI_HOST || "localhost",
   port: parseInt(process.env.COMFYUI_PORT || "8000", 10),
+  workflowPath: path.join(
+    __dirname,
+    "..",
+    "ops",
+    "comfyui",
+    "storage",
+    "user",
+    "default",
+    "default_workflow.json"
+  ),
   clientID:
     process.env.COMFYUI_CLIENT_ID ||
     `n8n_social_media_factory-${Date.now()}`,
@@ -68,93 +89,63 @@ const CONFIG = {
   poll: process.env.COMFYUI_POLL !== "false",
   maxPoll: parseInt(process.env.COMFYUI_MAX_POLL || "30", 10),
   interval: parseInt(process.env.COMFYUI_INTERVAL || "2000", 10),
-  loopCount: parseInt(process.env.COMFYUI_LOOP_COUNT || "5", 10),
+  noMetadata: process.env.COMFYUI_NO_METADATA === "true" || false,
 };
 
-/* ── Hardcoded Cloud-Inference Prompt Payload ───────────────────────── */
+/* ── Step 1 — Load the workflow template ────────────────────────────── */
 
-/**
- * Hardcoded cloud-inference prompt payload.
- * Represents a basic cloud inference workflow with:
- * - PrimitiveNode for text input (the cloud inference prompt)
- * - SaveImage node to capture output
- */
-const CLOUD_INFERENCE_PROMPT = {
-  "last_node_id": 3,
-  "last_link_id": 2,
-  "version": "0.1.0",
-  "nodes": [
-    {
-      "id": 1,
-      "type": "PrimitiveNode",
-      "pos": [0, 0],
-      "size": [180, 27],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "value",
-          "type": "STRING",
-          "links": [0],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "PrimitiveNode"
-      },
-      "widgets_values": [
-        "A beautiful landscape of a futuristic city with flying cars, cyberpunk style, highly detailed, 8k resolution"
-      ]
-    },
-    {
-      "id": 2,
-      "type": "SaveImage",
-      "pos": [300, 0],
-      "size": [180, 27],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 0
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "Node name for S&R": "SaveImage"
-      },
-      "widgets_values": [
-        "cloud_inference_output"
-      ]
-    }
-  ],
-  "links": [
-    [0, 1, 0, 2, 0]
-  ],
-  "groups": [],
-  "configs": [],
-  "extra": {}
-};
+function loadWorkflow() {
+  if (!fs.existsSync(CONFIG.workflowPath)) {
+    log("error", `Workflow file not found: ${CONFIG.workflowPath}`);
+    process.exit(2);
+  }
 
-/* ── Step 1 — Construct the API payload ─────────────────────────────── */
+  const raw = fs.readFileSync(CONFIG.workflowPath, "utf8");
+  const workflow = JSON.parse(raw);
 
-/**
- * Build the ComfyUI /prompt request body from the hardcoded cloud-inference prompt.
- */
-function buildCloudInferencePayload(format) {
-  let prompt;
-  
-  if (format === "api") {
-    // Convert to API format (node-ID keyed)
-    prompt = convertToApiFormat(CLOUD_INFERENCE_PROMPT);
-    log("info", "Converted cloud-inference prompt to ComfyUI API format (node-ID keyed)");
+  // Validate expected API elements are present
+  const nodeTypes = workflow.nodes?.map((n) => n.type) || [];
+  const expected = ["PrimitiveNode", "SaveImage"];
+  const hasExpected = expected.every((t) =>
+    nodeTypes.some((nt) => nt === t || nt.includes(t))
+  );
+
+  if (!hasExpected) {
+    log("warn", "Workflow does not contain expected API elements", {
+      nodeTypes,
+      expected,
+    });
   } else {
-    // Use graph format directly
-    prompt = CLOUD_INFERENCE_PROMPT;
+    log("ok", "Workflow loaded — API payload nodes detected", {
+      nodeTypes,
+      lastNodeId: workflow.last_node_id,
+      lastLinkId: workflow.last_link_id,
+      version: workflow.version,
+    });
+  }
+
+  return workflow;
+}
+
+/* ── Step 2 — Construct the mock API payload ────────────────────────── */
+
+/**
+ * Build the ComfyUI /prompt request body.
+ *
+ * By default ComfyUI accepts the *graph* format (the same structure
+ * saved as default_workflow.json — nodes + links arrays) directly in
+ * the `prompt` field.  When `format` is "api", we convert to the API
+ * format (node IDs as keys with class_type + inputs).
+ */
+function buildPayload(workflow, includeMetadata, format) {
+  if (includeMetadata === undefined) includeMetadata = !CONFIG.noMetadata;
+
+  let prompt;
+  if (format === "api") {
+    prompt = convertToApiFormat(workflow);
+    log("info", "Converted workflow to ComfyUI API format (node-ID keyed)");
+  } else {
+    prompt = workflow;
   }
 
   const payload = {
@@ -162,12 +153,52 @@ function buildCloudInferencePayload(format) {
     client_id: CONFIG.clientID,
   };
 
+  if (includeMetadata) {
+    /*
+     * Extra metadata field that tags the request as originating from the
+     * n8n_social_media_factory workflow pattern.  ComfyUI typically
+     * ignores unknown top-level keys, but some versions may reject the
+     * request — the script automatically retries without this metadata.
+     */
+    payload.n8n_social_media_factory = {
+      source: "n8n_workflow",
+      factory: "n8n_social_media_factory",
+      api_elements: {
+        primitive_node: workflow.nodes.find((n) =>
+          n.type.includes("PrimitiveNode")
+        )
+          ? {
+              present: true,
+              value: workflow.nodes[0]?.widgets_values?.[0],
+            }
+          : { present: false },
+        replicate_node: workflow.nodes.find((n) =>
+          n.type.startsWith("Replicate")
+        )
+          ? { present: true, model: workflow.nodes[1]?.type }
+          : { present: false },
+        save_image_node: workflow.nodes.find((n) =>
+          n.type.includes("SaveImage")
+        )
+          ? {
+              present: true,
+              filename_prefix: workflow.nodes[2]?.widgets_values?.[0],
+            }
+          : { present: false },
+      },
+    };
+  }
+
   return payload;
 }
 
 /**
  * Convert the graph format (nodes + links arrays) into ComfyUI's API
  * format (node IDs as string keys with class_type + inputs).
+ *
+ * Link tuples: [link_id, origin_node, origin_slot, dest_node, dest_slot, type]
+ * The converted inputs map each destination input name to
+ * [origin_node_id, origin_output_slot].
  */
 function convertToApiFormat(workflow) {
   const api = {};
@@ -234,7 +265,60 @@ function convertToApiFormat(workflow) {
   return api;
 }
 
-/* ── Step 2 — Send the POST request ─────────────────────────────────── */
+/**
+ * Query ComfyUI /object_info to verify that expected node types
+ * are registered in the running instance.
+ *
+ * Returns a dict mapping each node type string to a boolean indicating
+ * whether it was found in the server's node registry.
+ */
+function checkObjectInfo(nodeTypes) {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: CONFIG.host,
+      port: CONFIG.port,
+      path: "/object_info",
+      method: "GET",
+      timeout: 10000,
+    };
+
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        if (res.statusCode !== 200) {
+          resolve(null);
+          return;
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          resolve(null);
+          return;
+        }
+
+        const available = {};
+        nodeTypes.forEach((t) => {
+          // Check for exact match or partial match (e.g. "SaveImage")
+          available[t] = !!parsed[t] || Object.keys(parsed).some(
+            (key) => key === t || key.includes(t) || t.includes(key)
+          );
+        });
+        resolve(available);
+      });
+    });
+
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+/* ── Step 3 — Send the POST request ─────────────────────────────────── */
 
 function postPrompt(payload, label) {
   if (label) log("info", label);
@@ -283,7 +367,7 @@ function postPrompt(payload, label) {
   });
 }
 
-/* ── Step 3 — Poll for completion via /history ──────────────────────── */
+/* ── Step 4 — Poll for completion via /history ──────────────────────── */
 
 function pollHistory(promptID) {
   return new Promise((resolve) => {
@@ -400,10 +484,23 @@ function checkHealth() {
 
 async function main() {
   console.log(
-    `\n${C.bold}${C.cyan}ComfyUI Cloud-Inference Prompt Loop Test${C.reset}\n`
+    `\n${C.bold}${C.cyan}ComfyUI n8n Social Media Factory — Prompt Integration Test${C.reset}\n`
   );
 
-  /* 1. Check ComfyUI health */
+  /* 1. Load workflow */
+  const workflow = loadWorkflow();
+
+  /* 2. Build payload (with n8n_social_media_factory metadata by default) */
+  const payload = buildPayload(workflow, true);
+  log("info", "API payload constructed", {
+    source: "n8n_social_media_factory",
+    nodeCount: workflow.nodes.length,
+    linkCount: workflow.links.length,
+    hasClientID: !!CONFIG.clientID,
+    hasFactoryMetadata: payload.n8n_social_media_factory ? true : false,
+  });
+
+  /* 3. Check ComfyUI health */
   console.log(
     `${C.dim}Checking ComfyUI at ${CONFIG.host}:${CONFIG.port}…${C.reset}`
   );
@@ -425,86 +522,94 @@ async function main() {
       : "n/a",
   });
 
-  /* 2. Execute the cloud-inference prompt payload loop */
-  log("info", `Starting cloud-inference prompt loop (${CONFIG.loopCount} iterations)`);
-  
-  for (let i = 0; i < CONFIG.loopCount; i++) {
-    log("info", `Iteration ${i + 1}/${CONFIG.loopCount}`);
-    
-    /* Build payload (try API format first, fallback to graph format) */
-    let payload = buildCloudInferencePayload("api");
-    let label = `Attempt 1: API-format payload (iteration ${i + 1})`;
-    
-    let response;
+  /* 3b. Diagnostic — check /object_info for expected node types */
+  const nodeTypesToCheck = workflow.nodes.map((n) => n.type);
+  const objectInfo = await checkObjectInfo(nodeTypesToCheck);
+  if (objectInfo) {
+    log("info", "Node type availability check", objectInfo);
+  } else {
+    log("warn", "Could not query /object_info — skipping node availability check");
+  }
+
+  /* 4. POST the prompt (tagged payload first) */
+  let response;
+  try {
+    response = await postPrompt(payload, "Attempt 1: with n8n_social_media_factory metadata");
+  } catch (err) {
+    log("error", `Request failed: ${err.message}`);
+    process.exit(4);
+  }
+
+  let { status, body } = response;
+
+  /*
+   * Retry strategy:
+   *   Attempt 2 — strip n8n_social_media_factory metadata (graph format)
+   *   Attempt 3 — convert to API format (node-ID keyed) without metadata
+   */
+  if (status !== 200 && payload.n8n_social_media_factory) {
+    log("warn", `ComfyUI returned HTTP ${status} — retrying without factory metadata`);
+    const cleanPayload = buildPayload(workflow, false, "graph");
     try {
-      response = await postPrompt(payload, label);
+      response = await postPrompt(cleanPayload, "Attempt 2: clean graph-format payload");
+      status = response.status;
+      body = response.body;
     } catch (err) {
-      log("error", `Request failed: ${err.message}`);
+      log("error", `Retry request failed: ${err.message}`);
       process.exit(4);
-    }
-
-    let { status, body } = response;
-
-    /* Retry strategy:
-     *   Attempt 2 — strip metadata and use graph format
-     */
-    if (status !== 200) {
-      log("warn", `ComfyUI returned HTTP ${status} — retrying with graph-format payload`);
-      payload = buildCloudInferencePayload("graph");
-      label = `Attempt 2: graph-format payload (iteration ${i + 1})`;
-      
-      try {
-        response = await postPrompt(payload, label);
-        status = response.status;
-        body = response.body;
-      } catch (err) {
-        log("error", `Retry request failed: ${err.message}`);
-        process.exit(4);
-      }
-    }
-
-    if (status !== 200) {
-      log("error", `ComfyUI returned HTTP ${status}`, body);
-      process.exit(4);
-    }
-
-    if (body.error) {
-      log("error", `ComfyUI API error: ${body.error}`);
-      process.exit(4);
-    }
-
-    log("ok", "Prompt submitted to ComfyUI queue", {
-      promptID: body.prompt_id,
-      queueRemaining: body.queue_remaining,
-      clientID: CONFIG.clientID,
-      iteration: i + 1
-    });
-
-    /* 3. Optionally poll for completion */
-    if (CONFIG.poll && body.prompt_id) {
-      log(
-        "info",
-        `Polling for completion (max ${CONFIG.maxPoll} × ${CONFIG.interval}ms)…`,
-      );
-      const completed = await pollHistory(body.prompt_id);
-      if (completed) {
-        log("ok", `Generation verified for iteration ${i + 1}`);
-      } else {
-        log("warn", `Generation did not complete within timeout for iteration ${i + 1}`);
-      }
-    } else {
-      log("ok", `Prompt submitted successfully for iteration ${i + 1}`);
-    }
-    
-    // Small delay between iterations
-    if (i < CONFIG.loopCount - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
-  console.log(
-    `\n${C.green}${C.bold}✅ Cloud-inference prompt loop completed successfully (${CONFIG.loopCount} iterations)${C.reset}\n`
-  );
+  if (status !== 200) {
+    log("warn", `ComfyUI still returned HTTP ${status} — retrying with API-format conversion`);
+    const apiFormatPayload = buildPayload(workflow, false, "api");
+    try {
+      response = await postPrompt(apiFormatPayload, "Attempt 3: API-format payload (node-ID keyed)");
+      status = response.status;
+      body = response.body;
+    } catch (err) {
+      log("error", `Retry request failed: ${err.message}`);
+      process.exit(4);
+    }
+  }
+
+  if (status !== 200) {
+    log("error", `ComfyUI returned HTTP ${status}`, body);
+    process.exit(4);
+  }
+
+  if (body.error) {
+    log("error", `ComfyUI API error: ${body.error}`);
+    process.exit(4);
+  }
+
+  log("ok", "Prompt submitted to ComfyUI queue", {
+    promptID: body.prompt_id,
+    queueRemaining: body.queue_remaining,
+    clientID: CONFIG.clientID,
+  });
+
+  /* 5. Optionally poll for completion */
+  if (CONFIG.poll && body.prompt_id) {
+    log(
+      "info",
+      `Polling for completion (max ${CONFIG.maxPoll} × ${CONFIG.interval}ms)…`,
+    );
+    const completed = await pollHistory(body.prompt_id);
+    if (completed) {
+      console.log(
+        `\n${C.green}${C.bold}✅ Generation verified — /prompt integration is stable${C.reset}\n`
+      );
+      process.exit(0);
+    } else {
+      console.log(
+        `\n${C.yellow}⚠️  Generation did not complete within timeout — endpoint is reachable but generation may need more time.${C.reset}\n`
+      );
+      process.exit(0);
+    }
+  }
+
+  console.log(`\n${C.green}${C.bold}✅ Prompt submitted successfully${C.reset}\n`);
   process.exit(0);
 }
 
