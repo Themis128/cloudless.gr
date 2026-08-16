@@ -110,10 +110,54 @@ for d in /home/tbaltzakis/.vscode-server/cli/servers \
     2>&1 | tee -a "$LOG" || true
 done
 
-# ── 9. Stale /tmp files ───────────────────────────────────────────────────────
+# ── 9. npm cache ──────────────────────────────────────────────────────────────
+log "npm: cleaning user + root cache..."
+su -s /bin/bash -c 'npm cache clean --force' tbaltzakis 2>&1 | tail -2 | tee -a "$LOG" || true
+npm cache clean --force 2>&1 | tail -2 | tee -a "$LOG" || true
+
+# ── 10. cloudless-releases — keep last 3 SHAs ────────────────────────────────
+# Each SHA dir is ~500MB; deploys add one per run without any pruning by default.
+# Protect the active symlink target; keep 2 prior rollback points.
+if [ -d /home/tbaltzakis/cloudless-releases ]; then
+  log "cloudless-releases: pruning old SHAs (keep 3)..."
+  # Remove leftover .merge-* temp dirs from safe-deploy
+  find /home/tbaltzakis/cloudless-releases -maxdepth 1 -name '.merge-*' \
+    -exec rm -rf {} + 2>/dev/null || true
+
+  CURRENT_SHA=$(readlink /home/tbaltzakis/cloudless-standalone 2>/dev/null \
+    | xargs basename 2>/dev/null || true)
+  cd /home/tbaltzakis/cloudless-releases
+  # List by mtime newest-first, skip the active SHA, remove everything after the 2nd
+  ls -1dt -- */ 2>/dev/null | sed 's|/$||' | \
+    { [ -n "$CURRENT_SHA" ] && grep -v "^${CURRENT_SHA}$" || cat; } | \
+    tail -n +3 | while read -r dir; do
+      log "  removing old release: $dir"
+      rm -rf "$dir"
+    done
+  cd /
+fi
+
+# ── 11. cloudless.gr repo build artifacts ────────────────────────────────────
+# .next is compiled output — safe to delete any time; runner rebuilds on push.
+rm -rf /home/tbaltzakis/cloudless.gr/.next 2>/dev/null || true
+# node_modules: safe if not accessed in 7 days (runner re-installs before build)
+find /home/tbaltzakis/cloudless.gr -maxdepth 1 -name "node_modules" \
+  -type d -atime +7 -exec rm -rf {} + 2>/dev/null || true
+# pre-symlink backup dirs written by safe-deploy
+rm -rf /home/tbaltzakis/cloudless-standalone.pre-symlink-* 2>/dev/null || true
+
+# ── 12. Stale PR checkout dirs ────────────────────────────────────────────────
+# Dirs like postiz-pr, cloudless-pr-* are one-off checkouts; prune after 7 days.
+find /home/tbaltzakis -maxdepth 1 \( -name '*-pr' -o -name '*-pr-*' \) \
+  -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+# setup-pnpm dirs left by runner post-install steps
+find /home/tbaltzakis -maxdepth 1 -name 'setup-pnpm*' -type d \
+  -exec rm -rf {} + 2>/dev/null || true
+
+# ── 13. Stale /tmp files ─────────────────────────────────────────────────────
 find /tmp -type f -mtime +7 -delete 2>/dev/null || true
 
-# ── 10. Rotate the cleanup log itself ────────────────────────────────────────
+# ── 14. Rotate the cleanup log itself ────────────────────────────────────────
 # Prevent the log from accumulating indefinitely on root
 if [ -f "$LOG" ] && [ "$(du -m "$LOG" | cut -f1)" -ge 50 ]; then
   tail -n 500 "$LOG" > "${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"

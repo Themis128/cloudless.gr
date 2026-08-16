@@ -30,8 +30,11 @@ cat > /usr/local/sbin/cloudless-cleanup.sh << 'CLEANUP_SCRIPT_EOF'
 # See CLAUDE.md "Pi Housekeeping" for the operator runbook.
 #
 # More aggressive than the omv-ha variant because the control plane runs:
-#   Docker (for GH Actions runner arm64 builds), pnpm + buildx,
-#   k3s containerd (multi-namespace), 3 GH self-hosted runners, VS Code Server.
+#   • Docker (for GH Actions runner arm64 builds)
+#   • pnpm + buildx (Next.js CI builds)
+#   • k3s containerd (multi-namespace — larger image cache)
+#   • 3 GH self-hosted runners (/home/tbaltzakis/actions-runner-*)
+#   • VS Code Server remote
 #
 # Ordered by impact — biggest space savers first.
 
@@ -45,6 +48,7 @@ log "=== Cleanup start (omv-main) ==="
 BEFORE_ROOT=$(df --output=avail / | tail -1)
 
 # ── 1. Docker — images, stopped containers, unused volumes, buildx ──────────
+# Runners build arm64 images natively. Docker is the #1 root-space consumer.
 if command -v docker >/dev/null 2>&1; then
   log "Docker: pruning stopped containers + dangling images..."
   docker container prune -f 2>&1 | tail -3 | tee -a "$LOG" || true
@@ -62,15 +66,20 @@ else
 fi
 
 # ── 2. GitHub Actions runner caches ──────────────────────────────────────────
+# Runners keep _work/<repo> (checkout + node_modules ~1-2GB each) and
+# _actions/ tool caches. Prune the ones not touched in >3 days.
 for runner_dir in /home/tbaltzakis/actions-runner-*; do
   [ -d "$runner_dir/_work" ] || continue
 
+  # node_modules inside _work are the biggest hog; safe to nuke after 3 days
   find "$runner_dir/_work" -mindepth 3 -maxdepth 3 -name "node_modules" \
     -type d -atime +3 -exec rm -rf {} + 2>/dev/null || true
 
+  # _temp: always safe to prune
   find "$runner_dir/_work/_temp" -mindepth 1 -maxdepth 1 -mtime +1 \
     -exec rm -rf {} + 2>/dev/null || true
 
+  # _actions: prune entries not used in 14 days
   find "$runner_dir/_work/_actions" -mindepth 2 -maxdepth 2 \
     -type d -atime +14 -exec rm -rf {} + 2>/dev/null || true
 
@@ -83,12 +92,14 @@ if command -v pnpm >/dev/null 2>&1; then
   pnpm store prune 2>&1 | tail -3 | tee -a "$LOG" || true
 fi
 
+# Prune pnpm store as root user too (runner installs can go here)
 PNPM_STORE_ROOT="/root/.local/share/pnpm/store"
 if [ -d "$PNPM_STORE_ROOT" ]; then
   find "$PNPM_STORE_ROOT" -maxdepth 4 -name "*.tgz" -atime +30 -delete 2>/dev/null || true
 fi
 
 # ── 4. containerd (k3s) image prune ─────────────────────────────────────────
+# Control plane uses /run/k3s/containerd/containerd.sock
 CRICTL_SOCK="/run/k3s/containerd/containerd.sock"
 for i in 1 2 3 4 5 6; do
   [ -S "$CRICTL_SOCK" ] && break
@@ -125,10 +136,54 @@ for d in /home/tbaltzakis/.vscode-server/cli/servers \
     2>&1 | tee -a "$LOG" || true
 done
 
-# ── 9. Stale /tmp files ───────────────────────────────────────────────────────
+# ── 9. npm cache ──────────────────────────────────────────────────────────────
+log "npm: cleaning user + root cache..."
+su -s /bin/bash -c 'npm cache clean --force' tbaltzakis 2>&1 | tail -2 | tee -a "$LOG" || true
+npm cache clean --force 2>&1 | tail -2 | tee -a "$LOG" || true
+
+# ── 10. cloudless-releases — keep last 3 SHAs ────────────────────────────────
+# Each SHA dir is ~500MB; deploys add one per run without any pruning by default.
+# Protect the active symlink target; keep 2 prior rollback points.
+if [ -d /home/tbaltzakis/cloudless-releases ]; then
+  log "cloudless-releases: pruning old SHAs (keep 3)..."
+  # Remove leftover .merge-* temp dirs from safe-deploy
+  find /home/tbaltzakis/cloudless-releases -maxdepth 1 -name '.merge-*' \
+    -exec rm -rf {} + 2>/dev/null || true
+
+  CURRENT_SHA=$(readlink /home/tbaltzakis/cloudless-standalone 2>/dev/null \
+    | xargs basename 2>/dev/null || true)
+  cd /home/tbaltzakis/cloudless-releases
+  # List by mtime newest-first, skip the active SHA, remove everything after the 2nd
+  ls -1dt -- */ 2>/dev/null | sed 's|/$||' | \
+    { [ -n "$CURRENT_SHA" ] && grep -v "^${CURRENT_SHA}$" || cat; } | \
+    tail -n +3 | while read -r dir; do
+      log "  removing old release: $dir"
+      rm -rf "$dir"
+    done
+  cd /
+fi
+
+# ── 11. cloudless.gr repo build artifacts ────────────────────────────────────
+# .next is compiled output — safe to delete any time; runner rebuilds on push.
+rm -rf /home/tbaltzakis/cloudless.gr/.next 2>/dev/null || true
+# node_modules: safe if not accessed in 7 days (runner re-installs before build)
+find /home/tbaltzakis/cloudless.gr -maxdepth 1 -name "node_modules" \
+  -type d -atime +7 -exec rm -rf {} + 2>/dev/null || true
+# pre-symlink backup dirs written by safe-deploy
+rm -rf /home/tbaltzakis/cloudless-standalone.pre-symlink-* 2>/dev/null || true
+
+# ── 12. Stale PR checkout dirs ────────────────────────────────────────────────
+# Dirs like postiz-pr, cloudless-pr-* are one-off checkouts; prune after 7 days.
+find /home/tbaltzakis -maxdepth 1 \( -name '*-pr' -o -name '*-pr-*' \) \
+  -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+# setup-pnpm dirs left by runner post-install steps
+find /home/tbaltzakis -maxdepth 1 -name 'setup-pnpm*' -type d \
+  -exec rm -rf {} + 2>/dev/null || true
+
+# ── 13. Stale /tmp files ─────────────────────────────────────────────────────
 find /tmp -type f -mtime +7 -delete 2>/dev/null || true
 
-# ── 10. Rotate the cleanup log itself ────────────────────────────────────────
+# ── 14. Rotate the cleanup log itself ────────────────────────────────────────
 if [ -f "$LOG" ] && [ "$(du -m "$LOG" | cut -f1)" -ge 50 ]; then
   tail -n 500 "$LOG" > "${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
   log "(log truncated to last 500 lines)"
