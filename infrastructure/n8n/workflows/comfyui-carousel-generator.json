@@ -1,495 +1,424 @@
 {
-  "name": "ComfyUI Carousel Generator \u2014 cloudless.gr",
   "nodes": [
     {
       "parameters": {
-        "triggerTimes": {
-          "item": [
-            {
-              "hour": 9,
-              "minute": 0
-            }
-          ]
-        }
+        "triggerTimes": [
+          {
+            "mode": "everyDay",
+            "hour": 0,
+            "minute": 0
+          }
+        ]
       },
-      "name": "Trigger (Daily)",
+      "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        0,
-        0
-      ],
-      "id": "node-cron-trigger"
+        250,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const baseWorkflow = {\n  \"3\": {\n    \"inputs\": {\n      \"seed\": Math.floor(Math.random() * 10000000),\n      \"steps\": 20,\n      \"cfg\": 8.0,\n      \"sampler_name\": \"euler\",\n      \"scheduler\": \"normal\",\n      \"denoise\": 1.0,\n      \"model\": [\"4\", 0],\n      \"positive\": [\"6\", 0],\n      \"negative\": [\"7\", 0],\n      \"latent_image\": [\"8\", 0]\n    },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"v1-5-pruned-emaonly.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"professional enterprise cloud server topology, modern hyper-scale infrastructure architecture, cloudless serverless edge computing network grid, dark sleek minimal technical backdrop, vibrant deep blue and accent orange glowing lines, hyper-detailed, 8k resolution\",\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 512, \"height\": 512, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": {\n      \"images\": [\"9\", 0],\n      \"filename_prefix\": \"cloudless-carousel-wsl\"\n    },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\nreturn [{\n  json: {\n    prompt: baseWorkflow,\n    client_id: \"n8n-k3s-agent\"\n  }\n}];"
+        "functionCode": "return [\n  {\n    text: \"server topology, cloud computing, serverless edge grid, deep blue and orange glowing lines\",\n    comfyPrompt: \"server topology, cloud computing, serverless edge grid, deep blue and orange glowing lines\"\n  },\n  {\n    text: \"wasted database infrastructure, digital currency drain, sleek technical matrix backdrop\",\n    comfyPrompt: \"wasted database infrastructure, digital currency drain, sleek technical matrix backdrop\"\n  },\n  {\n    text: \"ultra-fast edge node networks, cloudflare workers architecture visualization, high-speed fiber data streams\",\n    comfyPrompt: \"ultra-fast edge node networks, cloudflare workers architecture visualization, high-speed fiber data streams\"\n  },\n  {\n    text: \"clean tech abstract surface, neon blue optimization lines, professional minimal presentation frame\",\n    comfyPrompt: \"clean tech abstract surface, neon blue optimization lines, professional minimal presentation frame\"\n  }\n];"
       },
-      "name": "Prepare ComfyUI Payload",
-      "type": "n8n-nodes-base.code",
+      "name": "Carousel Blueprint",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        0,
-        0
-      ],
-      "id": "node-prep-payload"
+        500,
+        300
+      ]
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/prompt",
+        "batchSize": 1,
+        "inputDataProperty": "json"
+      },
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "sendBody": true,
-        "specifyBody": "json",
-        "bodyKeyData": "={{ JSON.stringify($json) }}",
+        "url": "http://192.168.1.1:8000",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": {
+          "prompt": "={{ $json.comfyPrompt }}"
+        }
+      },
+      "name": "HTTP Request (Trigger ComfyUI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://192.168.1.1:8000/{{$json.prompt_id}}",
+        "responseFormat": "json",
         "options": {}
       },
-      "name": "Trigger ComfyUI",
+      "name": "HTTP Request (Get Status)",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "typeVersion": 2,
       "position": [
-        0,
-        0
-      ],
-      "id": "node-trigger-comfy"
+        1250,
+        100
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValueStringType": "string",
-            "rightValueStringType": "string"
-          },
-          "conditions": [
+          "boolean": [
             {
-              "id": "is-done",
-              "leftValue": "={{ $json.status }}",
-              "comparison": "equals",
-              "rightValue": "completed"
+              "value1": "={{ $json.status }}",
+              "operation": "equal",
+              "value2": "completed"
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "name": "Check Status Loop",
+      "name": "IF (Check Status)",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-status-check"
-    },
-    {
-      "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/history",
-        "method": "GET",
-        "options": {}
-      },
-      "name": "Fetch Execution History",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-fetch-history"
-    },
-    {
-      "parameters": {
-        "jsCode": "const promptId = $('Trigger ComfyUI').item.json.prompt_id;\nconst historyData = $json[promptId];\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
-      },
-      "name": "Evaluate Comfy Ready",
-      "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
-        0,
-        0
-      ],
-      "id": "node-eval-ready"
+        1500,
+        100
+      ]
     },
     {
       "parameters": {
-        "amount": 5,
-        "unit": "seconds"
+        "seconds": 5
       },
-      "name": "Wait Retry Interval",
+      "name": "Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        0,
-        0
-      ],
-      "id": "node-wait-retry"
+        1000,
+        400
+      ]
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/view?filename={{ $json.filename }}&type=output",
         "method": "GET",
-        "options": {
-          "responseFormat": "file"
-        }
-      },
-      "name": "Download Image from WSL",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-download-asset"
-    },
-    {
-      "parameters": {
-        "command": "=node /home/tbaltzakis/cloudless.gr/cloudless-carousel-generator/generate.js '{\"slides\":[{\"title\":\"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\"subtitle\":\"The framework we use at cloudless.gr to transition teams away from enterprise bloat to Serverless architecture.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"},{\"stepNumber\":\"01 / WASTED COMPUTE\",\"title\":\"Servers sitting idle 90% of the time are an absolute revenue drain.\",\"body\":\"Thinking you need dedicated infrastructure early on results in massive bills.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"}]}' /tmp/cloudless_linkedin_carousel.pdf"
-      },
-      "name": "Compile Carousel PDF",
-      "type": "n8n-nodes-base.executeCommandLine",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-compile-pdf"
-    },
-    {
-      "parameters": {
-        "url": "=http://cluster.local",
-        "method": "POST",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "bodyFormat": "multipart-form-data",
-        "formDataLessParameters": {
-          "properties": [
-            {
-              "name": "file",
-              "parameterType": "formFile",
-              "fileInputOption": "local",
-              "localFilePath": "/tmp/cloudless_linkedin_carousel.pdf"
-            },
-            {
-              "name": "type",
-              "parameterType": "formTextField",
-              "value": "document"
-            }
-          ]
-        },
-        "options": {
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "=Bearer {{ $env.POSTIZ_API_KEY }}"
-              }
-            ]
-          }
-        }
-      },
-      "name": "Upload Media to Postiz",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-postiz-upload"
-    },
-    {
-      "parameters": {
-        "url": "=http://cluster.local",
-        "method": "POST",
-        "sendBody": true,
-        "specifyBody": "json",
-        "bodyKeyData": "={\"content\":\"\ud83d\ude80 Stop overpaying for cloud infrastructure that sits idle 90% of the time.\\n\\nAt cloudless.gr, we migrate teams to lightning-fast, secure, and cost-optimized Serverless architecture on Cloudflare. Zero friction. No lock-in contracts.\\n\\nSwipe through the carousel built via our automated homelab pipeline below to see how we deliver results under 14 days. \ud83d\udc47\\n\\n#Cloudflare #Serverless #CloudArchitecture #DevOps #ThemistoklisBaltzakis\",\"mediaIds\":[\"{{ $json.id || $json.mediaId }}\"],\"platforms\":[\"linkedin\"],\"scheduledAt\":\"{{ new Date(Date.now() + 3600000).toISOString() }}\",\"timezone\":\"Europe/Athens\"}",
-        "options": {
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "=Bearer {{ $env.POSTIZ_API_KEY }}"
-              }
-            ]
-          }
-        }
-      },
-      "name": "Schedule Post on LinkedIn",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        0,
-        0
-      ],
-      "id": "node-schedule-linkedin"
-    },
-    {
-      "parameters": {
-        "filePath": "/tmp/cloudless_linkedin_carousel.pdf"
-      },
-      "name": "Read PDF File",
-      "type": "n8n-nodes-base.readBinaryFile",
-      "typeVersion": 1,
-      "position": [
-        200,
-        0
-      ],
-      "id": "read-pdf-file"
-    },
-    {
-      "parameters": {
-        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/curated/linkedIn-carousels/year={{ $now.format('YYYY') }}/month={{ $now.format('MM') }}/cloudless_carousel_{{ $now.format('YYYYMMDD') }}.pdf",
-        "method": "PUT",
-        "bodyFormat": "binary",
-        "binaryDataProperty": "data"
-      },
-      "name": "Upload PDF to Lakehouse",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        400,
-        0
-      ],
-      "id": "upload-pdf-to-lakehouse"
-    },
-    {
-      "parameters": {
-        "keepOnlySet": false,
-        "setBinaryData": {
-          "name": "data",
-          "value": "={{ $node[\"Download Image from WSL\"].binary.data }}"
-        }
-      },
-      "name": "Set Raw Image Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [
-        200,
-        100
-      ],
-      "id": "set-raw-image-data"
-    },
-    {
-      "parameters": {
-        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/raw/comfyui/year={{ $now.format('YYYY') }}/month={{ $now.format('MM') }}/cloudless-bg-{{ $node[\"Evaluate Comfy Ready\"].json.filename }}",
-        "method": "PUT",
-        "bodyFormat": "binary",
-        "binaryDataProperty": "data"
-      },
-      "name": "Upload Raw Image to Lakehouse",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        400,
-        100
-      ],
-      "id": "upload-raw-image-to-lakehouse"
-    },
-    {
-      "parameters": {
-        "jsCode": "const metadata = {\n  post_author: \"Themistoklis Baltzakis\",\n  company_domain: \"www.cloudless.gr\",\n  generation_timestamp: new Date().toISOString(),\n  comfyui_model_used: \"v1-5-pruned-emaonly.safetensors\",\n  carousel_title: \"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\n  s3_pdf_uri: `s3://lakehouse/curated/linkedIn-carousels/year=${new Date().getFullYear()}/month=${String(new Date().getMonth()+1).padStart(2, '0')}/cloudless_carousel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.pdf`,\n  postiz_scheduled_time: \"Europe/Athens\"\n};\nreturn [{ json: metadata }];"
-      },
-      "name": "Metadata Lakehouse Engine",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        600,
-        0
-      ],
-      "id": "metadata-lakehouse-engine"
-    },
-    {
-      "parameters": {
-        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/landing/metadata/metadata_{{ $now.format('YYYYMMDD_HHmmss') }}.json",
-        "method": "PUT",
-        "sendBody": true,
-        "specifyBody": "json",
-        "bodyKeyData": "={{ JSON.stringify($json) }}",
+        "url": "http://192.168.1.1:8000/{{$json.filename}}",
+        "responseFormat": "binary",
         "options": {}
       },
-      "name": "Upload Metadata to Lakehouse",
+      "name": "HTTP Request (Download PNG)",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "typeVersion": 2,
       "position": [
-        800,
-        0
-      ],
-      "id": "upload-metadata-to-lakehouse"
+        1750,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/slide_{{ $node[\"Split In Batches\" ].index }}.png",
+        "options": {}
+      },
+      "name": "Write Binary File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "set": [
+          {
+            "name": "filePath",
+            "value": "/tmp/slide_{{ $node[\"Split In Batches\" ].index }}.png"
+          }
+        ]
+      },
+      "name": "Set File Path",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2250,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "keepOnlySet": true,
+        "set": [
+          {
+            "name": "filePaths",
+            "value": "={{ $json.filePath }}"
+          }
+        ]
+      },
+      "name": "Merge (Collect File Paths)",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  filePaths: $json.filePaths\n}];"
+      },
+      "name": "Prepare Payload for generate.js",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "node generate.js",
+        "inputDataField": "json",
+        "arguments": [
+          "={{ JSON.stringify($json.filePaths) }}"
+        ],
+        "options": {}
+      },
+      "name": "Execute Command (generate.js)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "set": [
+          {
+            "name": "error",
+            "value": "ComfyUI generation failed: status not completed after 2 attempts"
+          }
+        ]
+      },
+      "name": "Set Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://192.168.1.1:8000/{{$json.prompt_id}}",
+        "responseFormat": "json",
+        "options": {}
+      },
+      "name": "HTTP Request (Get Status Second Attempt)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "equal",
+              "value2": "completed"
+            }
+          ]
+        }
+      },
+      "name": "IF (Check Status Second Attempt)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        500
+      ]
     }
   ],
   "connections": {
-    "Trigger (Daily)": {
+    "Cron": {
       "main": [
         [
           {
-            "node": "Prepare ComfyUI Payload",
+            "node": "Carousel Blueprint",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare ComfyUI Payload": {
+    "Carousel Blueprint": {
       "main": [
         [
           {
-            "node": "Trigger ComfyUI",
+            "node": "Split In Batches",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Trigger ComfyUI": {
+    "Split In Batches": {
       "main": [
         [
           {
-            "node": "Check Status Loop",
+            "node": "HTTP Request (Trigger ComfyUI)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Status Loop": {
+    "HTTP Request (Trigger ComfyUI)": {
       "main": [
         [
           {
-            "node": "Download Image from WSL",
+            "node": "HTTP Request (Get Status)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (Get Status)": {
+      "main": [
+        [
+          {
+            "node": "IF (Check Status)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Check Status)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (Download PNG)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fetch Execution History",
+            "node": "Wait",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Execution History": {
+    "Wait": {
       "main": [
         [
           {
-            "node": "Evaluate Comfy Ready",
+            "node": "HTTP Request (Get Status Second Attempt)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Evaluate Comfy Ready": {
+    "HTTP Request (Get Status Second Attempt)": {
       "main": [
         [
           {
-            "node": "Wait Retry Interval",
+            "node": "IF (Check Status Second Attempt)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Wait Retry Interval": {
+    "IF (Check Status Second Attempt)": {
       "main": [
         [
           {
-            "node": "Check Status Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Download Image from WSL": {
-      "main": [
-        [
-          {
-            "node": "Compile Carousel PDF",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Compile Carousel PDF": {
-      "main": [
-        [
-          {
-            "node": "Read PDF File",
+            "node": "HTTP Request (Download PNG)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Set Raw Image Data",
+            "node": "Set Error",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload Media to Postiz": {
+    "HTTP Request (Download PNG)": {
       "main": [
         [
           {
-            "node": "Schedule Post on LinkedIn",
+            "node": "Write Binary File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read PDF File": {
+    "Write Binary File": {
       "main": [
         [
           {
-            "node": "Upload PDF to Lakehouse",
+            "node": "Set File Path",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload PDF to Lakehouse": {
+    "Set File Path": {
       "main": [
         [
           {
-            "node": "Metadata Lakehouse Engine",
+            "node": "Merge (Collect File Paths)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Metadata Lakehouse Engine": {
+    "Merge (Collect File Paths)": {
       "main": [
         [
           {
-            "node": "Upload Metadata to Lakehouse",
+            "node": "Prepare Payload for generate.js",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload Metadata to Lakehouse": {
+    "Prepare Payload for generate.js": {
       "main": [
         [
           {
-            "node": "Upload Media to Postiz",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set Raw Image Data": {
-      "main": [
-        [
-          {
-            "node": "Upload Raw Image to Lakehouse",
+            "node": "Execute Command (generate.js)",
             "type": "main",
             "index": 0
           }
@@ -499,7 +428,7 @@
   },
   "active": false,
   "settings": {
-    "executionTimeout": 7200
+    "executionTimeout": 5400
   },
   "id": "1"
 }

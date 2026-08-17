@@ -92,7 +92,10 @@ spec:
         - name: WSL_HOST_IP
           value: "192.168.1.23"
         - name: POSTIZ_API_KEY
-          value: ""   # Must be set to actual Postiz API key
+          valueFrom:
+            secretKeyRef:
+              name: postiz-secret
+              key: POSTIZ_API_KEY
         volumeMounts:
         - name: data
           mountPath: /home/node/.n8n
@@ -128,8 +131,7 @@ spec:
         hostPath:
           path: /home/tbaltzakis/cloudless.gr
       - name: tmp
-        hostPath:
-          path: /tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
