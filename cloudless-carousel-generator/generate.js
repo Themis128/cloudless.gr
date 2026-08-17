@@ -39,19 +39,15 @@ export async function generateCarousel(payload, outputPath = './tmp/cloudless_ca
         const isFirst = index === 0;
         const isLast = index === totalSlides - 1;
 
-        // Draw solid background layer
-        doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fill(colors.background);
-
-        // Optional Background Image Component (Stitched down from your ComfyUI WSL download buffer)
-        if (slide.localImagePath && fs.existsSync(slide.localImagePath)) {
-          try {
-            // Render background image slightly dimmed to keep typography legible
-            doc.image(slide.localImagePath, 0, 0, { width: SLIDE_SIZE, height: SLIDE_SIZE });
-            doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fillColor(colors.background).fillOpacity(0.4).fill();
-          } catch (imgErr) {
-            console.error(`[WARN] Failed to embed image on page ${index + 1}:`, imgErr.message);
-          }
-        }
+         // Background: either image or solid color
+         if (slide.imagePath && fs.existsSync(slide.imagePath)) {
+           doc.image(slide.imagePath, 0, 0, { width: SLIDE_SIZE, height: SLIDE_SIZE });
+           // High-Contrast Overlay to dim the image for text legibility
+           doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fillColor('#0D0E11').fillOpacity(0.55).fill();
+         } else {
+           // Fallback to solid background
+           doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fill(colors.background);
+         }
 
         // --- Layout Headers ---
         if (!isFirst) {
