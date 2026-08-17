@@ -1,3 +1,4 @@
+*** Add File: scripts/test_comfy_api.js
 #!/usr/bin/env node
 /**
  * scripts/test_comfy_api.js
@@ -128,10 +129,4 @@ module.exports = {
   buildPayload,
   submitPrompt,
 };
-</task_progress>
-- [ ] Create test_comfy_api.js file
-- [ ] Verify file was created correctly
-- [ ] Test the script with appropriate environment variables
-</task_progress>
-</write_to_file>
-</execute_command>
+
