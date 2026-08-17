@@ -35,26 +35,26 @@ export async function generateCarousel(payload, outputPath = './tmp/cloudless_ca
 
       const totalSlides = payload.slides.length;
 
-      payload.slides.forEach((slide, index) => {
-        const isFirst = index === 0;
-        const isLast = index === totalSlides - 1;
+       payload.slides.forEach((slide, index) => {
+         const isFirst = index === 0;
+         const isLast = index === totalSlides - 1;
 
-         // Background: either image or solid color
-         if (slide.imagePath && fs.existsSync(slide.imagePath)) {
-           doc.image(slide.imagePath, 0, 0, { width: SLIDE_SIZE, height: SLIDE_SIZE });
-           // High-Contrast Overlay to dim the image for text legibility
-           doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fillColor('#0D0E11').fillOpacity(0.55).fill();
-         } else {
-           // Fallback to solid background
-           doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fill(colors.background);
+           // Background: either image or solid color
+           if (slide.imagePath && fs.existsSync(slide.imagePath)) {
+             doc.image(slide.imagePath, 0, 0, { width: SLIDE_SIZE, height: SLIDE_SIZE });
+             // Readability Layer: Draw a full-bleed overlay rectangle directly on top of the image
+             doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fillColor(colors.background).fillOpacity(0.55).fill();
+           } else {
+             // Fallback to solid background
+             doc.rect(0, 0, SLIDE_SIZE, SLIDE_SIZE).fill(colors.background);
+           }
+
+         // --- Layout Headers ---
+         if (!isFirst) {
+           doc.fillColor(colors.textSecondary).font('Helvetica-Bold').fontSize(24).text('Cloudless', 100, 80, { continued: true })
+              .font('Helvetica').fillColor(colors.accentOrange).text('  |  Serverless Frameworks');
+           doc.moveTo(100, 130).lineTo(SLIDE_SIZE - 100, 130).lineWidth(2).strokeColor('#1E293B').stroke();
          }
-
-        // --- Layout Headers ---
-        if (!isFirst) {
-          doc.fillColor(colors.textSecondary).font('Helvetica-Bold').fontSize(24).text('Cloudless', 100, 80, { continued: true })
-             .font('Helvetica').fillColor(colors.accentOrange).text('  |  Serverless Frameworks');
-          doc.moveTo(100, 130).lineTo(SLIDE_SIZE - 100, 130).lineWidth(2).strokeColor('#1E293B').stroke();
-        }
 
         // --- Core Typography Engine ---
         if (isFirst) {
