@@ -258,10 +258,16 @@
     },
     {
       "parameters": {
-        "command": "rm -f /tmp/slide_*.png /tmp/cloudless_*.pdf"
+        "command": "rm -f",
+        "inputDataField": "",
+        "arguments": [
+          "/tmp/slide_*.png",
+          "/tmp/cloudless_*.pdf"
+        ],
+        "options": {}
       },
       "name": "Cleanup Temporary Files",
-      "type": "n8n-nodes-base.shell",
+      "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         3250,
