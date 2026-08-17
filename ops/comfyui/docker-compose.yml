@@ -7,9 +7,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./storage:/home/user/ComfyUI
+      # Mount data directories individually to avoid overwriting ComfyUI source code
+      - ./storage/custom_nodes:/opt/ComfyUI/custom_nodes
+      - ./storage/models:/opt/ComfyUI/models
+      - ./storage/user:/opt/ComfyUI/user
+      # Output directory for generated images (symlinked to host in workflow)
+      - ./storage/output:/opt/ComfyUI/output
+      # Input directory for uploads
+      - ./storage/input:/opt/ComfyUI/input
     environment:
       - CLI_ARGS=--listen 0.0.0.0 --port 8000 --cpu  # Added --cpu flag to bypass CUDA assertions
       - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
-      - FAL_KEY=\${FAL_KEY}
+      - FAL_KEY=${FAL_KEY}
     restart: unless-stopped

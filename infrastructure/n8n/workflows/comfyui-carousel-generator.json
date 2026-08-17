@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const baseWorkflow = {\n  \"3\": {\n    \"inputs\": { \"seed\": Math.floor(Math.random() * 10000000) },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"v1-5-pruned-emaonly.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"professional enterprise cloud server topology, modern hyper-scale infrastructure architecture, cloudless serverless edge computing network grid, dark sleek minimal technical backdrop, vibrant deep blue and accent orange glowing lines, hyper-detailed, 8k resolution\",\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 512, \"height\": 512, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": {\n      \"images\": [\"9\", 0],\n      \"filename_prefix\": \"cloudless-carousel-wsl\"\n    },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\nreturn [{\n  json: {\n    prompt: baseWorkflow,\n    client_id: \"n8n-k3s-agent\"\n  }\n}];"
+        "jsCode": "const baseWorkflow = {\n  \"3\": {\n    \"inputs\": {\n      \"seed\": Math.floor(Math.random() * 10000000),\n      \"steps\": 20,\n      \"cfg\": 8.0,\n      \"sampler_name\": \"euler\",\n      \"scheduler\": \"normal\",\n      \"denoise\": 1.0,\n      \"model\": [\"4\", 0],\n      \"positive\": [\"6\", 0],\n      \"negative\": [\"7\", 0],\n      \"latent_image\": [\"8\", 0]\n    },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"v1-5-pruned-emaonly.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"professional enterprise cloud server topology, modern hyper-scale infrastructure architecture, cloudless serverless edge computing network grid, dark sleek minimal technical backdrop, vibrant deep blue and accent orange glowing lines, hyper-detailed, 8k resolution\",\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 512, \"height\": 512, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": {\n      \"images\": [\"9\", 0],\n      \"filename_prefix\": \"cloudless-carousel-wsl\"\n    },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\nreturn [{\n  json: {\n    prompt: baseWorkflow,\n    client_id: \"n8n-k3s-agent\"\n  }\n}];"
       },
       "name": "Prepare ComfyUI Payload",
       "type": "n8n-nodes-base.code",
@@ -36,7 +36,7 @@
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/prompt",
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/prompt",
         "method": "POST",
         "sendBody": true,
         "specifyBody": "json",
@@ -83,7 +83,7 @@
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/history",
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/history",
         "method": "GET",
         "options": {}
       },
@@ -125,7 +125,7 @@
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/view?filename={{ $json.filename }}&type=output",
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/view?filename={{ $json.filename }}&type=output",
         "method": "GET",
         "options": {
           "responseFormat": "file"

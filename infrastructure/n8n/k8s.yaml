@@ -90,7 +90,7 @@ spec:
           value: linkedin,linkedin-page,x,bluesky
         # Added for local script execution and ComfyUI asset buffering
         - name: WSL_HOST_IP
-          value: "192.168.1.50"
+          value: "192.168.1.23"
         - name: POSTIZ_API_KEY
           value: ""   # Must be set to actual Postiz API key
         volumeMounts:

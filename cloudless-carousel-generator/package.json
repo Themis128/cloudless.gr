@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "canvas": "^3.2.3",
     "pdfkit": "^0.19.1"
   }
 }
