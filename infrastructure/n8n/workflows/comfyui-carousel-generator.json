@@ -46,7 +46,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://192.168.1.1:8000",
+        "url": "http://host.docker.internal:8000",
         "jsonParameters": true,
         "options": {},
         "bodyParametersJson": {
@@ -64,7 +64,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "http://192.168.1.1:8000/{{$json.prompt_id}}",
+        "url": "http://host.docker.internal:8000/{{$json.prompt_id}}",
         "responseFormat": "json",
         "options": {}
       },
@@ -111,7 +111,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "http://192.168.1.1:8000/{{$json.filename}}",
+        "url": "http://host.docker.internal:8000/{{$json.filename}}",
         "responseFormat": "binary",
         "options": {}
       },
@@ -224,7 +224,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "http://192.168.1.1:8000/{{$json.prompt_id}}",
+        "url": "http://host.docker.internal:8000/{{$json.prompt_id}}",
         "responseFormat": "json",
         "options": {}
       },
