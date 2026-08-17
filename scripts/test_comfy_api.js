@@ -1,4 +1,3 @@
-*** Add File: scripts/test_comfy_api.js
 #!/usr/bin/env node
 /**
  * scripts/test_comfy_api.js
@@ -129,4 +128,3 @@ module.exports = {
   buildPayload,
   submitPrompt,
 };
-
