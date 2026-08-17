@@ -39,7 +39,7 @@
         "batchSize": 1,
         "options": {}
       },
-      "name": "Split Slides",
+      "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 1,
       "position": [
@@ -121,7 +121,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const historyData = $json;\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename, slideData: $node[\"Prepare ComfyUI Payload\"].json.slideData } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
+        "jsCode": "const historyData = $json;\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename, slideData: $json.slideData } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
       },
       "name": "Evaluate Comfy Ready",
       "type": "n8n-nodes-base.code",
@@ -165,7 +165,7 @@
     },
     {
       "parameters": {
-        "filePath": "/tmp/comfy_slide_{{ $node[\"Split Slides\"].index }}.png",
+        "filePath": "/tmp/comfy_slide_{{ $node[\"Split In Batches\"].index }}.png",
         "options": {}
       },
       "name": "Save Image to File",
@@ -179,7 +179,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const filePath = '/tmp/comfy_slide_' + $node[\"Split Slides\"].index + '.png';\nreturn [{ json: { ...$json, imagePath: filePath } }];"
+        "jsCode": "const filePath = '/tmp/comfy_slide_' + $node[\"Split In Batches\"].index + '.png';return [{ json: { ...$json, imagePath: filePath } ];}",
       },
       "name": "Add Image Path",
       "type": "n8n-nodes-base.code",
@@ -316,14 +316,14 @@
       "main": [
         [
           {
-            "node": "Split Slides",
+            "node": "Split In Batches",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Slides": {
+    "Split In Batches": {
       "main": [
         [
           {
