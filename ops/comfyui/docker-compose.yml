@@ -10,6 +10,6 @@ services:
       - ./storage:/home/user/ComfyUI
     environment:
       - CLI_ARGS=--listen 0.0.0.0 --port 8000 --cpu  # Added --cpu flag to bypass CUDA assertions
-      - REPLICATE_API_TOKEN=\${REPLICATE_API_TOKEN}
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
       - FAL_KEY=\${FAL_KEY}
     restart: unless-stopped

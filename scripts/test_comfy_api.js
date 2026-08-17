@@ -4,29 +4,16 @@
  *
  * ComfyUI API Integration Test — cloudless.gr
  *
- * Deterministic smoke payload built from src/lib/comfyui.buildPayload
+ * Deterministic smoke payload built from src/lib/comfyui.buildPayloadForSmokeTest
  * and robust timeout/error handling.
  */
 
-const { buildPayload } = require('../dist/comfyui');
+const { buildPayloadForSmokeTest } = require('../src/lib/comfyui');
 
 const DEFAULT_ENDPOINT = process.env.COMFYUI_ENDPOINT || 'http://localhost:8000/prompt';
 const CLIENT_ID = process.env.COMFY_CLIENT_ID || `cloudless-test-override`;
 const ENTRY_TOKEN = process.env.ENTRY_TOKEN || 'n8n_social_media_factory';
 const TIMEOUT_MS = Number(process.env.COMFY_TIMEOUT_MS || 10000);
-
-// API key validation
-const FAL_API_KEY = process.env.FAL_API_KEY;
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-
-if (!FAL_API_KEY) {
-  console.error('FAL_API_KEY not set. Add to .env.local or export in shell (export FAL_API_KEY="sk_live_...").');
-  process.exit(1);
-}
-if (!REPLICATE_API_TOKEN) {
-  console.error('REPLICATE_API_TOKEN not set. Add to .env.local or export in shell (export REPLICATE_API_TOKEN="r8_...").');
-  process.exit(1);
-}
 
 function logBanner(title) {
   const w = 52;
@@ -44,6 +31,12 @@ async function checkHealth(endpoint) {
   } catch (err) {
     return { ok: false, error: String(err) };
   }
+}
+
+function buildPayload() {
+  const payload = buildPayloadForSmokeTest(CLIENT_ID);
+  payload.entry_token = ENTRY_TOKEN;
+  return payload;
 }
 
 async function submitPrompt(endpoint, payload, timeoutMs = TIMEOUT_MS) {
@@ -88,8 +81,7 @@ async function main() {
   }
   console.log('  ✓ HTTP 200 — OK\n');
 
-  const payload = buildPayload(CLIENT_ID);
-  payload.entry_token = ENTRY_TOKEN;
+  const payload = buildPayload();
 
   console.log('→ Stage 2: Submitting prompt to /prompt …');
   console.log('  Endpoint:', DEFAULT_ENDPOINT);
