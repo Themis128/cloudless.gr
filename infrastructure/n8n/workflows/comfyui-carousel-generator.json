@@ -178,10 +178,10 @@
       "id": "node-save-image-file"
     },
     {
-      "parameters": {
-        "jsCode": "const filePath = '/tmp/comfy_slide_' + $node[\"Split In Batches\"].index + '.png';return [{ json: { ...$json, imagePath: filePath } ];}",
-      },
-      "name": "Add Image Path",
+       "parameters": {
+         "jsCode": "const filePath = '/tmp/comfy_slide_' + $node[\"Split In Batches\"].index + '.png';return [{ json: { ...$json, imagePath: filePath } ];}"
+       },
+       "name": "Add Image Path",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
