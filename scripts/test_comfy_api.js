@@ -15,6 +15,19 @@ const CLIENT_ID = process.env.COMFY_CLIENT_ID || `cloudless-test-override`;
 const ENTRY_TOKEN = process.env.ENTRY_TOKEN || 'n8n_social_media_factory';
 const TIMEOUT_MS = Number(process.env.COMFY_TIMEOUT_MS || 10000);
 
+// API key validation
+const FAL_API_KEY = process.env.FAL_API_KEY;
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
+if (!FAL_API_KEY) {
+  console.error('FAL_API_KEY not set. Add to .env.local or export in shell (export FAL_API_KEY="sk_live_...").');
+  process.exit(1);
+}
+if (!REPLICATE_API_TOKEN) {
+  console.error('REPLICATE_API_TOKEN not set. Add to .env.local or export in shell (export REPLICATE_API_TOKEN="r8_...").');
+  process.exit(1);
+}
+
 function logBanner(title) {
   const w = 52;
   console.log('╔' + '═'.repeat(w) + '╗');
