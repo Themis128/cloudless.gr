@@ -128,10 +128,4 @@ module.exports = {
   buildPayload,
   submitPrompt,
 };
-</task_progress>
-- [ ] Create the test script file
-- [ ] Add the file to git
-- [ ] Commit the changes
-- [ ] Push to remote repository
-</task_progress>
-</write_to_file>
+
