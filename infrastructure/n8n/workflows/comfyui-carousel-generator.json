@@ -195,7 +195,7 @@
         "options": {}
       },
       "name": "Execute Command (generate.js)",
-      "type": "n8n-nodes-base.executeCommand",
+      "type": "n8n-nodes-base.executeCommandLine",
       "typeVersion": 1,
       "position": [
         3000,
