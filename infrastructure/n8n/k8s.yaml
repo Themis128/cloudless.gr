@@ -9,7 +9,7 @@
 #      to keep steady-state RSS under 400Mi.
 # Auth: n8n basic-auth is disabled; rely on Cloudflare Tunnel + admin
 #       session for access control. Set N8N_BASIC_AUTH_ACTIVE=false.
-# Image: pinned to n8nio/n8n:2.28.2-arm64 (native arm64 build — avoids
+# Image: pinned to n8nio/n8n:2.34.6-arm64 (native arm64 build — avoids
 #        QEMU/emulation overhead on the Pi 5). Update by changing this tag.
 
 apiVersion: v1
@@ -88,9 +88,18 @@ spec:
           value: https://cloudless.gr/en/blog/rss.xml
         - name: POSTIZ_CHANNEL_IDENTIFIERS
           value: linkedin,linkedin-page,x,bluesky
+        # Added for local script execution and ComfyUI asset buffering
+        - name: WSL_HOST_IP
+          value: "192.168.1.50"
+        - name: POSTIZ_API_KEY
+          value: ""   # Must be set to actual Postiz API key
         volumeMounts:
         - name: data
           mountPath: /home/node/.n8n
+        - name: workspace
+          mountPath: /home/node/cloudless.gr
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             cpu: 100m
@@ -115,6 +124,12 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: n8n-data
+      - name: workspace
+        hostPath:
+          path: /home/tbaltzakis/cloudless.gr
+      - name: tmp
+        hostPath:
+          path: /tmp
 ---
 apiVersion: v1
 kind: Service
