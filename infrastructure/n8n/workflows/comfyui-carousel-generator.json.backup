@@ -1,0 +1,350 @@
+{
+  "name": "ComfyUI Carousel Generator \u2014 cloudless.gr",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 9,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "name": "Trigger (Daily)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-cron-trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const baseWorkflow = {\n  \"3\": {\n    \"inputs\": {\n      \"seed\": Math.floor(Math.random() * 10000000),\n      \"steps\": 20,\n      \"cfg\": 8.0,\n      \"sampler_name\": \"euler\",\n      \"scheduler\": \"normal\",\n      \"denoise\": 1.0,\n      \"model\": [\"4\", 0],\n      \"positive\": [\"6\", 0],\n      \"negative\": [\"7\", 0],\n      \"latent_image\": [\"8\", 0]\n    },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"v1-5-pruned-emaonly.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"professional enterprise cloud server topology, modern hyper-scale infrastructure architecture, cloudless serverless edge computing network grid, dark sleek minimal technical backdrop, vibrant deep blue and accent orange glowing lines, hyper-detailed, 8k resolution\",\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 512, \"height\": 512, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": {\n      \"images\": [\"9\", 0],\n      \"filename_prefix\": \"cloudless-carousel-wsl\"\n    },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\nreturn [{\n  json: {\n    prompt: baseWorkflow,\n    client_id: \"n8n-k3s-agent\"\n  }\n}];"
+      },
+      "name": "Prepare ComfyUI Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-prep-payload"
+    },
+    {
+      "parameters": {
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/prompt",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "bodyKeyData": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Trigger ComfyUI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-trigger-comfy"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValueStringType": "string",
+            "rightValueStringType": "string"
+          },
+          "conditions": [
+            {
+              "id": "is-done",
+              "leftValue": "={{ $json.status }}",
+              "comparison": "equals",
+              "rightValue": "completed"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Check Status Loop",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-status-check"
+    },
+    {
+      "parameters": {
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/history",
+        "method": "GET",
+        "options": {}
+      },
+      "name": "Fetch Execution History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-fetch-history"
+    },
+    {
+      "parameters": {
+        "jsCode": "const promptId = $('Trigger ComfyUI').item.json.prompt_id;\nconst historyData = $json[promptId];\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
+      },
+      "name": "Evaluate Comfy Ready",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-eval-ready"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "name": "Wait Retry Interval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-wait-retry"
+    },
+    {
+      "parameters": {
+         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/view?filename={{ $json.filename }}&type=output",
+        "method": "GET",
+        "options": {
+          "responseFormat": "file"
+        }
+      },
+      "name": "Download Image from WSL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-download-asset"
+    },
+    {
+      "parameters": {
+        "command": "=node /home/tbaltzakis/cloudless.gr/cloudless-carousel-generator/generate.js '{\"slides\":[{\"title\":\"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\"subtitle\":\"The framework we use at cloudless.gr to transition teams away from enterprise bloat to Serverless architecture.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"},{\"stepNumber\":\"01 / WASTED COMPUTE\",\"title\":\"Servers sitting idle 90% of the time are an absolute revenue drain.\",\"body\":\"Thinking you need dedicated infrastructure early on results in massive bills.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"}]}' /tmp/cloudless_linkedin_carousel.pdf"
+      },
+      "name": "Compile Carousel PDF",
+      "type": "n8n-nodes-base.executeCommandLine",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-compile-pdf"
+    },
+    {
+      "parameters": {
+        "url": "=http://cluster.local",
+        "method": "POST",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyFormat": "multipart-form-data",
+        "formDataLessParameters": {
+          "properties": [
+            {
+              "name": "file",
+              "parameterType": "formFile",
+              "fileInputOption": "local",
+              "localFilePath": "/tmp/cloudless_linkedin_carousel.pdf"
+            },
+            {
+              "name": "type",
+              "parameterType": "formTextField",
+              "value": "document"
+            }
+          ]
+        },
+        "options": {
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.POSTIZ_API_KEY }}"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Upload Media to Postiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-postiz-upload"
+    },
+    {
+      "parameters": {
+        "url": "=http://cluster.local",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "bodyKeyData": "={\"content\":\"\ud83d\ude80 Stop overpaying for cloud infrastructure that sits idle 90% of the time.\\n\\nAt cloudless.gr, we migrate teams to lightning-fast, secure, and cost-optimized Serverless architecture on Cloudflare. Zero friction. No lock-in contracts.\\n\\nSwipe through the carousel built via our automated homelab pipeline below to see how we deliver results under 14 days. \ud83d\udc47\\n\\n#Cloudflare #Serverless #CloudArchitecture #DevOps #ThemistoklisBaltzakis\",\"mediaIds\":[\"{{ $json.id || $json.mediaId }}\"],\"platforms\":[\"linkedin\"],\"scheduledAt\":\"{{ new Date(Date.now() + 3600000).toISOString() }}\",\"timezone\":\"Europe/Athens\"}",
+        "options": {
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $env.POSTIZ_API_KEY }}"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Schedule Post on LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-schedule-linkedin"
+    }
+  ],
+  "connections": {
+    "Trigger (Daily)": {
+      "main": [
+        [
+          {
+            "node": "Prepare ComfyUI Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare ComfyUI Payload": {
+      "main": [
+        [
+          {
+            "node": "Trigger ComfyUI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger ComfyUI": {
+      "main": [
+        [
+          {
+            "node": "Check Status Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status Loop": {
+      "main": [
+        [
+          {
+            "node": "Download Image from WSL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Execution History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Execution History": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Comfy Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Comfy Ready": {
+      "main": [
+        [
+          {
+            "node": "Wait Retry Interval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Retry Interval": {
+      "main": [
+        [
+          {
+            "node": "Check Status Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image from WSL": {
+      "main": [
+        [
+          {
+            "node": "Compile Carousel PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Carousel PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Media to Postiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Media to Postiz": {
+      "main": [
+        [
+          {
+            "node": "Schedule Post on LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionTimeout": 7200
+  },
+  "id": "1"
+}
