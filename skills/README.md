@@ -30,6 +30,7 @@ This README is the entry table to find the right one fast.
 | [gh-actions-pitfalls](gh-actions-pitfalls/SKILL.md) | matrix bash, pnpm action-setup, runner saturation, ResourceQuota, kube-cleanup-operator | 8 CI gotchas that have bitten cloudless.gr. Read BEFORE authoring any workflow. |
 | [linkedin-campaigns](linkedin-campaigns/SKILL.md) | linkedin campaign, paid acquisition, /campaigns/<slug>, insight tag, CAPI | Add a new LinkedIn campaign — landing page + checkout + dual-fire conversion. |
 | [linkedin-insight-doctor](linkedin-insight-doctor/SKILL.md) | linkedin pixel, insight tag, partner id, conversion-id mismatch | Diagnose silent LinkedIn pixel failures (CSP, conversion-id type mismatch, sync vs async fire). |
+| [mcp-tools](mcp-tools/SKILL.md) | what tools can I use, MCP server, call_tool, which server does X, tool catalog | Catalog of every configured MCP server (`.mcp.json` + `mcp.json`) and the tools each exposes — the index of the tool surface. |
 | [mqtt-auth-rollout](mqtt-auth-rollout/SKILL.md) | mosquitto auth, allow_anonymous, password_file, ESP32 mqtt creds | 3-phase no-downtime credential rollout for the cluster Mosquitto broker. |
 | [postiz](postiz/SKILL.md) | postiz, social media scheduling, postiz auth | Postiz API + admin operations. |
 | [postiz-doctor](postiz-doctor/SKILL.md) | postiz crashloop, postiz oom, postiz down | Postiz-specific incident diagnosis. |
