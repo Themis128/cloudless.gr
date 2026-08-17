@@ -49,4 +49,3 @@ export async function POST(request: Request) {
     );
   }
 }
-</write_to_file>

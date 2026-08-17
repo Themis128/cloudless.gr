@@ -4,11 +4,11 @@
  *
  * ComfyUI API Integration Test — cloudless.gr
  *
- * Deterministic smoke payload built from src/lib/comfyui.buildPayloadForSmokeTest
+ * Deterministic smoke payload built from src/lib/comfyui.buildPayload
  * and robust timeout/error handling.
  */
 
-const { buildPayloadForSmokeTest } = require('../src/lib/comfyui');
+const { buildPayload } = require('../dist/comfyui');
 
 const DEFAULT_ENDPOINT = process.env.COMFYUI_ENDPOINT || 'http://localhost:8000/prompt';
 const CLIENT_ID = process.env.COMFY_CLIENT_ID || `cloudless-test-override`;
@@ -31,12 +31,6 @@ async function checkHealth(endpoint) {
   } catch (err) {
     return { ok: false, error: String(err) };
   }
-}
-
-function buildPayload() {
-  const payload = buildPayloadForSmokeTest(CLIENT_ID);
-  payload.entry_token = ENTRY_TOKEN;
-  return payload;
 }
 
 async function submitPrompt(endpoint, payload, timeoutMs = TIMEOUT_MS) {
@@ -81,7 +75,8 @@ async function main() {
   }
   console.log('  ✓ HTTP 200 — OK\n');
 
-  const payload = buildPayload();
+  const payload = buildPayload(CLIENT_ID);
+  payload.entry_token = ENTRY_TOKEN;
 
   console.log('→ Stage 2: Submitting prompt to /prompt …');
   console.log('  Endpoint:', DEFAULT_ENDPOINT);
@@ -128,4 +123,3 @@ module.exports = {
   buildPayload,
   submitPrompt,
 };
-
