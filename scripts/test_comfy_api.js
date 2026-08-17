@@ -8,7 +8,7 @@
  * and robust timeout/error handling.
  */
 
-const { buildPayloadForSmokeTest } = require('../src/lib/comfyui');
+const { buildPayloadForSmokeTest } = require('../dist/lib/comfyui');
 
 const DEFAULT_ENDPOINT = process.env.COMFYUI_ENDPOINT || 'http://localhost:8000/prompt';
 const CLIENT_ID = process.env.COMFY_CLIENT_ID || `cloudless-test-override`;
