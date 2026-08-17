@@ -15,50 +15,17 @@
       "name": "Trigger (Daily)",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0,0],
       "id": "node-cron-trigger"
     },
     {
       "parameters": {
-        "jsCode": "// Define 4 carousel slides for cloudless.gr with custom comfyPrompt\nconst slides = [\n  {\n    \"title\": \"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\n    \"subtitle\": \"The framework we use at cloudless.gr to transition teams away from enterprise bloat to Serverless architecture.\",\n    \"comfyPrompt\": \"hyper-detailed sleek global server rack networking grid\"\n  },\n  {\n    \"title\": \"Servers sitting idle 90% of the time are an absolute revenue drain.\",\n    \"subtitle\": \"Thinking you need dedicated infrastructure early on results in massive bills. We pivot architectures to high-performance event-driven systems that drop to completely zero cost when traffic falls.\",\n    \"comfyPrompt\": \"abstract cloud computing edge processing visualization\"\n  },\n  {\n    \"title\": \"Global optimization on Cloudflare with zero latency friction.\",\n    \"subtitle\": \"Deploy your code right to edge boundaries. By utilizing Cloudflare Workers, D1, and R2 databases, apps run with a 12ms global p95 profile while slashing infrastructure costs by 60% to 80%.\",\n    \"comfyPrompt\": \"global edge network with nodes worldwide, interconnected cloudflare locations, data flowing between points, neon cyan connections on dark background, futuristic global connectivity visualization\"\n  },\n  {\n    \"title\": \"Guaranteed measurable execution progress inside 14 days.\",\n    \"subtitle\": \"Startups require speed, not multi-month roadmaps. We engineer and map transparent, production-ready deliverables within a 14-day execution sprint or keep refining until it hits exact specification.\",\n    \"comfyPrompt\": \"velocity and speed concept, racing lines, motion blur effect, checkered flag, timing gauges, vibrant orange and yellow accents, dynamic motion visualization, high-tech speedometer\"\n  }\n];\n\nreturn [{ json: { slides: slides } }];"
-      },
-      "name": "Slide Definition",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        200,
-        0
-      ],
-      "id": "node-slide-definition"
-    },
-    {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "name": "Split In Batches",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 1,
-      "position": [
-        400,
-        0
-      ],
-      "id": "node-split-slides"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Base ComfyUI workflow\nconst baseWorkflow = {\n  \"3\": {\n    \"inputs\": { \"seed\": Math.floor(Math.random() * 10000000) },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"juggernaut_xl_v8Rundiffusion.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"\", // Will be replaced with slide.comfyPrompt\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 1024, \"height\": 1024, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": { \"filename_prefix\": \"cloudless-carousel-wsl\" },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\n// Get current slide from context\nconst slide = $json;\n\n// Create a deep copy of the workflow\nconst workflow = JSON.parse(JSON.stringify(baseWorkflow));\n\n// Inject the slide's comfyPrompt into Node 6\nworkflow[\"6\"].inputs.text = slide.comfyPrompt;\n\nreturn [{\n  json: {\n    prompt: workflow,\n    client_id: `n8n-k3s-agent-slide-${slide.title ? slide.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20) : 'unknown'}`,\n    slideData: slide // Pass through slide data for later use\n  }\n}];"
+        "jsCode": "const baseWorkflow = {\n  \"3\": {\n    \"inputs\": { \"seed\": Math.floor(Math.random() * 10000000) },\n    \"class_type\": \"KSampler\"\n  },\n  \"4\": {\n    \"inputs\": { \"ckpt_name\": \"v1-5-pruned-emaonly.safetensors\" },\n    \"class_type\": \"CheckpointLoaderSimple\"\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"professional enterprise cloud server topology, modern hyper-scale infrastructure architecture, cloudless serverless edge computing network grid, dark sleek minimal technical backdrop, vibrant deep blue and accent orange glowing lines, hyper-detailed, 8k resolution\",\n      \"clip\": [\"4\", 1]\n    },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"7\": {\n    \"inputs\": { \"text\": \"blurry, low quality, disfigured text, bad hands, noisy background, neon green light bloat, oversaturated, human face, portrait, illustration\" },\n    \"class_type\": \"CLIPTextEncode\"\n  },\n  \"8\": {\n    \"inputs\": { \"width\": 512, \"height\": 512, \"batch_size\": 1 },\n    \"class_type\": \"EmptyLatentImage\"\n  },\n  \"9\": {\n    \"inputs\": { \"samples\": [\"3\", 0], \"vae\": [\"4\", 2] },\n    \"class_type\": \"VAEDecode\"\n  },\n  \"10\": {\n    \"inputs\": {\n      \"images\": [\"9\", 0],\n      \"filename_prefix\": \"cloudless-carousel-wsl\"\n    },\n    \"class_type\": \"SaveImage\"\n  }\n};\n\nreturn [{\n  json: {\n    prompt: baseWorkflow,\n    client_id: \"n8n-k3s-agent\"\n  }\n}];"
       },
       "name": "Prepare ComfyUI Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
-      "position": [
-        600,
-        0
-      ],
+      "position": [0,0],
       "id": "node-prep-payload"
     },
     {
@@ -73,10 +40,7 @@
       "name": "Trigger ComfyUI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        800,
-        0
-      ],
+      "position": [0,0],
       "id": "node-trigger-comfy"
     },
     {
@@ -98,38 +62,29 @@
       "name": "Check Status Loop",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        1000,
-        0
-      ],
+      "position": [0,0],
       "id": "node-status-check"
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/history/{{ $json.prompt_id }}",
+        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/history",
         "method": "GET",
         "options": {}
       },
       "name": "Fetch Execution History",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        1000,
-        200
-      ],
+      "position": [0,0],
       "id": "node-fetch-history"
     },
     {
       "parameters": {
-        "jsCode": "const historyData = $json;\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename, slideData: $json.slideData } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
+        "jsCode": "const promptId = $('Trigger ComfyUI').item.json.prompt_id;\nconst historyData = $json[promptId];\n\nif (historyData && historyData.outputs && historyData.outputs[\"10\"]) {\n  const filename = historyData.outputs[\"10\"].images[0].filename;\n  return [{ json: { status: \"completed\", filename: filename } }];\n}\nreturn [{ json: { status: \"processing\" } }];"
       },
       "name": "Evaluate Comfy Ready",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
-      "position": [
-        1200,
-        0
-      ],
+      "position": [0,0],
       "id": "node-eval-ready"
     },
     {
@@ -140,94 +95,31 @@
       "name": "Wait Retry Interval",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
-      "position": [
-        1400,
-        0
-      ],
+      "position": [0,0],
       "id": "node-wait-retry"
     },
     {
       "parameters": {
-        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/view?filename={{ $json.filename }}",
+        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8188/view?filename={{ $json.filename }}&type=output",
         "method": "GET",
         "options": {
-          "responseFormat": "blob"
+          "responseFormat": "file"
         }
       },
       "name": "Download Image from WSL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        1600,
-        0
-      ],
+      "position": [0,0],
       "id": "node-download-asset"
     },
     {
       "parameters": {
-        "filePath": "/tmp/comfy_slide_{{ $node[\"Split In Batches\"].index }}.png",
-        "options": {}
-      },
-      "name": "Save Image to File",
-      "type": "n8n-nodes-base.writeBinaryFile",
-      "typeVersion": 1,
-      "position": [
-        1800,
-        0
-      ],
-      "id": "node-save-image-file"
-    },
-    {
-       "parameters": {
-         "jsCode": "const filePath = '/tmp/comfy_slide_' + $node[\"Split In Batches\"].index + '.png';return [{ json: { ...$json, imagePath: filePath } ];}"
-       },
-       "name": "Add Image Path",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        1800,
-        200
-      ],
-      "id": "node-add-image-path"
-    },
-    {
-      "parameters": {
-        "mode": "append",
-        "options": {}
-      },
-      "name": "Collect Slide Results",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 1,
-      "position": [
-        2000,
-        0
-      ],
-      "id": "node-collect-results"
-    },
-    {
-      "parameters": {
-        "jsCode": "const imagePaths = $json.map(item => item.imagePath);\nreturn [{ json: { slides: $json, imagePaths: imagePaths } }];"
-      },
-      "name": "Prepare Image Paths Array",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        2200,
-        0
-      ],
-      "id": "node-prep-image-paths"
-    },
-    {
-      "parameters": {
-        "command": "=node /home/tbaltzakis/cloudless.gr/cloudless-carousel-generator/generate.js '{{ JSON.stringify($json) }}' /tmp/cloudless_linkedin_carousel.pdf"
+        "command": "=node /home/tbaltzakis/cloudless.gr/cloudless-carousel-generator/generate.js '{\"slides\":[{\"title\":\"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\"subtitle\":\"The framework we use at cloudless.gr to transition teams away from enterprise bloat to Serverless architecture.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"},{\"stepNumber\":\"01 / WASTED COMPUTE\",\"title\":\"Servers sitting idle 90% of the time are an absolute revenue drain.\",\"body\":\"Thinking you need dedicated infrastructure early on results in massive bills.\",\"imagePath\":\"/tmp/comfy_slide_0.png\"}]}' /tmp/cloudless_linkedin_carousel.pdf"
       },
       "name": "Compile Carousel PDF",
       "type": "n8n-nodes-base.executeCommandLine",
       "typeVersion": 1,
-      "position": [
-        2400,
-        0
-      ],
+      "position": [0,0],
       "id": "node-compile-pdf"
     },
     {
@@ -266,10 +158,7 @@
       "name": "Upload Media to Postiz",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        2600,
-        0
-      ],
+      "position": [0,0],
       "id": "node-postiz-upload"
     },
     {
@@ -293,201 +182,34 @@
       "name": "Schedule Post on LinkedIn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        2800,
-        0
-      ],
+      "position": [0,0],
       "id": "node-schedule-linkedin"
     }
   ],
   "connections": {
-    "Trigger (Daily)": {
-      "main": [
-        [
-          {
-            "node": "Slide Definition",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Slide Definition": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split In Batches": {
-      "main": [
-        [
-          {
-            "node": "Prepare ComfyUI Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare ComfyUI Payload": {
-      "main": [
-        [
-          {
-            "node": "Trigger ComfyUI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Trigger ComfyUI": {
-      "main": [
-        [
-          {
-            "node": "Check Status Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
+    "Trigger (Daily)": { "main": [[{ "node": "Prepare ComfyUI Payload", "type": "main", "index": 0 }]] },
+    "Prepare ComfyUI Payload": { "main": [[{ "node": "Trigger ComfyUI", "type": "main", "index": 0 }]] },
+    "Trigger ComfyUI": { "main": [[{ "node": "Check Status Loop", "type": "main", "index": 0 }]] },
     "Check Status Loop": {
       "main": [
-        [
-          {
-            "node": "Fetch Execution History",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Download Image from WSL",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Download Image from WSL", "type": "main", "index": 0 }],
+        [{ "node": "Fetch Execution History", "type": "main", "index": 0 }]
       ]
     },
-    "Fetch Execution History": {
-      "main": [
-        [
-          {
-            "node": "Evaluate Comfy Ready",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Evaluate Comfy Ready": {
-      "main": [
-        [
-          {
-            "node": "Wait Retry Interval",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait Retry Interval": {
-      "main": [
-        [
-          {
-            "node": "Check Status Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Download Image from WSL": {
-      "main": [
-        [
-          {
-            "node": "Save Image to File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Image to File": {
-      "main": [
-        [
-          {
-            "node": "Add Image Path",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Add Image Path": {
-      "main": [
-        [
-          {
-            "node": "Collect Slide Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Collect Slide Results": {
-      "main": [
-        [
-          {
-            "node": "Prepare Image Paths Array",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Image Paths Array": {
-      "main": [
-        [
-          {
-            "node": "Compile Carousel PDF",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Compile Carousel PDF": {
-      "main": [
-        [
-          {
-            "node": "Upload Media to Postiz",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upload Media to Postiz": {
-      "main": [
-        [
-          {
-            "node": "Schedule Post on LinkedIn",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Fetch Execution History": { "main": [[{ "node": "Evaluate Comfy Ready", "type": "main", "index": 0 }]] },
+    "Evaluate Comfy Ready": { "main": [[{ "node": "Wait Retry Interval", "type": "main", "index": 0 }]] },
+    "Wait Retry Interval": { "main": [[{ "node": "Check Status Loop", "type": "main", "index": 0 }]] },
+    "Download Image from WSL": { "main": [[{ "node": "Compile Carousel PDF", "type": "main", "index": 0 }]] },
+    "Compile Carousel PDF": { "main": [[{ "node": "Upload Media to Postiz", "type": "main", "index": 0 }]] },
+    "Upload Media to Postiz": { "main": [[{ "node": "Schedule Post on LinkedIn", "type": "main", "index": 0 }]] }
   },
   "active": false,
-  "settings": {
-    "executionTimeout": 7200
-  },
+  "settings": { "executionTimeout": 7200 },
   "id": "1"
 }
+</task_progress>
+- [x] Fix the JSON by replacing position placeholders
+- [x] Write the fixed JSON to the n8n workflow file (clean version)
+- [x] Write the fixed JSON to the cloudless-base-workflow file
+</task_progress>
+</write_to_file>
