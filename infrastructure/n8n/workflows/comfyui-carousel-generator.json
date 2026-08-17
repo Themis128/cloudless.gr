@@ -1,5 +1,5 @@
 {
-  "name": "ComfyUI Carousel Generator — cloudless.gr",
+  "name": "ComfyUI Carousel Generator \u2014 cloudless.gr",
   "nodes": [
     {
       "parameters": {
@@ -15,7 +15,10 @@
       "name": "Trigger (Daily)",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-cron-trigger"
     },
     {
@@ -25,7 +28,10 @@
       "name": "Prepare ComfyUI Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-prep-payload"
     },
     {
@@ -40,13 +46,20 @@
       "name": "Trigger ComfyUI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-trigger-comfy"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValueStringType": "string", "rightValueStringType": "string" },
+          "options": {
+            "caseSensitive": true,
+            "leftValueStringType": "string",
+            "rightValueStringType": "string"
+          },
           "conditions": [
             {
               "id": "is-done",
@@ -62,7 +75,10 @@
       "name": "Check Status Loop",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-status-check"
     },
     {
@@ -74,7 +90,10 @@
       "name": "Fetch Execution History",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-fetch-history"
     },
     {
@@ -84,7 +103,10 @@
       "name": "Evaluate Comfy Ready",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-eval-ready"
     },
     {
@@ -95,7 +117,10 @@
       "name": "Wait Retry Interval",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-wait-retry"
     },
     {
@@ -109,7 +134,10 @@
       "name": "Download Image from WSL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-download-asset"
     },
     {
@@ -119,7 +147,10 @@
       "name": "Compile Carousel PDF",
       "type": "n8n-nodes-base.executeCommandLine",
       "typeVersion": 1,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-compile-pdf"
     },
     {
@@ -158,7 +189,10 @@
       "name": "Upload Media to Postiz",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-postiz-upload"
     },
     {
@@ -167,7 +201,7 @@
         "method": "POST",
         "sendBody": true,
         "specifyBody": "json",
-        "bodyKeyData": "={\"content\":\"🚀 Stop overpaying for cloud infrastructure that sits idle 90% of the time.\\n\\nAt cloudless.gr, we migrate teams to lightning-fast, secure, and cost-optimized Serverless architecture on Cloudflare. Zero friction. No lock-in contracts.\\n\\nSwipe through the carousel built via our automated homelab pipeline below to see how we deliver results under 14 days. 👇\\n\\n#Cloudflare #Serverless #CloudArchitecture #DevOps #ThemistoklisBaltzakis\",\"mediaIds\":[\"{{ $json.id || $json.mediaId }}\"],\"platforms\":[\"linkedin\"],\"scheduledAt\":\"{{ new Date(Date.now() + 3600000).toISOString() }}\",\"timezone\":\"Europe/Athens\"}",
+        "bodyKeyData": "={\"content\":\"\ud83d\ude80 Stop overpaying for cloud infrastructure that sits idle 90% of the time.\\n\\nAt cloudless.gr, we migrate teams to lightning-fast, secure, and cost-optimized Serverless architecture on Cloudflare. Zero friction. No lock-in contracts.\\n\\nSwipe through the carousel built via our automated homelab pipeline below to see how we deliver results under 14 days. \ud83d\udc47\\n\\n#Cloudflare #Serverless #CloudArchitecture #DevOps #ThemistoklisBaltzakis\",\"mediaIds\":[\"{{ $json.id || $json.mediaId }}\"],\"platforms\":[\"linkedin\"],\"scheduledAt\":\"{{ new Date(Date.now() + 3600000).toISOString() }}\",\"timezone\":\"Europe/Athens\"}",
         "options": {
           "headerParameters": {
             "parameters": [
@@ -182,34 +216,135 @@
       "name": "Schedule Post on LinkedIn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [0,0],
+      "position": [
+        0,
+        0
+      ],
       "id": "node-schedule-linkedin"
     }
   ],
   "connections": {
-    "Trigger (Daily)": { "main": [[{ "node": "Prepare ComfyUI Payload", "type": "main", "index": 0 }]] },
-    "Prepare ComfyUI Payload": { "main": [[{ "node": "Trigger ComfyUI", "type": "main", "index": 0 }]] },
-    "Trigger ComfyUI": { "main": [[{ "node": "Check Status Loop", "type": "main", "index": 0 }]] },
-    "Check Status Loop": {
+    "Trigger (Daily)": {
       "main": [
-        [{ "node": "Download Image from WSL", "type": "main", "index": 0 }],
-        [{ "node": "Fetch Execution History", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Prepare ComfyUI Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Fetch Execution History": { "main": [[{ "node": "Evaluate Comfy Ready", "type": "main", "index": 0 }]] },
-    "Evaluate Comfy Ready": { "main": [[{ "node": "Wait Retry Interval", "type": "main", "index": 0 }]] },
-    "Wait Retry Interval": { "main": [[{ "node": "Check Status Loop", "type": "main", "index": 0 }]] },
-    "Download Image from WSL": { "main": [[{ "node": "Compile Carousel PDF", "type": "main", "index": 0 }]] },
-    "Compile Carousel PDF": { "main": [[{ "node": "Upload Media to Postiz", "type": "main", "index": 0 }]] },
-    "Upload Media to Postiz": { "main": [[{ "node": "Schedule Post on LinkedIn", "type": "main", "index": 0 }]] }
+    "Prepare ComfyUI Payload": {
+      "main": [
+        [
+          {
+            "node": "Trigger ComfyUI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger ComfyUI": {
+      "main": [
+        [
+          {
+            "node": "Check Status Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status Loop": {
+      "main": [
+        [
+          {
+            "node": "Download Image from WSL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Execution History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Execution History": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Comfy Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Comfy Ready": {
+      "main": [
+        [
+          {
+            "node": "Wait Retry Interval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Retry Interval": {
+      "main": [
+        [
+          {
+            "node": "Check Status Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image from WSL": {
+      "main": [
+        [
+          {
+            "node": "Compile Carousel PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Carousel PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Media to Postiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Media to Postiz": {
+      "main": [
+        [
+          {
+            "node": "Schedule Post on LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionTimeout": 7200 },
+  "settings": {
+    "executionTimeout": 7200
+  },
   "id": "1"
 }
-</task_progress>
-- [x] Fix the JSON by replacing position placeholders
-- [x] Write the fixed JSON to the n8n workflow file (clean version)
-- [x] Write the fixed JSON to the cloudless-base-workflow file
-</task_progress>
-</write_to_file>
