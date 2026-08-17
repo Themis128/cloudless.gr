@@ -36,7 +36,7 @@
     },
     {
       "parameters": {
-         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/prompt",
+        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/prompt",
         "method": "POST",
         "sendBody": true,
         "specifyBody": "json",
@@ -83,7 +83,7 @@
     },
     {
       "parameters": {
-         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/history",
+        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/history",
         "method": "GET",
         "options": {}
       },
@@ -125,7 +125,7 @@
     },
     {
       "parameters": {
-         "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/view?filename={{ $json.filename }}&type=output",
+        "url": "=http://{{ $env.WSL_HOST_IP || '192.168.1.50' }}:8000/view?filename={{ $json.filename }}&type=output",
         "method": "GET",
         "options": {
           "responseFormat": "file"
@@ -221,6 +221,99 @@
         0
       ],
       "id": "node-schedule-linkedin"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/cloudless_linkedin_carousel.pdf"
+      },
+      "name": "Read PDF File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ],
+      "id": "read-pdf-file"
+    },
+    {
+      "parameters": {
+        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/curated/linkedIn-carousels/year={{ $now.format('YYYY') }}/month={{ $now.format('MM') }}/cloudless_carousel_{{ $now.format('YYYYMMDD') }}.pdf",
+        "method": "PUT",
+        "bodyFormat": "binary",
+        "binaryDataProperty": "data"
+      },
+      "name": "Upload PDF to Lakehouse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "upload-pdf-to-lakehouse"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "setBinaryData": {
+          "name": "data",
+          "value": "={{ $node[\"Download Image from WSL\"].binary.data }}"
+        }
+      },
+      "name": "Set Raw Image Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        200,
+        100
+      ],
+      "id": "set-raw-image-data"
+    },
+    {
+      "parameters": {
+        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/raw/comfyui/year={{ $now.format('YYYY') }}/month={{ $now.format('MM') }}/cloudless-bg-{{ $node[\"Evaluate Comfy Ready\"].json.filename }}",
+        "method": "PUT",
+        "bodyFormat": "binary",
+        "binaryDataProperty": "data"
+      },
+      "name": "Upload Raw Image to Lakehouse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        400,
+        100
+      ],
+      "id": "upload-raw-image-to-lakehouse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const metadata = {\n  post_author: \"Themistoklis Baltzakis\",\n  company_domain: \"www.cloudless.gr\",\n  generation_timestamp: new Date().toISOString(),\n  comfyui_model_used: \"v1-5-pruned-emaonly.safetensors\",\n  carousel_title: \"Stop Overpaying For Gated Infrastructure That Sits Idle.\",\n  s3_pdf_uri: `s3://lakehouse/curated/linkedIn-carousels/year=${new Date().getFullYear()}/month=${String(new Date().getMonth()+1).padStart(2, '0')}/cloudless_carousel_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.pdf`,\n  postiz_scheduled_time: \"Europe/Athens\"\n};\nreturn [{ json: metadata }];"
+      },
+      "name": "Metadata Lakehouse Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "metadata-lakehouse-engine"
+    },
+    {
+      "parameters": {
+        "url": "http://{{$env.WSL_HOST_IP || '192.168.1.50'}}:9000/lakehouse/landing/metadata/metadata_{{ $now.format('YYYYMMDD_HHmmss') }}.json",
+        "method": "PUT",
+        "sendBody": true,
+        "specifyBody": "json",
+        "bodyKeyData": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Upload Metadata to Lakehouse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        800,
+        0
+      ],
+      "id": "upload-metadata-to-lakehouse"
     }
   ],
   "connections": {
@@ -323,7 +416,14 @@
       "main": [
         [
           {
-            "node": "Upload Media to Postiz",
+            "node": "Read PDF File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Raw Image Data",
             "type": "main",
             "index": 0
           }
@@ -335,6 +435,61 @@
         [
           {
             "node": "Schedule Post on LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read PDF File": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to Lakehouse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to Lakehouse": {
+      "main": [
+        [
+          {
+            "node": "Metadata Lakehouse Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadata Lakehouse Engine": {
+      "main": [
+        [
+          {
+            "node": "Upload Metadata to Lakehouse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Metadata to Lakehouse": {
+      "main": [
+        [
+          {
+            "node": "Upload Media to Postiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Raw Image Data": {
+      "main": [
+        [
+          {
+            "node": "Upload Raw Image to Lakehouse",
             "type": "main",
             "index": 0
           }
