@@ -189,19 +189,6 @@
         "POSTIZ_API_URL": "http://cluster.local"
       },
       "disabled": false
-    },
-    "n8n": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://n8n.cloudless.gr/mcp-server/http"],
-      "autoStart": true,
-      "alwaysAllow": [
-        "list_resources",
-        "read_resource",
-        "list_tools",
-        "call_tool",
-        "list_prompts",
-        "get_prompt"
-      ]
     }
   }
 }
