@@ -115,6 +115,7 @@ const nextConfig: NextConfig = {
     // ~50%+ once warm. deploy-pi.yml now preserves `.next/cache/` between
     // runs; if you ever need a full clean rebuild, delete the whole `.next`
     // directory locally or push a new-SHA branch.
+    // @ts-expect-error — exists at runtime in Next 16.3+ but not yet in exported types
     turbopackFileSystemCacheForBuild: true
   }
 };

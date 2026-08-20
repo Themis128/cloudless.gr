@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockRequireAdmin, mockIsConfiguredAsync, mockListContacts, mockReadPendingClients } =
+const { mockRequireAdmin, mockIsConfiguredAsync, mockListContacts, mockListLeads, mockReadPendingClients } =
   vi.hoisted(() => ({
     mockRequireAdmin: vi.fn(),
     mockIsConfiguredAsync: vi.fn(),
     mockListContacts: vi.fn(),
+    mockListLeads: vi.fn(),
     mockReadPendingClients: vi.fn(),
   }));
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
-vi.mock("@/lib/integrations", () => ({ isConfiguredAsync: mockIsConfiguredAsync }));
-vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts }));
+vi.mock("@/lib/integrations", () => ({
+  isConfiguredAsync: mockIsConfiguredAsync,
+  IntegrationNotConfiguredError: class IntegrationNotConfiguredError extends Error {
+    constructor(keys: string[]) {
+      super(`Not configured: ${keys.join(", ")}`);
+      this.name = "IntegrationNotConfiguredError";
+    }
+  },
+}));
+vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts, listLeads: mockListLeads }));
 vi.mock("@/lib/pending-clients", () => ({
   readPendingClients: mockReadPendingClients,
   PLAN_LABELS: { bundle: "Full-Stack Growth Engine (Bundle)" },
@@ -48,6 +57,7 @@ beforeEach(() => {
   mockRequireAdmin.mockResolvedValue({ ok: true });
   mockIsConfiguredAsync.mockResolvedValue(true);
   mockListContacts.mockResolvedValue([HUBSPOT_CONTACT]);
+  mockListLeads.mockResolvedValue([]);
   mockReadPendingClients.mockResolvedValue([]);
 });
 

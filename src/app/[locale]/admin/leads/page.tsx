@@ -61,7 +61,6 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLeads().catch(() => {});
     const interval = setInterval(() => {
       fetchLeads().catch(() => {});

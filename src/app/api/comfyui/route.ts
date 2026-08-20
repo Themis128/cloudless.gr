@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    
+    const body = await request.json() as Record<string, unknown>;
+
     // Validate and normalize the payload using our ComfyUI utilities
-    const { client_id, prompt } = normalizeAndValidatePrompt(body);
+    const { client_id, prompt } = normalizeAndValidatePrompt(body as Record<string, any>);
     
     // Validate client_id format (optional, can be removed if not needed)
     const clientIdPattern = /^cloudless-factory-\d+$/;

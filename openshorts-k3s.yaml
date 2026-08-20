@@ -26,36 +26,36 @@ spec:
       labels:
         app: openshorts
     spec:
-       containers:
-         - name: openshorts-app
-           image: mutonby/openshorts:latest
-           imagePullPolicy: IfNotPresent
-           ports:
-           - containerPort: 3000
-             name: http
-           env:
-           - name: GEMINI_API_KEY
-             valueFrom:
-               secretKeyRef:
-                 name: openshorts-secrets
-                 key: GEMINI_API_KEY
-           - name: ELEVENLABS_API_KEY
-             valueFrom:
-               secretKeyRef:
-                 name: openshorts-secrets
-                 key: ELEVENLABS_API_KEY
-           - name: FAL_AI_API_KEY
-             valueFrom:
-               secretKeyRef:
-                 name: openshorts-secrets
-                 key: FAL_AI_API_KEY
-           resources:
-             limits:
-               memory: 2Gi
-               cpu: "2"
-             requests:
-               memory: 512Mi
-               cpu: "500m"
+      containers:
+        - name: openshorts-app
+          image: mutonby/openshorts:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openshorts-secrets
+                  key: GEMINI_API_KEY
+            - name: ELEVENLABS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openshorts-secrets
+                  key: ELEVENLABS_API_KEY
+            - name: FAL_AI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openshorts-secrets
+                  key: FAL_AI_API_KEY
+          resources:
+            limits:
+              memory: 2Gi
+              cpu: "2"
+            requests:
+              memory: 512Mi
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service

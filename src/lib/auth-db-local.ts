@@ -9,6 +9,7 @@
  */
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+// @ts-expect-error — node:sqlite added in Node 22.5; @types/node lags behind
 import { DatabaseSync } from "node:sqlite";
 import type { AuthDatabase } from "./auth-d1";
 

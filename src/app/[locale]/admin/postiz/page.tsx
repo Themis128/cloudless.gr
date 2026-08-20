@@ -126,7 +126,6 @@ export default function PostizAdminPage() {
     // them happen after the fetch resolves, not synchronously in the effect
     // body. The new react-hooks/set-state-in-effect rule can't tell the
     // difference. Matches the existing pattern in AuthContext.tsx:199.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadIntegrations();
     void reloadPosts();
   }, [reloadIntegrations, reloadPosts]);

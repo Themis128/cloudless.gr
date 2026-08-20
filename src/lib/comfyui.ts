@@ -19,7 +19,7 @@ function normalizeAndValidatePrompt(promptObj: Record<string, any>) {
     }
     const rawType = nodeStruct.class_type;
     if (typeof rawType === "string") {
-      nodeStruct.class_type = nameMap[rawType] ?? rawType;
+      nodeStruct.class_type = (nameMap as Record<string, string>)[rawType] ?? rawType;
     }
 
     if (!("inputs" in nodeStruct) || typeof nodeStruct.inputs !== "object" || nodeStruct.inputs === null) {

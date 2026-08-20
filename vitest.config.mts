@@ -1,10 +1,31 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Plugin } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// node:sqlite was added in Node 22.5 — Vite 5.x doesn't know it's a built-in
+// and strips the "node:" prefix before trying to resolve it as an npm package.
+// This plugin intercepts the bare specifier and marks it external under the
+// correct "node:" prefix so vite-node does import("node:sqlite") not import("sqlite").
+const nodeBuiltinSqlite: Plugin = {
+  name: "externalize-node-sqlite",
+  enforce: "pre",
+  resolveId(id) {
+    if (id === "node:sqlite" || id === "sqlite") {
+      return { id: "node:sqlite", external: true };
+    }
+  },
+};
+
 export default defineConfig({
+  plugins: [nodeBuiltinSqlite],
+  esbuild: {
+    // Inject React into every JSX/TSX file so components that omit the import
+    // (valid with the new JSX transform) still work under Vitest's classic transform.
+    jsxInject: "import React from 'react'",
+  },
   resolve: {
     tsconfigPaths: true,
     // jose lives in the pnpm content-addressable store; the stub symlink at
@@ -57,14 +78,19 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     pool: "forks",
+    poolOptions: {
+      forks: { minForks: 1, maxForks: 2 },
+    },
     server: {
       deps: {
         // next-auth imports next/server as bare ESM specifier. Inlining lets
         // Vitest pre-transform the import through its alias map.
         inline: ["next-auth", "@auth/core", "next-intl"],
+        // node:sqlite is handled by the nodeBuiltinSqlite plugin above.
+        external: [/^node:sqlite/],
       },
     },
-    maxWorkers: 2,
+
     testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     // Agent tests need optional `redis` which is not a root dependency.

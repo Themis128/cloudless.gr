@@ -34,7 +34,6 @@ export type AnyBlock = TextBlock | ToolUseBlock | ToolResultBlock;
 
 export interface BedrockMessage {
   role: "user" | "assistant";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any[];
 }
 
