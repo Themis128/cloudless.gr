@@ -1,15 +1,10 @@
 name: Sync n8n workflows
 
 # Push all workflow JSON files from infrastructure/n8n/workflows/ into the
-# live n8n instance via the n8n REST API (X-N8N-API-KEY auth).
+# live n8n pod via kubectl exec + `n8n import:workflow`.
 #
-# Match by name: existing workflows are updated (nodes/connections/settings);
-# their active state is preserved. New workflows are created (inactive unless
-# the JSON has active:true).
-#
-# Requires GitHub Secrets:
-#   TAILSCALE_OAUTH_CLIENT_ID, TAILSCALE_OAUTH_SECRET  — ephemeral CI node
-#   N8N_API_KEY                                         — n8n Settings → n8n API
+# No API key required — uses the Pi self-hosted runner which has kubectl
+# access to the k3s cluster directly.
 
 on:
   push:
@@ -30,8 +25,10 @@ concurrency:
 jobs:
   sync:
     name: Sync workflow JSONs → n8n
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 10
+    env:
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
     steps:
     - name: Checkout
@@ -42,18 +39,9 @@ jobs:
       with:
         node-version: 22
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888   # v4.1.3
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-        tags: tag:ci
-
     - name: Sync workflow JSONs → n8n
       env:
-        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        N8N_API_URL: http://100.74.191.58:30900
-        N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        N8N_NAMESPACE: n8n
       run: node scripts/n8n-sync-workflows.mjs
 
     - name: Notify Slack on failure

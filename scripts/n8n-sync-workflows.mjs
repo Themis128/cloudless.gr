@@ -1,53 +1,39 @@
 #!/usr/bin/env node
 /**
  * Sync workflow JSON files from infrastructure/n8n/workflows/ into the
- * live n8n instance via its REST API.
+ * live n8n pod via kubectl exec (no API key required).
  *
- * Match strategy: workflow name (exact string, case-sensitive).
- *   - Exists in n8n  →  PUT (update nodes/connections/settings).
- *                        Active state is preserved — does not flip running workflows.
- *   - Not found      →  POST (create). Activates if JSON has active:true.
+ * Strategy:
+ *   1. Export all existing workflows from the pod to get name → id mapping.
+ *   2. For each local JSON: if a workflow with the same name exists, set its
+ *      id in the payload so n8n updates it. Otherwise omit id so n8n creates.
+ *   3. Copy the prepared JSON into the pod and run `n8n import:workflow`.
  *
  * Required env vars:
- *   N8N_API_URL   e.g. http://100.74.191.58:30900
- *   N8N_API_KEY   n8n API key (Settings → n8n API → Create an API key)
+ *   N8N_NAMESPACE   (default: n8n)
+ *   KUBECONFIG      (default: /etc/rancher/k3s/k3s.yaml on Pi runner)
  */
 
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, writeFileSync } from "fs";
 import { join, basename, dirname } from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dir, "..", "infrastructure", "n8n", "workflows");
+const NS = process.env.N8N_NAMESPACE ?? "n8n";
+const SUDO = process.env.KUBECTL_SUDO === "false" ? "" : "sudo ";
 
-const BASE = (process.env.N8N_API_URL ?? "").replace(/\/$/, "");
-const KEY = process.env.N8N_API_KEY;
-
-if (!BASE || !KEY) {
-  console.error("N8N_API_URL and N8N_API_KEY are required");
-  process.exit(1);
+function kube(cmd) {
+  return execSync(`${SUDO}kubectl ${cmd}`, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 
-async function n8nFetch(method, path, body) {
-  const opts = {
-    method,
-    headers: {
-      "X-N8N-API-KEY": KEY,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(20_000),
-  };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const res = await fetch(`${BASE}/api/v1${path}`, opts);
-  const text = await res.text();
-  if (!res.ok) throw new Error(`n8n ${method} ${path} → ${res.status}: ${text.slice(0, 400)}`);
-  return text ? JSON.parse(text) : null;
-}
-
-async function listAllWorkflows() {
-  const data = await n8nFetch("GET", "/workflows?limit=250");
-  return data?.data ?? [];
+function kubeSilent(cmd) {
+  try {
+    return kube(cmd);
+  } catch {
+    return "";
+  }
 }
 
 function nameFromFilename(file) {
@@ -63,9 +49,31 @@ async function main() {
 
   console.log(`\n📂  ${files.length} workflow file(s) in infrastructure/n8n/workflows/\n`);
 
-  const existing = await listAllWorkflows();
-  const byName = new Map(existing.map((w) => [w.name, w]));
-  console.log(`🔗  n8n has ${existing.length} existing workflow(s)\n`);
+  // Get the n8n pod name
+  const pod = kube(
+    `get pods -n ${NS} -l app=n8n -o jsonpath='{.items[0].metadata.name}'`
+  ).replace(/'/g, "");
+
+  if (!pod) {
+    console.error("No n8n pod found in namespace", NS);
+    process.exit(1);
+  }
+  console.log(`🔗  Pod: ${pod}\n`);
+
+  // Export all existing workflows from the pod to get name→id mapping
+  kubeSilent(
+    `exec -n ${NS} ${pod} -- n8n export:workflow --all --output=/tmp/n8n-export.json`
+  );
+  let existing = [];
+  try {
+    const raw = kubeSilent(`exec -n ${NS} ${pod} -- cat /tmp/n8n-export.json`);
+    if (raw) existing = JSON.parse(raw);
+    if (!Array.isArray(existing)) existing = [];
+  } catch {
+    existing = [];
+  }
+  const byName = new Map(existing.map((w) => [w.name, w.id]));
+  console.log(`   ${existing.length} workflow(s) already in n8n\n`);
 
   let created = 0,
     updated = 0,
@@ -77,47 +85,38 @@ async function main() {
     try {
       wf = JSON.parse(readFileSync(filePath, "utf-8"));
     } catch (e) {
-      console.error(`  ✗ ${file}: JSON parse error — ${e.message}`);
+      console.error(`  ✗  ${file}: JSON parse error — ${e.message}`);
       errors++;
       continue;
     }
 
-    // Derive name from filename when the JSON has no name field
-    if (!wf.name || typeof wf.name !== "string" || !wf.name.trim()) {
-      wf.name = nameFromFilename(file);
-    }
-
+    if (!wf.name?.trim()) wf.name = nameFromFilename(file);
     const name = wf.name;
-    const shouldBeActive = wf.active === true;
 
-    // Strip the file-level id — n8n manages its own ids
-    const { id: _fileId, ...wfBody } = wf;
+    // Set id to the live workflow's id so n8n updates instead of creating
+    const existingId = byName.get(name);
+    if (existingId !== undefined) {
+      wf.id = existingId;
+    } else {
+      delete wf.id;
+    }
+    delete wf.tags; // n8n import rejects unknown tag ids
 
-    const live = byName.get(name);
+    const tmpLocal = `/tmp/n8n-wf-${Date.now()}.json`;
+    const tmpPod = `/tmp/n8n-wf-import.json`;
 
     try {
-      if (live) {
-        // Update: PUT preserves active state (only structural changes)
-        await n8nFetch("PUT", `/workflows/${live.id}`, {
-          ...wfBody,
-          active: live.active, // keep whatever n8n says
-          id: String(live.id),
-        });
-        console.log(`  ↺  Updated  : ${name}`);
-        updated++;
-      } else {
-        // Create, then activate if JSON requests it
-        const created_wf = await n8nFetch("POST", "/workflows", { ...wfBody, active: false });
-        if (shouldBeActive) {
-          await n8nFetch("POST", `/workflows/${created_wf.id}/activate`);
-          console.log(`  +  Created  : ${name}  → activated`);
-        } else {
-          console.log(`  +  Created  : ${name}  (inactive)`);
-        }
-        created++;
-      }
+      writeFileSync(tmpLocal, JSON.stringify(wf));
+      kube(`cp ${tmpLocal} ${NS}/${pod}:${tmpPod}`);
+      const out = kube(
+        `exec -n ${NS} ${pod} -- n8n import:workflow --input=${tmpPod}`
+      );
+      const isUpdate = existingId !== undefined;
+      console.log(`  ${isUpdate ? "↺" : "+"}  ${isUpdate ? "Updated" : "Created"} : ${name}`);
+      if (out && !out.includes("Successfully")) console.log(`     ${out.trim()}`);
+      isUpdate ? updated++ : created++;
     } catch (e) {
-      console.error(`  ✗  Error    : ${name} — ${e.message}`);
+      console.error(`  ✗  Error   : ${name} — ${e.stderr ?? e.message}`);
       errors++;
     }
   }
