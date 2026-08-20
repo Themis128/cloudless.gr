@@ -1,0 +1,155 @@
+# EspoCRM MariaDB → Cloudflare R2 daily backup
+#
+# Uses the MinIO client (mc) to upload to R2's S3-compatible endpoint — no AWS
+# tooling involved. Runs at 02:30 UTC daily and prunes backups older than 7 days.
+#
+# ── One-time operator setup ─────────────────────────────────────────────────
+#
+# 1. Create the R2 bucket (skip if it already exists):
+#      npx wrangler r2 bucket create espocrm-backups
+#
+# 2. Create an R2 API token:
+#    Cloudflare dashboard → R2 → Manage R2 API Tokens → Create API Token
+#    Permissions: Object Read & Write on bucket "espocrm-backups"
+#    Copy the Access Key ID and Secret Access Key.
+#
+# 3. Create the k8s Secret (replace values with your token and account ID):
+#    kubectl create secret generic espocrm-r2-backup -n espocrm \
+#      --from-literal=R2_ENDPOINT=https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com \
+#      --from-literal=R2_ACCESS_KEY_ID=<access-key-id> \
+#      --from-literal=R2_SECRET_ACCESS_KEY=<secret-access-key> \
+#      --from-literal=R2_BUCKET=espocrm-backups
+#
+# 4. Apply this manifest:
+#    kubectl apply -f infrastructure/espocrm/k8s/backup-cronjob.yaml
+#
+# 5. Verify the first run:
+#    kubectl create job -n espocrm --from=cronjob/espocrm-mariadb-backup espocrm-backup-test
+#    kubectl logs -n espocrm -l job-name=espocrm-backup-test -f
+#
+# ── Backup path in R2 ────────────────────────────────────────────────────────
+# espocrm-db/YYYY-MM-DDTHHMMSSZ.sql.gz  (7-day rolling retention)
+# ─────────────────────────────────────────────────────────────────────────────
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: espocrm-mariadb-backup
+  namespace: espocrm
+  labels:
+    app: espocrm-mariadb-backup
+spec:
+  schedule: "30 2 * * *"        # 02:30 UTC — staggered from pi-disk-cleanup (03:00 EEST)
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid     # never run two backups at once
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: espocrm-mariadb-backup
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          restartPolicy: OnFailure
+          initContainers:
+          - name: download-mc
+            image: alpine:3.19
+            command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache curl --quiet && \
+              curl -sSL \
+                https://dl.min.io/client/mc/release/linux-arm64/mc \
+                -o /tools/mc && \
+              chmod +x /tools/mc
+            volumeMounts:
+            - name: tools
+              mountPath: /tools
+            resources:
+              requests: { cpu: 20m, memory: 32Mi }
+              limits:   { cpu: 200m, memory: 64Mi }
+          containers:
+          - name: backup
+            image: mariadb:11
+            env:
+            - name: MYSQL_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: espocrm-secrets
+                  key: mariadb-root-password
+            - name: R2_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: espocrm-r2-backup
+                  key: R2_ENDPOINT
+            - name: R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: espocrm-r2-backup
+                  key: R2_ACCESS_KEY_ID
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: espocrm-r2-backup
+                  key: R2_SECRET_ACCESS_KEY
+            - name: R2_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: espocrm-r2-backup
+                  key: R2_BUCKET
+            command:
+            - bash
+            - -euo
+            - pipefail
+            - -c
+            - |
+              TIMESTAMP=$(date -u +%Y-%m-%dT%H%M%SZ)
+              BACKUP_FILE="/tmp/espocrm-${TIMESTAMP}.sql.gz"
+
+              echo "[backup] Dumping EspoCRM database @ ${TIMESTAMP}..."
+              mariadb-dump \
+                -h espocrm-mariadb \
+                -u root \
+                --single-transaction \
+                --routines \
+                --triggers \
+                --databases espocrm \
+                | gzip -6 > "$BACKUP_FILE"
+
+              SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
+              echo "[backup] Dump complete — ${SIZE}"
+
+              echo "[backup] Configuring mc → R2..."
+              /tools/mc alias set r2 \
+                "$R2_ENDPOINT" \
+                "$R2_ACCESS_KEY_ID" \
+                "$R2_SECRET_ACCESS_KEY" \
+                --quiet
+
+              echo "[backup] Uploading to r2/${R2_BUCKET}/espocrm-db/${TIMESTAMP}.sql.gz ..."
+              /tools/mc cp \
+                "$BACKUP_FILE" \
+                "r2/${R2_BUCKET}/espocrm-db/${TIMESTAMP}.sql.gz"
+
+              echo "[backup] Pruning backups older than 7 days..."
+              /tools/mc rm \
+                --recursive \
+                --force \
+                --older-than 168h \
+                "r2/${R2_BUCKET}/espocrm-db/" 2>/dev/null || true
+
+              echo "[backup] Done — ${TIMESTAMP}.sql.gz (${SIZE})"
+            volumeMounts:
+            - name: tools
+              mountPath: /tools
+            resources:
+              requests: { cpu: 50m, memory: 96Mi }
+              limits:   { cpu: 500m, memory: 256Mi }
+          volumes:
+          - name: tools
+            emptyDir: {}

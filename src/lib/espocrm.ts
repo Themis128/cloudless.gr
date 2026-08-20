@@ -31,6 +31,8 @@ import {
 
 const PAGE_SIZE = 100;
 const MAX_LIMIT = 100;
+const MAX_RETRIES = 3;
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 interface EspoContact {
   email: string;
@@ -56,14 +58,37 @@ async function getEspoConfig(): Promise<{ baseUrl: string; apiKey: string }> {
 
 async function espoFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const { baseUrl, apiKey } = await getEspoConfig();
-  return fetch(`${baseUrl}/api/v1${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Api-Key": apiKey,
-      ...init.headers,
-    },
-  });
+  const url = `${baseUrl}/api/v1${path}`;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": apiKey,
+    ...((init.headers ?? {}) as Record<string, string>),
+  };
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise<void>((r) => setTimeout(r, 200 * 2 ** (attempt - 1)));
+    }
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!RETRYABLE_STATUS.has(res.status)) return res;
+      if (attempt === MAX_RETRIES - 1) return res;
+      if (res.status === 429) {
+        const after = parseInt(res.headers.get("Retry-After") ?? "", 10);
+        if (Number.isFinite(after) && after > 0 && after < 60) {
+          await new Promise<void>((r) => setTimeout(r, after * 1_000));
+        }
+      }
+    } catch (err) {
+      lastErr = err;
+      if (attempt === MAX_RETRIES - 1) throw err;
+    }
+  }
+  throw lastErr ?? new Error("espoFetch exhausted retries");
 }
 
 /**
@@ -84,7 +109,7 @@ async function espoListAll<T = unknown>(
       ...baseParams,
     });
     const res = await espoFetch(`/${entity}?${params.toString()}`);
-    if (!res.ok) break;
+    if (!res.ok) throw new Error(`EspoCRM ${entity} list page (offset ${offset}) failed: ${res.status}`);
     const data = (await res.json()) as { list: T[]; total: number };
     all.push(...data.list);
     if (data.list.length < PAGE_SIZE) break;
@@ -234,6 +259,32 @@ function clampLimit(limit: number, fallback = 20): number {
   return Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT) : fallback;
 }
 
+export async function listLeads(limit = 20): Promise<unknown[]> {
+  const clamped = clampLimit(limit);
+  const { value } = await readThrough(
+    "espocrm:listLeads",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(
+          `/Lead?` +
+            new URLSearchParams({
+              maxSize: String(clamped),
+              orderBy: "createdAt",
+              order: "desc",
+            }).toString()
+        );
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
+}
+
 export async function listContacts(limit = 10): Promise<unknown[]> {
   const clamped = clampLimit(limit, 10);
   const { value } = await readThrough(
@@ -330,7 +381,7 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
   return value;
 }
 
-interface TicketData {
+export interface TicketData {
   subject: string;
   content: string;
   hs_pipeline?: string;
@@ -431,21 +482,29 @@ export async function listDeals(limit = 20): Promise<unknown[]> {
 }
 
 export async function listOwners(): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(
-      `/User?` +
-        new URLSearchParams({
-          "where[0][type]": "equals",
-          "where[0][attribute]": "type",
-          "where[0][value]": "regular",
-          maxSize: "100",
-        }).toString()
-    );
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const { value } = await readThrough(
+    "espocrm:listOwners",
+    {},
+    async () => {
+      try {
+        const res = await espoFetch(
+          `/User?` +
+            new URLSearchParams({
+              "where[0][type]": "equals",
+              "where[0][attribute]": "type",
+              "where[0][value]": "regular",
+              maxSize: "100",
+            }).toString()
+        );
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 /** Search Contacts by an attribute (e.g. emailAddress). Property names map:
@@ -606,7 +665,7 @@ export async function countLeadsForCampaign(campaignSlug: string): Promise<numbe
 
 export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
 
-interface DealData {
+export interface DealData {
   dealname: string;
   amount?: number;
   currency?: string;
@@ -616,6 +675,14 @@ interface DealData {
   lead_source?: DealSource;
   description?: string;
   service_interest?: string;
+}
+
+export interface DealUpdateFields {
+  dealname?: string;
+  dealstage?: string;
+  amount?: number | string;
+  closedate?: string;
+  [key: string]: unknown;
 }
 
 function toEspoOpportunityPayload(data: DealData): Record<string, unknown> {
@@ -653,7 +720,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
 
 export async function updateDeal(
   id: string,
-  data: Partial<Record<string, string>>
+  data: DealUpdateFields
 ): Promise<{ id: string } | null> {
   try {
     // EspoCRM uses snake_case property names; EspoCRM uses camelCase. Map the
