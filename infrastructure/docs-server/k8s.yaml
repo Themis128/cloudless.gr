@@ -52,7 +52,7 @@ spec:
       - env:
         - name: GITHUB_WIKI_URL
           value: https://github.com/Themis128/cloudless.gr/wiki
-        image: nginx:alpine
+        image: nginx:1.27.5-alpine
         imagePullPolicy: IfNotPresent
         name: docs-server
         ports:

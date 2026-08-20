@@ -47,7 +47,7 @@ spec:
         kubernetes.io/hostname: omv         # k3s node label is `omv` (not `omv-main`); both PVCs are local-path so pod must stay here
       containers:
       - name: mariadb
-        image: mariadb:11
+        image: mariadb:11.4
         args:
         - --character-set-server=utf8mb4
         - --collation-server=utf8mb4_unicode_ci

@@ -12,7 +12,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: edit
-    image: alpine:3
+    image: alpine:3.20
     securityContext:
       privileged: true
     command:
@@ -100,7 +100,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: edit
-    image: alpine:3
+    image: alpine:3.20
     securityContext:
       privileged: true
     command:
