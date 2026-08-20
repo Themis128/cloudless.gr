@@ -17,7 +17,7 @@ concurrency:
 jobs:
   etl:
     name: Run AppFlowy → R2 sync
-    runs-on: [self-hosted, omv, build]
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
 
     steps:
