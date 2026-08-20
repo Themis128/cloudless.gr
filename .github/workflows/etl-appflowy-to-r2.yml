@@ -1,5 +1,8 @@
 name: 'ETL: AppFlowy to R2'
-# AppFlowy workspaces/users via kubectl+psql on cluster postgres → R2 via Tailscale.
+# AppFlowy workspaces/users via kubectl+psql on cluster postgres → R2.
+# Must run on self-hosted Pi runner — needs kubectl access to appflowy namespace.
+# TODO: add Tailscale step (needs TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_SECRET
+#       configured with correct Tailscale OAuth scopes) to enable GH-hosted runner support.
 
 on:
   schedule:
@@ -16,7 +19,7 @@ concurrency:
 jobs:
   etl:
     name: Run AppFlowy → R2 sync
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 20
 
     steps:
@@ -34,12 +37,6 @@ jobs:
         corepack enable || true
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
-
-    - name: Connect to tailnet
-      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
 
     - name: Configure kubectl
       run: |
