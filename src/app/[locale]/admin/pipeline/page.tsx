@@ -6,13 +6,11 @@ import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Deal {
   id: string;
-  properties: {
-    dealname: string;
-    amount: string;
-    dealstage: string;
-    closedate: string;
-    createdate: string;
-  };
+  name: string;
+  amount: number | null;
+  stage: string;
+  closeDate: string | null;
+  createdAt: string;
 }
 
 interface Pipeline {
@@ -22,18 +20,17 @@ interface Pipeline {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  appointmentscheduled: "border-neon-cyan/30 bg-neon-cyan/5",
-  qualifiedtobuy: "border-blue-500/30 bg-blue-500/5",
-  presentationscheduled: "border-purple-500/30 bg-purple-500/5",
-  decisionmakerboughtin: "border-yellow-500/30 bg-yellow-500/5",
-  contractsent: "border-orange-500/30 bg-orange-500/5",
-  closedwon: "border-neon-green/30 bg-neon-green/5",
-  closedlost: "border-red-500/30 bg-red-500/5",
+  Prospecting: "border-neon-cyan/30 bg-neon-cyan/5",
+  Qualification: "border-blue-500/30 bg-blue-500/5",
+  Proposal: "border-purple-500/30 bg-purple-500/5",
+  Negotiation: "border-yellow-500/30 bg-yellow-500/5",
+  "Closed Won": "border-neon-green/30 bg-neon-green/5",
+  "Closed Lost": "border-red-500/30 bg-red-500/5",
 };
 
 const STAGE_LABEL_COLORS: Record<string, string> = {
-  closedwon: "text-neon-green",
-  closedlost: "text-red-400",
+  "Closed Won": "text-neon-green",
+  "Closed Lost": "text-red-400",
 };
 
 export default function PipelinePage() {
@@ -130,7 +127,7 @@ export default function PipelinePage() {
           <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
             <p className="font-mono text-xs text-slate-500">Won</p>
             <p className="text-neon-green mt-1 font-mono text-2xl font-bold">
-              {stats.byStage["closedwon"]?.count ?? 0}
+              {stats.byStage["Closed Won"]?.count ?? 0}
             </p>
           </div>
         </div>
@@ -209,22 +206,22 @@ function DealCard({
   onMove: (dealId: string, stageId: string) => void;
   moving: boolean;
 }) {
-  const amount = parseFloat(deal.properties.amount || "0");
+  const amount = Number(deal.amount ?? 0);
 
   return (
     <div className="bg-void-light/80 group rounded-lg border border-slate-700/50 p-3 transition-all hover:border-slate-600">
       <p className="font-mono text-xs font-semibold text-white">
-        {deal.properties.dealname || "Untitled Deal"}
+        {deal.name || "Untitled Deal"}
       </p>
       {amount > 0 && (
         <p className="text-neon-green mt-1 font-mono text-xs">
           €{amount.toLocaleString("el-GR", { maximumFractionDigits: 0 })}
         </p>
       )}
-      {deal.properties.closedate && (
+      {deal.closeDate && (
         <p className="mt-1 font-mono text-[10px] text-slate-600">
           Close:{" "}
-          {new Date(deal.properties.closedate).toLocaleDateString("en-IE", {
+          {new Date(deal.closeDate).toLocaleDateString("en-IE", {
             day: "numeric",
             month: "short",
             timeZone: "Europe/Athens",
@@ -235,7 +232,7 @@ function DealCard({
         <div className="mt-2 hidden group-hover:block">
           <select
             disabled={moving}
-            defaultValue={deal.properties.dealstage}
+            defaultValue={deal.stage}
             onChange={(e) => onMove(deal.id, e.target.value)}
             className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[10px] text-slate-300 focus:outline-none"
           >
