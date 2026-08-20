@@ -102,8 +102,9 @@ async function main() {
     }
     delete wf.tags; // n8n import rejects unknown tag ids
 
-    const tmpLocal = `/tmp/n8n-wf-${Date.now()}.json`;
-    const tmpPod = `/tmp/n8n-wf-import.json`;
+    const slug = file.replace(".json", "").replace(/[^a-z0-9]/gi, "-");
+    const tmpLocal = `/tmp/n8n-wf-${slug}.json`;
+    const tmpPod = `/tmp/n8n-wf-${slug}.json`;
 
     try {
       writeFileSync(tmpLocal, JSON.stringify(wf));
