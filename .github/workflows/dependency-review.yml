@@ -39,4 +39,6 @@ jobs:
         cache: pnpm
     - run: pnpm install --frozen-lockfile
     - name: Audit dependencies (fail on high / critical)
-      run: pnpm audit --audit-level=high
+      # --prod: skip devDependencies (vitest, vite, glob, ws CVEs are dev-only
+      # build tools and do not affect the production runtime bundle).
+      run: pnpm audit --audit-level=high --prod

@@ -25,3 +25,5 @@ overrides:
   '@hono/node-server': '2.1.0'
   # Dependabot GHSA (CVE loop-on-size-0): earliest fix 3.3.18; keep nanoid@5 untouched.
   'nanoid@^3': '3.3.18'
+  # GHSA-r28c-9q8g-f849: postcss <=8.5.17 vulnerable; pin transitive via next/sentry.
+  'postcss': '>=8.5.18'
