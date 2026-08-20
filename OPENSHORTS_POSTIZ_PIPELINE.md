@@ -51,27 +51,32 @@ chmod +x openshorts_postiz_pipeline.js
 ## Pipeline Phases
 
 ### Phase 1: Trigger Render
+
 - Sends a render job to OpenShorts with template and data
 - Returns a job ID for tracking
 - **Timeout**: 30 seconds
 
 ### Phase 2: Poll Completion
+
 - Polls OpenShorts for job status every 5 seconds
 - Maximum 60 attempts (5 minutes total)
 - Returns video download URL on completion
 - **Timeout**: 5 minutes
 
 ### Phase 3: Download Video
+
 - Downloads rendered video to `./temp/video.mp4`
 - Uses curl for reliable large file transfer
 - **Timeout**: 5 minutes
 
 ### Phase 4: Upload to Postiz
+
 - Uploads video to Postiz media library via multipart/form-data
 - Returns media ID for scheduling
 - **Timeout**: 5 minutes
 
 ### Phase 5: Schedule Posts
+
 - Creates scheduled posts for multiple platforms:
   - LinkedIn
   - Twitter/X
@@ -309,6 +314,7 @@ For production use, consider:
 ## Support
 
 For issues with:
+
 - **OpenShorts**: Check [OpenShorts GitHub](https://github.com/mutonby/openshorts)
 - **Postiz**: Check [Postiz GitHub](https://github.com/gitroomhq/postiz)
 - **Pipeline**: Check Cloudless.gr repository issues

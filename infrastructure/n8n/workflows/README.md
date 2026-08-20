@@ -78,11 +78,13 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 1. Import `postiz-blog-ai-caption.json`.
 2. Copy the production webhook URL (`/webhook/postiz-blog-share`).
 3. Wire it as the target in the AppFlowy publish hook or call manually:
+
    ```bash
    curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-blog-share \
      -H 'Content-Type: application/json' \
      -d '{"title":"My Post","url":"https://cloudless.gr/en/blog/my-post"}'
    ```
+
 4. Posts are created as **drafts** — review in Postiz UI before publishing.
 
 ### Content recycler
@@ -101,11 +103,13 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 
 1. Import `postiz-video-distribute.json`.
 2. Trigger via webhook with a video URL:
+
    ```bash
    curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-video-distribute \
      -H 'Content-Type: application/json' \
      -d '{"videoUrl":"https://example.com/video.mp4","title":"Demo","caption":"Check this out","hashtags":"#cloud #tech","scheduleAt":"2026-08-16T10:00:00Z"}'
    ```
+
 3. Downloads the video, uploads to Postiz storage, then schedules across all video-capable channels (X, LinkedIn, FB, IG, TikTok, YT, Threads, Bluesky).
 
 ### AI per-platform captions (webhook-triggered)
@@ -114,11 +118,13 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 2. Set `NVIDIA_API_KEY` env var on the n8n deployment (free key from [build.nvidia.com](https://build.nvidia.com)).
 3. Optionally set `AI_MODEL` (default: `nvidia/nemotron-3.5-lightning-30b-a3b`) and `AI_API_URL` (default: `https://integrate.api.nvidia.com/v1/chat/completions`). Any OpenAI-compatible endpoint works.
 4. Trigger via webhook:
+
    ```bash
    curl -X POST http://n8n.n8n.svc.cluster.local:5678/webhook/postiz-ai-multicaption \
      -H 'Content-Type: application/json' \
      -d '{"title":"Cloud Hosting Guide","url":"https://cloudless.gr/en/blog/cloud-hosting","locale":"en"}'
    ```
+
 5. The AI generates a different caption for each platform (X: 280-char punchy, LinkedIn: professional 2-3 paragraphs, IG: emoji-heavy, Bluesky: conversational, etc.). Posts are created as **drafts** for review. Supports Greek (`locale: "el"`) and English.
 
 ## Bulk CLI import (from omv)
@@ -197,6 +203,7 @@ descriptions or photos + scripts. It produces captioned, lip-synced vertical
 video ready for TikTok/Instagram/X Reels.
 
 To evaluate, add to `mcp.json`:
+
 ```json
 "agent-media": {
   "command": "npx",
