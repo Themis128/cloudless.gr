@@ -1,0 +1,77 @@
+name: AI — scale vllm-kimi + appflowy-ai up or down
+
+# On-demand AI: vllm-kimi (llama.cpp, ~4.5 GB RAM) + appflowy-ai proxy.
+# Both default to 0 replicas to keep the Pi's 8 GB free for the main stack.
+# Scale up before using AI features in AppFlowy; scale down when done.
+#
+# Usage (GitHub UI): Actions → AI — scale … → Run workflow → action: up|down
+# Usage (gh CLI):
+#   gh workflow run ai-scale.yml -f action=up
+#   gh workflow run ai-scale.yml -f action=down
+#
+# After "up": allow 3-5 min for the model to load from the PVC. Watch with:
+#   kubectl -n omv-ai logs -f deployment/vllm-kimi
+# The pod is ready when the log shows "Uvicorn running on http://0.0.0.0:8000".
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Scale direction'
+        required: true
+        default: 'up'
+        type: choice
+        options: [up, down]
+
+permissions:
+  contents: read
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v4.3.1
+
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3  # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Scale ${{ inputs.action }}
+      run: |
+        set -euo pipefail
+        ACTION="${{ inputs.action }}"
+        REPLICAS=0
+        [ "${ACTION}" = "up" ] && REPLICAS=1
+
+        echo "→ scaling vllm-kimi (omv-ai) to ${REPLICAS}"
+        kubectl -n omv-ai scale deployment/vllm-kimi --replicas="${REPLICAS}"
+
+        echo "→ scaling appflowy-ai (appflowy) to ${REPLICAS}"
+        kubectl -n appflowy scale deployment/appflowy-ai --replicas="${REPLICAS}"
+
+        if [ "${ACTION}" = "up" ]; then
+          echo ""
+          echo "→ waiting for appflowy-ai to become ready (60s timeout)…"
+          kubectl -n appflowy rollout status deployment/appflowy-ai --timeout=60s || true
+
+          echo ""
+          echo "→ vllm-kimi is loading the model — this takes 3-5 min on the Pi."
+          echo "   Watch: kubectl -n omv-ai logs -f deployment/vllm-kimi"
+          echo ""
+          echo "→ current pod status:"
+          kubectl -n omv-ai get pods -l app=vllm-kimi
+          kubectl -n appflowy get pods -l app=appflowy-ai
+        else
+          echo ""
+          echo "→ AI pods scaled down. AppFlowy AI features will be unavailable until next 'up'."
+          kubectl -n omv-ai get pods -l app=vllm-kimi
+          kubectl -n appflowy get pods -l app=appflowy-ai
+        fi
