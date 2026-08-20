@@ -293,10 +293,12 @@ async function triggerBlogSocialShare(
   }
 
   const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
-  globalThis.fetch(`${n8nBase}/webhook/postiz-ai-multicaption`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, url, locale: "en" }),
-    signal: AbortSignal.timeout(10_000),
-  }).catch((err) => console.error("[appflowy-blog-admin → n8n ai-multicaption]", err));
+  globalThis
+    .fetch(`${n8nBase}/webhook/postiz-ai-multicaption`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, url, locale: "en" }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    .catch((err) => console.error("[appflowy-blog-admin → n8n ai-multicaption]", err));
 }
