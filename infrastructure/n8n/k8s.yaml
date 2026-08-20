@@ -93,6 +93,26 @@ spec:
             secretKeyRef:
               name: postiz-secret
               key: POSTIZ_API_KEY
+        # Email + CRM credentials for n8n workflow nodes.
+        # Create once: kubectl create secret generic n8n-integrations -n n8n
+        #   --from-literal=RESEND_API_KEY=<key>
+        #   --from-literal=ESPOCRM_BASE_URL=https://espocrm.cloudless.gr
+        #   --from-literal=ESPOCRM_API_KEY=<key>
+        - name: RESEND_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: RESEND_API_KEY
+        - name: ESPOCRM_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: ESPOCRM_BASE_URL
+        - name: ESPOCRM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: ESPOCRM_API_KEY
         volumeMounts:
         - name: data
           mountPath: /home/node/.n8n
