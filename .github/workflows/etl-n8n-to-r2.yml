@@ -1,5 +1,6 @@
 name: 'ETL: n8n to R2'
-# n8n workflows/executions → R2 via Tailscale (NodePort 30900 on omv).
+# n8n workflows/executions → R2 via Pi-local NodePort (bypass CF bot challenge).
+# Must run on self-hosted Pi runner — uses NodePort 30900 on omv.
 
 on:
   schedule:
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   etl:
     name: Run n8n → R2 sync
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 20
 
     steps:
@@ -35,17 +36,11 @@ jobs:
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-
     - name: Run n8n-to-R2 sync
       working-directory: scripts/etl
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        N8N_API_URL: http://100.74.191.58:30900
+        N8N_API_URL: http://127.0.0.1:30900
         N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
