@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  vite-node@2.1.9:
-    hash: wofzqn2me2dlfouawuuqjmq454
-    path: patches/vite-node@2.1.9.patch
-
 importers:
 
   .:
@@ -15664,7 +15659,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite-node@2.1.9(patch_hash=wofzqn2me2dlfouawuuqjmq454)(@types/node@20.19.43)(lightningcss@1.33.0)(terser@5.49.2):
+  vite-node@2.1.9(@types/node@20.19.43)(lightningcss@1.33.0)(terser@5.49.2):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
@@ -15713,7 +15708,7 @@ snapshots:
       tinypool: 1.1.1
       tinyrainbow: 1.2.0
       vite: 5.4.21(@types/node@20.19.43)(lightningcss@1.33.0)(terser@5.49.2)
-      vite-node: 2.1.9(patch_hash=wofzqn2me2dlfouawuuqjmq454)(@types/node@20.19.43)(lightningcss@1.33.0)(terser@5.49.2)
+      vite-node: 2.1.9(@types/node@20.19.43)(lightningcss@1.33.0)(terser@5.49.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.43
