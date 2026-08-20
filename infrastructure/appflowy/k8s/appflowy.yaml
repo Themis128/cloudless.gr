@@ -93,7 +93,7 @@ spec:
         - {name: walg, mountPath: /var/lib/postgresql/wal-g}
       containers:
       - name: postgres
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:0.8.0-pg16
         env:
         - {name: POSTGRES_USER, value: postgres}
         - {name: POSTGRES_DB, value: postgres}
@@ -112,6 +112,15 @@ spec:
         - -c
         - archive_command=/walg-bin/archive.sh %p %f
         ports: [containerPort: 5432]
+        livenessProbe:
+          exec: {command: [pg_isready, -U, postgres]}
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          exec: {command: [pg_isready, -U, postgres]}
+          initialDelaySeconds: 10
+          periodSeconds: 10
         volumeMounts:
         - {name: data, mountPath: /var/lib/postgresql/data}
         - {name: walg, mountPath: /var/lib/postgresql/wal-g}
@@ -165,8 +174,17 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: redis
-        image: redis:7-alpine
+        image: redis:7.2.9-alpine
         ports: [containerPort: 6379]
+        livenessProbe:
+          exec: {command: [redis-cli, ping]}
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          exec: {command: [redis-cli, ping]}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           requests: {cpu: 10m, memory: 16Mi}
           limits: {cpu: 100m, memory: 64Mi}
@@ -200,6 +218,15 @@ spec:
         ports:
         - {containerPort: 9000}
         - {containerPort: 9001}
+        livenessProbe:
+          httpGet: {path: /minio/health/live, port: 9000}
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /minio/health/ready, port: 9000}
+          initialDelaySeconds: 10
+          periodSeconds: 10
         volumeMounts: [{name: data, mountPath: /data}]
         resources:
           requests: {cpu: 25m, memory: 80Mi}
@@ -262,6 +289,15 @@ spec:
         - {name: GOTRUE_MAILER_URLPATHS_RECOVERY, value: /gotrue/verify}
         - {name: GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE, value: /gotrue/verify}
         ports: [containerPort: 9999]
+        livenessProbe:
+          httpGet: {path: /health, port: 9999}
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /health, port: 9999}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           requests: {cpu: 10m, memory: 32Mi}
           limits: {cpu: 200m, memory: 96Mi}
@@ -312,6 +348,15 @@ spec:
         - {name: APPFLOWY_ACCESS_CONTROL, value: 'true'}
         - {name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: '20'}
         ports: [containerPort: 8000]
+        livenessProbe:
+          httpGet: {path: /api/health, port: 8000}
+          initialDelaySeconds: 20
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /api/health, port: 8000}
+          initialDelaySeconds: 10
+          periodSeconds: 10
         resources:
           requests: {cpu: 50m, memory: 128Mi}
           limits: {cpu: 500m, memory: 320Mi}
@@ -517,8 +562,17 @@ spec:
       nodeSelector: {kubernetes.io/hostname: omv}
       containers:
       - name: nginx
-        image: nginx:1.27-alpine
+        image: nginx:1.27.5-alpine
         ports: [containerPort: 80]
+        livenessProbe:
+          httpGet: {path: /, port: 80}
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /, port: 80}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         volumeMounts:
         - {name: conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf}
         resources:
