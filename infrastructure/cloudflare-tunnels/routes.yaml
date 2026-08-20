@@ -56,85 +56,115 @@ routes:
   status: active
   description: FTP server (TCP, no HTTP health)
 
+  # ── All k8s app services → Traefik NodePort 30850 ──────────────────────────
+  # Traefik routes by hostname to ClusterIP services via IngressRoutes.
+  # See infrastructure/traefik/ingressroutes.yaml for per-host routing rules.
+
   # Documentation
 - hostname: docs.cloudless.gr
-  service: docs-server
-  port: 30901
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: Documentation portal (NodePort)
+  description: docs-server via Traefik ingress
 
   # Search
 - hostname: meili.cloudless.gr
-  service: meilisearch
-  port: 30902
+  service: traefik
+  port: 30850
   healthPath: /health
   node: omv
   status: active
-  description: Meilisearch search engine (NodePort)
+  description: Meilisearch via Traefik ingress
 
-  # CRM
+  # CRM — NodePort 30700 kept for ETL via Tailscale tag:ci ACL
 - hostname: espocrm.cloudless.gr
-  service: espocrm
-  port: 30700
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: EspoCRM customer relationship management
+  description: EspoCRM web via Traefik; ETL uses NodePort 30700 via tailnet
 
   # Notifications
 - hostname: ntfy.cloudless.gr
-  service: ntfy
-  port: 30080
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: ntfy notification service
+  description: ntfy via Traefik ingress
 
   # Monitoring
 - hostname: grafana.cloudless.gr
-  service: grafana
+  service: traefik
   port: 30850
   healthPath: /api/health
   node: omv
   status: active
-  description: Grafana monitoring dashboard
+  description: Grafana via Traefik ingress (service now ClusterIP)
 
 - hostname: kuma.cloudless.gr
-  service: uptime-kuma
-  port: 32501
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: Uptime Kuma monitoring
+  description: Uptime Kuma via Traefik ingress
 
-  # Workflow
+  # Workflow — NodePort 30900 kept for ETL via Tailscale tag:ci ACL
 - hostname: n8n.cloudless.gr
-  service: n8n
-  port: 30900
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: n8n workflow automation
+  description: n8n web via Traefik; ETL uses NodePort 30900 via tailnet
 
   # Postiz
 - hostname: postiz.cloudless.gr
-  service: postiz
-  port: 30500
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: Postiz social publishing engine
+  description: Postiz via Traefik ingress
 
   # AppFlowy
 - hostname: appflowy.cloudless.gr
-  service: appflowy
-  port: 30810
+  service: traefik
+  port: 30850
   healthPath: /
   node: omv
   status: active
-  description: AppFlowy CMS (NodePort)
+  description: AppFlowy via Traefik ingress (nginx ClusterIP)
+
+  # Agent / Vibe
+- hostname: agent.cloudless.gr
+  service: traefik
+  port: 30850
+  healthPath: /
+  node: omv
+  status: active
+  description: vibe-agent LangGraph API via Traefik ingress
+
+- hostname: vibe.cloudless.gr
+  service: traefik
+  port: 30850
+  healthPath: /
+  node: omv
+  status: active
+  description: vibe-agent UI via Traefik ingress
+
+  # Alerts / Logs
+- hostname: logs.cloudless.gr
+  service: traefik
+  port: 30850
+  healthPath: /
+  node: omv
+  status: active
+  description: pi-alert-api via Traefik ingress
 
   # HA Failover - Workers fallback for edge delivery
 - hostname: cloudless-failover.baltzakis-themis.workers.dev

@@ -540,7 +540,7 @@ metadata:
   name: nginx-nodeport
   namespace: appflowy
 spec:
-  type: NodePort
+  type: ClusterIP
   selector: {app: nginx}
   ports:
-  - {name: http, port: 80, targetPort: 80, nodePort: 30810}
+  - {name: http, port: 80, targetPort: 80}

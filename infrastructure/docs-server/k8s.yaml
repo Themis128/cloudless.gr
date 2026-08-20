@@ -85,10 +85,9 @@ metadata:
   name: docs-service
   namespace: default
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: docs-server
   ports:
   - port: 8080
     targetPort: 8080
-    nodePort: 30901
