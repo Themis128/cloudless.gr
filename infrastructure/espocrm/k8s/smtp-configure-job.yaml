@@ -1,0 +1,63 @@
+# One-shot Job: configure EspoCRM outbound SMTP to use Resend.
+#
+# Prerequisites (operator, one-time):
+#   kubectl patch secret espocrm-secrets -n espocrm --type='json' \
+#     -p='[{"op":"add","path":"/data/resend-smtp-password","value":"'"$(echo -n "$RESEND_API_KEY" | base64 -w0)"'"}]'
+#
+# Run:
+#   kubectl apply -f infrastructure/espocrm/k8s/smtp-configure-job.yaml
+#   kubectl wait --for=condition=complete job/espocrm-configure-smtp -n espocrm --timeout=60s
+#   kubectl logs -n espocrm job/espocrm-configure-smtp
+#   kubectl delete -f infrastructure/espocrm/k8s/smtp-configure-job.yaml
+#
+# The Job calls PUT /api/v1/Settings via the EspoCRM API user (X-Api-Key auth)
+# to set all outbound-email / SMTP fields in one request. Safe to re-run.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: espocrm-configure-smtp
+  namespace: espocrm
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv
+      restartPolicy: Never
+      containers:
+      - name: configure
+        image: curlimages/curl:8.9.1
+        env:
+        - name: ESPOCRM_ADMIN_USERNAME
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-username}}
+        - name: ESPOCRM_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-password}}
+        - name: RESEND_SMTP_PASSWORD
+          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: resend-smtp-password}}
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          BASE_URL="http://espocrm.espocrm.svc.cluster.local"
+          AUTH=$(printf '%s:%s' "$ESPOCRM_ADMIN_USERNAME" "$ESPOCRM_ADMIN_PASSWORD" | base64 | tr -d '\n')
+          PAYLOAD=$(printf '{
+            "smtpServer": "smtp.resend.com",
+            "smtpPort": 587,
+            "smtpSecurity": "TLS",
+            "smtpAuth": true,
+            "smtpUsername": "resend",
+            "smtpPassword": "%s",
+            "outboundEmailFromAddress": "noreply@cloudless.gr",
+            "outboundEmailFromName": "cloudless.gr"
+          }' "$RESEND_SMTP_PASSWORD")
+          RESP=$(curl -sf -X PUT \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Basic ${AUTH}" \
+            -d "$PAYLOAD" \
+            "${BASE_URL}/api/v1/Settings")
+          echo "Response: $RESP"
+          echo "SMTP configured successfully."
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 50m, memory: 32Mi}

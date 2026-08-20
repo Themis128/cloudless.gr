@@ -153,9 +153,19 @@ function mapLeadSource(s?: string): string | undefined {
   }
 }
 
-/** Create or update a contact (uniqueness by email). */
+/** Create or update a contact (uniqueness by email). Links to a real Account
+ *  when contact.company is set (calls upsertCompany internally). */
 export async function upsertContact(contact: EspoContact): Promise<string | null> {
   try {
+    // Resolve Account id before building payload so the Contact links to a real
+    // Account record rather than a free-text accountName string.
+    const accountId = contact.company
+      ? ((await upsertCompany(contact.company)) ?? undefined)
+      : undefined;
+    const basePayload = toEspoContactPayload(contact);
+    const payload = accountId
+      ? { ...basePayload, accountId, accountName: undefined }
+      : basePayload;
     // EspoCRM has no upsert primitive — search first, then POST or PATCH.
     const search = await espoFetch(
       `/Contact?` +
@@ -172,7 +182,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       if (existing) {
         await espoFetch(`/Contact/${existing.id}`, {
           method: "PUT",
-          body: JSON.stringify(toEspoContactPayload(contact)),
+          body: JSON.stringify(payload),
         });
         void invalidateEspoContactCaches(existing.id);
         return existing.id;
@@ -180,7 +190,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
     }
     const create = await espoFetch("/Contact", {
       method: "POST",
-      body: JSON.stringify(toEspoContactPayload(contact)),
+      body: JSON.stringify(payload),
     });
     if (!create.ok) {
       console.error("[EspoCRM] upsertContact create failed:", create.status);
@@ -462,6 +472,44 @@ export async function listCompanies(limit = 20): Promise<unknown[]> {
   return value;
 }
 
+/**
+ * Find or create an EspoCRM Account by exact name. Returns the Account id, or
+ * null on failure. Called by upsertContact so Contacts link to a real Account
+ * record rather than a free-text accountName string.
+ */
+export async function upsertCompany(name: string): Promise<string | null> {
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const search = await espoFetch(
+      `/Account?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "name",
+          "where[0][value]": trimmed,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (search.ok) {
+      const data = (await search.json()) as { list: { id: string }[] };
+      const existing = data.list[0];
+      if (existing) return existing.id;
+    }
+    const create = await espoFetch("/Account", {
+      method: "POST",
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (!create.ok) return null;
+    const created = (await create.json()) as { id: string };
+    void invalidateEspoListCaches();
+    return created.id;
+  } catch (err) {
+    console.error("[EspoCRM] upsertCompany error:", err);
+    return null;
+  }
+}
+
 export async function listDeals(limit = 20): Promise<unknown[]> {
   const clamped = clampLimit(limit);
   const { value } = await readThrough(
@@ -618,6 +666,29 @@ export async function createLead(data: LeadData): Promise<string | null> {
       status: "New",
       description: descLines.length ? descLines.join("\n") : undefined,
     };
+    // Dedup: if a Lead with this email already exists, update it instead of
+    // creating a second record. EspoCRM has no unique-email constraint on Lead.
+    const dupSearch = await espoFetch(
+      `/Lead?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "emailAddress",
+          "where[0][value]": data.emailAddress,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (dupSearch.ok) {
+      const dupData = (await dupSearch.json()) as { list: { id: string }[] };
+      const existing = dupData.list[0];
+      if (existing) {
+        await espoFetch(`/Lead/${existing.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        return existing.id;
+      }
+    }
     const res = await espoFetch("/Lead", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -748,6 +819,14 @@ export async function updateDeal(
 }
 
 export async function moveDealStage(id: string, stageId: string): Promise<{ id: string } | null> {
+  const pipelines = (await getPipelines()) as Array<{ stages: { id: string }[] }>;
+  const knownStages = pipelines[0]?.stages.map((s) => s.id) ?? [];
+  if (!knownStages.includes(stageId)) {
+    console.error(
+      `[EspoCRM] moveDealStage: unknown stage "${stageId}". Known: ${knownStages.join(", ")}`
+    );
+    return null;
+  }
   return updateDeal(id, { dealstage: stageId });
 }
 
