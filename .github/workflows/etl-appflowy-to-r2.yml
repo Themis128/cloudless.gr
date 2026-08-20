@@ -1,6 +1,5 @@
 name: 'ETL: AppFlowy to R2'
-# AppFlowy workspaces/users via kubectl+psql on cluster postgres → R2.
-# Must run on omv (kubectl access to appflowy namespace).
+# AppFlowy workspaces/users via kubectl+psql on cluster postgres → R2 via Tailscale.
 
 on:
   schedule:
@@ -35,6 +34,12 @@ jobs:
         corepack enable || true
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
+
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
 
     - name: Configure kubectl
       run: |
