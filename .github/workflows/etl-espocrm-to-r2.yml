@@ -1,10 +1,10 @@
 name: 'ETL: EspoCRM to R2'
-# Hourly ETL sync from EspoCRM to R2 data lake via Pi-local NodePort.
-# Must run on self-hosted Pi runner — uses NodePort 30700 on omv (bypass CF bot challenge).
+# Hourly ETL sync from EspoCRM to R2 data lake.
+# Uses Tailscale (tag:ci ephemeral node → omv NodePort 30700).
 
 on:
   schedule:
-  - cron: 20 * * * *       # hourly at :20 (offset from EspoCRM 03:15 + Stripe 03:30)
+  - cron: 20 * * * *       # hourly at :20
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 jobs:
   etl:
     name: Run EspoCRM → R2 sync
-    runs-on: [self-hosted, omv, pi]
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 20
 
     steps:
@@ -25,19 +25,25 @@ jobs:
       with:
         node-version: 22
 
-    - name: Install dependencies (use pnpm, avoid npm ci on pnpm-managed repo)
+    - name: Install dependencies
       working-directory: scripts/etl
       run: |
-        # Ensure pnpm is available via corepack, then install production deps
         corepack enable || true
         corepack prepare pnpm@latest --activate || true
         pnpm install --frozen-lockfile --prod
+
+    - name: Connect to tailnet
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        tags: tag:ci
 
     - name: Run EspoCRM-to-R2 sync
       working-directory: scripts/etl
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        ESPOCRM_BASE_URL: http://127.0.0.1:30700
+        ESPOCRM_BASE_URL: http://100.74.191.58:30700
         ESPOCRM_API_KEY: ${{ secrets.ESPOCRM_API_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
@@ -80,11 +86,3 @@ jobs:
               body: JSON.stringify(payload)
             }).catch(() => {});
           }
-
-# Required secrets (add via GitHub repo → Settings → Secrets → Actions):
-# ESPOCRM_API_KEY - Already in Wrangler secrets
-# ESPOCRM_API_PASSWORD - Already in Wrangler secrets
-# CF_ACCOUNT_ID - Your Cloudflare account ID
-# CF_R2_ACCESS_KEY_ID - R2 access key from Cloudflare dashboard
-# CF_R2_SECRET_ACCESS_KEY - R2 secret key from Cloudflare dashboard
-# KUMA_PUSH_ETL_ESPOCRM - Uptime Kuma push URL (optional)
