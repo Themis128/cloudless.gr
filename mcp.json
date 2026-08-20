@@ -21,17 +21,6 @@
       ],
       "autoStart": true
     },
-    "openshorts": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@mutonby/openshorts-mcp"
-      ],
-      "env": {
-        "OPENSHORTS_API_URL": "http://cluster.local"
-      },
-      "autoStart": false
-    },
     "postiz": {
       "command": "npx",
       "args": [
