@@ -391,32 +391,22 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
 }
 
 export interface TicketData {
-  subject: string;
-  content: string;
-  hs_pipeline?: string;
-  hs_pipeline_stage?: string;
-  hs_ticket_priority?: string;
+  name: string;
+  description: string;
+  status?: string;
+  priority?: "Low" | "Normal" | "High" | "Urgent";
 }
 
-/**
- * Create a Case. Maps EspoCRM ticket-priority strings (LOW/MEDIUM/HIGH/URGENT)
- * to EspoCRM Case.priority (Low/Normal/High/Urgent).
- */
+/** Create an EspoCRM Case (support ticket). */
 export async function createTicket(
   data: TicketData,
   contactId?: string
 ): Promise<{ id: string } | null> {
-  const priorityMap: Record<string, string> = {
-    LOW: "Low",
-    MEDIUM: "Normal",
-    HIGH: "High",
-    URGENT: "Urgent",
-  };
   const body: Record<string, unknown> = {
-    name: data.subject,
-    description: data.content,
-    status: data.hs_pipeline_stage || "New",
-    priority: priorityMap[data.hs_ticket_priority ?? "MEDIUM"] ?? "Normal",
+    name: data.name,
+    description: data.description,
+    status: data.status ?? "New",
+    priority: data.priority ?? "Normal",
     contactId: contactId ?? undefined,
   };
   const res = await espoFetch("/Case", { method: "POST", body: JSON.stringify(body) });

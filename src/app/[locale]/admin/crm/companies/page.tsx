@@ -8,13 +8,11 @@ const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-5
 
 interface Company {
   id: string;
-  properties: {
-    name?: string;
-    domain?: string;
-    city?: string;
-    country?: string;
-    createdate?: string;
-  };
+  name?: string;
+  website?: string;
+  billingAddressCity?: string;
+  billingAddressCountry?: string;
+  createdAt?: string;
 }
 
 export default function AdminCompaniesPage() {
@@ -66,12 +64,11 @@ export default function AdminCompaniesPage() {
 
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase();
-    const p = c.properties;
     return (
-      (p.name ?? "").toLowerCase().includes(q) ||
-      (p.domain ?? "").toLowerCase().includes(q) ||
-      (p.city ?? "").toLowerCase().includes(q) ||
-      (p.country ?? "").toLowerCase().includes(q)
+      (c.name ?? "").toLowerCase().includes(q) ||
+      (c.website ?? "").toLowerCase().includes(q) ||
+      (c.billingAddressCity ?? "").toLowerCase().includes(q) ||
+      (c.billingAddressCountry ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -112,27 +109,28 @@ export default function AdminCompaniesPage() {
                   key={c.id}
                   className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                 >
-                  <td className="px-6 py-4 font-medium text-white">{c.properties.name || "—"}</td>
+                  <td className="px-6 py-4 font-medium text-white">{c.name || "—"}</td>
                   <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                    {c.properties.domain ? (
+                    {c.website ? (
                       <a
-                        href={`https://${c.properties.domain}`}
+                        href={c.website.startsWith("http") ? c.website : `https://${c.website}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:underline"
                       >
-                        {c.properties.domain}
+                        {c.website.replace(/^https?:\/\//, "")}
                       </a>
                     ) : (
                       "—"
                     )}
                   </td>
                   <td className="px-6 py-4 text-slate-300">
-                    {[c.properties.city, c.properties.country].filter(Boolean).join(", ") || "—"}
+                    {[c.billingAddressCity, c.billingAddressCountry].filter(Boolean).join(", ") ||
+                      "—"}
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
-                    {c.properties.createdate
-                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE", {
+                    {c.createdAt
+                      ? new Date(c.createdAt).toLocaleDateString("en-IE", {
                           timeZone: "Europe/Athens",
                         })
                       : "—"}
@@ -191,9 +189,9 @@ export default function AdminCompaniesPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">With Domain</p>
+          <p className="font-mono text-xs text-slate-500">With Website</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : companies.filter((c) => c.properties.domain).length}
+            {loading ? "…" : companies.filter((c) => c.website).length}
           </p>
         </div>
       </div>
