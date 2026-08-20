@@ -46,9 +46,8 @@ async function n8nFetch(method, path, body) {
 }
 
 async function listAllWorkflows() {
-  const data = await n8nFetch("GET", "/workflows?limit=250&active=false");
-  const active = await n8nFetch("GET", "/workflows?limit=250&active=true");
-  return [...(data?.data ?? []), ...(active?.data ?? [])];
+  const data = await n8nFetch("GET", "/workflows?limit=250");
+  return data?.data ?? [];
 }
 
 function nameFromFilename(file) {
