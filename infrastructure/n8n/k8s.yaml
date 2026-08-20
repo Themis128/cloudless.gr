@@ -88,9 +88,6 @@ spec:
           value: https://cloudless.gr/en/blog/rss.xml
         - name: POSTIZ_CHANNEL_IDENTIFIERS
           value: linkedin,linkedin-page,x,bluesky
-        # Added for local script execution and ComfyUI asset buffering
-        - name: WSL_HOST_IP
-          value: "192.168.1.23"
         - name: POSTIZ_API_KEY
           valueFrom:
             secretKeyRef:
