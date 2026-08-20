@@ -239,5 +239,10 @@
     "typescript-eslint": "^8.0.0",
     "vitest": "^2.1.0",
     "wrangler": "^3.0.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "vite-node@2.1.9": "patches/vite-node@2.1.9.patch"
+    }
   }
 }
