@@ -8,12 +8,43 @@
         "OMV_SSH_USER": "omv",
         "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
-      }
+      },
+      "autoStart": false
     },
     "project": {
       "command": "npx",
       "args": ["-y", "project-mcp"],
-      "autoStart": true
+      "autoStart": true,
+      "env": {}
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare": {
+      "url": "https://mcp.cloudflare.com/mcp",
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/tbaltzakis/cloudless.gr"],
+      "env": {},
+      "autoStart": false
     },
     "postiz": {
       "command": "npx",
@@ -43,7 +74,7 @@
       },
       "autoStart": false
     },
-    "free-stock-images": {
+    "stock-images": {
       "command": "npx",
       "args": ["-y", "stock-images-mcp"],
       "env": {
@@ -55,9 +86,8 @@
     },
     "n8n": {
       "command": "npx",
-      "args": ["mcp-remote", "https://n8n.cloudless.gr/mcp-server/http"],
-      "autoStart": true,
-      "alwaysAllow": []
+      "args": ["-y", "mcp-remote", "https://n8n.cloudless.gr/mcp-server/http"],
+      "autoStart": false
     }
   }
 }
