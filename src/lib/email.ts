@@ -4,7 +4,6 @@ import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cl
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 import { isSuppressed } from "@/lib/ses-suppression-d1";
 
-
 const LABEL_CLOUDLESS = "Cloudless";
 
 export const SENDERS = {
