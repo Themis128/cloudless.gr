@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "fast-markdown": {
-      "command": "/home/tbaltzakis/.local/bin/fast-markdown-mcp",
-      "args": [],
+      "command": "npx",
+      "args": ["-y", "fast-markdown-mcp"],
       "env": {
         "MCP_STORAGE_DIR": "/home/tbaltzakis/DevDocs/storage/markdown"
       },
