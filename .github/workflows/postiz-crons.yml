@@ -15,8 +15,7 @@ name: Postiz crons
 
 on:
   schedule:
-  - cron: '*/15 * * * *'       # postiz-sync — every 15 min
-  - cron: 5 * * * *       # postiz-oauth-check — 5 min past the hour
+  - cron: '*/15 * * * *'   # every 15 min (sync always; oauth once per hour)
   workflow_dispatch:
     inputs:
       target:
@@ -33,7 +32,6 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: us-east-1
   # Bypass Cloudflare Bot Fight Mode on the apex (GHA IPs get 403 interstitials).
   # pi-origin hits the tunnel → Pi NodePort directly; app still enforces CRON_SECRET.
   BASE_URL: https://pi-origin.cloudless.gr
@@ -61,7 +59,6 @@ jobs:
       id: targets
       run: |
         EVENT="${{ github.event_name }}"
-        SCHEDULE="${{ github.event.schedule }}"
         INPUT="${{ github.event.inputs.target }}"
         RUN_SYNC="false"
         RUN_OAUTH="false"
@@ -71,10 +68,17 @@ jobs:
             postiz-sync)        RUN_SYNC="true" ;;
             postiz-oauth-check) RUN_OAUTH="true" ;;
           esac
-        elif [ "$SCHEDULE" = "*/15 * * * *" ]; then
+        else
+          # Schedule: always run sync; run oauth once per hour (minute 0–14).
+          # A single */15 cron is used because GHA coalesces multiple schedule
+          # triggers into one run, making github.event.schedule unreliable for
+          # distinguishing which schedule fired.
           RUN_SYNC="true"
-        elif [ "$SCHEDULE" = "5 * * * *" ]; then
-          RUN_OAUTH="true"
+          MINUTE=$(date -u +%M | sed 's/^0*//' )
+          MINUTE=${MINUTE:-0}
+          if [ "$MINUTE" -lt 15 ]; then
+            RUN_OAUTH="true"
+          fi
         fi
         echo "sync=$RUN_SYNC" >> "$GITHUB_OUTPUT"
         echo "oauth=$RUN_OAUTH" >> "$GITHUB_OUTPUT"

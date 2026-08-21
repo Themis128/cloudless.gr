@@ -1,0 +1,91 @@
+name: Postiz — diagnose pod startup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/postiz-diagnose.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, omv, pi, build]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Configure kubectl
+        run: |
+          mkdir -p /tmp/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > /tmp/.kube/config
+          chmod 600 /tmp/.kube/config
+          echo "KUBECONFIG=/tmp/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Postiz pods status
+        run: |
+          echo "=== all pods in postiz namespace ==="
+          kubectl get pods -n postiz -o wide
+          echo ""
+          echo "=== deployments ==="
+          kubectl get deploy -n postiz
+          echo ""
+          echo "=== postiz pod describe ==="
+          POD=$(kubectl get pods -n postiz -l app=postiz -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$POD" ]; then
+            kubectl describe pod "$POD" -n postiz
+          else
+            echo "No postiz pod found"
+          fi
+
+      - name: Postiz container logs
+        run: |
+          POD=$(kubectl get pods -n postiz -l app=postiz -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$POD" ]; then
+            echo "=== postiz logs (last 100 lines) ==="
+            kubectl logs "$POD" -n postiz --tail=100 2>&1 || echo "(no logs)"
+            echo ""
+            echo "=== previous container logs (if crashed) ==="
+            kubectl logs "$POD" -n postiz --previous --tail=50 2>&1 || echo "(no previous logs)"
+          else
+            echo "No postiz pod found"
+          fi
+
+      - name: Postgres and Redis status
+        run: |
+          echo "=== postgres pod ==="
+          PG=$(kubectl get pods -n postiz -l app=postiz-postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$PG" ]; then
+            kubectl get pod "$PG" -n postiz -o wide
+            kubectl logs "$PG" -n postiz --tail=20 2>&1 || true
+          fi
+          echo ""
+          echo "=== redis pod ==="
+          RD=$(kubectl get pods -n postiz -l app=postiz-redis -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$RD" ]; then
+            kubectl get pod "$RD" -n postiz -o wide
+            kubectl logs "$RD" -n postiz --tail=20 2>&1 || true
+          fi
+
+      - name: Node resources
+        run: |
+          echo "=== node resource usage ==="
+          kubectl top node 2>/dev/null || echo "(metrics-server not available)"
+          echo ""
+          echo "=== postiz namespace resource usage ==="
+          kubectl top pods -n postiz 2>/dev/null || echo "(metrics-server not available)"
+          echo ""
+          echo "=== events (postiz namespace, last 20) ==="
+          kubectl get events -n postiz --sort-by='.lastTimestamp' 2>/dev/null | tail -20
+
+      - name: Report to issue
+        if: always()
+        run: |
+          {
+            echo "### postiz-diagnose — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -

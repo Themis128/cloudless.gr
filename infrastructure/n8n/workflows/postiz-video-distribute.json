@@ -1,0 +1,169 @@
+{
+  "name": "Postiz — Video distribute (Google Drive → multi-platform)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postiz-video-distribute",
+        "options": {}
+      },
+      "name": "Video webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "postiz-video-distribute"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.body.videoUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "name": "Download video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/media/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Upload to Postiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/integrations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "List channels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Video webhook').first().json.body;\nconst mediaUrl = $('Upload to Postiz').first().json.url || $('Upload to Postiz').first().json.path || '';\nconst raw = $input.first().json;\nconst list = Array.isArray(raw) ? raw : (raw.integrations || []);\nconst videoChannels = ['x', 'linkedin', 'linkedin-page', 'facebook', 'instagram', 'tiktok', 'youtube', 'threads', 'bluesky'];\nconst channels = list.filter(i => videoChannels.includes(i.identifier) && !i.disabled);\nif (!channels.length) return [{ json: { skip: true, reason: 'no_video_channels' } }];\n\nconst title = (webhook.title || 'New video').trim();\nconst caption = (webhook.caption || title).trim();\nconst hashtags = (webhook.hashtags || '').trim();\nconst fullCaption = caption + (hashtags ? '\\n\\n' + hashtags : '');\nconst scheduleAt = webhook.scheduleAt || $now.plus(2, 'hours').toUTC().toISO();\n\nconst posts = channels.map(c => ({\n  integration: { id: c.id },\n  value: [{ content: fullCaption, image: mediaUrl ? [mediaUrl] : [] }],\n  settings: { __type: c.identifier }\n}));\n\nreturn [{ json: {\n  skip: false,\n  body: { type: 'schedule', date: scheduleAt, shortLink: false, tags: [], posts },\n  channelCount: channels.length,\n  title\n} }];"
+      },
+      "name": "Build multi-platform payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !$json.skip }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Has channels?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "name": "Create scheduled post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 220],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "note", "value": "={{ $json.reason || 'skipped' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Skip",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1540, 400]
+    }
+  ],
+  "connections": {
+    "Video webhook": {
+      "main": [[{ "node": "Download video", "type": "main", "index": 0 }]]
+    },
+    "Download video": {
+      "main": [[{ "node": "Upload to Postiz", "type": "main", "index": 0 }]]
+    },
+    "Upload to Postiz": {
+      "main": [[{ "node": "List channels", "type": "main", "index": 0 }]]
+    },
+    "List channels": {
+      "main": [[{ "node": "Build multi-platform payload", "type": "main", "index": 0 }]]
+    },
+    "Build multi-platform payload": {
+      "main": [[{ "node": "Has channels?", "type": "main", "index": 0 }]]
+    },
+    "Has channels?": {
+      "main": [
+        [{ "node": "Create scheduled post", "type": "main", "index": 0 }],
+        [{ "node": "Skip", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

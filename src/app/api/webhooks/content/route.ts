@@ -86,9 +86,11 @@ async function handlePageUpdated(payload: WebhookPayload) {
         const { scheduleBlogShare } = await import("@/lib/postiz-blog");
         const baseUrl = process.env.SITE_URL ?? "https://cloudless.gr";
         const url = slug ? `${baseUrl}/blog/${slug}` : baseUrl;
+        const title = (data.title as string) ?? "";
+        const locale = (data.locale as string) ?? "en";
         scheduleBlogShare({
           pageId: page_id,
-          title: (data.title as string) ?? "",
+          title,
           excerpt: (data.excerpt as string) ?? "",
           url,
         })
@@ -102,6 +104,16 @@ async function handlePageUpdated(payload: WebhookPayload) {
             }
           })
           .catch((err) => console.error("[content webhook → postiz] threw:", err));
+
+        const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
+        globalThis
+          .fetch(`${n8nBase}/webhook/postiz-ai-multicaption`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, url, locale }),
+            signal: AbortSignal.timeout(10_000),
+          })
+          .catch((err) => console.error("[content webhook → n8n ai-multicaption]", err));
       }
       break;
     case "docs":

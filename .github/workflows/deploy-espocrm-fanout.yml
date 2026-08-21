@@ -1,0 +1,41 @@
+name: Deploy espocrm-fanout Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - workers/espocrm-fanout/**
+      - .github/workflows/deploy-espocrm-fanout.yml
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/espocrm-fanout
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    # Queues must exist before deploy. `wrangler queues create` is idempotent —
+    # it returns exit 0 when the queue already exists.
+    - name: Ensure Cloudflare Queues exist
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        npx wrangler@latest queues create espocrm-events     || true
+        npx wrangler@latest queues create espocrm-events-dlq || true
+
+    - name: Deploy worker
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        workingDirectory: workers/espocrm-fanout
+        wranglerVersion: latest

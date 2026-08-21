@@ -3,8 +3,11 @@
   "dependencies": {
     "@dsnp/parquetjs": "^1.8.7",
     "aws4fetch": "^1.0.20",
-    "jose": "^6.2.7",
-    "stripe": "^22.4.0"
+    "jose": "^6.2.9",
+    "stripe": "^22.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   },
   "overrides": {
     "thrift": "^0.23.0"

@@ -13,6 +13,7 @@ import {
   type FunnelAbCompare,
 } from "@/lib/funnel-ab-compare";
 import { Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface FunnelRow {
   event_type: string;
@@ -155,6 +156,8 @@ export default function SearchFunnelPage() {
           by event type and A/B variant. Last {days} days.
         </p>
       </div>
+
+      <InsightPanel domain="seo" />
 
       <div className="flex gap-2">
         {[7, 30, 90].map((n) => (

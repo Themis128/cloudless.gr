@@ -116,14 +116,13 @@ metadata:
   labels:
     app: meilisearch
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: meilisearch
   ports:
   - name: http
     port: 7700
     targetPort: 7700
-    nodePort: 30902
 ---
 # ResourceQuota: 1.5Gi limits total (Meilisearch 1Gi + any helper pods).
 # Meilisearch alone requests 256Mi / limits 1Gi; the quota allows room

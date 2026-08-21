@@ -1,6 +1,6 @@
 name: 'ETL: Portals to R2'
 # ETL sync: Client portals from D1 app_config → portals parquet in R2.
-# Reads config from D1 app_config via /api/config endpoint.
+# Reads config from D1 app_config via Cloudflare D1 REST API.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
 
 on:
@@ -14,8 +14,7 @@ permissions:
 jobs:
   etl:
     name: Run Portals → R2 sync
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC ||
-      '["self-hosted","omv","build"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 15
 
     steps:
@@ -41,9 +40,9 @@ jobs:
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
         CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-        AUTH_DB_URL: http://localhost:8787/api/config
       run: node portals-to-r2.mjs
 
     - name: Notify Slack on failure
@@ -72,6 +71,7 @@ jobs:
 
 # Required secrets (add via GitHub repo → Settings → Secrets → Actions):
 # CF_ACCOUNT_ID - Your Cloudflare account ID
+# CLOUDFLARE_API_TOKEN - Cloudflare API token (D1 REST)
 # CF_R2_ACCESS_KEY_ID - R2 access key from Cloudflare dashboard
 # CF_R2_SECRET_ACCESS_KEY - R2 secret key from Cloudflare dashboard
 # SLACK_WEBHOOK_URL - Slack webhook for failure notifications (optional)

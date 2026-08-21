@@ -2,6 +2,7 @@
   "name": "espocrm-fanout",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-01",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "queues": {
     "producers": [{ "queue": "espocrm-events", "binding": "ESPOCRM_EVENTS" }],
     "consumers": [

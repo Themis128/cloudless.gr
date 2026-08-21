@@ -53,7 +53,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: postgres
-        image: postgres:17-alpine
+        image: postgres:17.4-alpine
         ports:
         - containerPort: 5432
         env:
@@ -120,7 +120,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: redis
-        image: redis:7-alpine
+        image: redis:7.2.9-alpine
         args: [--appendonly, yes]
         ports:
         - containerPort: 6379
@@ -178,11 +178,11 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: postiz
-          # Pinned to v2.11.2 — the last release before Postiz made the Temporal
-          # workflow server mandatory (v2.12.0+ needs temporal + its own DB +
-          # optional Elasticsearch, too heavy for the Pi cluster). Upgrading past
-          # this tag requires deploying Temporal alongside; see
-          # https://docs.postiz.com/installation/migration
+          # Rolled back to v2.11.2 (2026-08-15) — v2.12.0+ requires a Temporal
+          # workflow server + extra DB (too heavy for 8GB Pi), and v2.23.0's
+          # container only starts the orchestrator worker + frontend, not the
+          # backend API server, without Temporal_ADDRESS. v2.11.2 is the last
+          # single-process build that serves /api/public/v1/* correctly.
         image: ghcr.io/gitroomhq/postiz-app:v2.11.2
         ports:
         - containerPort: 5000
@@ -247,6 +247,18 @@ spec:
             # list will be fetched by Postiz; everything else is rejected.
         - name: RESTRICT_UPLOAD_DOMAINS
           value: cloudless.gr,uploads.postiz.cloudless.gr
+        # AI — routed through postiz-ai-proxy Cloudflare Worker which swaps
+        # Postiz's hardcoded "gpt-4.1" for nvidia/nemotron-3-super-120b-a12b
+        # on NVIDIA's free-tier NIM API. NVIDIA key lives as a Worker secret.
+        # PROXY_TOKEN must match the secret set via:
+        #   wrangler secret put PROXY_TOKEN --config workers/postiz-ai-proxy/wrangler.jsonc
+        - name: OPENAI_BASE_URL
+          value: https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: postiz-providers
+              key: POSTIZ_AI_PROXY_TOKEN
         volumeMounts:
         - name: uploads
           mountPath: /uploads
@@ -297,10 +309,9 @@ metadata:
   name: postiz
   namespace: postiz
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: postiz
   ports:
   - port: 5000
     targetPort: 5000
-    nodePort: 30500

@@ -4,6 +4,7 @@
 Refreshes via `tailscale metrics print` every REFRESH_SECS (default 15).
 Bind: 0.0.0.0 so kube-prometheus can scrape via LAN Endpoints.
 """
+
 from __future__ import annotations
 
 import os
