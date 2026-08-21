@@ -5,6 +5,8 @@ import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 import { isSuppressed } from "@/lib/ses-suppression-d1";
 
 
+const LABEL_CLOUDLESS = "Cloudless";
+
 export const SENDERS = {
   noreply: "noreply@cloudless.gr",
   info: "info@cloudless.gr",
@@ -67,7 +69,7 @@ export async function sendEmail(options: {
       }
 
       await email.send({
-        from: `${options.fromLabel || "Cloudless"} <${options.from || SENDERS.noreply}>`,
+        from: `${options.fromLabel || LABEL_CLOUDLESS} <${options.from || SENDERS.noreply}>`,
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -319,7 +321,7 @@ export async function sendActivationEmail(
     to,
     from: SENDERS.noreply,
     subject: "Activate your Cloudless account",
-    fromLabel: "Cloudless",
+    fromLabel: LABEL_CLOUDLESS,
     html: `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
         <div style="padding:32px 40px 24px;border-bottom:1px solid #1e293b;">
@@ -477,7 +479,7 @@ export async function sendUnsubscribeConfirmation(email: string): Promise<void> 
     to: email,
     from: SENDERS.newsletter,
     subject: "You've been unsubscribed — Cloudless",
-    fromLabel: "Cloudless",
+    fromLabel: LABEL_CLOUDLESS,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
         <h2 style="color: #00fff5; margin-top: 0;">Unsubscribed ✓</h2>
