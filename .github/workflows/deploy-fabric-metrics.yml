@@ -18,8 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  # Shared with cloudflare-tunnels-doctor — both restart cloudflared on the Pis.
-  group: cloudflare-host-fabric
+  group: deploy-fabric-metrics
   cancel-in-progress: false
 
 jobs:
@@ -51,25 +50,12 @@ jobs:
         sudo kubectl -n monitoring rollout status deploy/blackbox-exporter --timeout=120s
     - name: Verify scrapes
       run: |
-        wait_200() {
-          local url="$1" label="$2"
-          local i code=000
-          for i in $(seq 1 15); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "$url" 2>/dev/null || echo 000)
-            if [[ "$code" == "200" ]]; then
-              echo "${label}:${code} (attempt ${i})"
-              return 0
-            fi
-            sleep 2
-          done
-          echo "${label}:${code} FAILED" >&2
-          return 1
-        }
+        sleep 20
         echo "=== LAN metrics ==="
-        wait_200 http://192.168.1.128:20241/metrics omv-cf
-        wait_200 http://192.168.1.130:20241/metrics ha-cf
-        wait_200 http://192.168.1.128:9102/metrics omv-ts
-        wait_200 http://192.168.1.130:9102/metrics ha-ts
+        curl -sS -o /dev/null -w "omv-cf:%{http_code}\n" --max-time 5 http://192.168.1.128:20241/metrics
+        curl -sS -o /dev/null -w "ha-cf:%{http_code}\n" --max-time 5 http://192.168.1.130:20241/metrics
+        curl -sS -o /dev/null -w "omv-ts:%{http_code}\n" --max-time 5 http://192.168.1.128:9102/metrics
+        curl -sS -o /dev/null -w "ha-ts:%{http_code}\n" --max-time 5 http://192.168.1.130:9102/metrics
         echo "=== Prometheus targets (sample) ==="
         sudo kubectl -n monitoring exec prometheus-kube-prom-kube-prometheus-prometheus-0 -c prometheus -- \
           wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=up{job=~"cloudflared|tailscale"}' 2>/dev/null | head -c 2000 || true
