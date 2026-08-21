@@ -6,8 +6,6 @@ import { isSuppressed } from "@/lib/ses-suppression-d1";
 
 const LABEL_CLOUDLESS = "Cloudless";
 
-const LABEL_CLOUDLESS = "Cloudless";
-
 export const SENDERS = {
   noreply: "noreply@cloudless.gr",
   info: "info@cloudless.gr",
