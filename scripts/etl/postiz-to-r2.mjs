@@ -41,6 +41,13 @@ const postSchema = new ParquetSchema({
 	released_at: { type: "UTF8", optional: true },
 	content_length: { type: "INT32", optional: true },
 	created_at: { type: "UTF8", optional: true },
+	likes: { type: "INT32", optional: true },
+	comments: { type: "INT32", optional: true },
+	impressions: { type: "INT32", optional: true },
+	shares: { type: "INT32", optional: true },
+	clicks: { type: "INT32", optional: true },
+	engagement_rate: { type: "FLOAT", optional: true },
+	snapshot_date: { type: "UTF8", optional: true },
 });
 
 const integrationSchema = new ParquetSchema({
@@ -85,18 +92,29 @@ async function syncPosts() {
 			accum.push(p);
 		}
 	}
-	const rows = accum.map((p) => ({
-		post_id: String(p.id ?? ""),
-		integration_id: String(p.integration?.id ?? p.integrationId ?? ""),
-		integration_name: String(p.integration?.name ?? ""),
-		platform: String(p.integration?.providerIdentifier ?? p.providerIdentifier ?? ""),
-		state: String(p.state ?? ""),
-		release_url: String(p.releaseURL ?? ""),
-		publish_date: String(p.publishDate ?? ""),
-		released_at: String(p.releasedAt ?? ""),
-		content_length: typeof p.content === "string" ? p.content.length : 0,
-		created_at: String(p.createdAt ?? ""),
-	}));
+	const snapshotDate = new Date().toISOString().slice(0, 10);
+	const rows = accum.map((p) => {
+		const a = p.analytics || {};
+		return {
+			post_id: String(p.id ?? ""),
+			integration_id: String(p.integration?.id ?? p.integrationId ?? ""),
+			integration_name: String(p.integration?.name ?? ""),
+			platform: String(p.integration?.providerIdentifier ?? p.providerIdentifier ?? ""),
+			state: String(p.state ?? ""),
+			release_url: String(p.releaseURL ?? ""),
+			publish_date: String(p.publishDate ?? ""),
+			released_at: String(p.releasedAt ?? ""),
+			content_length: typeof p.content === "string" ? p.content.length : 0,
+			created_at: String(p.createdAt ?? ""),
+			likes: Number(a.likes ?? a.reactions ?? 0),
+			comments: Number(a.comments ?? a.replies ?? 0),
+			impressions: Number(a.impressions ?? a.views ?? 0),
+			shares: Number(a.shares ?? a.reposts ?? a.retweets ?? 0),
+			clicks: Number(a.clicks ?? a.linkClicks ?? 0),
+			engagement_rate: Number(a.engagementRate ?? 0),
+			snapshot_date: snapshotDate,
+		};
+	});
 	const local = "/tmp/postiz-posts.parquet";
 	const body = await writeParquet(rows, postSchema, local);
 	await uploadToR2("lake/postiz-posts/posts.parquet", body);

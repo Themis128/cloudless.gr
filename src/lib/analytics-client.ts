@@ -43,7 +43,13 @@ async function getDuckDB(): Promise<DuckRuntime> {
     const bundles = duckdb.getJsDelivrBundles();
     const bundle = await duckdb.selectBundle(bundles);
     if (!bundle.mainWorker) throw new Error("DuckDB worker URL missing");
-    const worker = new Worker(bundle.mainWorker);
+    // Browsers block new Worker() with cross-origin CDN URLs (same-origin
+    // enforcement applies regardless of CSP). Fetch the worker script and wrap
+    // it in a blob: URL so construction succeeds.
+    const workerResp = await fetch(bundle.mainWorker);
+    const workerText = await workerResp.text();
+    const blobUrl = URL.createObjectURL(new Blob([workerText], { type: "application/javascript" }));
+    const worker = new Worker(blobUrl);
     const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
     const db = new duckdb.AsyncDuckDB(logger, worker);
     await db.instantiate(bundle.mainModule, bundle.pthreadWorker ?? null);

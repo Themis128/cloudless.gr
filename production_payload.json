@@ -1,0 +1,24 @@
+{
+  "slides": [
+    {
+      "title": "Welcome to cloudless.gr",
+      "subtitle": "Your serverless framework partner",
+      "overline": "Transform your infrastructure"
+    },
+    {
+      "stepNumber": "1",
+      "title": "Assess",
+      "body": "We analyze your current cloud setup and identify optimization opportunities."
+    },
+    {
+      "overline": "ELIMINATE CLOUD INFRASTRUCTURE BLOAT",
+      "title": "Book a Free Audit",
+      "body": "Get a personalized 30-minute audit to see how much you can save."
+    },
+    {
+      "title": "Deploy with Confidence",
+      "subtitle": "Zero‑ops, full‑stack",
+      "overline": "From code to production in minutes"
+    }
+  ]
+}

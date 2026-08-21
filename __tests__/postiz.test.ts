@@ -11,6 +11,7 @@ vi.stubGlobal("fetch", mockFetch);
 import {
   changePostStatus,
   createPost,
+  createPostsBulk,
   deleteIntegration,
   deletePost,
   deletePostsByGroup,
@@ -38,6 +39,7 @@ import {
   updatePostReleaseId,
   uploadFile,
   uploadFromUrl,
+  withSocialUtm,
   type PostizIntegration,
 } from "@/lib/postiz";
 import { verifyPostizWebhookSignature } from "@/lib/postiz-webhook";
@@ -52,6 +54,25 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/** schedulePost now lists integrations first, then POSTs /posts. */
+function mockScheduleFetch(postBody: unknown = [{ id: "p1" }], postStatus = 200) {
+  mockFetch.mockImplementation((url: string) => {
+    if (String(url).includes("/integrations")) {
+      return Promise.resolve(
+        jsonResponse([{ id: "fb", name: "FB", identifier: "facebook" }])
+      );
+    }
+    return Promise.resolve(jsonResponse(postBody, postStatus));
+  });
+}
+
+function lastPostBody(): Record<string, unknown> {
+  const postCall = [...mockFetch.mock.calls]
+    .reverse()
+    .find(([url]) => String(url).includes("/posts"));
+  return JSON.parse(postCall![1].body as string) as Record<string, unknown>;
 }
 
 beforeEach(() => {
@@ -122,6 +143,22 @@ describe("matchIntegrationsForPlatform", () => {
   });
 });
 
+describe("withSocialUtm", () => {
+  it("adds utm_source/medium/campaign when missing", () => {
+    const out = withSocialUtm("https://cloudless.gr/en/blog/foo", "linkedin", "blog_abc");
+    expect(out).toContain("utm_source=linkedin");
+    expect(out).toContain("utm_medium=social");
+    expect(out).toContain("utm_campaign=blog_abc");
+  });
+
+  it("leaves non-URLs and already-tagged URLs alone for existing params", () => {
+    expect(withSocialUtm("not-a-url", "x")).toBe("not-a-url");
+    const tagged = withSocialUtm("https://cloudless.gr/?utm_source=manual", "x");
+    expect(tagged).toContain("utm_source=manual");
+    expect(tagged).not.toContain("utm_source=x");
+  });
+});
+
 describe("schedulePost", () => {
   it("rejects empty targets and empty content without calling the API", async () => {
     const noTargets = await schedulePost({ content: "hello", integrationIds: [] });
@@ -132,34 +169,38 @@ describe("schedulePost", () => {
   });
 
   it("uses type=schedule for future dates and type=now for past dates", async () => {
-    mockFetch.mockImplementation(() => Promise.resolve(jsonResponse([{ id: "p1" }])));
+    mockScheduleFetch();
     const future = new Date(Date.now() + 3600_000).toISOString();
     await schedulePost({ content: "hi", integrationIds: ["fb"], scheduleAt: future });
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body).type).toBe("schedule");
+    expect(lastPostBody().type).toBe("schedule");
 
+    mockScheduleFetch();
     const past = new Date(Date.now() - 3600_000).toISOString();
     await schedulePost({ content: "hi", integrationIds: ["fb"], scheduleAt: past });
-    expect(JSON.parse(mockFetch.mock.calls[1][1].body).type).toBe("now");
+    expect(lastPostBody().type).toBe("now");
   });
 
   it("uses type=draft when asDraft is set", async () => {
-    mockFetch.mockImplementation(() => Promise.resolve(jsonResponse([{ id: "p1" }])));
+    mockScheduleFetch();
     await schedulePost({ content: "hi", integrationIds: ["fb"], asDraft: true });
-    expect(JSON.parse(mockFetch.mock.calls[0][1].body).type).toBe("draft");
+    expect(lastPostBody().type).toBe("draft");
   });
 
-  it("builds one post entry per integration", async () => {
-    mockFetch.mockResolvedValue(jsonResponse([{ id: "a" }, { id: "b" }]));
+  it("builds one post entry per integration with settings", async () => {
+    mockScheduleFetch([{ id: "a" }, { id: "b" }]);
     const result = await schedulePost({ content: "hi", integrationIds: ["fb", "ig"] });
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = lastPostBody() as {
+      posts: Array<{ integration: { id: string }; value: Array<{ content: string }>; settings: { __type: string } }>;
+    };
     expect(body.posts).toHaveLength(2);
     expect(body.posts[0].integration.id).toBe("fb");
     expect(body.posts[0].value[0].content).toBe("hi");
+    expect(body.posts[0].settings.__type).toBe("facebook");
     expect(result).toEqual({ ok: true, postIds: ["a", "b"] });
   });
 
   it("returns ok=false with the status on API rejection", async () => {
-    mockFetch.mockResolvedValue(new Response("boom", { status: 422 }));
+    mockScheduleFetch("boom", 422);
     const result = await schedulePost({ content: "hi", integrationIds: ["fb"] });
     expect(result.ok).toBe(false);
     expect(result.error).toContain("422");
@@ -247,6 +288,41 @@ describe("createPost (throwing)", () => {
     expect(result).toEqual(upstream);
     const [, init] = mockFetch.mock.calls[0];
     expect(init.method).toBe("POST");
+  });
+});
+
+describe("createPostsBulk", () => {
+  const sampleBody = {
+    type: "schedule" as const,
+    date: "2026-08-16T10:00:00.000Z",
+    shortLink: false,
+    tags: [] as Array<{ value: string; label: string }>,
+    posts: [
+      {
+        integration: { id: "fb" },
+        value: [{ content: "hi", image: [] }],
+        settings: { __type: "facebook" },
+      },
+    ],
+  };
+
+  it("returns per-item ok/fail without aborting the batch", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse([{ postId: "p1", integration: "fb" }]))
+      .mockResolvedValueOnce(jsonResponse({ error: "nope" }, 400))
+      .mockResolvedValueOnce(jsonResponse([{ postId: "p3", integration: "fb" }]));
+
+    const results = await createPostsBulk([
+      { ...sampleBody, date: "2026-08-16T10:00:00.000Z" },
+      { ...sampleBody, date: "2026-08-17T10:00:00.000Z" },
+      { ...sampleBody, date: "2026-08-18T10:00:00.000Z" },
+    ]);
+
+    expect(results).toHaveLength(3);
+    expect(results[0]).toMatchObject({ index: 0, ok: true });
+    expect(results[1]).toMatchObject({ index: 1, ok: false, status: 400 });
+    expect(results[2]).toMatchObject({ index: 2, ok: true });
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
 

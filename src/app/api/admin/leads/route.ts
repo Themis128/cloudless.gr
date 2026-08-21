@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isConfiguredAsync } from "@/lib/integrations";
-import { listContacts } from "@/lib/espocrm";
+import { listContacts, listLeads } from "@/lib/espocrm";
 import { readPendingClients, PLAN_LABELS } from "@/lib/pending-clients";
 import { mapIntegrationError } from "@/lib/api-errors";
 
@@ -27,16 +27,35 @@ export interface UnifiedLead {
   createdAt?: string;
 }
 
+// EspoCRM returns flat records — these match the actual API response shapes.
 interface EspoCRMContactRecord {
   id: string;
-  properties?: {
-    email?: string;
-    firstname?: string;
-    lastname?: string;
-    company?: string;
-    createdate?: string;
-    hs_lead_status?: string;
-  };
+  emailAddress?: string;
+  firstName?: string;
+  lastName?: string;
+  accountName?: string;
+  leadSource?: string;
+  createdAt?: string;
+}
+
+interface EspoCRMLeadRecord {
+  id: string;
+  emailAddress?: string;
+  firstName?: string;
+  lastName?: string;
+  accountName?: string;
+  source?: string;
+  status?: string;
+  description?: string;
+  createdAt?: string;
+}
+
+function extractLeadInterest(description?: string): string | undefined {
+  if (!description) return undefined;
+  const tier = description.match(/^Tier:\s*(.+)$/m)?.[1]?.trim();
+  const campaign = description.match(/^Campaign:\s*(.+)$/m)?.[1]?.trim();
+  if (tier && campaign) return `${tier} (${campaign})`;
+  return tier ?? campaign;
 }
 
 function mergeLead(map: Map<string, UnifiedLead>, lead: UnifiedLead): void {
@@ -68,13 +87,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 100);
 
-    const [contactsResult, pendingResult] = await Promise.allSettled([
+    const [contactsResult, leadsResult, pendingResult] = await Promise.allSettled([
       espocrmConfigured ? listContacts(limit) : Promise.resolve([]),
+      espocrmConfigured ? listLeads(limit) : Promise.resolve([]),
       readPendingClients(),
     ]);
 
     const contacts =
       contactsResult.status === "fulfilled" ? (contactsResult.value as EspoCRMContactRecord[]) : [];
+    const espoLeads =
+      leadsResult.status === "fulfilled" ? (leadsResult.value as EspoCRMLeadRecord[]) : [];
     const pending = pendingResult.status === "fulfilled" ? pendingResult.value : [];
 
     if (!espocrmConfigured && pending.length === 0) {
@@ -87,15 +109,27 @@ export async function GET(request: NextRequest) {
     const map = new Map<string, UnifiedLead>();
 
     for (const contact of contacts) {
-      const p = contact.properties ?? {};
-      if (!p.email) continue;
+      if (!contact.emailAddress) continue;
       mergeLead(map, {
-        email: p.email,
-        name: [p.firstname, p.lastname].filter(Boolean).join(" "),
-        company: p.company || undefined,
+        email: contact.emailAddress,
+        name: [contact.firstName, contact.lastName].filter(Boolean).join(" "),
+        company: contact.accountName || undefined,
         sources: ["espocrm"],
-        status: p.hs_lead_status || undefined,
-        createdAt: p.createdate || undefined,
+        status: contact.leadSource || undefined,
+        createdAt: contact.createdAt || undefined,
+      });
+    }
+
+    for (const lead of espoLeads) {
+      if (!lead.emailAddress) continue;
+      mergeLead(map, {
+        email: lead.emailAddress,
+        name: [lead.firstName, lead.lastName].filter(Boolean).join(" "),
+        company: lead.accountName || undefined,
+        sources: ["espocrm-lead"],
+        interest: extractLeadInterest(lead.description),
+        status: lead.status || undefined,
+        createdAt: lead.createdAt || undefined,
       });
     }
 
@@ -119,6 +153,7 @@ export async function GET(request: NextRequest) {
       total: leads.length,
       sources: {
         espocrm: espocrmConfigured,
+        espocrm_leads: espocrmConfigured,
         portal: true,
       },
       fetchedAt: new Date().toISOString(),

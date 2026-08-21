@@ -52,7 +52,6 @@ function bindLocalAuthDb(): void {
   // Computed specifier so Turbopack does not statically trace node:sqlite into
   // the Edge instrumentation graph (same pattern as auth-d1 tryLoadLocalAuthDb).
   const spec = "." + "/lib/" + ["auth", "db", "local"].join("-");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getLocalAuthDb } = require(spec) as {
     getLocalAuthDb?: () => AuthDbBinding | null;
   };

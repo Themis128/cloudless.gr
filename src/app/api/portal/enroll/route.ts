@@ -7,6 +7,7 @@ import { SlackClient } from "@/lib/slack-notify";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackEscape } from "@/lib/slack-escape";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { upsertContact, createContactNote } from "@/lib/espocrm";
 
 // Admin notification destination — sent direct to Themis, not the generic team alias.
 const ADMIN_NOTIFY_EMAIL = "tbaltzakis@cloudless.gr";
@@ -116,6 +117,41 @@ export async function POST(request: NextRequest) {
     after(notify);
   } catch {
     notify().catch(() => {});
+  }
+
+  const syncToEspo = async () => {
+    try {
+      const nameParts = (pending.name ?? "").trim().split(/\s+/);
+      const contactId = await upsertContact({
+        email: pending.email,
+        firstname: nameParts[0] ?? "",
+        lastname: nameParts.slice(1).join(" ") || undefined,
+        lead_source: "Web Site",
+        message: [
+          `Portal plan: ${pending.planLabel ?? pending.plan}`,
+          pending.notes ? `Notes: ${pending.notes}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+      if (contactId) {
+        const noteLines = [
+          `Portal enrollment: ${pending.planLabel ?? pending.plan}`,
+          `Status: ${pending.status}`,
+          pending.notes ? `Client notes: ${pending.notes}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        await createContactNote(contactId, noteLines);
+      }
+    } catch (err) {
+      console.error("[portal/enroll] EspoCRM sync failed:", err);
+    }
+  };
+  try {
+    after(syncToEspo);
+  } catch {
+    syncToEspo().catch(() => {});
   }
 
   return NextResponse.json(

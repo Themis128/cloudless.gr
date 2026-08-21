@@ -1,0 +1,59 @@
+name: Wire Ollama Fallback
+
+# Sets OLLAMA_BASE_URL (+ optional OLLAMA_MODEL) on the cloudless-app
+# Deployment so Ollama (qwen2.5-coder on the WSL host, reachable over
+# Tailscale) becomes the AI fallback after NVIDIA proxy and Workers AI.
+# Superseded by wire-all-ai-backends.yml — kept for manual re-run only.
+on:
+  workflow_dispatch:
+
+jobs:
+  wire:
+    runs-on: [self-hosted, omv, pi, build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/.kube/config"
+          chmod 600 "$GITHUB_WORKSPACE/.kube/config"
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Set Ollama env vars on cloudless-app
+        run: |
+          # 100.121.191.7 is the WSL host Tailscale IP (confirmed in litellm-config.yaml).
+          # The Pi is on the same tailnet so this IP is reachable from the pod.
+          kubectl set env deployment/cloudless-app \
+            -n cloudless \
+            OLLAMA_BASE_URL=http://100.121.191.7:11434 \
+            OLLAMA_MODEL=qwen2.5-coder:latest
+
+          echo "✓ OLLAMA_BASE_URL + OLLAMA_MODEL set on cloudless-app"
+
+      - name: Restart app and wait
+        run: |
+          kubectl rollout restart deployment/cloudless-app -n cloudless
+          kubectl rollout status deployment/cloudless-app -n cloudless --timeout=180s
+          echo "✓ cloudless-app restarted"
+
+      - name: Smoke-test Ollama reachability from the Pi
+        run: |
+          # Verify the WSL Ollama is reachable over Tailscale from the Pi runner
+          RESULT=$(curl -sf http://100.121.191.7:11434/api/tags 2>&1) && \
+            echo "✓ Ollama reachable from Pi: $RESULT" || \
+            echo "⚠ Ollama not reachable from Pi — check Tailscale + ollama.service on WSL host"
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            const emoji = outcome === 'success' ? '✅' : '❌';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 382,
+              body: `${emoji} **wire-ollama-fallback** ${outcome}\n\nOllama (\`qwen2.5-coder:latest\` at \`http://100.121.191.7:11434\`) wired as AI fallback on cloudless-app (after NVIDIA proxy and Workers AI).`
+            });

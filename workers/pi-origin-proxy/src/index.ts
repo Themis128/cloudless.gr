@@ -11,6 +11,7 @@
 interface Env {
   PI_ORIGIN_HOST: string;
   PI_TIMEOUT_MS?: string;
+  ANALYTICS?: AnalyticsEngineDataset;
 }
 
 export const REQUEST_HOP_BY_HOP = new Set([
@@ -218,6 +219,7 @@ async function proxyWebSocket(
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const t0 = Date.now();
     const url = new URL(request.url);
     const host = (env.PI_ORIGIN_HOST || "pi-origin.cloudless.gr").replace(/^https?:\/\//, "");
     const target = new URL(url.pathname + url.search, `https://${host}`);
@@ -293,15 +295,26 @@ export default {
         headers: outHeaders,
       });
 
-      // Populate the edge cache from the same response we're about to return.
-      // clone() must run BEFORE the response body is streamed to the client, so
-      // do it here and hand the clone off via waitUntil so we don't block.
       if (cacheKey && isResponseCacheable(upstream)) {
         ctx.waitUntil(cache.put(cacheKey, proxied.clone()));
+      }
+      if (env.ANALYTICS) {
+        env.ANALYTICS.writeDataPoint({
+          blobs: [url.pathname, String(upstream.status), request.method],
+          doubles: [Date.now() - t0],
+          indexes: [url.pathname.split("/").slice(0, 3).join("/")],
+        });
       }
       return proxied;
     } catch (err) {
       console.error("pi-tunnel-proxy: origin unreachable", err);
+      if (env.ANALYTICS) {
+        env.ANALYTICS.writeDataPoint({
+          blobs: [url.pathname, "502", request.method],
+          doubles: [Date.now() - t0],
+          indexes: [url.pathname.split("/").slice(0, 3).join("/")],
+        });
+      }
       return new Response("Pi origin unreachable", {
         status: 502,
         headers: {

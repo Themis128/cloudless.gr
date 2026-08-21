@@ -288,7 +288,6 @@ export default function Esp32ManagerPage() {
   }, [call, selectedId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === "config") loadConfig().catch(() => {});
   }, [tab, loadConfig]);
 

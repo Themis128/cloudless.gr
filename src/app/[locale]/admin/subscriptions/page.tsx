@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import type { AdminSubscription } from "@/app/api/admin/subscriptions/route";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 type StatusFilter = "active" | "past_due" | "trialing" | "canceled" | "all";
 
@@ -57,7 +58,6 @@ export default function SubscriptionsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(statusFilter);
   }, [statusFilter]);
 
@@ -134,6 +134,8 @@ export default function SubscriptionsPage() {
           Refresh
         </button>
       </div>
+
+      <InsightPanel domain="revenue" />
 
       {/* Summary cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">

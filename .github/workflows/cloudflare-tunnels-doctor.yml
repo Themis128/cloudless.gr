@@ -1,0 +1,84 @@
+# Probe Cloudflare Tunnel edges + LAN origins, then remediate.
+#
+# Fix path (on omv self-hosted runner):
+#   1. Ensure known NodePorts for self-hosted apps
+#   2. Sync canonical infrastructure/cloudflare-tunnels/cloudflared-config.yml
+#      to omv + omv-ha (host-specific webmail/omv/ftp overrides)
+#   3. Restart cloudflared on both connectors
+#   4. Re-probe public HTTPS (Access 302 = healthy) + LAN origins
+#
+# Replaces the old ad-hoc grafana/n8n-only patch workflow.
+name: Cloudflare tunnels doctor
+
+on:
+  schedule:
+    # Every 6 hours — catch Access/edge 5xx and connector drift early.
+    - cron: '20 */6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cloudflare-tunnels-doctor.yml
+      - .github/workflows/fix-selfhosted-tunnels.yml
+      - scripts/cloudflare-tunnels-doctor.sh
+      - infrastructure/cloudflare-tunnels/cloudflared-config.yml
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: Apply NodePort + config sync + restart
+        required: false
+        default: true
+        type: boolean
+      dry_run:
+        description: Probe + show config drift only
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # Shared with deploy-fabric-metrics — both restart cloudflared on the Pis.
+  group: cloudflare-host-fabric
+  cancel-in-progress: false
+
+jobs:
+  doctor:
+    # Must run on omv — LAN SSH to both Pis; GH-hosted Tailscale SSH is flaky.
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SSH_USER: tbaltzakis
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+      FIX: ${{ github.event_name == 'workflow_dispatch' && (inputs.fix && '1' || '0') || '1' }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Run tunnels doctor
+      id: doctor
+      run: |
+        chmod +x scripts/cloudflare-tunnels-doctor.sh
+        bash scripts/cloudflare-tunnels-doctor.sh
+
+    - name: Comment issue 382 on failure
+      if: failure()
+      run: |
+        BODY=$(cat <<EOF
+        ## Cloudflare tunnels doctor failed
+
+        - Event: \`${{ github.event_name }}\`
+        - DRY_RUN=\`${{ env.DRY_RUN }}\` FIX=\`${{ env.FIX }}\`
+        - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        Manual on omv:
+        \`\`\`
+        FIX=1 bash scripts/cloudflare-tunnels-doctor.sh
+        \`\`\`
+        EOF
+        )
+        gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body "$BODY" || true
+
+  # Keep the legacy workflow name discoverable: thin wrapper dispatch note.
+  # Actual work is the doctor job above.

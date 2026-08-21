@@ -162,6 +162,9 @@ claude-dispatch-skill.skill
 claude-dispatch-skill/
 claude-dispatch-workspace/
 
+# ComfyUI (cloned for development, not to be committed)
+ComfyUI/
+
 # ESPHome secrets — contains Wi-Fi credentials and API keys
 infrastructure/esp32-watchdog/esphome/secrets.yaml
 # ESPHome OTA flash logs (generated locally, not source)
@@ -260,3 +263,7 @@ test-results.json/
 
 # gh-aw audit downloads (`gh aw audit <run-id>`)
 .github/aw/logs/
+
+# Local MCP launcher secrets (never commit keys)
+scripts/cursor-mcp/*.env
+scripts/cursor-mcp/*-secret*

@@ -1,4 +1,4 @@
-import { test, expect, vi } from "vitest";
+import { test, describe, expect, vi } from "vitest";
 
 // Mock next/server to avoid importing the full Next.js server module
 vi.mock("next/server", () => ({
@@ -27,7 +27,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireAdmin, optionalAuth } from "@/lib/auth-middleware";
 import { mockRequest } from "./mock-request";
 
-test.describe("Auth Middleware Tests", () => {
+describe("Auth Middleware Tests", () => {
   test("requireAuth should return 401 for unauthenticated users", async () => {
     const request = mockRequest({ url: "http://example.com/api/test" });
     const response = await requireAuth(request);

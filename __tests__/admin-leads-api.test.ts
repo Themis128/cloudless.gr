@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockRequireAdmin, mockIsConfiguredAsync, mockListContacts, mockReadPendingClients } =
+const { mockRequireAdmin, mockIsConfiguredAsync, mockListContacts, mockListLeads, mockReadPendingClients } =
   vi.hoisted(() => ({
     mockRequireAdmin: vi.fn(),
     mockIsConfiguredAsync: vi.fn(),
     mockListContacts: vi.fn(),
+    mockListLeads: vi.fn(),
     mockReadPendingClients: vi.fn(),
   }));
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
-vi.mock("@/lib/integrations", () => ({ isConfiguredAsync: mockIsConfiguredAsync }));
-vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts }));
+vi.mock("@/lib/integrations", () => ({
+  isConfiguredAsync: mockIsConfiguredAsync,
+  IntegrationNotConfiguredError: class IntegrationNotConfiguredError extends Error {
+    constructor(keys: string[]) {
+      super(`Not configured: ${keys.join(", ")}`);
+      this.name = "IntegrationNotConfiguredError";
+    }
+  },
+}));
+vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts, listLeads: mockListLeads }));
 vi.mock("@/lib/pending-clients", () => ({
   readPendingClients: mockReadPendingClients,
   PLAN_LABELS: { bundle: "Full-Stack Growth Engine (Bundle)" },
@@ -23,16 +32,14 @@ function makeRequest(url = "http://localhost/api/admin/leads"): NextRequest {
   return new NextRequest(url);
 }
 
-const HUBSPOT_CONTACT = {
+const ESPOCRM_CONTACT = {
   id: "1",
-  properties: {
-    email: "Jane@Acme.com",
-    firstname: "Jane",
-    lastname: "Doe",
-    company: "Acme",
-    createdate: "2026-06-01T10:00:00Z",
-    hs_lead_status: "NEW",
-  },
+  emailAddress: "Jane@Acme.com",
+  firstName: "Jane",
+  lastName: "Doe",
+  accountName: "Acme",
+  createdAt: "2026-06-01T10:00:00Z",
+  leadSource: "NEW",
 };
 
 const PENDING_CLIENT = {
@@ -47,7 +54,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ ok: true });
   mockIsConfiguredAsync.mockResolvedValue(true);
-  mockListContacts.mockResolvedValue([HUBSPOT_CONTACT]);
+  mockListContacts.mockResolvedValue([ESPOCRM_CONTACT]);
+  mockListLeads.mockResolvedValue([]);
   mockReadPendingClients.mockResolvedValue([]);
 });
 
@@ -90,10 +98,11 @@ describe("GET /api/admin/leads", () => {
 
   it("sorts leads newest-first by createdAt", async () => {
     mockListContacts.mockResolvedValue([
-      HUBSPOT_CONTACT,
+      ESPOCRM_CONTACT,
       {
         id: "2",
-        properties: { email: "new@corp.com", createdate: "2026-06-10T10:00:00Z" },
+        emailAddress: "new@corp.com",
+        createdAt: "2026-06-10T10:00:00Z",
       },
     ]);
     const res = await GET(makeRequest());
@@ -105,7 +114,7 @@ describe("GET /api/admin/leads", () => {
   });
 
   it("skips EspoCRM contacts without an email", async () => {
-    mockListContacts.mockResolvedValue([{ id: "3", properties: { firstname: "Ghost" } }]);
+    mockListContacts.mockResolvedValue([{ id: "3", firstName: "Ghost" }]);
     const res = await GET(makeRequest());
     const data = await res.json();
     expect(data.total).toBe(0);

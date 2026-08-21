@@ -1,0 +1,15 @@
+[Unit]
+Description=Tailscale Prometheus metrics exporter (:9102)
+After=network.target tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/lib/cloudless/tailscale-metrics-exporter.py
+Restart=on-failure
+RestartSec=5
+Environment=TAILSCALE_METRICS_PORT=9102
+Environment=TAILSCALE_METRICS_REFRESH=15
+
+[Install]
+WantedBy=multi-user.target

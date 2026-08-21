@@ -3,20 +3,86 @@
 /**
  * /admin/analytics/explore — DuckDB-Wasm over catalog-allowlisted R2 parquet.
  */
-import { useState, useSyncExternalStore, useTransition, type ChangeEvent } from "react";
+import { useState, useSyncExternalStore, useTransition, useEffect, type ChangeEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { LAKE_PARQUET_CATALOG, queryLakeParquet, isDuckDBAvailable } from "@/lib/analytics-client";
 import { Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
 
 const DEFAULT_SQL = "SELECT * FROM lake LIMIT 50";
 
+const QUICK_QUERIES: { label: string; dataset: string; sql: string }[] = [
+  {
+    label: "Top 20 keywords by clicks",
+    dataset: "gsc",
+    sql: "SELECT keyword, clicks, impressions, ROUND(ctr*100,1) AS ctr_pct, ROUND(position,1) AS avg_pos FROM lake ORDER BY clicks DESC LIMIT 20",
+  },
+  {
+    label: "Revenue by month",
+    dataset: "stripe",
+    sql: "SELECT strftime('%Y-%m', created) AS month, COUNT(*) AS txn_count, ROUND(SUM(amount)/100.0,2) AS revenue_eur FROM lake WHERE status='succeeded' GROUP BY 1 ORDER BY 1 DESC LIMIT 12",
+  },
+  {
+    label: "Leads by source",
+    dataset: "espocrm-contacts",
+    sql: "SELECT leadSource, COUNT(*) AS count FROM lake WHERE leadSource IS NOT NULL GROUP BY leadSource ORDER BY count DESC",
+  },
+  {
+    label: "Churn risk distribution",
+    dataset: "churn",
+    sql: "SELECT CASE WHEN churn_probability>=0.7 THEN 'High' WHEN churn_probability>=0.4 THEN 'Medium' ELSE 'Low' END AS risk, COUNT(*) AS contacts FROM lake GROUP BY 1 ORDER BY churn_probability DESC",
+  },
+  {
+    label: "RFM champions",
+    dataset: "rfm",
+    sql: "SELECT email, rfm_segment, recency_days, frequency, monetary_eur FROM lake WHERE rfm_segment IN ('Champions','Loyal') ORDER BY monetary_eur DESC LIMIT 25",
+  },
+  {
+    label: "Open pipeline deals",
+    dataset: "espocrm-opps",
+    sql: "SELECT name, stage, ROUND(amount,2) AS value_eur, closeDate FROM lake WHERE stage NOT IN ('Closed Won','Closed Lost') ORDER BY amount DESC LIMIT 30",
+  },
+  {
+    label: "Top GSC countries",
+    dataset: "gsc-countries",
+    sql: "SELECT country, clicks, impressions FROM lake ORDER BY clicks DESC LIMIT 20",
+  },
+  {
+    label: "Recent Sentry errors",
+    dataset: "sentry",
+    sql: "SELECT title, level, count, firstSeen FROM lake WHERE level IN ('error','fatal') ORDER BY count DESC LIMIT 20",
+  },
+];
+
 function subscribeNoop() {
   return () => {};
 }
 
+const QUICK_QUERY_MAP: Record<string, { dataset: string; sql: string }> = Object.fromEntries(
+  QUICK_QUERIES.map((q) => [q.label.toLowerCase().replace(/\s+/g, "-"), q])
+);
+
 export default function LakeExplorePage() {
-  const [catalogId, setCatalogId] = useState<string>(LAKE_PARQUET_CATALOG[0]?.id ?? "gsc");
-  const [sql, setSql] = useState(DEFAULT_SQL);
+  const searchParams = useSearchParams();
+  const [catalogId, setCatalogId] = useState<string>(() => {
+    const dataset = searchParams.get("dataset");
+    return dataset ?? LAKE_PARQUET_CATALOG[0]?.id ?? "gsc";
+  });
+  const [sql, setSql] = useState(() => {
+    const dataset = searchParams.get("dataset");
+    const qKey = searchParams.get("q");
+    if (qKey) {
+      const defaultDataset = dataset ?? LAKE_PARQUET_CATALOG[0]?.id ?? "gsc";
+      const match =
+        QUICK_QUERIES.find(
+          (q) =>
+            q.dataset === defaultDataset &&
+            q.label.toLowerCase().replace(/\s+/g, "-").includes(qKey)
+        ) ?? QUICK_QUERY_MAP[qKey];
+      if (match) return match.sql;
+    }
+    return DEFAULT_SQL;
+  });
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -79,6 +145,26 @@ export default function LakeExplorePage() {
       </div>
 
       {!duckOk && <ErrorMsg msg="DuckDB-Wasm needs a modern browser with WebAssembly Workers." />}
+
+      {/* Quick Queries */}
+      <div className="mb-4">
+        <label className="mb-1 block font-mono text-xs text-slate-500">Quick queries</label>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_QUERIES.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              onClick={() => {
+                setCatalogId(q.dataset);
+                setSql(q.sql);
+              }}
+              className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/80 hover:bg-neon-cyan/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 font-mono text-xs text-slate-400">

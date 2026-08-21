@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { BackLink, MetricCard, Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 /**
  * Matches GoogleCampaign returned by GET /api/admin/campaigns/google
@@ -64,7 +65,6 @@ export default function GoogleCampaignsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
@@ -96,6 +96,8 @@ export default function GoogleCampaignsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Google Ads Campaigns</h1>
       </div>
+
+      <InsightPanel domain="ads" />
 
       {metrics && (
         <div className="mb-8 grid grid-cols-5 gap-4">

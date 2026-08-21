@@ -109,13 +109,11 @@ export default function AdminProjectsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   }, []);
 
   useEffect(() => {
     if (tab === "tasks" && !fetchedTasks) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadTasks();
     }
   }, [tab, fetchedTasks]);

@@ -1,0 +1,77 @@
+# Apply fabric metrics (cloudflared + Tailscale) scrapes and Grafana dashboards.
+# Host exporters are installed by a job on the omv self-hosted runner.
+name: Deploy fabric metrics dashboards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - infrastructure/monitoring/cloudflared-servicemonitor.yaml
+      - infrastructure/monitoring/tailscale-servicemonitor.yaml
+      - infrastructure/monitoring/dashboards-fabric.yaml
+      - infrastructure/monitoring/blackbox-exporter.yaml
+      - infrastructure/monitoring/host-fabric-metrics/**
+      - .github/workflows/deploy-fabric-metrics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Shared with cloudflare-tunnels-doctor — both restart cloudflared on the Pis.
+  group: cloudflare-host-fabric
+  cancel-in-progress: false
+
+jobs:
+  install-hosts:
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+    - name: Install host fabric metrics on omv + omv-ha
+      run: |
+        chmod +x infrastructure/monitoring/host-fabric-metrics/install.sh
+        bash infrastructure/monitoring/host-fabric-metrics/install.sh
+
+  apply-k8s:
+    needs: install-hosts
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    env:
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+    - name: Apply ServiceMonitors, Probes, dashboards
+      run: |
+        sudo kubectl apply -f infrastructure/monitoring/cloudflared-servicemonitor.yaml
+        sudo kubectl apply -f infrastructure/monitoring/tailscale-servicemonitor.yaml
+        sudo kubectl apply -f infrastructure/monitoring/dashboards-fabric.yaml
+        sudo kubectl apply -f infrastructure/monitoring/blackbox-exporter.yaml
+        sudo kubectl -n monitoring rollout restart deploy/blackbox-exporter
+        sudo kubectl -n monitoring rollout status deploy/blackbox-exporter --timeout=120s
+    - name: Verify scrapes
+      run: |
+        wait_200() {
+          local url="$1" label="$2"
+          local i code=000
+          for i in $(seq 1 15); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "$url" 2>/dev/null || echo 000)
+            if [[ "$code" == "200" ]]; then
+              echo "${label}:${code} (attempt ${i})"
+              return 0
+            fi
+            sleep 2
+          done
+          echo "${label}:${code} FAILED" >&2
+          return 1
+        }
+        echo "=== LAN metrics ==="
+        wait_200 http://192.168.1.128:20241/metrics omv-cf
+        wait_200 http://192.168.1.130:20241/metrics ha-cf
+        wait_200 http://192.168.1.128:9102/metrics omv-ts
+        wait_200 http://192.168.1.130:9102/metrics ha-ts
+        echo "=== Prometheus targets (sample) ==="
+        sudo kubectl -n monitoring exec prometheus-kube-prom-kube-prometheus-prometheus-0 -c prometheus -- \
+          wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=up{job=~"cloudflared|tailscale"}' 2>/dev/null | head -c 2000 || true
+        echo
+        echo "Dashboards: Cloudflare Tunnel Status, Tailscale Status (Grafana sidecar)"

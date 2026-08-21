@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 const REFRESH_INTERVAL = 30_000;
 const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-500";
@@ -60,7 +61,6 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLeads().catch(() => {});
     const interval = setInterval(() => {
       fetchLeads().catch(() => {});
@@ -118,6 +118,8 @@ export default function AdminLeadsPage() {
           </button>
         </div>
       </div>
+
+      <InsightPanel domain="crm_funnel" />
 
       <input
         type="search"

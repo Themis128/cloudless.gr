@@ -11,30 +11,30 @@ export interface CloudflareEmailOptions {
   html: string;
   text: string;
   replyTo?: string[];
+  from?: string;
   fromLabel?: string;
   listUnsubscribeUrl?: string;
 }
 
-function cloudflareEmailApiToken(): string | undefined {
-  return process.env.CLOUDFLARE_EMAIL_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-}
-
 export function isCloudflareEmailConfigured(): boolean {
-  return Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && cloudflareEmailApiToken());
+  // Requires CLOUDFLARE_EMAIL_API_TOKEN explicitly — the general CLOUDFLARE_API_TOKEN
+  // does not have Email Sending scope and would cause "sending_disabled" errors.
+  return Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_EMAIL_API_TOKEN);
 }
 
 export async function sendEmailCloudflare(options: CloudflareEmailOptions): Promise<void> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = cloudflareEmailApiToken();
+  const apiToken = process.env.CLOUDFLARE_EMAIL_API_TOKEN;
   if (!accountId || !apiToken) {
     throw new Error(
       "CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_EMAIL_API_TOKEN (or CLOUDFLARE_API_TOKEN) not configured"
     );
   }
 
+  const fromEmail = options.from || "noreply@cloudless.gr";
   const fromAddress = options.fromLabel
-    ? `${options.fromLabel} <noreply@cloudless.gr>`
-    : "Cloudless <noreply@cloudless.gr>";
+    ? `${options.fromLabel} <${fromEmail}>`
+    : `Cloudless <${fromEmail}>`;
 
   const headers: Record<string, string> = {};
   if (options.listUnsubscribeUrl) {

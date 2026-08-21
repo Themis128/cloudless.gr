@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# omv-main-monitor — disk health cron for omv control-plane (Pi 5).
+#
+# Cron (every 15 min):
+#   */15 * * * * root /usr/local/bin/omv-main-monitor >> /var/log/omv-main-monitor.log 2>&1
+#
+# Reads alert credentials from /etc/safedeploy-watchdog.env (shared with the
+# SafeDeploy watchdog — install-safedeploy-watchdog.sh populates that file).
+#
+# Behaviour:
+#   root crosses 50% ↑  → immediate cleanup (edge-triggered, no cooldown)
+#   root ≥ 50% + 3h     → retry cleanup if still above threshold
+#   root ≥ 85%          → warning alert (max once per 1h)
+#   root ≥ 90%          → critical alert
+#   sda1 ≥ 80%          → warning alert
+#   sda1 ≥ 90%          → critical alert
+#   sdb1 ≥ 80%          → warning alert
+#   sdb1 ≥ 92%          → critical alert (user data; less urgent)
+#
+# Install: sudo bash infrastructure/omv/install-omv-main-monitor.sh
+
+set -euo pipefail
+
+ALERT_SCRIPT=/usr/local/bin/omv-main-alert
+CLEANUP_SCRIPT=/usr/local/sbin/cloudless-cleanup.sh
+STAMP_DIR=/run/omv-monitor
+COOLDOWN_ALERT=3600    # seconds between repeated alerts for the same device
+COOLDOWN_CLEANUP=10800 # seconds between auto-triggered cleanups (3h)
+
+SDB1_MOUNT=/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+
+mkdir -p "$STAMP_DIR"
+
+_pct() {
+  df "$1" --output=pcent 2>/dev/null | tail -1 | tr -d ' %' || echo 0
+}
+
+_stamp_age() {
+  local f="$STAMP_DIR/$1"
+  [ -f "$f" ] || { echo 9999999; return; }
+  echo $(( $(date +%s) - $(cat "$f") ))
+}
+
+_stamp_set() { printf '%s\n' "$(date +%s)" > "$STAMP_DIR/$1"; }
+
+log() { printf '[%s] %s\n' "$(date -u +%T)" "$*"; }
+
+_maybe_alert() {
+  local key="$1" pct="$2" label="$3" sev="$4"
+  if [ "$(_stamp_age "alert-${key}")" -ge "$COOLDOWN_ALERT" ]; then
+    _stamp_set "alert-${key}"
+    "$ALERT_SCRIPT" "${sev^^}: Disk ${pct}%: ${label} is ${pct}% full." "" "$sev" || true
+    log "ALERT $sev — $label ${pct}%"
+  else
+    log "SUPPRESSED $sev — $label ${pct}% (cooldown active)"
+  fi
+}
+
+check_disk() {
+  local mount="$1" warn="$2" crit="$3" label="$4" key="$5"
+  [ -d "$mount" ] || { log "SKIP $label — mount not found"; return; }
+  local pct; pct=$(_pct "$mount")
+  if [ "$pct" -ge "$crit" ]; then
+    _maybe_alert "$key" "$pct" "$label" "critical"
+  elif [ "$pct" -ge "$warn" ]; then
+    _maybe_alert "$key" "$pct" "$label" "warning"
+  else
+    rm -f "$STAMP_DIR/alert-${key}" 2>/dev/null || true
+  fi
+}
+
+# ── Root: edge-triggered cleanup at 50%, alert at 85%/90% ───────────────────
+ROOT_PCT=$(_pct /)
+PREV_PCT_FILE="$STAMP_DIR/root-pct-prev"
+PREV_PCT=$(cat "$PREV_PCT_FILE" 2>/dev/null || echo 0)
+printf '%s\n' "$ROOT_PCT" > "$PREV_PCT_FILE"
+
+# Cleanup fires immediately when root crosses the 50% threshold going up.
+# If cleanup didn't drop below 50%, the 3h cooldown allows a retry.
+RUN_CLEANUP=0
+if [ "$ROOT_PCT" -ge 50 ]; then
+  if [ "${PREV_PCT:-0}" -lt 50 ]; then
+    log "Root crossed 50% (${PREV_PCT}% → ${ROOT_PCT}%) — immediate cleanup"
+    RUN_CLEANUP=1
+  elif [ "$(_stamp_age cleanup-root)" -ge "$COOLDOWN_CLEANUP" ]; then
+    log "Root ${ROOT_PCT}% ≥ 50% — periodic cleanup (cooldown elapsed)"
+    RUN_CLEANUP=1
+  fi
+fi
+
+if [ "$RUN_CLEANUP" = "1" ]; then
+  _stamp_set cleanup-root
+  bash "$CLEANUP_SCRIPT" >> /var/log/cloudless-cleanup.log 2>&1 || true
+  ROOT_PCT=$(_pct /)
+  log "Root after cleanup: ${ROOT_PCT}%"
+fi
+
+check_disk /                    85 90 "Root (SD card 58GB)" root
+check_disk /var/lib/rancher/k3s 80 90 "k3s SSD (sda1 119GB)" k3s
+check_disk "$SDB1_MOUNT"        80 92 "UserData (sdb1 916GB)" sdb1

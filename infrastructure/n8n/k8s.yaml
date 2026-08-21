@@ -9,7 +9,7 @@
 #      to keep steady-state RSS under 400Mi.
 # Auth: n8n basic-auth is disabled; rely on Cloudflare Tunnel + admin
 #       session for access control. Set N8N_BASIC_AUTH_ACTIVE=false.
-# Image: pinned to n8nio/n8n:2.28.2-arm64 (native arm64 build — avoids
+# Image: pinned to n8nio/n8n:2.34.6-arm64 (native arm64 build — avoids
 #        QEMU/emulation overhead on the Pi 5). Update by changing this tag.
 
 apiVersion: v1
@@ -54,7 +54,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: n8n
-        image: n8nio/n8n:2.28.2-arm64
+        image: n8nio/n8n:2.34.6-arm64
         ports:
         - containerPort: 5678
         env:
@@ -78,9 +78,48 @@ spec:
           value: Europe/Athens
         - name: TZ
           value: Europe/Athens
+        # Allow Settings → Community Nodes (e.g. n8n-nodes-postiz).
+        - name: N8N_COMMUNITY_PACKAGES_ENABLED
+          value: 'true'
+        # In-cluster Postiz Public API (RSS / cron workflows). Override in UI Variables if needed.
+        - name: POSTIZ_API_BASE
+          value: http://postiz.postiz.svc.cluster.local:5000
+        - name: POSTIZ_RSS_FEED_URL
+          value: https://cloudless.gr/en/blog/rss.xml
+        - name: POSTIZ_CHANNEL_IDENTIFIERS
+          value: linkedin,linkedin-page,x,bluesky
+        - name: POSTIZ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: postiz-secret
+              key: POSTIZ_API_KEY
+        # Email + CRM credentials for n8n workflow nodes.
+        # Create once: kubectl create secret generic n8n-integrations -n n8n
+        #   --from-literal=RESEND_API_KEY=<key>
+        #   --from-literal=ESPOCRM_BASE_URL=https://espocrm.cloudless.gr
+        #   --from-literal=ESPOCRM_API_KEY=<key>
+        - name: RESEND_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: RESEND_API_KEY
+        - name: ESPOCRM_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: ESPOCRM_BASE_URL
+        - name: ESPOCRM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: n8n-integrations
+              key: ESPOCRM_API_KEY
         volumeMounts:
         - name: data
           mountPath: /home/node/.n8n
+        - name: workspace
+          mountPath: /home/node/cloudless.gr
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             cpu: 100m
@@ -105,6 +144,11 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: n8n-data
+      - name: workspace
+        hostPath:
+          path: /home/tbaltzakis/cloudless.gr
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
