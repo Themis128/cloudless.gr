@@ -229,6 +229,7 @@ function buildCSP(nonce: string): string {
     font-src 'self' https: data:;
     connect-src 'self' https: wss: https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://snap.licdn.com https://px.ads.linkedin.com;
     media-src 'self' https:;
+    worker-src blob: 'self';
     object-src 'none';
     base-uri 'self';
     form-action 'self' https://www.facebook.com https://connect.facebook.net;

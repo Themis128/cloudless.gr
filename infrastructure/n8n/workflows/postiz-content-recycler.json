@@ -1,0 +1,115 @@
+{
+  "name": "Postiz — Content recycler (top performers)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "days", "daysInterval": 3 }]
+        }
+      },
+      "name": "Every 3 days",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts?status=published&limit=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Fetch published posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst posts = Array.isArray(raw) ? raw : (raw.posts || []);\nconst scored = posts\n  .filter(p => p.analytics && (p.analytics.likes > 0 || p.analytics.impressions > 0))\n  .map(p => ({\n    id: p.id,\n    content: (p.posts?.[0]?.value?.[0]?.content || '').substring(0, 300),\n    integration: p.posts?.[0]?.integration?.id,\n    score: (p.analytics.likes || 0) * 3 + (p.analytics.comments || 0) * 5 + (p.analytics.impressions || 0) * 0.01\n  }))\n  .sort((a, b) => b.score - a.score);\nif (!scored.length) return [{ json: { skip: true, reason: 'no_scored_posts' } }];\nconst pick = scored[Math.floor(Math.random() * Math.min(5, scored.length))];\nreturn [{ json: { skip: false, ...pick } }];"
+      },
+      "name": "Pick top performer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !$json.skip }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Has content?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'schedule', date: $now.plus(6, 'hours').toUTC().toISO(), shortLink: false, tags: [], posts: [{ integration: { id: $json.integration }, value: [{ content: $json.content, image: [] }], settings: {} }] }) }}",
+        "options": {}
+      },
+      "name": "Repost as scheduled",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 220],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "note", "value": "={{ $json.reason || 'no_qualifying_posts' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Skip",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 400]
+    }
+  ],
+  "connections": {
+    "Every 3 days": {
+      "main": [[{ "node": "Fetch published posts", "type": "main", "index": 0 }]]
+    },
+    "Fetch published posts": {
+      "main": [[{ "node": "Pick top performer", "type": "main", "index": 0 }]]
+    },
+    "Pick top performer": {
+      "main": [[{ "node": "Has content?", "type": "main", "index": 0 }]]
+    },
+    "Has content?": {
+      "main": [
+        [{ "node": "Repost as scheduled", "type": "main", "index": 0 }],
+        [{ "node": "Skip", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

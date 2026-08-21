@@ -10,6 +10,17 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |-
+    # Claim NodePort 30850 for the HTTP entry point so the Cloudflare Tunnel
+    # can route all app hostnames to a single Traefik endpoint instead of one
+    # NodePort per service.  Grafana's kube-prom-stack service.type moves to
+    # ClusterIP (see kube-prom-stack-values.yaml) so this port is free.
+    ports:
+      web:
+        nodePort: 30850
+      # Keep websecure available for future in-cluster TLS if needed.
+      websecure:
+        expose:
+          default: false
     resources:
       requests:
         cpu: 20m

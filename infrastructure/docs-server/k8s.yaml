@@ -52,7 +52,7 @@ spec:
       - env:
         - name: GITHUB_WIKI_URL
           value: https://github.com/Themis128/cloudless.gr/wiki
-        image: nginx:alpine
+        image: nginx:1.27.5-alpine
         imagePullPolicy: IfNotPresent
         name: docs-server
         ports:
@@ -85,10 +85,9 @@ metadata:
   name: docs-service
   namespace: default
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: docs-server
   ports:
   - port: 8080
     targetPort: 8080
-    nodePort: 30901

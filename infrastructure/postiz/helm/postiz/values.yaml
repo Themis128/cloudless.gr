@@ -61,6 +61,9 @@ postiz:
   # TIKTOK_CLIENT_ID/SECRET). Marked optional in the Deployment so a fresh
   # cluster boots before this exists.
   providersSecretName: postiz-providers
+  # Public API rate limit (requests per hour per key). Postiz default is
+  # low; raise so admin/MCP/n8n bursts don't 429 during hub automation.
+  apiLimit: '100'
 
 postgres:
   user: postiz

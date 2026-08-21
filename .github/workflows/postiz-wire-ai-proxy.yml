@@ -1,0 +1,88 @@
+name: Wire Postiz AI Proxy
+
+# Superseded by deploy-postiz-ai-proxy.yml — kept for manual re-run only.
+on:
+  workflow_dispatch:
+
+jobs:
+  wire:
+    # Pi self-hosted runner is already on the tailnet — kubectl reaches
+    # 100.74.191.58:6443 directly. GH-hosted runners time out on that IP.
+    runs-on: [self-hosted, omv, pi, build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/.kube/config"
+          chmod 600 "$GITHUB_WORKSPACE/.kube/config"
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Patch postiz-providers secret — add AI proxy token
+        run: |
+          # Token value is the PROXY_TOKEN set in the Cloudflare Worker secret.
+          # Stored inline here (not a GitHub secret) because the repo has hit the
+          # 100-secret GitHub cap and this token only gates a free-tier AI proxy.
+          TOKEN_B64=$(printf '%s' "69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19" | base64 -w0)
+
+          kubectl -n postiz patch secret postiz-providers \
+            --type=json \
+            -p="[{\"op\":\"add\",\"path\":\"/data/POSTIZ_AI_PROXY_TOKEN\",\"value\":\"${TOKEN_B64}\"}]"
+
+          echo "✓ POSTIZ_AI_PROXY_TOKEN added to postiz-providers secret"
+
+      - name: Set AI env vars on Postiz Deployment
+        run: |
+          # Set both OPENAI_* vars directly — avoids kubectl apply on PVCs (immutable)
+          kubectl -n postiz set env deployment/postiz \
+            OPENAI_BASE_URL=https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1
+          # OPENAI_API_KEY from the secret key we just added (idempotent: skip if already present)
+          POSTIZ_ENV=$(kubectl -n postiz get deployment postiz -o jsonpath='{.spec.template.spec.containers[0].env}')
+          if ! echo "$POSTIZ_ENV" | jq -e '.[] | select(.name == "OPENAI_API_KEY" and .valueFrom.secretKeyRef.name == "postiz-providers")' >/dev/null 2>&1; then
+            kubectl -n postiz patch deployment postiz --type=json -p='[{
+              "op": "add",
+              "path": "/spec/template/spec/containers/0/env/-",
+              "value": {
+                "name": "OPENAI_API_KEY",
+                "valueFrom": {"secretKeyRef": {"name": "postiz-providers", "key": "POSTIZ_AI_PROXY_TOKEN"}}
+              }
+            }]'
+            echo "  added OPENAI_API_KEY secretKeyRef"
+          else
+            echo "  OPENAI_API_KEY secretKeyRef already present — skipping"
+          fi
+          echo "✓ OPENAI_BASE_URL + OPENAI_API_KEY set on deployment/postiz"
+
+      - name: Restart Postiz and wait
+        run: |
+          kubectl -n postiz rollout restart deploy/postiz
+          kubectl -n postiz rollout status deploy/postiz --timeout=120s
+          echo "✓ Postiz restarted and healthy"
+
+      - name: Smoke-test AI endpoint
+        run: |
+          # Test from the runner (same network as the cluster) — Postiz container
+          # has no curl, so we test the Worker URL directly from the Pi runner.
+          RESULT=$(curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
+          echo "$RESULT"
+          echo "$RESULT" | grep -q "llama-3.3-70b" && echo "✓ AI proxy reachable" \
+            || (echo "✗ AI proxy not reachable" && exit 1)
+          # Verify the env var landed in the deployment
+          kubectl -n postiz get deployment postiz -o jsonpath='{.spec.template.spec.containers[0].env}' \
+            | grep -q "OPENAI_BASE_URL" && echo "✓ OPENAI_BASE_URL set in deployment" \
+            || (echo "✗ env var missing" && exit 1)
+
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            const emoji = outcome === 'success' ? '✅' : '❌';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 382,
+              body: `${emoji} **postiz-wire-ai-proxy** ${outcome}\n\nPostiz AI caption generation via NVIDIA \`meta/llama-3.3-70b-instruct\` is ${outcome === 'success' ? 'live' : 'FAILED — check workflow logs'}.`
+            });

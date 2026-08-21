@@ -6,6 +6,7 @@ import {
   listPostizIntegrations,
   matchIntegrationsForPlatform,
   schedulePost,
+  withSocialUtm,
 } from "@/lib/postiz";
 
 /**
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
 
-  const content = (body.content ?? item.notes ?? item.title ?? "").trim();
+  let content = (body.content ?? item.notes ?? item.title ?? "").trim();
   if (!content) {
     return NextResponse.json(
       { error: "No content to publish — add notes to the calendar item." },
@@ -67,11 +68,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
 
+  // UTM-stamp bare https URLs in the body for attribution (idempotent if already present).
+  const utmSource =
+    item.platform === "meta"
+      ? "facebook"
+      : item.platform === "linkedin"
+        ? "linkedin"
+        : item.platform === "x"
+          ? "x"
+          : item.platform === "tiktok"
+            ? "tiktok"
+            : "social";
+  content = content.replace(/https?:\/\/[^\s)]+/gi, (url) =>
+    withSocialUtm(url, utmSource, `calendar_${id.slice(0, 12)}`)
+  );
+
   const result = await schedulePost({
     content,
     integrationIds: targets.map((t) => t.id),
     scheduleAt: item.date,
     asDraft: body.asDraft,
+    tags: [{ value: `calendar-${id}`, label: `calendar-${id}` }],
   });
 
   if (!result.ok) {

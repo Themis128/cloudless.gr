@@ -96,17 +96,15 @@ metadata:
   name: vibe-agent
   namespace: vibe
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: vibe-agent
   ports:
   - name: langgraph
     port: 2024
     targetPort: 2024
-    nodePort: 30924
   - name: ui
     port: 3001
     targetPort: 3001
-    nodePort: 30301
 --- null
 ...

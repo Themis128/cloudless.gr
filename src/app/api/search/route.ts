@@ -1,5 +1,6 @@
 import { isMeilisearchConfigured } from "@/lib/meilisearch";
 import { searchProductsFallback, searchProductsWithMeili } from "@/lib/product-search";
+import { searchContent } from "@/lib/content-index";
 
 export const runtime = "nodejs";
 
@@ -15,32 +16,28 @@ export async function GET(request: Request) {
   const limit = toLimit(url.searchParams.get("limit"));
 
   if (!q) {
-    return Response.json({
-      query: q,
-      source: "empty",
-      hits: [],
-    });
+    return Response.json({ query: q, source: "empty", hits: [], content: [] });
   }
 
   if (isMeilisearchConfigured()) {
     try {
-      const hits = await searchProductsWithMeili(q, limit);
+      const [hits, content] = await Promise.all([
+        searchProductsWithMeili(q, limit),
+        searchContent(q, limit),
+      ]);
 
       return Response.json({
         query: q,
         source: "meilisearch-bedrock",
         hits,
+        content,
       });
     } catch (err) {
-      console.warn("[api/search] Meilisearch/Bedrock search failed; using fallback:", err);
+      console.warn("[api/search] Meilisearch search failed; using fallback:", err);
     }
   }
 
   const hits = await searchProductsFallback(q, limit);
 
-  return Response.json({
-    query: q,
-    source: "fallback",
-    hits,
-  });
+  return Response.json({ query: q, source: "fallback", hits, content: [] });
 }

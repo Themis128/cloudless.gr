@@ -1,4 +1,5 @@
 import { reindexProductsWithEmbeddings } from "@/lib/product-search";
+import { syncContentIndex } from "@/lib/content-index";
 import { getConfig } from "@/lib/ssm-config";
 
 export const runtime = "nodejs";
@@ -12,10 +13,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await reindexProductsWithEmbeddings();
+  const [products, content] = await Promise.all([
+    reindexProductsWithEmbeddings(),
+    syncContentIndex(),
+  ]);
 
   return Response.json({
     ok: true,
-    ...result,
+    products,
+    content,
   });
 }

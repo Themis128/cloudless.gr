@@ -4,6 +4,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { AdminDailyBars } from "@/components/admin/AdminDailyBars";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface SeoData {
   clicks: number;
@@ -281,15 +282,25 @@ export default function UnifiedAnalyticsPage() {
             All KPIs in one view — SEO, revenue, pipeline, and email.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setRefreshKey((k) => k + 1)}
-          disabled={loading}
-          className="mt-2 rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-300 transition-all hover:border-slate-600 hover:text-white disabled:opacity-50"
-        >
-          {loading ? "Loading…" : "Refresh"}
-        </button>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            disabled={loading}
+            className="rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-300 transition-all hover:border-slate-600 hover:text-white disabled:opacity-50"
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+          <Link
+            href="/admin/reports"
+            className="border-neon-green/30 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 rounded-lg border px-4 py-2 font-mono text-xs transition-all"
+          >
+            ↓ PDF Reports
+          </Link>
+        </div>
       </div>
+
+      <InsightPanel domain="executive" />
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-xs text-red-400">
@@ -310,6 +321,75 @@ export default function UnifiedAnalyticsPage() {
 
       {data && (
         <div className="space-y-10">
+          {/* Growth Funnel — GSC clicks → leads → revenue */}
+          {(data.seo || data.pipeline || data.stripe) && (
+            <div>
+              <SectionHeader title="Growth Funnel" icon="📊" href="/admin/analytics/funnel" />
+              <div className="flex items-stretch gap-0 overflow-x-auto rounded-xl border border-slate-800">
+                {[
+                  {
+                    label: "Impressions",
+                    value: data.seo ? data.seo.impressions.toLocaleString() : "—",
+                    sub: "GSC (28d)",
+                    color: "text-slate-400",
+                    bg: "bg-void-light/30",
+                  },
+                  {
+                    label: "Clicks",
+                    value: data.seo ? data.seo.clicks.toLocaleString() : "—",
+                    sub: `CTR ${data.seo ? data.seo.ctr.toFixed(1) + "%" : "—"}`,
+                    color: "text-neon-blue",
+                    bg: "bg-void-light/40",
+                  },
+                  {
+                    label: "Open Deals",
+                    value: data.pipeline ? String(data.pipeline.totalDeals) : "—",
+                    sub: "EspoCRM pipeline",
+                    color: "text-neon-magenta",
+                    bg: "bg-void-light/50",
+                  },
+                  {
+                    label: "Pipeline Value",
+                    value: data.pipeline
+                      ? `€${data.pipeline.totalValue.toLocaleString("en", { maximumFractionDigits: 0 })}`
+                      : "—",
+                    sub: "open opportunities",
+                    color: "text-neon-magenta",
+                    bg: "bg-void-light/60",
+                  },
+                  {
+                    label: "Revenue",
+                    value: data.stripe ? eurosMajor(data.stripe.revenue) : "—",
+                    sub: `${data.stripe ? data.stripe.totalOrders : "—"} orders`,
+                    color: "text-neon-green",
+                    bg: "bg-void-light/70",
+                  },
+                ].map((step, i, arr) => (
+                  <div
+                    key={step.label}
+                    className={`${step.bg} relative flex min-w-32 flex-1 flex-col justify-center px-5 py-5`}
+                  >
+                    {i > 0 && (
+                      <span className="absolute top-1/2 -left-2 z-10 -translate-y-1/2 font-mono text-xs text-slate-600">
+                        →
+                      </span>
+                    )}
+                    <p className="font-mono text-[10px] tracking-widest text-slate-500 uppercase">
+                      {step.label}
+                    </p>
+                    <p className={`font-heading mt-1 text-xl font-bold ${step.color}`}>
+                      {step.value}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10px] text-slate-600">{step.sub}</p>
+                    {i < arr.length - 1 && (
+                      <div className="absolute top-0 right-0 h-full w-px bg-slate-800" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ROI — spend → leads → revenue */}
           <div>
             <SectionHeader title="Campaign ROI" icon="🎯" href="/admin/campaigns" />

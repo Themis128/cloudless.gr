@@ -1,0 +1,93 @@
+{
+  "mcpServers": {
+    "cloudless-infra": {
+      "command": "npx",
+      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
+      "env": {
+        "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
+        "OMV_SSH_USER": "omv",
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_rsa",
+        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
+      },
+      "autoStart": false
+    },
+    "project": {
+      "command": "npx",
+      "args": ["-y", "project-mcp"],
+      "autoStart": true,
+      "env": {}
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare": {
+      "url": "https://mcp.cloudflare.com/mcp",
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/tbaltzakis/cloudless.gr"],
+      "env": {},
+      "autoStart": false
+    },
+    "postiz": {
+      "command": "npx",
+      "args": ["-y", "postiz-mcp"],
+      "env": {
+        "POSTIZ_API_URL": "http://cluster.local",
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
+      },
+      "autoStart": false
+    },
+    "prompt-to-asset": {
+      "command": "npx",
+      "args": ["-y", "prompt-to-asset"],
+      "autoStart": false
+    },
+    "postlint": {
+      "command": "npx",
+      "args": ["-y", "@conorbronsdon/postlint-mcp"],
+      "autoStart": false
+    },
+    "bluesky": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-bluesky"],
+      "env": {
+        "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
+        "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}"
+      },
+      "autoStart": false
+    },
+    "stock-images": {
+      "command": "npx",
+      "args": ["-y", "stock-images-mcp"],
+      "env": {
+        "UNSPLASH_ACCESS_KEY": "${UNSPLASH_ACCESS_KEY}",
+        "PEXELS_API_KEY": "${PEXELS_API_KEY}",
+        "PIXABAY_API_KEY": "${PIXABAY_API_KEY}"
+      },
+      "autoStart": false
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://n8n.cloudless.gr/mcp-server/http"],
+      "autoStart": false
+    }
+  }
+}

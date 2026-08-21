@@ -354,7 +354,7 @@ export default function AppFlowyStatusPage() {
                     <span className="text-neon-cyan mr-2 font-mono">1.</span>
                     Go to{" "}
                     <a
-                      href="https://www.appflowy.cloudless.gr"
+                      href="https://appflowy.cloudless.gr"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-neon-cyan hover:underline"

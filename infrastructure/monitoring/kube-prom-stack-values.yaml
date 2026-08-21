@@ -30,6 +30,13 @@
 #     analytics monitoring from the scope per the 2026-06-21 cleanup)
 
 grafana:
+  # Service: ClusterIP only — Cloudflare Tunnel routes grafana.cloudless.gr
+  # through Traefik (NodePort 30850) via the grafana IngressRoute.
+  # NodePort 30850 is now owned by Traefik; do not set a grafana nodePort.
+  service:
+    type: ClusterIP
+    port: 80
+
   # Don't render any of the default dashboards into ConfigMaps. If you
   # ever want them back, set this to `true` and `helm upgrade`.
   defaultDashboardsEnabled: false

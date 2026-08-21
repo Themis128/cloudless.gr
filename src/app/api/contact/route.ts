@@ -161,7 +161,10 @@ async function sendContactAdminEmail(input: {
   } catch (emailErr) {
     const emailMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
     console.log(`[Contact API] Email sending failed: ${emailMsg}`);
-    if (emailMsg.toLowerCase().includes("not configured")) {
+    if (
+      emailMsg.toLowerCase().includes("not configured") ||
+      emailMsg.includes("sending_disabled")
+    ) {
       return jsonError("Email service not configured.", 503);
     }
     throw emailErr;

@@ -1,93 +1,77 @@
-#!/bin/bash
-# OpenMediaVault alert wrapper - sends notifications via Slack and/or Email
-# Install: sudo cp this file to /usr/local/bin/omv-main-alert && chmod +x
+#!/usr/bin/env bash
+# omv-main-alert — send a disk/system alert via ntfy + Slack + Resend email.
+#
+# Usage: omv-main-alert <subject> [body] [severity]
+#   severity: warning | critical | ok   (default: warning)
+#
+# Reads credentials from /etc/safedeploy-watchdog.env (the same env file
+# populated by install-safedeploy-watchdog.sh — no separate setup needed).
+#
+# Install: sudo bash infrastructure/omv/install-omv-main-monitor.sh
 
 set -euo pipefail
 
-# Configuration - set these env vars or edit directly
-SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"
-SLACK_CHANNEL="${SLACK_CHANNEL:-#alerts}"
-SES_FROM="${SES_FROM:-alerts@cloudless.gr}"
-SES_TO="${SES_TO:-tbaltzakis@cloudless.gr}"
+ENV_FILE=/etc/safedeploy-watchdog.env
+[ -f "$ENV_FILE" ] && . "$ENV_FILE"
 
-# Colors for Slack
-COLOR_OK="good"
-COLOR_WARN="warning"
-COLOR_ERR="danger"
+: "${NTFY_BASE_URL:=}"  "${NTFY_TOPIC:=}" "${NTFY_TOKEN:=}"
+: "${SLACK_BOT_TOKEN:=}" "${SLACK_CHANNEL:=#alerts}"
+: "${RESEND_API_KEY:=}" "${ALERT_EMAIL:=tbaltzakis@cloudless.gr}"
 
-send_slack() {
-    local subject="$1"
-    local body="$2"
-    local color="${3:-$COLOR_WARN}"
-    
-    if [[ -z "$SLACK_WEBHOOK_URL" ]]; then
-        echo "[Slack] WEBHOOK_URL not set, skipping"
-        return 1
-    fi
-    
-    local payload
-    payload=$(cat <<EOF
-{
-  "channel": "$SLACK_CHANNEL",
-  "username": "OMV Alert",
-  "icon_emoji": ":warning:",
-  "attachments": [{
-    "color": "$color",
-    "title": "[OMV] $subject",
-    "text": "$body",
-    "footer": "OMV Monitoring",
-    "ts": "$(date +%s)"
-  }]
-}
-EOF
-)
-    
-    curl -s -X POST \
-        -H 'Content-Type: application/json' \
-        -d "$payload" \
-        "$SLACK_WEBHOOK_URL" >/dev/null 2>&1 && echo "[Slack] Sent: $subject" || echo "[Slack] Failed to send"
-}
+SUBJECT="${1:-OMV Alert}"
+BODY="${2:-No details}"
+SEVERITY="${3:-warning}"
 
-send_email() {
-    local subject="$1"
-    local body="$2"
-    
-    if [[ -z "$SES_TO" ]]; then
-        echo "[Email] SES_TO not set, skipping"
-        return 1
-    fi
-    
-    # Use AWS SES to send
-    aws ses send-email \
-        --from "$SES_FROM" \
-        --to "$SES_TO" \
-        --subject "[OMV] $subject" \
-        --text "$body" \
-        --region us-east-1 >/dev/null 2>&1 && echo "[Email] Sent: $subject" || echo "[Email] Failed to send"
-}
+case "$SEVERITY" in
+  ok|success)          NTFY_PRIO=low;    ICON="✅" ;;
+  critical|error|urgent) NTFY_PRIO=urgent; ICON="🚨" ;;
+  *)                   NTFY_PRIO=high;   ICON="⚠️"  ;;
+esac
 
-# Main
-main() {
-    local subject="${1:-OMV Alert}"
-    local body="${2:-No details}"
-    local severity="${3:-warning}"
-    
-    local color
-    case "$severity" in
-        ok|success) color="$COLOR_OK" ;;
-        error|critical) color="$COLOR_ERR" ;;
-        *) color="$COLOR_WARN" ;;
-    esac
-    
-    echo "[OMV Alert] $subject: $body"
-    
-    # Send to Slack
-    send_slack "$subject" "$body" "$color" || true
-    
-    # Send email for critical alerts
-    if [[ "$severity" == "critical" ]]; then
-        send_email "$subject" "$body" || true
-    fi
-}
+FULL_TITLE="[OMV] $SUBJECT"
+FULL_BODY="${BODY:-}
+Host: $(hostname) | $(date -u '+%F %TZ')"
 
-main "$@"
+# ntfy
+if [ -n "$NTFY_BASE_URL" ] && [ -n "$NTFY_TOPIC" ]; then
+  auth_header=""
+  [ -n "$NTFY_TOKEN" ] && auth_header="-H Authorization: Bearer $NTFY_TOKEN"
+  curl -fsSm 10 -X POST "${NTFY_BASE_URL%/}/${NTFY_TOPIC}" \
+    -H "Title: $FULL_TITLE" \
+    -H "Priority: $NTFY_PRIO" \
+    -H "Tags: warning,floppy_disk" \
+    ${auth_header:+-H "$auth_header"} \
+    -d "$FULL_BODY" >/dev/null 2>&1 \
+    && echo "[alert] ntfy sent" || echo "[alert] ntfy failed (non-fatal)"
+fi
+
+# Slack (chat.postMessage with bot token)
+if [ -n "$SLACK_BOT_TOKEN" ]; then
+  payload=$(printf '{"channel":"%s","text":"%s %s\n%s"}' \
+    "$SLACK_CHANNEL" "$ICON" "${FULL_TITLE//\"/\\\"}" "${FULL_BODY//\"/\\\"}")
+  curl -fsSm 10 -X POST https://slack.com/api/chat.postMessage \
+    -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+    -H "Content-Type: application/json; charset=utf-8" \
+    -d "$payload" >/dev/null 2>&1 \
+    && echo "[alert] Slack sent" || echo "[alert] Slack failed (non-fatal)"
+fi
+
+# Resend email (no AWS dependency)
+if [ -n "$RESEND_API_KEY" ]; then
+  payload=$(python3 -c "
+import json, sys
+print(json.dumps({
+  'from': 'alerts@cloudless.gr',
+  'to': sys.argv[1],
+  'subject': sys.argv[2],
+  'text': sys.argv[3]
+}))
+" "$ALERT_EMAIL" "$FULL_TITLE" "$FULL_BODY")
+  curl -fsSm 10 -X POST https://api.resend.com/emails \
+    -H "Authorization: Bearer $RESEND_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$payload" >/dev/null 2>&1 \
+    && echo "[alert] email sent via Resend" || echo "[alert] Resend email failed (non-fatal)"
+fi
+
+echo "[alert] $SEVERITY — $SUBJECT"

@@ -1,0 +1,156 @@
+{
+  "name": "Kuma alert \u2192 EspoCRM incident ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kuma-alert",
+        "options": {}
+      },
+      "name": "Webhook (kuma-alert)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "kuma-alert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "equal",
+              "value2": "DOWN"
+            }
+          ]
+        }
+      },
+      "name": "Is DOWN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ESPOCRM_BASE_URL || 'https://espocrm.cloudless.gr' }}/api/v1/Case",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $env.ESPOCRM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ name: 'Uptime Alert: ' + $json.name, status: 'New', priority: 'High', description: $json.msg + ($json.url ? '\\nURL: ' + $json.url : '') }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "name": "EspoCRM \u2014 create incident Case",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        200
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, caseCreated: true, monitor: $json.name }) }}"
+      },
+      "name": "Respond (case created)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, skipped: true, status: $json.status }) }}"
+      },
+      "name": "Respond (not DOWN)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (kuma-alert)": {
+      "main": [
+        [
+          {
+            "node": "Is DOWN?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is DOWN?": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM \u2014 create incident Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond (not DOWN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM \u2014 create incident Case": {
+      "main": [
+        [
+          {
+            "node": "Respond (case created)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "infra"
+    },
+    {
+      "name": "espocrm"
+    },
+    {
+      "name": "cloudless"
+    }
+  ],
+  "id": "58a3ba86-ffbb-458c-9c84-254d7e272846"
+}

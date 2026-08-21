@@ -192,7 +192,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
+    checkAuth().catch(() => {});
   }, [checkAuth]);
 
   // D1: email/password → POST /api/auth/login (session_token cookie).

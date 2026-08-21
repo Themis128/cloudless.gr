@@ -4,7 +4,6 @@ import { useEffect } from "react";
 
 export default function WebMCPProvider() {
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const win = window as any;
     if (typeof window !== "undefined" && win.modelContext) {
       win.modelContext.provideContext({

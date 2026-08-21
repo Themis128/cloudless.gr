@@ -55,7 +55,11 @@
     ".dev.vars": "dotenv",
     "*.css": "tailwindcss",
     "wrangler.jsonc": "jsonc",
-    "open-next.config.*": "typescript"
+    "open-next.config.*": "typescript",
+    // Helm Go templates are not valid YAML until rendered — keep Red Hat YAML
+    // from flagging `{{- include ... }}` as "flow collection" errors.
+    "**/helm/**/templates/**/*.yaml": "helm",
+    "**/helm/**/templates/**/*.yml": "helm"
   },
 
   "eslint.enable": true,

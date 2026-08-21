@@ -35,7 +35,7 @@ metadata:
   labels:
     app: vllm-kimi
 spec:
-  replicas: 1
+  replicas: 0   # scaled up on demand via .github/workflows/ai-scale.yml; model stays on PVC
   selector:
     matchLabels:
       app: vllm-kimi

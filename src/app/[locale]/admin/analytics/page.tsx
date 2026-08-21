@@ -21,6 +21,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 // ─── Date-range filter ────────────────────────────────────────────────────────
 
@@ -548,6 +549,8 @@ export default function AdminAnalyticsPage() {
           Performance data from Google Search Console — clicks, impressions, rankings.
         </p>
       </div>
+
+      <InsightPanel domain="seo" />
 
       <div
         className="mb-4 flex flex-wrap items-center gap-2"

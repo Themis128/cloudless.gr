@@ -1,0 +1,83 @@
+name: Deploy n8n
+
+# Apply n8n k8s manifests to the cluster whenever the manifest changes.
+# Runs on the self-hosted omv Pi runner (has /etc/rancher/k3s/k3s.yaml).
+#
+# After kubectl apply this workflow also runs the workflow sync so a single
+# PR that touches both the manifest AND a workflow JSON only needs one push.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/n8n/k8s.yaml'
+      - 'infrastructure/n8n/limitrange.yaml'
+      - '.github/workflows/deploy-n8n.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-n8n
+  cancel-in-progress: false
+
+jobs:
+  apply-manifests:
+    name: kubectl apply n8n manifests
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    env:
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4.3.1
+
+    - name: Apply namespace + quota + limitrange
+      run: |
+        sudo kubectl apply -f infrastructure/n8n/limitrange.yaml
+
+    - name: Apply n8n deployment + service
+      run: |
+        sudo kubectl apply -f infrastructure/n8n/k8s.yaml
+
+    - name: Wait for rollout
+      run: |
+        sudo kubectl rollout status deployment/n8n -n n8n --timeout=120s
+
+    - name: Health check
+      run: |
+        for i in $(seq 1 12); do
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:30900/healthz 2>/dev/null || echo 000)
+          if [[ "$code" == "200" ]]; then
+            echo "n8n healthy (attempt $i)"
+            exit 0
+          fi
+          echo "attempt $i: HTTP $code — waiting…"
+          sleep 10
+        done
+        echo "n8n did not become healthy" >&2
+        exit 1
+
+  sync-workflows:
+    name: Sync workflow JSONs → n8n
+    needs: apply-manifests
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    env:
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4.3.1
+
+    - name: Set up Node.js 22
+      uses: actions/setup-node@v4.4.0
+      with:
+        node-version: 22
+
+    - name: Sync workflow JSONs → n8n
+      env:
+        N8N_NAMESPACE: n8n
+      run: node scripts/n8n-sync-workflows.mjs

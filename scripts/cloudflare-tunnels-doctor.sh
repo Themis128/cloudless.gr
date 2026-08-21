@@ -195,6 +195,16 @@ if [[ "$FIX" -eq 0 ]]; then
   exit 0
 fi
 
+# Do not mutate NodePorts / restart cloudflared when the edge is already healthy.
+# Merge-patching spec.ports replaces targetPort; a wrong value (e.g. 80 vs 3000)
+# takes down grafana + cloudless-app even if they were fine moments earlier.
+if [[ "$PRE_FAIL" -eq 0 && "$DRY_RUN" -eq 0 ]]; then
+  echo ""
+  echo "==> Pre-probes healthy — skipping NodePort/config mutation"
+  echo "==> Tunnels healthy"
+  exit 0
+fi
+
 # --- Fix NodePorts on omv ---
 echo ""
 echo "=== Ensure NodePorts ==="
@@ -214,7 +224,9 @@ patch() {
 # Known self-hosted NodePorts used by cloudflared ingress
 patch n8n n8n '{"spec":{"type":"NodePort","ports":[{"name":"http","port":5678,"targetPort":5678,"nodePort":30900}]}}'
 patch ntfy ntfy '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080}]}}'
-patch monitoring kube-prom-grafana '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30850}]}}' || true
+# Grafana and cloudless-app listen on container port 3000 (service port stays 80).
+# targetPort 80 blackholes NodePorts and 502s pi-origin / grafana.
+patch monitoring kube-prom-grafana '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30850}]}}' || true
 patch postiz postiz '{"spec":{"type":"NodePort","ports":[{"name":"http","port":5000,"targetPort":5000,"nodePort":30500}]}}' || true
 patch espocrm espocrm '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30700}]}}' || true
 patch appflowy nginx-nodeport '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30810}]}}' || true
@@ -222,11 +234,10 @@ patch uptime-kuma uptime-kuma '{"spec":{"type":"NodePort","ports":[{"name":"http
 patch default docs-service '{"spec":{"type":"NodePort","ports":[{"name":"http","port":8080,"targetPort":8080,"nodePort":30901}]}}' || true
 patch meilisearch meilisearch '{"spec":{"type":"NodePort","ports":[{"name":"http","port":7700,"targetPort":7700,"nodePort":30902}]}}' || true
 patch alert-manager alert-api '{"spec":{"type":"NodePort","ports":[{"name":"http","port":8080,"targetPort":8080,"nodePort":30820}]}}' || true
-patch cloudless cloudless-app '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30300}]}}' || true
+patch cloudless cloudless-app '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30300}]}}' || true
 echo "NodePort patches attempted"
 EOS
-}
-fix_nodeports
+}fix_nodeports
 
 # --- Build host-specific configs from canonical ---
 WORKDIR=$(mktemp -d)

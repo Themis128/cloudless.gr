@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 type EngineResponse = {
   configured?: boolean;
@@ -40,7 +41,7 @@ export default function AnalyticsEngineExplorerPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
+    load().catch(() => {});
   }, [load]);
 
   const rows = data?.rows ?? [];
@@ -63,6 +64,8 @@ export default function AnalyticsEngineExplorerPage() {
           Refresh
         </button>
       </div>
+
+      <InsightPanel domain="orchestration" />
 
       {loading ? <p className="font-mono text-sm text-slate-500">Loading…</p> : null}
       {error ? <p className="text-neon-magenta font-mono text-sm">{error}</p> : null}

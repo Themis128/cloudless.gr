@@ -336,7 +336,7 @@ jobs:
         tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
         echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
         # Cloudflare-native upload (no AWS CLI / S3 API client)
-        pnpm exec wrangler r2 object put "${R2_BUCKET}/${KEY}" --file="$TAR" --remote
+        pnpm exec wrangler r2 object put "${R2_BUCKET}/${KEY}" --file="$TAR"
         echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
         {
           echo "## R2 upload"

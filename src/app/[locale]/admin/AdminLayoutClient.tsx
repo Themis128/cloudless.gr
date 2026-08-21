@@ -44,6 +44,7 @@ import {
   Briefcase,
   HelpCircle,
   Package,
+  Share2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +68,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/analytics/unified", label: "Unified View", Icon: Layers },
       { href: "/admin/analytics/seo", label: "SEO", Icon: BarChart2 },
       { href: "/admin/analytics/funnel", label: "Funnel", Icon: Filter },
+      { href: "/admin/analytics/social", label: "Social", Icon: Share2 },
       { href: "/admin/kpi", label: "KPI", Icon: Gauge },
       { href: "/admin/cost", label: "Cost", Icon: CircleDollarSign },
     ],
@@ -223,7 +225,6 @@ export default function AdminLayoutClient({ children }: { readonly children: Rea
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDrawerOpen(false);
   }, [pathname]);
 

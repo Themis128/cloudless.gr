@@ -21,7 +21,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  // restoreAllMocks() also calls resetAllMocks(), which wipes the vi.fn()
+  // mockResolvedValue set in the vi.mock factory — causing getConfig() to
+  // return undefined in subsequent tests. clearAllMocks() clears call history
+  // only, leaving the mock implementation intact.
+  vi.clearAllMocks();
 });
 
 describe("linkedinAdapter.pushConversion", () => {

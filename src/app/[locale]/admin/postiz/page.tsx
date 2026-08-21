@@ -35,10 +35,18 @@ const POSTIZ_FILE_ACCEPT =
  *   POST   /api/admin/postiz/upload        → upload media by URL
  *   POST   /api/admin/postiz/upload-file   → multipart file upload
  *   GET    /api/admin/postiz/slot?id=...   → next free time slot
+ *   POST   /api/admin/postiz/posts/bulk    → multi-day / multi-row schedule
+ *   GET    /api/admin/postiz/analytics/... → channel + post metrics
  *   POST   /api/admin/ai/generate          → AI-draft a post
  */
 
-type Tab = "compose" | "schedule" | "calendar" | "channels";
+type Tab = "compose" | "bulk" | "schedule" | "calendar" | "channels" | "analytics";
+
+interface PostizAnalyticsMetric {
+  label: string;
+  data: Array<{ total: string; date: string }>;
+  percentageChange: number;
+}
 
 interface ImageRef {
   id: string;
@@ -118,7 +126,6 @@ export default function PostizAdminPage() {
     // them happen after the fetch resolves, not synchronously in the effect
     // body. The new react-hooks/set-state-in-effect rule can't tell the
     // difference. Matches the existing pattern in AuthContext.tsx:199.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadIntegrations();
     void reloadPosts();
   }, [reloadIntegrations, reloadPosts]);
@@ -162,24 +169,27 @@ export default function PostizAdminPage() {
       )}
 
       <nav className="flex gap-2 border-b">
-        {(["compose", "schedule", "calendar", "channels"] as const).map((t) => (
-          <button
-            type="button"
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm capitalize ${
-              tab === t ? "border-b-2 border-blue-600 font-medium text-blue-700" : "text-gray-600"
-            }`}
-          >
-            {t}
-            {t === "compose" && draft.id ? " (edit)" : ""}
-          </button>
-        ))}
+        {(["compose", "bulk", "schedule", "calendar", "channels", "analytics"] as const).map(
+          (t) => (
+            <button
+              type="button"
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-3 py-2 text-sm capitalize ${
+                tab === t ? "border-b-2 border-blue-600 font-medium text-blue-700" : "text-gray-600"
+              }`}
+            >
+              {t}
+              {t === "compose" && draft.id ? " (edit)" : ""}
+            </button>
+          )
+        )}
       </nav>
 
       {tab === "channels" && (
         <ChannelsTab integrations={integrations} onReload={reloadIntegrations} />
       )}
+      {tab === "analytics" && <AnalyticsTab integrations={integrations} />}
       {tab === "compose" && (
         <ComposeTab
           integrations={integrations ?? []}
@@ -189,6 +199,15 @@ export default function PostizAdminPage() {
           onPosted={() => {
             void reloadPosts();
             setDraft(EMPTY_DRAFT);
+            setTab("schedule");
+          }}
+        />
+      )}
+      {tab === "bulk" && (
+        <BulkTab
+          integrations={integrations ?? []}
+          onPosted={() => {
+            void reloadPosts();
             setTab("schedule");
           }}
         />
@@ -272,6 +291,280 @@ function ChannelsTab({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | null }) {
+  const [lookback, setLookback] = useState<7 | 14 | 30 | 60 | 90>(7);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [metrics, setMetrics] = useState<PostizAnalyticsMetric[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const effectiveId = selectedId || integrations?.[0]?.id || "";
+
+  const load = async () => {
+    if (!effectiveId) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(
+        `/api/admin/postiz/analytics/integration/${encodeURIComponent(effectiveId)}?date=${lookback}`
+      );
+      if (!res.ok) {
+        setErr(`analytics: ${res.status}`);
+        setMetrics(null);
+        return;
+      }
+      const data = (await res.json()) as { metrics: PostizAnalyticsMetric[] };
+      setMetrics(data.metrics ?? []);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (integrations === null) return <p>Loading channels…</p>;
+  if (integrations.length === 0) {
+    return (
+      <p className="text-gray-700">
+        No channels connected. Connect them in Postiz, then reload this page.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="postiz-analytics-channel" className="mb-1 block text-sm font-medium">
+            Channel
+          </label>
+          <select
+            id="postiz-analytics-channel"
+            value={effectiveId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="rounded border border-gray-300 p-2 text-sm"
+          >
+            {integrations.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name} ({i.identifier})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="postiz-analytics-lookback" className="mb-1 block text-sm font-medium">
+            Lookback
+          </label>
+          <select
+            id="postiz-analytics-lookback"
+            value={lookback}
+            onChange={(e) => setLookback(Number(e.target.value) as 7 | 14 | 30 | 60 | 90)}
+            className="rounded border border-gray-300 p-2 text-sm"
+          >
+            {[7, 14, 30, 60, 90].map((d) => (
+              <option key={d} value={d}>
+                {d} days
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={busy || !selectedId}
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {busy ? "Loading…" : "Load metrics"}
+        </button>
+      </div>
+      {err && <p className="text-sm text-red-700">{err}</p>}
+      {metrics && metrics.length === 0 && (
+        <p className="text-sm text-gray-600">
+          No metrics for this channel/window (provider may not expose analytics).
+        </p>
+      )}
+      {metrics && metrics.length > 0 && (
+        <ul className="divide-y rounded border">
+          {metrics.map((m) => {
+            const latest = m.data.at(-1);
+            return (
+              <li key={m.label} className="flex items-center justify-between gap-3 p-3 text-sm">
+                <div>
+                  <div className="font-medium">{m.label}</div>
+                  <div className="text-xs text-gray-500">
+                    latest {latest?.date ?? "—"} · {m.data.length} points
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono">{latest?.total ?? "—"}</div>
+                  <div
+                    className={`text-xs ${
+                      m.percentageChange >= 0 ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {m.percentageChange >= 0 ? "+" : ""}
+                    {m.percentageChange.toFixed(1)}%
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function BulkTab({
+  integrations,
+  onPosted,
+}: {
+  integrations: PostizIntegration[];
+  onPosted: () => void;
+}) {
+  const [lines, setLines] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [startAt, setStartAt] = useState("");
+  const [intervalHours, setIntervalHours] = useState(24);
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const toggleId = (id: string) =>
+    setSelectedIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const selectedIntegrations = useMemo(
+    () => integrations.filter((i) => selectedIds.includes(i.id)),
+    [integrations, selectedIds]
+  );
+
+  const onSubmit = async () => {
+    const contentLines = lines
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (contentLines.length === 0 || selectedIntegrations.length === 0 || !startAt) {
+      setFeedback("Need content lines, channels, and a start time.");
+      return;
+    }
+    setSubmitting(true);
+    setFeedback(null);
+    try {
+      const startMs = new Date(startAt).getTime();
+      const items: CreatePostBody[] = contentLines.map((content, i) => {
+        const date = new Date(startMs + i * intervalHours * 60 * 60 * 1000).toISOString();
+        return {
+          type: "schedule",
+          date,
+          shortLink: false,
+          tags: [],
+          posts: selectedIntegrations.map((ch) => ({
+            integration: { id: ch.id },
+            value: [{ content, image: [] }],
+            settings: settingsFor(ch),
+          })),
+        };
+      });
+      const res = await fetch("/api/admin/postiz/posts/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        succeeded?: number;
+        failed?: number;
+        error?: string;
+      };
+      if (!res.ok && res.status !== 207) {
+        setFeedback(`Bulk failed: ${res.status} ${data.error ?? ""}`);
+        return;
+      }
+      setFeedback(`✅ Bulk done — ${data.succeeded ?? 0} ok, ${data.failed ?? 0} failed`);
+      if ((data.succeeded ?? 0) > 0) onPosted();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600">
+        One post per line. Each line is scheduled starting at the start time, spaced by the interval
+        (max 30 lines). Same channels for every row.
+      </p>
+      <div>
+        <label htmlFor="postiz-bulk-channels" className="mb-1 block text-sm font-medium">
+          Channels ({selectedIds.length} selected)
+        </label>
+        <div id="postiz-bulk-channels" className="flex flex-wrap gap-2">
+          {integrations.map((i) => {
+            const on = selectedIds.includes(i.id);
+            return (
+              <button
+                type="button"
+                key={i.id}
+                onClick={() => toggleId(i.id)}
+                className={`rounded border px-3 py-1 text-sm ${
+                  on ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-300 text-gray-700"
+                }`}
+              >
+                {i.name} <span className="text-xs">({i.identifier})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <label htmlFor="postiz-bulk-lines" className="mb-1 block text-sm font-medium">
+          Posts (one per line)
+        </label>
+        <textarea
+          id="postiz-bulk-lines"
+          value={lines}
+          onChange={(e) => setLines(e.target.value)}
+          rows={8}
+          className="w-full rounded border border-gray-300 p-2 font-mono text-sm"
+          placeholder={"Monday tip…\nTuesday tip…\nWednesday tip…"}
+        />
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <label htmlFor="postiz-bulk-start" className="mb-1 block text-sm font-medium">
+            First schedule at
+          </label>
+          <input
+            id="postiz-bulk-start"
+            type="datetime-local"
+            value={startAt}
+            onChange={(e) => setStartAt(e.target.value)}
+            className="rounded border border-gray-300 p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="postiz-bulk-interval" className="mb-1 block text-sm font-medium">
+            Interval (hours)
+          </label>
+          <input
+            id="postiz-bulk-interval"
+            type="number"
+            min={1}
+            max={168}
+            value={intervalHours}
+            onChange={(e) => setIntervalHours(Number(e.target.value) || 24)}
+            className="w-24 rounded border border-gray-300 p-2 text-sm"
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={submitting}
+        onClick={() => void onSubmit()}
+        className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {submitting ? "Scheduling…" : "Schedule all"}
+      </button>
+      {feedback && <p className="text-sm">{feedback}</p>}
     </div>
   );
 }
