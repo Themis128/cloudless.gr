@@ -20,7 +20,7 @@ export interface UnifiedLead {
   sources: string[];
   /** Plan/service interest, when known. */
   interest?: string;
-  /** EspoCRM hs_lead_status, when present. */
+  /** EspoCRM leadSource (for contacts) or lead status (for Lead entities). */
   status?: string;
   /** Portal enrollment status, when present. */
   portalStatus?: string;

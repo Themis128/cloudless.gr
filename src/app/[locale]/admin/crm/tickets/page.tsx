@@ -8,27 +8,24 @@ const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-5
 
 interface Ticket {
   id: string;
-  properties: {
-    subject?: string;
-    content?: string;
-    hs_pipeline?: string;
-    hs_pipeline_stage?: string;
-    hs_ticket_priority?: string;
-    createdate?: string;
-  };
+  name?: string;
+  status?: string;
+  priority?: string;
+  createdAt?: string;
 }
 
-const priorityClasses: Record<string, string> = {
-  HIGH: "text-red-400 bg-red-400/10",
-  MEDIUM: "text-yellow-400 bg-yellow-400/10",
-  LOW: "text-neon-green bg-neon-green/10",
+const PRIORITY_CLASSES: Record<string, string> = {
+  High: "text-red-400 bg-red-400/10",
+  Urgent: "text-red-500 bg-red-500/10",
+  Normal: "text-yellow-400 bg-yellow-400/10",
+  Low: "text-neon-green bg-neon-green/10",
 };
 
-const stageLabels: Record<string, string> = {
-  "1": "New",
-  "2": "Waiting on contact",
-  "3": "Waiting on us",
-  "4": "Closed",
+const STATUS_CLASSES: Record<string, string> = {
+  Closed: "text-neon-green bg-neon-green/10",
+  New: "text-neon-cyan bg-neon-cyan/10",
+  Assigned: "text-yellow-400 bg-yellow-400/10",
+  Pending: "text-orange-400 bg-orange-400/10",
 };
 
 export default function AdminTicketsPage() {
@@ -78,12 +75,11 @@ export default function AdminTicketsPage() {
     };
   }, [fetchTickets]);
 
-  const filtered = tickets.filter((t) => {
-    const q = search.toLowerCase();
-    return (t.properties.subject ?? "").toLowerCase().includes(q);
-  });
+  const filtered = tickets.filter((t) =>
+    (t.name ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
-  const open = tickets.filter((t) => t.properties.hs_pipeline_stage !== "4").length;
+  const open = tickets.filter((t) => t.status !== "Closed").length;
 
   let mainContent: React.ReactElement;
   if (loading) {
@@ -112,50 +108,46 @@ export default function AdminTicketsPage() {
               <tr className="border-b border-slate-800">
                 <th className={TH_CLASS}>Subject</th>
                 <th className={TH_CLASS}>Priority</th>
-                <th className={TH_CLASS}>Stage</th>
+                <th className={TH_CLASS}>Status</th>
                 <th className={TH_CLASS}>Created</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => {
-                const priority = t.properties.hs_ticket_priority?.toUpperCase() ?? "";
-                const stage = t.properties.hs_pipeline_stage ?? "";
-                return (
-                  <tr
-                    key={t.id}
-                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                  >
-                    <td className="max-w-xs px-6 py-4 text-white">
-                      <span className="line-clamp-2">{t.properties.subject || "—"}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {priority ? (
-                        <span
-                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${priorityClasses[priority] ?? "bg-slate-800/50 text-slate-400"}`}
-                        >
-                          {priority}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-slate-600">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
+              {filtered.map((t) => (
+                <tr
+                  key={t.id}
+                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                >
+                  <td className="max-w-xs px-6 py-4 text-white">
+                    <span className="line-clamp-2">{t.name || "—"}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {t.priority ? (
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "bg-yellow-400/10 text-yellow-400"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${PRIORITY_CLASSES[t.priority] ?? "bg-slate-800/50 text-slate-400"}`}
                       >
-                        {stageLabels[stage] ?? (stage || "—")}
+                        {t.priority}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-slate-500">
-                      {t.properties.createdate
-                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE", {
-                            timeZone: "Europe/Athens",
-                          })
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
+                    ) : (
+                      <span className="font-mono text-slate-600">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${STATUS_CLASSES[t.status ?? ""] ?? "bg-slate-800/50 text-slate-400"}`}
+                    >
+                      {t.status || "—"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-mono text-slate-500">
+                    {t.createdAt
+                      ? new Date(t.createdAt).toLocaleDateString("en-IE", {
+                          timeZone: "Europe/Athens",
+                        })
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center font-mono text-slate-600">

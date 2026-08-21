@@ -8,15 +8,11 @@ type Tab = "subscribers" | "contacts";
 
 interface EspoCRMContact {
   id: string;
-  properties: {
-    email?: string;
-    firstname?: string;
-    lastname?: string;
-    createdate?: string;
-    lifecyclestage?: string;
-    hs_lead_status?: string;
-    lead_source?: string;
-  };
+  emailAddress?: string;
+  firstName?: string;
+  lastName?: string;
+  leadSource?: string;
+  createdAt?: string;
 }
 
 interface ContactsResponse {
@@ -25,24 +21,13 @@ interface ContactsResponse {
   fetchedAt: string;
 }
 
-const LIFECYCLE_BADGE: Record<string, string> = {
-  subscriber: "border-slate-700 text-slate-400",
-  lead: "border-neon-blue/30 text-neon-blue",
-  marketingqualifiedlead: "border-neon-cyan/30 text-neon-cyan",
-  salesqualifiedlead: "border-neon-green/30 text-neon-green",
-  opportunity: "border-neon-yellow/30 text-neon-yellow",
-  customer: "border-neon-green/40 text-neon-green",
-  evangelist: "border-neon-magenta/30 text-neon-magenta",
-};
-
-const LIFECYCLE_LABEL: Record<string, string> = {
-  subscriber: "Subscriber",
-  lead: "Lead",
-  marketingqualifiedlead: "MQL",
-  salesqualifiedlead: "SQL",
-  opportunity: "Opportunity",
-  customer: "Customer",
-  evangelist: "Evangelist",
+const SOURCE_BADGE: Record<string, string> = {
+  "Web Site": "border-neon-cyan/30 text-neon-cyan",
+  Email: "border-neon-green/30 text-neon-green",
+  "Cold Call": "border-yellow-400/30 text-yellow-400",
+  Partner: "border-neon-magenta/30 text-neon-magenta",
+  "Word of mouth": "border-blue-400/30 text-blue-400",
+  Other: "border-slate-700 text-slate-400",
 };
 
 export default function EmailPage() {
@@ -157,7 +142,7 @@ export default function EmailPage() {
                 <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Email</th>
                 <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Name</th>
                 {tab === "contacts" && (
-                  <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Stage</th>
+                  <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Source</th>
                 )}
                 <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">Added</th>
               </tr>
@@ -174,22 +159,23 @@ export default function EmailPage() {
                 </tr>
               )}
               {contacts.map((c) => {
-                const p = c.properties;
-                const name = [p.firstname, p.lastname].filter(Boolean).join(" ");
-                const stage = p.lifecyclestage ?? "";
+                const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
+                const source = c.leadSource ?? "";
                 return (
                   <tr key={c.id} className="transition-colors hover:bg-slate-800/30">
-                    <td className="px-4 py-3 font-mono text-sm text-white">{p.email ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-white">
+                      {c.emailAddress ?? "—"}
+                    </td>
                     <td className="px-4 py-3 font-mono text-sm text-slate-300">{name || "—"}</td>
                     {tab === "contacts" && (
                       <td className="px-4 py-3">
-                        {stage ? (
+                        {source ? (
                           <span
                             className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-                              LIFECYCLE_BADGE[stage] ?? "border-slate-700 text-slate-500"
+                              SOURCE_BADGE[source] ?? "border-slate-700 text-slate-500"
                             }`}
                           >
-                            {LIFECYCLE_LABEL[stage] ?? stage}
+                            {source}
                           </span>
                         ) : (
                           <span className="font-mono text-xs text-slate-600">—</span>
@@ -197,8 +183,8 @@ export default function EmailPage() {
                       </td>
                     )}
                     <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                      {p.createdate
-                        ? new Date(p.createdate).toLocaleDateString("en-IE", {
+                      {c.createdAt
+                        ? new Date(c.createdAt).toLocaleDateString("en-IE", {
                             timeZone: "Europe/Athens",
                           })
                         : "—"}
