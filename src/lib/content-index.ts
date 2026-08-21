@@ -55,6 +55,7 @@ function toExcerpt(body: string, maxLen = 200): string {
 }
 
 async function ensureContentIndex(): Promise<void> {
+  let created = false;
   try {
     await meiliRequest(`/indexes/${CONTENT_INDEX}`, { method: "GET" }, getMeiliAdminKey());
   } catch (err) {
@@ -68,20 +69,23 @@ async function ensureContentIndex(): Promise<void> {
       },
       getMeiliAdminKey()
     );
+    created = true;
   }
 
-  await meiliRequest(
-    `/indexes/${CONTENT_INDEX}/settings`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({
-        filterableAttributes: ["type", "category"],
-        sortableAttributes: ["date"],
-        searchableAttributes: ["title", "excerpt", "body", "category"],
-      }),
-    },
-    getMeiliAdminKey()
-  );
+  if (created) {
+    await meiliRequest(
+      `/indexes/${CONTENT_INDEX}/settings`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          filterableAttributes: ["type", "category"],
+          sortableAttributes: ["date"],
+          searchableAttributes: ["title", "excerpt", "body", "category"],
+        }),
+      },
+      getMeiliAdminKey()
+    );
+  }
 }
 
 export async function syncContentIndex(): Promise<{
