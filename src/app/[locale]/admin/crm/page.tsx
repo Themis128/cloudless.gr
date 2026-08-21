@@ -9,39 +9,35 @@ import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Contact {
   id: string;
-  // EspoCRM flat fields (emailAddress, firstName, etc.)
   emailAddress?: string;
   firstName?: string;
   lastName?: string;
   accountName?: string;
   createdAt?: string;
   leadSource?: string;
-  // Fallback legacy CRM-style wrapper that old API responses may still carry
-  properties?: {
-    email?: string;
-    firstname?: string;
-    lastname?: string;
-    company?: string;
-    createdate?: string;
-    hs_lead_status?: string;
-  };
 }
 
-const leadStatusClasses: Record<string, string> = {
-  NEW: "text-neon-cyan bg-neon-cyan/10",
-  OPEN: "text-neon-green bg-neon-green/10",
-  IN_PROGRESS: "text-yellow-400 bg-yellow-400/10",
-  OPEN_DEAL: "text-neon-magenta bg-neon-magenta/10",
-  UNQUALIFIED: "text-slate-400 bg-slate-800/50",
-  ATTEMPTED_TO_CONTACT: "text-orange-400 bg-orange-400/10",
-  CONNECTED: "text-blue-400 bg-blue-400/10",
-  BAD_TIMING: "text-slate-500 bg-slate-700/30",
+const SOURCE_CLASSES: Record<string, string> = {
+  "Web Site": "text-neon-cyan bg-neon-cyan/10",
+  Email: "text-neon-green bg-neon-green/10",
+  "Cold Call": "text-yellow-400 bg-yellow-400/10",
+  Partner: "text-neon-magenta bg-neon-magenta/10",
+  "Word of mouth": "text-blue-400 bg-blue-400/10",
+  Other: "text-slate-400 bg-slate-800/50",
 };
 
-const getEmail = (c: Contact) => c.emailAddress ?? c.properties?.email ?? "";
-const getFirst = (c: Contact) => c.firstName ?? c.properties?.firstname ?? "";
-const getLast = (c: Contact) => c.lastName ?? c.properties?.lastname ?? "";
-const getCompany = (c: Contact) => c.accountName ?? c.properties?.company ?? "";
+const getEmail = (c: Contact) => c.emailAddress ?? "";
+const getFirst = (c: Contact) => c.firstName ?? "";
+const getLast = (c: Contact) => c.lastName ?? "";
+const getCompany = (c: Contact) => c.accountName ?? "";
+
+const isThisWeek = (dateStr?: string) => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  return d >= cutoff;
+};
 
 export default function AdminCRMPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -114,7 +110,7 @@ export default function AdminCRMPage() {
                   Company
                 </th>
                 <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                  Lead Status
+                  Source
                 </th>
                 <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
                   Added
@@ -123,8 +119,8 @@ export default function AdminCRMPage() {
             </thead>
             <tbody>
               {filtered.map((c) => {
-                const status = c.properties?.hs_lead_status ?? c.leadSource ?? "";
-                const created = c.createdAt ?? c.properties?.createdate;
+                const source = c.leadSource ?? "";
+                const created = c.createdAt;
                 return (
                   <tr
                     key={c.id}
@@ -148,9 +144,9 @@ export default function AdminCRMPage() {
                     <td className="px-6 py-4 text-slate-300">{getCompany(c) || "—"}</td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[status] ?? "bg-slate-800/50 text-slate-400"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${SOURCE_CLASSES[source] ?? "bg-slate-800/50 text-slate-400"}`}
                       >
-                        {status || "—"}
+                        {source || "—"}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
@@ -221,20 +217,15 @@ export default function AdminCRMPage() {
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">New Leads</p>
+          <p className="font-mono text-xs text-slate-500">New This Week</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading
-              ? "…"
-              : contacts.filter((c) => (c.properties?.hs_lead_status ?? c.leadSource) === "NEW")
-                  .length}
+            {loading ? "…" : contacts.filter((c) => isThisWeek(c.createdAt)).length}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
-          <p className="font-mono text-xs text-slate-500">Open Deal</p>
+          <p className="font-mono text-xs text-slate-500">With Company</p>
           <p className="font-heading text-neon-magenta mt-1 text-2xl font-bold">
-            {loading
-              ? "…"
-              : contacts.filter((c) => c.properties?.hs_lead_status === "OPEN_DEAL").length}
+            {loading ? "…" : contacts.filter((c) => !!c.accountName).length}
           </p>
         </div>
       </div>
