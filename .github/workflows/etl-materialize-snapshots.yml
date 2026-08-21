@@ -18,8 +18,7 @@ jobs:
   materialize:
     name: Materialize datalake snapshots
     # Same runner shape as the source ETLs (self-hosted Pi, or generic per vars).
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC ||
-      '["self-hosted","omv","build"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 15
 
     steps:

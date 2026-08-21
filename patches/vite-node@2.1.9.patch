@@ -1,0 +1,26 @@
+diff --git a/dist/utils.cjs b/dist/utils.cjs
+index ba6b02d66f600fbc0071acbac8e5f8804ee91dee..79658dfb72ca57b2756c88fbefbd1824547063dc 100644
+--- a/dist/utils.cjs
++++ b/dist/utils.cjs
+@@ -34,7 +34,7 @@ const internalRequestRegexp = new RegExp(
+ function isInternalRequest(id) {
+   return internalRequestRegexp.test(id);
+ }
+-const prefixedBuiltins = /* @__PURE__ */ new Set(["node:test"]);
++const prefixedBuiltins = /* @__PURE__ */ new Set(["node:test", "node:sqlite", "node:sea"]);
+ const builtins = /* @__PURE__ */ new Set([
+   ...node_module.builtinModules,
+   "assert/strict",
+diff --git a/dist/utils.mjs b/dist/utils.mjs
+index 6bdd52196dab20f4193ea64122f12eaa4fc43e02..ee89bfc54856b5e88abbcc4709bc7b58f43dc936 100644
+--- a/dist/utils.mjs
++++ b/dist/utils.mjs
+@@ -32,7 +32,7 @@ const internalRequestRegexp = new RegExp(
+ function isInternalRequest(id) {
+   return internalRequestRegexp.test(id);
+ }
+-const prefixedBuiltins = /* @__PURE__ */ new Set(["node:test"]);
++const prefixedBuiltins = /* @__PURE__ */ new Set(["node:test", "node:sqlite", "node:sea"]);
+ const builtins = /* @__PURE__ */ new Set([
+   ...builtinModules,
+   "assert/strict",

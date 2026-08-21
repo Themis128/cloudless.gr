@@ -326,7 +326,6 @@ function useCampaignsHub() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAll().catch(() => {});
     const interval = setInterval(() => {
       fetchAll().catch(() => {});

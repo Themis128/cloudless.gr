@@ -1,0 +1,208 @@
+# Traefik IngressRoutes — all public app hostnames
+#
+# Traffic path: Cloudflare Tunnel → Traefik NodePort 30850 (web/HTTP)
+#               → IngressRoute match → ClusterIP service
+#
+# TLS terminates at Cloudflare; the tunnel forwards plain HTTP to Traefik.
+# All routes use the `web` entrypoint (HTTP).  No certResolver needed here.
+#
+# Apply:
+#   kubectl apply -f infrastructure/traefik/ingressroutes.yaml
+#
+# Invariants:
+#   - n8n and espocrm also keep their NodePort for ETL access via Tailscale.
+#   - cloudless.gr / manage / pi-origin stay on NodePort 30300 (Worker proxy
+#     path) and are NOT routed through Traefik.
+#   - omv.cloudless.gr and webmail.cloudless.gr are non-k8s hosts; no IngressRoute.
+
+---
+# grafana.cloudless.gr → kube-prom-grafana (monitoring)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`grafana.cloudless.gr`)
+    services:
+    - name: kube-prom-grafana
+      port: 80
+
+---
+# n8n.cloudless.gr → n8n (n8n)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`n8n.cloudless.gr`)
+    services:
+    - name: n8n
+      port: 5678
+
+---
+# espocrm.cloudless.gr → espocrm (espocrm)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: espocrm
+  namespace: espocrm
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`espocrm.cloudless.gr`)
+    services:
+    - name: espocrm
+      port: 80
+
+---
+# ntfy.cloudless.gr → ntfy (ntfy)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`ntfy.cloudless.gr`)
+    services:
+    - name: ntfy
+      port: 80
+
+---
+# meili.cloudless.gr → meilisearch (meilisearch)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: meilisearch
+  namespace: meilisearch
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`meili.cloudless.gr`)
+    services:
+    - name: meilisearch
+      port: 7700
+
+---
+# docs.cloudless.gr → docs-service (default)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: docs
+  namespace: default
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`docs.cloudless.gr`)
+    services:
+    - name: docs-service
+      port: 8080
+
+---
+# appflowy.cloudless.gr → nginx (appflowy)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: appflowy
+  namespace: appflowy
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`appflowy.cloudless.gr`)
+    services:
+    - name: nginx
+      port: 80
+
+---
+# kuma.cloudless.gr → uptime-kuma (uptime-kuma)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kuma
+  namespace: uptime-kuma
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`kuma.cloudless.gr`)
+    services:
+    - name: uptime-kuma
+      port: 3001
+
+---
+# postiz.cloudless.gr → postiz (postiz)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: postiz
+  namespace: postiz
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`postiz.cloudless.gr`)
+    services:
+    - name: postiz
+      port: 5000
+
+---
+# agent.cloudless.gr → vibe-agent LangGraph API (vibe)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vibe-agent
+  namespace: vibe
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`agent.cloudless.gr`)
+    services:
+    - name: vibe-agent
+      port: 2024
+
+---
+# vibe.cloudless.gr → vibe-agent project-picker UI (vibe)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vibe-ui
+  namespace: vibe
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`vibe.cloudless.gr`)
+    services:
+    - name: vibe-agent
+      port: 3001
+
+---
+# logs.cloudless.gr → alert-api (alert-manager)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: alert-api
+  namespace: alert-manager
+spec:
+  entryPoints: [web]
+  routes:
+  - kind: Rule
+    match: Host(`logs.cloudless.gr`)
+    services:
+    - name: alert-api
+      port: 8080

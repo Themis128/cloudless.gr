@@ -1,0 +1,73 @@
+# AppFlowy AI proxy microservice.
+#
+# Sits between appflowy_cloud and the local LLM (vllm-kimi / llama.cpp).
+# Exposes the same REST surface that AppFlowy Cloud expects, translates
+# requests to OpenAI-compatible calls against APPFLOWY_AI_OPENAI_API_BASE.
+#
+# Default replicas: 0 — scaled up alongside vllm-kimi on demand.
+# Scale both: .github/workflows/ai-scale.yml (workflow_dispatch)
+#
+# ⚠️  ARM64 image note: appflowyinc/appflowy_ai is a Python service.
+#     If the -arm64v8 tag does not exist on Docker Hub for this version,
+#     the pod will ImagePullBackOff. Check:
+#       docker pull appflowyinc/appflowy_ai:0.17.4-arm64v8
+#     If only amd64 is available, use `image: appflowyinc/appflowy_ai:0.17.4`
+#     — k3s will run it under QEMU (slower but functional for low traffic).
+#
+# ⚠️  First-time DB init: on first scale-up the service creates tables in
+#     the `ai` schema of the AppFlowy postgres. Normal — no manual step.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appflowy-ai
+  namespace: appflowy
+  labels:
+    app: appflowy-ai
+spec:
+  replicas: 0
+  selector:
+    matchLabels: {app: appflowy-ai}
+  template:
+    metadata:
+      labels: {app: appflowy-ai}
+    spec:
+      nodeSelector: {kubernetes.io/hostname: omv}
+      containers:
+      - name: appflowy-ai
+        image: appflowyinc/appflowy_ai:0.17.4-arm64v8
+        env:
+        # Any non-empty string satisfies the key check; vllm-kimi needs no key.
+        - {name: OPENAI_API_KEY, value: local-not-required}
+        # Route AI calls to the local llama.cpp server (vllm-kimi).
+        # vllm-kimi serves OpenAI-compatible /v1 endpoints on port 8000.
+        - {name: APPFLOWY_AI_OPENAI_API_BASE,
+           value: 'http://vllm-kimi.omv-ai.svc.cluster.local:8000/v1'}
+        # Postgres — same instance as AppFlowy Cloud.
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: appflowy-secrets, key: POSTGRES_PASSWORD}}
+        - {name: APPFLOWY_AI_DATABASE_URL,
+           value: 'postgresql+psycopg://postgres:$(POSTGRES_PASSWORD)@postgres.appflowy.svc.cluster.local:5432/postgres'}
+        ports: [{containerPort: 5001}]
+        livenessProbe:
+          httpGet: {path: /health, port: 5001}
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: {path: /health, port: 5001}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          requests: {cpu: 25m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appflowy-ai
+  namespace: appflowy
+spec:
+  selector: {app: appflowy-ai}
+  ports:
+  - {name: http, port: 5001, targetPort: 5001}

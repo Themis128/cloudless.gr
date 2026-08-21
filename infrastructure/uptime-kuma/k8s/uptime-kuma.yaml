@@ -86,6 +86,6 @@ metadata:
   labels: {app: uptime-kuma}
 spec:
   selector: {app: uptime-kuma}
-  type: NodePort
+  type: ClusterIP
   ports:
-  - {name: http, port: 3001, targetPort: 3001, nodePort: 32501}
+  - {name: http, port: 3001, targetPort: 3001}

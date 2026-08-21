@@ -242,10 +242,63 @@ export async function setEditorialStatus(
     const ok = await updateViewName(workspaceId, pageId, newName);
     if (!ok) {
       console.error("[appflowy-blog-admin] setEditorialStatus rename failed", pageId, status);
+      return false;
     }
-    return ok;
+
+    // Mirror the content-webhook path: Published → optional Postiz share.
+    // Fire-and-forget so Slack/admin status flips stay fast; gated by
+    // AUTO_POST_BLOG_TO_SOCIAL inside scheduleBlogShare.
+    if (status === "Published") {
+      void triggerBlogSocialShare(workspaceId, pageId, view.name).catch((err) =>
+        console.error("[appflowy-blog-admin] postiz share threw:", err)
+      );
+    }
+    return true;
   } catch (err) {
     console.error("[appflowy-blog-admin] setEditorialStatus error:", err);
     return false;
   }
+}
+
+/** Load title/excerpt/slug from the AppFlowy doc and queue a social share. */
+async function triggerBlogSocialShare(
+  workspaceId: string,
+  pageId: string,
+  viewName: string
+): Promise<void> {
+  let title = stripPrefix(viewName);
+  let excerpt = "";
+  let slug = "";
+  try {
+    const doc = await getDocument(workspaceId, pageId);
+    const text = doc ? await extractDocText(doc) : "";
+    const fields = parseBlogFields(text);
+    title = fields.title || title;
+    excerpt = fields.category ? `${fields.category} · ${fields.readTime}` : "";
+    slug = fields.slug || slugify(title);
+  } catch (err) {
+    console.error("[appflowy-blog-admin] triggerBlogSocialShare doc read failed:", err);
+  }
+
+  const { scheduleBlogShare } = await import("@/lib/postiz-blog");
+  const baseUrl = process.env.SITE_URL ?? "https://cloudless.gr";
+  const url = slug ? `${baseUrl}/en/blog/${slug}` : `${baseUrl}/en/blog`;
+  const result = await scheduleBlogShare({ pageId, title, excerpt, url });
+  if (result.skipped) {
+    console.warn(`[appflowy-blog-admin → postiz] skipped: ${result.skipped}`);
+  } else if (result.ok) {
+    console.warn(`[appflowy-blog-admin → postiz] posted ${result.postIds.length} channel(s)`);
+  } else {
+    console.error(`[appflowy-blog-admin → postiz] failed: ${result.error}`);
+  }
+
+  const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
+  globalThis
+    .fetch(`${n8nBase}/webhook/postiz-ai-multicaption`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, url, locale: "en" }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    .catch((err) => console.error("[appflowy-blog-admin → n8n ai-multicaption]", err));
 }

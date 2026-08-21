@@ -1,0 +1,94 @@
+{
+  "name": "Postiz — AI blog caption → multi-channel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postiz-blog-share",
+        "options": {}
+      },
+      "name": "Blog publish webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "postiz-blog-share"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.body.url || $json.body.link }}",
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      },
+      "name": "Fetch blog page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nconst title = ($('Blog publish webhook').first().json.body.title || '').trim();\nconst url = ($('Blog publish webhook').first().json.body.url || '').trim();\nconst text = html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').substring(0, 2000);\nreturn [{ json: { title, url, text } }];"
+      },
+      "name": "Extract text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'draft', posts: [{ integration: { id: $('List channels').first().json[0].id }, value: [{ content: $json.title + '\\n\\n' + $json.text.substring(0, 280) + '...\\n\\n' + $json.url + '?utm_source=postiz&utm_medium=social&utm_campaign=blog' }], settings: {} }] }) }}",
+        "options": {}
+      },
+      "name": "Create draft post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.POSTIZ_API_BASE || 'http://postiz.postiz.svc.cluster.local:5000' }}/api/public/v1/integrations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "List channels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "postiz-api-key",
+          "name": "Postiz API Key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Blog publish webhook": {
+      "main": [[{ "node": "Fetch blog page", "type": "main", "index": 0 }]]
+    },
+    "Fetch blog page": {
+      "main": [[{ "node": "Extract text", "type": "main", "index": 0 }]]
+    },
+    "Extract text": {
+      "main": [[{ "node": "List channels", "type": "main", "index": 0 }]]
+    },
+    "List channels": {
+      "main": [[{ "node": "Create draft post", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

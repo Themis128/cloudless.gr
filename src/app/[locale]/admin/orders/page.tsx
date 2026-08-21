@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Order {
   id: string;
@@ -78,6 +79,8 @@ export default function AdminOrdersPage() {
           Live data from Stripe — checkout sessions and subscriptions.
         </p>
       </div>
+
+      <InsightPanel domain="revenue" />
 
       {/* Summary Cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -3,12 +3,14 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface AnalyticsSummary {
-  totalEvents: number;
-  byType: Record<string, number>;
-  topPages: { page: string; count: number }[];
-  topSources: { source: string; count: number }[];
+  totalEvents?: number;
+  byType?: Record<string, number>;
+  topPages?: { page: string; count: number }[];
+  topSources?: { source: string; count: number }[];
+  note?: string;
 }
 
 interface GscSnapshot {
@@ -110,7 +112,6 @@ export default function KpiDashboard() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
@@ -138,6 +139,8 @@ export default function KpiDashboard() {
           {loading ? "Loading…" : "↺ Refresh"}
         </button>
       </div>
+
+      <InsightPanel domain="executive" />
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">
@@ -200,7 +203,7 @@ export default function KpiDashboard() {
               icon="📈"
               href="/admin/appflowy/analytics"
             />
-            {data.analytics ? (
+            {data.analytics?.byType ? (
               <>
                 <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <KpiCard
@@ -224,13 +227,13 @@ export default function KpiDashboard() {
                     color="text-neon-magenta"
                   />
                 </div>
-                {data.analytics.topPages.length > 0 && (
+                {(data.analytics.topPages?.length ?? 0) > 0 && (
                   <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
                     <p className="mb-3 font-mono text-[10px] tracking-widest text-slate-500 uppercase">
                       Top Pages
                     </p>
                     <div className="space-y-1.5">
-                      {data.analytics.topPages.slice(0, 5).map((p) => (
+                      {data.analytics.topPages!.slice(0, 5).map((p) => (
                         <div key={p.page} className="flex items-center justify-between gap-4">
                           <span className="truncate font-mono text-xs text-slate-400">
                             {p.page || "/"}
@@ -245,7 +248,9 @@ export default function KpiDashboard() {
                 )}
               </>
             ) : (
-              <p className="font-mono text-sm text-slate-600">No site-event snapshot in gold.</p>
+              <p className="font-mono text-sm text-slate-600">
+                {data.analytics?.note ?? "No site-event snapshot in gold."}
+              </p>
             )}
           </section>
 

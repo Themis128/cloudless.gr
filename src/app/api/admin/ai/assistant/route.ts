@@ -8,6 +8,8 @@ import {
   parseWorkersAiToolCall,
   isWorkersAiConfigured,
 } from "@/lib/workers-ai-client";
+import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
+import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 import { generateAdminAiText } from "@/lib/admin-ai";
 import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
@@ -60,8 +62,20 @@ export async function POST(req: NextRequest) {
   const rag = await retrieveAdminRagContext(query).catch(() => "");
   const systemWithRag = rag ? `${SYSTEM_PROMPT}\n\nRelevant site content:\n${rag}` : SYSTEM_PROMPT;
 
-  // Workers AI tool loop (preferred)
-  if (isWorkersAiConfigured()) {
+  // Tool loop — pick first available backend: NVIDIA → Workers AI → Ollama
+  const useNvidia = isNvidiaProxyConfigured();
+  const useWorkersAi = !useNvidia && isWorkersAiConfigured();
+  const useOllama = !useNvidia && !useWorkersAi && isOllamaConfigured();
+
+  if (useNvidia || useWorkersAi || useOllama) {
+    const provider = useNvidia ? "nvidia-proxy" : useWorkersAi ? "workers-ai" : "ollama";
+    const callBackend = (msgs: { role: string; content: string }[]) =>
+      useNvidia
+        ? callNvidiaProxyChat(msgs, { maxTokens: 2000 })
+        : useWorkersAi
+          ? callWorkersAiChat(msgs, { maxTokens: 2000 })
+          : callOllamaChat(msgs, { maxTokens: 2000 });
+
     const loopMessages: { role: string; content: string }[] = [
       {
         role: "system",
@@ -75,14 +89,10 @@ export async function POST(req: NextRequest) {
 
     try {
       for (let i = 0; i < MAX_ITERATIONS; i++) {
-        const reply = await callWorkersAiChat(loopMessages, { maxTokens: 2000 });
+        const reply = await callBackend(loopMessages);
         const toolCall = parseWorkersAiToolCall(reply);
         if (!toolCall) {
-          return NextResponse.json({
-            response: reply,
-            toolsUsed,
-            provider: "workers-ai",
-          });
+          return NextResponse.json({ response: reply, toolsUsed, provider });
         }
         if (!toolsUsed.includes(toolCall.name)) toolsUsed.push(toolCall.name);
         loopMessages.push({ role: "assistant", content: reply });
@@ -96,10 +106,10 @@ export async function POST(req: NextRequest) {
         response:
           "I hit the tool-use limit without a final answer. Please try rephrasing your request.",
         toolsUsed,
-        provider: "workers-ai",
+        provider,
       });
     } catch (err) {
-      console.warn("[assistant] Workers AI loop failed, falling back:", err);
+      console.warn(`[assistant] ${provider} tool loop failed, falling back to Gemini:`, err);
     }
   }
 

@@ -1,0 +1,147 @@
+{
+  "name": "Sentry error \u2192 EspoCRM bug ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentry-alert",
+        "options": {}
+      },
+      "name": "Webhook (sentry-alert)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "sentry-alert"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "title",
+              "value": "={{ $json.title || 'Sentry alert' }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity || 'info' }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message || '' }}"
+            },
+            {
+              "name": "permalink",
+              "value": "={{ $json.permalink || '' }}"
+            }
+          ]
+        }
+      },
+      "name": "Extract issue fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ESPOCRM_BASE_URL || 'https://espocrm.cloudless.gr' }}/api/v1/Case",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $env.ESPOCRM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ name: $('Extract issue fields').item.json.title.slice(0, 200), status: 'New', priority: $('Extract issue fields').item.json.severity === 'critical' ? 'Urgent' : $('Extract issue fields').item.json.severity === 'warning' ? 'High' : 'Normal', description: $('Extract issue fields').item.json.message + ($('Extract issue fields').item.json.permalink ? '\\nSentry: ' + $('Extract issue fields').item.json.permalink : '') }) }}",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "name": "EspoCRM \u2014 create bug Case",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, caseCreated: true, severity: $('Extract issue fields').item.json.severity }) }}"
+      },
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (sentry-alert)": {
+      "main": [
+        [
+          {
+            "node": "Extract issue fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract issue fields": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM \u2014 create bug Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM \u2014 create bug Case": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "infra"
+    },
+    {
+      "name": "espocrm"
+    },
+    {
+      "name": "cloudless"
+    }
+  ],
+  "id": "0c4ff116-f98f-45fc-9409-19128e4b4847"
+}

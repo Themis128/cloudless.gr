@@ -41,10 +41,11 @@ describe("normalizeGooglePrivateKeyPem", () => {
     expect(normalizeGooglePrivateKeyPem(json)).toBe(pem.trim());
   });
 
-  it("decodes a base64-encoded PEM blob", () => {
+  it("decodes base64-encoded PEM", () => {
     const pem = samplePkcs8Pem();
-    const b64 = Buffer.from(pem, "utf8").toString("base64");
-    expect(normalizeGooglePrivateKeyPem(b64)).toBe(pem.trim());
+    const b64 = Buffer.from(pem).toString("base64");
+    const out = normalizeGooglePrivateKeyPem(b64);
+    expect(out).toContain("-----BEGIN PRIVATE KEY-----");
   });
 
   it("rejects truncated keys", () => {

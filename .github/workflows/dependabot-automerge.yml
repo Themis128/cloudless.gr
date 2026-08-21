@@ -21,6 +21,27 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # dependency-names from fetch-metadata v3 can be a plain CSV string (e.g.
+      # "@anthropic-ai/sdk, ai, jose") for group updates rather than a JSON array,
+      # so fromJson() fails when the first character is "@". Normalise to JSON here.
+    - name: Check for framework packages
+      id: check
+      env:
+        DEPS: ${{ steps.meta.outputs.dependency-names }}
+      run: |
+        deps="$DEPS"
+        # Normalise: if it looks like JSON already, keep it; otherwise wrap CSV as array.
+        if [[ "$deps" == \[* ]]; then
+          json="$deps"
+        else
+          json="[\"$(echo "$deps" | sed 's/, /","/g')\"]"
+        fi
+        if echo "$json" | jq -e 'any(. == "next" or . == "react" or . == "react-dom")' > /dev/null 2>&1; then
+          echo "has_framework=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_framework=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Auto-merge minor and patch updates
         # Exclude framework-level packages whose node_modules content is read by
         # AI agents via AGENTS.md. Those packages must go through human review to
@@ -28,9 +49,7 @@ jobs:
       if: |
         (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
          steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
+        steps.check.outputs.has_framework == 'false'
       run: gh pr merge --auto --squash "$PR_URL"
       env:
         PR_URL: ${{ github.event.pull_request.html_url }}
@@ -40,9 +59,7 @@ jobs:
       if: |
         (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
          steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-        (contains(fromJson(steps.meta.outputs.dependency-names), 'next') ||
-         contains(fromJson(steps.meta.outputs.dependency-names), 'react') ||
-         contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom'))
+        steps.check.outputs.has_framework == 'true'
       run: |
         echo "::warning::Framework package update detected (next/react/react-dom)."
         echo "::warning::AGENTS.md reads from node_modules — human review required before merge."

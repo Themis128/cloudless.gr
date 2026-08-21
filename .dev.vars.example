@@ -61,3 +61,8 @@ ESPOCRM_API_PASSWORD=your-esprocrm-password
 # LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 # TAVILY_API_KEY=your-tavily-api-key
 # GITHUB_PERSONAL_ACCESS_TOKEN=your-github-token
+
+# ─── Postiz Social Scheduler ─────────────────────────────────────────────────
+# API Key for Postiz (social media scheduling)
+# Get from Postiz dashboard → Settings → API Keys
+# POSTIZ_API_KEY=your-postiz-api-key

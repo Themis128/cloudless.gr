@@ -31,6 +31,8 @@ import {
 
 const PAGE_SIZE = 100;
 const MAX_LIMIT = 100;
+const MAX_RETRIES = 3;
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 interface EspoContact {
   email: string;
@@ -56,14 +58,37 @@ async function getEspoConfig(): Promise<{ baseUrl: string; apiKey: string }> {
 
 async function espoFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const { baseUrl, apiKey } = await getEspoConfig();
-  return fetch(`${baseUrl}/api/v1${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Api-Key": apiKey,
-      ...init.headers,
-    },
-  });
+  const url = `${baseUrl}/api/v1${path}`;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": apiKey,
+    ...((init.headers ?? {}) as Record<string, string>),
+  };
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise<void>((r) => setTimeout(r, 200 * 2 ** (attempt - 1)));
+    }
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!RETRYABLE_STATUS.has(res.status)) return res;
+      if (attempt === MAX_RETRIES - 1) return res;
+      if (res.status === 429) {
+        const after = parseInt(res.headers.get("Retry-After") ?? "", 10);
+        if (Number.isFinite(after) && after > 0 && after < 60) {
+          await new Promise<void>((r) => setTimeout(r, after * 1_000));
+        }
+      }
+    } catch (err) {
+      lastErr = err;
+      if (attempt === MAX_RETRIES - 1) throw err;
+    }
+  }
+  throw lastErr ?? new Error("espoFetch exhausted retries");
 }
 
 /**
@@ -84,7 +109,8 @@ async function espoListAll<T = unknown>(
       ...baseParams,
     });
     const res = await espoFetch(`/${entity}?${params.toString()}`);
-    if (!res.ok) break;
+    if (!res.ok)
+      throw new Error(`EspoCRM ${entity} list page (offset ${offset}) failed: ${res.status}`);
     const data = (await res.json()) as { list: T[]; total: number };
     all.push(...data.list);
     if (data.list.length < PAGE_SIZE) break;
@@ -128,9 +154,17 @@ function mapLeadSource(s?: string): string | undefined {
   }
 }
 
-/** Create or update a contact (uniqueness by email). */
+/** Create or update a contact (uniqueness by email). Links to a real Account
+ *  when contact.company is set (calls upsertCompany internally). */
 export async function upsertContact(contact: EspoContact): Promise<string | null> {
   try {
+    // Resolve Account id before building payload so the Contact links to a real
+    // Account record rather than a free-text accountName string.
+    const accountId = contact.company
+      ? ((await upsertCompany(contact.company)) ?? undefined)
+      : undefined;
+    const basePayload = toEspoContactPayload(contact);
+    const payload = accountId ? { ...basePayload, accountId, accountName: undefined } : basePayload;
     // EspoCRM has no upsert primitive — search first, then POST or PATCH.
     const search = await espoFetch(
       `/Contact?` +
@@ -147,7 +181,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       if (existing) {
         await espoFetch(`/Contact/${existing.id}`, {
           method: "PUT",
-          body: JSON.stringify(toEspoContactPayload(contact)),
+          body: JSON.stringify(payload),
         });
         void invalidateEspoContactCaches(existing.id);
         return existing.id;
@@ -155,7 +189,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
     }
     const create = await espoFetch("/Contact", {
       method: "POST",
-      body: JSON.stringify(toEspoContactPayload(contact)),
+      body: JSON.stringify(payload),
     });
     if (!create.ok) {
       console.error("[EspoCRM] upsertContact create failed:", create.status);
@@ -232,6 +266,32 @@ export async function setNewsletterStatus(
 
 function clampLimit(limit: number, fallback = 20): number {
   return Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT) : fallback;
+}
+
+export async function listLeads(limit = 20): Promise<unknown[]> {
+  const clamped = clampLimit(limit);
+  const { value } = await readThrough(
+    "espocrm:listLeads",
+    { limit: clamped },
+    async () => {
+      try {
+        const res = await espoFetch(
+          `/Lead?` +
+            new URLSearchParams({
+              maxSize: String(clamped),
+              orderBy: "createdAt",
+              order: "desc",
+            }).toString()
+        );
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 export async function listContacts(limit = 10): Promise<unknown[]> {
@@ -330,7 +390,7 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
   return value;
 }
 
-interface TicketData {
+export interface TicketData {
   subject: string;
   content: string;
   hs_pipeline?: string;
@@ -411,6 +471,44 @@ export async function listCompanies(limit = 20): Promise<unknown[]> {
   return value;
 }
 
+/**
+ * Find or create an EspoCRM Account by exact name. Returns the Account id, or
+ * null on failure. Called by upsertContact so Contacts link to a real Account
+ * record rather than a free-text accountName string.
+ */
+export async function upsertCompany(name: string): Promise<string | null> {
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const search = await espoFetch(
+      `/Account?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "name",
+          "where[0][value]": trimmed,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (search.ok) {
+      const data = (await search.json()) as { list: { id: string }[] };
+      const existing = data.list[0];
+      if (existing) return existing.id;
+    }
+    const create = await espoFetch("/Account", {
+      method: "POST",
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (!create.ok) return null;
+    const created = (await create.json()) as { id: string };
+    void invalidateEspoListCaches();
+    return created.id;
+  } catch (err) {
+    console.error("[EspoCRM] upsertCompany error:", err);
+    return null;
+  }
+}
+
 export async function listDeals(limit = 20): Promise<unknown[]> {
   const clamped = clampLimit(limit);
   const { value } = await readThrough(
@@ -431,21 +529,29 @@ export async function listDeals(limit = 20): Promise<unknown[]> {
 }
 
 export async function listOwners(): Promise<unknown[]> {
-  try {
-    const res = await espoFetch(
-      `/User?` +
-        new URLSearchParams({
-          "where[0][type]": "equals",
-          "where[0][attribute]": "type",
-          "where[0][value]": "regular",
-          maxSize: "100",
-        }).toString()
-    );
-    if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
-  } catch {
-    return [];
-  }
+  const { value } = await readThrough(
+    "espocrm:listOwners",
+    {},
+    async () => {
+      try {
+        const res = await espoFetch(
+          `/User?` +
+            new URLSearchParams({
+              "where[0][type]": "equals",
+              "where[0][attribute]": "type",
+              "where[0][value]": "regular",
+              maxSize: "100",
+            }).toString()
+        );
+        if (!res.ok) return [];
+        return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+      } catch {
+        return [];
+      }
+    },
+    { ttlSeconds: ESPO_CACHE_TTL.list, acceptStaleSeconds: 300 }
+  );
+  return value;
 }
 
 /** Search Contacts by an attribute (e.g. emailAddress). Property names map:
@@ -559,6 +665,29 @@ export async function createLead(data: LeadData): Promise<string | null> {
       status: "New",
       description: descLines.length ? descLines.join("\n") : undefined,
     };
+    // Dedup: if a Lead with this email already exists, update it instead of
+    // creating a second record. EspoCRM has no unique-email constraint on Lead.
+    const dupSearch = await espoFetch(
+      `/Lead?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "emailAddress",
+          "where[0][value]": data.emailAddress,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (dupSearch.ok) {
+      const dupData = (await dupSearch.json()) as { list: { id: string }[] };
+      const existing = dupData.list[0];
+      if (existing) {
+        await espoFetch(`/Lead/${existing.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        return existing.id;
+      }
+    }
     const res = await espoFetch("/Lead", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -606,7 +735,7 @@ export async function countLeadsForCampaign(campaignSlug: string): Promise<numbe
 
 export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
 
-interface DealData {
+export interface DealData {
   dealname: string;
   amount?: number;
   currency?: string;
@@ -616,6 +745,14 @@ interface DealData {
   lead_source?: DealSource;
   description?: string;
   service_interest?: string;
+}
+
+export interface DealUpdateFields {
+  dealname?: string;
+  dealstage?: string;
+  amount?: number | string;
+  closedate?: string;
+  [key: string]: unknown;
 }
 
 function toEspoOpportunityPayload(data: DealData): Record<string, unknown> {
@@ -653,7 +790,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
 
 export async function updateDeal(
   id: string,
-  data: Partial<Record<string, string>>
+  data: DealUpdateFields
 ): Promise<{ id: string } | null> {
   try {
     // EspoCRM uses snake_case property names; EspoCRM uses camelCase. Map the
@@ -681,6 +818,14 @@ export async function updateDeal(
 }
 
 export async function moveDealStage(id: string, stageId: string): Promise<{ id: string } | null> {
+  const pipelines = (await getPipelines()) as Array<{ stages: { id: string }[] }>;
+  const knownStages = pipelines[0]?.stages.map((s) => s.id) ?? [];
+  if (!knownStages.includes(stageId)) {
+    console.error(
+      `[EspoCRM] moveDealStage: unknown stage "${stageId}". Known: ${knownStages.join(", ")}`
+    );
+    return null;
+  }
   return updateDeal(id, { dealstage: stageId });
 }
 

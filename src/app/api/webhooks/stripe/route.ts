@@ -304,6 +304,15 @@ export async function POST(request: NextRequest) {
     console.error("[Stripe] Failed to mark event as processed:", markErr);
   });
 
+  // Forward verified event to n8n for automation (welcome drip, dunning).
+  const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
+  fetch(`${n8nBase}/webhook/stripe-automation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: event.type, data: event.data.object }),
+    signal: AbortSignal.timeout(3000),
+  }).catch(() => {});
+
   if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
     await import("@sentry/nextjs").then(({ flush }) => flush(2000)).catch(() => {});
   }

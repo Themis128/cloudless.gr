@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { contactDisplayName } from "@/lib/crm-contact-360-shared";
 import { useVisiblePoll } from "@/lib/use-visible-poll";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 interface Contact {
   id: string;
@@ -185,6 +186,30 @@ export default function AdminCRMPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">CRM Contacts</h1>
         <p className="font-body mt-1 text-slate-400">Leads and contacts synced from EspoCRM.</p>
+      </div>
+
+      <InsightPanel domain="crm_funnel" />
+
+      {/* RFM quick links */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Link
+          href="/admin/analytics/explore?dataset=rfm&q=champions"
+          className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/70 hover:bg-neon-cyan/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
+        >
+          🏆 RFM Champions →
+        </Link>
+        <Link
+          href="/admin/analytics/explore?dataset=churn&q=high-risk"
+          className="rounded-full border border-red-500/20 bg-red-500/5 px-3 py-1 font-mono text-[10px] text-red-400/70 transition-colors hover:bg-red-500/10"
+        >
+          ⚠ High Churn Risk →
+        </Link>
+        <Link
+          href="/admin/analytics/explore?dataset=espocrm-opps&q=pipeline"
+          className="border-neon-magenta/20 bg-neon-magenta/5 text-neon-magenta/70 hover:bg-neon-magenta/15 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors"
+        >
+          🔀 Open Pipeline →
+        </Link>
       </div>
 
       {/* Stats */}

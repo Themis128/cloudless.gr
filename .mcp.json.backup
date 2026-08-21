@@ -1,0 +1,194 @@
+{
+  "mcpServers": {
+    "fast-markdown": {
+      "command": "npx",
+      "args": ["tsx", "fast-markdown-mcp/src/index.ts"],
+      "env": {
+        "DEVDOCS_STORAGE_PATH": "${DEVDOCS_STORAGE_PATH:-/home/tbaltzakis/DevDocs/storage/markdown}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "get_toc"
+      ]
+    },
+    "cloudflare-pages": {
+      "command": "npx",
+      "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "pages_list_projects",
+        "pages_get_project",
+        "pages_list_deployments",
+        "pages_get_deployment_logs"
+      ]
+    },
+    "cloudflare-bindings": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://bindings.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "kv_namespaces_list",
+        "kv_namespace_create",
+        "kv_namespace_delete",
+        "workers_list",
+        "r2_buckets_list"
+      ]
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
+      },
+      "autoStart": true
+    },
+    "cloudflare-graphql": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://graphql.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare-docs": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/mcp"],
+      "autoStart": false
+    },
+    "cloudflare-builds": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://builds.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare-observability": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://observability.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "opennextjs-mcp": {
+      "command": "node",
+      "args": [
+        "/home/tbaltzakis/opennextjs-cli/packages/opennextjs-mcp/dist/index.js"
+      ],
+      "env": {
+        "PROJECT_ROOT": "/home/tbaltzakis/cloudless.gr"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "get_project_status",
+        "validate_configuration",
+        "deploy_to_cloudflare",
+        "start_preview_server",
+        "update_configuration",
+        "check_health",
+        "list_environments"
+      ]
+    },
+    "sequentialthinking": {
+      "command": "node",
+      "args": [
+        "/home/tbaltzakis/Cline/MCP/sequentialthinking/src/sequentialthinking/dist/index.js"
+      ],
+      "autoStart": true,
+      "alwaysAllow": ["sequentialthinking"]
+    },
+    "github": {
+      "command": "/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server",
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "search_repos",
+        "search_code",
+        "search_issues",
+        "search_users",
+        "get_file_contents",
+        "get_issue",
+        "list_issues",
+        "create_issue",
+        "update_issue",
+        "get_pull_request",
+        "list_pull_requests",
+        "create_pull_request",
+        "get_repo",
+        "list_repos",
+        "create_repo",
+        "fork_repo",
+        "get_branch",
+        "list_branches",
+        "create_branch",
+        "delete_branch",
+        "get_commit",
+        "list_commits",
+        "get_workflow_run",
+        "list_workflow_runs",
+        "get_workflow_run_logs",
+        "get_workflow_run_usage",
+        "get_actions_secrets",
+        "create_actions_secret",
+        "delete_actions_secret",
+        "get_actions_variables",
+        "create_actions_variable",
+        "delete_actions_variable"
+      ]
+    },
+    "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/tbaltzakis/cloudless.gr"
+      ],
+      "autoStart": true,
+      "alwaysAllow": [
+        "read_text_file",
+        "read_media_file",
+        "read_multiple_files",
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "list_directory_with_sizes",
+        "move_file",
+        "search_files",
+        "directory_tree",
+        "get_file_info",
+        "list_allowed_directories"
+      ]
+    },
+    "openshorts-mcp": {
+      "command": "npx",
+      "args": ["-y", "@mutonby/openshorts-mcp"],
+      "env": {
+        "OPENSHORTS_API_URL": "http://cluster.local"
+      },
+      "disabled": false
+    },
+    "postiz-mcp": {
+      "command": "npx",
+      "args": ["-y", "@antoniolg/postiz-mcp"],
+      "env": {
+        "POSTIZ_API_URL": "http://cluster.local"
+      },
+      "disabled": false
+    }
+  }
+}

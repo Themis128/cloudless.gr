@@ -1,25 +1,44 @@
 # Cloudflare Tunnel Configuration for omv (192.168.1.128)
 # Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
-# Copy to /etc/cloudflared/config.yml on omv AND mirror to omv-ha
-# (same tunnel UUID; edge round-robins both connectors).
 #
-# Host-specific overrides on omv-ha:
-#   webmail.cloudless.gr → http://localhost:80  (mail host)
-#   omv.cloudless.gr     → http://192.168.1.128:80  (not ha localhost)
-#   ftp.cloudless.gr     → http://192.168.1.128:21
+# Traffic path (k8s services):
+#   Cloudflare Edge → Tunnel → Traefik NodePort 30850 → IngressRoute → ClusterIP
+#
+# Exceptions (bypass Traefik):
+#   cloudless.gr / manage / pi-origin → NodePort 30300 (Workers proxy path)
+#   webmail.cloudless.gr → omv-ha:80 (mail server, not k8s)
+#   omv.cloudless.gr     → localhost:80 (OMV admin panel)
+#   ftp.cloudless.gr     → localhost:21 (FTP, not HTTP)
+#
+# n8n and EspoCRM NodePorts (30900, 30700) remain for ETL access via Tailscale
+# tag:ci ACL — they are NOT exposed through this tunnel directly anymore.
 
 tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
 credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
 no-autoupdate: true
-# Prometheus metrics (also set via systemd drop-in --metrics 0.0.0.0:20241)
 metrics: 0.0.0.0:20241
 
 ingress:
+# ── Non-k8s hosts ─────────────────────────────────────────────────────────────
 - hostname: webmail.cloudless.gr
   service: http://192.168.1.130:80
   originRequest:
     connectTimeout: 15s
 
+- hostname: omv.cloudless.gr
+  service: http://localhost:80
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    httpHostHeader: omv.cloudless.gr
+
+- hostname: ftp.cloudless.gr
+  service: http://localhost:21
+  originRequest:
+    connectTimeout: 30s
+    tcpKeepAlive: 60s
+
+# ── Main app (bypasses Traefik — Workers proxy path must stay direct) ──────────
 - hostname: cloudless.gr
   service: http://192.168.1.128:30300
   originRequest:
@@ -38,100 +57,84 @@ ingress:
     connectTimeout: 30s
     httpHostHeader: pi-origin.cloudless.gr
 
+# ── All k8s app services → Traefik NodePort 30850 ─────────────────────────────
 - hostname: grafana.cloudless.gr
   service: http://192.168.1.128:30850
   originRequest:
-    noTLSVerify: true
     connectTimeout: 15s
     tcpKeepAlive: 30s
-
-- hostname: postiz.cloudless.gr
-  service: http://192.168.1.128:30500
-  originRequest:
-    connectTimeout: 15s
-    tcpKeepAlive: 30s
-
-- hostname: espocrm.cloudless.gr
-  service: http://192.168.1.128:30700
-  originRequest:
-    connectTimeout: 15s
-    tcpKeepAlive: 30s
-
-- hostname: appflowy.cloudless.gr
-  service: http://192.168.1.128:30810
-  originRequest:
-    connectTimeout: 15s
-    tcpKeepAlive: 30s
-    noTLSVerify: false
-    httpHostHeader: appflowy.cloudless.gr
 
 - hostname: n8n.cloudless.gr
-  service: http://192.168.1.128:30900
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s
     httpHostHeader: n8n.cloudless.gr
 
-- hostname: kuma.cloudless.gr
-  service: http://192.168.1.128:32501
+- hostname: espocrm.cloudless.gr
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s
-    noTLSVerify: false
-    httpHostHeader: kuma.cloudless.gr
+    httpHostHeader: espocrm.cloudless.gr
 
 - hostname: ntfy.cloudless.gr
-  service: http://192.168.1.128:30080
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s
     httpHostHeader: ntfy.cloudless.gr
 
-- hostname: omv.cloudless.gr
-  service: http://localhost:80
-  originRequest:
-    connectTimeout: 15s
-    tcpKeepAlive: 30s
-    httpHostHeader: omv.cloudless.gr
-
-- hostname: ftp.cloudless.gr
-  service: http://localhost:21
-  originRequest:
-    connectTimeout: 30s
-    tcpKeepAlive: 60s
-
-- hostname: docs.cloudless.gr
-  service: http://192.168.1.128:30901
-  originRequest:
-    connectTimeout: 15s
-    tcpKeepAlive: 30s
-
 - hostname: meili.cloudless.gr
-  service: http://192.168.1.128:30902
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 10s
     tcpKeepAlive: 30s
 
+- hostname: docs.cloudless.gr
+  service: http://192.168.1.128:30850
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
+- hostname: appflowy.cloudless.gr
+  service: http://192.168.1.128:30850
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    httpHostHeader: appflowy.cloudless.gr
+
+- hostname: kuma.cloudless.gr
+  service: http://192.168.1.128:30850
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    httpHostHeader: kuma.cloudless.gr
+
+- hostname: postiz.cloudless.gr
+  service: http://192.168.1.128:30850
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
 - hostname: agent.cloudless.gr
-  service: http://192.168.1.128:30924
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 30s
     tcpKeepAlive: 30s
     httpHostHeader: agent.cloudless.gr
 
 - hostname: vibe.cloudless.gr
-  service: http://192.168.1.128:30301
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 30s
     tcpKeepAlive: 30s
     httpHostHeader: vibe.cloudless.gr
 
 - hostname: logs.cloudless.gr
-  service: http://192.168.1.128:30820
+  service: http://192.168.1.128:30850
   originRequest:
     connectTimeout: 10s
     tcpKeepAlive: 30s
-    keepAliveConnections: 10
-    keepAliveTimeout: 90s
 
 - service: http_status:404

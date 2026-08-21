@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { downloadCsvFile, rowsToCsv } from "@/lib/csv-export";
+import { InsightPanel } from "@/components/admin/InsightPanel";
 
 type Row = Record<string, string | number | null>;
 
@@ -324,6 +325,8 @@ export default function DatalakeDashboardPage() {
           </button>
         </div>
       </header>
+
+      <InsightPanel domain="executive" />
 
       {err && (
         <div
