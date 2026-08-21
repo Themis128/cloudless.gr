@@ -1,0 +1,84 @@
+# Prometheus scrape config for Meilisearch metrics.
+#
+# Meilisearch exposes /metrics (Prometheus format) when MEILI_ENABLE_METRICS=true.
+# In production mode all routes — including /metrics — require a bearer token.
+# This manifest mirrors the master key into the monitoring namespace so the
+# ServiceMonitor can pass it as Authorization: Bearer.
+#
+# Run fix-meili-search-key.yml first — it patches meilisearch-scrape-auth with
+# the master key. Until that workflow runs this ServiceMonitor is inert.
+#
+# Apply: kubectl apply -f infrastructure/monitoring/meilisearch-servicemonitor.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meilisearch-metrics
+  namespace: monitoring
+  labels:
+    app: meilisearch
+    component: metrics
+    release: kube-prom
+spec:
+  type: ExternalName
+  externalName: meilisearch.meilisearch.svc.cluster.local
+  ports:
+  - name: metrics
+    port: 7700
+    targetPort: 7700
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: meilisearch
+  namespace: monitoring
+  labels:
+    release: kube-prom
+    app: meilisearch
+spec:
+  selector:
+    matchLabels:
+      app: meilisearch
+      component: metrics
+  namespaceSelector:
+    matchNames: [monitoring]
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 60s
+    scrapeTimeout: 10s
+    bearerTokenSecret:
+      name: meilisearch-scrape-auth
+      key: MEILI_MASTER_KEY
+    relabelings:
+    - targetLabel: job
+      replacement: meilisearch
+    - targetLabel: namespace
+      replacement: meilisearch
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: meilisearch-health
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+  - name: meilisearch.rules
+    rules:
+    - alert: MeilisearchMetricsAbsent
+      expr: absent(meilisearch_http_requests_total) == 1
+      for: 15m
+      labels: {severity: warning}
+      annotations:
+        summary: Meilisearch metrics not scraped
+        description: No meilisearch_http_requests_total for 15m — check MEILI_ENABLE_METRICS and the scrape auth Secret.
+    - alert: MeilisearchIndexingErrors
+      expr: increase(meilisearch_http_response_status_code_total{status_code=~"5.."}[15m]) > 10
+      for: 5m
+      labels: {severity: warning}
+      annotations:
+        summary: Elevated Meilisearch 5xx errors
+        description: "More than 10 5xx responses in 15m on {{ $labels.instance }}."
