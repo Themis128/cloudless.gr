@@ -6,7 +6,7 @@
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
         "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_rsa",
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       },
       "autoStart": false
