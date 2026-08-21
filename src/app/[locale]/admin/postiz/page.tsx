@@ -81,6 +81,61 @@ const CLS_LINK_REFRESH = "text-sm text-blue-600 underline";
 const CLS_CHECK_LABEL = "flex items-center gap-2 text-sm";
 const CLS_LEGEND = "text-xs font-medium text-gray-700";
 
+// Shared no-op — used as `.catch(noop)` to avoid inline arrow callbacks that
+// inflate cognitive-complexity scores (sonarjs/cognitive-complexity S3776).
+const noop = () => {};
+
+// Pure updater for the "sticky-false" configured flag.  Extracted to module
+// level so the useCallback that calls it contains no nested functions.
+function markConfiguredUpdater(cur: boolean | null): boolean | null {
+  return cur === false ? false : true;
+}
+
+// Module-level async helpers — keep useCallback bodies free of control-flow so
+// PostizAdminPage stays under the cognitive-complexity threshold (≤ 15).
+
+async function loadIntegrations(
+  setConfigured: (_: boolean) => void,
+  onMarkConfigured: () => void,
+  setIntegrations: (_: PostizIntegration[]) => void,
+  setError: (_: string | null) => void
+): Promise<void> {
+  const res = await fetch("/api/admin/postiz/integrations");
+  if (res.status === 503) {
+    setConfigured(false);
+    return;
+  }
+  onMarkConfigured();
+  if (!res.ok) {
+    setError(`integrations: ${res.status}`);
+    return;
+  }
+  const data = (await res.json()) as { integrations: PostizIntegration[] };
+  setIntegrations(data.integrations ?? []);
+  setError(null);
+}
+
+async function loadPosts(
+  setConfigured: (_: boolean) => void,
+  onMarkConfigured: () => void,
+  setPosts: (_: PostizPost[]) => void,
+  setError: (_: string | null) => void
+): Promise<void> {
+  const res = await fetch("/api/admin/postiz/posts");
+  if (res.status === 503) {
+    setConfigured(false);
+    return;
+  }
+  onMarkConfigured();
+  if (!res.ok) {
+    setError(`posts: ${res.status}`);
+    return;
+  }
+  const data = (await res.json()) as { posts: PostizPost[] };
+  setPosts(data.posts ?? []);
+  setError(null);
+}
+
 export default function PostizAdminPage() {
   const [tab, setTab] = useState<Tab>("compose");
   const [integrations, setIntegrations] = useState<PostizIntegration[] | null>(null);
@@ -91,47 +146,27 @@ export default function PostizAdminPage() {
 
   // Concurrent reloads race against `configured` — once a 503 is observed,
   // Postiz is definitively unconfigured and the success path of the other
-  // request must NOT flip the flag back to `true`. Use the functional setter
-  // so `false` is sticky; `null` (initial) → `true` is the only upgrade.
+  // request must NOT flip the flag back to `true`. The updater function is
+  // extracted to module level so this callback contains no nested functions.
   const markConfigured = useCallback(() => {
-    setConfigured((cur) => (cur === false ? false : true));
+    setConfigured(markConfiguredUpdater);
   }, []);
 
-  const reloadIntegrations = useCallback(async () => {
-    const res = await fetch("/api/admin/postiz/integrations");
-    if (res.status === 503) {
-      setConfigured(false);
-      return;
-    }
-    markConfigured();
-    if (!res.ok) {
-      setError(`integrations: ${res.status}`);
-      return;
-    }
-    const data = (await res.json()) as { integrations: PostizIntegration[] };
-    setIntegrations(data.integrations ?? []);
-    setError(null);
-  }, [markConfigured]);
+  // Thin wrappers: all async logic lives in the module-level helpers above so
+  // these callbacks contribute only +1 each to cognitive complexity.
+  const reloadIntegrations = useCallback(
+    () => loadIntegrations(setConfigured, markConfigured, setIntegrations, setError).catch(noop),
+    [markConfigured]
+  );
 
-  const reloadPosts = useCallback(async () => {
-    const res = await fetch("/api/admin/postiz/posts");
-    if (res.status === 503) {
-      setConfigured(false);
-      return;
-    }
-    markConfigured();
-    if (!res.ok) {
-      setError(`posts: ${res.status}`);
-      return;
-    }
-    const data = (await res.json()) as { posts: PostizPost[] };
-    setPosts(data.posts ?? []);
-    setError(null);
-  }, [markConfigured]);
+  const reloadPosts = useCallback(
+    () => loadPosts(setConfigured, markConfigured, setPosts, setError).catch(noop),
+    [markConfigured]
+  );
 
   useEffect(() => {
-    reloadIntegrations().catch(() => {});
-    reloadPosts().catch(() => {});
+    reloadIntegrations();
+    reloadPosts();
   }, [reloadIntegrations, reloadPosts]);
 
   /** Switch to Compose tab populated from an existing scheduled / draft post. */
@@ -203,7 +238,7 @@ export default function PostizAdminPage() {
           onDraftChange={setDraft}
           onCancel={() => setDraft(EMPTY_DRAFT)}
           onPosted={() => {
-            reloadPosts().catch(() => {});
+            reloadPosts();
             setDraft(EMPTY_DRAFT);
             setTab("schedule");
           }}
@@ -213,7 +248,7 @@ export default function PostizAdminPage() {
         <BulkTab
           integrations={integrations ?? []}
           onPosted={() => {
-            reloadPosts().catch(() => {});
+            reloadPosts();
             setTab("schedule");
           }}
         />
@@ -301,6 +336,34 @@ function ChannelsTab({
   );
 }
 
+// Module-level async helper for analytics loading — extracted so AnalyticsTab
+// itself contains no inner async functions and stays under the complexity limit.
+async function doLoadAnalytics(
+  selectedId: string,
+  lookback: number,
+  setBusy: (_: boolean) => void,
+  setErr: (_: string | null) => void,
+  setMetrics: (_: PostizAnalyticsMetric[] | null) => void
+): Promise<void> {
+  if (!selectedId) return;
+  setBusy(true);
+  setErr(null);
+  try {
+    const res = await fetch(
+      `/api/admin/postiz/analytics/integration/${encodeURIComponent(selectedId)}?date=${lookback}`
+    );
+    if (!res.ok) {
+      setErr(`analytics: ${res.status}`);
+      setMetrics(null);
+      return;
+    }
+    const data = (await res.json()) as { metrics: PostizAnalyticsMetric[] };
+    setMetrics(data.metrics ?? []);
+  } finally {
+    setBusy(false);
+  }
+}
+
 function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | null }) {
   const [lookback, setLookback] = useState<7 | 14 | 30 | 60 | 90>(7);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -308,31 +371,14 @@ function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | nu
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Seed the channel picker with the first integration once data arrives.
   useEffect(() => {
-    if (!selectedId && integrations && integrations.length > 0) {
-      setSelectedId(integrations[0]!.id);
-    }
+    const firstId = integrations?.[0]?.id;
+    if (!selectedId && firstId) setSelectedId(firstId);
   }, [integrations, selectedId]);
 
-  const load = async () => {
-    if (!selectedId) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await fetch(
-        `/api/admin/postiz/analytics/integration/${encodeURIComponent(selectedId)}?date=${lookback}`
-      );
-      if (!res.ok) {
-        setErr(`analytics: ${res.status}`);
-        setMetrics(null);
-        return;
-      }
-      const data = (await res.json()) as { metrics: PostizAnalyticsMetric[] };
-      setMetrics(data.metrics ?? []);
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Thin wrapper — all async logic lives in doLoadAnalytics above.
+  const load = () => doLoadAnalytics(selectedId, lookback, setBusy, setErr, setMetrics).catch(noop);
 
   if (integrations === null) return <p>Loading channels…</p>;
   if (integrations.length === 0) {
@@ -382,7 +428,7 @@ function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | nu
         </div>
         <button
           type="button"
-          onClick={() => load().catch(() => {})}
+          onClick={load}
           disabled={busy || !selectedId}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
