@@ -42,6 +42,18 @@ export function normalizeGooglePrivateKeyPem(raw: string): string {
 
   key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
 
+  // Operators sometimes store the PEM as a single-line base64 blob (no BEGIN header).
+  if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key)) {
+    try {
+      const decoded = Buffer.from(key, "base64").toString("utf8").trim();
+      if (/-----BEGIN (RSA )?PRIVATE KEY-----/.test(decoded)) {
+        key = decoded.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+      }
+    } catch {
+      // keep original key for the error below
+    }
+  }
+
   if (!/-----BEGIN (RSA )?PRIVATE KEY-----/.test(key)) {
     throw new Error(
       "GOOGLE_PRIVATE_KEY must be a PEM private key (-----BEGIN PRIVATE KEY----- or -----BEGIN RSA PRIVATE KEY-----)"
