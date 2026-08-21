@@ -215,9 +215,7 @@ export default function PostizAdminPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-2 text-sm capitalize ${
-                tab === t
-                  ? "border-b-2 border-blue-600 font-medium text-blue-700"
-                  : "text-gray-600"
+                tab === t ? "border-b-2 border-blue-600 font-medium text-blue-700" : "text-gray-600"
               }`}
             >
               {t}
