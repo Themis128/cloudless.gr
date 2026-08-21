@@ -1,5 +1,5 @@
 {
-  "name": "Stripe automation — onboarding drip + dunning emails",
+  "name": "Stripe automation \u2014 onboarding drip + dunning emails",
   "nodes": [
     {
       "parameters": {
@@ -10,7 +10,10 @@
       "name": "Webhook (stripe-automation)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "stripe-automation"
     },
     {
@@ -19,8 +22,12 @@
         "value1": "={{ $json.type }}",
         "rules": {
           "rules": [
-            { "value2": "checkout.session.completed" },
-            { "value2": "invoice.payment_failed" }
+            {
+              "value2": "checkout.session.completed"
+            },
+            {
+              "value2": "invoice.payment_failed"
+            }
           ]
         },
         "fallbackOutput": 2
@@ -28,24 +35,45 @@
       "name": "Route by event type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [460, 400]
+      "position": [
+        460,
+        400
+      ]
     },
     {
       "parameters": {
         "values": {
           "string": [
-            { "name": "email", "value": "={{ $json.data.customer_email || '' }}" },
-            { "name": "name",  "value": "={{ $json.data.customer_details?.name || '' }}" },
-            { "name": "sessionId", "value": "={{ $json.data.id || '' }}" },
-            { "name": "amount", "value": "={{ (($json.data.amount_total || 0) / 100).toFixed(2) + ' ' + ($json.data.currency || 'EUR').toUpperCase() }}" },
-            { "name": "campaign", "value": "={{ $json.data.metadata?.campaign || '' }}" }
+            {
+              "name": "email",
+              "value": "={{ $json.data.customer_email || '' }}"
+            },
+            {
+              "name": "name",
+              "value": "={{ $json.data.customer_details?.name || '' }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.data.id || '' }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ (($json.data.amount_total || 0) / 100).toFixed(2) + ' ' + ($json.data.currency || 'EUR').toUpperCase() }}"
+            },
+            {
+              "name": "campaign",
+              "value": "={{ $json.data.metadata?.campaign || '' }}"
+            }
           ]
         }
       },
       "name": "Extract checkout fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [680, 260]
+      "position": [
+        680,
+        260
+      ]
     },
     {
       "parameters": {
@@ -61,7 +89,10 @@
       "name": "Has email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [900, 260]
+      "position": [
+        900,
+        260
+      ]
     },
     {
       "parameters": {
@@ -70,18 +101,29 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyParametersJson": "={{ JSON.stringify({ from: 'Cloudless <hello@cloudless.gr>', to: [$('Extract checkout fields').item.json.email], subject: 'Ευχαριστούμε για την αγορά σας!', html: '<h2>Καλώς ήρθατε στο Cloudless!</h2><p>Αγαπητέ/ή ' + ($('Extract checkout fields').item.json.name || 'πελάτη') + ',</p><p>Λάβαμε την παραγγελία σας (<strong>' + $('Extract checkout fields').item.json.amount + '</strong>) και θα επικοινωνήσουμε σύντομα.</p><p>Αν έχετε ερωτήσεις, απαντήστε σε αυτό το email.</p><p>Η ομάδα Cloudless<br><a href=\"https://cloudless.gr\">cloudless.gr</a></p>' }) }}",
-        "options": { "timeout": 8000 }
+        "bodyParametersJson": "={{ JSON.stringify({ from: 'Cloudless <hello@cloudless.gr>', to: [$('Extract checkout fields').item.json.email], subject: '\u0395\u03c5\u03c7\u03b1\u03c1\u03b9\u03c3\u03c4\u03bf\u03cd\u03bc\u03b5 \u03b3\u03b9\u03b1 \u03c4\u03b7\u03bd \u03b1\u03b3\u03bf\u03c1\u03ac \u03c3\u03b1\u03c2!', html: '<h2>\u039a\u03b1\u03bb\u03ce\u03c2 \u03ae\u03c1\u03b8\u03b1\u03c4\u03b5 \u03c3\u03c4\u03bf Cloudless!</h2><p>\u0391\u03b3\u03b1\u03c0\u03b7\u03c4\u03ad/\u03ae ' + ($('Extract checkout fields').item.json.name || '\u03c0\u03b5\u03bb\u03ac\u03c4\u03b7') + ',</p><p>\u039b\u03ac\u03b2\u03b1\u03bc\u03b5 \u03c4\u03b7\u03bd \u03c0\u03b1\u03c1\u03b1\u03b3\u03b3\u03b5\u03bb\u03af\u03b1 \u03c3\u03b1\u03c2 (<strong>' + $('Extract checkout fields').item.json.amount + '</strong>) \u03ba\u03b1\u03b9 \u03b8\u03b1 \u03b5\u03c0\u03b9\u03ba\u03bf\u03b9\u03bd\u03c9\u03bd\u03ae\u03c3\u03bf\u03c5\u03bc\u03b5 \u03c3\u03cd\u03bd\u03c4\u03bf\u03bc\u03b1.</p><p>\u0391\u03bd \u03ad\u03c7\u03b5\u03c4\u03b5 \u03b5\u03c1\u03c9\u03c4\u03ae\u03c3\u03b5\u03b9\u03c2, \u03b1\u03c0\u03b1\u03bd\u03c4\u03ae\u03c3\u03c4\u03b5 \u03c3\u03b5 \u03b1\u03c5\u03c4\u03cc \u03c4\u03bf email.</p><p>\u0397 \u03bf\u03bc\u03ac\u03b4\u03b1 Cloudless<br><a href=\"https://cloudless.gr\">cloudless.gr</a></p>' }) }}",
+        "options": {
+          "timeout": 8000
+        }
       },
-      "name": "Resend — welcome email",
+      "name": "Resend \u2014 welcome email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1120, 200],
+      "position": [
+        1120,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -92,7 +134,10 @@
       "name": "Respond (checkout OK)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1340, 200]
+      "position": [
+        1340,
+        200
+      ]
     },
     {
       "parameters": {
@@ -102,22 +147,37 @@
       "name": "Respond (no email)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 360]
+      "position": [
+        1120,
+        360
+      ]
     },
     {
       "parameters": {
         "values": {
           "string": [
-            { "name": "email",     "value": "={{ $json.data.customer_email || '' }}" },
-            { "name": "invoiceId", "value": "={{ $json.data.id || '' }}" },
-            { "name": "amount",    "value": "={{ (($json.data.amount_due || 0) / 100).toFixed(2) + ' ' + ($json.data.currency || 'EUR').toUpperCase() }}" }
+            {
+              "name": "email",
+              "value": "={{ $json.data.customer_email || '' }}"
+            },
+            {
+              "name": "invoiceId",
+              "value": "={{ $json.data.id || '' }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ (($json.data.amount_due || 0) / 100).toFixed(2) + ' ' + ($json.data.currency || 'EUR').toUpperCase() }}"
+            }
           ]
         }
       },
       "name": "Extract invoice fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [680, 540]
+      "position": [
+        680,
+        540
+      ]
     },
     {
       "parameters": {
@@ -126,18 +186,29 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyParametersJson": "={{ JSON.stringify({ from: 'Cloudless <hello@cloudless.gr>', to: [$('Extract invoice fields').item.json.email], subject: 'Αποτυχία πληρωμής — ανανεώστε τα στοιχεία σας', html: '<h2>Η πληρωμή απέτυχε</h2><p>Το τιμολόγιό σας ύψους <strong>' + $('Extract invoice fields').item.json.amount + '</strong> δεν ήταν δυνατόν να χρεωθεί.</p><p>Παρακαλούμε ανανεώστε τα στοιχεία πληρωμής σας για να αποφύγετε διακοπή της υπηρεσίας.</p><p><a href=\"https://cloudless.gr/el/profile\">Ανανέωση στοιχείων</a></p><p>Η ομάδα Cloudless</p>' }) }}",
-        "options": { "timeout": 8000 }
+        "bodyParametersJson": "={{ JSON.stringify({ from: 'Cloudless <hello@cloudless.gr>', to: [$('Extract invoice fields').item.json.email], subject: '\u0391\u03c0\u03bf\u03c4\u03c5\u03c7\u03af\u03b1 \u03c0\u03bb\u03b7\u03c1\u03c9\u03bc\u03ae\u03c2 \u2014 \u03b1\u03bd\u03b1\u03bd\u03b5\u03ce\u03c3\u03c4\u03b5 \u03c4\u03b1 \u03c3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03b1 \u03c3\u03b1\u03c2', html: '<h2>\u0397 \u03c0\u03bb\u03b7\u03c1\u03c9\u03bc\u03ae \u03b1\u03c0\u03ad\u03c4\u03c5\u03c7\u03b5</h2><p>\u03a4\u03bf \u03c4\u03b9\u03bc\u03bf\u03bb\u03cc\u03b3\u03b9\u03cc \u03c3\u03b1\u03c2 \u03cd\u03c8\u03bf\u03c5\u03c2 <strong>' + $('Extract invoice fields').item.json.amount + '</strong> \u03b4\u03b5\u03bd \u03ae\u03c4\u03b1\u03bd \u03b4\u03c5\u03bd\u03b1\u03c4\u03cc\u03bd \u03bd\u03b1 \u03c7\u03c1\u03b5\u03c9\u03b8\u03b5\u03af.</p><p>\u03a0\u03b1\u03c1\u03b1\u03ba\u03b1\u03bb\u03bf\u03cd\u03bc\u03b5 \u03b1\u03bd\u03b1\u03bd\u03b5\u03ce\u03c3\u03c4\u03b5 \u03c4\u03b1 \u03c3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03b1 \u03c0\u03bb\u03b7\u03c1\u03c9\u03bc\u03ae\u03c2 \u03c3\u03b1\u03c2 \u03b3\u03b9\u03b1 \u03bd\u03b1 \u03b1\u03c0\u03bf\u03c6\u03cd\u03b3\u03b5\u03c4\u03b5 \u03b4\u03b9\u03b1\u03ba\u03bf\u03c0\u03ae \u03c4\u03b7\u03c2 \u03c5\u03c0\u03b7\u03c1\u03b5\u03c3\u03af\u03b1\u03c2.</p><p><a href=\"https://cloudless.gr/el/profile\">\u0391\u03bd\u03b1\u03bd\u03ad\u03c9\u03c3\u03b7 \u03c3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03c9\u03bd</a></p><p>\u0397 \u03bf\u03bc\u03ac\u03b4\u03b1 Cloudless</p>' }) }}",
+        "options": {
+          "timeout": 8000
+        }
       },
-      "name": "Resend — dunning email",
+      "name": "Resend \u2014 dunning email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [900, 540],
+      "position": [
+        900,
+        540
+      ],
       "continueOnFail": true
     },
     {
@@ -148,7 +219,10 @@
       "name": "Respond (dunning OK)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1120, 540]
+      "position": [
+        1120,
+        540
+      ]
     },
     {
       "parameters": {
@@ -158,40 +232,126 @@
       "name": "Respond (skip)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 680]
+      "position": [
+        680,
+        680
+      ]
     }
   ],
   "connections": {
     "Webhook (stripe-automation)": {
-      "main": [[{ "node": "Route by event type", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Route by event type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Route by event type": {
       "main": [
-        [{ "node": "Extract checkout fields", "type": "main", "index": 0 }],
-        [{ "node": "Extract invoice fields",  "type": "main", "index": 0 }],
-        [{ "node": "Respond (skip)",           "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract checkout fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract invoice fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond (skip)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract checkout fields": {
-      "main": [[{ "node": "Has email?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Has email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has email?": {
       "main": [
-        [{ "node": "Resend — welcome email", "type": "main", "index": 0 }],
-        [{ "node": "Respond (no email)",     "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Resend \u2014 welcome email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond (no email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Resend — welcome email": {
-      "main": [[{ "node": "Respond (checkout OK)", "type": "main", "index": 0 }]]
+    "Resend \u2014 welcome email": {
+      "main": [
+        [
+          {
+            "node": "Respond (checkout OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract invoice fields": {
-      "main": [[{ "node": "Resend — dunning email", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Resend \u2014 dunning email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Resend — dunning email": {
-      "main": [[{ "node": "Respond (dunning OK)", "type": "main", "index": 0 }]]
+    "Resend \u2014 dunning email": {
+      "main": [
+        [
+          {
+            "node": "Respond (dunning OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
-  "tags": [{ "name": "stripe" }, { "name": "email" }, { "name": "cloudless" }]
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "stripe"
+    },
+    {
+      "name": "email"
+    },
+    {
+      "name": "cloudless"
+    }
+  ],
+  "id": "fecc370b-8d4c-49dd-b4fd-0b38377c113a"
 }
