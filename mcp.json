@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "cloudflare": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CF_API_TOKEN}"
+      }
+    },
     "cloudless-infra": {
       "command": "npx",
       "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
