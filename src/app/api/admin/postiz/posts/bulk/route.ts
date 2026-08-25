@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  createPostsBulk,
-  PostizNotConfiguredError,
-  type CreatePostBody,
-} from "@/lib/postiz";
+import { createPostsBulk, PostizNotConfiguredError, type CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 

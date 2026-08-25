@@ -210,9 +210,7 @@ function DealCard({
 
   return (
     <div className="bg-void-light/80 group rounded-lg border border-slate-700/50 p-3 transition-all hover:border-slate-600">
-      <p className="font-mono text-xs font-semibold text-white">
-        {deal.name || "Untitled Deal"}
-      </p>
+      <p className="font-mono text-xs font-semibold text-white">{deal.name || "Untitled Deal"}</p>
       {amount > 0 && (
         <p className="text-neon-green mt-1 font-mono text-xs">
           €{amount.toLocaleString("el-GR", { maximumFractionDigits: 0 })}
