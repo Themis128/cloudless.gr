@@ -10,7 +10,7 @@ set -euo pipefail
 # Tailscale NodePort → postiz Service (bypasses Cloudflare Access).
 # Override with POSTIZ_API_URL if you use a CF Access service token against
 # https://postiz.cloudless.gr instead.
-export POSTIZ_API_URL="${POSTIZ_API_URL:-http://100.74.191.58:30500/api}"
+export POSTIZ_API_URL="${POSTIZ_API_URL:-http://100.74.191.58:30500}"
 
 if [[ -z "${POSTIZ_API_KEY:-}" ]]; then
   echo "POSTIZ_API_KEY is unset. Export it (Postiz → Settings → Developers → Public API), then re-source." >&2

@@ -13,10 +13,7 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ locale: string }> }
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cloudless.gr";
   const blogBase = `${base}/${locale}/blog`;

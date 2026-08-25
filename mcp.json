@@ -1,12 +1,19 @@
 {
   "mcpServers": {
+    "cloudflare": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CF_API_TOKEN}"
+      }
+    },
     "cloudless-infra": {
       "command": "npx",
       "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
         "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_rsa",
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       }
     },
@@ -19,8 +26,8 @@
       "command": "npx",
       "args": ["-y", "postiz-mcp"],
       "env": {
-        "POSTIZ_API_URL": "http://cluster.local",
-        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
+        "POSTIZ_API_URL": "https://postiz.cloudless.gr",
+        "POSTIZ_API_KEY": "edd2c4f5c5e49502fad640a8164147eecf506622a3be4caea6c477cd94ccced2"
       },
       "autoStart": false
     },
@@ -38,7 +45,7 @@
       "command": "npx",
       "args": ["-y", "mcp-server-bluesky"],
       "env": {
-        "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
+        "BLUESKY_IDENTIFIER": "dcvv-4xxf-vs7h-ux6c",
         "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}"
       },
       "autoStart": false
@@ -48,7 +55,7 @@
       "args": ["-y", "stock-images-mcp"],
       "env": {
         "UNSPLASH_ACCESS_KEY": "${UNSPLASH_ACCESS_KEY}",
-        "PEXELS_API_KEY": "${PEXELS_API_KEY}",
+        "PEXELS_API_KEY": "AXdiQ6gWmGYxIsU9HZZhVkUYCDtNjE9FapeGEWl5Pyp4CvNTDsUvEiwb",
         "PIXABAY_API_KEY": "${PIXABAY_API_KEY}"
       },
       "autoStart": false

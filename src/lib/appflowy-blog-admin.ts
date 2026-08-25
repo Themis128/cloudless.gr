@@ -249,7 +249,7 @@ export async function setEditorialStatus(
     // Fire-and-forget so Slack/admin status flips stay fast; gated by
     // AUTO_POST_BLOG_TO_SOCIAL inside scheduleBlogShare.
     if (status === "Published") {
-      void triggerBlogSocialShare(workspaceId, pageId, view.name).catch((err) =>
+      triggerBlogSocialShare(workspaceId, pageId, view.name).catch((err) =>
         console.error("[appflowy-blog-admin] postiz share threw:", err)
       );
     }
@@ -291,14 +291,4 @@ async function triggerBlogSocialShare(
   } else {
     console.error(`[appflowy-blog-admin → postiz] failed: ${result.error}`);
   }
-
-  const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
-  globalThis
-    .fetch(`${n8nBase}/webhook/postiz-ai-multicaption`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, url, locale: "en" }),
-      signal: AbortSignal.timeout(10_000),
-    })
-    .catch((err) => console.error("[appflowy-blog-admin → n8n ai-multicaption]", err));
 }

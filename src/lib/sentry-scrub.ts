@@ -7,7 +7,12 @@
  * dumps in stack frames) and any client-side fetch URLs that include tokens.
  */
 
-import type { Breadcrumb, ErrorEvent, EventHint } from "@sentry/core";
+// Import types from @sentry/nextjs to match the version used by Sentry configs
+// This avoids type mismatches between @sentry/nextjs/node_modules/@sentry/core and root @sentry/core
+import type { Breadcrumb, ErrorEvent, EventHint } from "@sentry/nextjs";
+
+// Type that matches Sentry's beforeSend callback expectation
+type BeforeSendReturn = ErrorEvent | PromiseLike<ErrorEvent | null> | null;
 
 const REDACT = "[REDACTED]";
 
@@ -128,7 +133,7 @@ function scrubRequest(req: NonNullable<ErrorEvent["request"]>): void {
   }
 }
 
-export function scrubEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
+export function scrubEvent(event: ErrorEvent, _hint: EventHint): BeforeSendReturn {
   if (event.request) scrubRequest(event.request);
   if (event.extra) event.extra = redactObject(event.extra) as typeof event.extra;
   if (event.contexts) event.contexts = redactObject(event.contexts) as typeof event.contexts;
