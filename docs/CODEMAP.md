@@ -3,10 +3,11 @@
 ## 🏗️ **Architecture Overview**
 
 **cloudless.gr** is a full-stack cloud consulting platform built with modern web technologies, featuring:
+
 - **Multi-tenant SaaS architecture** with role-based access control
 - **Headless CMS** via AppFlowy for content management
 - **Integrated marketing stack** (Ads, SEO, Analytics, Email)
-- **Hybrid deployment** (AWS Lambda + Raspberry Pi k3s cluster)
+- **Single-node Raspberry Pi k3s cluster** deployment with Cloudflare Workers proxy
 - **Real-time monitoring** (ESP32 sensors, cluster health)
 
 ---
@@ -14,20 +15,24 @@
 ## 🛠️ **Tech Stack**
 
 ### **Core Framework**
-- **Next.js 16.2.9** (App Router, React 19.2.7)
-- **TypeScript 6.0.3** (strict mode)
-- **Tailwind CSS 4.3.1** (utility-first styling)
-- **next-intl 4.13.0** (i18n routing: en, el, fr, de)
-- **next-auth 5.0.0-beta.31** (authentication)
+
+- **Next.js 15.2.0** (App Router, React 19.0.0)
+- **TypeScript 5.5.0** (strict mode)
+- **Tailwind CSS 4.0.0** (utility-first styling)
+- **next-intl 4.13.7** (i18n routing: en, el, fr, de)
+- **next-auth 5.0.0-beta.32** (authentication)
 
 ### **Infrastructure & Deployment**
-- **AWS Lambda** (primary production deployment via SST v4)
-- **Raspberry Pi k3s cluster** (HA standby, real-time monitoring)
-- **Cloudflare Workers** (edge proxy, ESP32 tunnel)
+
+- **Raspberry Pi k3s cluster** (single-node omv, primary production deployment)
+- **Cloudflare Workers** (edge proxy via cloudless2 worker)
+- **Cloudflare Tunnel** (secure pi-origin.cloudless.gr access)
+- **SafeDeploy** (rollback system with auto-rollback watchdog)
 - **Docker** (standalone builds)
 - **GitHub Actions** (80+ CI/CD workflows)
 
 ### **Data & Storage**
+
 - **AWS SSM Parameter Store** (secrets management)
 - **AWS SES v2** (transactional email)
 - **AppFlowy Cloud** (headless CMS)
@@ -36,6 +41,7 @@
 - **DuckDB** (analytics data lake)
 
 ### **Monitoring & Analytics**
+
 - **Sentry** (error tracking)
 - **Prometheus + Grafana** (cluster monitoring)
 - **Google Search Console** (SEO analytics)
@@ -43,10 +49,11 @@
 - **N8N** (workflow automation)
 
 ### **Testing**
-- **Vitest 4.1.9** (unit tests, jsdom)
-- **Playwright 1.61.0** (E2E tests, 3 projects)
-- **React Testing Library 16.3.2** (component tests)
-- **@axe-core/playwright 4.11.3** (accessibility)
+
+- **Vitest 2.1.0** (unit tests, jsdom)
+- **Playwright 1.49.0** (E2E tests, 3 projects)
+- **React Testing Library 16.0.0** (component tests)
+- **@axe-core/playwright 4.13.0** (accessibility)
 
 ---
 
@@ -72,7 +79,7 @@ cloudless.gr/
 │   │   │   ├── auth/           # Authentication APIs
 │   │   │   ├── checkout/       # Stripe checkout
 │   │   │   ├── slack/          # Slack integration
-│   │   │   └── webhooks/       # Stripe & Notion webhooks
+│   │   │   └── webhooks/       # Stripe webhooks
 │   │   ├── layout.tsx           # Root layout
 │   │   └── proxy.ts            # Middleware (auth + locale)
 │   ├── components/             # React components
@@ -128,30 +135,35 @@ cloudless.gr/
 ## 🎯 **Key Features & Modules**
 
 ### **Authentication & Authorization**
+
 - **Cloudflare D1** (user-auth-db) for password authentication
 - **Opaque session cookies** (30-day default)
 - **Role-based access control** (admin, user, customer)
 - **Admin promotion** via API (`POST /api/admin/users`)
 
 ### **Content Management (AppFlowy)**
+
 - **Headless CMS** via AppFlowy Cloud integration
 - **Dynamic content**: blog posts, case studies, FAQs, services
-- **Multi-language support** with Notion fallback
+- **Multi-language support** via AppFlowy locales
 - **Real-time content updates** via webhooks
 
 ### **E-commerce & Payments**
+
 - **Stripe integration** for subscriptions and one-time purchases
 - **Shopping cart** with React context state management
 - **Product catalog** with dynamic pricing
 - **Customer portal** for order management
 
 ### **Marketing & Campaigns**
+
 - **Multi-platform ads**: Google Ads, Meta (Facebook/Instagram), LinkedIn, TikTok, X (Twitter)
 - **Campaign landing pages** with conversion tracking
 - **Social media scheduling** via Postiz integration
 - **Email campaigns** with ActiveCampaign integration
 
 ### **Analytics & Reporting**
+
 - **Google Search Console** integration (11 SEO functions)
 - **Custom analytics dashboards** (Grafana, Metabase)
 - **Data lake architecture** with DuckDB
@@ -159,6 +171,7 @@ cloudless.gr/
 - **Search funnel analysis** and keyword opportunities
 
 ### **Admin Panel (60+ pages)**
+
 - **Analytics dashboards** (SEO, social, unified, workspaces)
 - **AI assistant** (content generation, campaign creation)
 - **CRM management** (contacts, companies, deals, tickets)
@@ -169,23 +182,27 @@ cloudless.gr/
 - **Integrations hub** (external service configuration)
 
 ### **Infrastructure & Monitoring**
-- **Raspberry Pi k3s cluster** (single-node HA setup)
+
+- **Raspberry Pi k3s cluster** (single-node omv Pi 5)
 - **ESP32 sensor network** with real-time alerts
 - **Cloudflare tunnel** for secure Pi access
 - **Prometheus + Grafana** monitoring stack
-- **Automatic failover** and health checks
+- **SafeDeploy** rollback system with auto-rollback watchdog
+- **Health checks** and automatic recovery
 
 ---
 
 ## 🔌 **API Endpoints (100+ routes)**
 
 ### **Authentication**
+
 - `POST /api/auth/login` - User login
 - `POST /api/auth/signup` - User registration
 - `POST /api/auth/logout` - User logout
 - `POST /api/auth/forgot-password` - Password reset
 
 ### **Admin APIs**
+
 - **Analytics**: `/api/admin/analytics/*` (SEO, social, unified, data lake)
 - **AI**: `/api/admin/ai/*` (generate, assistant, langgraph, product descriptions)
 - **CRM**: `/api/admin/crm/*` (contacts, companies, deals, tickets)
@@ -195,23 +212,25 @@ cloudless.gr/
 - **Email**: `/api/admin/email/*` (campaigns, lists, contacts, automations)
 
 ### **Public APIs**
+
 - `POST /api/contact` - Contact form submission
 - `POST /api/subscribe` - Newsletter subscription
 - `POST /api/checkout` - Stripe checkout initiation
 - `GET /api/health` - Health check endpoint
 - `POST /api/webhooks/stripe` - Stripe webhook handler
-- `POST /api/webhooks/notion` - Notion webhook handler
 
 ---
 
 ## 🎨 **Design System**
 
 ### **Color Palette**
+
 - **Void colors**: `#0a0a0f` (void), `#12121a` (void-light), `#1a1a2e` (void-lighter)
 - **Neon colors**: cyan `#00fff5`, magenta `#ff00ff`, green `#00ff41`, blue `#4d7cff`
 - **Typography**: Instrument Sans (headings), Work Sans (body), Geist Mono (code)
 
 ### **Component Patterns**
+
 - **Cards**: `rounded-xl border border-slate-800 bg-void-light/50`
 - **Buttons**: `rounded-lg` (WCAG 44px+ touch targets)
 - **Backdrop**: `bg-void/90 backdrop-blur-xl` on navbar
@@ -222,6 +241,7 @@ cloudless.gr/
 ## 🚀 **Development Workflow**
 
 ### **Local Development**
+
 ```bash
 pnpm dev                    # Start dev server on :4000
 pnpm dev:local-auth        # Use local SQLite instead of D1
@@ -229,6 +249,7 @@ pnpm dev:webpack           # Webpack mode (for coverage)
 ```
 
 ### **Testing**
+
 ```bash
 pnpm test                   # Vitest watch mode
 pnpm test:ci                # Vitest CI run
@@ -237,12 +258,15 @@ pnpm test:k3s               # k3s cluster tests
 ```
 
 ### **Deployment**
+
 ```bash
-pnpm deploy                 # SST deploy to production
-pnpm deploy:staging         # SST deploy to staging
+pnpm deploy                 # Cloudflare Workers deploy to production
+pnpm deploy:staging         # Cloudflare Workers deploy to staging
+scripts/rollback.sh previous # SafeDeploy rollback (~15s, no rebuild)
 ```
 
 ### **Code Quality**
+
 ```bash
 pnpm lint                   # ESLint
 pnpm format                 # Prettier
@@ -258,7 +282,7 @@ pnpm typecheck              # TypeScript type checking
 - **Local dev**: `.env.local` (git-ignored)
 - **Secret caching**: 5-minute cache with stale-on-error fallback
 - **Rate limiting**: IP-based for API routes
-- **Webhook verification**: HMAC-SHA256 for Stripe and Notion
+- **Webhook verification**: HMAC-SHA256 for Stripe
 
 ---
 
@@ -275,13 +299,14 @@ pnpm typecheck              # TypeScript type checking
 
 ```
 Production Traffic:
-cloudless.gr → Cloudflare → AWS Lambda (Amplify)
-              → Cloudflare Tunnel → Pi k3s cluster (HA standby)
+cloudless.gr → Worker cloudless2 (pi-origin-proxy)
+              → Cloudflare Tunnel (pi-origin.cloudless.gr)
+              → k3s cloudless-app on omv (NodePort)
 ```
 
-**Primary**: AWS Lambda via SST (Amplify)
-**Standby**: Raspberry Pi k3s cluster with automatic failover
-**Edge**: Cloudflare Workers for proxy and tunnel
+**Primary**: Raspberry Pi k3s cluster (single-node omv Pi 5)
+**Edge**: Cloudflare Workers (cloudless2 reverse proxy)
+**Tunnel**: Cloudflare Tunnel for secure origin access
 
 ---
 
@@ -298,9 +323,57 @@ cloudless.gr → Cloudflare → AWS Lambda (Amplify)
 
 ---
 
+## 🔄 **SafeDeploy Rollback System**
+
+### **Deployment Architecture**
+
+- **SafeDeploy**: Automatic rollback system for Pi deployments
+- **Rollback**: `scripts/rollback.sh previous` (~15s, no rebuild)
+- **Watchdog**: Continuous prod monitor (systemd timer, every 2min)
+- **Auto-rollback**: Triggers at 16min unhealthy (alerts at 6min)
+- **Health checks**: Post-deploy validation with automatic failover
+
+### **Rollback Workflow**
+
+1. Every deploy writes to per-SHA `releases/` directory
+2. Symlink flip for atomic deployment
+3. Health checks validate new release
+4. Auto-rollback on failure (watchdog monitoring)
+5. Manual rollback via `scripts/rollback.sh previous`
+
+---
+
+## 🌐 **Cloudflare Tunnel & Proxy Configuration**
+
+### **Production Traffic Path**
+
+```
+browser → cloudless.gr → Worker cloudless2 (pi-origin-proxy)
+      → Cloudflare Tunnel (pi-origin.cloudless.gr)
+      → k3s cloudless-app on omv (NodePort)
+```
+
+### **Cloudflare Workers (cloudless2)**
+
+- **Role**: Reverse proxy only (no app secrets)
+- **Worker**: `workers/pi-origin-proxy`
+- **Origin**: `pi-origin.cloudless.gr` via Cloudflare Tunnel
+- **Headers**: `x-served-by: pi-tunnel-proxy` indicates proxy path
+- **Secrets**: Empty Wrangler secrets (proxy doesn't need app secrets)
+
+### **Cloudflare Tunnel**
+
+- **Origin**: `pi-origin.cloudless.gr`
+- **Access**: Secure tunnel to k3s cluster
+- **Benefits**: No public IP exposure, automatic SSL
+- **Direct origin**: Available for debugging/crons
+
+---
+
 ## 🎯 **Business Logic Modules**
 
 ### **Customer Journey**
+
 1. **Landing** → Services → Contact → Signup
 2. **Onboarding** → Dashboard → Service selection
 3. **Purchase** → Stripe checkout → Order confirmation
@@ -308,6 +381,7 @@ cloudless.gr → Cloudflare → AWS Lambda (Amplify)
 5. **Support** → Dashboard settings → Support tickets
 
 ### **Admin Operations**
+
 1. **Content management** → AppFlowy projects → Publish
 2. **Campaign creation** → AI assistant → Multi-platform ads
 3. **Analytics review** → Unified dashboards → ROI analysis
