@@ -16,6 +16,8 @@ export default defineConfig({
   },
   // Disable oxc (use esbuild instead)
   oxc: false,
+  // Use custom tsconfig for Vite's import analysis (root level)
+  tsconfig: "tsconfig.vitest.json",
   // Pass Vite config directly to use custom tsconfig for import analysis
   vite: {
     // Override jsx setting for tests (tsconfig.json has jsx: preserve for Next.js)
