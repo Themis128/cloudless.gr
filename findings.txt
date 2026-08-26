@@ -1,0 +1,5 @@
+Findings:
+- Tailscale is active and the omv node (github-omv) is reachable at 100.74.191.58 (direct connection to 192.168.1.200:41641).
+- The k3s cluster has one node named 'office' (control-plane) which is Ready.
+- No pods or services are deployed in the cluster (except the default Kubernetes service).
+- This indicates that the workloads (as per the cluster map) are not running.
