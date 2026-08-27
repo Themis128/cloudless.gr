@@ -6,10 +6,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   esbuild: {
-    // Override tsconfig.json's jsx:"preserve" (Next.js default) so vitest 4.x
-    // esbuild transform handles JSX before import analysis runs.
-    jsx: "react-jsx",
-    jsxImportSource: "react",
+    // tsconfigRaw bypasses tsconfig.json's jsx:"preserve" (Next.js default).
+    // Without this, Vite's esbuild plugin reads tsconfig first, outputs
+    // preserved JSX, then vite:import-analysis fails to parse it.
+    tsconfigRaw: {
+      compilerOptions: {
+        jsx: "react-jsx",
+        jsxImportSource: "react",
+      },
+    },
   },
   resolve: {
     tsconfigPaths: true,
