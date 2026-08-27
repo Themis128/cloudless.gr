@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -176,7 +177,29 @@ export default function ChatWidget() {
                       : "bg-void-light border border-slate-800 text-slate-300"
                   }`}
                 >
-                  {m.content || (
+                  {m.content ? (
+                    m.role === "assistant" ? (
+                      <ReactMarkdown
+                        components={{
+                          table: ({ children }) => (
+                            <div className="my-2 overflow-x-auto">
+                              <table className="w-full border-collapse font-mono text-xs">{children}</table>
+                            </div>
+                          ),
+                          thead: ({ children }) => <thead className="border-b border-slate-600">{children}</thead>,
+                          th: ({ children }) => <th className="px-2 py-1 text-left text-slate-400 font-semibold">{children}</th>,
+                          td: ({ children }) => <td className="px-2 py-1 text-slate-300 border-b border-slate-800/60">{children}</td>,
+                          tr: ({ children }) => <tr className="hover:bg-slate-800/30">{children}</tr>,
+                          strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    ) : (
+                      m.content
+                    )
+                  ) : (
                     <span className="inline-flex gap-1">
                       <span className="animate-bounce text-slate-500">●</span>
                       <span

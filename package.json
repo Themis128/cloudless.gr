@@ -202,6 +202,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-email": "^6.9.2",
+    "react-markdown": "^10.1.0",
     "resend": "^6.22.0",
     "stripe": "^22.5.0",
     "three": "^0.185.1",
