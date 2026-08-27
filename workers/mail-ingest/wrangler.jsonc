@@ -1,0 +1,13 @@
+{
+  "name": "mail-ingest",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-01",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "workers_dev": false,
+  "vars": {
+    // Prefer webmail path until tunnel API token has Cloudflare Tunnel:Edit
+    // for dedicated hostname mail-ingest.cloudless.gr (DNS already exists).
+    "MAIL_INGEST_URL": "https://webmail.cloudless.gr/ingest",
+    "FALLBACK_FORWARD": "themis.baltzakis@gmail.com"
+  }
+}

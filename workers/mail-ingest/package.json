@@ -1,0 +1,13 @@
+{
+  "name": "mail-ingest",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "secret": "wrangler secret put MAIL_INGEST_SECRET"
+  },
+  "devDependencies": {
+    "wrangler": "^4.20.0",
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "typescript": "^5.8.0"
+  }
+}

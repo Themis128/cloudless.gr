@@ -7,6 +7,8 @@ Topic-oriented documentation for cloudless.gr. Pick a folder by subject; each fo
 [roadmap/agency-platform-backlog.md](roadmap/agency-platform-backlog.md) ·
 production edge in `.cursor/rules/cloudless2-pi-proxy.mdc`
 
+**Notifications:** [NOTIFICATIONS.md](NOTIFICATIONS.md) — all channels (Slack, ntfy, email, D1 store), event map, watchdog, infra-layer alerts
+
 | Folder | Topic |
 |--------|--------|
 | [ai/](ai/) | Workers AI, agents, analytics orchestration |

@@ -1,0 +1,17 @@
+[Unit]
+Description=Stagger mailcow after Pi boot so k3s settles first
+After=docker.service k3s-k3s-omv.service k3s.service
+Wants=docker.service
+# Do not block boot; start in background once deps are up.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloudless-boot-stagger.sh
+RemainAfterExit=yes
+TimeoutStartSec=600
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target
