@@ -30,6 +30,16 @@ on:
 permissions:
   contents: read
 
+# Serialize deploys: a newer push queues behind the running build instead of
+# aborting it. cancel-in-progress: false lets the in-flight build finish (so
+# hostPath never lands on a partial/stale sync); GitHub keeps at most one
+# pending run per group, superseding older *queued* runs but never the running
+# one. Fixes builds cancelled mid-"Finalizing page optimization" when rapid
+# main merges arrive during the ~25min Pi build.
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   K3S_NAMESPACE: cloudless
