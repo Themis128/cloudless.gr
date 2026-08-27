@@ -24,6 +24,12 @@ tools:
   bash: true
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+# Do not fail the workflow when Gemini quota is exhausted mid-run.
+# jobs.agent.continue-on-error is also pinned in the compiled lock.yml
+# (gh-aw currently omits it from built-in agent emission).
+jobs:
+  agent:
+    continue-on-error: true
 safe-outputs:
   report-failure-as-issue: false
   noop:
