@@ -234,7 +234,7 @@
     "monocart-coverage-reports": "^2.13.0",
     "monocart-reporter": "^2.12.6",
     "playwright": "^1.49.0",
-    "postcss": "^8.4.0",
+    "postcss": "^8.5.26",
     "prettier": "^3.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "project-mcp": "^3.3.0",
@@ -250,6 +250,13 @@
     "vitest": "^4.1.11",
     "wrangler": "^3.0.0"
   },
-  "pnpm": {}
-
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5": "^8.5.26",
+      "minimatch@<9": "^9.0.9",
+      "ws@<8": "^8.21.3",
+      "undici@<6": "^6.21.0",
+      "sharp@<0.34": "^0.35.4"
+    }
+  }
 }
