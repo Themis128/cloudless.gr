@@ -1,15 +1,32 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { transform as esbuildTransform } from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
-  esbuild: {
-    // Inject React into every JSX/TSX file so components that omit the import
-    // (valid with the new JSX transform) still work under Vitest's classic transform.
-    jsxInject: "import React from 'react'",
+// vite:import-analysis (uses es-module-lexer) runs after user plugins.
+// When tsconfig.json has jsx:"preserve" (Next.js default), files are loaded
+// as-is and import-analysis sees raw JSX → parse failure. A pre-plugin that
+// compiles JSX to regular JS first lets import-analysis proceed normally.
+const jsxTransformPlugin = {
+  name: "jsx-pre-transform",
+  enforce: "pre" as const,
+  async transform(code: string, id: string) {
+    if (!id.endsWith(".tsx") && !id.endsWith(".jsx")) return;
+    const result = await esbuildTransform(code, {
+      loader: id.endsWith(".tsx") ? "tsx" : "jsx",
+      jsx: "automatic",
+      jsxImportSource: "react",
+      sourcemap: true,
+      sourcefile: id,
+    });
+    return { code: result.code, map: result.map };
   },
+};
+
+export default defineConfig({
+  plugins: [jsxTransformPlugin],
   resolve: {
     tsconfigPaths: true,
     // jose lives in the pnpm content-addressable store; the stub symlink at

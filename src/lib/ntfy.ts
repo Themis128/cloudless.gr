@@ -5,7 +5,7 @@
  * for things that should bypass Slack's per-channel noise filters).
  *
  * Config (SSM or env):
- *   NTFY_BASE_URL   default: http://ntfy.monitoring.svc.cluster.local (in-cluster),
+ *   NTFY_BASE_URL   default: http://ntfy.ntfy.svc.cluster.local (in-cluster),
  *                   set to https://ntfy.cloudless.gr if tunnel-exposed.
  *   NTFY_TOPIC      default: cloudless-ops (operator-created topic).
  *   NTFY_TOKEN      optional Bearer token; ntfy supports anonymous publish

@@ -1,12 +1,12 @@
 # Self-Hosted Mail Server — cloudless.gr (on omv-ha)
 
-**Status (2026-08-08):** ✅ **fully live** — outbound (postfix → Resend), mailbox
-(dovecot IMAP), and webmail (Roundcube at `https://webmail.cloudless.gr` via
-the Cloudflare tunnel) all working. Inbound is via Cloudflare Email Routing →
-forward to `themis.baltzakis@gmail.com` (Gmail as the reader). An admin
-dashboard **Webmail** tab under Infrastructure opens the Roundcube UI.
-Host: **omv-ha** (Pi 4, dedicated mail host after it was removed from k3s —
-see the topology note in `CLAUDE.md`).
+**Status (2026-08-26):** ✅ **fully live** — outbound (postfix → Resend), mailbox
+(dovecot IMAP/IMAPS + submission :587), webmail (Roundcube at
+`https://webmail.cloudless.gr`), and **inbound** via Cloudflare Email Routing →
+Worker `mail-ingest` → HTTPS ingest → dovecot Maildir. Catch-all / Worker
+fallback still mirrors to Gmail. An admin **Webmail** tab under Infrastructure
+opens Roundcube. Host: **omv-ha** (dedicated mail host; out of k3s — see
+topology note in `CLAUDE.md`).
 
 ## ⚠️ Why this is NOT a "direct" mail server (read first)
 
@@ -25,17 +25,16 @@ public IP anyway.
 
 The working design routes _around_ both constraints:
 
-| Piece           | How                                                           | Self-hosted? |
-| --------------- | ------------------------------------------------------------- | ------------ |
-| Mailbox + IMAP  | **dovecot** on omv-ha (Maildir virtual user)                  | ✅           |
-| Webmail UI      | **Roundcube** on omv-ha, HTTPS via **Cloudflare Tunnel**      | ✅           |
-| Outbound send   | **postfix** relays via `smtp.resend.com:587` (Resend)         | relay        |
-| Inbound receive | **Cloudflare Email Routing** → forward to Gmail (not dovecot) | ✅           |
+| Piece           | How                                                                 | Self-hosted? |
+| --------------- | ------------------------------------------------------------------- | ------------ |
+| Mailbox + IMAP  | **dovecot** on omv-ha (Maildir; IMAPS 993 + submission 587)         | ✅           |
+| Webmail UI      | **Roundcube** on omv-ha, HTTPS via **Cloudflare Tunnel**            | ✅           |
+| Outbound send   | **postfix** relays via `smtp.resend.com:587` (Resend)               | relay        |
+| Inbound receive | **CF Email Routing** → Worker `mail-ingest` → ingest → dovecot      | ✅ (free CF) |
 
 No port 25, no inbound reachability required — outbound uses :587 (Resend);
-inbound uses Cloudflare Email Routing (MX on Cloudflare). Roundcube compose
-still goes through local postfix → Resend. Reading inbound mail is via Gmail
-(see Inbound section) — not a Worker→dovecot LMTP bridge.
+inbound uses Cloudflare MX + Email Worker. Roundcube compose still goes through
+local postfix → Resend. Clients on Tailscale use IMAPS/SMTP on omv-ha.
 
 ## Components & credentials
 
@@ -57,9 +56,9 @@ Resend sender verification (added 2026-08-08):
 | MX   | `send`              | `feedback-smtp.eu-west-1.amazonses.com` (prio 10) |
 | TXT  | `send`              | `v=spf1 include:amazonses.com ~all`               |
 
-Inbound (Cloudflare Email Routing — **live**): root `MX` points at Cloudflare's
-mail servers. Catch-all and `tbaltzakis@` forward to Gmail. DMARC is live (see
-DMARC status below) — do not treat this section as pending.
+Inbound (Cloudflare Email Routing — **live**): root `MX` → Cloudflare;
+`tbaltzakis@` → Worker `mail-ingest` → dovecot; catch-all → Gmail. SPF is a
+single TXT including Cloudflare + Resend. DMARC live (`p=none`).
 
 ## omv-ha config (what's on the box)
 
@@ -121,18 +120,40 @@ PUT) or Cloudflare Zero Trust dashboard, not by editing files on-box.
 DNS: `webmail.cloudless.gr` CNAME → `<tunnel-uuid>.cfargotunnel.com`
 (proxied). Added via API on 2026-08-08.
 
-## Inbound (Cloudflare Email Routing)
+## Inbound (Cloudflare Email Routing → Worker → dovecot) — LIVE
 
-Cloudflare Email Routing is **enabled** on `cloudless.gr` with:
+Free Cloudflare path (no CF Email Sending product required):
 
-- `tbaltzakis@cloudless.gr` → forward to `themis.baltzakis@gmail.com`
-- catch-all → forward to `themis.baltzakis@gmail.com`
+```
+Internet → CF MX (Email Routing)
+  → Worker mail-ingest (workers/mail-ingest)
+  → POST https://webmail.cloudless.gr/ingest  (+ X-Mail-Ingest-Secret)
+  → PHP → dovecot-lda (as vmail) → Maildir
+```
 
-So all mail _to_ `@cloudless.gr` reaches Gmail. This deliberately does NOT
-land in the dovecot mailbox — building a CF Email Worker → tunnel → LMTP
-bridge would just duplicate mail into Roundcube for zero benefit (you'd
-read the same message twice). If you want inbound in Roundcube specifically,
-change/add a rule to run a Worker that POSTs to a small receiver on omv-ha.
+- Rule `tbaltzakis@cloudless.gr` → **Send to Worker** `mail-ingest`
+- Catch-all → **Send to Worker** `mail-ingest` (every `@cloudless.gr` address)
+- Ingest always delivers into mailbox `tbaltzakis@cloudless.gr` (single client inbox)
+- Worker var `FALLBACK_FORWARD` = Gmail **only if ingest fails**
+- Ingest also exists as nginx `server_name mail-ingest.cloudless.gr`; DNS CNAME
+  is present, but the tunnel is **remotely managed** and the cluster
+  `CLOUDFLARE_API_TOKEN` lacks **Tunnel:Edit**, so public traffic uses the
+  webmail hostname path until that permission is added and the remote ingress
+  gains `mail-ingest.cloudless.gr` → `http://192.168.1.130:80`.
+
+Deploy notes: `workers/mail-ingest/README.md`.
+Host install: `infrastructure/omv-ha/mail-ingest/install-mail-ingest.sh`.
+Submission/IMAPS: `infrastructure/omv-ha/enable-mail-submission.sh`.
+
+### Mail client (Tailscale)
+
+| | |
+| --- | --- |
+| IMAP | `omv-ha` / `100.95.117.84`, port **993**, SSL (accept self-signed) |
+| SMTP | same host, port **587**, STARTTLS + auth |
+| User | `tbaltzakis@cloudless.gr` |
+| Password | mailbox password (`MAIL_TBALTZAKIS_PASSWORD`) |
+| Webmail | https://webmail.cloudless.gr |
 
 ## DMARC status
 

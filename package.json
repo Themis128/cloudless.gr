@@ -182,6 +182,7 @@
     "agents": "^0.20.1",
     "ai": "^7.0.66",
     "aws4fetch": "^1.0.20",
+    "cloudflare": "^7.1.0",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.1",
     "gsap": "^3.12.5",
@@ -224,7 +225,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "^2.1.0",
-    "eslint": "^8.57.0",
+    "@vitest/utils": "^4.1.11",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.2.5",
     "jsdom": "^25.0.0",
     "markdownlint-cli2": "^0.23.2",
@@ -243,12 +245,11 @@
     "tsx": "^4.23.12",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^2.1.0",
+    "vite-node": "^6.0.0",
+    "vite-plugin-node-polyfill": "^0.22.1",
+    "vitest": "^4.1.11",
     "wrangler": "^3.0.0"
   },
-  "pnpm": {
-    "patchedDependencies": {
-      "vite-node@2.1.9": "patches/vite-node@2.1.9.patch"
-    }
-  }
+  "pnpm": {}
+
 }

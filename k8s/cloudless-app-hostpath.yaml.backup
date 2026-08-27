@@ -116,7 +116,7 @@ spec:
             port: 3000
           periodSeconds: 5
           failureThreshold: 30
-          timeoutSeconds: 15
+          timeoutSeconds: 5
         # Readiness fails after 30s (3 × 10s) — was 60s (6 × 10s). Faster
         # signal to the Service; startupProbe absorbs cold-start slow paths
         # so this can be tighter without false negatives.
@@ -126,14 +126,14 @@ spec:
             port: 3000
           periodSeconds: 10
           failureThreshold: 3
-          timeoutSeconds: 15
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /api/health
             port: 3000
           periodSeconds: 30
           failureThreshold: 3
-          timeoutSeconds: 15
+          timeoutSeconds: 5
         # Give Kubernetes a beat to remove this pod's IP from the Service
         # endpoints before the process starts exiting — otherwise in-flight
         # requests during a rolling restart hit a closing socket.

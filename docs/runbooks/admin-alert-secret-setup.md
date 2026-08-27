@@ -7,7 +7,7 @@ match exactly**:
 
 | Side | Where | Read by |
 |---|---|---|
-| Lambda (the receiver) | SSM `/cloudless/production/ADMIN_ALERT_SECRET` (us-east-1) | `src/lib/ssm-config.ts` cold-start; route reads `cfg.ADMIN_ALERT_SECRET` (with fallback to `cfg.NOTION_WEBHOOK_SECRET`) |
+| Pi Next.js app (the receiver) | SSM `/cloudless/production/ADMIN_ALERT_SECRET` (us-east-1) | `src/lib/ssm-config.ts` reads at request time via `pi-standby-aws-creds`; route reads `cfg.ADMIN_ALERT_SECRET` (with fallback to `cfg.NOTION_WEBHOOK_SECRET`) |
 | Senders (probes, CronJobs) | Whatever they need (env var, k8s Secret, etc.) | The pod / process posting the alert |
 
 The route handler:
@@ -36,11 +36,9 @@ aws ssm put-parameter \
   --overwrite \
   --region us-east-1
 
-# 3. Force Lambda cold-start so it picks up the new SSM value.
-# Either redeploy via deploy.yml workflow OR adjust an env var to bounce:
-#   pnpm sst deploy --stage production --target NextjsSite
-# (SSM is read once at module-load; running Lambda containers will keep
-# serving with the old/missing value until they recycle.)
+# 3. The Pi app reads SSM at request time (no module-level caching for
+#    ADMIN_ALERT_SECRET), so the new value is picked up immediately —
+#    no pod restart or redeploy needed.
 
 # 4. Mirror into k8s Secrets that need to call the endpoint.
 #    Currently only one consumer: the sdb1 capacity probe.

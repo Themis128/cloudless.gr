@@ -21,14 +21,20 @@ EspoCRM has its own SMTP bootstrap still pointed at **AWS SES**
 - Host: **omv-ha** (Pi 4, out of k3s). Starlink CGNAT — no public IP; port 25 blocked.
 - Mailbox: `tbaltzakis@cloudless.gr` · Webmail: https://webmail.cloudless.gr
 - Tunnel: `e977a490-58c5-4fdb-9155-86832e3e636a` → `192.168.1.130:80`
-- **Inbound:** Cloudflare Email Routing → forward to `themis.baltzakis@gmail.com`
-  (catch-all too). **Does not** land in dovecot (deliberate).
-- Installer: `infrastructure/omv-ha/setup-mail-server.sh` (dovecot + postfix
-  relay only; Roundcube/tunnel configured separately).
+- **Inbound (LIVE 2026-08-26):** Cloudflare Email Routing → Worker `mail-ingest`
+  → `POST https://webmail.cloudless.gr/ingest` → dovecot-lda → Maildir.
+  `tbaltzakis@` + catch-all → Worker; all addresses land in
+  `tbaltzakis@cloudless.gr` Maildir. `FALLBACK_FORWARD` → Gmail only on ingest failure.
+- Clients: IMAPS `:993` + submission `:587` on omv-ha (Tailscale / LAN);
+  Roundcube at https://webmail.cloudless.gr.
+- Installer: `infrastructure/omv-ha/setup-mail-server.sh` +
+  `infrastructure/omv-ha/mail-ingest/` + `workers/mail-ingest/`.
 - Admin nav: Infrastructure → Webmail.
-- DMARC: `_dmarc.cloudless.gr` live (`p=none`, RUA → `dmarc@` → Gmail).
+- DMARC: `_dmarc.cloudless.gr` live (`p=none`, RUA → `dmarc@` → catch-all → Gmail).
+- SPF: single TXT `v=spf1 include:_spf.mx.cloudflare.net include:_spf.resend.com ~all`
+  (duplicate `v=spf1 mx ~all` removed 2026-08-26 — was locking Email Routing).
 
-Superseded: `infrastructure/snappymail/` (Docker webmail).
+Superseded: `infrastructure/snappymail/`, omv `/srv/mailcow` (quarantined).
 
 ## App transactional (`src/lib/email.ts`)
 
@@ -85,7 +91,7 @@ See `docs/aws/EMAIL-SES.md`.
 | `admin-email-api` + `client-report-email` + `auth-resend-verification-api` | 26/26 pass |
 | Remote D1 `email_suppression` table on `user-auth-db` | Present (`SELECT` ok; 0 rows at probe time) |
 | `https://webmail.cloudless.gr/` | HTTPS reachable (Roundcube) |
-| Doc consistency | Inbound = Gmail-only; App sync = CF REST → Resend; suppression before send |
+| Doc consistency | Inbound = Worker→dovecot (+ Gmail catch-all/fallback); App = CF REST → Resend |
 
-Do **not** treat Worker→dovecot LMTP as live. Do **not** confuse omv-ha postfix
-relay (human compose) with `@/lib/email` (API transactional).
+Do **not** confuse omv-ha postfix relay (human compose) with `@/lib/email`
+(API transactional).

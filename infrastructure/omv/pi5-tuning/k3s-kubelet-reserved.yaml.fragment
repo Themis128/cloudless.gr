@@ -1,0 +1,10 @@
+# Appended / merged into /etc/rancher/k3s/config.yaml by install-pi5-tuning.sh
+# Pi 5 8GB single-node: reserve host + kubelet memory so pods cannot starve
+# systemd/etcd into a watchdog reset.
+kubelet-arg:
+  - "system-reserved=cpu=300m,memory=768Mi"
+  - "kube-reserved=cpu=250m,memory=512Mi"
+  - "eviction-hard=memory.available<400Mi,nodefs.available<15%,imagefs.available<15%"
+  - "eviction-soft=memory.available<600Mi"
+  - "eviction-soft-grace-period=memory.available=1m"
+  - "max-pods=90"
