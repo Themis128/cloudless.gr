@@ -5,7 +5,7 @@ import AgentCounter from "@/components/AgentCounter";
 
 export const metadata: Metadata = {
   title: "Agents",
-  description: "Cloudless Agent Workers - Interactive demos and tools.",
+  description: "Cloudless Agent Workers — Interactive demos and tools.",
   alternates: {
     canonical: "https://cloudless.gr/agents",
   },
