@@ -313,7 +313,7 @@ export default function AIAssistantPage() {
                   id="targetAudience"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
-                  placeholder="e.g. Greek SMB owners, 30-55"
+                  placeholder="e.g. Greek SMB owners, 30–55"
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
                 />
               </div>
