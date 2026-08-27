@@ -55,6 +55,7 @@ Used by `notifyTeam()` for high-severity alerts (→ `tbaltzakis@cloudless.gr`)
 and by the SafeDeploy Watchdog independently via Resend REST.
 
 Dispatch order (app path):
+
 1. Workers `EMAIL` binding
 2. Cloudflare Email Sending REST (`email-cloudflare.ts`)
 3. Resend SDK (`email-resend.ts`)
