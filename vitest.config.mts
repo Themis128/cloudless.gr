@@ -16,7 +16,7 @@ const jsxTransformPlugin = {
     if (!id.endsWith(".tsx") && !id.endsWith(".jsx")) return;
     const result = await esbuildTransform(code, {
       loader: id.endsWith(".tsx") ? "tsx" : "jsx",
-      jsx: "react-jsx",
+      jsx: "automatic",
       jsxImportSource: "react",
       sourcemap: true,
       sourcefile: id,
