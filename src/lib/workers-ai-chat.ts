@@ -24,6 +24,14 @@ import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
+// Detect when the model outputs reasoning instead of a visitor-facing reply
+const REASONING_PATTERNS = /^(we need to|i need to|let me|the user|we should|to book|looking at|it seems|we must|however we|given the|since we|the slot|need iso|the tool|let's assume)/i;
+
+function looksLikeLeakedReasoning(text: string): boolean {
+  const t = text.trim();
+  return REASONING_PATTERNS.test(t) || (t.length > 250 && /we need to|i need to|let me think|we should call|we must|the model/i.test(t));
+}
+
 async function callChatBackend(messages: { role: string; content: string }[]): Promise<string> {
   if (isNvidiaProxyConfigured()) {
     return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
@@ -59,10 +67,23 @@ export async function runWorkersAiChatLoop(
     ...initialMessages.map((m) => ({ role: m.role, content: m.content })),
   ];
 
+  let reasoningRetried = false;
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const reply = await callChatBackend(messages);
     const toolCall = parseWorkersAiToolCall(reply);
-    if (!toolCall) return reply || "Sorry — I could not generate a reply.";
+    if (!toolCall) {
+      // If the model leaked reasoning as plain text, give it one silent retry
+      if (!reasoningRetried && looksLikeLeakedReasoning(reply)) {
+        reasoningRetried = true;
+        messages.push({ role: "assistant", content: reply });
+        messages.push({
+          role: "user",
+          content: "Please send your final reply to the visitor now. No reasoning — just the message they should read.",
+        });
+        continue;
+      }
+      return reply || "Sorry — I could not generate a reply.";
+    }
 
     messages.push({ role: "assistant", content: reply });
     const toolResult = await runTool(toolCall.name, toolCall.args);

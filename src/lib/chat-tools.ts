@@ -168,8 +168,17 @@ async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<
     return `No open 30-minute slots in the next ${days} day(s). Suggest the visitor use the Contact page or check back tomorrow.`;
   }
 
-  const table = formatAthensSlotsTable(slots.slice(0, MAX_SLOT_RESULTS));
-  return `Available slots (Athens time):\n\n${table}\n\nSTART YOUR REPLY WITH A ONE-SENTENCE INTRO, THEN OUTPUT THE EXACT TABLE ABOVE — DO NOT CONVERT IT TO BULLETS OR A LIST. After the table, ask the visitor which row number they prefer and for their full name and email so you can call book_slot. They can also book directly at https://cloudless.gr/book.`;
+  const capped = slots.slice(0, MAX_SLOT_RESULTS);
+  const table = formatAthensSlotsTable(capped, { includeRefs: false });
+  // Machine-readable JSON so the model can copy exact ISO values into book_slot
+  const isoData = JSON.stringify(
+    capped.map((s, i) => ({ row: i + 1, start: s.start, end: s.end }))
+  );
+  return [
+    `Available consultation slots (Athens time):\n\n${table}`,
+    `BOOKING_ISO_DATA:${isoData}`,
+    `ASK THE VISITOR: "Which row would you like? Please reply with your row number, full name, and email all at once — e.g. '1, Jane Smith, jane@example.com'." Then call book_slot in one step using BOOKING_ISO_DATA for the start/end of the chosen row.`,
+  ].join("\n\n");
 }
 
 async function runBookSlot(input: BookSlotInput): Promise<string> {
