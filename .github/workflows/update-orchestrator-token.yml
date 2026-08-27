@@ -26,5 +26,5 @@ jobs:
       run: |
         set -euo pipefail
         cd workers/pi-deploy-orchestrator
-        echo "$NEW_TOKEN" | npx wrangler secret put DEPLOY_ORCHESTRATOR_TOKEN
+        echo "$NEW_TOKEN" | npx wrangler secret put DEPLOY_ORCHESTRATOR_TOKEN --name pi-deploy-orchestrator
         echo "CF Worker secret updated"
