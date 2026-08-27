@@ -6,9 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   esbuild: {
-    // Inject React into every JSX/TSX file so components that omit the import
-    // (valid with the new JSX transform) still work under Vitest's classic transform.
-    jsxInject: "import React from 'react'",
+    // Override tsconfig.json's jsx:"preserve" (Next.js default) so vitest 4.x
+    // esbuild transform handles JSX before import analysis runs.
+    jsx: "react-jsx",
+    jsxImportSource: "react",
   },
   resolve: {
     tsconfigPaths: true,
