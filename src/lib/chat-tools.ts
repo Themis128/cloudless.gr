@@ -15,12 +15,13 @@ import { getAvailableSlots, bookConsultation } from "@/lib/google-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, notifyTeam } from "@/lib/email";
 import {
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
   clampDaysAhead,
   formatAthensSlot,
+  formatAthensSlotsTable,
 } from "@/lib/booking-slots";
 
 const SITE_BASE_URL = "https://cloudless.gr";
@@ -51,7 +52,7 @@ export const CHAT_TOOLS = [
   {
     name: "check_calendar_availability",
     description:
-      "Look up available 30-minute consultation slots in the next N days. Use this when the visitor asks to book a call, see availability, or schedule an audit. Returns up to 5 upcoming slots in Athens local time.",
+      "Look up available 30-minute consultation slots in the next N days. Use this when the visitor asks to book a call, see availability, or schedule an audit. Returns up to 5 upcoming slots as a markdown table (Day | Time, Athens local).",
     input_schema: {
       type: "object",
       properties: {
@@ -167,10 +168,8 @@ async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<
     return `No open 30-minute slots in the next ${days} day(s). Suggest the visitor use the Contact page or check back tomorrow.`;
   }
 
-  const lines = slots
-    .slice(0, MAX_SLOT_RESULTS)
-    .map((s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`);
-  return `Available slots (next ${days} day(s)):\n${lines.join("\n")}\nAsk the visitor which slot they prefer, then collect their name and email to call book_slot. They can also book directly at https://cloudless.gr/book.`;
+  const table = formatAthensSlotsTable(slots.slice(0, MAX_SLOT_RESULTS));
+  return `Available slots (Athens time):\n\n${table}\n\nSTART YOUR REPLY WITH A ONE-SENTENCE INTRO, THEN OUTPUT THE EXACT TABLE ABOVE — DO NOT CONVERT IT TO BULLETS OR A LIST. After the table, ask the visitor which row number they prefer and for their full name and email so you can call book_slot. They can also book directly at https://cloudless.gr/book.`;
 }
 
 async function runBookSlot(input: BookSlotInput): Promise<string> {
@@ -197,6 +196,7 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   }
 
   const slotLabel = formatAthensSlot(start, end);
+  const meetLink = result.meetLink;
 
   // Fire-and-forget notifications — never block or fail the booking confirmation
   slackBookingNotify({
@@ -204,24 +204,38 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
     email,
     start,
     notes,
-    meetLink: result.htmlLink,
+    meetLink,
   }).catch((err) => console.warn("[chat-tools] slackBookingNotify failed:", err));
   sendBookingConfirmation({
     name,
     email,
     slotLabel,
-    meetLink: result.htmlLink,
+    meetLink,
     notes,
   }).catch((err) => console.warn("[chat-tools] sendBookingConfirmation failed:", err));
+  notifyTeam(
+    `New consultation booked — ${name}`,
+    [
+      `<p><strong>Name:</strong> ${name}</p>`,
+      `<p><strong>Email:</strong> ${email}</p>`,
+      `<p><strong>Slot:</strong> ${slotLabel}</p>`,
+      meetLink ? `<p><strong>Google Meet:</strong> <a href="${meetLink}">${meetLink}</a></p>` : "",
+      notes ? `<p><strong>Notes:</strong> ${notes}</p>` : "",
+    ]
+      .filter(Boolean)
+      .join("\n")
+  ).catch((err) => console.warn("[chat-tools] notifyTeam failed:", err));
 
   return [
     `Booking confirmed!`,
     `Slot: ${slotLabel}`,
     `Name: ${name}`,
     `Email: ${email}`,
-    `Google Meet: ${result.htmlLink}`,
+    meetLink ? `Google Meet: ${meetLink}` : "",
     `A calendar invite and confirmation email have been sent to ${email}.`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

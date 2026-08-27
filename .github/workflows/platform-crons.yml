@@ -2,11 +2,12 @@ name: Platform crons
 
 # Triggers the app's authenticated cron endpoints on a schedule:
 #
-#   /api/cron/owner-digest    — weekly Slack digest (Mon 06:00 UTC)
-#   /api/cron/client-reports  — monthly client status emails (1st 08:00 UTC;
-#                               endpoint is idempotent within a 25-day window,
-#                               so re-runs are safe)
-#   /api/cron/email-digest    — weekly executive email digest (Mon 08:00 UTC)
+#   /api/cron/owner-digest           — weekly Slack digest (Mon 06:00 UTC)
+#   /api/cron/client-reports         — monthly client status emails (1st 08:00 UTC;
+#                                      endpoint is idempotent within a 25-day window,
+#                                      so re-runs are safe)
+#   /api/cron/email-digest           — weekly executive email digest (Mon 08:00 UTC)
+#   /api/cron/consultation-reminder  — pre-consultation Slack+email reminder (every 30min)
 #
 # Auth: CRON_SECRET is read from SSM /cloudless/production/CRON_SECRET via the
 # existing AWS OIDC deploy role — no extra repo secrets needed.
@@ -18,6 +19,7 @@ on:
   - cron: 0 6 * * 1       # owner-digest — Mondays 06:00 UTC
   - cron: 0 8 1 * *       # client-reports — 1st of the month 08:00 UTC
   - cron: 0 8 * * 1       # email-digest — Mondays 08:00 UTC
+  - cron: 0,30 * * * *    # consultation-reminder — every 30 minutes
   workflow_dispatch:
     inputs:
       target:
@@ -29,6 +31,7 @@ on:
         - owner-digest
         - client-reports
         - email-digest
+        - consultation-reminder
 
 permissions:
   id-token: write
@@ -65,12 +68,14 @@ jobs:
         RUN_DIGEST="false"
         RUN_REPORTS="false"
         RUN_EMAIL_DIGEST="false"
+        RUN_CONSULT_REMINDER="false"
         if [ "$EVENT" = "workflow_dispatch" ]; then
           case "$INPUT" in
-            all)             RUN_DIGEST="true"; RUN_REPORTS="true"; RUN_EMAIL_DIGEST="true" ;;
-            owner-digest)    RUN_DIGEST="true" ;;
-            client-reports)  RUN_REPORTS="true" ;;
-            email-digest)    RUN_EMAIL_DIGEST="true" ;;
+            all)                    RUN_DIGEST="true"; RUN_REPORTS="true"; RUN_EMAIL_DIGEST="true"; RUN_CONSULT_REMINDER="true" ;;
+            owner-digest)           RUN_DIGEST="true" ;;
+            client-reports)         RUN_REPORTS="true" ;;
+            email-digest)           RUN_EMAIL_DIGEST="true" ;;
+            consultation-reminder)  RUN_CONSULT_REMINDER="true" ;;
           esac
         elif [ "$SCHEDULE" = "0 6 * * 1" ]; then
           RUN_DIGEST="true"
@@ -78,10 +83,13 @@ jobs:
           RUN_REPORTS="true"
         elif [ "$SCHEDULE" = "0 8 * * 1" ]; then
           RUN_EMAIL_DIGEST="true"
+        elif [ "$SCHEDULE" = "0,30 * * * *" ]; then
+          RUN_CONSULT_REMINDER="true"
         fi
         echo "digest=$RUN_DIGEST" >> "$GITHUB_OUTPUT"
         echo "reports=$RUN_REPORTS" >> "$GITHUB_OUTPUT"
         echo "email_digest=$RUN_EMAIL_DIGEST" >> "$GITHUB_OUTPUT"
+        echo "consult_reminder=$RUN_CONSULT_REMINDER" >> "$GITHUB_OUTPUT"
 
     - name: Trigger owner-digest
       if: steps.targets.outputs.digest == 'true'
@@ -118,6 +126,19 @@ jobs:
           "$BASE_URL/api/cron/email-digest")
         echo "Response: $RESPONSE"
         echo "## Email digest" >> "$GITHUB_STEP_SUMMARY"
+        echo '```json' >> "$GITHUB_STEP_SUMMARY"
+        echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Trigger consultation-reminder
+      if: steps.targets.outputs.consult_reminder == 'true'
+      run: |
+        echo "Calling $BASE_URL/api/cron/consultation-reminder"
+        RESPONSE=$(curl -fsS --retry 2 --retry-delay 5 --max-time 30 \
+          -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
+          "$BASE_URL/api/cron/consultation-reminder")
+        echo "Response: $RESPONSE"
+        echo "## Consultation reminder" >> "$GITHUB_STEP_SUMMARY"
         echo '```json' >> "$GITHUB_STEP_SUMMARY"
         echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
         echo '```' >> "$GITHUB_STEP_SUMMARY"

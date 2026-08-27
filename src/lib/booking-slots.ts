@@ -31,6 +31,13 @@ const ATHENS_TIME_ONLY_FORMAT: Intl.DateTimeFormatOptions = {
   hour12: false,
 };
 
+const ATHENS_DAY_FORMAT: Intl.DateTimeFormatOptions = {
+  timeZone: APP_TIMEZONE,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+};
+
 /**
  * Format a slot as e.g. "Tue Aug 12 10:00–10:30 Athens".
  */
@@ -38,6 +45,42 @@ export function formatAthensSlot(start: string, end: string): string {
   const startStr = new Date(start).toLocaleString("en-IE", ATHENS_DATE_FORMAT);
   const endStr = new Date(end).toLocaleTimeString("en-IE", ATHENS_TIME_ONLY_FORMAT);
   return `${startStr}–${endStr} Athens`;
+}
+
+/** Day label only, e.g. "Fri, 28 Aug". */
+export function formatAthensSlotDay(start: string): string {
+  return new Date(start).toLocaleDateString("en-IE", ATHENS_DAY_FORMAT);
+}
+
+/** Time range only, e.g. "09:00–09:30". */
+export function formatAthensSlotTimeRange(start: string, end: string): string {
+  const startTime = new Date(start).toLocaleTimeString("en-IE", ATHENS_TIME_ONLY_FORMAT);
+  const endTime = new Date(end).toLocaleTimeString("en-IE", ATHENS_TIME_ONLY_FORMAT);
+  return `${startTime}–${endTime}`;
+}
+
+/**
+ * Markdown table of slots for chat (Day | Time). Includes a machine-readable
+ * footer with ISO start/end so book_slot can use exact values.
+ */
+export function formatAthensSlotsTable(
+  slots: { start: string; end: string }[],
+  options?: { includeRefs?: boolean }
+): string {
+  const includeRefs = options?.includeRefs !== false;
+  const header = "| # | Day | Time (Athens) |\n| --- | --- | --- |";
+  const rows = slots.map((s, i) => {
+    const n = i + 1;
+    const day = formatAthensSlotDay(s.start);
+    const time = formatAthensSlotTimeRange(s.start, s.end);
+    return `| ${n} | ${day} | ${time} |`;
+  });
+  const table = [header, ...rows].join("\n");
+  if (!includeRefs) return table;
+  const refs = slots
+    .map((s, i) => `${i + 1}. start=${s.start} end=${s.end}`)
+    .join("\n");
+  return `${table}\n\nSlot refs (use exact ISO values for book_slot):\n${refs}`;
 }
 
 /**

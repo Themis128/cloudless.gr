@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatAthensSlot,
+  formatAthensSlotsTable,
   clampDaysAhead,
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
@@ -37,6 +38,43 @@ describe("booking-slots", () => {
       // name. A regression that re-introduces "+03" would break the UX.
       expect(out).not.toMatch(/\+0?3/);
       expect(out).not.toMatch(/GMT/);
+    });
+  });
+
+  describe("formatAthensSlotsTable", () => {
+    // Slots that correspond to 09:00–10:30 Athens summer time (UTC+3)
+    const slots = [
+      { start: "2026-08-28T06:00:00.000Z", end: "2026-08-28T06:30:00.000Z" },
+      { start: "2026-08-28T06:30:00.000Z", end: "2026-08-28T07:00:00.000Z" },
+      { start: "2026-08-28T07:00:00.000Z", end: "2026-08-28T07:30:00.000Z" },
+    ];
+
+    it("outputs a markdown table with header row", () => {
+      const table = formatAthensSlotsTable(slots);
+      expect(table).toContain("| # | Day | Time (Athens) |");
+      expect(table).toContain("| --- | --- | --- |");
+    });
+
+    it("has one data row per slot", () => {
+      const table = formatAthensSlotsTable(slots);
+      const rows = table.split("\n").filter((l) => /^\| \d/.test(l));
+      expect(rows).toHaveLength(3);
+    });
+
+    it("includes ISO refs by default", () => {
+      const table = formatAthensSlotsTable(slots);
+      expect(table).toContain("start=2026-08-28T06:00:00.000Z");
+    });
+
+    it("omits ISO refs when includeRefs=false", () => {
+      const table = formatAthensSlotsTable(slots, { includeRefs: false });
+      expect(table).not.toContain("start=");
+    });
+
+    it("renders Athens time (UTC+3 in summer), not UTC", () => {
+      const table = formatAthensSlotsTable(slots);
+      // 06:00 UTC = 09:00 Athens summer
+      expect(table).toContain("09:00");
     });
   });
 

@@ -45,14 +45,13 @@ describe("google-calendar.ts", () => {
       await expect(getAvailableSlots()).rejects.toThrow("Google service account not configured");
     });
 
-    it("returns empty array when freeBusy request fails", async () => {
+    it("throws when freeBusy request fails", async () => {
       vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(new Response("error", { status: 500 }));
 
       const { getAvailableSlots } = await importGcal();
-      const slots = await getAvailableSlots(1);
-      expect(slots).toEqual([]);
+      await expect(getAvailableSlots(1)).rejects.toThrow("Google Calendar freeBusy failed (500)");
     });
 
     it("generates slots at correct UTC time for Athens summer (UTC+3)", async () => {
@@ -116,7 +115,57 @@ describe("google-calendar.ts", () => {
       expect(result).toBeNull();
     });
 
-    it("returns eventId and htmlLink on success", async () => {
+    it("passes sendUpdates=all in the request URL", async () => {
+      vi.mocked(globalThis.fetch)
+        .mockResolvedValueOnce(mockAuthOk())
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id: "e1", htmlLink: "https://cal.google.com/e/e1" }), {
+            status: 200,
+          })
+        );
+
+      const { bookConsultation } = await importGcal();
+      await bookConsultation({
+        name: "Test User",
+        email: TEST_EMAIL,
+        start: "2026-05-10T09:00:00Z",
+        end: "2026-05-10T09:30:00Z",
+      });
+
+      const calendarCall = vi.mocked(globalThis.fetch).mock.calls[1];
+      expect(String(calendarCall?.[0])).toContain("sendUpdates=all");
+    });
+
+    it("returns eventId, htmlLink and meetLink on success", async () => {
+      const meetUrl = "https://meet.google.com/abc-defg-hij";
+      vi.mocked(globalThis.fetch)
+        .mockResolvedValueOnce(mockAuthOk())
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              id: "event-abc",
+              htmlLink: "https://cal.google.com/event/event-abc",
+              conferenceData: {
+                entryPoints: [{ entryPointType: "video", uri: meetUrl }],
+              },
+            }),
+            { status: 200 }
+          )
+        );
+
+      const { bookConsultation } = await importGcal();
+      const result = await bookConsultation({
+        name: "Test User",
+        email: TEST_EMAIL,
+        start: "2026-05-10T09:00:00Z",
+        end: "2026-05-10T09:30:00Z",
+      });
+      expect(result).not.toBeNull();
+      expect(result!.eventId).toBe("event-abc");
+      expect(result!.meetLink).toBe(meetUrl);
+    });
+
+    it("returns meetLink undefined when conferenceData is absent", async () => {
       vi.mocked(globalThis.fetch)
         .mockResolvedValueOnce(mockAuthOk())
         .mockResolvedValueOnce(
@@ -134,7 +183,7 @@ describe("google-calendar.ts", () => {
         end: "2026-05-10T09:30:00Z",
       });
       expect(result).not.toBeNull();
-      expect(result!.eventId).toBe("event-abc");
+      expect(result!.meetLink).toBeUndefined();
     });
   });
 

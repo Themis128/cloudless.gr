@@ -122,6 +122,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/email/campaigns", label: "Email Campaigns", Icon: Mail },
       { href: "/admin/pipeline", label: "Pipeline", Icon: GitMerge },
       { href: "/admin/calendar", label: "Calendar", Icon: CalendarDays },
+      { href: "/admin/consultations", label: "Consultations", Icon: Clock },
       { href: "/admin/postiz", label: "Postiz", Icon: Megaphone },
       { href: "/admin/ai-assistant", label: "AI Assistant", Icon: Bot },
       { href: "/admin/ai-generator", label: "AI Generator", Icon: Bot },

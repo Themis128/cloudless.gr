@@ -128,11 +128,21 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
     }),
   });
 
-  if (!freeBusyRes.ok) return [];
+  if (!freeBusyRes.ok) {
+    const detail = await freeBusyRes.text().catch(() => "");
+    console.error("[GCal] freeBusy failed:", freeBusyRes.status, detail.slice(0, 300));
+    throw new Error(`Google Calendar freeBusy failed (${freeBusyRes.status})`);
+  }
   const freeBusyData = (await freeBusyRes.json()) as {
-    calendars?: Record<string, { busy?: TimeSlot[] }>;
+    calendars?: Record<string, { busy?: TimeSlot[]; errors?: { reason?: string; message?: string }[] }>;
   };
-  const busySlots: TimeSlot[] = freeBusyData.calendars?.[calendarId]?.busy ?? [];
+  const cal = freeBusyData.calendars?.[calendarId];
+  if (cal?.errors?.length) {
+    const msg = cal.errors.map((e) => e.message || e.reason || "unknown").join("; ");
+    console.error("[GCal] freeBusy calendar errors:", msg);
+    throw new Error(`Google Calendar freeBusy calendar error: ${msg}`);
+  }
+  const busySlots: TimeSlot[] = cal?.busy ?? [];
 
   // Generate 30-min slots during business hours (09:00-17:00 Europe/Athens).
   // Athens is UTC+2 (EET) in winter and UTC+3 (EEST) in summer; the offset
@@ -147,13 +157,14 @@ export async function bookConsultation(data: {
   start: string;
   end: string;
   notes?: string;
-}): Promise<{ eventId: string; htmlLink: string } | null> {
+}): Promise<{ eventId: string; htmlLink: string; meetLink?: string } | null> {
   const { GOOGLE_CALENDAR_ID } = await getConfig();
   const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
 
   try {
+    // sendUpdates=all ensures Google sends the calendar invite email to the attendee
     const res = await calendarFetch(
-      `/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1`,
+      `/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`,
       {
         method: "POST",
         body: JSON.stringify({
@@ -184,12 +195,24 @@ export async function bookConsultation(data: {
     );
 
     if (!res.ok) {
-      console.error("[GCal] Create event failed:", res.status);
+      const detail = await res.text().catch(() => "");
+      console.error("[GCal] Create event failed:", res.status, detail.slice(0, 300));
       return null;
     }
 
-    const event = (await res.json()) as { id: string; htmlLink: string };
-    return { eventId: event.id, htmlLink: event.htmlLink };
+    const event = (await res.json()) as {
+      id: string;
+      htmlLink: string;
+      conferenceData?: {
+        entryPoints?: Array<{ entryPointType?: string; uri?: string }>;
+      };
+    };
+
+    const meetLink = event.conferenceData?.entryPoints?.find(
+      (ep) => ep.entryPointType === "video"
+    )?.uri;
+
+    return { eventId: event.id, htmlLink: event.htmlLink, meetLink };
   } catch (err) {
     console.error("[GCal] Error:", err);
     return null;
@@ -203,6 +226,59 @@ interface Consultation {
   end: string;
   meetLink?: string;
   status: "upcoming" | "past";
+}
+
+/**
+ * List all upcoming consultation events on the owner's calendar (next 30 days).
+ * Used by the admin consultations page.
+ */
+export async function getUpcomingConsultations(): Promise<Consultation[]> {
+  const { GOOGLE_CALENDAR_ID } = await getConfig();
+  const calendarId = GOOGLE_CALENDAR_ID ?? DEFAULT_CALENDAR_ID;
+
+  const now = new Date();
+  const timeMax = new Date(now.getTime() + LOOKAHEAD_DAYS * MS_PER_DAY).toISOString();
+
+  try {
+    const params = new URLSearchParams({
+      timeMin: now.toISOString(),
+      timeMax,
+      q: "Consultation",
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: String(MAX_CALENDAR_RESULTS),
+    });
+
+    const res = await calendarFetch(
+      `/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+    );
+
+    if (!res.ok) return [];
+    const data = (await res.json()) as { items?: Record<string, unknown>[] };
+    const items = data.items ?? [];
+
+    return items
+      .filter(
+        (evt: Record<string, unknown>) =>
+          typeof evt.summary === "string" &&
+          (evt.summary as string).toLowerCase().includes("consultation")
+      )
+      .map((evt: Record<string, unknown>) => {
+        const start = (evt.start as { dateTime?: string })?.dateTime ?? "";
+        return {
+          id: evt.id as string,
+          title: evt.summary as string,
+          start,
+          end: (evt.end as { dateTime?: string })?.dateTime ?? "",
+          meetLink: (evt.conferenceData as { entryPoints?: Array<{ uri?: string }> })
+            ?.entryPoints?.[0]?.uri,
+          status: new Date(start) > now ? "upcoming" : "past",
+        } satisfies Consultation;
+      });
+  } catch (err) {
+    console.error("[GCal] getUpcomingConsultations error:", err);
+    return [];
+  }
 }
 
 /**
