@@ -1,0 +1,80 @@
+name: Debug Pi release pull agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue to post results to
+        required: false
+        default: '382'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: ${{ github.event.inputs.issue || '382' }}
+    steps:
+    - name: Connect to tailnet
+      uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888         # v4.1.3
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+
+    - name: Setup SSH key
+      run: |
+        install -d -m 700 ~/.ssh
+        echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+    - name: Diagnose pull agent on omv
+      id: diag
+      run: |
+        set -euo pipefail
+        SSH="ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=15 tbaltzakis@100.74.191.58"
+        {
+          echo "### Pi pull-agent diagnostic — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+          echo ""
+          echo "#### Timer status"
+          echo '```'
+          $SSH "systemctl status pi-release-pull.timer --no-pager 2>&1 | head -20" || echo "(timer not found)"
+          echo '```'
+          echo ""
+          echo "#### Last 30 service log lines"
+          echo '```'
+          $SSH "journalctl -u pi-release-pull.service -n 30 --no-pager 2>&1 || journalctl -t pi-release-pull -n 30 --no-pager 2>&1 || echo '(no logs)'"
+          echo '```'
+          echo ""
+          echo "#### Env file present"
+          echo '```'
+          $SSH "test -f /etc/cloudless/pi-release-pull.env && echo 'EXISTS — keys:' && sudo grep -oP '^[A-Z_]+' /etc/cloudless/pi-release-pull.env | sort || echo 'MISSING'"
+          echo '```'
+          echo ""
+          echo "#### Script present"
+          echo '```'
+          $SSH "test -f /usr/local/sbin/pi-release-pull.sh && echo 'EXISTS' || echo 'MISSING'"
+          echo '```'
+          echo ""
+          echo "#### System load + iowait"
+          echo '```'
+          $SSH "uptime && mpstat 1 1 2>/dev/null | tail -3 || echo '(mpstat unavailable)'"
+          echo '```'
+          echo ""
+          echo "#### Current symlink / health"
+          echo '```'
+          $SSH "readlink /home/tbaltzakis/cloudless-standalone 2>/dev/null || echo '(symlink missing)'; curl -sS --max-time 5 http://127.0.0.1:30300/api/health 2>/dev/null || echo '(health unreachable)'"
+          echo '```'
+        } | tee /tmp/diag.md
+        echo "done"
+
+    - name: Post results
+      if: always()
+      run: |
+        gh issue comment "$ISSUE" \
+          --repo "${{ github.repository }}" \
+          --body-file /tmp/diag.md
