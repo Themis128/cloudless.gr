@@ -43,11 +43,12 @@ async function updateTunnelConfig() {
           { hostname: "agent.cloudless.gr", service: "http://192.168.1.128:30924", originRequest: { connectTimeout: "30s", tcpKeepAlive: "30s", httpHostHeader: "agent.cloudless.gr" } },
           { hostname: "vibe.cloudless.gr", service: "http://192.168.1.128:30301", originRequest: { connectTimeout: "30s", tcpKeepAlive: "30s", httpHostHeader: "vibe.cloudless.gr" } },
           { hostname: "logs.cloudless.gr", service: "http://192.168.1.128:30820", originRequest: { connectTimeout: "10s", tcpKeepAlive: "30s", keepAliveConnections: 10, keepAliveTimeout: "90s" } },
-          { service: "http_status:404" }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { service: "http_status:404" } as any,
         ]
       }
     };
-    
+
     const result = await client.zeroTrust.tunnels.cloudflared.configurations.update(TUNNEL_ID, {
       account_id: CF_ACCOUNT_ID!,
       ...newConfig
