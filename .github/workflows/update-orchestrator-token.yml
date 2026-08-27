@@ -1,0 +1,44 @@
+name: Update orchestrator deploy token
+
+# One-shot: rotates DEPLOY_ORCHESTRATOR_TOKEN on the CF Worker and GH secret.
+# Run once after writing a new token to /etc/cloudless/pi-release-pull.env on omv.
+on:
+  workflow_dispatch:
+    inputs:
+      new_token:
+        description: New DEPLOY_ORCHESTRATOR_TOKEN value (hex string)
+        required: true
+
+permissions:
+  contents: read
+  secrets: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+
+    - name: Update Cloudflare Worker secret
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        NEW_TOKEN: ${{ inputs.new_token }}
+      run: |
+        set -euo pipefail
+        cd workers/pi-deploy-orchestrator
+        echo "$NEW_TOKEN" | npx wrangler secret put DEPLOY_ORCHESTRATOR_TOKEN
+        echo "CF Worker secret updated"
+
+    - name: Update GitHub secret
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN_ADMIN }}
+        NEW_TOKEN: ${{ inputs.new_token }}
+      run: |
+        set -euo pipefail
+        if [ -z "${GH_TOKEN:-}" ]; then
+          echo "::warning::GH_TOKEN_ADMIN not set — skipping GitHub secret update; set DEPLOY_ORCHESTRATOR_TOKEN manually via gh secret set"
+          exit 0
+        fi
+        echo "$NEW_TOKEN" | gh secret set DEPLOY_ORCHESTRATOR_TOKEN --repo "${{ github.repository }}"
+        echo "GitHub secret updated"
