@@ -14,23 +14,36 @@
  *   KUBECONFIG      (default: /etc/rancher/k3s/k3s.yaml on Pi runner)
  */
 
-import { readFileSync, readdirSync, writeFileSync } from "fs";
+import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join, basename, dirname } from "path";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dir, "..", "infrastructure", "n8n", "workflows");
-const NS = process.env.N8N_NAMESPACE ?? "n8n";
-const SUDO = process.env.KUBECTL_SUDO === "false" ? "" : "sudo ";
 
-function kube(cmd) {
-  return execSync(`${SUDO}kubectl ${cmd}`, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+// Validate namespace: k8s names are lowercase alphanumeric + hyphens, max 63 chars
+const RAW_NS = process.env.N8N_NAMESPACE ?? "n8n";
+if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(RAW_NS)) {
+  console.error(`Invalid N8N_NAMESPACE value: "${RAW_NS}"`);
+  process.exit(1);
+}
+const NS = RAW_NS;
+
+const USE_SUDO = process.env.KUBECTL_SUDO !== "false";
+
+function kube(args) {
+  const argv = USE_SUDO ? ["sudo", "kubectl", ...args] : ["kubectl", ...args];
+  return execFileSync(argv[0], argv.slice(1), {
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "pipe"],
+  }).trim();
 }
 
-function kubeSilent(cmd) {
+function kubeSilent(args) {
   try {
-    return kube(cmd);
+    return kube(args);
   } catch {
     return "";
   }
@@ -50,9 +63,11 @@ async function main() {
   console.log(`\n📂  ${files.length} workflow file(s) in infrastructure/n8n/workflows/\n`);
 
   // Get the n8n pod name
-  const pod = kube(
-    `get pods -n ${NS} -l app=n8n -o jsonpath='{.items[0].metadata.name}'`
-  ).replace(/'/g, "");
+  const pod = kube([
+    "get", "pods", "-n", NS,
+    "-l", "app=n8n",
+    "-o", "jsonpath={.items[0].metadata.name}",
+  ]);
 
   if (!pod) {
     console.error("No n8n pod found in namespace", NS);
@@ -61,12 +76,13 @@ async function main() {
   console.log(`🔗  Pod: ${pod}\n`);
 
   // Export all existing workflows from the pod to get name→id mapping
-  kubeSilent(
-    `exec -n ${NS} ${pod} -- n8n export:workflow --all --output=/tmp/n8n-export.json`
-  );
+  kubeSilent([
+    "exec", "-n", NS, pod, "--",
+    "n8n", "export:workflow", "--all", "--output=/tmp/n8n-export.json",
+  ]);
   let existing = [];
   try {
-    const raw = kubeSilent(`exec -n ${NS} ${pod} -- cat /tmp/n8n-export.json`);
+    const raw = kubeSilent(["exec", "-n", NS, pod, "--", "cat", "/tmp/n8n-export.json"]);
     if (raw) existing = JSON.parse(raw);
     if (!Array.isArray(existing)) existing = [];
   } catch {
@@ -75,51 +91,59 @@ async function main() {
   const byName = new Map(existing.map((w) => [w.name, w.id]));
   console.log(`   ${existing.length} workflow(s) already in n8n\n`);
 
+  // Use a unique temp directory to avoid predictable /tmp paths
+  const tmpDir = mkdtempSync(join(tmpdir(), "n8n-sync-"));
+
   let created = 0,
     updated = 0,
     errors = 0;
 
-  for (const file of files) {
-    const filePath = join(WORKFLOWS_DIR, file);
-    let wf;
-    try {
-      wf = JSON.parse(readFileSync(filePath, "utf-8"));
-    } catch (e) {
-      console.error(`  ✗  ${file}: JSON parse error — ${e.message}`);
-      errors++;
-      continue;
+  try {
+    for (const file of files) {
+      const filePath = join(WORKFLOWS_DIR, file);
+      let wf;
+      try {
+        wf = JSON.parse(readFileSync(filePath, "utf-8"));
+      } catch (e) {
+        console.error(`  ✗  ${file}: JSON parse error — ${e.message}`);
+        errors++;
+        continue;
+      }
+
+      if (!wf.name?.trim()) wf.name = nameFromFilename(file);
+      const name = wf.name;
+
+      // Set id to the live workflow's id so n8n updates instead of creating
+      const existingId = byName.get(name);
+      if (existingId !== undefined) {
+        wf.id = existingId;
+      } else {
+        delete wf.id;
+      }
+      delete wf.tags; // n8n import rejects unknown tag ids
+
+      const slug = file.replace(".json", "").replace(/[^a-z0-9]/gi, "-");
+      const tmpLocal = join(tmpDir, `${slug}.json`);
+      const tmpPod = `/tmp/n8n-wf-${slug}.json`;
+
+      try {
+        writeFileSync(tmpLocal, JSON.stringify(wf));
+        kube(["cp", tmpLocal, `${NS}/${pod}:${tmpPod}`]);
+        const out = kube([
+          "exec", "-n", NS, pod, "--",
+          "n8n", "import:workflow", `--input=${tmpPod}`,
+        ]);
+        const isUpdate = existingId !== undefined;
+        console.log(`  ${isUpdate ? "↺" : "+"}  ${isUpdate ? "Updated" : "Created"} : ${name}`);
+        if (out && !out.includes("Successfully")) console.log(`     ${out.trim()}`);
+        isUpdate ? updated++ : created++;
+      } catch (e) {
+        console.error(`  ✗  Error   : ${name} — ${e.stderr ?? e.message}`);
+        errors++;
+      }
     }
-
-    if (!wf.name?.trim()) wf.name = nameFromFilename(file);
-    const name = wf.name;
-
-    // Set id to the live workflow's id so n8n updates instead of creating
-    const existingId = byName.get(name);
-    if (existingId !== undefined) {
-      wf.id = existingId;
-    } else {
-      delete wf.id;
-    }
-    delete wf.tags; // n8n import rejects unknown tag ids
-
-    const slug = file.replace(".json", "").replace(/[^a-z0-9]/gi, "-");
-    const tmpLocal = `/tmp/n8n-wf-${slug}.json`;
-    const tmpPod = `/tmp/n8n-wf-${slug}.json`;
-
-    try {
-      writeFileSync(tmpLocal, JSON.stringify(wf));
-      kube(`cp ${tmpLocal} ${NS}/${pod}:${tmpPod}`);
-      const out = kube(
-        `exec -n ${NS} ${pod} -- n8n import:workflow --input=${tmpPod}`
-      );
-      const isUpdate = existingId !== undefined;
-      console.log(`  ${isUpdate ? "↺" : "+"}  ${isUpdate ? "Updated" : "Created"} : ${name}`);
-      if (out && !out.includes("Successfully")) console.log(`     ${out.trim()}`);
-      isUpdate ? updated++ : created++;
-    } catch (e) {
-      console.error(`  ✗  Error   : ${name} — ${e.stderr ?? e.message}`);
-      errors++;
-    }
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
   }
 
   console.log(`\n✅  Done — created: ${created}  updated: ${updated}  errors: ${errors}\n`);

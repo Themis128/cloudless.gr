@@ -96,7 +96,7 @@ describe("proxy HTTPS enforcement", () => {
     const res = await proxy(req);
     expect(res.status).toBe(308);
     const location = res.headers.get("location") ?? "";
-    expect(location.startsWith("https://cloudless.gr")).toBe(true);
+    expect(new URL(location).origin).toBe("https://cloudless.gr");
     expect(location).not.toContain("0.0.0.0");
     vi.unstubAllEnvs();
   });
