@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: read
-  secrets: write
 
 jobs:
   rotate:
@@ -29,16 +28,3 @@ jobs:
         cd workers/pi-deploy-orchestrator
         echo "$NEW_TOKEN" | npx wrangler secret put DEPLOY_ORCHESTRATOR_TOKEN
         echo "CF Worker secret updated"
-
-    - name: Update GitHub secret
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN_ADMIN }}
-        NEW_TOKEN: ${{ inputs.new_token }}
-      run: |
-        set -euo pipefail
-        if [ -z "${GH_TOKEN:-}" ]; then
-          echo "::warning::GH_TOKEN_ADMIN not set — skipping GitHub secret update; set DEPLOY_ORCHESTRATOR_TOKEN manually via gh secret set"
-          exit 0
-        fi
-        echo "$NEW_TOKEN" | gh secret set DEPLOY_ORCHESTRATOR_TOKEN --repo "${{ github.repository }}"
-        echo "GitHub secret updated"
