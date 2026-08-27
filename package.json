@@ -250,9 +250,6 @@
     "vitest": "^4.1.11",
     "wrangler": "^3.0.0"
   },
-  "pnpm": {
-    "patchedDependencies": {
-      "vite-node@2.1.9": "patches/vite-node@2.1.9.patch"
-    }
-  }
+  "pnpm": {}
+
 }
