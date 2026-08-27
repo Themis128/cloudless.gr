@@ -16,7 +16,7 @@ const client = new Cloudflare({
 async function updateTunnelConfig() {
   try {
     // First, get current config
-    const currentConfig = await client.zeroTrust.tunnels.configurations.get(TUNNEL_ID, {
+    const currentConfig = await client.zeroTrust.tunnels.cloudflared.configurations.get(TUNNEL_ID, {
       account_id: CF_ACCOUNT_ID,
     });
     console.log("Current config:", JSON.stringify(currentConfig, null, 2));
@@ -48,7 +48,7 @@ async function updateTunnelConfig() {
       }
     };
     
-    const result = await client.zeroTrust.tunnels.configurations.update(TUNNEL_ID, {
+    const result = await client.zeroTrust.tunnels.cloudflared.configurations.update(TUNNEL_ID, {
       account_id: CF_ACCOUNT_ID,
       ...newConfig
     });

@@ -5,30 +5,13 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  // Use esbuild for JSX transformation (more stable with React 19)
-  transformMode: {
-    web: ['tsx', 'jsx'],
-  },
   esbuild: {
-    // Use React 19 new JSX transform for esbuild
-    jsx: "react-jsx",
-    jsxImportSource: "react",
-  },
-  // Disable oxc (use esbuild instead)
-  oxc: false,
-  // Use custom tsconfig for Vite's import analysis (root level)
-  tsconfig: "tsconfig.vitest.json",
-  // Pass Vite config directly to use custom tsconfig for import analysis
-  vite: {
-    // Override jsx setting for tests (tsconfig.json has jsx: preserve for Next.js)
-    esbuild: {
-      jsx: "react-jsx",
-      jsxImportSource: "react",
-    },
-    // Use custom tsconfig for Vite's import analysis
-    tsconfig: "tsconfig.vitest.json",
+    // Inject React into every JSX/TSX file so components that omit the import
+    // (valid with the new JSX transform) still work under Vitest's classic transform.
+    jsxInject: "import React from 'react'",
   },
   resolve: {
+    tsconfigPaths: true,
     // jose lives in the pnpm content-addressable store; the stub symlink at
     // node_modules/jose is missing its package.json, so Vite can't resolve it
     // via normal package resolution. Alias it to the real store location.
@@ -78,23 +61,17 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    // Vitest 4.x: pool options moved to top-level
     pool: "forks",
-    minThreads: 1,
-    maxThreads: 2,
-    // Allow tests to specify @vitest-environment node for node-specific tests
-    environmentOptions: {
-      jsdom: {
-        url: "http://localhost",
-      },
+    poolOptions: {
+      forks: { minForks: 1, maxForks: 2 },
     },
     server: {
       deps: {
         // next-auth imports next/server as bare ESM specifier. Inlining lets
         // Vitest pre-transform the import through its alias map.
         inline: ["next-auth", "@auth/core", "next-intl"],
-        // Allow node:sqlite to be resolved natively in Node.js environment
-        external: [],
+        // node:sqlite is handled by the nodeBuiltinSqlite plugin above.
+        external: [/^node:sqlite/],
       },
     },
 
