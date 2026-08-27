@@ -224,7 +224,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.2.5",
-    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vitest/utils": "^4.1.11",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.5",
