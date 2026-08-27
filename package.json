@@ -203,6 +203,7 @@
     "react-dom": "^19.0.0",
     "react-email": "^6.9.2",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "resend": "^6.22.0",
     "stripe": "^22.5.0",
     "three": "^0.185.1",
@@ -251,7 +252,7 @@
     "vitest": "^4.1.11",
     "wrangler": "^3.0.0"
   },
-    "pnpm": {
+  "pnpm": {
     "overrides": {
       "postcss@<8.5": "^8.5.26",
       "minimatch@<9.0.7": "^9.0.9",

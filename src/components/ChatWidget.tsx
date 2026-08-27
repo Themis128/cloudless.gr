@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   id: string;
@@ -180,6 +181,7 @@ export default function ChatWidget() {
                   {m.content ? (
                     m.role === "assistant" ? (
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           table: ({ children }) => (
                             <div className="my-2 overflow-x-auto">
