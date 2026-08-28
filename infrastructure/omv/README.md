@@ -222,3 +222,21 @@ sudo bash infrastructure/omv/install-gha-runner-heal.sh
 ```
 
 See `docs/deploy/runners.md`.
+
+## Postfix supervision (Daily Health Check alerts)
+
+Fixes the recurring `[OMV] Daily Health Check` alerts ("Service postfix is NOT
+running!" + "High number of system errors …"). postfix was `disabled` at boot and
+effectively unsupervised by monit, so it stayed down until the nightly
+`nas-health-check` restarted it (up to ~13h), while monit's own 127.0.0.1:25 alert
+handler looped and inflated the error count.
+
+```bash
+# preview (no changes), then:
+sudo bash infrastructure/omv/install-monit-postfix-fix.sh --apply
+# optional: also point monit alerts at the external relay (see caveats in the script)
+sudo bash infrastructure/omv/install-monit-postfix-fix.sh --apply --mail-relay
+```
+
+See the script header for the full root-cause writeup.
+
