@@ -258,6 +258,10 @@ RUN-MIGRATION.md
 
 # Local lint tool caches (yamllint / actionlint)
 .tools/
+
+# Mimosa git-hook runtime state (per-commit baselines/snapshots — never commit)
+.mimosa/
+.mimosa-hook/
 test-results.json/
 .lighthouseci/
 
