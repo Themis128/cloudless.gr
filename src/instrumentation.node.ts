@@ -51,15 +51,28 @@ async function bindRemoteAuthDb(): Promise<void> {
 function bindLocalAuthDb(): void {
   // Computed specifier so Turbopack does not statically trace node:sqlite into
   // the Edge instrumentation graph (same pattern as auth-d1 tryLoadLocalAuthDb).
+  // NOTE: webpack dev compiles the computed require into an empty context
+  // (webpackEmptyContext) that THROWS MODULE_NOT_FOUND at runtime — the same
+  // throw auth-d1.tryLoadLocalAuthDb swallows. Keep that guard here too, so a
+  // tokenless `next dev` (CI, Playwright) never fails the instrumentation hook,
+  // which would gate the request handler and leave the dev server unready.
+  // auth-d1.getAuthDbFromEnv() retries the adapter (and D1 HTTP) per request.
   const spec = "." + "/lib/" + ["auth", "db", "local"].join("-");
-  const { getLocalAuthDb } = require(spec) as {
-    getLocalAuthDb?: () => AuthDbBinding | null;
-  };
-  const local = getLocalAuthDb?.();
-  if (local && typeof local.prepare === "function") {
-    bindAuthDb(local);
-    console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
-    return;
+  try {
+    const { getLocalAuthDb } = require(spec) as {
+      getLocalAuthDb?: () => AuthDbBinding | null;
+    };
+    const local = getLocalAuthDb?.();
+    if (local && typeof local.prepare === "function") {
+      bindAuthDb(local);
+      console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
+      return;
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `${LOG_PREFIX} Local D1 adapter unavailable (${msg}) — continuing without sqlite`
+    );
   }
   console.warn(`${LOG_PREFIX} AUTH_DB missing — run: pnpm d1:migrate:local`);
 }
