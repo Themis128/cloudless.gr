@@ -103,6 +103,8 @@ Only include the platforms that were requested. Tailor recommendations for the G
     return NextResponse.json({ targeting, provider });
   } catch (e) {
     console.error("[ai/audience] generation failed:", e);
+    if (e instanceof Error && e.name === "AdminAiNotConfigured")
+      return adminAiNotConfiguredResponse();
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

@@ -75,6 +75,8 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     return NextResponse.json({ strategy, provider });
   } catch (e) {
     console.error("[ai/campaign] generation failed:", e);
+    if (e instanceof Error && e.name === "AdminAiNotConfigured")
+      return adminAiNotConfiguredResponse();
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

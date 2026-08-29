@@ -45,6 +45,12 @@ function tryParseBookingReply(msg: string): { row: number; name: string; email: 
   return { row: parseInt(m[1], 10), name: m[2].trim(), email: m[3].trim().toLowerCase() };
 }
 
+// Detect raw JSON tool-call leaking as final text — happens with llama-3.1-8b
+// when context is lost and the model outputs the tool call as prose.
+function looksLikeLeakedToolCall(text: string): boolean {
+  return /^\s*\{[\s\S]*"tool"\s*:/.test(text.trim());
+}
+
 // Detect when the model outputs reasoning instead of a visitor-facing reply
 const REASONING_PATTERNS =
   /^(we need to|i need to|let me|the user|we should|to book|looking at|it seems|we must|however we|given the|since we|the slot|need iso|the tool|let's assume)/i;
@@ -94,15 +100,24 @@ export async function runWorkersAiChatLoop(
   ];
 
   // --- Booking-reply short-circuit ---
-  // If the last user message is "row, name, email" AND the most recent
-  // assistant turn looks like a slot table, handle the booking ourselves
-  // rather than sending it to the model (which loops back to calendar lookup).
+  // If the last user message matches "row, name, email", handle the booking
+  // server-side and skip the model's tool loop entirely. llama-3.1-8b reliably
+  // loops back to check_calendar_availability because BOOKING_ISO_DATA only
+  // lives in the prior tool-call exchange and is not in the client message
+  // history. We fire this whenever the pattern matches — the previous assistant
+  // message check is lenient: "Athens" alone (covers tab-separated tables, pipe
+  // tables, and any format the model chooses).
   const lastUserMsg = initialMessages.filter((m) => m.role === "user").at(-1)?.content ?? "";
   const bookingReply = tryParseBookingReply(lastUserMsg);
   if (bookingReply) {
     const prevAssistant = [...initialMessages].reverse().find((m) => m.role === "assistant");
+    // Accept any prior assistant message that looks like a slot table:
+    // - markdown pipe table (|), tab-separated table, or the prompt phrase
+    const prevContent = prevAssistant?.content ?? "";
     const looksLikeSlotTable =
-      prevAssistant?.content.includes("Athens") && prevAssistant.content.includes("|");
+      prevContent.includes("Athens") ||
+      /please reply with your row/i.test(prevContent) ||
+      /\d+\s*[,\t|]\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(prevContent);
     if (looksLikeSlotTable) {
       try {
         const slots = await getAvailableSlots(DEFAULT_DAYS_AHEAD);
@@ -122,11 +137,17 @@ export async function runWorkersAiChatLoop(
           const confirmation = await callChatBackend(messages);
           return confirmation || bookResult;
         }
-        // Row out of range — tell visitor kindly
-        return `Sorry, row ${bookingReply.row} isn't available anymore — the slots may have changed. Let me show you the current ones:`;
+        // Row out of range — show current slots so visitor can pick again
+        const slotLines = slots
+          .map(
+            (s, i) =>
+              `${i + 1}. ${new Date(s.start).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} ${new Date(s.start).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Athens" })}–${new Date(s.end).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Athens" })}`
+          )
+          .join("\n");
+        return `Row ${bookingReply.row} isn't in the current list — the available slots may have refreshed. Here are the current ones:\n\n${slotLines}\n\nPlease reply with your row number, full name, and email all at once.`;
       } catch (err) {
         console.error("[chat] booking short-circuit failed:", err);
-        // fall through to normal loop
+        return "Sorry, I ran into a problem while booking your slot. Please try again or contact us directly at hello@cloudless.gr.";
       }
     }
   }
@@ -136,6 +157,12 @@ export async function runWorkersAiChatLoop(
     const reply = await callChatBackend(messages);
     const toolCall = parseWorkersAiToolCall(reply);
     if (!toolCall) {
+      // If the model leaked a raw JSON tool call as prose (common with llama-3.1-8b
+      // when context is lost), return a friendly recovery message instead.
+      if (looksLikeLeakedToolCall(reply)) {
+        console.warn("[chat] model leaked raw tool call as final reply:", reply.slice(0, 120));
+        return 'Sorry, I lost track of the context. Could you rephrase your request? If you were trying to book, please tell me your preferred slot number, full name, and email — e.g. "3, Jane Smith, jane@example.com".';
+      }
       // If the model leaked reasoning as plain text, give it one silent retry
       if (!reasoningRetried && looksLikeLeakedReasoning(reply)) {
         reasoningRetried = true;
