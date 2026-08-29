@@ -70,9 +70,7 @@ function bindLocalAuthDb(): void {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(
-      `${LOG_PREFIX} Local D1 adapter unavailable (${msg}) — continuing without sqlite`
-    );
+    console.warn(`${LOG_PREFIX} Local D1 adapter unavailable (${msg}) — continuing without sqlite`);
   }
   console.warn(`${LOG_PREFIX} AUTH_DB missing — run: pnpm d1:migrate:local`);
 }

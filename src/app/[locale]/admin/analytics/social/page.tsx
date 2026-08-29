@@ -178,7 +178,7 @@ export default function SocialAnalyticsPage() {
                   key={label}
                   className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
                 >
-                  <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <div className="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400">
                     {label}
                   </div>
                   <div className="mt-1 text-2xl font-bold tabular-nums">{formatNum(value)}</div>
@@ -190,7 +190,7 @@ export default function SocialAnalyticsPage() {
           {/* Channel breakdown */}
           {data.channels.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <h2 className="mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                 Channels
               </h2>
               <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
@@ -232,7 +232,7 @@ export default function SocialAnalyticsPage() {
           {/* Top posts */}
           {data.topPosts.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <h2 className="mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                 Top Posts
               </h2>
               <div className="space-y-2">
@@ -247,7 +247,9 @@ export default function SocialAnalyticsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span className="font-medium">{platformLabel(post.platform)}</span>
-                        <span>{post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ""}</span>
+                        <span>
+                          {post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ""}
+                        </span>
                       </div>
                       <p className="mt-0.5 line-clamp-2 text-sm">{post.content || "(no text)"}</p>
                       <div className="mt-1.5 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
@@ -277,37 +279,37 @@ export default function SocialAnalyticsPage() {
       {/* Social → Lead Attribution */}
       {attribution && attribution.rows.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             Social → Lead Attribution
           </h2>
 
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="text-xs font-medium uppercase text-gray-500">Sessions</div>
+              <div className="text-xs font-medium text-gray-500 uppercase">Sessions</div>
               <div className="mt-1 text-xl font-bold tabular-nums">
                 {formatNum(attribution.totals.sessions)}
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="text-xs font-medium uppercase text-gray-500">Leads</div>
+              <div className="text-xs font-medium text-gray-500 uppercase">Leads</div>
               <div className="mt-1 text-xl font-bold tabular-nums">
                 {formatNum(attribution.totals.leads)}
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="text-xs font-medium uppercase text-gray-500">Signups</div>
+              <div className="text-xs font-medium text-gray-500 uppercase">Signups</div>
               <div className="mt-1 text-xl font-bold tabular-nums">
                 {formatNum(attribution.totals.signups)}
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="text-xs font-medium uppercase text-gray-500">Revenue</div>
+              <div className="text-xs font-medium text-gray-500 uppercase">Revenue</div>
               <div className="mt-1 text-xl font-bold tabular-nums">
                 &euro;{formatNum(attribution.totals.revenue)}
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="text-xs font-medium uppercase text-gray-500">Conv. Rate</div>
+              <div className="text-xs font-medium text-gray-500 uppercase">Conv. Rate</div>
               <div className="mt-1 text-xl font-bold tabular-nums">
                 {attribution.totals.conversionRate.toFixed(1)}%
               </div>
@@ -333,8 +335,12 @@ export default function SocialAnalyticsPage() {
                     <td className="px-4 py-2 text-gray-500">{r.utm_campaign}</td>
                     <td className="px-4 py-2 text-gray-500">{r.platform}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{r.sessions}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{Number(r.leads) + Number(r.signups)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">&euro;{Number(r.revenue).toFixed(0)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      {Number(r.leads) + Number(r.signups)}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      &euro;{Number(r.revenue).toFixed(0)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

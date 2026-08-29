@@ -176,10 +176,16 @@ export default function SeoAnalyticsPage() {
           {snapshot && (
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               <MetricCard label="Organic Clicks" value={(snapshot.clicks ?? 0).toLocaleString()} />
-              <MetricCard label="Impressions" value={(snapshot.impressions ?? 0).toLocaleString()} />
+              <MetricCard
+                label="Impressions"
+                value={(snapshot.impressions ?? 0).toLocaleString()}
+              />
               <MetricCard label="CTR" value={`${snapshot.ctr ?? 0}%`} />
               <MetricCard label="Avg Position" value={(snapshot.avgPosition ?? 0).toFixed(1)} />
-              <MetricCard label="Keywords" value={(snapshot.organicKeywords ?? 0).toLocaleString()} />
+              <MetricCard
+                label="Keywords"
+                value={(snapshot.organicKeywords ?? 0).toLocaleString()}
+              />
             </div>
           )}
 

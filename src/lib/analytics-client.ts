@@ -48,9 +48,7 @@ async function getDuckDB(): Promise<DuckRuntime> {
     // it in a blob: URL so construction succeeds.
     const workerResp = await fetch(bundle.mainWorker);
     const workerText = await workerResp.text();
-    const blobUrl = URL.createObjectURL(
-      new Blob([workerText], { type: "application/javascript" })
-    );
+    const blobUrl = URL.createObjectURL(new Blob([workerText], { type: "application/javascript" }));
     const worker = new Worker(blobUrl);
     const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
     const db = new duckdb.AsyncDuckDB(logger, worker);
