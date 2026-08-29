@@ -80,7 +80,8 @@ Respond with raw JSON only (no markdown fences):
     return NextResponse.json({ variants, provider });
   } catch (e) {
     console.error("[ai/copy] generation failed:", e);
-    if (e instanceof Error && e.name === "AdminAiNotConfigured") return adminAiNotConfiguredResponse();
+    if (e instanceof Error && e.name === "AdminAiNotConfigured")
+      return adminAiNotConfiguredResponse();
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

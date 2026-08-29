@@ -39,7 +39,8 @@ Write 3-5 sentences of plain English insights. Mention specific numbers, compare
     return NextResponse.json({ insights, provider });
   } catch (e) {
     console.error("[ai/report-insights] generation failed:", e);
-    if (e instanceof Error && e.name === "AdminAiNotConfigured") return adminAiNotConfiguredResponse();
+    if (e instanceof Error && e.name === "AdminAiNotConfigured")
+      return adminAiNotConfiguredResponse();
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }
