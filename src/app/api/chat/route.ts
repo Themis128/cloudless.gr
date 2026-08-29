@@ -44,6 +44,9 @@ Keep answers concise (2–4 sentences max, plus a slot table when booking). If s
 
 Output format: respond with plain conversational text only (markdown tables for slot availability). Do NOT output internal reasoning, thinking, "We need to...", "I need to...", <thinking> tags, XML markup, or any monologue. Output ONLY the message the visitor should read.`;
 
+// Assistant messages can contain the full slot table (~350 chars for 5 slots) plus
+// BOOKING_ISO_DATA. 2000 keeps the booking context intact without blowing up the prompt.
+const MAX_ASSISTANT_MESSAGE = 2_000;
 const MAX_USER_MESSAGE = 500;
 const MAX_TURNS = 10;
 
@@ -80,7 +83,9 @@ function parseMessages(body: unknown): { role: "user" | "assistant"; content: st
     .slice(-MAX_TURNS)
     .map((m): { role: "user" | "assistant"; content: string } => ({
       role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
+      content: m.content
+        .slice(0, m.role === "assistant" ? MAX_ASSISTANT_MESSAGE : MAX_USER_MESSAGE)
+        .trim(),
     }))
     .filter((m) => m.content.length > 0);
 

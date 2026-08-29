@@ -135,7 +135,15 @@ export async function runWorkersAiChatLoop(
             content: `TOOL_RESULT for book_slot:\n${bookResult}\n\nConfirm the booking to the visitor in 2-3 warm sentences. Include the Meet link if provided.`,
           });
           const confirmation = await callChatBackend(messages);
-          return confirmation || bookResult;
+          // Guard against the model returning another tool call or reasoning as confirmation
+          if (
+            !confirmation ||
+            looksLikeLeakedToolCall(confirmation) ||
+            looksLikeLeakedReasoning(confirmation)
+          ) {
+            return bookResult;
+          }
+          return confirmation;
         }
         // Row out of range — show current slots so visitor can pick again
         const slotLines = slots
