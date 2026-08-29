@@ -110,14 +110,7 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Tools:** `read_text_file`, `read_media_file`, `read_multiple_files`, `write_file`, `edit_file`, `create_directory`, `list_directory`, `list_directory_with_sizes`, `move_file`, `search_files`, `directory_tree`, `get_file_info`, `list_allowed_directories`
 - **Note:** restricted to `/home/tbaltzakis/cloudless.gr`.
 
-### 13. openshorts-mcp
-- **Command:** `npx -y @mutonby/openshorts-mcp`
-- **AutoStart:** ❌
-- **Purpose:** OpenShorts video-shorts pipeline (script, voiceover, render).
-- **Env:** `OPENSHORTS_API_URL` (points to cluster.local)
-- **Related docs:** `OPENSHORTS_POSTIZ_PIPELINE.md`.
-
-### 14. postiz-mcp
+### 13. postiz-mcp
 - **Command:** `npx -y @antoniolg/postiz-mcp`
 - **AutoStart:** ❌
 - **Purpose:** Postiz Public API tooling (integrations, posts, schedule).
@@ -146,11 +139,7 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Command:** `npx -y project-mcp` · **AutoStart:** ✅
 - **Purpose:** codebase context/search for the repo.
 
-### 3. openshorts
-- `npx -y @mutonby/openshorts-mcp` · **AutoStart:** ❌
-- Same as `openshorts-mcp` above.
-
-### 4. postiz
+### 3. postiz
 - `npx -y @antoniolg/postiz-mcp` · **AutoStart:** ❌
 - Same as `postiz-mcp` above.
 
@@ -192,7 +181,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 | k3s cluster ops (pods, logs, restart, apply) | `cloudless-infra` (+ `cluster-bash`) |
 | n8n workflow automation | `n8n` (+ `n8n-operator`) |
 | Postiz scheduling / social publishing | `postiz` / `postiz-mcp` (+ `postiz*` skills) |
-| OpenShorts video pipeline | `openshorts` / `openshorts-mcp` |
 | Bluesky posting | `bluesky` |
 | Stock images | `free-stock-images` |
 | Post copy linting | `postlint` |
