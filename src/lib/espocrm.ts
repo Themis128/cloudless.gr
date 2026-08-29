@@ -811,9 +811,8 @@ export async function moveDealStage(id: string, stageId: string): Promise<{ id: 
   const pipelines = (await getPipelines()) as Array<{ stages: { id: string }[] }>;
   const knownStages = pipelines[0]?.stages.map((s) => s.id) ?? [];
   if (!knownStages.includes(stageId)) {
-    const safeId = stageId.replace(/[\r\n\t]/g, " ");
     console.error(
-      `[EspoCRM] moveDealStage: unknown stage "${safeId}". Known: ${knownStages.join(", ")}`
+      `[EspoCRM] moveDealStage: unrecognized stageId (${knownStages.length} valid stages exist)`
     );
     return null;
   }
