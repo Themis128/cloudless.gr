@@ -2,8 +2,6 @@ packages:
   - workers/*
   - scripts/etl
 
-patchedDependencies:
-  vite-node@2.1.9: patches/vite-node@2.1.9.patch
 
 allowBuilds:
   '@parcel/watcher': true

@@ -139,14 +139,5 @@ export async function POST(req: NextRequest) {
     click: issue.permalink,
   });
 
-  // Forward to n8n so errors open an EspoCRM bug case.
-  const n8nBase = process.env.N8N_INTERNAL_URL ?? "http://n8n.n8n.svc.cluster.local:5678";
-  fetch(`${n8nBase}/webhook/sentry-alert`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ severity, title, message, permalink: issue.permalink }),
-    signal: AbortSignal.timeout(3000),
-  }).catch(() => {});
-
   return NextResponse.json({ ok: true, result });
 }

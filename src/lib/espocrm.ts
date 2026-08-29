@@ -109,8 +109,7 @@ async function espoListAll<T = unknown>(
       ...baseParams,
     });
     const res = await espoFetch(`/${entity}?${params.toString()}`);
-    if (!res.ok)
-      throw new Error(`EspoCRM ${entity} list page (offset ${offset}) failed: ${res.status}`);
+    if (!res.ok) throw new Error(`EspoCRM ${entity} list page (offset ${offset}) failed: ${res.status}`);
     const data = (await res.json()) as { list: T[]; total: number };
     all.push(...data.list);
     if (data.list.length < PAGE_SIZE) break;
@@ -164,7 +163,9 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       ? ((await upsertCompany(contact.company)) ?? undefined)
       : undefined;
     const basePayload = toEspoContactPayload(contact);
-    const payload = accountId ? { ...basePayload, accountId, accountName: undefined } : basePayload;
+    const payload = accountId
+      ? { ...basePayload, accountId, accountName: undefined }
+      : basePayload;
     // EspoCRM has no upsert primitive — search first, then POST or PATCH.
     const search = await espoFetch(
       `/Contact?` +

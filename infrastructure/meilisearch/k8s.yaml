@@ -1,6 +1,6 @@
 # Meilisearch — open-source, fast, hyper-relevant search engine
-# Service: NodePort 30902 on omv-main — required by cloudflared (host process).
-# Tunnel: meili.cloudless.gr → http://192.168.1.128:30902 (cloudflare-tunnels/ingress-rules.yaml)
+# NodePort 30902 on omv-main (120GB SSD, exclusive k3s storage).
+# Tunnel: meili.cloudless.gr → http://127.0.0.1:30902
 #
 # Storage: local-path PVC on 120GB SSD (sda1).
 # RAM: requests 256Mi / limit 1Gi. Meilisearch v1.48 uses ~200-400Mi at
@@ -8,11 +8,9 @@
 #      Indexing bursts up to ~600Mi during initial product catalog import.
 # Image: pinned to getmeili/meilisearch:v1.48.3 — multi-arch image with
 #        native arm64 support (avoids QEMU/emulation overhead on Pi 5).
-# Auth: Master key in meilisearch-secret. App uses scope-limited keys:
-#       MEILI_SEARCH_KEY (search only) and MEILI_ADMIN_KEY (index/settings).
-#       Run fix-meili-search-key.yml once to generate and store them.
-# Metrics: MEILI_ENABLE_METRICS=true — scraped by Prometheus via
-#          infrastructure/monitoring/meilisearch-servicemonitor.yaml.
+# Auth: MEILI_MASTER_KEY set via the meilisearch-secret Secret.
+#       The app secret key must match what src/lib/search.ts expects
+#       (see R21b for /api/search route).
 
 apiVersion: v1
 kind: Namespace
@@ -82,10 +80,6 @@ spec:
           value: 0.0.0.0:7700
         - name: MEILI_DB_PATH
           value: /meili_data
-        - name: MEILI_NO_ANALYTICS
-          value: 'true'
-        - name: MEILI_ENABLE_METRICS
-          value: 'true'
         - name: TZ
           value: Europe/Athens
         volumeMounts:
@@ -99,15 +93,13 @@ spec:
             cpu: '1'
             memory: 1Gi
         livenessProbe:
-          httpGet:
-            path: /health
+          tcpSocket:
             port: 7700
           initialDelaySeconds: 30
           periodSeconds: 20
           failureThreshold: 5
         readinessProbe:
-          httpGet:
-            path: /health
+          tcpSocket:
             port: 7700
           initialDelaySeconds: 15
           periodSeconds: 10
@@ -124,14 +116,13 @@ metadata:
   labels:
     app: meilisearch
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: meilisearch
   ports:
   - name: http
     port: 7700
     targetPort: 7700
-    nodePort: 30902
 ---
 # ResourceQuota: 1.5Gi limits total (Meilisearch 1Gi + any helper pods).
 # Meilisearch alone requests 256Mi / limits 1Gi; the quota allows room

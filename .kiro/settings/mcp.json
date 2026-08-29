@@ -1,37 +1,63 @@
 {
   "mcpServers": {
     "cloudless-infra": {
-      "command": "npx",
-      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
+      "command": "node",
+      "args": [
+        "C:/Users/baltz/AppData/Roaming/kiro/tools/ssh-mcp/dist/index.js"
+      ],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
         "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
+        "OMV_SSH_KEY": "C:/Users/baltz/.ssh/id_ed25519",
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       },
-      "autoApprove": ["ssh_execute", "run_cmd", "read_file"]
+      "autoApprove": [
+        "ssh_execute",
+        "run_cmd",
+        "read_file"
+      ]
     },
     "project": {
       "command": "npx",
-      "args": ["-y", "project-mcp"],
+      "args": [
+        "--no-install",
+        "project-mcp"
+      ],
       "autoStart": true,
-      "autoApprove": ["search", "read", "write"]
+      "autoApprove": [
+        "search",
+        "read",
+        "write"
+      ]
     },
     "notion": {
       "command": "npx",
-      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "args": [
+        "--no-install",
+        "@notionhq/notion-mcp-server"
+      ],
       "env": {
-        "NOTION_TOKEN": "${NOTION_TOKEN}"
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
       },
       "autoStart": true,
-      "autoApprove": ["search_pages", "get_block"]
+      "autoApprove": [
+        "search_pages",
+        "get_block"
+      ]
     },
     "cloudflare": {
       "url": "https://mcp.cloudflare.com/mcp",
       "env": {
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
       },
-      "autoApprove": ["deploy", "kv_get", "kv_put", "search", "execute", "docs"]
+      "autoApprove": [
+        "deploy",
+        "kv_get",
+        "kv_put",
+        "search",
+        "execute",
+        "docs"
+      ]
     }
   }
 }

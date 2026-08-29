@@ -26,7 +26,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 ## `.mcp.json` — workspace servers
 
 ### 1. fast-markdown
-
 - **Command:** `npx tsx fast-markdown-mcp/src/index.ts`
 - **AutoStart:** ✅
 - **Purpose:** read/search the local DevDocs markdown store.
@@ -35,7 +34,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skill:** none (generic docs lookup).
 
 ### 2. cloudflare-pages
-
 - **Command:** `npx tsx cloudflare-pages-mcp/src/index.ts`
 - **AutoStart:** ❌
 - **Purpose:** Cloudflare Pages project + deployment management.
@@ -44,7 +42,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Use for:** checking Pages build status, reading deploy logs.
 
 ### 3. cloudflare-bindings
-
 - **Command:** `npx mcp-remote https://bindings.mcp.cloudflare.com/mcp`
 - **AutoStart:** ✅
 - **Purpose:** Cloudflare resource bindings (KV, Workers, R2).
@@ -53,7 +50,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skill:** `cloudflare-token-doctor` (token troubleshooting).
 
 ### 4. cloudflare (full platform)
-
 - **Command:** `npx -y @cloudflare/mcp-server-cloudflare`
 - **AutoStart:** ✅
 - **Purpose:** Full Cloudflare platform — zones, DNS, Workers, R2, D1, KV, AI, WAF, Cache.
@@ -61,7 +57,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skills:** `cloudflare-tunnel-ops`, `cloudflare-token-doctor`, `sst-cloudflare`, `wrangler-ai-search`.
 
 ### 5. cloudflare-graphql
-
 - **Command:** `npx mcp-remote https://graphql.mcp.cloudflare.com/mcp`
 - **AutoStart:** ❌
 - **Purpose:** Cloudflare GraphQL Analytics API — zone analytics, HTTP requests, Workers invocations, security events.
@@ -69,21 +64,18 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Use for:** pulling historical metrics (requests, threats, bandwidth, cache performance).
 
 ### 6. cloudflare-docs
-
 - **Command:** `npx mcp-remote https://docs.mcp.cloudflare.com/mcp`
 - **AutoStart:** ❌
 - **Purpose:** searchable Cloudflare documentation.
 - **Use for:** retrieving current docs instead of relying on training data.
 
 ### 7. cloudflare-builds
-
 - **Command:** `npx mcp-remote https://builds.mcp.cloudflare.com/mcp`
 - **AutoStart:** ❌
 - **Purpose:** Cloudflare Builds management (build config, triggers, logs).
 - **Env:** `CLOUDFLARE_API_TOKEN`
 
 ### 8. cloudflare-observability
-
 - **Command:** `npx mcp-remote https://observability.mcp.cloudflare.com/mcp`
 - **AutoStart:** ❌
 - **Purpose:** Workers Observability / Logpush / real-time logs.
@@ -91,7 +83,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Use for:** Workers runtime errors, tail logs, exception traces.
 
 ### 9. opennextjs-mcp
-
 - **Command:** `node /home/tbaltzakis/opennextjs-cli/packages/opennextjs-mcp/dist/index.js`
 - **AutoStart:** ❌
 - **Purpose:** OpenNext.js ↔ Cloudflare build/deploy lifecycle for this repo.
@@ -100,14 +91,12 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skill:** `sst-cloudflare` / `opennext-build-deploy` (.clinerules).
 
 ### 10. sequentialthinking
-
 - **Command:** `node /home/tbaltzakis/Cline/MCP/sequentialthinking/.../index.js`
 - **AutoStart:** ✅
 - **Tools:** `sequentialthinking`
 - **Use for:** complex multi-step reasoning (not a data-fetch tool).
 
 ### 11. github
-
 - **Command:** `/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server`
 - **AutoStart:** ✅
 - **Purpose:** GitHub repo/branch/PR/issue/actions management.
@@ -116,14 +105,19 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skills:** `gh-actions-pitfalls`, `github-*` (anthropic bundles).
 
 ### 12. github.com/…/filesystem
-
 - **Command:** `npx -y @modelcontextprotocol/server-filesystem /home/tbaltzakis/cloudless.gr`
 - **AutoStart:** ✅
 - **Tools:** `read_text_file`, `read_media_file`, `read_multiple_files`, `write_file`, `edit_file`, `create_directory`, `list_directory`, `list_directory_with_sizes`, `move_file`, `search_files`, `directory_tree`, `get_file_info`, `list_allowed_directories`
 - **Note:** restricted to `/home/tbaltzakis/cloudless.gr`.
 
-### 13. postiz-mcp
+### 13. openshorts-mcp
+- **Command:** `npx -y @mutonby/openshorts-mcp`
+- **AutoStart:** ❌
+- **Purpose:** OpenShorts video-shorts pipeline (script, voiceover, render).
+- **Env:** `OPENSHORTS_API_URL` (points to cluster.local)
+- **Related docs:** `OPENSHORTS_POSTIZ_PIPELINE.md`.
 
+### 14. postiz-mcp
 - **Command:** `npx -y @antoniolg/postiz-mcp`
 - **AutoStart:** ❌
 - **Purpose:** Postiz Public API tooling (integrations, posts, schedule).
@@ -131,7 +125,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skill:** `postiz`, `postiz-automation`, `postiz-agent-cli`.
 
 ### 15. n8n
-
 - **Command:** `npx mcp-remote https://n8n.cloudless.gr/mcp-server/http`
 - **AutoStart:** ✅
 - **Purpose:** remote n8n MCP bridge — list/invoke n8n workflows as tools.
@@ -143,7 +136,6 @@ Auto-start servers connect on launch; the rest can be started on demand.
 ## `mcp.json` — project servers
 
 ### 1. cloudless-infra (SSH / k3s) — the cluster control plane
-
 - **Command:** `npx tsx tools/ssh-mcp/src/index.ts`
 - **Purpose:** SSH ops on omv / omv-ha: k3s, cluster commands, tunnels, terraform.
 - **Tools (canonical names):** `cluster_run_command`, `cluster_run_fanout`, `k3s_get_pod_logs`, `k3s_rollout_restart`, `k3s_apply_manifest`, `ssh_*` family, `tf_doctor`, `cloudflare_tunnel_status`.
@@ -151,39 +143,36 @@ Auto-start servers connect on launch; the rest can be started on demand.
 - **Related skill:** `cluster-bash` — read BEFORE any cluster SSH.
 
 ### 2. project (project-mcp)
-
 - **Command:** `npx -y project-mcp` · **AutoStart:** ✅
 - **Purpose:** codebase context/search for the repo.
 
-### 3. postiz
+### 3. openshorts
+- `npx -y @mutonby/openshorts-mcp` · **AutoStart:** ❌
+- Same as `openshorts-mcp` above.
 
+### 4. postiz
 - `npx -y @antoniolg/postiz-mcp` · **AutoStart:** ❌
 - Same as `postiz-mcp` above.
 
 ### 5. prompt-to-asset
-
 - `npx -y prompt-to-asset` · **AutoStart:** ❌
 - **Purpose:** generate design assets from prompts.
 
 ### 6. postlint
-
 - `npx -y postlint-mcp` · **AutoStart:** ❌
 - **Purpose:** social-post linting (hashtags, length, tone, best practices).
 
 ### 7. bluesky
-
 - `npx -y @morinokami/mcp-server-bluesky` · **AutoStart:** ❌
 - **Env:** `BLUESKY_IDENTIFIER`, `BLUESKY_APP_PASSWORD`
 - **Purpose:** post/search/manage the cloudless Bluesky account.
 
 ### 8. free-stock-images
-
 - `npx -y free-stock-images-mcp` · **AutoStart:** ❌
 - **Env:** `UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`, `PIXABAY_API_KEY`
 - **Purpose:** search royalty-free stock images (Unsplash / Pexels / Pixabay).
 
 ### 9. n8n
-
 - `npx mcp-remote https://n8n.cloudless.gr/mcp-server/http` · **AutoStart:** ✅
 - Same as `.mcp.json` → n8n. Includes `alwaysAllow` for the resource/tool/prompt primitives.
 
@@ -203,6 +192,7 @@ Auto-start servers connect on launch; the rest can be started on demand.
 | k3s cluster ops (pods, logs, restart, apply) | `cloudless-infra` (+ `cluster-bash`) |
 | n8n workflow automation | `n8n` (+ `n8n-operator`) |
 | Postiz scheduling / social publishing | `postiz` / `postiz-mcp` (+ `postiz*` skills) |
+| OpenShorts video pipeline | `openshorts` / `openshorts-mcp` |
 | Bluesky posting | `bluesky` |
 | Stock images | `free-stock-images` |
 | Post copy linting | `postlint` |

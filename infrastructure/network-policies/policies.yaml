@@ -110,13 +110,6 @@ spec:
           kubernetes.io/metadata.name: cloudless
     ports:
     - port: 7700
-  # Allow n8n workflows to call Meilisearch directly (reindex triggers, ETL)
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: n8n
-    ports:
-    - port: 7700
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

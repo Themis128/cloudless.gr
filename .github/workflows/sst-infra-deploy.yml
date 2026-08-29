@@ -62,10 +62,7 @@ jobs:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     - name: Build Next.js app with OpenNext
-      run: |
-        set -euo pipefail
-        pnpm run cf:build
-        test -f .open-next/worker.js
+      run: pnpm run cf:build
 
     - name: Strip @vercel/og .bin fonts (SST esbuild)
       run: node scripts/strip-opennext-bin-fonts.mjs

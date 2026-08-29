@@ -35,7 +35,11 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url);
   const lookback = Math.min(Number(url.searchParams.get("days") || "30"), 90) as
-    7 | 14 | 30 | 60 | 90;
+    | 7
+    | 14
+    | 30
+    | 60
+    | 90;
 
   try {
     const integrations = await listPostizIntegrations();
@@ -90,7 +94,8 @@ export async function GET(req: NextRequest) {
           }
           withStats.push({
             id: post.id,
-            platform: post.integration?.providerIdentifier ?? post.integration?.identifier ?? "",
+            platform:
+              post.integration?.providerIdentifier ?? post.integration?.identifier ?? "",
             content: (post.content ?? "").slice(0, 120),
             publishDate: post.publishDate ?? "",
             likes: metricMap.likes ?? metricMap.reactions ?? 0,

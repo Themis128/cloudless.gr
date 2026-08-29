@@ -9,7 +9,10 @@
     },
     "cloudless-infra": {
       "command": "npx",
-      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
+      "args": [
+        "tsx",
+        "tools/ssh-mcp/src/index.ts"
+      ],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
         "OMV_SSH_USER": "omv",
@@ -19,12 +22,29 @@
     },
     "project": {
       "command": "npx",
-      "args": ["-y", "project-mcp"],
+      "args": [
+        "-y",
+        "project-mcp"
+      ],
       "autoStart": true
+    },
+    "openshorts": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mutonby/openshorts-mcp"
+      ],
+      "env": {
+        "OPENSHORTS_API_URL": "http://cluster.local"
+      },
+      "autoStart": false
     },
     "postiz": {
       "command": "npx",
-      "args": ["-y", "postiz-mcp"],
+      "args": [
+        "-y",
+        "@antoniolg/postiz-mcp"
+      ],
       "env": {
         "POSTIZ_API_URL": "https://postiz.cloudless.gr",
         "POSTIZ_API_KEY": "edd2c4f5c5e49502fad640a8164147eecf506622a3be4caea6c477cd94ccced2"
@@ -33,17 +53,26 @@
     },
     "prompt-to-asset": {
       "command": "npx",
-      "args": ["-y", "prompt-to-asset"],
+      "args": [
+        "-y",
+        "prompt-to-asset"
+      ],
       "autoStart": false
     },
     "postlint": {
       "command": "npx",
-      "args": ["-y", "@conorbronsdon/postlint-mcp"],
+      "args": [
+        "-y",
+        "postlint-mcp"
+      ],
       "autoStart": false
     },
     "bluesky": {
       "command": "npx",
-      "args": ["-y", "mcp-server-bluesky"],
+      "args": [
+        "-y",
+        "@morinokami/mcp-server-bluesky"
+      ],
       "env": {
         "BLUESKY_IDENTIFIER": "dcvv-4xxf-vs7h-ux6c",
         "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}"
@@ -52,7 +81,7 @@
     },
     "free-stock-images": {
       "command": "npx",
-      "args": ["-y", "stock-images-mcp"],
+      "args": ["-y", "free-stock-images-mcp"],
       "env": {
         "UNSPLASH_ACCESS_KEY": "${UNSPLASH_ACCESS_KEY}",
         "PEXELS_API_KEY": "AXdiQ6gWmGYxIsU9HZZhVkUYCDtNjE9FapeGEWl5Pyp4CvNTDsUvEiwb",

@@ -55,7 +55,6 @@ function toExcerpt(body: string, maxLen = 200): string {
 }
 
 async function ensureContentIndex(): Promise<void> {
-  let created = false;
   try {
     await meiliRequest(`/indexes/${CONTENT_INDEX}`, { method: "GET" }, getMeiliAdminKey());
   } catch (err) {
@@ -69,23 +68,20 @@ async function ensureContentIndex(): Promise<void> {
       },
       getMeiliAdminKey()
     );
-    created = true;
   }
 
-  if (created) {
-    await meiliRequest(
-      `/indexes/${CONTENT_INDEX}/settings`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          filterableAttributes: ["type", "category"],
-          sortableAttributes: ["date"],
-          searchableAttributes: ["title", "excerpt", "body", "category"],
-        }),
-      },
-      getMeiliAdminKey()
-    );
-  }
+  await meiliRequest(
+    `/indexes/${CONTENT_INDEX}/settings`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        filterableAttributes: ["type", "category"],
+        sortableAttributes: ["date"],
+        searchableAttributes: ["title", "excerpt", "body", "category"],
+      }),
+    },
+    getMeiliAdminKey()
+  );
 }
 
 export async function syncContentIndex(): Promise<{
@@ -155,7 +151,10 @@ export async function syncContentIndex(): Promise<{
   };
 }
 
-export async function searchContent(query: string, limit = 8): Promise<ContentSearchResult[]> {
+export async function searchContent(
+  query: string,
+  limit = 8
+): Promise<ContentSearchResult[]> {
   if (!isMeilisearchConfigured() || !query.trim()) return [];
 
   try {
