@@ -28,6 +28,7 @@ const jsxTransformPlugin = {
 export default defineConfig({
   plugins: [jsxTransformPlugin],
   resolve: {
+    tsconfigPaths: true,
     // jose lives in the pnpm content-addressable store; the stub symlink at
     // node_modules/jose is missing its package.json, so Vite can't resolve it
     // via normal package resolution. Alias it to the real store location.
@@ -77,23 +78,17 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    // Vitest 4.x: pool options moved to top-level
     pool: "forks",
-    minThreads: 1,
-    maxThreads: 2,
-    // Allow tests to specify @vitest-environment node for node-specific tests
-    environmentOptions: {
-      jsdom: {
-        url: "http://localhost",
-      },
+    poolOptions: {
+      forks: { minForks: 1, maxForks: 2 },
     },
     server: {
       deps: {
         // next-auth imports next/server as bare ESM specifier. Inlining lets
         // Vitest pre-transform the import through its alias map.
         inline: ["next-auth", "@auth/core", "next-intl"],
-        // Allow node:sqlite to be resolved natively in Node.js environment
-        external: [],
+        // node:sqlite is handled by the nodeBuiltinSqlite plugin above.
+        external: [/^node:sqlite/],
       },
     },
 
