@@ -20,9 +20,30 @@ import {
 } from "@/lib/workers-ai-client";
 import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
 import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
+import { getAvailableSlots } from "@/lib/google-calendar";
+import { DEFAULT_DAYS_AHEAD } from "@/lib/booking-slots";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
+
+// ---------------------------------------------------------------------------
+// Booking-reply short-circuit
+// ---------------------------------------------------------------------------
+// The model reliably loops back to check_calendar_availability when the
+// visitor sends "row, name, email" because BOOKING_ISO_DATA only lives inside
+// the tool-call exchange of the previous turn and is not preserved in the
+// client-side message history. We intercept this pattern server-side and call
+// book_slot directly — the model only generates the confirmation text.
+
+// Matches "5, Themis Baltzakis, themis@example.com" with optional whitespace
+const BOOKING_REPLY_RE =
+  /^\s*(\d+)\s*,\s*([^,]+?)\s*,\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\s*$/;
+
+function tryParseBookingReply(msg: string): { row: number; name: string; email: string } | null {
+  const m = BOOKING_REPLY_RE.exec(msg.trim());
+  if (!m) return null;
+  return { row: parseInt(m[1], 10), name: m[2].trim(), email: m[3].trim().toLowerCase() };
+}
 
 // Detect when the model outputs reasoning instead of a visitor-facing reply
 const REASONING_PATTERNS =
@@ -71,6 +92,44 @@ export async function runWorkersAiChatLoop(
     },
     ...initialMessages.map((m) => ({ role: m.role, content: m.content })),
   ];
+
+  // --- Booking-reply short-circuit ---
+  // If the last user message is "row, name, email" AND the most recent
+  // assistant turn looks like a slot table, handle the booking ourselves
+  // rather than sending it to the model (which loops back to calendar lookup).
+  const lastUserMsg = initialMessages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+  const bookingReply = tryParseBookingReply(lastUserMsg);
+  if (bookingReply) {
+    const prevAssistant = [...initialMessages].reverse().find((m) => m.role === "assistant");
+    const looksLikeSlotTable =
+      prevAssistant?.content.includes("Athens") && prevAssistant.content.includes("|");
+    if (looksLikeSlotTable) {
+      try {
+        const slots = await getAvailableSlots(DEFAULT_DAYS_AHEAD);
+        const slot = slots[bookingReply.row - 1];
+        if (slot) {
+          const bookResult = await runTool("book_slot", {
+            name: bookingReply.name,
+            email: bookingReply.email,
+            start: slot.start,
+            end: slot.end,
+          });
+          // Ask the model to turn the raw tool result into a friendly reply
+          messages.push({
+            role: "user",
+            content: `TOOL_RESULT for book_slot:\n${bookResult}\n\nConfirm the booking to the visitor in 2-3 warm sentences. Include the Meet link if provided.`,
+          });
+          const confirmation = await callChatBackend(messages);
+          return confirmation || bookResult;
+        }
+        // Row out of range — tell visitor kindly
+        return `Sorry, row ${bookingReply.row} isn't available anymore — the slots may have changed. Let me show you the current ones:`;
+      } catch (err) {
+        console.error("[chat] booking short-circuit failed:", err);
+        // fall through to normal loop
+      }
+    }
+  }
 
   let reasoningRetried = false;
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
