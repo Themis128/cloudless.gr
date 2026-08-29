@@ -24,8 +24,18 @@ const ATHENS_FMT: Intl.DateTimeFormatOptions = {
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function formatAthens(iso: string) {
@@ -44,10 +54,29 @@ function minutesUntil(iso: string) {
 
 function StatusPill({ start }: { start: string }) {
   const mins = minutesUntil(start);
-  if (mins < 0) return <span className="rounded-full bg-slate-700 px-2 py-0.5 font-mono text-[10px] text-slate-400">Past</span>;
-  if (mins <= 60) return <span className="rounded-full bg-red-500/20 px-2 py-0.5 font-mono text-[10px] text-red-400">In {mins}m</span>;
-  if (mins <= 1440) return <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 font-mono text-[10px] text-yellow-400">Today</span>;
-  return <span className="rounded-full bg-green-500/20 px-2 py-0.5 font-mono text-[10px] text-green-400">Upcoming</span>;
+  if (mins < 0)
+    return (
+      <span className="rounded-full bg-slate-700 px-2 py-0.5 font-mono text-[10px] text-slate-400">
+        Past
+      </span>
+    );
+  if (mins <= 60)
+    return (
+      <span className="rounded-full bg-red-500/20 px-2 py-0.5 font-mono text-[10px] text-red-400">
+        In {mins}m
+      </span>
+    );
+  if (mins <= 1440)
+    return (
+      <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
+        Today
+      </span>
+    );
+  return (
+    <span className="rounded-full bg-green-500/20 px-2 py-0.5 font-mono text-[10px] text-green-400">
+      Upcoming
+    </span>
+  );
 }
 
 export default function ConsultationsPage() {
@@ -107,12 +136,25 @@ export default function ConsultationsPage() {
   }
 
   // Calendar grid
-  const prevMonth = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
-  const nextMonth = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
+  const prevMonth = () => {
+    if (month === 0) {
+      setYear((y) => y - 1);
+      setMonth(11);
+    } else setMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 11) {
+      setYear((y) => y + 1);
+      setMonth(0);
+    } else setMonth((m) => m + 1);
+  };
 
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: (number | null)[] = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const cells: (number | null)[] = [
+    ...Array(firstWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
   while (cells.length % 7 !== 0) cells.push(null);
 
   const consultationsByDate: Record<string, Consultation[]> = {};
@@ -122,7 +164,7 @@ export default function ConsultationsPage() {
     consultationsByDate[d].push(c);
   }
 
-  const upcoming = consultations.filter(c => c.status === "upcoming");
+  const upcoming = consultations.filter((c) => c.status === "upcoming");
 
   return (
     <div>
@@ -134,9 +176,7 @@ export default function ConsultationsPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-heading text-2xl font-bold text-white">Consultations</h1>
-            <p className="font-body mt-1 text-slate-400">
-              Upcoming bookings from Google Calendar.
-            </p>
+            <p className="font-body mt-1 text-slate-400">Upcoming bookings from Google Calendar.</p>
           </div>
           {notifPermission !== "granted" && typeof Notification !== "undefined" && (
             <button
@@ -155,7 +195,8 @@ export default function ConsultationsPage() {
 
       {!configured && (
         <div className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 font-mono text-sm text-yellow-400">
-          Google Calendar is not configured. Set <code>GOOGLE_CLIENT_EMAIL</code> and <code>GOOGLE_PRIVATE_KEY</code> to enable booking.
+          Google Calendar is not configured. Set <code>GOOGLE_CLIENT_EMAIL</code> and{" "}
+          <code>GOOGLE_PRIVATE_KEY</code> to enable booking.
         </div>
       )}
 
@@ -163,25 +204,56 @@ export default function ConsultationsPage() {
         {/* Mini calendar */}
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <button type="button" onClick={prevMonth} className="px-2 font-mono text-slate-400 hover:text-white">‹</button>
-            <h2 className="font-mono text-sm font-semibold text-white">{MONTHS[month]} {year}</h2>
-            <button type="button" onClick={nextMonth} className="px-2 font-mono text-slate-400 hover:text-white">›</button>
+            <button
+              type="button"
+              onClick={prevMonth}
+              className="px-2 font-mono text-slate-400 hover:text-white"
+            >
+              ‹
+            </button>
+            <h2 className="font-mono text-sm font-semibold text-white">
+              {MONTHS[month]} {year}
+            </h2>
+            <button
+              type="button"
+              onClick={nextMonth}
+              className="px-2 font-mono text-slate-400 hover:text-white"
+            >
+              ›
+            </button>
           </div>
           <div className="grid grid-cols-7 gap-px bg-slate-800">
-            {DAYS.map(d => (
-              <div key={d} className="bg-void-light py-1.5 text-center font-mono text-[9px] text-slate-500">{d}</div>
+            {DAYS.map((d) => (
+              <div
+                key={d}
+                className="bg-void-light py-1.5 text-center font-mono text-[9px] text-slate-500"
+              >
+                {d}
+              </div>
             ))}
             {cells.map((day, idx) => {
-              const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
+              const dateStr = day
+                ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                : null;
               const dayConsultations = dateStr ? (consultationsByDate[dateStr] ?? []) : [];
-              const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+              const isToday =
+                day === today.getDate() &&
+                month === today.getMonth() &&
+                year === today.getFullYear();
               return (
                 <div key={idx} className="bg-void flex min-h-10 flex-col items-center p-1">
                   {day && (
                     <>
-                      <p className={`font-mono text-[10px] ${isToday ? "text-neon-magenta font-bold" : "text-slate-500"}`}>{day}</p>
+                      <p
+                        className={`font-mono text-[10px] ${isToday ? "text-neon-magenta font-bold" : "text-slate-500"}`}
+                      >
+                        {day}
+                      </p>
                       {dayConsultations.length > 0 && (
-                        <span className="bg-neon-magenta mt-0.5 h-1.5 w-1.5 rounded-full" title={`${dayConsultations.length} consultation(s)`} />
+                        <span
+                          className="bg-neon-magenta mt-0.5 h-1.5 w-1.5 rounded-full"
+                          title={`${dayConsultations.length} consultation(s)`}
+                        />
                       )}
                     </>
                   )}
@@ -208,7 +280,7 @@ export default function ConsultationsPage() {
           )}
 
           <div className="space-y-3">
-            {upcoming.map(c => {
+            {upcoming.map((c) => {
               const name = extractClientName(c.title);
               const mins = minutesUntil(c.start);
               const startLabel = formatAthens(c.start);
@@ -219,17 +291,24 @@ export default function ConsultationsPage() {
                 hour12: false,
               });
               return (
-                <div key={c.id} className={`rounded-lg border p-4 transition-colors ${mins <= 60 ? "border-red-500/30 bg-red-500/5" : "border-slate-700 bg-slate-900/50"}`}>
+                <div
+                  key={c.id}
+                  className={`rounded-lg border p-4 transition-colors ${mins <= 60 ? "border-red-500/30 bg-red-500/5" : "border-slate-700 bg-slate-900/50"}`}
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
                         <User className="text-neon-magenta h-3.5 w-3.5 shrink-0" />
-                        <span className="font-mono text-sm font-semibold text-white truncate">{name}</span>
+                        <span className="truncate font-mono text-sm font-semibold text-white">
+                          {name}
+                        </span>
                         <StatusPill start={c.start} />
                       </div>
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <Calendar className="h-3 w-3 shrink-0" />
-                        <span className="font-mono text-xs">{startLabel}–{endLabel} Athens</span>
+                        <span className="font-mono text-xs">
+                          {startLabel}–{endLabel} Athens
+                        </span>
                       </div>
                     </div>
                     {c.meetLink && (

@@ -77,9 +77,7 @@ export function formatAthensSlotsTable(
   });
   const table = [header, ...rows].join("\n");
   if (!includeRefs) return table;
-  const refs = slots
-    .map((s, i) => `${i + 1}. start=${s.start} end=${s.end}`)
-    .join("\n");
+  const refs = slots.map((s, i) => `${i + 1}. start=${s.start} end=${s.end}`).join("\n");
   return `${table}\n\nSlot refs (use exact ISO values for book_slot):\n${refs}`;
 }
 

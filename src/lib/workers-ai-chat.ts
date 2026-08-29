@@ -25,11 +25,16 @@ const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
 // Detect when the model outputs reasoning instead of a visitor-facing reply
-const REASONING_PATTERNS = /^(we need to|i need to|let me|the user|we should|to book|looking at|it seems|we must|however we|given the|since we|the slot|need iso|the tool|let's assume)/i;
+const REASONING_PATTERNS =
+  /^(we need to|i need to|let me|the user|we should|to book|looking at|it seems|we must|however we|given the|since we|the slot|need iso|the tool|let's assume)/i;
 
 function looksLikeLeakedReasoning(text: string): boolean {
   const t = text.trim();
-  return REASONING_PATTERNS.test(t) || (t.length > 250 && /we need to|i need to|let me think|we should call|we must|the model/i.test(t));
+  return (
+    REASONING_PATTERNS.test(t) ||
+    (t.length > 250 &&
+      /we need to|i need to|let me think|we should call|we must|the model/i.test(t))
+  );
 }
 
 async function callChatBackend(messages: { role: string; content: string }[]): Promise<string> {
@@ -78,7 +83,8 @@ export async function runWorkersAiChatLoop(
         messages.push({ role: "assistant", content: reply });
         messages.push({
           role: "user",
-          content: "Please send your final reply to the visitor now. No reasoning — just the message they should read.",
+          content:
+            "Please send your final reply to the visitor now. No reasoning — just the message they should read.",
         });
         continue;
       }

@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   authors: [{ name: "Cloudless" }],
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: {
+      "tiktok-developers-site-verification": "30QWkDq9g0olcwcIDueeqBix84M0VCXn",
+    },
   },
   // iOS PWA support — apple-touch-icon + status bar style
   appleWebApp: {

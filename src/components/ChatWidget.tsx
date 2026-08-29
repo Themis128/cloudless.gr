@@ -185,14 +185,30 @@ export default function ChatWidget() {
                         components={{
                           table: ({ children }) => (
                             <div className="my-2 overflow-x-auto">
-                              <table className="w-full border-collapse font-mono text-xs">{children}</table>
+                              <table className="w-full border-collapse font-mono text-xs">
+                                {children}
+                              </table>
                             </div>
                           ),
-                          thead: ({ children }) => <thead className="border-b border-slate-600">{children}</thead>,
-                          th: ({ children }) => <th className="px-2 py-1 text-left text-slate-400 font-semibold">{children}</th>,
-                          td: ({ children }) => <td className="px-2 py-1 text-slate-300 border-b border-slate-800/60">{children}</td>,
-                          tr: ({ children }) => <tr className="hover:bg-slate-800/30">{children}</tr>,
-                          strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                          thead: ({ children }) => (
+                            <thead className="border-b border-slate-600">{children}</thead>
+                          ),
+                          th: ({ children }) => (
+                            <th className="px-2 py-1 text-left font-semibold text-slate-400">
+                              {children}
+                            </th>
+                          ),
+                          td: ({ children }) => (
+                            <td className="border-b border-slate-800/60 px-2 py-1 text-slate-300">
+                              {children}
+                            </td>
+                          ),
+                          tr: ({ children }) => (
+                            <tr className="hover:bg-slate-800/30">{children}</tr>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-white">{children}</strong>
+                          ),
                           p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
                         }}
                       >

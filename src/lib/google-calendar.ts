@@ -134,7 +134,10 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
     throw new Error(`Google Calendar freeBusy failed (${freeBusyRes.status})`);
   }
   const freeBusyData = (await freeBusyRes.json()) as {
-    calendars?: Record<string, { busy?: TimeSlot[]; errors?: { reason?: string; message?: string }[] }>;
+    calendars?: Record<
+      string,
+      { busy?: TimeSlot[]; errors?: { reason?: string; message?: string }[] }
+    >;
   };
   const cal = freeBusyData.calendars?.[calendarId];
   if (cal?.errors?.length) {
