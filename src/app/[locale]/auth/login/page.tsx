@@ -53,7 +53,13 @@ function LoginContent() {
   useEffect(() => {
     if (!isLoading && user) {
       if (isSafeRedirectPath(nextParam)) {
-        router.push(normalizeRedirectPath(nextParam));
+        const dest = normalizeRedirectPath(nextParam);
+        // /portal/* is locale-free; the i18n router would prefix /en/ and 404.
+        if (dest.startsWith("/portal")) {
+          window.location.href = dest;
+        } else {
+          router.push(dest);
+        }
       } else {
         router.push(isAdmin ? "/admin" : "/dashboard");
       }

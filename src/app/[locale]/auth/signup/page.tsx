@@ -29,7 +29,9 @@ function SignUpForm() {
   useEffect(() => {
     if (!isLoading && user) {
       if (postSignupDestination) {
-        router.push(postSignupDestination);
+        // /portal/* is locale-free — the i18n router would add /en/ and 404.
+        // Use window.location to navigate without the locale prefix.
+        window.location.href = postSignupDestination;
       } else {
         router.push(isAdmin ? "/admin" : "/dashboard");
       }
@@ -273,7 +275,11 @@ function SignUpForm() {
                 {t("auth.canSignInNow", "You can now sign in with your email and password.")}
               </p>
               <Link
-                href="/auth/login"
+                href={
+                  postSignupDestination
+                    ? `/auth/login?redirect=${encodeURIComponent(postSignupDestination)}`
+                    : "/auth/login"
+                }
                 className="text-neon-cyan block font-mono text-sm hover:underline"
               >
                 {t("auth.goToSignIn", "Go to Sign In →")}

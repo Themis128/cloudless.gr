@@ -129,21 +129,10 @@ export async function runWorkersAiChatLoop(
             start: slot.start,
             end: slot.end,
           });
-          // Ask the model to turn the raw tool result into a friendly reply
-          messages.push({
-            role: "user",
-            content: `TOOL_RESULT for book_slot:\n${bookResult}\n\nConfirm the booking to the visitor in 2-3 warm sentences. Include the Meet link if provided.`,
-          });
-          const confirmation = await callChatBackend(messages);
-          // Guard against the model returning another tool call or reasoning as confirmation
-          if (
-            !confirmation ||
-            looksLikeLeakedToolCall(confirmation) ||
-            looksLikeLeakedReasoning(confirmation)
-          ) {
-            return bookResult;
-          }
-          return confirmation;
+          // Return the tool result directly — it already contains the Meet link,
+          // slot details, and confirmation. Skipping a model "warm-up" call avoids
+          // the llama-3.1-8b leaked-tool-call problem on this step entirely.
+          return bookResult;
         }
         // Row out of range — show current slots so visitor can pick again
         const slotLines = slots
