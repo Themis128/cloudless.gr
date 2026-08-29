@@ -49,7 +49,7 @@ export async function sendEmail(options: {
   listUnsubscribeUrl?: string;
 }) {
   if (await isSuppressed(options.to)) {
-    console.warn("[email] Skipping suppressed address");
+    console.warn("[email] Skipping suppressed address:", options.to.replace(/[\r\n]/g, " "));
     return;
   }
 
