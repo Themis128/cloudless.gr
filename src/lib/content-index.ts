@@ -151,10 +151,7 @@ export async function syncContentIndex(): Promise<{
   };
 }
 
-export async function searchContent(
-  query: string,
-  limit = 8
-): Promise<ContentSearchResult[]> {
+export async function searchContent(query: string, limit = 8): Promise<ContentSearchResult[]> {
   if (!isMeilisearchConfigured() || !query.trim()) return [];
 
   try {

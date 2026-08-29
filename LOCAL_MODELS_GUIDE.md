@@ -17,20 +17,24 @@ This guide provides information about free local models you can download and run
 ## Where to Download (Direct, Reliable Sources)
 
 ### Hugging Face Model Hub
+
 - Central place for many Stable Diffusion checkpoints, Llama 2 mirrors, Mistral, Vicuna community uploads, and quantized variants
 - Use [huggingface.co/models](https://huggingface.co/models) and check the model's README for license and usage instructions
 
 ### Stability.ai / SDXL Pages
+
 - Official pages and links for Stable Diffusion and SDXL models
 - Often point to Hugging Face or direct downloads
 
 ### GGML / Community Builds
+
 - For CPU-friendly LLMs (Llama 2, Mistral, Vicuna), look for GGML-converted weights and quantized builds (4-bit/8-bit) on Hugging Face or community repos
 - These are optimized for local CPU inference
 
 ## Practical Recommendations by Use Case
 
 ### Image Generation with ComfyUI (Fastest Path)
+
 1. Start with **Stable Diffusion 1.5** (smallest ecosystem friction)
 2. Download the `sd-v1-5` checkpoint from Hugging Face or a Stability release page
 3. Use ComfyUI's SD nodes or diffusers backend
@@ -38,39 +42,43 @@ This guide provides information about free local models you can download and run
 5. Upgrade to SDXL only if you have GPU or plan to use a cloud GPU (much better quality but heavier)
 
 ### Local Chat/Assistant (LLMs)
+
 1. **Llama 2 7B** - Good balance of quality and resource needs
    - Get the model from Meta/Hugging Face
    - Use a GGML or 4-bit quantized build for CPU
    - Accept Meta's license if required
-   
 2. **Mistral 7B** - Strong open model
    - Similar workflow: download FP16 then convert/quantize for CPU inference
-   
 3. **Vicuna** - Instruction-tuned variant for chat
    - Often requires a base Llama checkpoint plus Vicuna weights
    - Use community GGML conversions for CPU
 
 ### Very Small, Low-Resource Models for CPU-only
+
 - Look for distilled or quantized variants (4-bit AWQ, GGML) on Hugging Face
 - These let you run 7B-class models on a decent CPU with ~16–32 GB RAM
 
 ## Quick Setup Notes (Image + LLM Local)
 
 ### ComfyUI
+
 - Supports Stable Diffusion checkpoints directly
 - Drop `.ckpt` or `.safetensors` files into the models folder and restart UI
 - Use ComfyUI community nodes for SDXL or specialized models
 
 ### LLM Runtimes
+
 - Use `llama.cpp/ggml` for CPU inference
 - Use `transformers + bitsandbytes` for GPU/FP16
 - For best CPU performance: use GGML-converted and quantized weights
 
 ### Quantization
+
 - 4-bit/8-bit quantization reduces memory and speeds up inference
 - Check each model's conversion instructions and community tools (e.g., ggml, llama.cpp, gguf converters)
 
 ## Licensing and Safety
+
 - Check each model's license on its Hugging Face or official page before using it in production
 - Some models require accepting terms (e.g., Llama 2)
 - Avoid copyrighted checkpoints that are not cleared for redistribution
@@ -79,32 +87,37 @@ This guide provides information about free local models you can download and run
 ## Notes on Specific Models
 
 ### Stable Diffusion Variants
+
 - **SD 1.5**: Most widely supported, largest community, many fine-tuned versions available
 - **SD 2.1**: Improved architecture but different licensing; check if your use case is permitted
 - **SDXL**: Significantly better quality but requires more resources; consider using distilled versions like SDXL-Turbo for faster generation
 
 ### LLM Variants
+
 - **Llama 2**: Requires accepting Meta's license; available in 7B, 13B, and 70B sizes
 - **Mistral 7B**: Fully open-source (Apache 2.0), no usage restrictions
 - **Vicuna**: Based on Llama, requires checking the base model license; instruction-tuned for better chat performance
 
 ## Hardware Considerations
 
-### For Image Generation:
+### For Image Generation
+
 - **Minimum CPU**: Modern quad-core CPU
 - **Recommended RAM**: 16GB+ for SD 1.5/SD 2.1, 32GB+ for SDXL
 - **Storage**: 10-20GB+ depending on model variants
 - **Optimization**: Use CPU-specific builds, quantized VAE, attention slicing
 
-### For Text Generation (LLMs):
+### For Text Generation (LLMs)
+
 - **Minimum CPU**: Modern CPU with AVX2 support
-- **RAM Requirements**: 
+- **RAM Requirements**:
   - 7B model (4-bit quantized): ~4-6GB RAM
   - 7B model (8-bit quantized): ~6-8GB RAM
   - 7B model (FP16): ~14GB+ RAM
 - **Storage**: 4-15GB+ depending on quantization level
 
 ## Community Resources
+
 - **ComfyUI**: https://github.com/comfyanonymous/ComfyUI
 - **llama.cpp**: https://github.com/ggerganov/llama.cpp
 - **text-generation-webui**: https://github.com/oobabooga/text-generation-webui
