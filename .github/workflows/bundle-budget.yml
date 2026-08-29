@@ -39,7 +39,9 @@ jobs:
       #     measured static chunks 2736KB on PR #1368.
       #   2800KB → 3200KB (2026-08-21): EspoCRM + AI SDK growth; measured 3118KB
       #     on PR #1714 (20 minor/patch dep updates including ai 7.0.56→7.0.66).
-      BUNDLE_MAX_KB: '3200'
+      #   3200KB → 3400KB (2026-08-29): react-markdown + remark-gfm for ChatWidget
+      #     GFM table rendering; measured 3274KB on PR #1751.
+      BUNDLE_MAX_KB: '3400'
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v6
     - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10

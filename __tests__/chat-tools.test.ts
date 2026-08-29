@@ -81,9 +81,9 @@ describe("chat-tools.runTool", () => {
     const out = await runTool("check_calendar_availability", {
       days_ahead: 7,
     });
-    expect(out).toContain("Available slots");
+    expect(out).toContain("Available consultation slots");
     expect(out).toContain("Athens");
-    expect(out).toContain("https://cloudless.gr/book");
+    expect(out).toContain("BOOKING_ISO_DATA");
   });
 
   it("check_calendar_availability returns a graceful message when calendar isn't configured", async () => {
