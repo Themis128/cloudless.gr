@@ -1,0 +1,56 @@
+# k8s CronJob for the automated weekly newsletter.
+# Calls /api/cron/newsletter-auto every Monday at 09:00 Athens.
+#
+# Requires the cloudless-secrets Secret to contain a CRON_SECRET key that the
+# app accepts (src/lib/cron-auth.ts). Add it with:
+#   kubectl -n cloudless patch secret cloudless-secrets --type merge -p \
+#     '{"stringData":{"CRON_SECRET":"<same-value-as-the-app-CRON_SECRET>"}}'
+#
+# Apply: kubectl apply -f infrastructure/newsletter/cronjob-newsletter.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: newsletter-auto
+  namespace: cloudless
+  labels:
+    app.kubernetes.io/name: newsletter-auto
+    app.kubernetes.io/component: cron
+spec:
+  schedule: "0 9 * * 1"
+  timeZone: Europe/Athens
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 4
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: newsletter
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "→ sending weekly newsletter"
+              curl -fsS --max-time 120 \
+                -H "Authorization: Bearer ${CRON_SECRET}" \
+                "https://cloudless.gr/api/cron/newsletter-auto"
+              echo "✅ newsletter sent"
+            env:
+            - name: CRON_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudless-secrets
+                  key: CRON_SECRET
+            resources:
+              requests:
+                memory: 16Mi
+                cpu: 10m
+              limits:
+                memory: 64Mi
+                cpu: 100m
