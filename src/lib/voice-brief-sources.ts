@@ -1,7 +1,7 @@
 /**
  * Shared data-source primitives for the voice-brief cron route.
  *
- * Called by the Bedrock agent (`src/lib/agent-voice-brief.ts`) which wraps
+ * Called by the voice-brief agent (`src/lib/agent-voice-brief.ts`) which wraps
  * each one with `withRetry` and formats the result into a tool-response
  * string. Kept as a separate module so the data-shaping logic stays out of
  * the agent loop and can be unit-tested independently.

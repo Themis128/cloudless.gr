@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
       return Response.json({
         query: q,
-        source: "meilisearch-bedrock",
+        source: "meilisearch",
         hits,
         content,
       });

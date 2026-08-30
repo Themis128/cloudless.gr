@@ -2,7 +2,7 @@
  * Cloudflare AI Search integration for the chat widget.
  *
  * Provides semantic search capabilities using managed AI Search instances.
- * Uses the same environment detection pattern as bedrock-chat.ts.
+ * Uses the same environment detection pattern as workers-ai-chat.ts.
  */
 
 // Detect Cloudflare Workers environment

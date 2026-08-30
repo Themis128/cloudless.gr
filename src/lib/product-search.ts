@@ -1,5 +1,5 @@
 import { getProducts, type StoreProduct } from "@/lib/store-products";
-import { WORKERS_AI_EMBED_DIMENSIONS, embedTextWithWorkersAi } from "@/lib/bedrock-embeddings";
+import { WORKERS_AI_EMBED_DIMENSIONS, embedTextWithWorkersAi } from "@/lib/workers-ai-client";
 import {
   PRODUCT_EMBEDDER,
   PRODUCTS_INDEX,

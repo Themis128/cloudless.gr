@@ -1,6 +1,6 @@
 /**
  * Low-level Cloudflare Workers AI REST client (account + API token).
- * Shared by chat, agents, and embeddings — no AWS Bedrock dependency.
+ * Shared by chat, agents, and embeddings.
  *
  * When CLOUDFLARE_AI_GATEWAY_ID is set, requests go through AI Gateway
  * (free caching, rate limits, request logs).
@@ -201,4 +201,28 @@ export async function callWorkersAiEmbed(
     throw new Error("Workers AI embedding response did not include data[0]");
   }
   return vector.map((v) => Number(v));
+}
+
+export const WORKERS_AI_EMBED_MODEL =
+  process.env.WORKERS_AI_EMBED_MODEL || "@cf/baai/bge-small-en-v1.5";
+
+export const WORKERS_AI_EMBED_DIMENSIONS = Number.parseInt(
+  process.env.WORKERS_AI_EMBED_DIMENSIONS || "384",
+  10
+);
+
+export function normalizeEmbeddingInput(input: string): string {
+  return input.replace(/\s+/g, " ").trim().slice(0, 50_000);
+}
+
+export function isEmbeddingsConfigured(): boolean {
+  return isWorkersAiConfigured();
+}
+
+export async function embedTextWithWorkersAi(input: string): Promise<number[]> {
+  const inputText = normalizeEmbeddingInput(input);
+  if (!inputText) {
+    throw new Error("Cannot embed empty text");
+  }
+  return callWorkersAiEmbed(inputText, { model: WORKERS_AI_EMBED_MODEL });
 }

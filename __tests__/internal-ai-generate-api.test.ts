@@ -109,14 +109,13 @@ describe("POST /api/internal/ai/generate", () => {
     expect(body.result).toBe("From fallback CF");
   });
 
-  it("returns 502 when every CF model fails (no Bedrock)", async () => {
-    globalThis.fetch = vi.fn().mockImplementation(
-      () =>
-        Promise.resolve(
-          new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
-            status: 500,
-          })
-        )
+  it("returns 502 when every CF model fails", async () => {
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
+          status: 500,
+        })
+      )
     ) as typeof fetch;
     const res = await POST(
       reqWith({

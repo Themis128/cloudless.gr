@@ -63,12 +63,6 @@ export default defineConfig({
       // @aws-sdk/client-dynamodb crashes via @smithy/core subpath under JSDOM.
       // Tests mock stripe-transactions.ts directly; the stub satisfies imports.
       "@aws-sdk/client-dynamodb": path.resolve(__dirname, "__tests__/stubs/aws-dynamodb-stub.js"),
-      // @aws-sdk/client-bedrock-runtime shares the same @aws-sdk/util-endpoints
-      // crash under JSDOM. Tests mock bedrock-chat.ts directly.
-      "@aws-sdk/client-bedrock-runtime": path.resolve(
-        __dirname,
-        "__tests__/stubs/aws-bedrock-runtime-stub.js"
-      ),
       // @aws-sdk/client-sesv2 shares the same crash. Tests mock email.ts directly.
       "@aws-sdk/client-sesv2": path.resolve(__dirname, "__tests__/stubs/aws-sesv2-stub.js"),
     },
@@ -95,10 +89,7 @@ export default defineConfig({
     testTimeout: 15000,
     include: ["__tests__/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     // Agent tests need optional `redis` which is not a root dependency.
-    exclude: [
-      "tests/BaseAgent.test.ts",
-      "tests/Orchestrator.test.ts",
-    ],
+    exclude: ["tests/BaseAgent.test.ts", "tests/Orchestrator.test.ts"],
     reporters: ["default"],
     setupFiles: ["./__tests__/setup.ts"],
     coverage: {

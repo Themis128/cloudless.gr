@@ -5,7 +5,7 @@ import { getConfig } from "@/lib/ssm-config";
 /**
  * POST /api/internal/ai/generate — service-to-service text generation.
  *
- * Cloudflare Workers AI only (AWS Bedrock removed in CF cutover).
+ * Cloudflare Workers AI only.
  *
  * Auth: shared secret in `x-internal-secret`, compared in constant time
  * with `AI_GENERATE_SECRET`. Returns 503 if the secret isn't configured.

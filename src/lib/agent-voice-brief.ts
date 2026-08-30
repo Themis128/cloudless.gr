@@ -10,7 +10,7 @@
  *      up on a source.
  *   3. Calls `emit_brief` exactly once with a polished TTS-friendly narrative.
  *
- * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (no Bedrock fallback).
+ * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  */
 import {
   fetchSeoMetrics,

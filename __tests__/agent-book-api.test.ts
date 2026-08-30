@@ -233,7 +233,7 @@ describe("POST /api/agent/book", () => {
     expect(data.status).toBe("no_match");
   });
 
-  it("propose: 503 when Bedrock access is denied", async () => {
+  it("propose: 503 when Workers AI access is denied", async () => {
     const err = Object.assign(new Error("denied"), {
       name: "AccessDeniedException",
     });

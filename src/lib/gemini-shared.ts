@@ -1,6 +1,5 @@
 /**
- * Google Gemini AI provider for cloudless.gr chat.
- * Replaces AWS Bedrock as the primary AI provider for chat functionality.
+ * Google Gemini AI provider for cloudless.gr.
  * Supports function calling/tool use via Gemini's native tool support.
  */
 

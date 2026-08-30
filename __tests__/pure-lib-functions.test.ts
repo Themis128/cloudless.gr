@@ -1,61 +1,10 @@
 /**
  * Tests for pure/deterministic library functions — no mocks needed.
- * Covers: bedrock-shared, rate-limit, content-calendar, store-products,
+ * Covers: rate-limit, content-calendar, store-products,
  *         content-cache, escape-html, format-price,
  *         booking-slots, validation, structured-data, ab-flags, use-locale.
  */
 import { describe, it, expect, beforeEach } from "vitest";
-
-// ── bedrock-shared.ts (pure helpers) ─────────────────────────────────────────
-
-describe("bedrock-shared.ts — pure helpers", () => {
-  it("pickToolUseBlocks filters to only tool-use blocks", async () => {
-    const { pickToolUseBlocks } = await import("@/lib/bedrock-shared");
-    const content = [
-      { text: "hello" },
-      { toolUse: { toolUseId: "t1", name: "get_data", input: {} } },
-      { text: "world" },
-      { toolUse: { toolUseId: "t2", name: "emit", input: {} } },
-    ];
-    const result = pickToolUseBlocks(content as never[]);
-    expect(result).toHaveLength(2);
-    expect(result[0].toolUse.toolUseId).toBe("t1");
-  });
-
-  it("pickToolUseBlocks returns empty for no tool-use blocks", async () => {
-    const { pickToolUseBlocks } = await import("@/lib/bedrock-shared");
-    expect(pickToolUseBlocks([{ text: "hi" } as never])).toEqual([]);
-  });
-
-  it("joinAssistantText concatenates text blocks and trims", async () => {
-    const { joinAssistantText } = await import("@/lib/bedrock-shared");
-    const content = [
-      { text: "Hello" },
-      { toolUse: { toolUseId: "t1", name: "x", input: {} } },
-      { text: "world" },
-    ];
-    expect(joinAssistantText(content as never[])).toBe("Hello world");
-  });
-
-  it("joinAssistantText returns empty string for no text blocks", async () => {
-    const { joinAssistantText } = await import("@/lib/bedrock-shared");
-    expect(joinAssistantText([])).toBe("");
-  });
-
-  it("buildBedrockToolConfig builds correct structure", async () => {
-    const { buildBedrockToolConfig } = await import("@/lib/bedrock-shared");
-    const tools = [
-      {
-        name: "my_tool",
-        description: "does stuff",
-        inputSchema: { json: { type: "object", properties: {} } },
-      },
-    ];
-    const config = buildBedrockToolConfig(tools as never[]);
-    expect(config).toHaveProperty("tools");
-    expect(Array.isArray(config.tools)).toBe(true);
-  });
-});
 
 // ── rate-limit.ts ─────────────────────────────────────────────────────────────
 

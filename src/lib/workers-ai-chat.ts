@@ -201,6 +201,3 @@ export async function runWorkersAiChatLoop(
 
   return "I hit a tool-call limit — please try again with a simpler question, or use the Contact page.";
 }
-
-/** @deprecated name kept for gradual call-site migration */
-export const runBedrockChatLoop = runWorkersAiChatLoop;
