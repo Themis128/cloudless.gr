@@ -10,6 +10,7 @@ import {
   groupDocsByCategory,
 } from "@/lib/appflowy-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { sanitizeCmsHtml } from "@/lib/sanitize-cms-html";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { trackEvent } from "@/lib/appflowy-analytics";
@@ -144,7 +145,7 @@ export default async function DocPage({ params }: Props) {
                   {content?.html ? (
                     <div
                       className="prose prose-invert prose-sm md:prose-base prose-headings:font-heading prose-headings:text-white prose-p:text-slate-300 prose-p:leading-relaxed prose-a:text-neon-cyan prose-a:no-underline hover:prose-a:underline prose-code:text-neon-cyan prose-code:bg-neon-cyan/5 prose-code:border prose-code:border-neon-cyan/10 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-xs prose-pre:bg-void-light/60 prose-pre:border prose-pre:border-slate-700 prose-blockquote:border-neon-cyan/40 prose-blockquote:text-slate-400 prose-hr:border-slate-800 prose-strong:text-white prose-li:text-slate-300 max-w-none"
-                      dangerouslySetInnerHTML={{ __html: content.html }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content.html) }}
                     />
                   ) : (
                     <p className="font-mono text-slate-500">No content available.</p>

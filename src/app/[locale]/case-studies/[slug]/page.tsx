@@ -8,6 +8,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { sanitizeCmsHtml } from "@/lib/sanitize-cms-html";
 import {
   getCaseStudyBySlug,
   staticCaseStudies,
@@ -177,7 +178,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
           <ScrollReveal>
             <div
               className="prose prose-invert prose-lg max-w-none"
-              dangerouslySetInnerHTML={{ __html: cs.html }}
+              dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(cs.html) }}
             />
           </ScrollReveal>
         ) : (
