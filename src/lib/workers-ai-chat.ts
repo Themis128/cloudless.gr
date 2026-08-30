@@ -65,19 +65,36 @@ function looksLikeLeakedReasoning(text: string): boolean {
 }
 
 async function callChatBackend(messages: { role: string; content: string }[]): Promise<string> {
+  const errors: Error[] = [];
+
+  async function tryBackend(fn: () => Promise<string>): Promise<string | undefined> {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof Error) errors.push(e);
+      return undefined;
+    }
+  }
+
+  // Try the configured AI backends in priority order. If one fails, continue
+  // to the next so a single unreachable provider does not take the chatbot down.
   if (isNvidiaProxyConfigured()) {
-    return callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS });
+    const reply = await tryBackend(() => callNvidiaProxyChat(messages, { maxTokens: MAX_TOKENS }));
+    if (reply !== undefined) return reply;
   }
-  // Try Workers AI directly; if credentials are absent it throws UnauthorizedException
-  // which we catch to fall through to the next backend.
-  try {
-    return await callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
-  } catch (e) {
-    if (!(e instanceof Error && e.name === "UnauthorizedException")) throw e;
-  }
+
+  const workersAiReply = await tryBackend(() =>
+    callWorkersAiChat(messages, { maxTokens: MAX_TOKENS })
+  );
+  if (workersAiReply !== undefined) return workersAiReply;
+
   if (isOllamaConfigured()) {
-    return callOllamaChat(messages, { maxTokens: MAX_TOKENS });
+    const reply = await tryBackend(() => callOllamaChat(messages, { maxTokens: MAX_TOKENS }));
+    if (reply !== undefined) return reply;
   }
+
+  const last = errors.at(-1);
+  if (last) throw last;
   const err = new Error("No chat backend configured");
   err.name = "UnauthorizedException";
   throw err;

@@ -130,7 +130,12 @@ export type WorkersAiToolCall = { name: string; args: Record<string, unknown> };
  * Expected shape: {"tool":"<name>","args":{...}}
  */
 export function parseWorkersAiToolCall(text: string): WorkersAiToolCall | null {
-  const trimmed = text.trim();
+  // Strip optional ```json ... ``` fences so JSON parsing does not choke on
+  // the markdown some small models wrap around the tool call.
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?\s*\n?|\n?```\s*$/gi, "")
+    .trim();
   const jsonMatch = trimmed.match(/\{[\s\S]*"tool"[\s\S]*\}/);
   if (!jsonMatch) return null;
   try {
