@@ -25,6 +25,13 @@ const GSC_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
+class PermissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PermissionError";
+  }
+}
+
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) {
@@ -47,7 +54,9 @@ export function dateRange(): { startDate: string; endDate: string } {
 async function getGoogleAccessToken(): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL || "";
   if (!email) {
-    console.error("[weekly-gsc-sync-af] missing env var: GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_CLIENT_EMAIL");
+    console.error(
+      "[weekly-gsc-sync-af] missing env var: GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_CLIENT_EMAIL"
+    );
     process.exit(1);
   }
   const privateKey = loadGooglePrivateKey(requireEnv("GOOGLE_PRIVATE_KEY"));
@@ -86,7 +95,7 @@ interface GscRow {
 export async function gscQuery(
   token: string,
   siteUrl: string,
-  body: object,
+  body: object
 ): Promise<{ rows?: GscRow[] }> {
   const encoded = encodeURIComponent(siteUrl);
   const res = await fetch(`${GSC_API}/${encoded}/searchAnalytics/query`, {
@@ -98,9 +107,28 @@ export async function gscQuery(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`GSC query failed: ${res.status} ${await res.text()}`);
+    const bodyText = await res.text();
+    if (res.status === 403 || res.status === 401) {
+      throw new PermissionError(`GSC query failed: ${res.status} ${bodyText}`);
+    }
+    throw new Error(`GSC query failed: ${res.status} ${bodyText}`);
   }
   return res.json() as Promise<{ rows?: GscRow[] }>;
+}
+
+async function listGscSites(token: string): Promise<string[]> {
+  const res = await fetch(GSC_API, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const bodyText = await res.text();
+    if (res.status === 403 || res.status === 401) {
+      throw new PermissionError(`GSC list sites failed: ${res.status} ${bodyText}`);
+    }
+    throw new Error(`GSC list sites failed: ${res.status} ${bodyText}`);
+  }
+  const data = (await res.json()) as { siteEntry?: Array<{ siteUrl: string }> };
+  return data.siteEntry?.map((s) => s.siteUrl) ?? [];
 }
 
 // --- AppFlowy helpers ----------------------------------------------------------
@@ -134,12 +162,13 @@ async function findFirstSpace(token: string, workspaceId: string): Promise<strin
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
-  const body = (await res.json()) as { code?: number; data?: { children?: Array<{ view_id?: string; space_permission?: unknown }> } };
+  const body = (await res.json()) as {
+    code?: number;
+    data?: { children?: Array<{ view_id?: string; space_permission?: unknown }> };
+  };
   if (body.code != null && body.code !== 0) return null; // uninitialized workspace
   const children = body.data?.children ?? [];
-  const space =
-    children.find((c) => c.space_permission != null) ||
-    children[0];
+  const space = children.find((c) => c.space_permission != null) || children[0];
   return space ? (space.view_id ?? null) : null;
 }
 
@@ -160,7 +189,7 @@ async function createReportPage(
   workspaceId: string,
   parentViewId: string,
   blocks: Array<Record<string, unknown>>,
-  title: string,
+  title: string
 ): Promise<{ url: string }> {
   const base = process.env.APPFLOWY_API_URL!.replace(/\/$/, "");
   const viewId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
@@ -205,6 +234,15 @@ async function main(): Promise<void> {
   const token = await getGoogleAccessToken();
   console.log(`[weekly-gsc-sync-af] obtained Google access token`);
 
+  const accessibleSites = await listGscSites(token);
+  if (!accessibleSites.includes(siteUrl)) {
+    throw new PermissionError(
+      `Site ${siteUrl} is not in the accessible GSC sites list. ` +
+        "Add the service account as a user in Google Search Console."
+    );
+  }
+  console.log(`[weekly-gsc-sync-af] site is accessible`);
+
   // Totals
   const totalsResp = await gscQuery(token, siteUrl, {
     ...range,
@@ -233,9 +271,7 @@ async function main(): Promise<void> {
   }));
 
   // CTR Opportunities
-  const ctrOpportunities = allQueries.filter(
-    (r) => r.impressions >= 20 && r.ctr < 0.02,
-  ).length;
+  const ctrOpportunities = allQueries.filter((r) => r.impressions >= 20 && r.ctr < 0.02).length;
 
   // Country breakdown
   const countryResp = await gscQuery(token, siteUrl, {
@@ -252,20 +288,14 @@ async function main(): Promise<void> {
     dimensions: ["device"],
     rowLimit: 5,
   });
-  const totalDeviceClicks = (deviceResp.rows ?? []).reduce(
-    (sum, r) => sum + r.clicks,
-    0,
-  );
-  const mobileClicks =
-    deviceResp.rows?.find((r) => r.keys?.[0] === "MOBILE")?.clicks ?? 0;
+  const totalDeviceClicks = (deviceResp.rows ?? []).reduce((sum, r) => sum + r.clicks, 0);
+  const mobileClicks = deviceResp.rows?.find((r) => r.keys?.[0] === "MOBILE")?.clicks ?? 0;
   const mobilePct =
-    totalDeviceClicks > 0
-      ? parseFloat(((mobileClicks / totalDeviceClicks) * 100).toFixed(1))
-      : 0;
+    totalDeviceClicks > 0 ? parseFloat(((mobileClicks / totalDeviceClicks) * 100).toFixed(1)) : 0;
 
   console.log(
     `[weekly-gsc-sync-af] clicks=${totals.clicks} impressions=${totals.impressions} ` +
-      `keywords=${allQueries.length} ctrOpps=${ctrOpportunities} country=${topCountry} mobile=${mobilePct}%`,
+      `keywords=${allQueries.length} ctrOpps=${ctrOpportunities} country=${topCountry} mobile=${mobilePct}%`
   );
 
   // Login to AppFlowy and create report
@@ -275,7 +305,7 @@ async function main(): Promise<void> {
   // Get parent folder/view
   let parentViewId = process.env.APPFLOWY_GSC_REPORTS_FOLDER;
   if (!parentViewId) {
-    parentViewId = await findFirstSpace(afToken, workspaceId) ?? workspaceId;
+    parentViewId = (await findFirstSpace(afToken, workspaceId)) ?? workspaceId;
     console.log(`[weekly-gsc-sync-af] using parent: ${parentViewId}`);
   }
 
@@ -302,19 +332,17 @@ async function main(): Promise<void> {
     blocks.push(paragraphBlock(`${tq.q}: ${tq.clicks} clicks, ${tq.ctr}% CTR`));
   }
 
-  const { url } = await createReportPage(
-    afToken,
-    workspaceId,
-    parentViewId,
-    blocks,
-    reportTitle,
-  );
+  const { url } = await createReportPage(afToken, workspaceId, parentViewId, blocks, reportTitle);
   console.log(`[weekly-gsc-sync-af] report created: ${url}`);
 }
 
 // Only auto-run when invoked directly
 if (process.argv[1]?.includes("weekly-gsc-sync-af")) {
   main().catch((err) => {
+    if (err instanceof PermissionError) {
+      console.error(`[weekly-gsc-sync-af] SKIPPED: ${err.message}`);
+      process.exit(0);
+    }
     console.error("[weekly-gsc-sync-af] FAILED:", err);
     process.exit(1);
   });
