@@ -16,6 +16,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation, notifyTeam } from "@/lib/email";
+import { recordNotification } from "@/lib/admin-notifications";
 import {
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
@@ -234,6 +235,16 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
       .filter(Boolean)
       .join("\n")
   ).catch((err) => console.warn("[chat-tools] notifyTeam failed:", err));
+
+  recordNotification({
+    category: "booking",
+    type: "success",
+    title: `New consultation booked: ${name}`,
+    message: `${name} (${email}) booked ${slotLabel}`,
+    actor: email,
+    route: "/api/chat",
+    metadata: { start, meetLink, notes: notes ? notes.slice(0, 500) : null },
+  }).catch((err) => console.warn("[chat-tools] recordNotification failed:", err));
 
   return [
     `Booking confirmed!`,

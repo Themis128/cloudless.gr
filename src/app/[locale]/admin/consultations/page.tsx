@@ -88,6 +88,7 @@ export default function ConsultationsPage() {
   const [configured, setConfigured] = useState(true);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
   const knownIds = useRef<Set<string>>(new Set());
+  const remindedIds = useRef<Set<string>>(new Set());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function loadConsultations() {
@@ -128,6 +129,30 @@ export default function ConsultationsPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pre-meeting popup reminders — fire once when a consultation is ~15 min away
+  useEffect(() => {
+    if (notifPermission !== "granted" || consultations.length === 0) return;
+
+    function checkReminders() {
+      const now = Date.now();
+      for (const c of consultations) {
+        const startMs = new Date(c.start).getTime();
+        const minutesUntil = (startMs - now) / 60_000;
+        if (minutesUntil > 0 && minutesUntil <= 15 && !remindedIds.current.has(c.id)) {
+          new Notification("Consultation starting soon", {
+            body: `${extractClientName(c.title)} — ${formatAthens(c.start)} Athens`,
+            icon: "/favicon.ico",
+          });
+          remindedIds.current.add(c.id);
+        }
+      }
+    }
+
+    checkReminders();
+    const reminderRef = setInterval(checkReminders, 60_000);
+    return () => clearInterval(reminderRef);
+  }, [consultations, notifPermission]);
 
   async function requestNotifPermission() {
     if (typeof Notification === "undefined") return;
