@@ -9,10 +9,7 @@
     },
     "cloudless-infra": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "tools/ssh-mcp/src/index.ts"
-      ],
+      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.74.191.58",
         "OMV_SSH_USER": "omv",
@@ -22,46 +19,31 @@
     },
     "project": {
       "command": "npx",
-      "args": [
-        "-y",
-        "project-mcp"
-      ],
+      "args": ["-y", "project-mcp"],
       "autoStart": true
     },
     "postiz": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@antoniolg/postiz-mcp"
-      ],
+      "args": ["-y", "@antoniolg/postiz-mcp"],
       "env": {
         "POSTIZ_API_URL": "https://postiz.cloudless.gr",
-        "POSTIZ_API_KEY": "edd2c4f5c5e49502fad640a8164147eecf506622a3be4caea6c477cd94ccced2"
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
       },
       "autoStart": false
     },
     "prompt-to-asset": {
       "command": "npx",
-      "args": [
-        "-y",
-        "prompt-to-asset"
-      ],
+      "args": ["-y", "prompt-to-asset"],
       "autoStart": false
     },
     "postlint": {
       "command": "npx",
-      "args": [
-        "-y",
-        "postlint-mcp"
-      ],
+      "args": ["-y", "@conorbronsdon/postlint-mcp"],
       "autoStart": false
     },
     "bluesky": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@morinokami/mcp-server-bluesky"
-      ],
+      "args": ["-y", "@morinokami/mcp-server-bluesky"],
       "env": {
         "BLUESKY_IDENTIFIER": "dcvv-4xxf-vs7h-ux6c",
         "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}"
@@ -73,7 +55,7 @@
       "args": ["-y", "free-stock-images-mcp"],
       "env": {
         "UNSPLASH_ACCESS_KEY": "${UNSPLASH_ACCESS_KEY}",
-        "PEXELS_API_KEY": "AXdiQ6gWmGYxIsU9HZZhVkUYCDtNjE9FapeGEWl5Pyp4CvNTDsUvEiwb",
+        "PEXELS_API_KEY": "${PEXELS_API_KEY}",
         "PIXABAY_API_KEY": "${PIXABAY_API_KEY}"
       },
       "autoStart": false
