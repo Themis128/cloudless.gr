@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { posts } from "@/lib/blog";
 import { defaultProducts } from "@/lib/store-products";
 import { getCaseStudies, staticCaseStudies } from "@/lib/appflowy-case-studies";
+import { getDocs } from "@/lib/appflowy-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 
 // ISR-cache sitemap.xml so crawler requests don't pay CMS fetch latency
@@ -110,5 +111,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     alternates: localeAlternates(`/case-studies/${cs.slug}`),
   }));
 
-  return [...staticPages, ...blogPages, ...productPages, ...caseStudyPages];
+  // Docs (AppFlowy with no fallback)
+  let docPages: MetadataRoute.Sitemap = [];
+  try {
+    if (await isAppFlowyConfigured()) {
+      const docs = await getDocs();
+      docPages = docs
+        .filter((d) => d.published)
+        .map((d) => ({
+          url: `${baseUrl}/docs/${d.slug}`,
+          lastModified: new Date(d.lastModified ?? Date.now()),
+          changeFrequency: "weekly" as const,
+          priority: 0.6,
+          alternates: localeAlternates(`/docs/${d.slug}`),
+        }));
+    }
+  } catch {
+    // fall back to no docs in sitemap
+  }
+
+  return [...staticPages, ...blogPages, ...productPages, ...caseStudyPages, ...docPages];
 }

@@ -32,7 +32,7 @@ export function getOrganizationSchema(): OrganizationSchema {
     // Image should be at least 112×112px, hosted on the same domain.
     logo: {
       "@type": "ImageObject",
-      url: "https://cloudless.gr/logo.png",
+      url: "https://cloudless.gr/icons/icon-512.png",
       width: 512,
       height: 512,
     },
@@ -150,7 +150,7 @@ export function getBlogPostSchema(post: BlogPostSchemaInput): BlogPostSchema {
       name: "Cloudless",
       logo: {
         "@type": "ImageObject",
-        url: "https://cloudless.gr/logo.png",
+        url: "https://cloudless.gr/icons/icon-512.png",
       },
     },
   };

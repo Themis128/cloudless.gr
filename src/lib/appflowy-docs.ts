@@ -36,6 +36,7 @@ export interface AppFlowyDoc {
   category: string;
   order: number;
   published: boolean;
+  lastModified?: string;
   url: string;
   html?: string;
 }
@@ -99,6 +100,7 @@ function mapViewToDoc(view: {
     category,
     order: 0,
     published: isDocPage(view.name),
+    lastModified: view.last_edited_time,
     verificationStatus: "Unverified",
     url: `/appflowy/view/${view.view_id}`,
   };
