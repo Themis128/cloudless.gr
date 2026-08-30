@@ -8,6 +8,7 @@ import {
   getPostBySlug as getAppFlowyPostBySlug,
   type AppFlowyPost,
 } from "@/lib/appflowy-blog";
+import { getR2BlogPosts, getR2BlogPostBySlug } from "@/lib/blog-r2";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import type { CmsSource } from "@/lib/cms-provider";
 
@@ -75,8 +76,13 @@ export async function getBlogPostsWithSource(): Promise<{
         };
       }
     } catch {
-      // Fall through to static.
+      // Fall through to R2 / static.
     }
+  }
+
+  const r2Posts = await getR2BlogPosts();
+  if (r2Posts.length > 0) {
+    return { posts: r2Posts, source: "r2" };
   }
 
   return { posts: staticPosts, source: "static" };
@@ -97,9 +103,12 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefi
         return mapAppFlowyPost(appFlowyPost);
       }
     } catch {
-      // Fall through to static.
+      // Fall through to R2 / static.
     }
   }
+
+  const r2Post = await getR2BlogPostBySlug(slug);
+  if (r2Post) return r2Post;
 
   return staticHit;
 }

@@ -5,7 +5,7 @@
 
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 
-export type CmsSource = "appflowy" | "static";
+export type CmsSource = "appflowy" | "r2" | "static";
 
 export async function isAppFlowyCmsConfigured(): Promise<boolean> {
   return isAppFlowyConfigured();
