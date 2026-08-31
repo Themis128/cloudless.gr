@@ -46,7 +46,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
 
       # Best-effort: only needed for the SSM token fallback. Do not fail the job
       # if OIDC isn't configured — the repo secret path covers the common case.

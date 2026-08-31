@@ -39,7 +39,7 @@ jobs:
       E2E_ADMIN_EMAIL: testadmin@cloudless.gr
       E2E_ADMIN_PASSWORD: AdminPass123!
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:

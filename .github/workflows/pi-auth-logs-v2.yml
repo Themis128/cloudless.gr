@@ -23,7 +23,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAIL: ${{ inputs.tail_lines || '400' }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Connect to tailnet (ephemeral node)
       uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3  # v3.2.4
