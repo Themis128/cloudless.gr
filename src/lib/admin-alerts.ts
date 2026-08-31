@@ -6,6 +6,7 @@
  *     per `feedback_slack_use_slackclient` + `feedback_slack_lambda_env_frozen`.
  *   - ntfy (opt-in, secondary): push-notification fan-out to the operator's
  *     phone via `src/lib/ntfy.ts`. Enabled by env `ADMIN_PUSH_VIA_NTFY=1`.
+ *   - Email: uses the canonical `notifyTeam()` transport for operator alerts.
  *
  * R4 of the 2026-06-21 R-series. Operator wanted phone push for SEV1 alerts
  * even when the laptop is closed; ntfy delivers that without rebuilding the
@@ -24,6 +25,8 @@
  * is purely additive for the new "alerts that should bypass Slack noise
  * filters" lane.
  */
+import { notifyTeam } from "@/lib/email";
+import { escapeHtml } from "@/lib/escape-html";
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
 import { publishNtfy } from "@/lib/ntfy";
@@ -48,6 +51,7 @@ export interface AdminAlertInput {
 export interface AdminAlertResult {
   slack: { ok: boolean; error?: string };
   ntfy: { ok: boolean; skipped?: string; error?: string };
+  email: { ok: boolean; skipped?: string; error?: string };
 }
 
 const SEVERITY_EMOJI: Record<AdminAlertSeverity, string> = {
@@ -87,6 +91,7 @@ export async function notifyAdmin(input: AdminAlertInput): Promise<AdminAlertRes
   const result: AdminAlertResult = {
     slack: { ok: false },
     ntfy: { ok: false },
+    email: { ok: false },
   };
 
   const slackText = `${SEVERITY_EMOJI[input.severity]} *${input.title}*\n${input.message}${
@@ -142,6 +147,23 @@ export async function notifyAdmin(input: AdminAlertInput): Promise<AdminAlertRes
     result.ntfy = r;
   })();
 
-  await Promise.allSettled([slackTask, ntfyTask]);
+  const emailTask = (async () => {
+    try {
+      const title = escapeHtml(input.title);
+      const message = escapeHtml(input.message).replace(/\n/g, "<br>");
+      const click = input.click
+        ? `<p><a href="${escapeHtml(input.click)}">Open incident details</a></p>`
+        : "";
+      await notifyTeam(
+        `[${input.severity.toUpperCase()}] ${input.title}`,
+        `<h2>${title}</h2><p>${message}</p>${click}`
+      );
+      result.email = { ok: true };
+    } catch (err) {
+      result.email = { ok: false, error: (err as Error).message };
+    }
+  })();
+
+  await Promise.allSettled([slackTask, ntfyTask, emailTask]);
   return result;
 }
