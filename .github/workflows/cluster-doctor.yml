@@ -42,7 +42,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Connect to tailnet
+      - name: Connect to tailnet with OAuth
+        id: tailscale-oauth
+        continue-on-error: true
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Connect to tailnet with recovery auth key
+        if: steps.tailscale-oauth.outcome == 'failure'
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
