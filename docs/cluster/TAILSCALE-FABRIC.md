@@ -95,7 +95,7 @@ Production URLs are Cloudflare-fronted.
 flowchart LR
   subgraph LAN["Office LAN 192.168.1.0/24"]
     OMV["omv · Pi 5<br/>192.168.1.128<br/>control-plane"]
-    HA["omv-ha · Pi<br/>192.168.1.130<br/>worker / standby taint"]
+    HA["omv-ha · Pi<br/>192.168.1.130<br/>dedicated mail host"]
     WSL["office WSL"]
   end
 
@@ -103,7 +103,7 @@ flowchart LR
     GHO["github-omv<br/>100.74.191.58"]
     OMH["omv-ha<br/>100.95.117.84"]
     OFF["office<br/>100.98.121.44"]
-    SR0["k3s-subnet-router-0/1"]
+    SR0["k3s-subnet-router-0"]
     IN0["ingress-0"]
     KU0["kube-0"]
   end
@@ -122,7 +122,7 @@ flowchart LR
 | Hostname (Machines) | Role                                        | LAN             | Tailscale IPv4  | MagicDNS                       |
 | ------------------- | ------------------------------------------- | --------------- | --------------- | ------------------------------ |
 | `github-omv`        | k3s control-plane, GH runners, app NodePort | `192.168.1.128` | `100.74.191.58` | `github-omv.tail4ecae1.ts.net` |
-| `omv-ha`            | worker (often `NoSchedule` standby)         | `192.168.1.130` | `100.95.117.84` | `omv-ha.tail4ecae1.ts.net`     |
+| `omv-ha`            | dedicated mail host; not part of k3s        | `192.168.1.130` | `100.95.117.84` | `omv-ha.tail4ecae1.ts.net`     |
 | `office`            | Admin WSL                                   | —               | DYNAMIC         | `office.tail4ecae1.ts.net`     |
 | `office-1`          | Admin WSL                                   | —               | DYNAMIC         | `office-1.tail4ecae1.ts.net`   |
 | `office-2`          | Admin WSL (OFFLINE - needs reconnection)    | —               | DYNAMIC         | `office-2.tail4ecae1.ts.net`   |
@@ -137,7 +137,7 @@ flowchart LR
 
 | Prefix / name         | Kind                        | Purpose                                 |
 | --------------------- | --------------------------- | --------------------------------------- |
-| `k3s-subnet-router-*` | Connector replicas          | Advertise pod + ClusterIP CIDRs         |
+| `k3s-subnet-router-0` | Single-node Connector       | Advertise pod + ClusterIP CIDRs         |
 | `ingress-*`           | ProxyGroup `ingress`        | Shared L7 Serve for annotated Ingresses |
 | `kube-*`              | ProxyGroup `kube-apiserver` | `tailscale configure kubeconfig`        |
 

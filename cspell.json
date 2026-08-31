@@ -1,6 +1,27 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": ["baltzakisthemiscom", "capi", "contentful", "gstatic", "hubspot", "nosniff", "opengraph", "powerbi", "quicksight", "sntrys", "wordmark"],
-  "ignorePaths": ["node_modules/**", ".next/**", "dist/**", "build/**", "coverage/**", "*.lock", "pnpm-lock.yaml"]
+  "words": [
+    "authkey",
+    "baltzakisthemiscom",
+    "capi",
+    "contentful",
+    "gstatic",
+    "hubspot",
+    "nosniff",
+    "opengraph",
+    "powerbi",
+    "quicksight",
+    "sntrys",
+    "wordmark"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "*.lock",
+    "pnpm-lock.yaml"
+  ]
 }
