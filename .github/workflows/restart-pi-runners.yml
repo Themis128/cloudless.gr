@@ -130,7 +130,7 @@ jobs:
                 sudo systemctl restart \"\$svc\" || echo \"  WARN: failed to restart \$svc\"
               done
             fi
-          " || true
+          "
 
           echo "=== Runner service status (after) ==="
           $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true
@@ -187,6 +187,7 @@ jobs:
 
       - name: Send operator email notification
         if: always()
+        continue-on-error: true
         run: |
           payload=$(python3 - <<'PY'
           import json
