@@ -86,7 +86,7 @@ jobs:
         echo "OK  required Cloudflare secrets present."
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup Node.js
       uses: actions/setup-node@v4

@@ -10,7 +10,7 @@ jobs:
     # 100.74.191.58:6443 directly. GH-hosted runners time out on that IP.
     runs-on: [self-hosted, omv, pi, build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Configure kubectl
         run: |

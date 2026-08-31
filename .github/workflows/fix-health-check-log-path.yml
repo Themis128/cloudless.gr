@@ -24,7 +24,7 @@ jobs:
       PI_USER: tbaltzakis
       KUBECMD: sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Connect to tailnet
       uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4

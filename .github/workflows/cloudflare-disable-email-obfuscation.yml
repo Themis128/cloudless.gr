@@ -40,7 +40,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
 
       # Fallback: if CLOUDFLARE_API_TOKEN repo secret is absent, the OIDC role
       # reads it from SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
