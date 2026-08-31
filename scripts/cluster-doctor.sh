@@ -58,8 +58,9 @@ k top nodes 2>/dev/null || echo "(metrics-server unavailable)"
 echo '```'
 echo ""
 
-# ── Per-node conditions on omv ────────────────────────────────────────
-for node in omv omv-ha; do
+# ── Per-node conditions ───────────────────────────────────────────────
+while IFS= read -r node; do
+  [[ -z "$node" ]] && continue
   echo "### ${node} — conditions & allocation"
   echo '```'
   k describe node "$node" 2>/dev/null | awk '/^Conditions:/,/^Addresses:/' | head -30
@@ -67,15 +68,18 @@ for node in omv omv-ha; do
   k describe node "$node" 2>/dev/null | awk '/^Allocated resources:/,/^Events:/' | head -30
   echo '```'
   echo ""
-done
+done < <(k get nodes -o name 2>/dev/null | sed 's#node/##')
 
-# ── Pods on the omv node specifically ─────────────────────────────────
-echo "## All pods on node \`omv\`"
-echo ""
-echo '```'
-k get pods -A -o wide --field-selector=spec.nodeName=omv
-echo '```'
-echo ""
+# ── Pods by node ──────────────────────────────────────────────────────
+while IFS= read -r node; do
+  [[ -z "$node" ]] && continue
+  echo "## All pods on node \`${node}\`"
+  echo ""
+  echo '```'
+  k get pods -A -o wide --field-selector="spec.nodeName=${node}"
+  echo '```'
+  echo ""
+done < <(k get nodes -o name 2>/dev/null | sed 's#node/##')
 
 # ── Problem pods (all namespaces) ─────────────────────────────────────
 echo "## Pods not Running/Completed (all namespaces)"
@@ -90,13 +94,20 @@ fi
 echo '```'
 echo ""
 
-# ── Pods with recent restarts ─────────────────────────────────────────
-echo "## Pods with restarts > 0 (last 24h)"
+# ── Pods with restart history ─────────────────────────────────────────
+echo "## Pods with restart count > 0"
 echo ""
 echo '```'
 k get pods -A --no-headers 2>/dev/null \
-  | awk 'int($5) > 0 { printf "%-25s %-45s ready=%-5s status=%-15s restarts=%s\n", $1, $2, $3, $4, $5 }' \
+  | awk 'int($5) > 0 { printf "%-25s %-45s ready=%-5s status=%-15s restarts=%s age=%s\n", $1, $2, $3, $4, $5, $6 }' \
   | sort -k5 -n -r | head -20
+echo '```'
+echo ""
+
+echo "## Highest-memory pods"
+echo ""
+echo '```'
+k top pods -A --sort-by=memory 2>/dev/null | head -21 || echo "(pod metrics unavailable)"
 echo '```'
 echo ""
 
