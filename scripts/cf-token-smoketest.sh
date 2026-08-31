@@ -98,7 +98,7 @@ if [ -n "$ZONE_ID" ]; then
   fi
 fi
 
-# ── 3. DNS:Edit (Read leg) ───────────────────────────────────────────────────
+# ── 3. DNS:Read/Edit ─────────────────────────────────────────────────────────
 if [ -n "$ZONE_ID" ]; then
   DNS="$(curl_cf "$API/zones/$ZONE_ID/dns_records?per_page=1")"
   DNS_OK="$(echo "$DNS" | jq -r '.success')"
@@ -107,6 +107,26 @@ if [ -n "$ZONE_ID" ]; then
   else
     ERR_MSG="$(echo "$DNS" | jq -r '.errors[0].message // "unknown"')"
     check "DNS:Read" "$ERR_MSG"
+  fi
+
+  # Probe DNS:Edit by creating and immediately deleting a test TXT record.
+  TEST_RECORD="tiktok-developers-site-verification=cf-smoketest-$(date +%s)"
+  DNS_CREATE="$(curl_cf -X POST -d "{\"type\":\"TXT\",\"name\":\"_cf-smoketest.${ZONE_NAME}\",\"content\":\"${TEST_RECORD}\",\"ttl\":60,\"comment\":\"smoketest\"}" "$API/zones/$ZONE_ID/dns_records")"
+  DNS_CREATE_OK="$(echo "$DNS_CREATE" | jq -r '.success')"
+  DNS_CREATE_ID="$(echo "$DNS_CREATE" | jq -r '.result.id // empty')"
+  if [ "$DNS_CREATE_OK" = "true" ] && [ -n "$DNS_CREATE_ID" ]; then
+    DNS_DELETE="$(curl_cf -X DELETE "$API/zones/$ZONE_ID/dns_records/$DNS_CREATE_ID")"
+    DNS_DELETE_OK="$(echo "$DNS_DELETE" | jq -r '.success')"
+    if [ "$DNS_DELETE_OK" = "true" ]; then
+      check "DNS:Edit" ok
+    else
+      ERR_MSG="$(echo "$DNS_DELETE" | jq -r '.errors[0].message // "unknown"')"
+      check "DNS:Edit (cleanup failed)" "$ERR_MSG"
+    fi
+  else
+    ERR_CODE="$(echo "$DNS_CREATE" | jq -r '.errors[0].code // "unknown"')"
+    ERR_MSG="$(echo "$DNS_CREATE" | jq -r '.errors[0].message // "unknown"')"
+    check "DNS:Edit" "code=$ERR_CODE: $ERR_MSG"
   fi
 fi
 

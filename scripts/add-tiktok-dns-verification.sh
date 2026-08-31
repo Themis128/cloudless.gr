@@ -14,7 +14,12 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-cloudless.gr}"
-TXT_VALUE="tiktok-developers-site-verification=30QWkDq9g0olcwcIDueeqBix84M0VCXn"
+TIKTOK_VERIFICATION_TOKEN="${TIKTOK_VERIFICATION_TOKEN:-}"
+if [ -z "$TIKTOK_VERIFICATION_TOKEN" ]; then
+  echo "::error::TIKTOK_VERIFICATION_TOKEN is required."
+  exit 1
+fi
+TXT_VALUE="tiktok-developers-site-verification=${TIKTOK_VERIFICATION_TOKEN}"
 API="https://api.cloudflare.com/client/v4"
 
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
@@ -29,14 +34,21 @@ fi
 
 cf() {
   local method="$1" url="$2" body="${3:-}"
+  local http_code out
+  out=$(mktemp)
   if [ -n "$body" ]; then
-    curl -fsS -X "$method" "$url" \
+    http_code=$(curl -sS -o "$out" -w '%{http_code}' -X "$method" "$url" \
       -H "Authorization: Bearer ${CF_TOKEN}" \
       -H "Content-Type: application/json" \
-      --data "$body"
+      --data "$body")
   else
-    curl -fsS -X "$method" "$url" \
-      -H "Authorization: Bearer ${CF_TOKEN}"
+    http_code=$(curl -sS -o "$out" -w '%{http_code}' -X "$method" "$url" \
+      -H "Authorization: Bearer ${CF_TOKEN}")
+  fi
+  cat "$out"
+  rm -f "$out"
+  if [ "$http_code" -ge 400 ]; then
+    return "$http_code"
   fi
 }
 
@@ -59,8 +71,11 @@ if [ -n "$EXISTING" ]; then
 fi
 
 echo "→ Creating TXT record: ${TXT_VALUE}"
-RESULT="$(cf POST "${API}/zones/${ZONE_ID}/dns_records" \
-  "{\"type\":\"TXT\",\"name\":\"${DOMAIN}\",\"content\":\"${TXT_VALUE}\",\"ttl\":300}")"
+if ! RESULT="$(cf POST "${API}/zones/${ZONE_ID}/dns_records" \
+  "{\"type\":\"TXT\",\"name\":\"${DOMAIN}\",\"content\":\"${TXT_VALUE}\",\"ttl\":300}")"; then
+  echo "::error::failed to create DNS record: $(echo "$RESULT" | jq -c . 2>/dev/null || echo "$RESULT")"
+  exit 1
+fi
 
 if echo "$RESULT" | jq -e '.success == true' > /dev/null; then
   RECORD_ID="$(echo "$RESULT" | jq -r '.result.id')"
