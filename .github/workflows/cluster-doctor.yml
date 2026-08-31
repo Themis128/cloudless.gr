@@ -22,12 +22,12 @@ on:
       issue:
         description: Issue number to post the snapshot to
         required: false
-        default: '382'
+        default: "382"
   push:
     branches: [main]
     paths:
-    - .github/workflows/cluster-doctor.yml
-    - scripts/cluster-doctor.sh
+      - .github/workflows/cluster-doctor.yml
+      - scripts/cluster-doctor.sh
 
 permissions:
   contents: read
@@ -40,27 +40,28 @@ jobs:
       ISSUE: ${{ github.event.inputs.issue || '382' }}
       GH_TOKEN: ${{ github.token }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd         # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
 
-    - name: Configure kubectl
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-    - name: Run diagnostics
-      run: bash scripts/cluster-doctor.sh | tee snapshot.md
+      - name: Run diagnostics
+        run: bash scripts/cluster-doctor.sh | tee snapshot.md
 
-    - name: Post snapshot to tracking issue
-      if: always()
-      run: |
-        if [ ! -s snapshot.md ]; then
-          printf '# Cluster snapshot\n\n_doctor produced no output — kubectl likely could not reach the cluster (runner/Tailscale/KUBECONFIG issue)._\n' > snapshot.md
-        fi
-        gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file snapshot.md
+      - name: Post snapshot to tracking issue
+        if: always()
+        run: |
+          if [ ! -s snapshot.md ]; then
+            printf '# Cluster snapshot\n\n_doctor produced no output — kubectl likely could not reach the cluster (runner/Tailscale/KUBECONFIG issue)._\n' > snapshot.md
+          fi
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file snapshot.md

@@ -5,16 +5,16 @@
 > (`omv` only, running a 4K-page kernel); `omv-ha` was drained + removed from
 > k3s and repurposed as the dedicated mail host. See `CLAUDE.md` "Cluster
 > Topology" for current state.
-> **Status:** source of truth (2026-07-30)  
-> **Audience:** operators + agents touching Pi k3s, GHA, or admin GUIs  
+> **Status:** source of truth (2026-07-30)
+> **Audience:** operators + agents touching Pi k3s, GHA, or admin GUIs
 > **Scope:** private admin mesh only — **not** the public `cloudless.gr` edge
 
-Tailscale is the **admin fabric** for the two-node Pi k3s cluster. Public HTTP
-stays on **Cloudflare** (Workers Free `cloudless2` proxy → Tunnel → Pi NodePort).
+Tailscale is the **admin fabric** for the single-node Pi k3s cluster on `omv`.
+Public HTTP stays on **Cloudflare** (Workers Free `cloudless2` proxy → Tunnel → Pi NodePort).
 Mixing those trust boundaries is how we got Funnel 403s, Bot Fight false alarms,
 and one Tailscale device per Service.
 
-Canonical manifests: [`infrastructure/tailscale/`](../../infrastructure/tailscale/).  
+Canonical manifests: [`infrastructure/tailscale/`](../../infrastructure/tailscale/).
 Operator kubectl runbook: [`kubectl-tailscale.md`](kubectl-tailscale.md).
 
 ---
@@ -34,14 +34,14 @@ flowchart TB
   subgraph Fabric["Private fabric — Tailscale trust"]
     Office["office WSL / laptop<br/>MagicDNS"]
     GHA_TS["GHA + TS_AUTHKEY<br/>ephemeral node"]
-    HostTS["Host tailscaled<br/>github-omv · omv-ha"]
+    HostTS["Host tailscaled<br/>github-omv"]
     Op[k8s Tailscale Operator]
     Conn["Connector k3s-cidrs<br/>10.42/16 · 10.43/16"]
     PG_I["ProxyGroup ingress<br/>Grafana · Meili Serve"]
     PG_K["ProxyGroup kube<br/>apiserver auth proxy"]
   end
 
-  subgraph Cluster["Pi k3s — omv + omv-ha"]
+  subgraph Cluster["Pi k3s — omv"]
     API[":6443 kube-apiserver"]
     NP["NodePort :30300<br/>cloudless-app"]
     Pods["Pods / ClusterIPs"]
@@ -65,23 +65,23 @@ flowchart TB
   Tun -.->|same NodePort origin| NP
 ```
 
-| Boundary | Who | What travels | Auth |
-|----------|-----|--------------|------|
-| **Cloudflare public** | Humans, bots, Lighthouse (when not CF-blocked) | App HTTP/S for `*.cloudless.gr` | App session / D1 auth / CRON_SECRET |
-| **Tailscale fabric** | Admins (full), members (HTTPS Serve only), GHA with `TS_AUTHKEY` | SSH, `:6443`, NodePorts, Serve HTTPS, pod CIDRs | Tailnet ACL grants + device identity |
-| **Never cross** | — | DB TCP, etcd, Redis | Stay ClusterIP; use `kubectl port-forward` |
+| Boundary              | Who                                                              | What travels                                    | Auth                                       |
+| --------------------- | ---------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| **Cloudflare public** | Humans, bots, Lighthouse (when not CF-blocked)                   | App HTTP/S for `*.cloudless.gr`                 | App session / D1 auth / CRON_SECRET        |
+| **Tailscale fabric**  | Admins (full), members (HTTPS Serve only), GHA with `TS_AUTHKEY` | SSH, `:6443`, NodePorts, Serve HTTPS, pod CIDRs | Tailnet ACL grants + device identity       |
+| **Never cross**       | —                                                                | DB TCP, etcd, Redis                             | Stay ClusterIP; use `kubectl port-forward` |
 
 ---
 
 ## 2. Why Tailscale exists here
 
-| Need | Solution | Not this |
-|------|----------|----------|
-| `kubectl` from office / cloud agents | Host mesh + optional `kube` ProxyGroup | Exposing `:6443` on WAN |
-| SSH / runner restart / disk cleanup | Host `tailscaled` on omv | Public SSH |
-| Grafana / Meili for admins | Shared `ingress` ProxyGroup + Serve | Public Funnel or one device per Service |
-| Hit pod / ClusterIP from a laptop | `Connector` subnet routes | Publishing every Service |
-| Public website | Cloudflare Worker + Tunnel | Tailscale Funnel as primary edge |
+| Need                                 | Solution                               | Not this                                |
+| ------------------------------------ | -------------------------------------- | --------------------------------------- |
+| `kubectl` from office / cloud agents | Host mesh + optional `kube` ProxyGroup | Exposing `:6443` on WAN                 |
+| SSH / runner restart / disk cleanup  | Host `tailscaled` on omv               | Public SSH                              |
+| Grafana / Meili for admins           | Shared `ingress` ProxyGroup + Serve    | Public Funnel or one device per Service |
+| Hit pod / ClusterIP from a laptop    | `Connector` subnet routes              | Publishing every Service                |
+| Public website                       | Cloudflare Worker + Tunnel             | Tailscale Funnel as primary edge        |
 
 **Architectural rule:** Funnel may exist on a node for **diagnostics**
 (`https://github-omv.<tailnet>.ts.net/…`), but it is **not** the HA or SEO path.
@@ -95,7 +95,7 @@ Production URLs are Cloudflare-fronted.
 flowchart LR
   subgraph LAN["Office LAN 192.168.1.0/24"]
     OMV["omv · Pi 5<br/>192.168.1.128<br/>control-plane"]
-    HA["omv-ha · Pi<br/>192.168.1.130<br/>worker / standby taint"]
+    HA["omv-ha · Pi<br/>192.168.1.130<br/>dedicated mail host"]
     WSL["office WSL"]
   end
 
@@ -103,7 +103,7 @@ flowchart LR
     GHO["github-omv<br/>100.74.191.58"]
     OMH["omv-ha<br/>100.95.117.84"]
     OFF["office<br/>100.98.121.44"]
-    SR0["k3s-subnet-router-0/1"]
+    SR0["k3s-subnet-router-0"]
     IN0["ingress-0"]
     KU0["kube-0"]
   end
@@ -119,14 +119,14 @@ flowchart LR
 
 ### Node inventory (host mesh)
 
-| Hostname (Machines) | Role | LAN | Tailscale IPv4 | MagicDNS |
-|---------------------|------|-----|----------------|----------|
-| `github-omv` | k3s control-plane, GH runners, app NodePort | `192.168.1.128` | `100.74.191.58` | `github-omv.tail4ecae1.ts.net` |
-| `omv-ha` | worker (often `NoSchedule` standby) | `192.168.1.130` | `100.95.117.84` | `omv-ha.tail4ecae1.ts.net` |
-| `office` | Admin WSL | — | DYNAMIC | `office.tail4ecae1.ts.net` |
-| `office-1` | Admin WSL | — | DYNAMIC | `office-1.tail4ecae1.ts.net` |
-| `office-2` | Admin WSL (OFFLINE - needs reconnection) | — | DYNAMIC | `office-2.tail4ecae1.ts.net` |
-| `office-3` | Admin WSL | — | DYNAMIC | `office-3.tail4ecae1.ts.net` |
+| Hostname (Machines) | Role                                        | LAN             | Tailscale IPv4  | MagicDNS                       |
+| ------------------- | ------------------------------------------- | --------------- | --------------- | ------------------------------ |
+| `github-omv`        | k3s control-plane, GH runners, app NodePort | `192.168.1.128` | `100.74.191.58` | `github-omv.tail4ecae1.ts.net` |
+| `omv-ha`            | dedicated mail host; not part of k3s        | `192.168.1.130` | `100.95.117.84` | `omv-ha.tail4ecae1.ts.net`     |
+| `office`            | Admin WSL                                   | —               | DYNAMIC         | `office.tail4ecae1.ts.net`     |
+| `office-1`          | Admin WSL                                   | —               | DYNAMIC         | `office-1.tail4ecae1.ts.net`   |
+| `office-2`          | Admin WSL (OFFLINE - needs reconnection)    | —               | DYNAMIC         | `office-2.tail4ecae1.ts.net`   |
+| `office-3`          | Admin WSL                                   | —               | DYNAMIC         | `office-3.tail4ecae1.ts.net`   |
 
 > **IP caveat:** Tailscale CGNAT addresses **rotate** after reimage / re-auth.
 > Prefer **MagicDNS** (`github-omv.tail4ecae1.ts.net`) in new scripts.
@@ -135,11 +135,11 @@ flowchart LR
 
 ### Operator-owned devices (fabric)
 
-| Prefix / name | Kind | Purpose |
-|---------------|------|---------|
-| `k3s-subnet-router-*` | Connector replicas | Advertise pod + ClusterIP CIDRs |
-| `ingress-*` | ProxyGroup `ingress` | Shared L7 Serve for annotated Ingresses |
-| `kube-*` | ProxyGroup `kube-apiserver` | `tailscale configure kubeconfig` |
+| Prefix / name         | Kind                        | Purpose                                 |
+| --------------------- | --------------------------- | --------------------------------------- |
+| `k3s-subnet-router-0` | Single-node Connector       | Advertise pod + ClusterIP CIDRs         |
+| `ingress-*`           | ProxyGroup `ingress`        | Shared L7 Serve for annotated Ingresses |
+| `kube-*`              | ProxyGroup `kube-apiserver` | `tailscale configure kubeconfig`        |
 
 **Delete in admin if offline forever:** old per-Service proxies
 (`monitoring-proxies-*`, `ts-n8n-*`, `appflowy`, `grafana`, …). Those came from
@@ -161,24 +161,24 @@ flowchart TB
   L4 --> LK
 ```
 
-| Layer | Kubernetes / host object | Consumers | Notes |
-|-------|--------------------------|-----------|-------|
-| **L4 Host mesh** | `tailscaled` systemd on Pis + client apps | SSH, NodePort `:30300`, direct `:6443` (if TLS SAN includes TS IP) | Always on; baseline for GHA Tailscale Action |
-| **L3 Subnet** | `Connector/k3s-cidrs` + `ProxyClass/pi-fabric` | Laptop → ClusterIP / pod IP | Requires `--accept-routes` on client; ACL `autoApprovers.routes` |
-| **L7 Serve** | `ProxyGroup/ingress` + Ingresses in `ingresses.yaml` | Admins → Grafana, Meilisearch | **No Funnel**; private HTTPS certs need HTTPS Certificates enabled |
-| **API proxy** | `ProxyGroup/kube` | Off-LAN kubectl | Preferred over raw `:6443` from WSL userspace |
-| **Operator** | Default namespace is `tailscale` (configurable via `TS_OPERATOR_NS`) | Deploy scripts use `--namespace $NS` | All pods + CRDs in same namespace |
+| Layer            | Kubernetes / host object                                             | Consumers                                                          | Notes                                                              |
+| ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **L4 Host mesh** | `tailscaled` systemd on Pis + client apps                            | SSH, NodePort `:30300`, direct `:6443` (if TLS SAN includes TS IP) | Always on; baseline for GHA Tailscale Action                       |
+| **L3 Subnet**    | `Connector/k3s-cidrs` + `ProxyClass/pi-fabric`                       | Laptop → ClusterIP / pod IP                                        | Requires `--accept-routes` on client; ACL `autoApprovers.routes`   |
+| **L7 Serve**     | `ProxyGroup/ingress` + Ingresses in `ingresses.yaml`                 | Admins → Grafana, Meilisearch                                      | **No Funnel**; private HTTPS certs need HTTPS Certificates enabled |
+| **API proxy**    | `ProxyGroup/kube`                                                    | Off-LAN kubectl                                                    | Preferred over raw `:6443` from WSL userspace                      |
+| **Operator**     | Default namespace is `tailscale` (configurable via `TS_OPERATOR_NS`) | Deploy scripts use `--namespace $NS`                               | All pods + CRDs in same namespace                                  |
 
 Manifest map:
 
-| File | Layer |
-|------|-------|
-| `connector.yaml` | L3 + `ProxyClass` |
-| `proxygroup.yaml` | L7 + API |
-| `ingresses.yaml` | L7 backends |
-| `ingress-class.yaml` | `IngressClass` `tailscale` |
+| File                      | Layer                                                      |
+| ------------------------- | ---------------------------------------------------------- |
+| `connector.yaml`          | L3 + `ProxyClass`                                          |
+| `proxygroup.yaml`         | L7 + API                                                   |
+| `ingresses.yaml`          | L7 backends                                                |
+| `ingress-class.yaml`      | `IngressClass` `tailscale`                                 |
 | `acl-policy.example.json` | ACL tags / autoApprovers / grants / ssh / Apps `nodeAttrs` |
-| `deploy.sh` | Helm operator install (OAuth env — **no AWS SSM**) |
+| `deploy.sh`               | Helm operator install (OAuth env — **no AWS SSM**)         |
 
 ---
 
@@ -189,36 +189,37 @@ Day-2 detail also lives in
 
 ### DNS (`tail4ecae1.ts.net`)
 
-| Setting | Value | Do not |
-|---------|-------|--------|
-| MagicDNS | On | Disable / rename tailnet casually |
-| Global nameserver | `100.100.100.100` (MagicDNS) | Add Pi-hole/router as override unless intentional |
-| Search domains | `tail4ecae1.ts.net` | Stuff home-LAN domains in without need |
-| HTTPS Certificates | On | Disable (breaks Serve TLS) |
+| Setting            | Value                        | Do not                                            |
+| ------------------ | ---------------------------- | ------------------------------------------------- |
+| MagicDNS           | On                           | Disable / rename tailnet casually                 |
+| Global nameserver  | `100.100.100.100` (MagicDNS) | Add Pi-hole/router as override unless intentional |
+| Search domains     | `tail4ecae1.ts.net`          | Stuff home-LAN domains in without need            |
+| HTTPS Certificates | On                           | Disable (breaks Serve TLS)                        |
 
 Connector hosts use `--accept-dns=false` so MagicDNS is not the system
 resolver on the Pi (CoreDNS / LAN DNS stay authoritative).
 
 ### Grants + Tailscale SSH (hardened 2026-08-12)
 
-| Src | Dst | Allow |
-|-----|-----|-------|
-| admin | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` / `tag:pi` | `*` |
-| member | `tag:pi` | `tcp:22` (classic OpenSSH) |
-| member | `tag:k8s` | `tcp:80`, `tcp:443` |
-| member | `tag:app-connector` | DNS `53` only |
-| admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self | `accept` (no check-mode) |
+| Src                                  | Dst                                                             | Allow                                                       |
+| ------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------- |
+| admin                                | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` / `tag:pi` | `*`                                                         |
+| member                               | `tag:pi`                                                        | `tcp:22` (classic OpenSSH)                                  |
+| `tag:ci`                             | `tag:pi`                                                        | `tcp:22`, `tcp:30300`, `tcp:30700`, `tcp:30900`, `tcp:6443` |
+| member                               | `tag:k8s`                                                       | `tcp:80`, `tcp:443`                                         |
+| member                               | `tag:app-connector`                                             | DNS `53` only                                               |
+| admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self                                                 | `accept` (no check-mode)                                    |
 
 **Device tags (canonical — `scripts/tailscale-retag-fleet.sh`):**
 
-| Hostname pattern | Tags |
-|------------------|------|
-| `github-omv` | `tag:pi` + `tag:app-connector` |
-| `omv-ha` | `tag:pi` |
-| `ingress-*`, `kube-*`, `k3s-subnet-router*`, `k3s-cidrs-*` | `tag:k8s` |
-| `tailscale-operator*` | `tag:k8s-operator` |
-| `cloudless-fly-proxy*` | `tag:app-connector` |
-| `office`, `office-*` | *(untagged — user devices)* |
+| Hostname pattern                                           | Tags                           |
+| ---------------------------------------------------------- | ------------------------------ |
+| `github-omv`                                               | `tag:pi` + `tag:app-connector` |
+| `omv-ha`                                                   | `tag:pi`                       |
+| `ingress-*`, `kube-*`, `k3s-subnet-router*`, `k3s-cidrs-*` | `tag:k8s`                      |
+| `tailscale-operator*`                                      | `tag:k8s-operator`             |
+| `cloudless-fly-proxy*`                                     | `tag:app-connector`            |
+| `office`, `office-*`                                       | _(untagged — user devices)_    |
 
 Apply via CI with **`acl_only=true`** (skips dangerous Machine cleanup):
 
@@ -228,14 +229,14 @@ gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
 
 ### VIP Services vs endpoint discovery
 
-| Console surface | What it is | Action |
-|-----------------|------------|--------|
-| **Services** (`svc:grafana`, `svc:meilisearch`, `svc:kube`) | Approved Serve VIP hosts | Keep; prune orphans with `tailscale-approve-service-hosts` |
-| **Machines → discovered endpoints** | Inventory (sshd, node_exporter, k3s, …) | Ignore noise; grants control reachability |
+| Console surface                                             | What it is                              | Action                                                     |
+| ----------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| **Services** (`svc:grafana`, `svc:meilisearch`, `svc:kube`) | Approved Serve VIP hosts                | Keep; prune orphans with `tailscale-approve-service-hosts` |
+| **Machines → discovered endpoints**                         | Inventory (sshd, node_exporter, k3s, …) | Ignore noise; grants control reachability                  |
 
 ### Apps (app connectors)
 
-Live connector: **`github-omv`** carries **`tag:app-connector`** *and*
+Live connector: **`github-omv`** carries **`tag:app-connector`** _and_
 **`tag:pi`** (SSH). Fly proxies (`cloudless-fly-proxy-*`) are also
 `tag:app-connector`. Presets + custom domains are in
 `acl-policy.example.json` `nodeAttrs`. Do **not** put `*.cloudless.gr` or
@@ -270,12 +271,12 @@ Intermittent **HTTP 502** on apex / `pi-origin` with `x-served-by: pi-tunnel-pro
 means the Worker received a Tunnel 502 (or threw) — origin may still be healthy
 on fabric L4. The HTTPS probe distinguishes:
 
-| Public | Fabric NodePort | Meaning |
-|--------|-----------------|---------|
-| 200 | — | Public path OK |
-| 403 | 200 | Bot Fight; origin OK via fabric |
-| 502/503 | 200 | **Tunnel/Worker flap**; origin OK — check `cloudflared` |
-| 502/503 | fail | Origin / NodePort actually down |
+| Public  | Fabric NodePort | Meaning                                                 |
+| ------- | --------------- | ------------------------------------------------------- |
+| 200     | —               | Public path OK                                          |
+| 403     | 200             | Bot Fight; origin OK via fabric                         |
+| 502/503 | 200             | **Tunnel/Worker flap**; origin OK — check `cloudflared` |
+| 502/503 | fail            | Origin / NodePort actually down                         |
 
 `cloudless2` (`workers/pi-origin-proxy`) retries once on idempotent methods for
 transient upstream 502 / network errors.
@@ -298,11 +299,11 @@ sequenceDiagram
   NP-->>GHA: 200 status=ok
 ```
 
-| Do | Don't |
-|----|-------|
-| Join the tailnet, then hit **NodePort `:30300` via MagicDNS** | Use public **Funnel** as the CI SLA path (DERP-mediated, flaky timeouts) |
-| Prefer MagicDNS over CGNAT literals | Hardcode `100.x` (rotates; e.g. stale `100.113.41.119`) |
-| Treat CF 403 + healthy fabric NodePort as “edge blocked bots, origin up” | Soft-pass 403 without validating origin |
+| Do                                                                       | Don't                                                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Join the tailnet, then hit **NodePort `:30300` via MagicDNS**            | Use public **Funnel** as the CI SLA path (DERP-mediated, flaky timeouts) |
+| Prefer MagicDNS over CGNAT literals                                      | Hardcode `100.x` (rotates; e.g. stale `100.113.41.119`)                  |
+| Treat CF 403 + healthy fabric NodePort as “edge blocked bots, origin up” | Soft-pass 403 without validating origin                                  |
 
 Funnel (`https://github-omv.…ts.net` from the public internet) may still answer
 sometimes — it is **break-glass / diagnostic only**, not an availability contract.
@@ -367,19 +368,19 @@ Typical secrets: `TS_AUTHKEY` (ephemeral, pre-authorized), `KUBECONFIG_B64`,
 
 ## 6. Decision records
 
-| ID | Decision | Rationale |
-|----|----------|-----------|
-| D1 | Public edge = Cloudflare, not Funnel | Free Bot Fight + Funnel as primary broke SEO/CI; CF Tunnel already terminates at NodePort |
-| D2 | One shared `ingress` ProxyGroup | Per-Ingress proxies exploded Machines (`monitoring-proxies-0..9`) and RAM on Pi |
-| D3 | Subnet routes only via `Connector` | ProxyGroup cannot advertise routes; wrong CRD caused silent failures |
-| D4 | `ProxyClass/pi-fabric` arm64 + tiny limits | Pi 5 RAM budget; avoid scheduling operator proxies on starved nodes |
-| D5 | kube ProxyGroup for off-LAN kubectl | Avoids k3s TLS SAN churn and WSL userspace TCP pain |
-| D6 | No AWS SSM in `deploy.sh` | Free-tier / Cloudflare-first policy — OAuth env only |
-| D7 | Prefer MagicDNS over CGNAT literals | Tailscale IPs rotate; docs and new automation must not hardcode |
-| D8 | CI origin fallback = private fabric L4, not Funnel | Funnel is public Serve over DERP — intermittent timeouts from GHA; NodePort via MagicDNS after `TS_AUTHKEY` is the same origin Cloudflare Tunnel uses |
-| D9 | Members HTTPS-only to `tag:k8s`; admins `*` | Stops accidental reach to node_exporter / k3s / discovery ports over the tailnet |
-| D10 | ACL CI with `acl_only=true` by default | Full admin-api cleanup can delete Connector Machines that look “stale” |
-| D11 | App connector on a tagged Linux host + MagicDNS DNS page unchanged | SaaS egress via Apps; public site stays Cloudflare |
+| ID  | Decision                                                           | Rationale                                                                                                                                             |
+| --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Public edge = Cloudflare, not Funnel                               | Free Bot Fight + Funnel as primary broke SEO/CI; CF Tunnel already terminates at NodePort                                                             |
+| D2  | One shared `ingress` ProxyGroup                                    | Per-Ingress proxies exploded Machines (`monitoring-proxies-0..9`) and RAM on Pi                                                                       |
+| D3  | Subnet routes only via `Connector`                                 | ProxyGroup cannot advertise routes; wrong CRD caused silent failures                                                                                  |
+| D4  | `ProxyClass/pi-fabric` arm64 + tiny limits                         | Pi 5 RAM budget; avoid scheduling operator proxies on starved nodes                                                                                   |
+| D5  | kube ProxyGroup for off-LAN kubectl                                | Avoids k3s TLS SAN churn and WSL userspace TCP pain                                                                                                   |
+| D6  | No AWS SSM in `deploy.sh`                                          | Free-tier / Cloudflare-first policy — OAuth env only                                                                                                  |
+| D7  | Prefer MagicDNS over CGNAT literals                                | Tailscale IPs rotate; docs and new automation must not hardcode                                                                                       |
+| D8  | CI origin fallback = private fabric L4, not Funnel                 | Funnel is public Serve over DERP — intermittent timeouts from GHA; NodePort via MagicDNS after `TS_AUTHKEY` is the same origin Cloudflare Tunnel uses |
+| D9  | Members HTTPS-only to `tag:k8s`; admins `*`                        | Stops accidental reach to node_exporter / k3s / discovery ports over the tailnet                                                                      |
+| D10 | ACL CI with `acl_only=true` by default                             | Full admin-api cleanup can delete Connector Machines that look “stale”                                                                                |
+| D11 | App connector on a tagged Linux host + MagicDNS DNS page unchanged | SaaS egress via Apps; public site stays Cloudflare                                                                                                    |
 
 ---
 
@@ -485,7 +486,7 @@ bash scripts/tailscale-refresh-tls-secrets.sh
 # /etc/rancher/k3s/config.yaml (via scripts/configure-k3s.sh)
 tls-san:
   - "192.168.1.128"
-  - "100.74.191.58"                 # refresh if CGNAT changed
+  - "100.74.191.58" # refresh if CGNAT changed
   - "github-omv.tail4ecae1.ts.net"
 ```
 
@@ -503,17 +504,17 @@ sudo tailscale set --accept-routes   # Linux with real TUN
 
 ### 8.4 Workflows & scripts
 
-| Workflow / script | Purpose |
-|-------------------|---------|
-| `tailscale-deploy.yml` / `tailscale-fabric-deploy.yml` | Operator / fabric apply |
-| `tailscale-enable-https.yml` | Tailnet HTTPS setting |
-| `tailscale-approve-service-hosts.yml` | Approve `svc:*` hosts |
-| `tailscale-fix-fabric-acl.yml` | ACL merge helper |
-| `tailscale-probe-posture.yml` | Posture / health of fabric |
-| `tailscale-admin-api.yml` | ACL merge (+ optional device cleanup); prefer `acl_only=true` |
-| `scripts/tailscale-diagnose.sh` | Local diagnosis |
-| `scripts/setup-kubectl-tailscale.sh` | Client kubeconfig helper |
-| `scripts/ts-wsl.sh` | WSL userspace Tailscale |
+| Workflow / script                                      | Purpose                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------- |
+| `tailscale-deploy.yml` / `tailscale-fabric-deploy.yml` | Operator / fabric apply                                       |
+| `tailscale-enable-https.yml`                           | Tailnet HTTPS setting                                         |
+| `tailscale-approve-service-hosts.yml`                  | Approve `svc:*` hosts                                         |
+| `tailscale-fix-fabric-acl.yml`                         | ACL merge helper                                              |
+| `tailscale-probe-posture.yml`                          | Posture / health of fabric                                    |
+| `tailscale-admin-api.yml`                              | ACL merge (+ optional device cleanup); prefer `acl_only=true` |
+| `scripts/tailscale-diagnose.sh`                        | Local diagnosis                                               |
+| `scripts/setup-kubectl-tailscale.sh`                   | Client kubeconfig helper                                      |
+| `scripts/ts-wsl.sh`                                    | WSL userspace Tailscale                                       |
 
 ---
 
@@ -551,13 +552,13 @@ Offline / orphaned devices: [`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastr
 
 ## 10. Related documents
 
-| Doc | Role |
-|-----|------|
-| [`kubectl-tailscale.md`](kubectl-tailscale.md) | Day-2 kubectl from WSL / LAN |
-| [`infrastructure/tailscale/README.md`](../../infrastructure/tailscale/README.md) | Manifest index + quick deploy |
-| [`databases/omv-cluster.md`](../databases/omv-cluster.md) | DB access rules (no TS exposure) |
-| [`CLUSTER-MAP.md`](../../CLUSTER-MAP.md) | Live pod map (refresh periodically) |
-| Cloudflare tunnel ops skill | Public `*.cloudless.gr` ingress |
+| Doc                                                                              | Role                                |
+| -------------------------------------------------------------------------------- | ----------------------------------- |
+| [`kubectl-tailscale.md`](kubectl-tailscale.md)                                   | Day-2 kubectl from WSL / LAN        |
+| [`infrastructure/tailscale/README.md`](../../infrastructure/tailscale/README.md) | Manifest index + quick deploy       |
+| [`databases/omv-cluster.md`](../databases/omv-cluster.md)                        | DB access rules (no TS exposure)    |
+| [`CLUSTER-MAP.md`](../../CLUSTER-MAP.md)                                         | Live pod map (refresh periodically) |
+| Cloudflare tunnel ops skill                                                      | Public `*.cloudless.gr` ingress     |
 
 ---
 
@@ -580,15 +581,15 @@ kubectl set image deployment/operator tailscale=tailscale/k8s-operator:v1.98.10 
 
 ## 12. Glossary
 
-| Term | Meaning here |
-|------|----------------|
-| **Fabric** | Private Tailscale mesh used by admins and automation |
-| **Serve** | Tailscale HTTPS to a node/ProxyGroup VIP (tailnet-only unless Funnel) |
-| **Funnel** | Expose Serve to the public internet — **not** our production edge |
-| **Connector** | Operator CR that advertises subnet routes |
-| **ProxyGroup** | Shared proxy StatefulSet (`ingress` / `egress` / `kube-apiserver`) |
-| **MagicDNS** | `*.tail4ecae1.ts.net` names — prefer over CGNAT IPs |
-| **VIP Service** | Approved `svc:*` Serve host (grafana / meilisearch / kube) |
-| **App connector** | Tagged node advertising SaaS routes for Tailscale Apps |
-| **Endpoint discovery** | Machines UI inventory — not an allow rule |
-| **pi-origin** | Cloudflare hostname → Tunnel → `192.168.1.128:30300` |
+| Term                   | Meaning here                                                          |
+| ---------------------- | --------------------------------------------------------------------- |
+| **Fabric**             | Private Tailscale mesh used by admins and automation                  |
+| **Serve**              | Tailscale HTTPS to a node/ProxyGroup VIP (tailnet-only unless Funnel) |
+| **Funnel**             | Expose Serve to the public internet — **not** our production edge     |
+| **Connector**          | Operator CR that advertises subnet routes                             |
+| **ProxyGroup**         | Shared proxy StatefulSet (`ingress` / `egress` / `kube-apiserver`)    |
+| **MagicDNS**           | `*.tail4ecae1.ts.net` names — prefer over CGNAT IPs                   |
+| **VIP Service**        | Approved `svc:*` Serve host (grafana / meilisearch / kube)            |
+| **App connector**      | Tagged node advertising SaaS routes for Tailscale Apps                |
+| **Endpoint discovery** | Machines UI inventory — not an allow rule                             |
+| **pi-origin**          | Cloudflare hostname → Tunnel → `192.168.1.128:30300`                  |

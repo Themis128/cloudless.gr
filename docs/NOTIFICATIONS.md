@@ -1,7 +1,7 @@
 # Notifications — cloudless.gr
 
 Canonical map of every notification channel and event source. Three layers:
-**app-layer** (Next.js routes → Slack/ntfy/D1), **ops-layer** (admin alerts
+**app-layer** (Next.js routes → Slack/ntfy/email/D1), **ops-layer** (admin alerts
 fan-out via `notifyAdmin()`), and **infra-layer** (systemd watchdog,
 Alertmanager, pi-alert-api — independent of the app process).
 
@@ -19,15 +19,15 @@ exponential backoff. Identical errors are deduplicated for 10 min
 
 **Per-channel routing:**
 
-| `SlackClient` instance | Slack channel | Events |
-|---|---|---|
-| `bookingsClient` | `#bookings` | `slackBookingNotify` |
-| `ordersClient` | `#orders` | `slackOrderNotify` |
-| `errorsClient` | `#errors` | `slackErrorNotify` |
-| `deploymentsClient` | `#deployments` | `slackDeployNotify` |
-| `contactsClient` | `#notifications` | `slackContactNotify` |
-| `subscribersClient` | `#newsletter` (or `NEWSLETTER_SLACK_CHANNEL_ID`) | `slackSubscriberNotify` |
-| `interactionsClient` | `#notifications` | `slackChatNotify`, `slackTicketNotify`, `slackRegistrationNotify` |
+| `SlackClient` instance | Slack channel                                    | Events                                                            |
+| ---------------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| `bookingsClient`       | `#bookings`                                      | `slackBookingNotify`                                              |
+| `ordersClient`         | `#orders`                                        | `slackOrderNotify`                                                |
+| `errorsClient`         | `#errors`                                        | `slackErrorNotify`                                                |
+| `deploymentsClient`    | `#deployments`                                   | `slackDeployNotify`                                               |
+| `contactsClient`       | `#notifications`                                 | `slackContactNotify`                                              |
+| `subscribersClient`    | `#newsletter` (or `NEWSLETTER_SLACK_CHANNEL_ID`) | `slackSubscriberNotify`                                           |
+| `interactionsClient`   | `#notifications`                                 | `slackChatNotify`, `slackTicketNotify`, `slackRegistrationNotify` |
 
 Config: `SLACK_BOT_TOKEN`, `SLACK_WEBHOOK_URL`, `SLACK_DEFAULT_CHANNEL`. See
 [`docs/integrations/SLACK.md`](integrations/SLACK.md) for the full setup.
@@ -82,15 +82,15 @@ Admin UI at `/admin/notifications`. Analytics endpoint at
 
 ## Fan-out helper — `src/lib/admin-alerts.ts`
 
-`notifyAdmin(input)` fires both Slack and ntfy in parallel via
-`Promise.allSettled` — one failing channel never blocks the other.
+`notifyAdmin(input)` fires Slack, ntfy, and the canonical transactional email
+transport in parallel via `Promise.allSettled` — one failing channel never blocks the others.
 
 ```ts
 await notifyAdmin({
-  severity: "high",   // info | warning | error | high | critical
-  title:    "espocrm down",
-  message:  "5xx from /api/v1/App/user for 3 min",
-  click:    "https://espocrm.cloudless.gr",
+  severity: "high", // info | warning | error | high | critical
+  title: "espocrm down",
+  message: "5xx from /api/v1/App/user for 3 min",
+  click: "https://espocrm.cloudless.gr",
 });
 ```
 
@@ -126,25 +126,27 @@ for provisioning.
 
 ## Event map — what fires what
 
-| Event | Route | Slack | ntfy | D1 store |
-|---|---|---|---|---|
-| Contact form submitted | `/api/contact` | `slackContactNotify` → `#notifications` | — | `contact` |
-| Newsletter subscribe | `/api/subscribe` | `slackSubscriberNotify` → `#newsletter` | — | `subscribe` |
-| Calendar booking | `/api/calendar/book`, `/api/agent/book` | `slackBookingNotify` → `#bookings` | — | `booking` |
-| Stripe checkout complete | `/api/webhooks/stripe` | `slackOrderNotify` → `#orders` | via `notifyAdmin` when high-value | `order` |
-| New user registration | `/api/auth/register` | `slackRegistrationNotify` → `#notifications` | — | `auth` |
-| Chat conversation started | `/api/chat` | `slackChatNotify` → `#notifications` | — | — |
-| EspoCRM Contact / Lead created | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyContactCreated` / `notifyLeadCreated` → `#leads` | — | — |
-| EspoCRM Opportunity created / stage changed | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyOpportunityCreated` / `notifyOpportunityStageChanged` → `#orders` | — | — |
-| EspoCRM Case created / status changed | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyCaseCreated` / `notifyCaseStatusChanged` → `#notifications` | — | — |
-| Portal client enrolled | `/api/portal/enroll` | DM to ops users (inline) | — | `portal` |
-| Portal deliverable ready | `/api/portal/[token]/deliverables` | — | — | `portal` |
-| Sentry alert | `/api/webhooks/sentry` | DM to ops users via `notifyAdmin` | `notifyAdmin` (opt-in) | — |
-| MQTT high-severity event | `/api/webhooks/mqtt/publish` | DM to ops users via `notifyAdmin` | `notifyAdmin` (opt-in) | — |
-| Generic admin alert | `/api/webhooks/admin-alert` | DM to ops users via `notifyAdmin` | `notifyAdmin` (opt-in) | — |
-| Application error | `src/lib/slack-notify.ts slackErrorNotify` | `#errors` (deduped 10 min) | — | `error` (mirrored) |
-| Insight refresh failure | `/api/admin/insights/refresh` | `slackErrorNotify` → `#errors` | — | — |
-| Deploy started/done/failed | `src/instrumentation.ts` | `slackDeployNotify` → `#deployments` | — | — |
+| Event                                       | Route                                        | Slack                                                                    | ntfy                              | D1 store           |
+| ------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------- | ------------------ |
+| Contact form submitted                      | `/api/contact`                               | `slackContactNotify` → `#notifications`                                  | —                                 | `contact`          |
+| Newsletter subscribe                        | `/api/subscribe`                             | `slackSubscriberNotify` → `#newsletter`                                  | —                                 | `subscribe`        |
+| Calendar booking                            | `/api/calendar/book`, `/api/agent/book`      | `slackBookingNotify` → `#bookings`                                       | —                                 | `booking`          |
+| Stripe checkout complete                    | `/api/webhooks/stripe`                       | `slackOrderNotify` → `#orders`                                           | via `notifyAdmin` when high-value | `order`            |
+| New user registration                       | `/api/auth/register`                         | `slackRegistrationNotify` → `#notifications`                             | —                                 | `auth`             |
+| Chat conversation started                   | `/api/chat`                                  | `slackChatNotify` → `#notifications`                                     | —                                 | —                  |
+| EspoCRM Contact / Lead created              | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyContactCreated` / `notifyLeadCreated` → `#leads`                  | —                                 | —                  |
+| EspoCRM Opportunity created / stage changed | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyOpportunityCreated` / `notifyOpportunityStageChanged` → `#orders` | —                                 | —                  |
+| EspoCRM Case created / status changed       | `/api/webhooks/espocrm` → `espocrm-dispatch` | `notifyCaseCreated` / `notifyCaseStatusChanged` → `#notifications`       | —                                 | —                  |
+| Portal client enrolled                      | `/api/portal/enroll`                         | DM to ops users (inline)                                                 | —                                 | `portal`           |
+| Portal deliverable ready                    | `/api/portal/[token]/deliverables`           | —                                                                        | —                                 | `portal`           |
+| Sentry alert                                | `/api/webhooks/sentry`                       | DM to ops users via `notifyAdmin`                                        | `notifyAdmin` (opt-in)            | —                  |
+| MQTT high-severity event                    | `/api/webhooks/mqtt/publish`                 | DM to ops users via `notifyAdmin`                                        | `notifyAdmin` (opt-in)            | —                  |
+| Generic admin alert                         | `/api/webhooks/admin-alert`                  | DM to ops users via `notifyAdmin`                                        | `notifyAdmin` (opt-in)            | —                  |
+| Application error                           | `src/lib/slack-notify.ts slackErrorNotify`   | `#errors` (deduped 10 min)                                               | —                                 | `error` (mirrored) |
+| Insight refresh failure                     | `/api/admin/insights/refresh`                | `slackErrorNotify` → `#errors`                                           | —                                 | —                  |
+| Deploy started/done/failed                  | `src/instrumentation.ts`                     | `slackDeployNotify` → `#deployments`                                     | —                                 | —                  |
+
+Generic admin alerts also email `SES_TO_EMAIL` (default `tbaltzakis@cloudless.gr`) through the canonical Cloudflare Email/Resend dispatch path.
 
 ---
 
@@ -155,13 +157,13 @@ for provisioning.
 Polls `/api/health` every 2 min from host (outside k3s). Fires ntfy + Slack +
 email **directly via curl + Resend REST** — does not go through the app.
 
-| Consecutive failures | ~Minutes | Action |
-|---|---|---|
-| 1–2 | 2–4 min | Silent |
-| **3** | ~6 min | Alert on all 3 channels (one-shot per incident) |
-| 4–7 | 8–14 min | No further pings |
-| **8** | ~16 min | Auto-rollback + "rolled back" alert |
-| — | recovers | "Recovered" alert; state reset |
+| Consecutive failures | ~Minutes | Action                                          |
+| -------------------- | -------- | ----------------------------------------------- |
+| 1–2                  | 2–4 min  | Silent                                          |
+| **3**                | ~6 min   | Alert on all 3 channels (one-shot per incident) |
+| 4–7                  | 8–14 min | No further pings                                |
+| **8**                | ~16 min  | Auto-rollback + "rolled back" alert             |
+| —                    | recovers | "Recovered" alert; state reset                  |
 
 Credentials: `/etc/safedeploy-watchdog.env` (mode 600).
 Logs: `journalctl -t safedeploy-watchdog`.
@@ -200,19 +202,19 @@ Pod doc: [`docs/pods/kuma-slack-bridge/README.md`](pods/kuma-slack-bridge/README
 
 ## Config reference
 
-| Key | Where | Used by |
-|---|---|---|
-| `SLACK_BOT_TOKEN` | SSM / env | All `SlackClient` posts |
-| `SLACK_WEBHOOK_URL` | SSM / env | `SlackClient` webhook fallback |
-| `SLACK_DEFAULT_CHANNEL` | SSM / env | Default channel when no instance override |
-| `NEWSLETTER_SLACK_CHANNEL_ID` | env | `subscribersClient` channel override |
-| `NTFY_BASE_URL` | SSM | `ntfy.ts publishNtfy` (default: in-cluster ClusterIP) |
-| `NTFY_TOPIC` | SSM | `ntfy.ts publishNtfy` |
-| `NTFY_TOKEN` | SSM | `ntfy.ts` Bearer auth (optional) |
-| `ADMIN_PUSH_VIA_NTFY` | SSM (wins) / env | Enables ntfy fan-out in `notifyAdmin` |
-| `ADMIN_ALERT_SECRET` | SSM | `/api/webhooks/admin-alert` shared secret |
-| `RESEND_API_KEY` | env / SSM | App email + SafeDeploy Watchdog email |
-| `ALERT_EMAIL` | watchdog env | Watchdog email recipient (default: `tbaltzakis@cloudless.gr`) |
+| Key                           | Where            | Used by                                                       |
+| ----------------------------- | ---------------- | ------------------------------------------------------------- |
+| `SLACK_BOT_TOKEN`             | SSM / env        | All `SlackClient` posts                                       |
+| `SLACK_WEBHOOK_URL`           | SSM / env        | `SlackClient` webhook fallback                                |
+| `SLACK_DEFAULT_CHANNEL`       | SSM / env        | Default channel when no instance override                     |
+| `NEWSLETTER_SLACK_CHANNEL_ID` | env              | `subscribersClient` channel override                          |
+| `NTFY_BASE_URL`               | SSM              | `ntfy.ts publishNtfy` (default: in-cluster ClusterIP)         |
+| `NTFY_TOPIC`                  | SSM              | `ntfy.ts publishNtfy`                                         |
+| `NTFY_TOKEN`                  | SSM              | `ntfy.ts` Bearer auth (optional)                              |
+| `ADMIN_PUSH_VIA_NTFY`         | SSM (wins) / env | Enables ntfy fan-out in `notifyAdmin`                         |
+| `ADMIN_ALERT_SECRET`          | SSM              | `/api/webhooks/admin-alert` shared secret                     |
+| `RESEND_API_KEY`              | env / SSM        | App email + SafeDeploy Watchdog email                         |
+| `ALERT_EMAIL`                 | watchdog env     | Watchdog email recipient (default: `tbaltzakis@cloudless.gr`) |
 
 ---
 
