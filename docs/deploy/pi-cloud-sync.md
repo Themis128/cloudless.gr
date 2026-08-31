@@ -26,16 +26,16 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 
 ## Sync surfaces
 
-| Surface | Mechanism | Drift risk |
-|---|---|---|
-| **Code (image)** | Both sides use `cloudless-pi-app` from ECR (us-east-1). Cloud builds via SST, Pi pulls via K3s. | Until both pin to the same SHA, Pi can lag arbitrarily. |
-| **Public env** | `NEXT_PUBLIC_*` baked into the image at build time (see [Dockerfile](../../Dockerfile)). | Identical because identical image. |
-| **Runtime secrets** | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
-| **Notion content** | Both fetch live from Notion API; ISR per-process. | Pi cache lags by up to its ISR TTL after Notion edits. |
-| **Auth sessions** | Both verify JWTs against the same Cognito JWKS. | Pi must have the `COGNITO_*` vars in SSM. |
-| **Webhooks (Stripe/Notion/EspoCRM)** | Hit `cloudless.gr` and route to whichever is live. | Pi must hold the same webhook secrets in SSM. |
-| **TLS cert** | Cloud uses ACM; Pi uses its own (Let's Encrypt / cert-manager). | Independent expiry. **Highest silent-failure risk.** |
-| **Outbound IP / source reputation** | Differs (CloudFront IP vs WAN `150.228.63.192`). | Anything with IP allowlists — outbound APIs, SES — must allowlist both. |
+| Surface                              | Mechanism                                                                                         | Drift risk                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Code (image)**                     | Both sides use `cloudless-pi-app` from ECR (us-east-1). Cloud builds via SST, Pi pulls via K3s.   | Until both pin to the same SHA, Pi can lag arbitrarily.                           |
+| **Public env**                       | `NEXT_PUBLIC_*` baked into the image at build time (see [Dockerfile](../../Dockerfile)).          | Identical because identical image.                                                |
+| **Runtime secrets**                  | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
+| **Notion content**                   | Both fetch live from Notion API; ISR per-process.                                                 | Pi cache lags by up to its ISR TTL after Notion edits.                            |
+| **Auth sessions**                    | Both verify JWTs against the same Cognito JWKS.                                                   | Pi must have the `COGNITO_*` vars in SSM.                                         |
+| **Webhooks (Stripe/Notion/EspoCRM)** | Hit `cloudless.gr` and route to whichever is live.                                                | Pi must hold the same webhook secrets in SSM.                                     |
+| **TLS cert**                         | Cloud uses ACM; Pi uses its own (Let's Encrypt / cert-manager).                                   | Independent expiry. **Highest silent-failure risk.**                              |
+| **Outbound IP / source reputation**  | Differs (CloudFront IP vs WAN `150.228.63.192`).                                                  | Anything with IP allowlists — outbound APIs, SES — must allowlist both.           |
 
 ## What's enforced today
 
@@ -64,7 +64,7 @@ kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.
 
 ### 2. SECONDARY-path health monitoring — `Pi TLS Cert Check` workflow
 
-[.github/workflows/pi-tls-cert-check.yml](../../.github/workflows/pi-tls-cert-check.yml)
+[.github/workflows/tls-cert-parity-probe.yml](../../.github/workflows/tls-cert-parity-probe.yml)
 runs every 6h (00:30, 06:30, 12:30, 18:30 UTC) against the APIGW SECONDARY frontend
 (`d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`) and asserts:
 
@@ -84,8 +84,8 @@ Failure modes this catches:
 - Pi unreachable on its IPv6:18443 socket (Starlink IPv6 lease changed,
   firewall, K3s pod down, listener not bound)
 
-Because this probes the SECONDARY path *directly*, it surfaces issues
-*before* a real PRIMARY outage forces failover. The job is included in the
+Because this probes the SECONDARY path _directly_, it surfaces issues
+_before_ a real PRIMARY outage forces failover. The job is included in the
 weekly CI health routine, so any failure is reported in the Monday summary.
 
 ### 3. Weekly CI health routine
@@ -137,7 +137,7 @@ events** — i.e. PRIMARY → SECONDARY transitions and back — not on every
 probe failure, so a flapping check doesn't spam the inbox.
 
 Together with #2 (daily proactive APIGW probe) this gives both
-*pre-incident* and *during-incident* signals:
+_pre-incident_ and _during-incident_ signals:
 
 - 6-hourly TLS+health check (00:30, 06:30, 12:30, 18:30 UTC): "the failover path is currently usable"
 - SNS edge alert: "we just flipped to (or from) failover RIGHT NOW"
@@ -167,7 +167,7 @@ doc for context. Listed in priority order:
 - **APIGW HTTP API**: `cloudless-pi-frontend` (id `dwtp9xt4dd`, us-east-1)
 - **APIGW custom domains** (SECONDARY targets):
   - apex: `d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`
-  - www:  `d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com`
+  - www: `d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com`
 - **APIGW regional zone ID**: `Z1UJRXOUMOOFQ8` (well-known)
 - **Pi backend**: IPv6:18443 (Starlink global v6 lease — current address
   is whatever `cloudless-ddns-updater` last wrote into the Lambda env)
