@@ -121,13 +121,13 @@ jobs:
           $SSH "
             set -euo pipefail
             services=\$(sudo systemctl list-units 'actions.runner.*' --no-pager --all --output=json 2>/dev/null \
-              | python3 -c \"import sys,json; units=json.load(sys.stdin); [print(u['unit']) for u in units if u['activestate'] in ('inactive','failed','dead')]\" 2>/dev/null || true)
+              | python3 -c \"import sys,json; units=json.load(sys.stdin); [print(u['unit']) for u in units if u['active'] in ('inactive','failed')]\" 2>/dev/null || true)
             if [ -z \"\$services\" ]; then
               echo 'All runner services are already active — nothing to restart.'
             else
               for svc in \$services; do
                 echo \"  restarting: \$svc\"
-                sudo systemctl restart \"\$svc\" || echo \"  WARN: failed to restart \$svc\"
+                sudo systemctl restart \"\$svc\"
               done
             fi
           "
