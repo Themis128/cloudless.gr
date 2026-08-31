@@ -24,6 +24,8 @@
  * is purely additive for the new "alerts that should bypass Slack noise
  * filters" lane.
  */
+import { notifyTeam } from "@/lib/email";
+import { escapeHtml } from "@/lib/escape-html";
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
 import { publishNtfy } from "@/lib/ntfy";
