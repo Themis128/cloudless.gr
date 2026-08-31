@@ -14,7 +14,12 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-cloudless.gr}"
-TXT_VALUE="tiktok-developers-site-verification=30QWkDq9g0olcwcIDueeqBix84M0VCXn"
+TIKTOK_VERIFICATION_TOKEN="${TIKTOK_VERIFICATION_TOKEN:-}"
+if [ -z "$TIKTOK_VERIFICATION_TOKEN" ]; then
+  echo "::error::TIKTOK_VERIFICATION_TOKEN is required."
+  exit 1
+fi
+TXT_VALUE="tiktok-developers-site-verification=${TIKTOK_VERIFICATION_TOKEN}"
 API="https://api.cloudflare.com/client/v4"
 
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
