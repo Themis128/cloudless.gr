@@ -28,6 +28,42 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
+      - name: Ensure Tailscale Slack channel
+        id: slack-channel
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ["SLACK_BOT_TOKEN"]
+
+          def call(method, payload=None):
+              data = json.dumps(payload).encode() if payload is not None else None
+              request = urllib.request.Request(
+                  f"https://slack.com/api/{method}",
+                  data=data,
+                  headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+              )
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  result = json.load(response)
+              if not result.get("ok"):
+                  raise SystemExit(f"Slack {method} failed: {result.get('error', 'unknown_error')}")
+              return result
+
+          query = urllib.parse.urlencode({"exclude_archived": "true", "limit": 200, "types": "public_channel"})
+          channels = call(f"conversations.list?{query}")["channels"]
+          channel = next((item for item in channels if item["name"] == "tailscale"), None)
+          if channel is None:
+              channel = call("conversations.create", {"name": "tailscale", "is_private": False})["channel"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"channel_id={channel['id']}\n")
+          print(f"Tailscale notifications channel ready: #{channel['name']}")
+          PY
+
       - name: Connect to tailnet with OAuth
         id: tailscale-oauth
         continue-on-error: true
@@ -77,6 +113,82 @@ jobs:
 
           echo "=== Runner service status (after) ==="
           $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true
+
+      - name: Post result to Tailscale Slack channel
+        if: always() && steps.slack-channel.outputs.channel_id != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          CHANNEL_ID: ${{ steps.slack-channel.outputs.channel_id }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          status = os.environ["JOB_STATUS"]
+          payload = {
+              "channel": os.environ["CHANNEL_ID"],
+              "text": f"Tailscale runner recovery {status}",
+              "blocks": [
+                  {
+                      "type": "header",
+                      "text": {"type": "plain_text", "text": f"Tailscale runner recovery: {status}"},
+                  },
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": f"The automated Pi runner recovery workflow finished with *{status}*.",
+                      },
+                  },
+                  {
+                      "type": "section",
+                      "text": {"type": "mrkdwn", "text": f"<{os.environ['RUN_URL']}|Open workflow run>"},
+                  },
+              ],
+          }
+          request = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=json.dumps(payload).encode(),
+              headers={
+                  "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}",
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=20) as response:
+              result = json.load(response)
+          if not result.get("ok"):
+              raise SystemExit(f"Slack chat.postMessage failed: {result.get('error', 'unknown_error')}")
+          print("Tailscale runner recovery notification sent")
+          PY
+
+      - name: Send operator email notification
+        if: always()
+        run: |
+          payload=$(python3 - <<'PY'
+          import json
+          import os
+          print(json.dumps({
+              "severity": os.environ.get("SEVERITY", "high"),
+              "title": f"Tailscale runner recovery {os.environ['JOB_STATUS']}",
+              "message": "The automated Pi runner recovery workflow completed.",
+              "click": os.environ["RUN_URL"],
+              "source": "github-actions/tailscale",
+          }))
+          PY
+          )
+          curl --fail --silent --show-error --max-time 30 \
+            -X POST http://github-omv.tail4ecae1.ts.net:30300/api/webhooks/admin-alert \
+            -H "x-cloudless-alert-secret: $ALERT_SECRET" \
+            -H "content-type: application/json" \
+            --data "$payload"
+        env:
+          ALERT_SECRET: ${{ secrets.NOTION_WEBHOOK_SECRET }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SEVERITY: ${{ job.status == 'success' && 'info' || 'high' }}
 
       - name: Post result to tracking issue
         if: always()
