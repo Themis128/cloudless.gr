@@ -170,7 +170,7 @@ jobs:
     - name: Upload SBOM artifact
       if: steps.skip.outputs.already != 'true'
       continue-on-error: true
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: sbom
         path: sbom.json
@@ -186,7 +186,7 @@ jobs:
     - name: Upload licenses artifact
       if: steps.skip.outputs.already != 'true'
       continue-on-error: true
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: licenses
         path: licenses.json
@@ -351,7 +351,7 @@ jobs:
     - name: Upload standalone artifact (debug fallback)
       if: steps.skip.outputs.already != 'true'
       continue-on-error: true
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: standalone-${{ github.sha }}
         path: ${{ steps.pack.outputs.artifact }}
