@@ -201,13 +201,14 @@ resolver on the Pi (CoreDNS / LAN DNS stay authoritative).
 
 ### Grants + Tailscale SSH (hardened 2026-08-12)
 
-| Src                                  | Dst                                                             | Allow                      |
-| ------------------------------------ | --------------------------------------------------------------- | -------------------------- |
-| admin                                | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` / `tag:pi` | `*`                        |
-| member                               | `tag:pi`                                                        | `tcp:22` (classic OpenSSH) |
-| member                               | `tag:k8s`                                                       | `tcp:80`, `tcp:443`        |
-| member                               | `tag:app-connector`                                             | DNS `53` only              |
-| admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self                                                 | `accept` (no check-mode)   |
+| Src                                  | Dst                                                             | Allow                                          |
+| ------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------- |
+| admin                                | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` / `tag:pi` | `*`                                            |
+| member                               | `tag:pi`                                                        | `tcp:22` (classic OpenSSH)                     |
+| `tag:ci`                             | `tag:pi`                                                        | `tcp:22`, `tcp:30700`, `tcp:30900`, `tcp:6443` |
+| member                               | `tag:k8s`                                                       | `tcp:80`, `tcp:443`                            |
+| member                               | `tag:app-connector`                                             | DNS `53` only                                  |
+| admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self                                                 | `accept` (no check-mode)                       |
 
 **Device tags (canonical — `scripts/tailscale-retag-fleet.sh`):**
 
