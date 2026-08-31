@@ -1,43 +1,21 @@
 {
   "tagOwners": {
-    "tag:k8s-operator": [
-      "autogroup:admin"
-    ],
-    "tag:k8s": [
-      "tag:k8s-operator"
-    ],
-    "tag:app-connector": [
-      "autogroup:admin"
-    ],
-    "tag:pi": [
-      "autogroup:admin"
-    ],
-    "tag:ci": [
-      "autogroup:admin"
-    ]
+    "tag:k8s-operator": ["autogroup:admin"],
+    "tag:k8s": ["tag:k8s-operator"],
+    "tag:app-connector": ["autogroup:admin"],
+    "tag:pi": ["autogroup:admin"],
+    "tag:ci": ["autogroup:admin"]
   },
   "autoApprovers": {
     "routes": {
-      "10.42.0.0/16": [
-        "tag:k8s"
-      ],
-      "10.43.0.0/16": [
-        "tag:k8s"
-      ],
-      "0.0.0.0/0": [
-        "tag:app-connector"
-      ],
-      "::/0": [
-        "tag:app-connector"
-      ]
+      "10.42.0.0/16": ["tag:k8s"],
+      "10.43.0.0/16": ["tag:k8s"],
+      "0.0.0.0/0": ["tag:app-connector"],
+      "::/0": ["tag:app-connector"]
     },
     "services": {
-      "svc:*": [
-        "tag:k8s"
-      ],
-      "tag:k8s": [
-        "tag:k8s"
-      ]
+      "svc:*": ["tag:k8s"],
+      "tag:k8s": ["tag:k8s"]
     }
   },
   "grants": [
@@ -49,7 +27,7 @@
     {
       "src": ["tag:ci"],
       "dst": ["tag:pi"],
-      "ip": ["tcp:30700", "tcp:30900", "tcp:6443"]
+      "ip": ["tcp:22", "tcp:30700", "tcp:30900", "tcp:6443"]
     },
     {
       "src": ["autogroup:member"],
@@ -92,85 +70,48 @@
   ],
   "nodeAttrs": [
     {
-      "target": [
-        "*"
-      ],
+      "target": ["*"],
       "app": {
         "tailscale.com/app-connectors": [
           {
             "name": "github",
-            "connectors": [
-              "tag:app-connector"
-            ],
+            "connectors": ["tag:app-connector"],
             "presetAppID": "github"
           },
           {
             "name": "stripe",
-            "connectors": [
-              "tag:app-connector"
-            ],
+            "connectors": ["tag:app-connector"],
             "presetAppID": "stripe"
           },
           {
             "name": "google-workspace",
-            "connectors": [
-              "tag:app-connector"
-            ],
+            "connectors": ["tag:app-connector"],
             "presetAppID": "google-workspace"
           },
           {
             "name": "notion",
-            "connectors": [
-              "tag:app-connector"
-            ],
-            "domains": [
-              "www.notion.so",
-              "notion.so",
-              "*.notion.so",
-              "api.notion.com"
-            ]
+            "connectors": ["tag:app-connector"],
+            "domains": ["www.notion.so", "notion.so", "*.notion.so", "api.notion.com"]
           },
           {
             "name": "sentry",
-            "connectors": [
-              "tag:app-connector"
-            ],
-            "domains": [
-              "*.sentry.io",
-              "sentry.io"
-            ]
+            "connectors": ["tag:app-connector"],
+            "domains": ["*.sentry.io", "sentry.io"]
           },
           {
             "name": "slack",
-            "connectors": [
-              "tag:app-connector"
-            ],
-            "domains": [
-              "*.slack.com",
-              "slack.com",
-              "api.slack.com"
-            ]
+            "connectors": ["tag:app-connector"],
+            "domains": ["*.slack.com", "slack.com", "api.slack.com"]
           },
           {
             "name": "cloudflare",
-            "connectors": [
-              "tag:app-connector"
-            ],
-            "domains": [
-              "dash.cloudflare.com",
-              "api.cloudflare.com",
-              "*.cloudflare.com"
-            ]
+            "connectors": ["tag:app-connector"],
+            "domains": ["dash.cloudflare.com", "api.cloudflare.com", "*.cloudflare.com"]
           },
           {
             "name": "anthropic",
-            "connectors": [
-              "tag:app-connector"
-            ],
-            "domains": [
-              "api.anthropic.com",
-              "console.anthropic.com"
-            ]
+            "connectors": ["tag:app-connector"],
+            "domains": ["api.anthropic.com", "console.anthropic.com"]
           }
         ]
       }
