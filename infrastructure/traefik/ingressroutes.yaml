@@ -25,11 +25,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`grafana.cloudless.gr`)
-    services:
-    - name: kube-prom-grafana
-      port: 80
+    - kind: Rule
+      match: Host(`grafana.cloudless.gr`)
+      services:
+        - name: kube-prom-grafana
+          port: 80
 
 ---
 # n8n.cloudless.gr → n8n (n8n)
@@ -41,11 +41,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`n8n.cloudless.gr`)
-    services:
-    - name: n8n
-      port: 5678
+    - kind: Rule
+      match: Host(`n8n.cloudless.gr`)
+      services:
+        - name: n8n
+          port: 5678
 
 ---
 # espocrm.cloudless.gr → espocrm (espocrm)
@@ -57,11 +57,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`espocrm.cloudless.gr`)
-    services:
-    - name: espocrm
-      port: 80
+    - kind: Rule
+      match: Host(`espocrm.cloudless.gr`)
+      services:
+        - name: espocrm
+          port: 80
 
 ---
 # ntfy.cloudless.gr → ntfy (ntfy)
@@ -73,11 +73,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`ntfy.cloudless.gr`)
-    services:
-    - name: ntfy
-      port: 80
+    - kind: Rule
+      match: Host(`ntfy.cloudless.gr`)
+      services:
+        - name: ntfy
+          port: 80
 
 ---
 # meili.cloudless.gr → meilisearch (meilisearch)
@@ -89,11 +89,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`meili.cloudless.gr`)
-    services:
-    - name: meilisearch
-      port: 7700
+    - kind: Rule
+      match: Host(`meili.cloudless.gr`)
+      services:
+        - name: meilisearch
+          port: 7700
 
 ---
 # docs.cloudless.gr → docs-service (default)
@@ -105,11 +105,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`docs.cloudless.gr`)
-    services:
-    - name: docs-service
-      port: 8080
+    - kind: Rule
+      match: Host(`docs.cloudless.gr`)
+      services:
+        - name: docs-service
+          port: 8080
 
 ---
 # appflowy.cloudless.gr → nginx (appflowy)
@@ -121,11 +121,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`appflowy.cloudless.gr`)
-    services:
-    - name: nginx
-      port: 80
+    - kind: Rule
+      match: Host(`appflowy.cloudless.gr`)
+      services:
+        - name: nginx
+          port: 80
 
 ---
 # kuma.cloudless.gr → uptime-kuma (uptime-kuma)
@@ -137,11 +137,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`kuma.cloudless.gr`)
-    services:
-    - name: uptime-kuma
-      port: 3001
+    - kind: Rule
+      match: Host(`kuma.cloudless.gr`)
+      services:
+        - name: uptime-kuma
+          port: 3001
 
 ---
 # postiz.cloudless.gr → postiz (postiz)
@@ -153,43 +153,11 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`postiz.cloudless.gr`)
-    services:
-    - name: postiz
-      port: 5000
-
----
-# agent.cloudless.gr → vibe-agent LangGraph API (vibe)
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: vibe-agent
-  namespace: vibe
-spec:
-  entryPoints: [web]
-  routes:
-  - kind: Rule
-    match: Host(`agent.cloudless.gr`)
-    services:
-    - name: vibe-agent
-      port: 2024
-
----
-# vibe.cloudless.gr → vibe-agent project-picker UI (vibe)
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: vibe-ui
-  namespace: vibe
-spec:
-  entryPoints: [web]
-  routes:
-  - kind: Rule
-    match: Host(`vibe.cloudless.gr`)
-    services:
-    - name: vibe-agent
-      port: 3001
+    - kind: Rule
+      match: Host(`postiz.cloudless.gr`)
+      services:
+        - name: postiz
+          port: 5000
 
 ---
 # logs.cloudless.gr → alert-api (alert-manager)
@@ -201,8 +169,8 @@ metadata:
 spec:
   entryPoints: [web]
   routes:
-  - kind: Rule
-    match: Host(`logs.cloudless.gr`)
-    services:
-    - name: alert-api
-      port: 8080
+    - kind: Rule
+      match: Host(`logs.cloudless.gr`)
+      services:
+        - name: alert-api
+          port: 8080

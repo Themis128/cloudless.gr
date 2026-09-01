@@ -1,7 +1,7 @@
 # Cloudflare Configuration & Architecture
 
-**Last Updated:** July 31, 2026  
-**Status:** ✅ Production Ready  
+**Last Updated:** July 31, 2026
+**Status:** ✅ Production Ready
 **Maintainer:** DevOps / Infrastructure Team
 
 ---
@@ -73,32 +73,32 @@ The infrastructure uses **two Workers** with different purposes:
 
 ### Cloudflare Account
 
-| Property | Value |
-|----------|-------|
-| Account Name | cloudless (via baltzakisthemis@gmail.com) |
-| Account ID | `fb7dc7b69b662480cd5961a4d1913c78` |
-| Zone | cloudless.gr |
-| Zone ID | `7025298073d6a5c645a6ad9add0cbf0e` |
-| Nameservers | `nova.ns.cloudflare.com` / `watson.ns.cloudflare.com` |
-| Plan | Free |
-| Two-Factor Auth | ✅ Enabled |
+| Property        | Value                                                 |
+| --------------- | ----------------------------------------------------- |
+| Account Name    | cloudless (via baltzakisthemis@gmail.com)             |
+| Account ID      | `fb7dc7b69b662480cd5961a4d1913c78`                    |
+| Zone            | cloudless.gr                                          |
+| Zone ID         | `7025298073d6a5c645a6ad9add0cbf0e`                    |
+| Nameservers     | `nova.ns.cloudflare.com` / `watson.ns.cloudflare.com` |
+| Plan            | Free                                                  |
+| Two-Factor Auth | ✅ Enabled                                            |
 
 ### Zone Settings
 
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| SSL/TLS | Full | Edge ↔ origin encryption (Tunnel) |
-| HSTS (zone) | `max-age=63072000; includeSubDomains; preload` + nosniff | Force HTTPS via browser (matches app header) |
-| Minimum TLS | 1.2 | No TLS 1.0/1.1 |
-| TLS 1.3 | On (0-RTT) | Modern clients |
-| HTTP/3 | On | QUIC |
-| Always Use HTTPS | On | Redirect HTTP → HTTPS |
-| Security Level | medium | Challenge medium+ threat scores (was `essentially_off`) |
-| Browser Integrity Check | On | Block obvious forged browsers |
-| Email Obfuscation | Off | Avoid React #418 hydration from CF email rewrite |
-| Bot Fight Mode | Off | Free: not API-toggleable; leave off — crons use `pi-origin` |
-| Apply / verify (TLS) | `scripts/cf-zone-tls-harden.sh` | Idempotent zone TLS posture |
-| Apply / verify (WAF) | `scripts/cf-zone-waf-harden.sh` | Idempotent Free-plan WAF posture |
+| Setting                 | Value                                                    | Purpose                                                     |
+| ----------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
+| SSL/TLS                 | Full                                                     | Edge ↔ origin encryption (Tunnel)                           |
+| HSTS (zone)             | `max-age=63072000; includeSubDomains; preload` + nosniff | Force HTTPS via browser (matches app header)                |
+| Minimum TLS             | 1.2                                                      | No TLS 1.0/1.1                                              |
+| TLS 1.3                 | On (0-RTT)                                               | Modern clients                                              |
+| HTTP/3                  | On                                                       | QUIC                                                        |
+| Always Use HTTPS        | On                                                       | Redirect HTTP → HTTPS                                       |
+| Security Level          | medium                                                   | Challenge medium+ threat scores (was `essentially_off`)     |
+| Browser Integrity Check | On                                                       | Block obvious forged browsers                               |
+| Email Obfuscation       | Off                                                      | Avoid React #418 hydration from CF email rewrite            |
+| Bot Fight Mode          | Off                                                      | Free: not API-toggleable; leave off — crons use `pi-origin` |
+| Apply / verify (TLS)    | `scripts/cf-zone-tls-harden.sh`                          | Idempotent zone TLS posture                                 |
+| Apply / verify (WAF)    | `scripts/cf-zone-waf-harden.sh`                          | Idempotent Free-plan WAF posture                            |
 
 ---
 
@@ -108,30 +108,28 @@ The infrastructure uses **two Workers** with different purposes:
 
 All production records point to Cloudflare Tunnel with orange cloud (proxied), except the apex/root which is served by the `cloudless2` Worker.
 
-| Type | Name | Value | Status | TTL | Proxied | Notes |
-|------|------|-------|--------|-----|---------|-------|
-| CNAME | @ (root) | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
-| CNAME | www | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
-| CNAME | manage | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
-| CNAME | pi-origin | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | Direct Tunnel origin for Worker proxy |
-| CNAME | omv | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | OMV admin panel |
-| CNAME | ftp | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | FTP web interface |
-| CNAME | docs | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Documentation portal |
-| CNAME | meili | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Meilisearch search engine |
-| CNAME | tftp | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | Returns 404 (UDP not supported via HTTP tunnel) |
-| CNAME | api | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | API gateway (fallback) |
-| CNAME | n8n | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Workflow automation (port 30900) |
-| CNAME | ntfy | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Notification service (port 30080) |
-| CNAME | espocrm | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | CRM system (port 30700) |
-| CNAME | postiz | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Social publishing (port 30500) |
-| CNAME | appflowy | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | CMS (port 30810) |
-| CNAME | kuma | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Uptime Kuma (port 32501) |
-| CNAME | logs | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | ESP32 alert API (port 30820) |
-| CNAME | agent | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Agent API (port 30924) |
-| CNAME | vibe | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Vibe agent (port 30301) |
-| TXT | _acme-challenge | (Letsencrypt cert validation) | 🔵 Active | Auto | ❌ No | |
-| MX | @ | mail.cloudless.gr (priority 10) | 🔵 Active | 3600 | ❌ No | |
-| TXT | @ | v=spf1 include:_spf.mx.cloudflare.net ~all | 🔵 Active | 3600 | ❌ No | Updated from sendgrid to Cloudflare Email |
+| Type  | Name            | Value                                                   | Status    | TTL  | Proxied | Notes                                           |
+| ----- | --------------- | ------------------------------------------------------- | --------- | ---- | ------- | ----------------------------------------------- |
+| CNAME | @ (root)        | cloudless2 Worker route                                 | 🔵 Active | Auto | ✅ Yes  | Served by pi-origin-proxy Worker                |
+| CNAME | www             | cloudless2 Worker route                                 | 🔵 Active | Auto | ✅ Yes  | Served by pi-origin-proxy Worker                |
+| CNAME | manage          | cloudless2 Worker route                                 | 🔵 Active | Auto | ✅ Yes  | Served by pi-origin-proxy Worker                |
+| CNAME | pi-origin       | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes  | Direct Tunnel origin for Worker proxy           |
+| CNAME | omv             | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes  | OMV admin panel                                 |
+| CNAME | ftp             | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes  | FTP web interface                               |
+| CNAME | docs            | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Documentation portal                            |
+| CNAME | meili           | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Meilisearch search engine                       |
+| CNAME | tftp            | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes  | Returns 404 (UDP not supported via HTTP tunnel) |
+| CNAME | api             | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes  | API gateway (fallback)                          |
+| CNAME | n8n             | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Workflow automation (port 30900)                |
+| CNAME | ntfy            | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Notification service (port 30080)               |
+| CNAME | espocrm         | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | CRM system (port 30700)                         |
+| CNAME | postiz          | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Social publishing (port 30500)                  |
+| CNAME | appflowy        | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | CMS (port 30810)                                |
+| CNAME | kuma            | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | Uptime Kuma (port 32501)                        |
+| CNAME | logs            | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes  | ESP32 alert API (port 30820)                    |
+| TXT   | _acme-challenge | (Letsencrypt cert validation)                           | 🔵 Active | Auto | ❌ No   |                                                 |
+| MX    | @               | mail.cloudless.gr (priority 10)                         | 🔵 Active | 3600 | ❌ No   |                                                 |
+| TXT   | @               | v=spf1 include:_spf.mx.cloudflare.net ~all              | 🔵 Active | 3600 | ❌ No   | Updated from sendgrid to Cloudflare Email       |
 
 ### DNS Update Process
 
@@ -176,16 +174,16 @@ Cloudflare Tunnel (formerly Argo Tunnel) provides a secure, outbound-only connec
 
 ### Tunnel Configuration
 
-| Property | Value |
-|----------|-------|
-| Tunnel ID | `e977a490-58c5-4fdb-9155-86832e3e636a` |
-| Tunnel Name | omv-main-tunnel |
-| Account ID | `fb7dc7b69b662480cd5961a4d1913c78` |
-| Account Name | cloudless (via baltzakisthemis@gmail.com) |
-| Status | ✅ Active |
-| Origin | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` |
-| Egress Location | EU (sof01, vie02) |
-| DNS Access | Enabled (Tailscale DNS integration) |
+| Property        | Value                                                   |
+| --------------- | ------------------------------------------------------- |
+| Tunnel ID       | `e977a490-58c5-4fdb-9155-86832e3e636a`                  |
+| Tunnel Name     | omv-main-tunnel                                         |
+| Account ID      | `fb7dc7b69b662480cd5961a4d1913c78`                      |
+| Account Name    | cloudless (via baltzakisthemis@gmail.com)               |
+| Status          | ✅ Active                                               |
+| Origin          | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` |
+| Egress Location | EU (sof01, vie02)                                       |
+| DNS Access      | Enabled (Tailscale DNS integration)                     |
 
 ### Tunnel Credentials
 
@@ -290,25 +288,25 @@ cloudflared tunnel token e977a490-58c5-4fdb-9155-86832e3e636a
 
 Each ingress rule maps a hostname to an origin service:
 
-| Hostname | Service | Port | Notes |
-|----------|---------|------|-------|
-| pi-origin.cloudless.gr | cloudless-app (NodePort) | 30300 | Direct Tunnel origin for Worker proxy |
-| omv.cloudless.gr | OMV Web UI | 80 | ProFTPD + TFTP management |
-| docs.cloudless.gr | k3s docs service | 30901 | Documentation portal |
-| ftp.cloudless.gr | FTP Web UI | 80 | Same as OMV |
-| meili.cloudless.gr | Meilisearch search engine | 30902 | Runs on omv-main (120GB SSD) |
-| tftp.cloudless.gr | N/A | 404 | UDP not supported via HTTP tunnel |
-| api.cloudless.gr | API Gateway | 80 | Fallback service |
-| grafana.cloudless.gr | Grafana | 30850 | Monitoring dashboard |
-| kuma.cloudless.gr | Uptime Kuma | 32501 | Uptime monitoring |
-| n8n.cloudless.gr | n8n | 30900 | Workflow automation |
-| ntfy.cloudless.gr | ntfy | 30080 | Notification service |
-| espocrm.cloudless.gr | EspoCRM | 30700 | CRM system |
-| postiz.cloudless.gr | Postiz | 30500 | Social publishing |
-| appflowy.cloudless.gr | AppFlowy | 30810 | CMS |
-| logs.cloudless.gr | ESP32 alert API | 30820 | Alert API (WebSocket) |
-| agent.cloudless.gr | Agent API | 30924 | Agent API |
-| vibe.cloudless.gr | Vibe agent | 30301 | Vibe agent |
+| Hostname               | Service                   | Port  | Notes                                 |
+| ---------------------- | ------------------------- | ----- | ------------------------------------- |
+| pi-origin.cloudless.gr | cloudless-app (NodePort)  | 30300 | Direct Tunnel origin for Worker proxy |
+| omv.cloudless.gr       | OMV Web UI                | 80    | ProFTPD + TFTP management             |
+| docs.cloudless.gr      | k3s docs service          | 30901 | Documentation portal                  |
+| ftp.cloudless.gr       | FTP Web UI                | 80    | Same as OMV                           |
+| meili.cloudless.gr     | Meilisearch search engine | 30902 | Runs on omv-main (120GB SSD)          |
+| tftp.cloudless.gr      | N/A                       | 404   | UDP not supported via HTTP tunnel     |
+| api.cloudless.gr       | API Gateway               | 80    | Fallback service                      |
+| grafana.cloudless.gr   | Grafana                   | 30850 | Monitoring dashboard                  |
+| kuma.cloudless.gr      | Uptime Kuma               | 32501 | Uptime monitoring                     |
+| n8n.cloudless.gr       | n8n                       | 30900 | Workflow automation                   |
+| ntfy.cloudless.gr      | ntfy                      | 30080 | Notification service                  |
+| espocrm.cloudless.gr   | EspoCRM                   | 30700 | CRM system                            |
+| postiz.cloudless.gr    | Postiz                    | 30500 | Social publishing                     |
+| appflowy.cloudless.gr  | AppFlowy                  | 30810 | CMS                                   |
+| logs.cloudless.gr      | ESP32 alert API           | 30820 | Alert API (WebSocket)                 |
+| agent.cloudless.gr     | Agent API                 | 30924 | Agent API                             |
+| vibe.cloudless.gr      | Vibe agent                | 30301 | Vibe agent                            |
 
 ---
 
@@ -320,14 +318,14 @@ Each ingress rule maps a hostname to an origin service:
 
 **Configuration** (`workers/pi-origin-proxy/wrangler.jsonc`):
 
-| Property | Value |
-|----------|-------|
-| Worker Name | cloudless2 |
-| Type | HTTP Handler |
-| Routes | `cloudless.gr`, `www.cloudless.gr`, `manage.cloudless.gr` |
-| Plan | Free |
+| Property              | Value                                                                  |
+| --------------------- | ---------------------------------------------------------------------- |
+| Worker Name           | cloudless2                                                             |
+| Type                  | HTTP Handler                                                           |
+| Routes                | `cloudless.gr`, `www.cloudless.gr`, `manage.cloudless.gr`              |
+| Plan                  | Free                                                                   |
 | Environment Variables | `PI_ORIGIN_HOST` = `pi-origin.cloudless.gr`, `PI_TIMEOUT_MS` = `30000` |
-| Size | <50 KiB (stays under Free tier 3 MiB gzip limit) |
+| Size                  | <50 KiB (stays under Free tier 3 MiB gzip limit)                       |
 
 **Traffic Flow:**
 
@@ -355,11 +353,11 @@ npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
 
 **Configuration** (`workers/cloudless-failover/wrangler.toml`):
 
-| Property | Value |
-|----------|-------|
-| Worker Name | cloudless-failover |
-| Type | HTTP Handler |
-| Routes | `cloudless.gr/*`, `www.cloudless.gr/*` |
+| Property              | Value                                                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Worker Name           | cloudless-failover                                                                                                            |
+| Type                  | HTTP Handler                                                                                                                  |
+| Routes                | `cloudless.gr/*`, `www.cloudless.gr/*`                                                                                        |
 | Environment Variables | `AWS_FALLBACK_HOST` = `d3k7muo3c6lw6s.cloudfront.net`, `PI_ORIGIN_HOST` = `pi-origin.cloudless.gr`, `PI_TIMEOUT_MS` = `10000` |
 
 **Failover Logic:**
@@ -415,36 +413,36 @@ npx wrangler deploy
 
 **Configuration** (`workers/wrangler.json`):
 
-| Property | Value |
-|----------|-------|
-| Worker Name | cloudless-analytics |
-| Routes | `/api/analytics/export`, `/api/analytics/query`, `/api/analytics/rollup` |
-| Bindings | `ANALYTICS` (Analytics Engine dataset), `DATALAKE_BUCKET` (R2), `ANALYTICS_BUCKET` (R2) |
+| Property    | Value                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------- |
+| Worker Name | cloudless-analytics                                                                     |
+| Routes      | `/api/analytics/export`, `/api/analytics/query`, `/api/analytics/rollup`                |
+| Bindings    | `ANALYTICS` (Analytics Engine dataset), `DATALAKE_BUCKET` (R2), `ANALYTICS_BUCKET` (R2) |
 
 ### Deployment inventory (single source of truth)
 
 The Cloudflare account currently holds **exactly two** deployed Workers:
 
-| Live script name | Source config | Deployed by | Notes |
-|------------------|--------------|-------------|-------|
-| `cloudless2` | [`workers/pi-origin-proxy/wrangler.jsonc`](../../workers/pi-origin-proxy/wrangler.jsonc) | [`.github/workflows/cloudflare-deploy.yml`](../../.github/workflows/cloudflare-deploy.yml) | The Free-tier pi-origin proxy described above. |
-| `cloudless-monorepo-production-analyticsworkerscript` | Analytics Engine worker (see Worker 3) | Monorepo pipeline | Serves `/api/analytics/*`. |
+| Live script name                                      | Source config                                                                            | Deployed by                                                                                | Notes                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| `cloudless2`                                          | [`workers/pi-origin-proxy/wrangler.jsonc`](../../workers/pi-origin-proxy/wrangler.jsonc) | [`.github/workflows/cloudflare-deploy.yml`](../../.github/workflows/cloudflare-deploy.yml) | The Free-tier pi-origin proxy described above. |
+| `cloudless-monorepo-production-analyticsworkerscript` | Analytics Engine worker (see Worker 3)                                                   | Monorepo pipeline                                                                          | Serves `/api/analytics/*`.                     |
 
 Verify with `mcp__cloudflare-observability__workers_list` or
 `npx wrangler deployments list --config workers/pi-origin-proxy/wrangler.jsonc`.
 
 #### Alternate configs present in the repo but **not currently deployed**
 
-Two additional wrangler configs describe a *hypothetical* full Next.js
+Two additional wrangler configs describe a _hypothetical_ full Next.js
 deployment on Workers (static assets from `./out`, Durable Objects
 `CounterAgent`/`EchoAgent`/`CodingAgent`, D1 `AUTH_DB`, R2 buckets, AI, cron
 triggers). They exist for the AWS→Cloudflare migration explorations and are
 not part of the current production edge:
 
-| File | Would deploy as | Triggered by | Status |
-|------|-----------------|--------------|--------|
+| File                                                                   | Would deploy as                                                            | Triggered by                                                                               | Status                                                                                                                                                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`wrangler-cloudflare-free.json`](../../wrangler-cloudflare-free.json) | `cloudless-gr-free` (custom domain on `cloudless.gr` + `www.cloudless.gr`) | [`.github/workflows/deploy-cloudflare.yml`](../../.github/workflows/deploy-cloudflare.yml) | Experimental. If deployed, its `custom_domain: true` routes on `cloudless.gr` / `www.cloudless.gr` would collide with `cloudless2`. Do not run without first removing the `cloudless2` routes. |
-| ~~`wrangler-cloudless2.json`~~ | (deleted 2026-08-07) | — | Was a footgun: also named itself `cloudless2` but with entirely different bindings. Removed alongside `scripts/store_cloudflare_token.sh` which referenced it. |
+| ~~`wrangler-cloudless2.json`~~                                         | (deleted 2026-08-07)                                                       | —                                                                                          | Was a footgun: also named itself `cloudless2` but with entirely different bindings. Removed alongside `scripts/store_cloudflare_token.sh` which referenced it.                                 |
 
 The historical `cloudless-failover` Paid-tier Worker described earlier in this
 document is **not deployed** — the CloudFront-primary/Pi-standby failover
@@ -459,22 +457,22 @@ history until the Worker is re-created.
 
 Cloudflare automatically mitigates Layer 3/4 (network) and Layer 7 (application) DDoS attacks:
 
-| Protection Level | Setting |
-|------------------|---------|
-| Advanced DDoS | ✅ Enabled (free plan) |
-| Sensitivity | High |
-| Challenge | ✅ CAPTCHA for suspicious traffic |
-| Rate Limiting | Custom rules (see below) |
+| Protection Level | Setting                           |
+| ---------------- | --------------------------------- |
+| Advanced DDoS    | ✅ Enabled (free plan)            |
+| Sensitivity      | High                              |
+| Challenge        | ✅ CAPTCHA for suspicious traffic |
+| Rate Limiting    | Custom rules (see below)          |
 
 ### Web Application Firewall (WAF)
 
 **Status:** ✅ Managed Rules Enabled
 
-| Rule Set | Action | Notes |
-|----------|--------|-------|
-| OWASP ModSecurity Core | Challenge | SQL injection, XSS, etc. |
-| Cloudflare Managed Rules | Block | Known malware, botnets |
-| Cloudflare Bot Management | Challenge | Suspicious bot traffic |
+| Rule Set                  | Action    | Notes                    |
+| ------------------------- | --------- | ------------------------ |
+| OWASP ModSecurity Core    | Challenge | SQL injection, XSS, etc. |
+| Cloudflare Managed Rules  | Block     | Known malware, botnets   |
+| Cloudflare Bot Management | Challenge | Suspicious bot traffic   |
 
 ### Custom WAF Rules
 
@@ -489,13 +487,13 @@ Until the token is rotated, manage rules in the dashboard
 
 ### SSL/TLS Settings
 
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| SSL Mode | Full | Edge ↔ Tunnel origin |
-| HTTP to HTTPS | Redirect | Force secure connections |
-| Minimum TLS | 1.2 | No legacy clients |
+| Setting           | Value                                          | Purpose                   |
+| ----------------- | ---------------------------------------------- | ------------------------- |
+| SSL Mode          | Full                                           | Edge ↔ Tunnel origin      |
+| HTTP to HTTPS     | Redirect                                       | Force secure connections  |
+| Minimum TLS       | 1.2                                            | No legacy clients         |
 | HSTS (zone + app) | `max-age=63072000; includeSubDomains; preload` | Prevent downgrade attacks |
-| Apply | `scripts/cf-zone-tls-harden.sh` | Idempotent |
+| Apply             | `scripts/cf-zone-tls-harden.sh`                | Idempotent                |
 
 ---
 
@@ -503,16 +501,16 @@ Until the token is rotated, manage rules in the dashboard
 
 ### Current Token
 
-| Property | Value |
-|----------|-------|
-| Token Name | cloudless2 |
-| Type | User API Token |
-| Prefix | cfut_(vs cfat_ for API keys) |
-| Permissions | Zone.Zone:Read + Zone.DNS:Edit + Zone.SSL:Edit |
-| Scopes | cloudless.gr zone only |
-| Status | ✅ Active |
-| Storage | GitHub Secret `CLOUDFLARE_API_TOKEN` |
-| Rotation Policy | Annual or on compromise |
+| Property        | Value                                          |
+| --------------- | ---------------------------------------------- |
+| Token Name      | cloudless2                                     |
+| Type            | User API Token                                 |
+| Prefix          | cfut_(vs cfat_ for API keys)                   |
+| Permissions     | Zone.Zone:Read + Zone.DNS:Edit + Zone.SSL:Edit |
+| Scopes          | cloudless.gr zone only                         |
+| Status          | ✅ Active                                      |
+| Storage         | GitHub Secret `CLOUDFLARE_API_TOKEN`           |
+| Rotation Policy | Annual or on compromise                        |
 
 ### Token Verification
 
@@ -530,14 +528,14 @@ curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
 
 ### Token Permissions
 
-| Permission | Scope | Purpose |
-|------------|-------|---------|
-| Zone.Zone:Read | cloudless.gr | Read zone settings |
-| Zone.DNS:Edit | cloudless.gr | Modify DNS records |
-| Zone.SSL:Edit | cloudless.gr | Manage SSL/TLS |
-| Zone.Zone:Edit | cloudless.gr | (Recommended) Zone-level operations |
-| Zone.Firewall Services:Edit | cloudless.gr | (Recommended) Manage WAF rulesets |
-| Zone.Load Balancing:Edit | cloudless.gr | (Optional) If using Load Balancer |
+| Permission                  | Scope        | Purpose                             |
+| --------------------------- | ------------ | ----------------------------------- |
+| Zone.Zone:Read              | cloudless.gr | Read zone settings                  |
+| Zone.DNS:Edit               | cloudless.gr | Modify DNS records                  |
+| Zone.SSL:Edit               | cloudless.gr | Manage SSL/TLS                      |
+| Zone.Zone:Edit              | cloudless.gr | (Recommended) Zone-level operations |
+| Zone.Firewall Services:Edit | cloudless.gr | (Recommended) Manage WAF rulesets   |
+| Zone.Load Balancing:Edit    | cloudless.gr | (Optional) If using Load Balancer   |
 
 ### Creating New Token
 
@@ -571,13 +569,13 @@ When rotating (e.g., quarterly):
 
 ### Key Metrics
 
-| Metric | Alert Threshold | Action |
-|--------|-----------------|--------|
-| Tunnel Status | Down > 5min | Page on-call engineer |
-| 5xx Errors | > 10/min | Page engineer |
-| Cache Hit Ratio | < 50% | Investigate cache settings |
-| Worker Errors | > 5% | Review worker logs |
-| DNS Query Failure | > 1% | Investigate nameserver |
+| Metric            | Alert Threshold | Action                     |
+| ----------------- | --------------- | -------------------------- |
+| Tunnel Status     | Down > 5min     | Page on-call engineer      |
+| 5xx Errors        | > 10/min        | Page engineer              |
+| Cache Hit Ratio   | < 50%           | Investigate cache settings |
+| Worker Errors     | > 5%            | Review worker logs         |
+| DNS Query Failure | > 1%            | Investigate nameserver     |
 
 ### Setting Up Alerts
 
@@ -918,26 +916,26 @@ dig omv.cloudless.gr +short
 
 ### Team Contacts
 
-| Role | Contact | Timezone |
-|------|---------|----------|
-| DevOps Lead | tbaltzakis | CET/EET |
-| On-Call Escalation | (TBD) | (TBD) |
-| Cloudflare Support | Premium | 24/7 |
+| Role               | Contact    | Timezone |
+| ------------------ | ---------- | -------- |
+| DevOps Lead        | tbaltzakis | CET/EET  |
+| On-Call Escalation | (TBD)      | (TBD)    |
+| Cloudflare Support | Premium    | 24/7     |
 
 ### Revision History
 
-| Date | Author | Change |
-|------|--------|--------|
-| 2026-07-04 | Kiro CLI | Initial comprehensive documentation |
-| 2026-07-05 | tbaltzakis | Fixed docs.cloudless.gr port (30900 → 30901), updated DNS status table |
-| 2026-07-06 | Cline | Updated meili.cloudless.gr to omv-main (127.0.0.1), removed omv-ha nodeSelector |
-| 2026-07-20 | Cline | Fixed tunnel credentials permissions (400 → 644), updated tunnel ID |
-| 2026-07-26 | Cline | Updated DNS records with all active services, added Worker architecture |
-| 2026-07-31 | Cline | Comprehensive update: corrected tunnel ID, added missing DNS records, documented both Workers, updated token storage to GitHub Secrets |
-| 2026-08-07 | Claude | Added Deployment Inventory section; flagged `cloudless-gr-free` as unused; noted `cloudless-failover` is documented but not deployed; removed orphan `wrangler-cloudless2.json` and dead `scripts/store_cloudflare_token.sh` |
+| Date       | Author     | Change                                                                                                                                                                                                                       |
+| ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-04 | Kiro CLI   | Initial comprehensive documentation                                                                                                                                                                                          |
+| 2026-07-05 | tbaltzakis | Fixed docs.cloudless.gr port (30900 → 30901), updated DNS status table                                                                                                                                                       |
+| 2026-07-06 | Cline      | Updated meili.cloudless.gr to omv-main (127.0.0.1), removed omv-ha nodeSelector                                                                                                                                              |
+| 2026-07-20 | Cline      | Fixed tunnel credentials permissions (400 → 644), updated tunnel ID                                                                                                                                                          |
+| 2026-07-26 | Cline      | Updated DNS records with all active services, added Worker architecture                                                                                                                                                      |
+| 2026-07-31 | Cline      | Comprehensive update: corrected tunnel ID, added missing DNS records, documented both Workers, updated token storage to GitHub Secrets                                                                                       |
+| 2026-08-07 | Claude     | Added Deployment Inventory section; flagged `cloudless-gr-free` as unused; noted `cloudless-failover` is documented but not deployed; removed orphan `wrangler-cloudless2.json` and dead `scripts/store_cloudflare_token.sh` |
 
 ---
 
-**Status:** ✅ Production Ready  
-**Last Reviewed:** 2026-08-07  
+**Status:** ✅ Production Ready
+**Last Reviewed:** 2026-08-07
 **Next Review:** 2026-09-07 (monthly)
