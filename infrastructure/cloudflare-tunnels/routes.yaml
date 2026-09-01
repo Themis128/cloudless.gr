@@ -5,176 +5,159 @@
 routes:
   # Main application — Workers Free: tiny pi-origin-proxy on cloudless2;
   # Tunnel pi-origin → NodePort 30300; app image via deploy-pi.yml
-- hostname: cloudless.gr
-  service: cloudless-app
-  port: 30300
-  healthPath: /api/health
-  node: omv
-  status: active
-  description: Apex via Worker proxy → pi-origin → Pi (Workers Free)
+  - hostname: cloudless.gr
+    service: cloudless-app
+    port: 30300
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Apex via Worker proxy → pi-origin → Pi (Workers Free)
 
-- hostname: manage.cloudless.gr
-  service: cloudless-app
-  port: 30300
-  healthPath: /api/health
-  node: omv
-  status: active
-  description: Management UI (same as apex)
+  - hostname: manage.cloudless.gr
+    service: cloudless-app
+    port: 30300
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Management UI (same as apex)
 
-- hostname: pi-origin.cloudless.gr
-  service: cloudless-app
-  port: 30300
-  healthPath: /api/health
-  node: omv
-  status: active
-  description: Direct Tunnel origin for Worker proxy (must not loop to Worker)
+  - hostname: pi-origin.cloudless.gr
+    service: cloudless-app
+    port: 30300
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Direct Tunnel origin for Worker proxy (must not loop to Worker)
 
-  # Wildcard catch-all disabled — subdomains have explicit Tunnel routes.
-  # Do not send * to Workers (OpenNext exceeds Free 3 MiB).
-- hostname: '*.cloudless.gr'
-  service: http_status
-  port: 404
-  healthPath: /
-  node: omv
-  status: inactive
-  description: Disabled catch-all (was Workers; Free plan cannot host OpenNext)
+    # Wildcard catch-all disabled — subdomains have explicit Tunnel routes.
+    # Do not send * to Workers (OpenNext exceeds Free 3 MiB).
+  - hostname: "*.cloudless.gr"
+    service: http_status
+    port: 404
+    healthPath: /
+    node: omv
+    status: inactive
+    description: Disabled catch-all (was Workers; Free plan cannot host OpenNext)
 
-  # Infrastructure services
-- hostname: omv.cloudless.gr
-  service: omv-webui
-  port: 80
-  healthPath: /
-  node: omv
-  status: active
-  description: OpenMediaVault admin panel
+    # Infrastructure services
+  - hostname: omv.cloudless.gr
+    service: omv-webui
+    port: 80
+    healthPath: /
+    node: omv
+    status: active
+    description: OpenMediaVault admin panel
 
-- hostname: ftp.cloudless.gr
-  service: omv-ftp
-  port: 21
-  healthPath:
-  node: omv
-  status: active
-  description: FTP server (TCP, no HTTP health)
+  - hostname: ftp.cloudless.gr
+    service: omv-ftp
+    port: 21
+    healthPath:
+    node: omv
+    status: active
+    description: FTP server (TCP, no HTTP health)
 
-  # ── All k8s app services → Traefik NodePort 30850 ──────────────────────────
-  # Traefik routes by hostname to ClusterIP services via IngressRoutes.
-  # See infrastructure/traefik/ingressroutes.yaml for per-host routing rules.
+    # ── All k8s app services → Traefik NodePort 30850 ──────────────────────────
+    # Traefik routes by hostname to ClusterIP services via IngressRoutes.
+    # See infrastructure/traefik/ingressroutes.yaml for per-host routing rules.
 
-  # Documentation
-- hostname: docs.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: docs-server via Traefik ingress
+    # Documentation
+  - hostname: docs.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: docs-server via Traefik ingress
 
-  # Search
-- hostname: meili.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /health
-  node: omv
-  status: active
-  description: Meilisearch via Traefik ingress
+    # Search
+  - hostname: meili.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /health
+    node: omv
+    status: active
+    description: Meilisearch via Traefik ingress
 
-  # CRM — NodePort 30700 kept for ETL via Tailscale tag:ci ACL
-- hostname: espocrm.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: EspoCRM web via Traefik; ETL uses NodePort 30700 via tailnet
+    # CRM — NodePort 30700 kept for ETL via Tailscale tag:ci ACL
+  - hostname: espocrm.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: EspoCRM web via Traefik; ETL uses NodePort 30700 via tailnet
 
-  # Notifications
-- hostname: ntfy.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: ntfy via Traefik ingress
+    # Notifications
+  - hostname: ntfy.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: ntfy via Traefik ingress
 
-  # Monitoring
-- hostname: grafana.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /api/health
-  node: omv
-  status: active
-  description: Grafana via Traefik ingress (service now ClusterIP)
+    # Monitoring
+  - hostname: grafana.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Grafana via Traefik ingress (service now ClusterIP)
 
-- hostname: kuma.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: Uptime Kuma via Traefik ingress
+  - hostname: kuma.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: Uptime Kuma via Traefik ingress
 
-  # Workflow — NodePort 30900 kept for ETL via Tailscale tag:ci ACL
-- hostname: n8n.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: n8n web via Traefik; ETL uses NodePort 30900 via tailnet
+    # Workflow — NodePort 30900 kept for ETL via Tailscale tag:ci ACL
+  - hostname: n8n.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: n8n web via Traefik; ETL uses NodePort 30900 via tailnet
 
-  # Postiz
-- hostname: postiz.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: Postiz via Traefik ingress
+    # Postiz
+  - hostname: postiz.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: Postiz via Traefik ingress
 
-  # AppFlowy
-- hostname: appflowy.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: AppFlowy via Traefik ingress (nginx ClusterIP)
+    # AppFlowy
+  - hostname: appflowy.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: AppFlowy via Traefik ingress (nginx ClusterIP)
 
-  # Agent / Vibe
-- hostname: agent.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: vibe-agent LangGraph API via Traefik ingress
+    # Alerts / Logs
+  - hostname: logs.cloudless.gr
+    service: traefik
+    port: 30850
+    healthPath: /
+    node: omv
+    status: active
+    description: pi-alert-api via Traefik ingress
 
-- hostname: vibe.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: vibe-agent UI via Traefik ingress
-
-  # Alerts / Logs
-- hostname: logs.cloudless.gr
-  service: traefik
-  port: 30850
-  healthPath: /
-  node: omv
-  status: active
-  description: pi-alert-api via Traefik ingress
-
-  # HA Failover - Workers fallback for edge delivery
-- hostname: cloudless-failover.baltzakis-themis.workers.dev
-  service: cloudflare-workers
-  port: 443
-  healthPath: /api/health
-  node: cloudflare
-  status: active
-  description: Workers fallback (static assets + auth endpoints) - activated
-    when Pi primary fails
+    # HA Failover - Workers fallback for edge delivery
+  - hostname: cloudless-failover.baltzakis-themis.workers.dev
+    service: cloudflare-workers
+    port: 443
+    healthPath: /api/health
+    node: cloudflare
+    status: active
+    description: Workers fallback (static assets + auth endpoints) - activated
+      when Pi primary fails
 
 # Tunnel configuration
 tunnel:
