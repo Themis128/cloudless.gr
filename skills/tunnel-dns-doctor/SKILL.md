@@ -183,8 +183,6 @@ Known correct mappings (from `cloudflared-config.yml`):
 | appflowy.cloudless.gr | 30810 | 30810 | ✅ |
 | docs.cloudless.gr | 30901 | 30901 | ✅ |
 | omv.cloudless.gr | localhost:80 | (host) | ✅ |
-| agent.cloudless.gr | 30924 | (host) | ? |
-| vibe.cloudless.gr | 30301 | (host) | ? |
 
 **Note**: The `.clinerules` docs incorrectly say `cloudless.gr → port 3000`.
 The actual NodePort is **30300** (port 3000 is the container targetPort).

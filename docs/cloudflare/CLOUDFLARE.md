@@ -305,8 +305,6 @@ Each ingress rule maps a hostname to an origin service:
 | postiz.cloudless.gr    | Postiz                    | 30500 | Social publishing                     |
 | appflowy.cloudless.gr  | AppFlowy                  | 30810 | CMS                                   |
 | logs.cloudless.gr      | ESP32 alert API           | 30820 | Alert API (WebSocket)                 |
-| agent.cloudless.gr     | Agent API                 | 30924 | Agent API                             |
-| vibe.cloudless.gr      | Vibe agent                | 30301 | Vibe agent                            |
 
 ---
 

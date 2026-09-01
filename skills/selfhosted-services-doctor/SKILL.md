@@ -64,8 +64,6 @@ This checks all 10 areas:
 | appflowy | appflowy.cloudless.gr | 30810 | appflowy | HTTP 302 on `/` |
 | docs | docs.cloudless.gr | 30901 | default | HTTP 302 on `/` |
 | omv-ui | omv.cloudless.gr | localhost:80 | (host) | OMV web UI |
-| agent | agent.cloudless.gr | 30924 | (host) | Agent API |
-| vibe | vibe.cloudless.gr | 30301 | (host) | Vibe agent |
 
 ### Internal-only (no tunnel exposure)
 
