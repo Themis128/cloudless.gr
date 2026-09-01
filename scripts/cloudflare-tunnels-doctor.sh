@@ -81,8 +81,6 @@ PUBLIC_URLS=(
 
 # Optional apps — report but do not fail the job if backends are undeployed.
 OPTIONAL_PUBLIC=(
-  "agent|https://agent.cloudless.gr/"
-  "vibe|https://vibe.cloudless.gr/"
 )
 
 # LAN origin ports expected on omv (must answer something other than timeout).

@@ -46,15 +46,15 @@ spec:
       app: ntfy
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 80
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -65,10 +65,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # meilisearch namespace
@@ -94,22 +95,22 @@ spec:
       app: meilisearch
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 7700
-  # Allow cloudless-app in cloudless namespace to query search
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: cloudless
-    ports:
-    - port: 7700
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 7700
+    # Allow cloudless-app in cloudless namespace to query search
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudless
+      ports:
+        - port: 7700
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -120,10 +121,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # n8n namespace
@@ -149,19 +151,19 @@ spec:
       app: n8n
   policyTypes: [Ingress]
   ingress:
-  # Traefik → n8n web UI
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 5678
-  # ETL workflows reach n8n via NodePort (Tailscale tag:ci ACL gates this externally)
-  - ports:
-    - port: 5678
+    # Traefik → n8n web UI
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 5678
+    # ETL workflows reach n8n via NodePort (Tailscale tag:ci ACL gates this externally)
+    - ports:
+        - port: 5678
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -172,10 +174,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # espocrm namespace
@@ -201,19 +204,19 @@ spec:
       app: espocrm
   policyTypes: [Ingress]
   ingress:
-  # Traefik → EspoCRM web
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 80
-  # ETL workflows reach EspoCRM via NodePort (Tailscale tag:ci ACL gates externally)
-  - ports:
-    - port: 80
+    # Traefik → EspoCRM web
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 80
+    # ETL workflows reach EspoCRM via NodePort (Tailscale tag:ci ACL gates externally)
+    - ports:
+        - port: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -226,12 +229,12 @@ spec:
       app: espocrm-mariadb
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: espocrm
-    ports:
-    - port: 3306
+    - from:
+        - podSelector:
+            matchLabels:
+              app: espocrm
+      ports:
+        - port: 3306
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -242,10 +245,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # appflowy namespace
@@ -271,15 +275,15 @@ spec:
       app: nginx
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 80
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -290,9 +294,9 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  # All AppFlowy pods can talk to each other (nginx→appflowy-cloud, gotrue, minio, etc.)
-  - from:
-    - podSelector: {}
+    # All AppFlowy pods can talk to each other (nginx→appflowy-cloud, gotrue, minio, etc.)
+    - from:
+        - podSelector: {}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -303,10 +307,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # postiz namespace
@@ -332,15 +337,15 @@ spec:
       app: postiz
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 5000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 5000
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -351,9 +356,9 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  # postiz ↔ postiz-postgres ↔ postiz-redis
-  - from:
-    - podSelector: {}
+    # postiz ↔ postiz-postgres ↔ postiz-redis
+    - from:
+        - podSelector: {}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -364,10 +369,11 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # uptime-kuma namespace
@@ -393,15 +399,16 @@ spec:
       app: uptime-kuma
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 3001
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 3001
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # vibe namespace
@@ -415,28 +422,7 @@ metadata:
 spec:
   podSelector: {}
   policyTypes: [Ingress]
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-traefik
-  namespace: vibe
-spec:
-  podSelector:
-    matchLabels:
-      app: vibe-agent
-  policyTypes: [Ingress]
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 2024
-    - port: 3001
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # alert-manager namespace
@@ -462,18 +448,19 @@ spec:
       app: alert-api
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: traefik
-    ports:
-    - port: 8080
-  # ESP32 devices push alerts directly (non-k8s origin)
-  - ports:
-    - port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+    # ESP32 devices push alerts directly (non-k8s origin)
+    - ports:
+        - port: 8080
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # database namespace (postgresql-ha + redis-ha shared by cloudless-app)
@@ -497,16 +484,16 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: cloudless
-    ports:
-    - port: 5432
-    - port: 6379
-  # Allow intra-namespace (HA replica sync)
-  - from:
-    - podSelector: {}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudless
+      ports:
+        - port: 5432
+        - port: 6379
+    # Allow intra-namespace (HA replica sync)
+    - from:
+        - podSelector: {}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -517,7 +504,7 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
