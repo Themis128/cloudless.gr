@@ -126,12 +126,15 @@ async function espoListAll<T = unknown>(
  * Account record later via Workflow.
  */
 function toEspoContactPayload(c: EspoContact): Record<string, unknown> {
+  // EspoCRM validates phone numbers strictly — strip spaces so formats like
+  // "+30 555 0000" don't trigger a "valid" validation error.
+  const phone = c.phone?.replace(/\s+/g, "") || undefined;
   return {
     emailAddress: c.email,
     firstName: c.firstname ?? "",
     lastName: c.lastname || c.email.split("@")[0],
     accountName: c.company ?? undefined,
-    phoneNumber: c.phone ?? undefined,
+    phoneNumber: phone,
     description: [c.message, c.service_interest && `Service: ${c.service_interest}`]
       .filter(Boolean)
       .join("\n\n"),
@@ -192,7 +195,8 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       body: JSON.stringify(payload),
     });
     if (!create.ok) {
-      console.error("[EspoCRM] upsertContact create failed:", create.status);
+      const errBody = await create.text().catch(() => "");
+      console.error("[EspoCRM] upsertContact create failed:", create.status, errBody.slice(0, 300));
       return null;
     }
     const created = (await create.json()) as { id: string };
