@@ -30,17 +30,17 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 10
     steps:
-      - name: Fix ConfigMap — EspoCRM in-cluster DNS
+      - name: Fix ConfigMap — EspoCRM + AppFlowy in-cluster DNS
         run: |
           set -euo pipefail
           KUBECTL="sudo k3s kubectl"
 
-          # 1. Patch ConfigMap to use in-cluster DNS for EspoCRM (like Postiz)
-          # Public https://espocrm.cloudless.gr is behind CF Access → 302 login page
-          # In-cluster: espocrm.espocrm.svc.cluster.local:80 (NodePort 30700)
+          # 1. Patch ConfigMap to use in-cluster DNS for EspoCRM AND AppFlowy
+          # Public URLs are behind Cloudflare Access → 302 login page → non-JSON
+          # In-cluster DNS avoids the CF Access login wall entirely.
           $KUBECTL -n cloudless patch configmap cloudless-app-config \
-            --type merge -p '{"data":{"ESPOCRM_BASE_URL":"http://espocrm.espocrm.svc.cluster.local"}}'
-          echo "Patched ESPOCRM_BASE_URL → in-cluster DNS"
+            --type merge -p '{"data":{"ESPOCRM_BASE_URL":"http://espocrm.espocrm.svc.cluster.local","APPFLOWY_API_URL":"http://appflowy-cloud.appflowy.svc.cluster.local:8000"}}'
+          echo "Patched ESPOCRM_BASE_URL + APPFLOWY_API_URL → in-cluster DNS"
 
           # 2. Remove CLOUDFLARE_EMAIL_API_TOKEN from the secret if it exists
           # (it lacks Email Sending scope and causes "sending_disabled" errors;
@@ -60,10 +60,27 @@ jobs:
             echo "Note: CLOUDFLARE_API_TOKEN is in the secret — email module should NOT use it (isCloudflareEmailConfigured checks CLOUDFLARE_EMAIL_API_TOKEN only)"
           fi
 
-      - name: Restart cloudless-app
+      - name: Restart cloudless-app and verify ConfigMap pickup
         run: |
+          set -euo pipefail
           sudo k3s kubectl -n cloudless rollout restart deploy/cloudless-app
           sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s
+          # Verify the new pod picked up the in-cluster URLs
+          sleep 5
+          ESPO_URL=$(sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv ESPOCRM_BASE_URL 2>&1 || echo "(not set)")
+          APPFLOWY_URL=$(sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv APPFLOWY_API_URL 2>&1 || echo "(not set)")
+          echo "Pod ESPOCRM_BASE_URL: $ESPO_URL"
+          echo "Pod APPFLOWY_API_URL: $APPFLOWY_URL"
+          if [[ "$ESPO_URL" == *"svc.cluster.local"* ]]; then
+            echo "✓ EspoCRM using in-cluster DNS"
+          else
+            echo "::warning::EspoCRM NOT using in-cluster DNS — pod may need another restart"
+          fi
+          if [[ "$APPFLOWY_URL" == *"svc.cluster.local"* ]]; then
+            echo "✓ AppFlowy using in-cluster DNS"
+          else
+            echo "::warning::AppFlowy NOT using in-cluster DNS — pod may need another restart"
+          fi
 
       - name: Verify Slack bot token
         env:

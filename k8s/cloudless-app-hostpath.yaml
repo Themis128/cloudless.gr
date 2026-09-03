@@ -5,26 +5,26 @@ metadata:
   namespace: cloudless
 data:
   NODE_ENV: production
-  PORT: '3000'
+  PORT: "3000"
   # Do not set HOSTNAME to the all-interfaces bind address. Next standalone
   # already binds that way when HOSTNAME is unset, and setting it makes 308
   # Location headers use http://<bind>:3000/en instead of the request Host.
-  SSM_DISABLED: '1'
+  SSM_DISABLED: "1"
   NEXT_PUBLIC_SITE_URL: https://cloudless.gr
   NEXT_PUBLIC_AUTH_PROVIDER: d1
   SENTRY_ENVIRONMENT: pi-standby
-  ESPOCRM_BASE_URL: https://espocrm.cloudless.gr
+  ESPOCRM_BASE_URL: http://espocrm.espocrm.svc.cluster.local
   # Public https://postiz.cloudless.gr is behind Cloudflare Access (302 → login),
   # so server-side calls get a non-JSON redirect → 502. Pods must use in-cluster DNS.
   POSTIZ_API_URL: http://postiz.postiz.svc.cluster.local:5000
   N8N_API_URL: https://n8n.cloudless.gr
-  APPFLOWY_API_URL: https://appflowy.cloudless.gr
+  APPFLOWY_API_URL: http://appflowy-cloud.appflowy.svc.cluster.local:8000
   MEILI_HOST: http://meilisearch.meilisearch.svc.cluster.local:7700
   # Public URL meili.cloudless.gr is CF-proxied; pods must use in-cluster DNS.
   # In-cluster only — public https://ntfy.cloudless.gr is CF-challenged from pods.
   # cloudless-secrets may also set NTFY_BASE_URL (secretRef wins over this ConfigMap).
   NTFY_BASE_URL: http://ntfy.ntfy.svc.cluster.local
-  ADMIN_PUSH_VIA_NTFY: '1'
+  ADMIN_PUSH_VIA_NTFY: "1"
   GRAFANA_URL: https://grafana.cloudless.gr
   KUMA_URL: https://kuma.cloudless.gr
   KUMA_BASE_URL: http://uptime-kuma.uptime-kuma.svc.cluster.local:3001
@@ -76,86 +76,86 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-      - name: app
-        image: docker.io/library/node:22-bookworm-slim
-        imagePullPolicy: IfNotPresent
-        workingDir: /app
-        command: [node, server.js]
-        ports:
-        - containerPort: 3000
-          name: http
-        envFrom:
-        - configMapRef:
-            name: cloudless-app-config
-        - secretRef:
-            name: cloudless-secrets
-            optional: false
-        # Pin the Cloudflare account that owns user-auth-db D1. Explicit env
-        # overrides envFrom, so this wins over any stale CLOUDFLARE_ACCOUNT_ID
-        # in cloudless-secrets. A wrong account makes the D1 REST API return
-        # 401 → /api/auth/login 500. The account id is not a secret; the D1
-        # API token still comes from cloudless-secrets.
-        env:
-        - name: CLOUDFLARE_ACCOUNT_ID
-          value: fb7dc7b69b662480cd5961a4d1913c78
-        # Local time = Athens (server-side timestamps in logs/api responses).
-        # The host node already runs Europe/Athens; this exports it into the
-        # Node.js container which otherwise defaults to UTC.
-        - name: TZ
-          value: Europe/Athens
-        volumeMounts:
-        - name: standalone
-          mountPath: /app
-        # startupProbe defers liveness until Next.js has answered /api/health
-        # once. 30 × 5s = 2.5 min budget — comfortable for a cold Node.js
-        # container on the Pi. Prevents the liveness probe from restarting
-        # the pod mid-startup on a slow boot.
-        startupProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          periodSeconds: 5
-          failureThreshold: 30
-          timeoutSeconds: 15
-        # Readiness fails after 30s (3 × 10s) — was 60s (6 × 10s). Faster
-        # signal to the Service; startupProbe absorbs cold-start slow paths
-        # so this can be tighter without false negatives.
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          periodSeconds: 10
-          failureThreshold: 3
-          timeoutSeconds: 15
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          periodSeconds: 30
-          failureThreshold: 3
-          timeoutSeconds: 15
-        # Give Kubernetes a beat to remove this pod's IP from the Service
-        # endpoints before the process starts exiting — otherwise in-flight
-        # requests during a rolling restart hit a closing socket.
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 5"]
-        resources:
-          requests:
-            cpu: 100m
-            memory: 256Mi
-          limits:
-            cpu: '1'
-            memory: 768Mi
+        - name: app
+          image: docker.io/library/node:22-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          command: [node, server.js]
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloudless-app-config
+            - secretRef:
+                name: cloudless-secrets
+                optional: false
+          # Pin the Cloudflare account that owns user-auth-db D1. Explicit env
+          # overrides envFrom, so this wins over any stale CLOUDFLARE_ACCOUNT_ID
+          # in cloudless-secrets. A wrong account makes the D1 REST API return
+          # 401 → /api/auth/login 500. The account id is not a secret; the D1
+          # API token still comes from cloudless-secrets.
+          env:
+            - name: CLOUDFLARE_ACCOUNT_ID
+              value: fb7dc7b69b662480cd5961a4d1913c78
+            # Local time = Athens (server-side timestamps in logs/api responses).
+            # The host node already runs Europe/Athens; this exports it into the
+            # Node.js container which otherwise defaults to UTC.
+            - name: TZ
+              value: Europe/Athens
+          volumeMounts:
+            - name: standalone
+              mountPath: /app
+          # startupProbe defers liveness until Next.js has answered /api/health
+          # once. 30 × 5s = 2.5 min budget — comfortable for a cold Node.js
+          # container on the Pi. Prevents the liveness probe from restarting
+          # the pod mid-startup on a slow boot.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            periodSeconds: 5
+            failureThreshold: 30
+            timeoutSeconds: 15
+          # Readiness fails after 30s (3 × 10s) — was 60s (6 × 10s). Faster
+          # signal to the Service; startupProbe absorbs cold-start slow paths
+          # so this can be tighter without false negatives.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 15
+          # Give Kubernetes a beat to remove this pod's IP from the Service
+          # endpoints before the process starts exiting — otherwise in-flight
+          # requests during a rolling restart hit a closing socket.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
       # 30s grace budget: 5s preStop + up to 25s for in-flight requests /
       # DB connection cleanup. Next.js signal-handles SIGTERM correctly.
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: standalone
-        hostPath:
-          path: /home/tbaltzakis/cloudless-standalone
-          type: DirectoryOrCreate
+        - name: standalone
+          hostPath:
+            path: /home/tbaltzakis/cloudless-standalone
+            type: DirectoryOrCreate
 ---
 # Block voluntary evictions (drain, node-upgrade, priority-preemption) from
 # ever taking the sole cloudless-app replica down without warning. On this
@@ -185,11 +185,11 @@ spec:
   selector:
     app: cloudless-app
   ports:
-  - name: http
-    port: 80
-    targetPort: 3000
-    nodePort: 30300
-    protocol: TCP
+    - name: http
+      port: 80
+      targetPort: 3000
+      nodePort: 30300
+      protocol: TCP
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:
