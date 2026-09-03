@@ -11,12 +11,40 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     steps:
-      - name: Check fresh logs
+      - name: Debug EspoCRM 400 error
         run: |
           set -euo pipefail
-          echo "=== Pod env (verify in-cluster URLs) ==="
-          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv ESPOCRM_BASE_URL 2>&1 || true
-          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv APPFLOWY_API_URL 2>&1 || true
+          echo "=== Test EspoCRM API directly from pod ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- node -e '
+            const url = process.env.ESPOCRM_BASE_URL;
+            const key = process.env.ESPOCRM_API_KEY;
+            console.log("URL:", url);
+            console.log("Key length:", key?.length || 0);
+            // Try a simple GET to verify auth works
+            fetch(url + "/api/v1/Contact?maxSize=1", {headers: {"X-Api-Key": key}})
+              .then(r => { console.log("GET Status:", r.status); return r.text(); })
+              .then(t => console.log("GET Body:", t.substring(0, 500)))
+              .catch(e => console.log("GET Error:", e.message))
+          ' 2>&1 || echo "node test failed"
           echo ""
-          echo "=== Logs since=30s (fresh) ==="
-          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=30s 2>&1 | head -60
+          echo "=== Test creating a contact ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- node -e '
+            const url = process.env.ESPOCRM_BASE_URL;
+            const key = process.env.ESPOCRM_API_KEY;
+            const body = JSON.stringify({
+              name: "Test Contact",
+              emailAddress: "test+debug@cloudless.gr",
+              phoneNumber: "+30 555 0000"
+            });
+            fetch(url + "/api/v1/Contact", {
+              method: "POST",
+              headers: {"X-Api-Key": key, "Content-Type": "application/json"},
+              body
+            })
+              .then(r => { console.log("POST Status:", r.status); return r.text(); })
+              .then(t => console.log("POST Body:", t.substring(0, 500)))
+              .catch(e => console.log("POST Error:", e.message))
+          ' 2>&1 || echo "node test failed"
+          echo ""
+          echo "=== Recent logs ==="
+          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=30s 2>&1 | head -30
