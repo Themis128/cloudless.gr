@@ -336,7 +336,9 @@ jobs:
           KEY="releases/${{ github.sha }}.tar.zst"
           TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends zstd awscli
+          sudo apt-get install -y --no-install-recommends zstd
+          pip3 install --user awscli
+          export PATH="$HOME/.local/bin:$PATH"
           tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
           echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
           # S3-compatible upload to Cloudflare R2 (avoids wrangler API-token scope issues)
