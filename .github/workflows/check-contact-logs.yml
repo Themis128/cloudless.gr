@@ -1,0 +1,25 @@
+name: Check contact pipeline logs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+    - .github/workflows/check-contact-logs.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 5
+    steps:
+    - name: Check cloudless-app logs for contact pipeline
+      run: |
+        set -euo pipefail
+        echo "=== Recent contact-related logs ==="
+        sudo k3s kubectl -n cloudless logs deploy/cloudless-app --tail=300 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|activecampaign|error|warn|lead|notification|503|500|success)" | tail -60
+        echo ""
+        echo "=== Verify secrets are in the pod env (names only) ==="
+        sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(RESEND|SLACK_BOT|ESPOCRM_API|APPFLOWY_JWT|APPFLOWY_API|ACTIVECAMPAIGN)" | sed 's/=.*/=***/' || echo "(could not exec into pod)"
