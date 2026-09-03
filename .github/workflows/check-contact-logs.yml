@@ -11,27 +11,36 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     steps:
-      - name: Debug EspoCRM config
+      - name: Debug env override
         run: |
           set -euo pipefail
-          echo "=== ConfigMap value ==="
-          sudo k3s kubectl -n cloudless get configmap cloudless-app-config -o jsonpath='{.data.ESPOCRM_BASE_URL}'
+          echo "=== ConfigMap values ==="
+          sudo k3s kubectl -n cloudless get configmap cloudless-app-config -o json | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(f"  {k}: {v}") for k,v in sorted(d.get("data",{}).items()) if "ESPOCRM" in k or "APPFLOWY" in k]'
           echo ""
-          echo "=== Pod env value ==="
+          echo "=== Secret keys (names only) ==="
+          sudo k3s kubectl -n cloudless get secret cloudless-secrets -o json | python3 -c 'import json,sys; d=json.load(sys.stdin); keys=sorted(d.get("data",{}).keys()); [print(f"  {k}") for k in keys if "ESPOCRM" in k or "APPFLOWY" in k or "EMAIL" in k or "RESEND" in k]'
+          echo ""
+          echo "=== Pod env (all ESPOCRM/APPFLOWY/EMAIL/RESEND) ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(ESPOCRM|APPFLOWY|RESEND|CLOUDFLARE_EMAIL)" | sed 's/=.*/=***/'
+          echo ""
+          echo "=== Fix: remove ESPOCRM_BASE_URL and APPFLOWY_API_URL from secret if present ==="
+          # Secret envFrom comes after ConfigMap envFrom, so Secret values override.
+          # Remove these URL keys from the secret so ConfigMap values win.
+          for KEY in ESPOCRM_BASE_URL APPFLOWY_API_URL; do
+            EXISTS=$(sudo k3s kubectl -n cloudless get secret cloudless-secrets -o jsonpath="{.data.$KEY}" 2>/dev/null || echo "")
+            if [ -n "$EXISTS" ]; then
+              sudo k3s kubectl -n cloudless patch secret cloudless-secrets --type json -p "[{\"op\":\"remove\",\"path\":\"/data/$KEY\"}]"
+              echo "Removed $KEY from cloudless-secrets"
+            else
+              echo "$KEY not in secret"
+            fi
+          done
+          echo ""
+          echo "=== Restart pod ==="
+          sudo k3s kubectl -n cloudless rollout restart deploy/cloudless-app
+          sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s
+          sleep 5
+          echo ""
+          echo "=== Pod env after restart ==="
           sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv ESPOCRM_BASE_URL 2>&1 || echo "(not set)"
-          echo ""
-          echo "=== EspoCRM service in cluster ==="
-          sudo k3s kubectl -n espocrm get svc 2>&1 || echo "(espocrm namespace not found)"
-          echo ""
-          echo "=== Test in-cluster EspoCRM from cloudless pod ==="
-          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- node -e '
-            const url = process.env.ESPOCRM_BASE_URL;
-            console.log("ESPOCRM_BASE_URL:", url);
-            fetch(url + "/api/v1/Contact", {headers: {"X-Api-Key": process.env.ESPOCRM_API_KEY}})
-              .then(r => { console.log("Status:", r.status); return r.text(); })
-              .then(t => console.log("Body:", t.substring(0, 200)))
-              .catch(e => console.log("Error:", e.message))
-          ' 2>&1 || echo "node test failed"
-          echo ""
-          echo "=== Recent logs (since=2m) ==="
-          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=2m 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|error|warn|success|sending|lead)" | tail -30
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv APPFLOWY_API_URL 2>&1 || echo "(not set)"
