@@ -129,7 +129,7 @@ function toEspoContactPayload(c: EspoContact): Record<string, unknown> {
   return {
     emailAddress: c.email,
     firstName: c.firstname ?? "",
-    lastName: c.lastname ?? c.email.split("@")[0],
+    lastName: c.lastname || c.email.split("@")[0],
     accountName: c.company ?? undefined,
     phoneNumber: c.phone ?? undefined,
     description: [c.message, c.service_interest && `Service: ${c.service_interest}`]
@@ -649,7 +649,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
     const payload: Record<string, unknown> = {
       emailAddress: data.emailAddress,
       firstName: data.firstName ?? "",
-      lastName: data.lastName ?? data.emailAddress.split("@")[0],
+      lastName: data.lastName || data.emailAddress.split("@")[0],
       phoneNumber: data.phoneNumber ?? undefined,
       source: data.source ?? "Web Site",
       status: "New",
