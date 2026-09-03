@@ -249,22 +249,8 @@ export async function POST(request: Request) {
 
     const messageText = message;
     const config = await getConfig();
-    const emailFail = await sendContactAdminEmail({
-      name,
-      email,
-      phone,
-      company,
-      service,
-      messageText,
-      to: config.SES_TO_EMAIL,
-    });
-    if (emailFail) return emailFail;
 
     const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
-    sendContactAcknowledgment({ name, email, service }).catch((err) =>
-      console.warn("[contact] Auto-reply failed:", err)
-    );
-
     const nameParts = String(name).trim().split(" ");
     const attributionData = attribution ? (JSON.parse(attribution) as LeadAttribution) : undefined;
     const bodyLocale = typeof fields.locale === "string" ? fields.locale : undefined;
@@ -287,7 +273,27 @@ export async function POST(request: Request) {
     });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
+    // All downstream services run fire-and-forget so a single integration
+    // outage (email, Slack, CRM, etc.) never blocks the others or the
+    // customer-facing response. Each task logs its own failure.
     Promise.allSettled([
+      // 1. Admin email notification
+      sendContactAdminEmail({
+        name,
+        email,
+        phone,
+        company,
+        service,
+        messageText,
+        to: config.SES_TO_EMAIL,
+      }).then((emailFail) => {
+        if (emailFail) {
+          console.warn("[Contact] Admin email returned:", emailFail.status);
+        }
+      }),
+      // 2. Customer acknowledgment email
+      sendContactAcknowledgment({ name, email, service }),
+      // 3. Slack real-time notification
       slackContactNotify({
         name,
         email,
@@ -301,6 +307,7 @@ export async function POST(request: Request) {
         nlpIntent: nlp.intent,
         nlpLocale: nlp.locale,
       }),
+      // 4. Admin notifications dashboard
       recordNotification({
         category: "contact",
         type: "info",
@@ -317,6 +324,7 @@ export async function POST(request: Request) {
           nlpLocale: nlp.locale,
         },
       }),
+      // 5. EspoCRM — upsert contact + note + deal (if hot lead)
       syncEspoForInbound({
         email,
         name,
@@ -330,6 +338,7 @@ export async function POST(request: Request) {
         nlp,
         attributionSummary,
       }),
+      // 6. AppFlowy form submission persistence
       saveSubmission({
         name,
         email,
@@ -339,6 +348,7 @@ export async function POST(request: Request) {
         message: messageText,
         source: "contact",
       }),
+      // 7. ActiveCampaign — enroll in lead follow-up automation
       enrollLeadInAutomation({
         email,
         firstName: nameParts[0],
@@ -346,7 +356,15 @@ export async function POST(request: Request) {
       }),
     ])
       .then((results) => {
-        const labels = ["slack", "espocrm", "appflowy", "activecampaign"];
+        const labels = [
+          "admin_email",
+          "customer_email",
+          "slack",
+          "notifications",
+          "espocrm",
+          "appflowy",
+          "activecampaign",
+        ];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
@@ -382,7 +400,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const mapped = mapIntegrationError(error);
     if (mapped) return mapped;
-    const msg = error instanceof Error ? error.message : String(error);
     console.error("Contact error:", error);
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       await import("@sentry/nextjs")
@@ -394,9 +411,6 @@ export async function POST(request: Request) {
         )
         .catch(() => {});
     }
-    if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("not configured")) {
-      return jsonError("Email service not configured.", 503);
-    }
-    return jsonError("Failed to send email.", 500);
+    return jsonError("Failed to process contact form.", 500);
   }
 }
