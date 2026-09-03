@@ -15,17 +15,17 @@ on:
   push:
     branches: [main]
     paths:
-    - src/**
-    - public/**
-    - package.json
-    - pnpm-lock.yaml
-    - pnpm-workspace.yaml
-    - next.config.ts
-    - patches/**
-    - scripts/pi-rollout-from-artifact.sh
-    - workers/pi-deploy-orchestrator/**
-    - infrastructure/omv/pi-release-pull*
-    - .github/workflows/deploy-pi.yml
+      - src/**
+      - public/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - next.config.ts
+      - patches/**
+      - scripts/pi-rollout-from-artifact.sh
+      - workers/pi-deploy-orchestrator/**
+      - infrastructure/omv/pi-release-pull*
+      - .github/workflows/deploy-pi.yml
   workflow_dispatch:
     inputs:
       trigger_only:
@@ -59,305 +59,311 @@ jobs:
       artifact_key: ${{ steps.r2.outputs.artifact_key }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-    - name: Skip if SHA already live
-      id: skip
-      run: |
-        set -euo pipefail
-        WANT="${{ github.sha }}"
-        LIVE=""
-        for candidate in \
-          https://pi-origin.cloudless.gr/api/health \
-          https://cloudless.gr/api/health
-        do
-          BODY=$(curl -sS --max-time 10 "$candidate" || true)
-          if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
-            LIVE=$(echo "$BODY" | jq -r .version)
-            echo "health $candidate → version=${LIVE}"
-            break
+      - name: Skip if SHA already live
+        id: skip
+        run: |
+          set -euo pipefail
+          WANT="${{ github.sha }}"
+          LIVE=""
+          for candidate in \
+            https://pi-origin.cloudless.gr/api/health \
+            https://cloudless.gr/api/health
+          do
+            BODY=$(curl -sS --max-time 10 "$candidate" || true)
+            if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
+              LIVE=$(echo "$BODY" | jq -r .version)
+              echo "health $candidate → version=${LIVE}"
+              break
+            fi
+            echo "health $candidate → unreachable or invalid"
+          done
+          if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Deploy skipped"
+              echo "Live hostPath already serves \`${WANT}\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Already deployed ${WANT} — skipping build/rollout"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+            echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
           fi
-          echo "health $candidate → unreachable or invalid"
-        done
-        if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
-          echo "already=true" >> "$GITHUB_OUTPUT"
-          {
-            echo "## Deploy skipped"
-            echo "Live hostPath already serves \`${WANT}\`."
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "Already deployed ${WANT} — skipping build/rollout"
-        else
-          echo "already=false" >> "$GITHUB_OUTPUT"
-          echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
-        fi
 
-    - name: Setup pnpm
-      if: steps.skip.outputs.already != 'true'
-      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
+      - name: Setup pnpm
+        if: steps.skip.outputs.already != 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
-    - name: Setup Node
-      if: steps.skip.outputs.already != 'true'
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
-      with:
-        node-version: '24'
-        cache: pnpm
+      - name: Setup Node
+        if: steps.skip.outputs.already != 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: pnpm
 
-    - name: Restore Next.js build cache
-      if: steps.skip.outputs.already != 'true'
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
-      with:
-        path: .next/cache
-        key: nextjs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
-        restore-keys: |
-          nextjs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
-          nextjs-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore Next.js build cache
+        if: steps.skip.outputs.already != 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-${{ runner.arch }}-
 
-    - name: Install dependencies
-      if: steps.skip.outputs.already != 'true'
-      run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        if: steps.skip.outputs.already != 'true'
+        run: pnpm install --frozen-lockfile --prefer-offline
 
-    - name: Build Next.js standalone
-      if: steps.skip.outputs.already != 'true'
-      env:
-        NEXT_OUTPUT_STANDALONE: '1'
-        NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-        NEXT_PUBLIC_STAGE: production
-        NEXT_PUBLIC_AUTH_PROVIDER: d1
-        NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-        SENTRY_ENVIRONMENT: pi-standby
-        NEXT_PUBLIC_SENTRY_ENVIRONMENT: pi-standby
-        NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
-        NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
-        NEXT_PUBLIC_GTM_ID: GTM-W7N3J3TV
-        NEXT_PUBLIC_GA_MEASUREMENT_ID: G-K05JWC4HTD
-        APP_VERSION: ${{ github.sha }}
-        NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
-        NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
-      run: pnpm build
+      - name: Build Next.js standalone
+        if: steps.skip.outputs.already != 'true'
+        env:
+          NEXT_OUTPUT_STANDALONE: "1"
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_STAGE: production
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: pi-standby
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: pi-standby
+          NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
+          NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
+          NEXT_PUBLIC_GTM_ID: GTM-W7N3J3TV
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: G-K05JWC4HTD
+          APP_VERSION: ${{ github.sha }}
+          NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+        run: pnpm build
 
-    - name: Ensure rsync
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        if ! command -v rsync >/dev/null 2>&1; then
+      - name: Ensure rsync
+        if: steps.skip.outputs.already != 'true'
+        run: |
+          set -euo pipefail
+          if ! command -v rsync >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y rsync
+          fi
+
+      - name: Install Syft for SBOM generation
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Generate SBOM
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if ! command -v syft >/dev/null 2>&1; then
+            echo "syft not installed — skipping SBOM"
+            exit 0
+          fi
+          # Match ci.yml: new Syft no longer accepts packages:pnpm-lock.yaml.
+          syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
+          test -s sbom.json
+
+      - name: Upload SBOM artifact
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Scan licenses with pnpm licenses
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        run: |
+          pnpm licenses ls --json > licenses.json
+
+      - name: Upload licenses artifact
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: licenses
+          path: licenses.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Pack standalone artifact
+        id: pack
+        if: steps.skip.outputs.already != 'true'
+        run: |
+          set -euo pipefail
+          SRC=".next/standalone"
+          if [ ! -f "${SRC}/server.js" ]; then
+            echo "::error::Standalone build output not found at ${SRC}/server.js"
+            exit 1
+          fi
+          OUT="${RUNNER_TEMP}/standalone-pack"
+          rm -rf "$OUT"
+          mkdir -p "$OUT/standalone"
+          rsync -a "$SRC/" "$OUT/standalone/"
+
+          # Hosted arm64 + Turbopack file tracing often omits Next's own runtime
+          # deps (@next/env, @swc/helpers, styled-jsx, …). Inject from the install
+          # tree so the Pi node:22 hostPath boot does not MODULE_NOT_FOUND.
+          inject_pkg() {
+            local spec="$1"
+            local dest="$OUT/standalone/node_modules/${spec}"
+            if [ -f "${dest}/package.json" ]; then
+              return 0
+            fi
+            local src=""
+            if [ -f "node_modules/${spec}/package.json" ]; then
+              src="node_modules/${spec}"
+            else
+              src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
+            fi
+            if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
+              echo "::warning::Could not locate ${spec} in install tree — skipping"
+              return 0
+            fi
+            mkdir -p "$(dirname "$dest")"
+            rsync -a "$src/" "$dest/"
+            echo "Injected ${spec} from ${src}"
+          }
+
+          # next/package.json dependencies (runtime) + common helpers
+          while IFS= read -r dep; do
+            [ -n "$dep" ] || continue
+            inject_pkg "$dep"
+          done < <(node -e "const d=require('./node_modules/next/package.json').dependencies||{}; for (const k of Object.keys(d)) console.log(k)")
+          inject_pkg "@swc/helpers"
+          inject_pkg "client-only"
+          inject_pkg "server-only"
+
+          # Sentry / OpenTelemetry instrumentation (instrumentation.ts) traces
+          # require-in-the-middle + import-in-the-middle into .next/node_modules
+          # with hashed folder names; their deps are often omitted from standalone.
+          inject_pkg "debug"
+          inject_pkg "ms"
+          inject_pkg "module-details-from-path"
+          inject_pkg "cjs-module-lexer"
+          inject_pkg "es-module-lexer"
+
+          # Also plant copies next to the traced hooks so Node resolves without
+          # walking all the way to /app/node_modules (Turbopack hashed paths).
+          inject_into_next_nm() {
+            local spec="$1"
+            local next_nm="$OUT/standalone/.next/node_modules"
+            [ -d "$next_nm" ] || return 0
+            local dest="${next_nm}/${spec}"
+            if [ -f "${dest}/package.json" ]; then
+              return 0
+            fi
+            local src=""
+            if [ -f "$OUT/standalone/node_modules/${spec}/package.json" ]; then
+              src="$OUT/standalone/node_modules/${spec}"
+            elif [ -f "node_modules/${spec}/package.json" ]; then
+              src="node_modules/${spec}"
+            else
+              src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
+            fi
+            if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
+              echo "::warning::Could not plant ${spec} under .next/node_modules"
+              return 0
+            fi
+            mkdir -p "$(dirname "$dest")"
+            rsync -a "$src/" "$dest/"
+            echo "Planted ${spec} → .next/node_modules/"
+          }
+          for tracing_dep in debug ms module-details-from-path cjs-module-lexer es-module-lexer; do
+            inject_into_next_nm "$tracing_dep"
+          done
+
+          # Fail fast if the known crash deps are still missing
+          for must in @next/env @swc/helpers debug ms module-details-from-path; do
+            if [ ! -f "$OUT/standalone/node_modules/${must}/package.json" ]; then
+              echo "::error::Required runtime package ${must} missing from standalone after inject"
+              exit 1
+            fi
+          done
+
+          if [ -d .next/static ]; then
+            mkdir -p "$OUT/static"
+            rsync -a .next/static/ "$OUT/static/"
+          fi
+          if [ -d public ]; then
+            mkdir -p "$OUT/public"
+            rsync -a public/ "$OUT/public/"
+          fi
+
+          # SafeDeploy / hostPath boot needs BUILD_ID under standalone/.next.
+          # Turbopack standalone tracing sometimes omits it; copy from the build root.
+          if [ ! -s "$OUT/standalone/.next/BUILD_ID" ]; then
+            if [ -s .next/BUILD_ID ]; then
+              mkdir -p "$OUT/standalone/.next"
+              cp -a .next/BUILD_ID "$OUT/standalone/.next/BUILD_ID"
+              echo "Copied .next/BUILD_ID into standalone pack"
+            else
+              echo "::error::Missing .next/BUILD_ID after build — refusing to pack"
+              exit 1
+            fi
+          fi
+          test -s "$OUT/standalone/.next/BUILD_ID"
+          echo "standalone BUILD_ID=$(cat "$OUT/standalone/.next/BUILD_ID")"
+          # Non-hidden backup: upload-artifact@v4 drops dotdirs unless
+          # include-hidden-files is set — keep a plain-file copy as failsafe.
+          cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/standalone/BUILD_ID"
+          cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/BUILD_ID"
+          echo "standalone/.next file count=$(find "$OUT/standalone/.next" -type f | wc -l)"
+
+          echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
+          echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Tar + upload to R2
+        id: r2
+        if: steps.skip.outputs.already != 'true'
+        env:
+          # S3-compatible R2 credentials (the CLOUDFLARE_API_TOKEN GitHub secret
+          # lacks R2 object-write scope; the S3 access keys are the proven path).
+          AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          R2_BUCKET: ${{ env.R2_BUCKET }}
+          OUT: ${{ steps.pack.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          KEY="releases/${{ github.sha }}.tar.zst"
+          TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
           sudo apt-get update -qq
-          sudo apt-get install -y rsync
-        fi
+          sudo apt-get install -y --no-install-recommends zstd awscli
+          tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
+          echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
+          # S3-compatible upload to Cloudflare R2 (avoids wrangler API-token scope issues)
+          ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          aws s3 cp "$TAR" "s3://${R2_BUCKET}/${KEY}" \
+            --endpoint-url "$ENDPOINT" --region auto
+          echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
+          {
+            echo "## R2 upload"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| sha | \`${{ github.sha }}\` |"
+            echo "| artifactKey | \`$KEY\` |"
+            echo "| githubRunId | \`${{ github.run_id }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Install Syft for SBOM generation
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      run: |
-        set -euo pipefail
-        mkdir -p "$HOME/.local/bin"
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "$HOME/.local/bin"
-        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-    - name: Generate SBOM
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      run: |
-        set -euo pipefail
-        if ! command -v syft >/dev/null 2>&1; then
-          echo "syft not installed — skipping SBOM"
-          exit 0
-        fi
-        # Match ci.yml: new Syft no longer accepts packages:pnpm-lock.yaml.
-        syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
-        test -s sbom.json
-
-    - name: Upload SBOM artifact
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      uses: actions/upload-artifact@v7
-      with:
-        name: sbom
-        path: sbom.json
-        retention-days: 30
-        if-no-files-found: ignore
-
-    - name: Scan licenses with pnpm licenses
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      run: |
-        pnpm licenses ls --json > licenses.json
-
-    - name: Upload licenses artifact
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      uses: actions/upload-artifact@v7
-      with:
-        name: licenses
-        path: licenses.json
-        retention-days: 30
-        if-no-files-found: ignore
-
-    - name: Pack standalone artifact
-      id: pack
-      if: steps.skip.outputs.already != 'true'
-      run: |
-        set -euo pipefail
-        SRC=".next/standalone"
-        if [ ! -f "${SRC}/server.js" ]; then
-          echo "::error::Standalone build output not found at ${SRC}/server.js"
-          exit 1
-        fi
-        OUT="${RUNNER_TEMP}/standalone-pack"
-        rm -rf "$OUT"
-        mkdir -p "$OUT/standalone"
-        rsync -a "$SRC/" "$OUT/standalone/"
-
-        # Hosted arm64 + Turbopack file tracing often omits Next's own runtime
-        # deps (@next/env, @swc/helpers, styled-jsx, …). Inject from the install
-        # tree so the Pi node:22 hostPath boot does not MODULE_NOT_FOUND.
-        inject_pkg() {
-          local spec="$1"
-          local dest="$OUT/standalone/node_modules/${spec}"
-          if [ -f "${dest}/package.json" ]; then
-            return 0
-          fi
-          local src=""
-          if [ -f "node_modules/${spec}/package.json" ]; then
-            src="node_modules/${spec}"
-          else
-            src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
-          fi
-          if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
-            echo "::warning::Could not locate ${spec} in install tree — skipping"
-            return 0
-          fi
-          mkdir -p "$(dirname "$dest")"
-          rsync -a "$src/" "$dest/"
-          echo "Injected ${spec} from ${src}"
-        }
-
-        # next/package.json dependencies (runtime) + common helpers
-        while IFS= read -r dep; do
-          [ -n "$dep" ] || continue
-          inject_pkg "$dep"
-        done < <(node -e "const d=require('./node_modules/next/package.json').dependencies||{}; for (const k of Object.keys(d)) console.log(k)")
-        inject_pkg "@swc/helpers"
-        inject_pkg "client-only"
-        inject_pkg "server-only"
-
-        # Sentry / OpenTelemetry instrumentation (instrumentation.ts) traces
-        # require-in-the-middle + import-in-the-middle into .next/node_modules
-        # with hashed folder names; their deps are often omitted from standalone.
-        inject_pkg "debug"
-        inject_pkg "ms"
-        inject_pkg "module-details-from-path"
-        inject_pkg "cjs-module-lexer"
-        inject_pkg "es-module-lexer"
-
-        # Also plant copies next to the traced hooks so Node resolves without
-        # walking all the way to /app/node_modules (Turbopack hashed paths).
-        inject_into_next_nm() {
-          local spec="$1"
-          local next_nm="$OUT/standalone/.next/node_modules"
-          [ -d "$next_nm" ] || return 0
-          local dest="${next_nm}/${spec}"
-          if [ -f "${dest}/package.json" ]; then
-            return 0
-          fi
-          local src=""
-          if [ -f "$OUT/standalone/node_modules/${spec}/package.json" ]; then
-            src="$OUT/standalone/node_modules/${spec}"
-          elif [ -f "node_modules/${spec}/package.json" ]; then
-            src="node_modules/${spec}"
-          else
-            src=$(find node_modules -path "*/${spec}/package.json" 2>/dev/null | head -1 | xargs -r dirname || true)
-          fi
-          if [ -z "${src:-}" ] || [ ! -d "$src" ]; then
-            echo "::warning::Could not plant ${spec} under .next/node_modules"
-            return 0
-          fi
-          mkdir -p "$(dirname "$dest")"
-          rsync -a "$src/" "$dest/"
-          echo "Planted ${spec} → .next/node_modules/"
-        }
-        for tracing_dep in debug ms module-details-from-path cjs-module-lexer es-module-lexer; do
-          inject_into_next_nm "$tracing_dep"
-        done
-
-        # Fail fast if the known crash deps are still missing
-        for must in @next/env @swc/helpers debug ms module-details-from-path; do
-          if [ ! -f "$OUT/standalone/node_modules/${must}/package.json" ]; then
-            echo "::error::Required runtime package ${must} missing from standalone after inject"
-            exit 1
-          fi
-        done
-
-        if [ -d .next/static ]; then
-          mkdir -p "$OUT/static"
-          rsync -a .next/static/ "$OUT/static/"
-        fi
-        if [ -d public ]; then
-          mkdir -p "$OUT/public"
-          rsync -a public/ "$OUT/public/"
-        fi
-
-        # SafeDeploy / hostPath boot needs BUILD_ID under standalone/.next.
-        # Turbopack standalone tracing sometimes omits it; copy from the build root.
-        if [ ! -s "$OUT/standalone/.next/BUILD_ID" ]; then
-          if [ -s .next/BUILD_ID ]; then
-            mkdir -p "$OUT/standalone/.next"
-            cp -a .next/BUILD_ID "$OUT/standalone/.next/BUILD_ID"
-            echo "Copied .next/BUILD_ID into standalone pack"
-          else
-            echo "::error::Missing .next/BUILD_ID after build — refusing to pack"
-            exit 1
-          fi
-        fi
-        test -s "$OUT/standalone/.next/BUILD_ID"
-        echo "standalone BUILD_ID=$(cat "$OUT/standalone/.next/BUILD_ID")"
-        # Non-hidden backup: upload-artifact@v4 drops dotdirs unless
-        # include-hidden-files is set — keep a plain-file copy as failsafe.
-        cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/standalone/BUILD_ID"
-        cp -a "$OUT/standalone/.next/BUILD_ID" "$OUT/BUILD_ID"
-        echo "standalone/.next file count=$(find "$OUT/standalone/.next" -type f | wc -l)"
-
-        echo "Packed $(du -sh "$OUT" | cut -f1) → $OUT"
-        echo "artifact=$OUT" >> "$GITHUB_OUTPUT"
-
-    - name: Tar + upload to R2
-      id: r2
-      if: steps.skip.outputs.already != 'true'
-      env:
-        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        OUT: ${{ steps.pack.outputs.artifact }}
-      run: |
-        set -euo pipefail
-        KEY="releases/${{ github.sha }}.tar.zst"
-        TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
-        sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends zstd
-        tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
-        echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
-        # Cloudflare-native upload (no AWS CLI / S3 API client)
-        pnpm exec wrangler r2 object put "${R2_BUCKET}/${KEY}" --file="$TAR"
-        echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
-        {
-          echo "## R2 upload"
-          echo ""
-          echo "| Field | Value |"
-          echo "| --- | --- |"
-          echo "| sha | \`${{ github.sha }}\` |"
-          echo "| artifactKey | \`$KEY\` |"
-          echo "| githubRunId | \`${{ github.run_id }}\` |"
-        } >> "$GITHUB_STEP_SUMMARY"
-
-    - name: Upload standalone artifact (debug fallback)
-      if: steps.skip.outputs.already != 'true'
-      continue-on-error: true
-      uses: actions/upload-artifact@v7
-      with:
-        name: standalone-${{ github.sha }}
-        path: ${{ steps.pack.outputs.artifact }}
-        retention-days: 2
-        if-no-files-found: error
-        include-hidden-files: true
+      - name: Upload standalone artifact (debug fallback)
+        if: steps.skip.outputs.already != 'true'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: standalone-${{ github.sha }}
+          path: ${{ steps.pack.outputs.artifact }}
+          retention-days: 2
+          if-no-files-found: error
+          include-hidden-files: true
 
   publish:
     name: Trigger CF Workflow (durable health wait)
@@ -371,154 +377,154 @@ jobs:
     # Trigger is fast; edge smoke may wait a few minutes for omv pull + health.
     timeout-minutes: 15
     steps:
-    - name: Resolve artifact key
-      id: key
-      run: |
-        set -euo pipefail
-        if [ -n "${{ needs.build.outputs.artifact_key }}" ]; then
-          echo "artifact_key=${{ needs.build.outputs.artifact_key }}" >> "$GITHUB_OUTPUT"
-        else
-          echo "artifact_key=releases/${{ github.sha }}.tar.zst" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: POST /trigger
-      id: trigger
-      env:
-        ORCH_URL: ${{ env.PI_DEPLOY_ORCHESTRATOR_URL }}
-        ORCH_TOKEN: ${{ secrets.DEPLOY_ORCHESTRATOR_TOKEN }}
-        ARTIFACT_KEY: ${{ steps.key.outputs.artifact_key }}
-      run: |
-        set -euo pipefail
-        if [ -z "${ORCH_URL:-}" ]; then
-          echo "::warning::PI_DEPLOY_ORCHESTRATOR_URL not set — R2 upload done; skip Workflow trigger until orchestrator is deployed"
-          echo "workflow_instance_id=skipped-no-orch-url" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        if [ -z "${ORCH_TOKEN:-}" ]; then
-          echo "::warning::DEPLOY_ORCHESTRATOR_TOKEN not set — skip Workflow trigger"
-          echo "workflow_instance_id=skipped-no-orch-token" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        RESP=$(curl -fsS --max-time 60 \
-          -H "Authorization: Bearer ${ORCH_TOKEN}" \
-          -H "content-type: application/json" \
-          -d "$(jq -n \
-            --arg sha "${{ github.sha }}" \
-            --arg key "$ARTIFACT_KEY" \
-            --arg rid "${{ github.run_id }}" \
-            --arg rurl "$RUN_URL" \
-            '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl}')" \
-          "${ORCH_URL%/}/trigger")
-        echo "$RESP" | tee /tmp/trigger.json
-        INSTANCE=$(echo "$RESP" | jq -r .workflowInstanceId)
-        echo "workflow_instance_id=$INSTANCE" >> "$GITHUB_OUTPUT"
-        {
-          echo "## CF Workflow triggered"
-          echo ""
-          echo "| Field | Value |"
-          echo "| --- | --- |"
-          echo "| sha | \`${{ github.sha }}\` |"
-          echo "| artifactKey | \`$ARTIFACT_KEY\` |"
-          echo "| workflowInstanceId | \`$INSTANCE\` |"
-          echo "| githubRunId | \`${{ github.run_id }}\` |"
-        } >> "$GITHUB_STEP_SUMMARY"
-
-    - name: Edge smoke (health SHA + public routes)
-      id: smoke
-      if: steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-url' && steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-token'
-      env:
-        WANT_SHA: ${{ github.sha }}
-      run: |
-        set -euo pipefail
-        WANT12="${WANT_SHA:0:12}"
-        HEALTH_URLS=(
-          https://cloudless.gr/api/health
-          https://pi-origin.cloudless.gr/api/health
-        )
-        PAGE_URLS=(
-          https://cloudless.gr/en
-          https://cloudless.gr/en/store
-          https://cloudless.gr/en/contact
-        )
-
-        # omv pull can take >6m under SSD load; poll ~12m (24×30s) before failing.
-        echo "Waiting for /api/health version to match ${WANT12} (up to ~12m)…"
-        LIVE=""
-        MATCHED=0
-        for i in $(seq 1 24); do
-          for u in "${HEALTH_URLS[@]}"; do
-            BODY=$(curl -sS --max-time 15 "$u" || true)
-            if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
-              LIVE=$(echo "$BODY" | jq -r .version)
-              echo "  try ${i}: $u → version=${LIVE}"
-              case "$LIVE" in
-                "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
-                  MATCHED=1
-                  break 2
-                  ;;
-              esac
-            else
-              CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || echo 000)
-              echo "  try ${i}: $u → http=${CODE} (no version json)"
-            fi
-          done
-          sleep 30
-        done
-
-        if [ "$MATCHED" != "1" ]; then
-          echo "::error::Edge health did not report sha ${WANT12} within ~12m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
-          exit 1
-        fi
-
-        SMOKE_LINES=()
-        for u in "${PAGE_URLS[@]}"; do
-          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo 000)
-          echo "smoke $u → ${CODE}"
-          SMOKE_LINES+=("| \`$u\` | ${CODE} |")
-          case "$CODE" in
-            2??) ;;
-            *)
-              echo "::error::Smoke failed: $u returned ${CODE}"
-              exit 1
-              ;;
-          esac
-        done
-
-        {
-          echo "## Edge smoke"
-          echo ""
-          echo "| Check | Result |"
-          echo "| --- | --- |"
-          echo "| health version | \`${LIVE}\` (want \`${WANT12}\`) |"
-          printf '%s\n' "${SMOKE_LINES[@]}"
-        } | tee /tmp/smoke.md >> "$GITHUB_STEP_SUMMARY"
-
-    - name: Comment tracking on issue 382
-      if: always()
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        set -euo pipefail
-        INSTANCE="${{ steps.trigger.outputs.workflow_instance_id || 'n/a' }}"
-        KEY="${{ steps.key.outputs.artifact_key || 'n/a' }}"
-        {
-          echo "### deploy-pi pull-path — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-          echo ""
-          echo "| Field | Value |"
-          echo "| --- | --- |"
-          echo "| job | \`${{ job.status }}\` |"
-          echo "| sha | \`${{ github.sha }}\` |"
-          echo "| artifactKey | \`$KEY\` |"
-          echo "| workflowInstanceId | \`$INSTANCE\` |"
-          echo "| run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
-          if [ -f /tmp/smoke.md ]; then
-            echo ""
-            # Drop the H2 from the step summary copy; keep the table.
-            sed '1{/^## Edge smoke$/d;}' /tmp/smoke.md | sed '/^$/d' | {
-              echo "#### Edge smoke"
-              echo ""
-              cat
-            }
+      - name: Resolve artifact key
+        id: key
+        run: |
+          set -euo pipefail
+          if [ -n "${{ needs.build.outputs.artifact_key }}" ]; then
+            echo "artifact_key=${{ needs.build.outputs.artifact_key }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact_key=releases/${{ github.sha }}.tar.zst" >> "$GITHUB_OUTPUT"
           fi
-        } | gh issue comment 382 --repo "${{ github.repository }}" --body-file -
+
+      - name: POST /trigger
+        id: trigger
+        env:
+          ORCH_URL: ${{ env.PI_DEPLOY_ORCHESTRATOR_URL }}
+          ORCH_TOKEN: ${{ secrets.DEPLOY_ORCHESTRATOR_TOKEN }}
+          ARTIFACT_KEY: ${{ steps.key.outputs.artifact_key }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ORCH_URL:-}" ]; then
+            echo "::warning::PI_DEPLOY_ORCHESTRATOR_URL not set — R2 upload done; skip Workflow trigger until orchestrator is deployed"
+            echo "workflow_instance_id=skipped-no-orch-url" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${ORCH_TOKEN:-}" ]; then
+            echo "::warning::DEPLOY_ORCHESTRATOR_TOKEN not set — skip Workflow trigger"
+            echo "workflow_instance_id=skipped-no-orch-token" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RESP=$(curl -fsS --max-time 60 \
+            -H "Authorization: Bearer ${ORCH_TOKEN}" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg sha "${{ github.sha }}" \
+              --arg key "$ARTIFACT_KEY" \
+              --arg rid "${{ github.run_id }}" \
+              --arg rurl "$RUN_URL" \
+              '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl}')" \
+            "${ORCH_URL%/}/trigger")
+          echo "$RESP" | tee /tmp/trigger.json
+          INSTANCE=$(echo "$RESP" | jq -r .workflowInstanceId)
+          echo "workflow_instance_id=$INSTANCE" >> "$GITHUB_OUTPUT"
+          {
+            echo "## CF Workflow triggered"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| sha | \`${{ github.sha }}\` |"
+            echo "| artifactKey | \`$ARTIFACT_KEY\` |"
+            echo "| workflowInstanceId | \`$INSTANCE\` |"
+            echo "| githubRunId | \`${{ github.run_id }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Edge smoke (health SHA + public routes)
+        id: smoke
+        if: steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-url' && steps.trigger.outputs.workflow_instance_id != 'skipped-no-orch-token'
+        env:
+          WANT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          WANT12="${WANT_SHA:0:12}"
+          HEALTH_URLS=(
+            https://cloudless.gr/api/health
+            https://pi-origin.cloudless.gr/api/health
+          )
+          PAGE_URLS=(
+            https://cloudless.gr/en
+            https://cloudless.gr/en/store
+            https://cloudless.gr/en/contact
+          )
+
+          # omv pull can take >6m under SSD load; poll ~12m (24×30s) before failing.
+          echo "Waiting for /api/health version to match ${WANT12} (up to ~12m)…"
+          LIVE=""
+          MATCHED=0
+          for i in $(seq 1 24); do
+            for u in "${HEALTH_URLS[@]}"; do
+              BODY=$(curl -sS --max-time 15 "$u" || true)
+              if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
+                LIVE=$(echo "$BODY" | jq -r .version)
+                echo "  try ${i}: $u → version=${LIVE}"
+                case "$LIVE" in
+                  "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
+                    MATCHED=1
+                    break 2
+                    ;;
+                esac
+              else
+                CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || echo 000)
+                echo "  try ${i}: $u → http=${CODE} (no version json)"
+              fi
+            done
+            sleep 30
+          done
+
+          if [ "$MATCHED" != "1" ]; then
+            echo "::error::Edge health did not report sha ${WANT12} within ~12m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
+            exit 1
+          fi
+
+          SMOKE_LINES=()
+          for u in "${PAGE_URLS[@]}"; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo 000)
+            echo "smoke $u → ${CODE}"
+            SMOKE_LINES+=("| \`$u\` | ${CODE} |")
+            case "$CODE" in
+              2??) ;;
+              *)
+                echo "::error::Smoke failed: $u returned ${CODE}"
+                exit 1
+                ;;
+            esac
+          done
+
+          {
+            echo "## Edge smoke"
+            echo ""
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| health version | \`${LIVE}\` (want \`${WANT12}\`) |"
+            printf '%s\n' "${SMOKE_LINES[@]}"
+          } | tee /tmp/smoke.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment tracking on issue 382
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          INSTANCE="${{ steps.trigger.outputs.workflow_instance_id || 'n/a' }}"
+          KEY="${{ steps.key.outputs.artifact_key || 'n/a' }}"
+          {
+            echo "### deploy-pi pull-path — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| job | \`${{ job.status }}\` |"
+            echo "| sha | \`${{ github.sha }}\` |"
+            echo "| artifactKey | \`$KEY\` |"
+            echo "| workflowInstanceId | \`$INSTANCE\` |"
+            echo "| run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
+            if [ -f /tmp/smoke.md ]; then
+              echo ""
+              # Drop the H2 from the step summary copy; keep the table.
+              sed '1{/^## Edge smoke$/d;}' /tmp/smoke.md | sed '/^$/d' | {
+                echo "#### Edge smoke"
+                echo ""
+                cat
+              }
+            fi
+          } | gh issue comment 382 --repo "${{ github.repository }}" --body-file -
