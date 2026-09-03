@@ -2,10 +2,6 @@ name: Check contact pipeline logs
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-    - .github/workflows/check-contact-logs.yml
 
 permissions:
   contents: read
@@ -15,11 +11,29 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     steps:
-    - name: Check cloudless-app logs for contact pipeline
-      run: |
-        set -euo pipefail
-        echo "=== Recent contact-related logs ==="
-        sudo k3s kubectl -n cloudless logs deploy/cloudless-app --tail=300 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|activecampaign|error|warn|lead|notification|503|500|success)" | tail -60
-        echo ""
-        echo "=== Verify secrets are in the pod env (names only) ==="
-        sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(RESEND|SLACK_BOT|ESPOCRM_API|APPFLOWY_JWT|APPFLOWY_API|ACTIVECAMPAIGN)" | sed 's/=.*/=***/' || echo "(could not exec into pod)"
+      - name: Test contact API and check fresh logs
+        run: |
+          set -euo pipefail
+          echo "=== Pod env (EspoCRM + email) ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(ESPOCRM_BASE|RESEND|CLOUDFLARE_EMAIL|CLOUDFLARE_API)" | sed 's/=.*/=***/' || true
+          echo ""
+          echo "=== Submit test contact via Node fetch ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- node -e '
+            fetch("http://localhost:3000/api/contact", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({
+                name: "Pipeline Verify Fresh",
+                email: "devin-verify+fresh@cloudless.gr",
+                phone: "+30 555 0000",
+                service: "shop-online — E-shop Launch",
+                message: "Fresh pipeline verification after restart — please disregard.",
+                attribution: JSON.stringify({source:"devin-verify",campaign:"shop-online"})
+              })
+            }).then(r => r.text()).then(t => console.log("RESPONSE:", t)).catch(e => console.log("ERROR:", e.message))
+          ' 2>&1 || echo "node fetch failed"
+          echo ""
+          echo "=== Wait 3s for background tasks ==="
+          sleep 3
+          echo "=== Fresh logs (since=30s) ==="
+          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=30s 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|error|warn|success|sending|lead)" | tail -30
