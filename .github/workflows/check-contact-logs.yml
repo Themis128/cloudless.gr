@@ -11,29 +11,27 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     steps:
-      - name: Test contact API and check fresh logs
+      - name: Debug EspoCRM config
         run: |
           set -euo pipefail
-          echo "=== Pod env (EspoCRM + email) ==="
-          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(ESPOCRM_BASE|RESEND|CLOUDFLARE_EMAIL|CLOUDFLARE_API)" | sed 's/=.*/=***/' || true
+          echo "=== ConfigMap value ==="
+          sudo k3s kubectl -n cloudless get configmap cloudless-app-config -o jsonpath='{.data.ESPOCRM_BASE_URL}'
           echo ""
-          echo "=== Submit test contact via Node fetch ==="
+          echo "=== Pod env value ==="
+          sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- printenv ESPOCRM_BASE_URL 2>&1 || echo "(not set)"
+          echo ""
+          echo "=== EspoCRM service in cluster ==="
+          sudo k3s kubectl -n espocrm get svc 2>&1 || echo "(espocrm namespace not found)"
+          echo ""
+          echo "=== Test in-cluster EspoCRM from cloudless pod ==="
           sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- node -e '
-            fetch("http://localhost:3000/api/contact", {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({
-                name: "Pipeline Verify Fresh",
-                email: "devin-verify+fresh@cloudless.gr",
-                phone: "+30 555 0000",
-                service: "shop-online — E-shop Launch",
-                message: "Fresh pipeline verification after restart — please disregard.",
-                attribution: JSON.stringify({source:"devin-verify",campaign:"shop-online"})
-              })
-            }).then(r => r.text()).then(t => console.log("RESPONSE:", t)).catch(e => console.log("ERROR:", e.message))
-          ' 2>&1 || echo "node fetch failed"
+            const url = process.env.ESPOCRM_BASE_URL;
+            console.log("ESPOCRM_BASE_URL:", url);
+            fetch(url + "/api/v1/Contact", {headers: {"X-Api-Key": process.env.ESPOCRM_API_KEY}})
+              .then(r => { console.log("Status:", r.status); return r.text(); })
+              .then(t => console.log("Body:", t.substring(0, 200)))
+              .catch(e => console.log("Error:", e.message))
+          ' 2>&1 || echo "node test failed"
           echo ""
-          echo "=== Wait 3s for background tasks ==="
-          sleep 3
-          echo "=== Fresh logs (since=30s) ==="
-          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=30s 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|error|warn|success|sending|lead)" | tail -30
+          echo "=== Recent logs (since=2m) ==="
+          sudo k3s kubectl -n cloudless logs deploy/cloudless-app --since=2m 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|error|warn|success|sending|lead)" | tail -30
