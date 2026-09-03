@@ -30,7 +30,7 @@ interface ContactRequestBody {
   service: string;
   message: string;
   phone?: string;
-  attribution?: string;
+  attribution?: string | LeadAttribution;
   turnstileToken?: string;
   locale?: string;
 }
@@ -252,7 +252,19 @@ export async function POST(request: Request) {
 
     const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
     const nameParts = String(name).trim().split(" ");
-    const attributionData = attribution ? (JSON.parse(attribution) as LeadAttribution) : undefined;
+    let attributionData: LeadAttribution | undefined;
+    if (attribution) {
+      try {
+        // Accept both a JSON string and a pre-parsed object (some clients send
+        // attribution as an object instead of a stringified JSON value).
+        attributionData =
+          typeof attribution === "string"
+            ? (JSON.parse(attribution) as LeadAttribution)
+            : (attribution as LeadAttribution);
+      } catch {
+        attributionData = undefined;
+      }
+    }
     const bodyLocale = typeof fields.locale === "string" ? fields.locale : undefined;
     const pageLocale =
       bodyLocale || localeFromReferer(request.headers.get("referer") ?? "") || "en";
