@@ -10,7 +10,9 @@
 #
 # Auth: CLOUDFLARE_API_TOKEN env, else SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
 # Token needs Zone:Read + Zone:DNS:Edit on cloudless.gr.
-# Idempotent: skips creation if the exact record already exists.
+# Idempotent: if a TikTok verification TXT record already exists with the exact
+# same value, skips. If a TikTok verification TXT record exists with a DIFFERENT
+# value (token rotation), updates it in-place via PUT. Otherwise creates a new one.
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-cloudless.gr}"
@@ -61,28 +63,59 @@ if [ -z "$ZONE_ID" ]; then
 fi
 echo "  zone_id=${ZONE_ID}"
 
-echo "→ Checking for existing TXT record…"
-EXISTING="$(cf GET "${API}/zones/${ZONE_ID}/dns_records?type=TXT&name=${DOMAIN}&per_page=100" | \
-  jq -r --arg v "$TXT_VALUE" '.result[] | select(.content == $v) | .id')"
+echo "→ Checking for existing TikTok verification TXT record…"
+# Match any TXT record whose content starts with the TikTok verification prefix,
+# regardless of the token value (so token rotations are detected).
+RECORDS_JSON="$(cf GET "${API}/zones/${ZONE_ID}/dns_records?type=TXT&name=${DOMAIN}&per_page=100")"
 
-if [ -n "$EXISTING" ]; then
-  echo "✓ TXT record already exists (id=${EXISTING}) — nothing to do."
+# Exact match — same token, nothing to do.
+EXISTING_EXACT="$(echo "$RECORDS_JSON" | \
+  jq -r --arg v "$TXT_VALUE" '.result[] | select(.content == $v) | .id')"
+if [ -n "$EXISTING_EXACT" ]; then
+  echo "✓ TXT record already exists with this token (id=${EXISTING_EXACT}) — nothing to do."
   exit 0
 fi
 
-echo "→ Creating TXT record: ${TXT_VALUE}"
-if ! RESULT="$(cf POST "${API}/zones/${ZONE_ID}/dns_records" \
-  "{\"type\":\"TXT\",\"name\":\"${DOMAIN}\",\"content\":\"${TXT_VALUE}\",\"ttl\":300}")"; then
-  echo "::error::failed to create DNS record: $(echo "$RESULT" | jq -c . 2>/dev/null || echo "$RESULT")"
-  exit 1
-fi
+# Prefix match — old token, needs updating.
+EXISTING_OLD_ID="$(echo "$RECORDS_JSON" | \
+  jq -r --arg prefix "tiktok-developers-site-verification=" \
+  '.result[] | select(.content | startswith($prefix)) | .id')"
+EXISTING_OLD_CONTENT="$(echo "$RECORDS_JSON" | \
+  jq -r --arg prefix "tiktok-developers-site-verification=" \
+  '.result[] | select(.content | startswith($prefix)) | .content')"
 
-if echo "$RESULT" | jq -e '.success == true' > /dev/null; then
-  RECORD_ID="$(echo "$RESULT" | jq -r '.result.id')"
-  echo "✓ TXT record created (id=${RECORD_ID})"
+if [ -n "$EXISTING_OLD_ID" ]; then
+  echo "→ Found existing TikTok verification record with different token (id=${EXISTING_OLD_ID})"
+  echo "  old value: ${EXISTING_OLD_CONTENT}"
+  echo "  new value: ${TXT_VALUE}"
+  echo "→ Updating TXT record…"
+  if ! RESULT="$(cf PUT "${API}/zones/${ZONE_ID}/dns_records/${EXISTING_OLD_ID}" \
+    "{\"type\":\"TXT\",\"name\":\"${DOMAIN}\",\"content\":\"${TXT_VALUE}\",\"ttl\":300}")"; then
+    echo "::error::failed to update DNS record: $(echo "$RESULT" | jq -c . 2>/dev/null || echo "$RESULT")"
+    exit 1
+  fi
+  if echo "$RESULT" | jq -e '.success == true' > /dev/null; then
+    echo "✓ TXT record updated (id=${EXISTING_OLD_ID})"
+  else
+    echo "::error::failed to update DNS record: $(echo "$RESULT" | jq -c .)"
+    exit 1
+  fi
 else
-  echo "::error::failed to create DNS record: $(echo "$RESULT" | jq -c .)"
-  exit 1
+  echo "→ No existing TikTok verification TXT record found — creating new one."
+  echo "→ Creating TXT record: ${TXT_VALUE}"
+  if ! RESULT="$(cf POST "${API}/zones/${ZONE_ID}/dns_records" \
+    "{\"type\":\"TXT\",\"name\":\"${DOMAIN}\",\"content\":\"${TXT_VALUE}\",\"ttl\":300}")"; then
+    echo "::error::failed to create DNS record: $(echo "$RESULT" | jq -c . 2>/dev/null || echo "$RESULT")"
+    exit 1
+  fi
+
+  if echo "$RESULT" | jq -e '.success == true' > /dev/null; then
+    RECORD_ID="$(echo "$RESULT" | jq -r '.result.id')"
+    echo "✓ TXT record created (id=${RECORD_ID})"
+  else
+    echo "::error::failed to create DNS record: $(echo "$RESULT" | jq -c .)"
+    exit 1
+  fi
 fi
 
 echo "→ Verifying record is live (may take up to 60s)…"
