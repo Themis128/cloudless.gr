@@ -1,0 +1,136 @@
+name: Fix contact pipeline integrations
+
+# Fixes three issues identified by log inspection:
+# 1. EspoCRM: public URL is behind Cloudflare Access → use in-cluster DNS
+# 2. Email: CLOUDFLARE_EMAIL_API_TOKEN lacks Email Sending scope → remove it
+#    so the email module falls through to Resend (which has a valid key)
+# 3. Slack: verify bot token validity (cannot fix expired tokens here)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+    - .github/workflows/fix-contact-pipeline.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fix-contact-pipeline
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  fix:
+    name: Fix EspoCRM URL + email provider + verify Slack
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+
+    - name: Fix ConfigMap — EspoCRM in-cluster DNS
+      run: |
+        set -euo pipefail
+        KUBECTL="sudo k3s kubectl"
+
+        # 1. Patch ConfigMap to use in-cluster DNS for EspoCRM (like Postiz)
+        # Public https://espocrm.cloudless.gr is behind CF Access → 302 login page
+        # In-cluster: espocrm.espocrm.svc.cluster.local:80 (NodePort 30700)
+        $KUBECTL -n cloudless patch configmap cloudless-app-config \
+          --type merge -p '{"data":{"ESPOCRM_BASE_URL":"http://espocrm.espocrm.svc.cluster.local"}}'
+        echo "Patched ESPOCRM_BASE_URL → in-cluster DNS"
+
+        # 2. Remove CLOUDFLARE_EMAIL_API_TOKEN from the secret if it exists
+        # (it lacks Email Sending scope and causes "sending_disabled" errors;
+        #  the email module should fall through to Resend instead)
+        EXISTING=$($KUBECTL -n cloudless get secret cloudless-secrets -o jsonpath='{.data.CLOUDFLARE_EMAIL_API_TOKEN}' 2>/dev/null || echo "")
+        if [ -n "$EXISTING" ]; then
+          $KUBECTL -n cloudless patch secret cloudless-secrets \
+            --type json -p '[{"op":"remove","path":"/data/CLOUDFLARE_EMAIL_API_TOKEN"}]'
+          echo "Removed CLOUDFLARE_EMAIL_API_TOKEN from cloudless-secrets (was causing sending_disabled)"
+        else
+          echo "CLOUDFLARE_EMAIL_API_TOKEN not in secret — skipping removal"
+        fi
+
+        # 3. Check if CLOUDFLARE_API_TOKEN is being used as email token
+        CF_TOKEN=$($KUBECTL -n cloudless get secret cloudless-secrets -o jsonpath='{.data.CLOUDFLARE_API_TOKEN}' 2>/dev/null || echo "")
+        if [ -n "$CF_TOKEN" ]; then
+          echo "Note: CLOUDFLARE_API_TOKEN is in the secret — email module should NOT use it (isCloudflareEmailConfigured checks CLOUDFLARE_EMAIL_API_TOKEN only)"
+        fi
+
+    - name: Restart cloudless-app
+      run: |
+        sudo k3s kubectl -n cloudless rollout restart deploy/cloudless-app
+        sudo k3s kubectl -n cloudless rollout status deploy/cloudless-app --timeout=180s
+
+    - name: Verify Slack bot token
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      run: |
+        set -euo pipefail
+        if [ -z "$SLACK_BOT_TOKEN" ]; then
+          echo "::warning::SLACK_BOT_TOKEN is empty in GitHub secrets"
+          exit 0
+        fi
+        RESP=$(curl -sS -X POST https://slack.com/api/auth.test \
+          -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+          -H "Content-Type: application/json" \
+          --max-time 10 2>&1 || echo '{"ok":false,"error":"curl_failed"}')
+        OK=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "False")
+        if [ "$OK" = "True" ]; then
+          TEAM=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('team','?'))" 2>/dev/null || echo "?")
+          echo "Slack bot token is VALID (workspace: $TEAM)"
+        else
+          ERR=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('error','unknown'))" 2>/dev/null || echo "unknown")
+          echo "::warning::Slack bot token is INVALID: $ERR — needs to be regenerated in Slack API settings"
+        fi
+
+    - name: Verify pod env after fix
+      run: |
+        echo "=== ESPOCRM_BASE_URL in ConfigMap ==="
+        sudo k3s kubectl -n cloudless get configmap cloudless-app-config -o jsonpath='{.data.ESPOCRM_BASE_URL}'
+        echo ""
+        echo "=== Email-related env in pod (names only) ==="
+        sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(RESEND|CLOUDFLARE_EMAIL|CLOUDFLARE_API_TOKEN|SES_FROM|SES_TO)" | sed 's/=.*/=***/' || echo "(none found)"
+        echo "=== EspoCRM-related env in pod (names only) ==="
+        sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- env 2>&1 | grep -iE "^(ESPOCRM)" | sed 's/=.*/=***/' || echo "(none found)"
+
+    - name: Test contact API internally
+      run: |
+        set -euo pipefail
+        echo "=== Testing /api/contact from inside the cluster ==="
+        # Port-forward to the app and test
+        sudo k3s kubectl -n cloudless exec deploy/cloudless-app -- \
+          curl -sS -X POST http://localhost:3000/api/contact \
+          -H "Content-Type: application/json" \
+          -d '{
+            "name":"Pipeline Verify",
+            "email":"devin-verify+internal@cloudless.gr",
+            "phone":"+30 555 0000",
+            "service":"shop-online — E-shop Launch",
+            "message":"Internal pipeline verification — please disregard.",
+            "attribution":"{\"source\":\"devin-verify\",\"campaign\":\"shop-online\"}"
+          }' \
+          -w "\n---\nHTTP %{http_code}\n" --max-time 30 2>&1 || echo "curl failed"
+
+    - name: Check logs after test
+      run: |
+        echo "=== Recent app logs ==="
+        sudo k3s kubectl -n cloudless logs deploy/cloudless-app --tail=50 --since=2m 2>&1 | grep -iE "(contact|email|slack|espocrm|appflowy|resend|error|warn|success|sending)" | tail -30
+
+    - name: Comment tracking issue
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        {
+          echo "### Fix contact pipeline — $(date -u '+%F %T')Z"
+          echo ""
+          echo "**Job:** ${{ job.status }}"
+          echo "**Fixes:** EspoCRM in-cluster DNS, remove bad CLOUDFLARE_EMAIL_API_TOKEN, verify Slack"
+        } > c.md
+        gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md || true
