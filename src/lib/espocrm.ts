@@ -233,8 +233,12 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       void invalidateEspoContactCaches(existingId);
       return existingId;
     }
+    // Use X-Skip-Duplicate-Check to avoid EspoCRM's name-based duplicate
+    // check, which returns 409 for any contact with the same first+last name
+    // even if the email is different. We already search by email above.
     let create = await espoFetch("/Contact", {
       method: "POST",
+      headers: { "X-Skip-Duplicate-Check": "true" },
       body: JSON.stringify(payload),
     });
     // Check for 409 conflict FIRST, before any body-consuming logic.
@@ -306,6 +310,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         if (accountId) Object.assign(retryPayload, { accountId, accountName: undefined });
         create = await espoFetch("/Contact", {
           method: "POST",
+          headers: { "X-Skip-Duplicate-Check": "true" },
           body: JSON.stringify(retryPayload),
         });
         // The retry may also hit a 409 — parse the conflict body.
@@ -396,6 +401,7 @@ export async function setNewsletterStatus(
     if (status === "newsletter_unsubscribed") return true; // unknown email + unsub = no-op
     const create = await espoFetch("/Contact", {
       method: "POST",
+      headers: { "X-Skip-Duplicate-Check": "true" },
       body: JSON.stringify({
         emailAddress: email,
         lastName: email.split("@")[0],
@@ -828,6 +834,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
     }
     const res = await espoFetch("/Lead", {
       method: "POST",
+      headers: { "X-Skip-Duplicate-Check": "true" },
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
