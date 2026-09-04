@@ -164,9 +164,9 @@ function mapLeadSource(s?: string): string | undefined {
 /** Create or update a contact (uniqueness by email). Links to a real Account
  *  when contact.company is set (calls upsertCompany internally). */
 /**
- * Search for a contact by email. Tries the exact email first, then falls back
- * to the base email (without + alias) because EspoCRM's emailAddress equals
- * filter does not match plus-aliases (e.g. user+tag@domain.com).
+ * Search for a contact by email. Uses the searchParams JSON format
+ * (more reliable than where[0][type]=... URL params for nested arrays).
+ * Tries exact email first, then base email without + alias.
  */
 async function findContactByEmail(email: string): Promise<string | null> {
   const candidates = [email];
@@ -177,19 +177,21 @@ async function findContactByEmail(email: string): Promise<string | null> {
     candidates.push(email.slice(0, plusIdx) + email.slice(atIdx));
   }
   for (const candidate of candidates) {
-    const res = await espoFetch(
-      `/Contact?` +
-        new URLSearchParams({
-          "where[0][type]": "equals",
-          "where[0][attribute]": "emailAddress",
-          "where[0][value]": candidate,
-          maxSize: "1",
-        }).toString()
-    );
+    const searchParams = JSON.stringify({
+      maxSize: 5,
+      select: ["id", "emailAddress"],
+      where: [
+        {
+          type: "equals",
+          attribute: "emailAddress",
+          value: candidate,
+        },
+      ],
+    });
+    const res = await espoFetch(`/Contact?searchParams=${encodeURIComponent(searchParams)}`);
     if (res.ok) {
       const data = (await res.json()) as { list: { id: string }[]; total: number };
-      const existing = data.list[0];
-      if (existing) return existing.id;
+      if (data.list?.[0]) return data.list[0].id;
     }
   }
   return null;
@@ -306,27 +308,15 @@ export async function setNewsletterStatus(
   status: "newsletter_signup" | "newsletter_unsubscribed"
 ): Promise<boolean> {
   try {
-    const search = await espoFetch(
-      `/Contact?` +
-        new URLSearchParams({
-          "where[0][type]": "equals",
-          "where[0][attribute]": "emailAddress",
-          "where[0][value]": email,
-          maxSize: "1",
-        }).toString()
-    );
-    if (search.ok) {
-      const data = (await search.json()) as { list: { id: string }[] };
-      const existing = data.list[0];
-      if (existing) {
-        const upd = await espoFetch(`/Contact/${existing.id}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            leadSource: status === "newsletter_signup" ? "Email" : "Other",
-          }),
-        });
-        return upd.ok;
-      }
+    const existingId = await findContactByEmail(email);
+    if (existingId) {
+      const upd = await espoFetch(`/Contact/${existingId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          leadSource: status === "newsletter_signup" ? "Email" : "Other",
+        }),
+      });
+      return upd.ok;
     }
     if (status === "newsletter_unsubscribed") return true; // unknown email + unsub = no-op
     const create = await espoFetch("/Contact", {
@@ -640,15 +630,17 @@ export async function searchContacts(
         : propertyName === "lastname"
           ? "lastName"
           : propertyName;
-  const res = await espoFetch(
-    `/Contact?` +
-      new URLSearchParams({
-        "where[0][type]": "equals",
-        "where[0][attribute]": espoAttr,
-        "where[0][value]": value,
-        maxSize: "100",
-      }).toString()
-  );
+  const searchParams = JSON.stringify({
+    maxSize: 100,
+    where: [
+      {
+        type: "equals",
+        attribute: espoAttr,
+        value: value,
+      },
+    ],
+  });
+  const res = await espoFetch(`/Contact?searchParams=${encodeURIComponent(searchParams)}`);
   if (!res.ok) {
     throw new Error(`EspoCRM search failed ${res.status}`);
   }
@@ -736,16 +728,18 @@ export async function createLead(data: LeadData): Promise<string | null> {
     };
     // Dedup: if a Lead with this email already exists, update it instead of
     // creating a second record. EspoCRM has no unique-email constraint on Lead.
-    const dupSearch = await espoFetch(
-      `/Lead?` +
-        new URLSearchParams({
-          "where[0][type]": "equals",
-          "where[0][attribute]": "emailAddress",
-          "where[0][value]": data.emailAddress,
-          maxSize: "1",
-          select: "id",
-        }).toString()
-    );
+    const leadSearchParams = JSON.stringify({
+      maxSize: 1,
+      select: ["id"],
+      where: [
+        {
+          type: "equals",
+          attribute: "emailAddress",
+          value: data.emailAddress,
+        },
+      ],
+    });
+    const dupSearch = await espoFetch(`/Lead?searchParams=${encodeURIComponent(leadSearchParams)}`);
     if (dupSearch.ok) {
       const dupData = (await dupSearch.json()) as { list: { id: string }[] };
       const existing = dupData.list[0];
