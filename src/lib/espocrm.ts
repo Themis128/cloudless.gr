@@ -125,10 +125,14 @@ async function espoListAll<T = unknown>(
  * field (cAccountName) on initial create; an admin can wire it to a real
  * Account record later via Workflow.
  */
-function toEspoContactPayload(c: EspoContact): Record<string, unknown> {
-  // EspoCRM validates phone numbers strictly — strip spaces so formats like
-  // "+30 555 0000" don't trigger a "valid" validation error.
-  const phone = c.phone?.replace(/\s+/g, "") || undefined;
+function toEspoContactPayload(c: EspoContact, includePhone = true): Record<string, unknown> {
+  // EspoCRM validates phone numbers strictly. Only send if it looks like a
+  // real phone number (international or local format with 7+ digits).
+  // Test/fake numbers like "+30 555 0000" fail the "valid" validator and
+  // cause the entire contact creation to 400.
+  const rawPhone = c.phone?.replace(/[\s\-()]/g, "") || "";
+  const digitCount = rawPhone.replace(/\D/g, "").length;
+  const phone = includePhone && digitCount >= 7 ? rawPhone : undefined;
   return {
     emailAddress: c.email,
     firstName: c.firstname ?? "",
@@ -190,10 +194,24 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         return existing.id;
       }
     }
-    const create = await espoFetch("/Contact", {
+    let create = await espoFetch("/Contact", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    if (!create.ok && contact.phone) {
+      // Retry without phone — EspoCRM's phone validator is strict and may
+      // reject numbers that are technically valid but don't match its
+      // expected format. The contact is more important than the phone.
+      const errBody = await create.text().catch(() => "");
+      if (errBody.includes("phoneNumber")) {
+        const retryPayload = toEspoContactPayload(contact, false);
+        if (accountId) Object.assign(retryPayload, { accountId, accountName: undefined });
+        create = await espoFetch("/Contact", {
+          method: "POST",
+          body: JSON.stringify(retryPayload),
+        });
+      }
+    }
     if (!create.ok) {
       const errBody = await create.text().catch(() => "");
       console.error("[EspoCRM] upsertContact create failed:", create.status, errBody.slice(0, 300));
