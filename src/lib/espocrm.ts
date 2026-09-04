@@ -198,20 +198,8 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       method: "POST",
       body: JSON.stringify(payload),
     });
-    if (!create.ok && contact.phone) {
-      // Retry without phone — EspoCRM's phone validator is strict and may
-      // reject numbers that are technically valid but don't match its
-      // expected format. The contact is more important than the phone.
-      const errBody = await create.text().catch(() => "");
-      if (errBody.includes("phoneNumber")) {
-        const retryPayload = toEspoContactPayload(contact, false);
-        if (accountId) Object.assign(retryPayload, { accountId, accountName: undefined });
-        create = await espoFetch("/Contact", {
-          method: "POST",
-          body: JSON.stringify(retryPayload),
-        });
-      }
-    }
+    // Check for 409 conflict FIRST, before any body-consuming logic.
+    // A 409 means the contact already exists — no point retrying with/without phone.
     if (create.status === 409) {
       // Contact already exists (race condition or search missed it).
       // The 409 response body contains the full contact record — extract the ID.
@@ -224,6 +212,32 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         }).catch(() => {});
         void invalidateEspoContactCaches(conflictBody.id);
         return conflictBody.id;
+      }
+    }
+    if (!create.ok && contact.phone) {
+      // Retry without phone — EspoCRM's phone validator is strict and may
+      // reject numbers that are technically valid but don't match its
+      // expected format. The contact is more important than the phone.
+      const errBody = await create.text().catch(() => "");
+      if (errBody.includes("phoneNumber")) {
+        const retryPayload = toEspoContactPayload(contact, false);
+        if (accountId) Object.assign(retryPayload, { accountId, accountName: undefined });
+        create = await espoFetch("/Contact", {
+          method: "POST",
+          body: JSON.stringify(retryPayload),
+        });
+        // The retry may also hit a 409 (race) — handle it here too.
+        if (create.status === 409) {
+          const conflictBody = (await create.json().catch(() => ({}))) as { id?: string };
+          if (conflictBody.id) {
+            await espoFetch(`/Contact/${conflictBody.id}`, {
+              method: "PUT",
+              body: JSON.stringify(payload),
+            }).catch(() => {});
+            void invalidateEspoContactCaches(conflictBody.id);
+            return conflictBody.id;
+          }
+        }
       }
     }
     if (!create.ok) {
