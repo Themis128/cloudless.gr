@@ -14,10 +14,19 @@ jobs:
       - name: Full log dump after test
         run: |
           set -euo pipefail
-          echo "=== Submit test with full name ==="
+          # Use a unique clean email (no + alias) to test the full flow
+          TEST_EMAIL="verify-$(date +%s)@cloudless.gr"
+          echo "=== Submit test with email: $TEST_EMAIL ==="
           curl -sS -X POST https://cloudless.gr/api/contact \
             -H "Content-Type: application/json" \
-            -d '{"name":"Themis Baltzakis","email":"devin-verify+full@cloudless.gr","phone":"+30 555 0000","service":"shop-online","message":"Full name test","attribution":"{\"source\":\"devin-verify\"}"}' \
+            -d "{\"name\":\"Themis Baltzakis\",\"email\":\"$TEST_EMAIL\",\"phone\":\"+30 555 0000\",\"service\":\"shop-online\",\"message\":\"Full name test\",\"attribution\":\"{\\\"source\\\":\\\"devin-verify\\\"}\"}" \
+            -w "\nHTTP %{http_code}\n" --max-time 30 2>&1
+          sleep 3
+          echo ""
+          echo "=== Submit duplicate to test 409 handling ==="
+          curl -sS -X POST https://cloudless.gr/api/contact \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"Themis Baltzakis\",\"email\":\"$TEST_EMAIL\",\"service\":\"shop-online\",\"message\":\"Duplicate test\",\"attribution\":\"{\\\"source\\\":\\\"devin-verify\\\"}\"}" \
             -w "\nHTTP %{http_code}\n" --max-time 30 2>&1
           sleep 3
           echo ""
