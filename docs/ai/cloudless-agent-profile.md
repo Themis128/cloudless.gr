@@ -8,7 +8,7 @@ cloudless.gr is a custom Next.js + SST/Lambda website and e-shop with analytics,
 
 ## Runtime architecture
 
-- AWS Lambda/SST is the primary runtime for the public web app.
+- Cloudflare Workers is the primary runtime for the public web app.
 - Pi k3s is warm-standby for the web app and primary host for self-hosted apps.
 - Pi-hosted apps are not assumed to have AWS replicas.
 - Self-hosted apps live only on Pi:
