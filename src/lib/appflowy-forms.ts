@@ -15,6 +15,9 @@ import {
   getDocument,
   extractDocText,
   isAppFlowyConfigured,
+  getWorkspaceFolder,
+  createPage,
+  appendBlockToPage,
 } from "./appflowy";
 
 const SOURCE_CONTACT = "contact";
@@ -82,9 +85,20 @@ async function getPrimaryWorkspaceId(): Promise<string | null> {
   }
 }
 
+/** Pick the best parent view for a new contact submission page. */
+async function findSubmissionParentView(workspaceId: string): Promise<string | null> {
+  const folder = await getWorkspaceFolder(workspaceId, 2);
+  if (!folder) return null;
+  // Prefer a top-level "General" space, otherwise the first child folder.
+  const child =
+    folder.children?.find((v) => v.name.toLowerCase() === "general") ?? folder.children?.[0];
+  return child?.view_id ?? folder.view_id ?? null;
+}
+
 /**
  * Save a contact form submission to AppFlowy.
- * Creates a Document page with the submission data.
+ * Creates a Document page under the workspace's General space (or first child)
+ * and appends the submission fields as paragraph blocks.
  * Returns the created view_id, or null if AppFlowy is not configured.
  */
 export async function saveSubmission(data: ContactSubmission): Promise<string | null> {
@@ -92,16 +106,47 @@ export async function saveSubmission(data: ContactSubmission): Promise<string | 
 
   const workspaceId = await getPrimaryWorkspaceId();
   if (!workspaceId) return null;
+  if (!data.email?.trim()) return null;
 
-  try {
-    // Write API not available yet — keep the shape ready without logging PII.
-    if (!data.email?.trim()) return null;
-    console.log("[AppFlowy Forms] Would create submission (stub)");
-    return `submission-${Date.now()}`;
-  } catch {
-    console.error("[AppFlowy Forms] Failed to save submission");
+  const parentViewId = await findSubmissionParentView(workspaceId);
+  if (!parentViewId) return null;
+
+  const title = `[Contact] ${data.name} - ${data.email}`;
+  const page = await createPage(workspaceId, {
+    parent_view_id: parentViewId,
+    layout: 0, // Document
+    name: title,
+  });
+  if (!page?.view_id) {
+    console.error("[AppFlowy Forms] createPage returned no view_id");
     return null;
   }
+
+  const lines = [
+    `**Name**: ${data.name}`,
+    `**Email**: ${data.email}`,
+    data.phone ? `**Phone**: ${data.phone}` : "",
+    data.company ? `**Company**: ${data.company}` : "",
+    data.service ? `**Service**: ${data.service}` : "",
+    `**Source**: ${data.source ?? "contact"}`,
+    `**Date**: ${new Date().toISOString()}`,
+    "",
+    `**Message**:`,
+    data.message,
+  ].filter(Boolean);
+
+  const blocks = lines.map((line) => ({
+    type: "paragraph",
+    data: { delta: [{ insert: line }] },
+  }));
+
+  const ok = await appendBlockToPage(workspaceId, page.view_id, blocks);
+  if (!ok) {
+    console.error("[AppFlowy Forms] appendBlockToPage failed for", page.view_id);
+    return null;
+  }
+
+  return page.view_id;
 }
 
 /**
