@@ -238,13 +238,37 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       body: JSON.stringify(payload),
     });
     // Check for 409 conflict FIRST, before any body-consuming logic.
-    // A 409 means the contact already exists — re-search and update it.
+    // EspoCRM's 409 returns a JSON array of duplicate contact records.
     if (create.status === 409) {
-      // Log the 409 body for debugging
-      const conflictBody = await create.text().catch(() => "");
-      console.log("[EspoCRM] 409 conflict body:", conflictBody.slice(0, 500));
-      // EspoCRM's 409 body is empty, so re-search by email to find the
-      // existing contact. Try exact email and base (without + alias).
+      const conflictText = await create.text().catch(() => "");
+      // Parse the 409 body — it's a JSON array of matching contacts
+      let conflictContacts: Array<{ id: string; emailAddress?: string }> = [];
+      try {
+        const parsed = JSON.parse(conflictText);
+        conflictContacts = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Not JSON — fall through to email search
+      }
+      // Try to find a contact in the 409 array that matches our email
+      // Compute base email (without + alias) for matching
+      const plusIdx = contact.email.indexOf("+");
+      const atIdx = contact.email.indexOf("@");
+      const baseEmail =
+        plusIdx > 0 && atIdx > plusIdx
+          ? contact.email.slice(0, plusIdx) + contact.email.slice(atIdx)
+          : contact.email;
+      const match = conflictContacts.find(
+        (c) => c.emailAddress === contact.email || c.emailAddress === baseEmail
+      );
+      if (match) {
+        await espoFetch(`/Contact/${match.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+        void invalidateEspoContactCaches(match.id);
+        return match.id;
+      }
+      // 409 body didn't have our contact — try email search as fallback
       const conflictId = await findContactByEmail(contact.email);
       if (conflictId) {
         await espoFetch(`/Contact/${conflictId}`, {
@@ -254,8 +278,20 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         void invalidateEspoContactCaches(conflictId);
         return conflictId;
       }
+      // The 409 is a "duplicates exist" response — EspoCRM found a duplicate
+      // by name or other field, not email. Use the first contact from the
+      // 409 array and update it with our data (including the new email).
+      if (conflictContacts[0]?.id) {
+        const dup = conflictContacts[0];
+        await espoFetch(`/Contact/${dup.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+        void invalidateEspoContactCaches(dup.id);
+        return dup.id;
+      }
       console.error(
-        "[EspoCRM] upsertContact: 409 conflict but re-search found no match for",
+        "[EspoCRM] upsertContact: 409 conflict but could not resolve contact for",
         contact.email
       );
       return null;
@@ -272,8 +308,27 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           method: "POST",
           body: JSON.stringify(retryPayload),
         });
-        // The retry may also hit a 409 — re-search for the existing contact.
+        // The retry may also hit a 409 — parse the conflict body.
         if (create.status === 409) {
+          const retryConflictText = await create.text().catch(() => "");
+          let retryContacts: Array<{ id: string; emailAddress?: string }> = [];
+          try {
+            const parsed = JSON.parse(retryConflictText);
+            retryContacts = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            // Not JSON — fall through
+          }
+          // Use the first contact from the 409 array
+          if (retryContacts[0]?.id) {
+            const dup = retryContacts[0];
+            await espoFetch(`/Contact/${dup.id}`, {
+              method: "PUT",
+              body: JSON.stringify(payload),
+            }).catch(() => {});
+            void invalidateEspoContactCaches(dup.id);
+            return dup.id;
+          }
+          // Fallback to email search
           const conflictId = await findContactByEmail(contact.email);
           if (conflictId) {
             await espoFetch(`/Contact/${conflictId}`, {
@@ -284,7 +339,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
             return conflictId;
           }
           console.error(
-            "[EspoCRM] upsertContact: 409 after phone retry but re-search found no match for",
+            "[EspoCRM] upsertContact: 409 after phone retry but could not resolve contact for",
             contact.email
           );
           return null;
