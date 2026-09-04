@@ -543,6 +543,106 @@ export async function searchDocuments(workspaceId: string, query: string): Promi
   }
 }
 
+export interface AppFlowyFolderView {
+  view_id: string;
+  parent_view_id?: string;
+  name: string;
+  is_space?: boolean;
+  layout: number;
+  children?: AppFlowyFolderView[];
+  last_edited_time?: string;
+}
+
+export interface CreatePageParams {
+  parent_view_id: string;
+  layout?: number;
+  name?: string;
+  page_data?: unknown;
+  view_id?: string;
+  collab_id?: string;
+}
+
+export interface AppFlowyBlock {
+  type: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Return the workspace folder tree (root + children). The root view is the
+ * workspace root; its children are typically spaces such as "General".
+ */
+export async function getWorkspaceFolder(
+  workspaceId: string,
+  depth = 2
+): Promise<AppFlowyFolderView | null> {
+  try {
+    const r = await callThrowing<{ data: AppFlowyFolderView }>(
+      `/workspace/${workspaceId}/folder?depth=${depth}`,
+      { timeoutMs: 30_000 }
+    );
+    return r.data ?? null;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return null;
+    if (e instanceof AppFlowyApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+}
+
+/**
+ * Create a new page under a parent view. Returns the new page view_id.
+ */
+export async function createPage(
+  workspaceId: string,
+  params: CreatePageParams
+): Promise<{ view_id: string } | null> {
+  try {
+    const r = await callThrowing<{ data: { view_id: string } }>(
+      `/workspace/${workspaceId}/page-view`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          layout: params.layout ?? 0,
+          ...params,
+        }),
+      }
+    );
+    // Invalidate cached views for this workspace.
+    cachedViewsByWorkspace.delete(workspaceId);
+    return r.data ?? null;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return null;
+    console.error("[appflowy] createPage failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Append blocks to the end of a document page.
+ */
+export async function appendBlockToPage(
+  workspaceId: string,
+  viewId: string,
+  blocks: AppFlowyBlock[]
+): Promise<boolean> {
+  try {
+    const r = await appflowyFetch(`/workspace/${workspaceId}/page-view/${viewId}/append-block`, {
+      method: "POST",
+      body: JSON.stringify({ blocks }),
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      console.error("[appflowy] appendBlockToPage failed:", r.status, body.slice(0, 200));
+      return false;
+    }
+    cachedViewsByWorkspace.delete(workspaceId);
+    return true;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return false;
+    console.error("[appflowy] appendBlockToPage failed:", e);
+    return false;
+  }
+}
+
 /** Rename a page/view (used for editorial status via [Draft]/[Review]/[Archived] prefixes). */
 export async function updateViewName(
   workspaceId: string,
