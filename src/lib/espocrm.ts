@@ -177,6 +177,7 @@ async function findContactByEmail(email: string): Promise<string | null> {
     candidates.push(email.slice(0, plusIdx) + email.slice(atIdx));
   }
   for (const candidate of candidates) {
+    // Try searchParams JSON format
     const searchParams = JSON.stringify({
       maxSize: 5,
       select: ["id", "emailAddress"],
@@ -192,6 +193,22 @@ async function findContactByEmail(email: string): Promise<string | null> {
     if (res.ok) {
       const data = (await res.json()) as { list: { id: string }[]; total: number };
       if (data.list?.[0]) return data.list[0].id;
+    }
+    // Fallback: textFilter search (searches across all text fields including email)
+    const textParams = JSON.stringify({
+      maxSize: 5,
+      select: ["id", "emailAddress"],
+      textFilter: candidate,
+    });
+    const textRes = await espoFetch(`/Contact?searchParams=${encodeURIComponent(textParams)}`);
+    if (textRes.ok) {
+      const data = (await textRes.json()) as {
+        list: { id: string; emailAddress?: string }[];
+        total: number;
+      };
+      // Verify the match is by email, not just name
+      const match = data.list?.find((c) => c.emailAddress === candidate);
+      if (match) return match.id;
     }
   }
   return null;
@@ -223,6 +240,9 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
     // Check for 409 conflict FIRST, before any body-consuming logic.
     // A 409 means the contact already exists — re-search and update it.
     if (create.status === 409) {
+      // Log the 409 body for debugging
+      const conflictBody = await create.text().catch(() => "");
+      console.log("[EspoCRM] 409 conflict body:", conflictBody.slice(0, 500));
       // EspoCRM's 409 body is empty, so re-search by email to find the
       // existing contact. Try exact email and base (without + alias).
       const conflictId = await findContactByEmail(contact.email);
