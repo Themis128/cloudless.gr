@@ -199,20 +199,38 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       body: JSON.stringify(payload),
     });
     // Check for 409 conflict FIRST, before any body-consuming logic.
-    // A 409 means the contact already exists — no point retrying with/without phone.
+    // A 409 means the contact already exists — re-search and update it.
     if (create.status === 409) {
-      // Contact already exists (race condition or search missed it).
-      // The 409 response body contains the full contact record — extract the ID.
-      const conflictBody = (await create.json().catch(() => ({}))) as { id?: string };
-      if (conflictBody.id) {
-        // Update the existing contact with the new data.
-        await espoFetch(`/Contact/${conflictBody.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }).catch(() => {});
-        void invalidateEspoContactCaches(conflictBody.id);
-        return conflictBody.id;
+      // EspoCRM's 409 body is often empty, so re-search by email to find
+      // the existing contact ID. The initial search may have missed it due
+      // to eventual consistency or email-plus-alias matching differences.
+      const reSearch = await espoFetch(
+        `/Contact?` +
+          new URLSearchParams({
+            "where[0][type]": "equals",
+            "where[0][attribute]": "emailAddress",
+            "where[0][value]": contact.email,
+            maxSize: "1",
+          }).toString()
+      );
+      if (reSearch.ok) {
+        const data = (await reSearch.json()) as { list: { id: string }[]; total: number };
+        const existing = data.list[0];
+        if (existing) {
+          await espoFetch(`/Contact/${existing.id}`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          }).catch(() => {});
+          void invalidateEspoContactCaches(existing.id);
+          return existing.id;
+        }
       }
+      // 409 but re-search found nothing — log and fall through
+      console.error(
+        "[EspoCRM] upsertContact: 409 conflict but re-search found no match for",
+        contact.email
+      );
+      return null;
     }
     if (!create.ok && contact.phone) {
       // Retry without phone — EspoCRM's phone validator is strict and may
@@ -226,17 +244,34 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           method: "POST",
           body: JSON.stringify(retryPayload),
         });
-        // The retry may also hit a 409 (race) — handle it here too.
+        // The retry may also hit a 409 — re-search for the existing contact.
         if (create.status === 409) {
-          const conflictBody = (await create.json().catch(() => ({}))) as { id?: string };
-          if (conflictBody.id) {
-            await espoFetch(`/Contact/${conflictBody.id}`, {
-              method: "PUT",
-              body: JSON.stringify(payload),
-            }).catch(() => {});
-            void invalidateEspoContactCaches(conflictBody.id);
-            return conflictBody.id;
+          const reSearch = await espoFetch(
+            `/Contact?` +
+              new URLSearchParams({
+                "where[0][type]": "equals",
+                "where[0][attribute]": "emailAddress",
+                "where[0][value]": contact.email,
+                maxSize: "1",
+              }).toString()
+          );
+          if (reSearch.ok) {
+            const data = (await reSearch.json()) as { list: { id: string }[] };
+            const existing = data.list[0];
+            if (existing) {
+              await espoFetch(`/Contact/${existing.id}`, {
+                method: "PUT",
+                body: JSON.stringify(payload),
+              }).catch(() => {});
+              void invalidateEspoContactCaches(existing.id);
+              return existing.id;
+            }
           }
+          console.error(
+            "[EspoCRM] upsertContact: 409 after phone retry but re-search found no match for",
+            contact.email
+          );
+          return null;
         }
       }
     }
