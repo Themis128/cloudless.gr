@@ -212,6 +212,20 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         });
       }
     }
+    if (create.status === 409) {
+      // Contact already exists (race condition or search missed it).
+      // The 409 response body contains the full contact record — extract the ID.
+      const conflictBody = (await create.json().catch(() => ({}))) as { id?: string };
+      if (conflictBody.id) {
+        // Update the existing contact with the new data.
+        await espoFetch(`/Contact/${conflictBody.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+        void invalidateEspoContactCaches(conflictBody.id);
+        return conflictBody.id;
+      }
+    }
     if (!create.ok) {
       const errBody = await create.text().catch(() => "");
       console.error("[EspoCRM] upsertContact create failed:", create.status, errBody.slice(0, 300));
