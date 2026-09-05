@@ -4,6 +4,7 @@ import {
   createCalendarItem,
   updateCalendarItem,
   deleteCalendarItem,
+  invalidateConsultationCache,
 } from "@/lib/content-calendar";
 
 vi.mock("@/lib/integrations", () => ({
@@ -14,8 +15,15 @@ vi.mock("@/lib/integrations", () => ({
   resetIntegrationCacheAsync: vi.fn(),
 }));
 
-// Reset the in-memory store between tests
+const mockGetUpcomingConsultations = vi.fn().mockResolvedValue([]);
+vi.mock("@/lib/google-calendar", () => ({
+  getUpcomingConsultations: (...args: unknown[]) => mockGetUpcomingConsultations(...args),
+}));
+
+// Reset the in-memory store and GCal cache between tests
 async function clearStore() {
+  invalidateConsultationCache();
+  mockGetUpcomingConsultations.mockResolvedValue([]);
   const all = await getCalendarItems();
   for (const item of all) {
     await deleteCalendarItem(item.id);
@@ -166,6 +174,82 @@ describe("content-calendar.ts", () => {
 
     it("returns false for non-existent id", async () => {
       expect(await deleteCalendarItem("cal_ghost")).toBe(false);
+    });
+  });
+
+  // ── Google Calendar merge ────────────────────────────────────────────────────
+
+  describe("GCal consultation merge", () => {
+    it("merges GCal consultations into results", async () => {
+      mockGetUpcomingConsultations.mockResolvedValue([
+        {
+          id: "evt_abc",
+          title: "Cloudless Consultation — Alice",
+          start: "2026-09-10T09:00:00+03:00",
+          end: "2026-09-10T09:30:00+03:00",
+          meetLink: "https://meet.google.com/abc-defg-hij",
+          status: "upcoming",
+        },
+      ]);
+      invalidateConsultationCache();
+      const items = await getCalendarItems();
+      const gcalItem = items.find((i) => i.id === "gcal_evt_abc");
+      expect(gcalItem).toBeDefined();
+      expect(gcalItem?.type).toBe("consultation");
+      expect(gcalItem?.platform).toBe("google_calendar");
+      expect(gcalItem?.status).toBe("scheduled");
+      expect(gcalItem?.url).toBe("https://meet.google.com/abc-defg-hij");
+    });
+
+    it("uses cached GCal results on repeated calls", async () => {
+      mockGetUpcomingConsultations.mockResolvedValue([]);
+      invalidateConsultationCache();
+      await getCalendarItems(); // populates cache
+      mockGetUpcomingConsultations.mockResolvedValue([
+        {
+          id: "evt_new",
+          title: "Cloudless Consultation — Bob",
+          start: "2026-09-11T10:00:00+03:00",
+          end: "2026-09-11T10:30:00+03:00",
+          status: "upcoming",
+        },
+      ]);
+      // second call should still use cache — new event not visible yet
+      const items = await getCalendarItems();
+      expect(items.find((i) => i.id === "gcal_evt_new")).toBeUndefined();
+    });
+
+    it("invalidateConsultationCache forces re-fetch", async () => {
+      mockGetUpcomingConsultations.mockResolvedValue([]);
+      invalidateConsultationCache();
+      await getCalendarItems(); // populates cache
+      mockGetUpcomingConsultations.mockResolvedValue([
+        {
+          id: "evt_fresh",
+          title: "Cloudless Consultation — Carol",
+          start: "2026-09-12T11:00:00+03:00",
+          end: "2026-09-12T11:30:00+03:00",
+          status: "upcoming",
+        },
+      ]);
+      invalidateConsultationCache(); // bust the cache
+      const items = await getCalendarItems();
+      expect(items.find((i) => i.id === "gcal_evt_fresh")).toBeDefined();
+    });
+
+    it("returns empty GCal items when GCal throws", async () => {
+      mockGetUpcomingConsultations.mockRejectedValue(new Error("GCal unavailable"));
+      invalidateConsultationCache();
+      await createCalendarItem({
+        title: "Store item",
+        type: "social_post",
+        platform: "linkedin",
+        date: "2026-09-10",
+        status: "draft",
+      });
+      const items = await getCalendarItems();
+      expect(items).toHaveLength(1);
+      expect(items[0].title).toBe("Store item");
     });
   });
 });
