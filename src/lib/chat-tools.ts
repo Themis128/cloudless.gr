@@ -12,6 +12,7 @@
 
 import { getProducts } from "@/lib/store-products";
 import { getAvailableSlots, bookConsultation } from "@/lib/google-calendar";
+import { invalidateConsultationCache } from "@/lib/content-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
@@ -230,6 +231,8 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   if (!result) {
     return `That slot was just taken. Call check_calendar_availability again to get the latest open slots and ask the visitor to pick a new row.`;
   }
+
+  invalidateConsultationCache();
 
   const slotLabel = formatAthensSlot(start, end);
   const meetLink = result.meetLink;

@@ -1,4 +1,5 @@
 import type { CalendarItem, CalendarItemType, CalendarPlatform } from "./calendar-shared";
+import { getUpcomingConsultations } from "./google-calendar";
 
 export type { CalendarItem, CalendarItemType, CalendarPlatform };
 export { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "./calendar-shared";
@@ -6,6 +7,38 @@ export { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "./calendar-shared";
 // In-process store. Calendar no longer falls through to Notion.
 // Resets on every cold start; not durable. Postiz is the social scheduler.
 let store: CalendarItem[] = [];
+
+// GCal consultation cache — refreshed at most every 5 minutes.
+const GCAL_CACHE_TTL_MS = 5 * 60 * 1000;
+let gcalCache: { items: CalendarItem[]; expiry: number } | null = null;
+
+/** Force the next readAllItems call to re-fetch from Google Calendar. */
+export function invalidateConsultationCache(): void {
+  gcalCache = null;
+}
+
+async function fetchGCalConsultations(): Promise<CalendarItem[]> {
+  const now = Date.now();
+  if (gcalCache && now < gcalCache.expiry) return gcalCache.items;
+  try {
+    const consultations = await getUpcomingConsultations();
+    const items: CalendarItem[] = consultations.map((c) => ({
+      id: `gcal_${c.id}`,
+      title: c.title,
+      type: "consultation" as CalendarItemType,
+      platform: "google_calendar" as CalendarPlatform,
+      date: c.start,
+      endDate: c.end,
+      status: c.status === "upcoming" ? "scheduled" : "published",
+      url: c.meetLink,
+    }));
+    gcalCache = { items, expiry: now + GCAL_CACHE_TTL_MS };
+    return items;
+  } catch {
+    // Keep stale cache on error rather than returning nothing.
+    return gcalCache?.items ?? [];
+  }
+}
 
 function newCalendarItemId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -31,8 +64,10 @@ export async function getCalendarItems(
 }
 
 async function readAllItems(from?: string, to?: string): Promise<CalendarItem[]> {
-  if (!from && !to) return store;
-  return store.filter((item) => {
+  const gcalItems = await fetchGCalConsultations();
+  const all = [...store, ...gcalItems];
+  if (!from && !to) return all;
+  return all.filter((item) => {
     if (from && item.date < from) return false;
     if (to && item.date > to) return false;
     return true;

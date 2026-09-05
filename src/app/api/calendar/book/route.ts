@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bookConsultation } from "@/lib/google-calendar";
+import { invalidateConsultationCache } from "@/lib/content-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackBookingNotify } from "@/lib/slack-notify";
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
     if (!result) {
       return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
     }
+
+    invalidateConsultationCache();
 
     slackBookingNotify({ name, email, start, notes }).catch(() => {});
 
