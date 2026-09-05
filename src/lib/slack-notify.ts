@@ -253,9 +253,7 @@ const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
 const contactsClient = new SlackClient({
-  // Prefer explicit env/SSM channel; default to #general (the channel the
-  // app was reinstalled into) if no dedicated #notifications channel exists.
-  channel: process.env.SLACK_CONTACTS_CHANNEL || "#general",
+  channel: process.env.SLACK_CONTACTS_CHANNEL || "#notifications",
 });
 const subscribersClient = new SlackClient({
   // Live channel is #newsletter (C0BBDKY6Q9E). Prefer env/SSM channel id when set.
