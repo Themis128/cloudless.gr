@@ -15,9 +15,9 @@ on:
         required: true
         type: string
 
-# One review per PR branch at a time; cancel stale runs on new push
+# One review per PR at a time; cancel stale runs on new push
 concurrency:
-  group: pr-review-${{ github.event.pull_request.number }}
+  group: pr-review-${{ inputs.pr_number || github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -69,18 +69,25 @@ jobs:
         fi
 
     - name: Build diff (src/ + root configs vs base branch)
+      id: diff
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git diff "origin/${{ github.base_ref }}...HEAD" \
+        BASE_REF="${{ github.base_ref }}"
+        if [ -z "$BASE_REF" ]; then
+          BASE_REF=$(gh pr view "${{ inputs.pr_number }}" --json baseRefName -q .baseRefName)
+        fi
+        git fetch origin "$BASE_REF" --depth=50
+        git diff "origin/${BASE_REF}...HEAD" \
           -- 'src/**' 'sentry.*.config.ts' 'instrumentation.ts' \
           > pr.diff
         LINES=$(wc -l < pr.diff)
         echo "Diff: $LINES lines"
         echo "diff_lines=$LINES" >> "$GITHUB_OUTPUT"
-      id: diff
 
     - name: Run Claude PR review
       env:
-        PR_NUMBER: ${{ github.event.number }}
+        PR_NUMBER: ${{ inputs.pr_number || github.event.number }}
         PR_TITLE: ${{ github.event.pull_request.title }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository }}
@@ -90,13 +97,14 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        PR="${{ inputs.pr_number || github.event.number }}"
         if [ ! -s review.md ]; then
           echo "No review output — skipping comment."
           exit 0
         fi
         # Update existing bot comment if present, otherwise create new
-        gh pr comment "${{ github.event.number }}" \
+        gh pr comment "$PR" \
           --body-file review.md \
           --edit-last 2>/dev/null || \
-        gh pr comment "${{ github.event.number }}" \
+        gh pr comment "$PR" \
           --body-file review.md
