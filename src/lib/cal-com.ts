@@ -13,7 +13,7 @@ import { getConfig } from "@/lib/ssm-config";
 import { APP_TIMEZONE } from "@/lib/timezone";
 
 const CAL_API = "https://api.cal.com/v2";
-const CAL_API_VERSION = "2024-06-14";
+const CAL_API_VERSION = "2024-08-13";
 const DEFAULT_EVENT_TYPE_ID = 4923747;
 const CAL_TIMEOUT_MS = 10_000;
 const DEFAULT_DAYS_AHEAD = 7;
@@ -148,8 +148,9 @@ export async function bookConsultation(data: {
           name: data.name,
           email: data.email,
           timeZone: APP_TIMEZONE,
-          language: "en",
+          language: "el",
         },
+        metadata: {},
         bookingFieldsResponses: data.notes ? { notes: data.notes } : undefined,
       }),
     });
