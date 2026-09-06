@@ -158,6 +158,8 @@ export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
 }
 
 let cachedAsync: IntegrationConfig | null = null;
+let cachedAsyncAt = 0;
+const ASYNC_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Async version of getIntegrations() — reads from process.env first, then
@@ -167,24 +169,12 @@ let cachedAsync: IntegrationConfig | null = null;
  * The sync getIntegrations() is only suitable for build-time / edge contexts.
  */
 export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
-  if (cachedAsync) return cachedAsync;
+  if (cachedAsync && Date.now() - cachedAsyncAt < ASYNC_CACHE_TTL_MS) return cachedAsync;
 
   // Start with env-based values
   const envCfg = getIntegrations();
 
-  // If all critical keys are already present in env, skip D1 round-trip
-  const criticalKeys: (keyof IntegrationConfig)[] = [
-    "NOTION_API_KEY",
-    "STRIPE_SECRET_KEY",
-    "SENTRY_AUTH_TOKEN",
-  ];
-  const allPresent = criticalKeys.every((k) => Boolean(envCfg[k]));
-  if (allPresent) {
-    cachedAsync = envCfg;
-    return cachedAsync;
-  }
-
-  // At least one critical key is missing — pull from D1 app_config
+  // Pull from D1 app_config to fill any keys missing from env
   try {
     const { getConfig } = await import("@/lib/ssm-config");
     const d1cfg = await getConfig();
@@ -266,9 +256,11 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       POSTIZ_API_KEY: envCfg.POSTIZ_API_KEY || d1cfg.POSTIZ_API_KEY || undefined,
       CAL_API_KEY: envCfg.CAL_API_KEY || d1cfg.CAL_API_KEY || undefined,
     };
+    cachedAsyncAt = Date.now();
   } catch (err) {
     console.warn("[Integrations] D1 config fallback failed, using env-only config:", err);
     cachedAsync = envCfg;
+    cachedAsyncAt = Date.now();
   }
 
   return cachedAsync!;
@@ -333,6 +325,7 @@ export async function isConfiguredAsync(...keys: (keyof IntegrationConfig)[]): P
 /** Reset the async integration cache — useful in tests */
 export function resetIntegrationCacheAsync(): void {
   cachedAsync = null;
+  cachedAsyncAt = 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -428,6 +421,7 @@ export function resetIntegrationCache(): void {
   cached = null;
   cachedSlack = null;
   cachedAsync = null;
+  cachedAsyncAt = 0;
   cachedSlackAsync = null;
 }
 
