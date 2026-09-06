@@ -1,5 +1,5 @@
 import type { CalendarItem, CalendarItemType, CalendarPlatform } from "./calendar-shared";
-import { getUpcomingConsultations } from "./google-calendar";
+import { getUpcomingConsultations } from "./cal-com";
 
 export type { CalendarItem, CalendarItemType, CalendarPlatform };
 export { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "./calendar-shared";

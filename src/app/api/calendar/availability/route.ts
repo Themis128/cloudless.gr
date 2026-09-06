@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAvailableSlots } from "@/lib/google-calendar";
+import { getAvailableSlots } from "@/lib/cal-com";
 import { isAgentBookConfigured } from "@/lib/calendar-checks";
 
 export async function GET(request: Request) {

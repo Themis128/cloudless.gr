@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { bookConsultation } from "@/lib/google-calendar";
+import { bookConsultation } from "@/lib/cal-com";
 import { invalidateConsultationCache } from "@/lib/content-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getUpcomingConsultations } from "@/lib/google-calendar";
+import { getUpcomingConsultations } from "@/lib/cal-com";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {

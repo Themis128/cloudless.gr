@@ -130,6 +130,8 @@ export interface AppConfig {
   // n8n workflow IDs
   N8N_WORKFLOW_LEAD_ENRICH_ID: string;
   N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: string;
+  // Cal.com scheduling
+  CAL_API_KEY: string;
 }
 
 // Import D1 configuration functions
@@ -252,6 +254,7 @@ function buildConfigFromEnv(): AppConfig {
     N8N_API_KEY: process.env.N8N_API_KEY || "",
     N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
     N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: process.env.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID || "",
+    CAL_API_KEY: process.env.CAL_API_KEY || "",
   };
 }
 

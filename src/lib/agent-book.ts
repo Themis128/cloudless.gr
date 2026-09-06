@@ -14,7 +14,7 @@
  *   - two-phase (propose → confirm) so the model can't fire the booking solo
  *   - tighter system prompt scoped to scheduling only
  */
-import { getAvailableSlots } from "@/lib/google-calendar";
+import { getAvailableSlots } from "@/lib/cal-com";
 import { isConfiguredAsync } from "@/lib/integrations";
 import {
   buildWorkersAiToolProtocol,
@@ -148,7 +148,7 @@ export type ProposeResult =
  * Workers AI credentials are checked at propose time (fail closed).
  */
 export async function isAgentBookConfigured(): Promise<boolean> {
-  return isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY");
+  return isConfiguredAsync("CAL_API_KEY");
 }
 
 /**

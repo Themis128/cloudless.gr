@@ -17,7 +17,7 @@ import { requireAuth } from "@/lib/api-auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { isAgentBookConfigured, proposeBookingSlot } from "@/lib/agent-book";
 import { MAX_DAYS_AHEAD, formatAthensSlot } from "@/lib/booking-slots";
-import { bookConsultation, getAvailableSlots } from "@/lib/google-calendar";
+import { bookConsultation, getAvailableSlots } from "@/lib/cal-com";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendBookingConfirmation } from "@/lib/email";

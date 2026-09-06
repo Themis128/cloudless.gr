@@ -20,7 +20,7 @@ import {
 } from "@/lib/workers-ai-client";
 import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
 import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
-import { getAvailableSlots } from "@/lib/google-calendar";
+import { getAvailableSlots } from "@/lib/cal-com";
 import { DEFAULT_DAYS_AHEAD } from "@/lib/booking-slots";
 
 const MAX_TOKENS = 600;

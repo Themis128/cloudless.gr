@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Dynamic import to avoid loading google-calendar if not needed
-    const { getConsultationsByEmail } = await import("@/lib/google-calendar");
+    // Dynamic import so cal-com is not loaded unless needed
+    const { getConsultationsByEmail } = await import("@/lib/cal-com");
     const consultations = await getConsultationsByEmail(email);
     return NextResponse.json({ consultations, configured: true });
   } catch (err) {

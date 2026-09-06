@@ -78,6 +78,8 @@ export interface IntegrationConfig {
   // Postiz (social scheduler) API key — used by lib/postiz.ts + admin/postiz console
   POSTIZ_API_URL?: string;
   POSTIZ_API_KEY?: string;
+  // Cal.com scheduling (replaces Google Calendar for booking)
+  CAL_API_KEY?: string;
 }
 
 let cached: IntegrationConfig | null = null;
@@ -143,6 +145,7 @@ export function getIntegrations(): IntegrationConfig {
     N8N_API_KEY: process.env.N8N_API_KEY,
     POSTIZ_API_URL: process.env.POSTIZ_API_URL,
     POSTIZ_API_KEY: process.env.POSTIZ_API_KEY,
+    CAL_API_KEY: process.env.CAL_API_KEY,
   };
 
   return cached;
@@ -257,6 +260,7 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       N8N_API_KEY: envCfg.N8N_API_KEY || ssm.N8N_API_KEY || undefined,
       POSTIZ_API_URL: envCfg.POSTIZ_API_URL || ssm.POSTIZ_API_URL || undefined,
       POSTIZ_API_KEY: envCfg.POSTIZ_API_KEY || ssm.POSTIZ_API_KEY || undefined,
+      CAL_API_KEY: envCfg.CAL_API_KEY || ssm.CAL_API_KEY || undefined,
     };
   } catch (err) {
     console.warn("[Integrations] SSM fallback failed, using env-only config:", err);

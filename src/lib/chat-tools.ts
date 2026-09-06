@@ -11,7 +11,7 @@
  */
 
 import { getProducts } from "@/lib/store-products";
-import { getAvailableSlots, bookConsultation } from "@/lib/google-calendar";
+import { getAvailableSlots, bookConsultation } from "@/lib/cal-com";
 import { invalidateConsultationCache } from "@/lib/content-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
@@ -161,7 +161,7 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
 }
 
 async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<string> {
-  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
+  if (!(await isConfiguredAsync("CAL_API_KEY"))) {
     return "Calendar booking is not yet wired up. Suggest the visitor use the Contact page to request a time.";
   }
 
@@ -192,7 +192,7 @@ async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<
 }
 
 async function runBookSlot(input: BookSlotInput): Promise<string> {
-  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
+  if (!(await isConfiguredAsync("CAL_API_KEY"))) {
     return "Booking is not yet configured. Suggest the visitor use the Contact page to request a time.";
   }
 

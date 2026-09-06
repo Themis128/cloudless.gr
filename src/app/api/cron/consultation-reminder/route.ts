@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
-import { getUpcomingConsultations } from "@/lib/google-calendar";
+import { getUpcomingConsultations } from "@/lib/cal-com";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { SlackClient } from "@/lib/slack-notify";
 import { notifyTeam } from "@/lib/email";
