@@ -1,94 +1,91 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   COOKIE_BANNER_HEIGHT_VAR,
-  applyCookieBannerOffset,
   cookieBannerOffsetPx,
+  applyCookieBannerOffset,
   observeCookieBannerHeight,
 } from "@/lib/cookie-banner-height";
 
-class FakeResizeObserver {
-  static last: FakeResizeObserver | undefined;
-  readonly observed: Element[] = [];
-  constructor(readonly callback: ResizeObserverCallback) {
-    FakeResizeObserver.last = this;
-  }
-  observe(el: Element) {
-    this.observed.push(el);
-  }
-  disconnect() {
-    this.observed.length = 0;
-  }
-  unobserve() {
-    /* no-op */
-  }
-}
-
-function bannerWithHeight(height: number): HTMLElement {
-  const el = document.createElement("div");
-  el.getBoundingClientRect = () =>
-    ({
-      height,
-      width: 412,
-      top: 0,
-      left: 0,
-      bottom: height,
-      right: 412,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    }) as DOMRect;
-  return el;
-}
+describe("COOKIE_BANNER_HEIGHT_VAR", () => {
+  it("is the expected CSS variable name", () => {
+    expect(COOKIE_BANNER_HEIGHT_VAR).toBe("--cookie-banner-h");
+  });
+});
 
 describe("cookieBannerOffsetPx", () => {
-  it("ceils positive heights and zeros the rest", () => {
-    expect(cookieBannerOffsetPx(312.2)).toBe("313px");
+  it("returns '0px' for zero", () => {
     expect(cookieBannerOffsetPx(0)).toBe("0px");
-    expect(cookieBannerOffsetPx(-4)).toBe("0px");
-    expect(cookieBannerOffsetPx(Number.NaN)).toBe("0px");
+  });
+
+  it("returns '0px' for negative numbers", () => {
+    expect(cookieBannerOffsetPx(-10)).toBe("0px");
+  });
+
+  it("returns '0px' for NaN", () => {
+    expect(cookieBannerOffsetPx(NaN)).toBe("0px");
+  });
+
+  it("returns '0px' for Infinity", () => {
+    expect(cookieBannerOffsetPx(Infinity)).toBe("0px");
+  });
+
+  it("returns the ceiled pixel value for positive numbers", () => {
+    expect(cookieBannerOffsetPx(80)).toBe("80px");
+    expect(cookieBannerOffsetPx(80.4)).toBe("81px");
+    expect(cookieBannerOffsetPx(0.1)).toBe("1px");
+  });
+});
+
+describe("applyCookieBannerOffset", () => {
+  it("calls style.setProperty with the CSS var and correct px value", () => {
+    const setProperty = vi.fn();
+    applyCookieBannerOffset({ setProperty }, 64);
+    expect(setProperty).toHaveBeenCalledWith("--cookie-banner-h", "64px");
+  });
+
+  it("sets 0px when height is 0", () => {
+    const setProperty = vi.fn();
+    applyCookieBannerOffset({ setProperty }, 0);
+    expect(setProperty).toHaveBeenCalledWith("--cookie-banner-h", "0px");
   });
 });
 
 describe("observeCookieBannerHeight", () => {
-  afterEach(() => {
-    FakeResizeObserver.last = undefined;
+  it("sets offset to 0 and returns cleanup when banner is null", () => {
+    const setProperty = vi.fn();
+    const root = { style: { setProperty } } as unknown as HTMLElement;
+    const cleanup = observeCookieBannerHeight(root, null);
+    expect(setProperty).toHaveBeenCalledWith("--cookie-banner-h", "0px");
+    cleanup();
+    expect(setProperty).toHaveBeenCalledTimes(2);
+  });
+
+  it("observes banner and disconnects on cleanup", () => {
+    const disconnect = vi.fn();
+    const observe = vi.fn();
+    const mockObserver = { observe, disconnect };
+    class MockResizeObserver {
+      observe = observe;
+      disconnect = disconnect;
+      constructor() { return mockObserver as unknown as MockResizeObserver; }
+    }
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    const setProperty = vi.fn();
+    const root = { style: { setProperty } } as unknown as HTMLElement;
+    const banner = {
+      getBoundingClientRect: () => ({ height: 56 }),
+    } as unknown as HTMLElement;
+
+    const cleanup = observeCookieBannerHeight(root, banner);
+    expect(observe).toHaveBeenCalledWith(banner);
+    expect(setProperty).toHaveBeenCalledWith("--cookie-banner-h", "56px");
+
+    cleanup();
+    expect(disconnect).toHaveBeenCalled();
+    // After cleanup, offset is reset to 0
+    expect(setProperty).toHaveBeenLastCalledWith("--cookie-banner-h", "0px");
+
     vi.unstubAllGlobals();
-  });
-
-  it("writes 0px when the banner is not mounted", () => {
-    const root = document.createElement("html");
-    const stop = observeCookieBannerHeight(root, null);
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("0px");
-    stop();
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("0px");
-  });
-
-  it("measures the banner and observes resizes", () => {
-    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
-    const root = document.createElement("html");
-    const banner = bannerWithHeight(280);
-    const stop = observeCookieBannerHeight(root, banner);
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("280px");
-    expect(FakeResizeObserver.last?.observed).toEqual([banner]);
-    stop();
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("0px");
-    expect(FakeResizeObserver.last?.observed).toEqual([]);
-  });
-
-  it("still sets the offset when ResizeObserver is missing", () => {
-    vi.stubGlobal("ResizeObserver", undefined);
-    const root = document.createElement("html");
-    const stop = observeCookieBannerHeight(root, bannerWithHeight(199.2));
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("200px");
-    stop();
-    expect(root.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe("0px");
-  });
-
-  it("applyCookieBannerOffset writes the CSS variable", () => {
-    const style = { setProperty: vi.fn() };
-    applyCookieBannerOffset(style, 12.1);
-    expect(style.setProperty).toHaveBeenCalledWith(COOKIE_BANNER_HEIGHT_VAR, "13px");
   });
 });

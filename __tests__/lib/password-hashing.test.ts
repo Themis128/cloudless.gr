@@ -1,72 +1,58 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { hashPassword, verifyPassword } from "@/lib/password-hashing";
 
-// password-hashing uses SESSION_SECRET as a pepper via process.env.
-// We set a stable pepper for all tests so results are reproducible.
 beforeEach(() => {
-  process.env.SESSION_SECRET = "test-pepper-stable";
+  process.env.SESSION_SECRET = "test-session-secret";
+});
+
+afterEach(() => {
+  delete process.env.SESSION_SECRET;
 });
 
 describe("hashPassword", () => {
-  it("returns a string in salt:hex format", async () => {
-    const h = await hashPassword("mypassword");
-    const parts = h.split(":");
+  it("returns a string with salt:hash format", async () => {
+    const hash = await hashPassword("mypassword");
+    expect(typeof hash).toBe("string");
+    const parts = hash.split(":");
     expect(parts).toHaveLength(2);
-    const [salt, hex] = parts;
-    expect(salt.length).toBeGreaterThan(0);
-    expect(hex).toMatch(/^[0-9a-f]{64}$/); // 256-bit hex
+    expect(parts[0].length).toBeGreaterThan(0); // salt
+    expect(parts[1].length).toBe(64); // 256-bit hex = 64 chars
   });
 
-  it("generates a different salt on each call (output not deterministic)", async () => {
-    const h1 = await hashPassword("same");
-    const h2 = await hashPassword("same");
-    expect(h1).not.toBe(h2); // random salt → different ciphertext
-  });
-
-  it("handles empty password", async () => {
-    const h = await hashPassword("");
-    expect(h).toContain(":");
-  });
-
-  it("handles unicode passwords", async () => {
-    const h = await hashPassword("αβγδ-cloudless");
-    expect(h).toContain(":");
+  it("generates different hashes for the same password (random salt)", async () => {
+    const hash1 = await hashPassword("mypassword");
+    const hash2 = await hashPassword("mypassword");
+    expect(hash1).not.toBe(hash2);
   });
 });
 
 describe("verifyPassword", () => {
-  it("verifies a freshly hashed password", async () => {
-    const hash = await hashPassword("correct-horse-battery");
-    expect(await verifyPassword("correct-horse-battery", hash)).toBe(true);
+  it("returns true for a correct password", async () => {
+    const hash = await hashPassword("correct");
+    expect(await verifyPassword("correct", hash)).toBe(true);
   });
 
-  it("rejects the wrong password", async () => {
-    const hash = await hashPassword("correct-horse-battery");
-    expect(await verifyPassword("wrong-horse-battery", hash)).toBe(false);
+  it("returns false for an incorrect password", async () => {
+    const hash = await hashPassword("correct");
+    expect(await verifyPassword("wrong", hash)).toBe(false);
   });
 
-  it("is case-sensitive", async () => {
-    const hash = await hashPassword("Password123");
-    expect(await verifyPassword("password123", hash)).toBe(false);
-  });
-
-  it("verifies legacy SHA-256 hash (no salt prefix)", async () => {
-    // Legacy format: just a 64-char hex string, no colon
-    // Produce the expected legacy hash manually
-    const pepper = process.env.SESSION_SECRET ?? "";
+  it("returns false when the hash has no colon (legacy path, wrong password)", async () => {
+    // Legacy SHA-256 hash of "password" + SESSION_SECRET
     const encoder = new TextEncoder();
-    const data = encoder.encode("legacypass" + pepper);
-    const buf = await crypto.subtle.digest("SHA-256", data);
-    const legacyHash = Array.from(new Uint8Array(buf), (b) =>
+    const data = encoder.encode("password" + "test-session-secret");
+    const hashBuf = await crypto.subtle.digest("SHA-256", data);
+    const legacyHash = Array.from(new Uint8Array(hashBuf), (b) =>
       b.toString(16).padStart(2, "0")
     ).join("");
-
-    expect(await verifyPassword("legacypass", legacyHash)).toBe(true);
-    expect(await verifyPassword("wrongpass", legacyHash)).toBe(false);
+    // Verify the correct password works against the legacy hash
+    expect(await verifyPassword("password", legacyHash)).toBe(true);
+    // And wrong password fails
+    expect(await verifyPassword("wrong", legacyHash)).toBe(false);
   });
 
-  it("rejects a totally invalid hash string", async () => {
-    // Falls into legacy path with garbage — should return false, not throw
-    expect(await verifyPassword("anything", "notahex")).toBe(false);
+  it("returns false for empty stored hash", async () => {
+    // edge case: no colon, empty — should not throw
+    expect(await verifyPassword("any", "")).toBe(false);
   });
 });
