@@ -7,7 +7,7 @@
  * other.
  *
  * Reads NEWSLETTER_SLACK_SIGNING_SECRET / NEWSLETTER_SLACK_BOT_TOKEN from
- * env first, falls back to SSM (/cloudless/production/NEWSLETTER_SLACK_*).
+ * env first, falls back to Cloudflare D1 app_config.
  * Cached after first read; tests can call resetNewsletterSlackConfigCache().
  */
 
@@ -35,13 +35,13 @@ export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackCo
   if (!token || !signingSecret || !channel) {
     try {
       const { getConfig } = await import("@/lib/ssm-config");
-      const ssm = await getConfig();
-      if (!token) token = ssm.NEWSLETTER_SLACK_BOT_TOKEN ?? "";
-      if (!signingSecret) signingSecret = ssm.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
-      if (!channel) channel = ssm.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
+      const d1cfg = await getConfig();
+      if (!token) token = d1cfg.NEWSLETTER_SLACK_BOT_TOKEN ?? "";
+      if (!signingSecret) signingSecret = d1cfg.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
+      if (!channel) channel = d1cfg.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
     } catch (err) {
       if (!isProductionBuildPhase()) {
-        console.warn("[NewsletterSlack] SSM fallback failed:", err);
+        console.warn("[NewsletterSlack] D1 config fallback failed:", err);
       }
     }
   }

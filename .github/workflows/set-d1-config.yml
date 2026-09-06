@@ -1,0 +1,56 @@
+name: Set D1 config value
+
+# One-shot workflow — run manually to write any key/value to the Cloudflare D1
+# app_config table (user-auth-db). The Pi pod reads app_config at runtime via
+# getConfig() → getAuthDbFromEnv(), so changes take effect within 5 minutes
+# (cache TTL) without a pod restart.
+#
+# Usage: Actions → "Set D1 config value" → Run workflow → fill key + value.
+#
+# Common keys: CAL_API_KEY, NOTION_API_KEY, STRIPE_SECRET_KEY, ANTHROPIC_API_KEY
+# See src/lib/ssm-config.ts AppConfig for the full list.
+#
+# Requires GitHub Secrets: CLOUDFLARE_API_TOKEN (with D1:Edit permission),
+# CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_key:
+        description: "Config key (e.g. CAL_API_KEY)"
+        required: true
+        type: string
+      config_value:
+        description: "Config value — treated as a secret, never logged"
+        required: true
+        type: string
+
+jobs:
+  set-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write key to D1 app_config
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CONFIG_KEY: ${{ inputs.config_key }}
+          CONFIG_VALUE: ${{ inputs.config_value }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg sql "INSERT OR REPLACE INTO app_config (key, value, description, updated_at) VALUES (?, ?, 'set via CI', strftime('%s', 'now'))" \
+            --arg key "$CONFIG_KEY" \
+            --arg val "$CONFIG_VALUE" \
+            '{"sql": $sql, "params": [$key, $val]}')
+
+          RESULT=$(curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/7ca74513-23c3-412a-b9ca-b0c55835973d/query" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          echo "$RESULT" | jq -e '.success == true' > /dev/null || {
+            echo "❌ D1 write failed:"
+            echo "$RESULT" | jq .
+            exit 1
+          }
+          echo "✅ ${CONFIG_KEY} written to D1 app_config (user-auth-db)"

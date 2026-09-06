@@ -1,10 +1,10 @@
 /**
- * Optional integration API keys — loaded from env vars with SSM fallback.
+ * Optional integration API keys — loaded from env vars with Cloudflare D1 fallback.
  * The app works without any of these; each integration degrades gracefully.
  *
- * Use getIntegrations() (sync) in contexts where SSM is unavailable (e.g. build time).
- * Use getIntegrationsAsync() (async) in API routes — it merges SSM values for any
- * keys that are missing from process.env, which is the normal production case.
+ * Use getIntegrations() (sync) at build time or in edge contexts without D1 access.
+ * Use getIntegrationsAsync() (async) in API routes — it merges D1 app_config values
+ * for any keys missing from process.env, which is the normal production case.
  */
 
 const DEFAULT_SENTRY_ORG = "baltzakisthemiscom";
@@ -161,11 +161,10 @@ let cachedAsync: IntegrationConfig | null = null;
 
 /**
  * Async version of getIntegrations() — reads from process.env first, then
- * fills any missing values from SSM Parameter Store (/cloudless/production/*).
+ * fills any missing values from Cloudflare D1 app_config table.
  *
- * Use this in API route handlers where SSM is available (Lambda / server).
- * The sync getIntegrations() is only suitable for build-time / edge contexts
- * where SSM cannot be called.
+ * Use this in API route handlers where D1 is accessible.
+ * The sync getIntegrations() is only suitable for build-time / edge contexts.
  */
 export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
   if (cachedAsync) return cachedAsync;
@@ -173,7 +172,7 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
   // Start with env-based values
   const envCfg = getIntegrations();
 
-  // If all critical keys are already present in env, skip SSM round-trip
+  // If all critical keys are already present in env, skip D1 round-trip
   const criticalKeys: (keyof IntegrationConfig)[] = [
     "NOTION_API_KEY",
     "STRIPE_SECRET_KEY",
@@ -185,85 +184,90 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
     return cachedAsync;
   }
 
-  // At least one critical key is missing — pull from SSM
+  // At least one critical key is missing — pull from D1 app_config
   try {
     const { getConfig } = await import("@/lib/ssm-config");
-    const ssm = await getConfig();
+    const d1cfg = await getConfig();
 
     cachedAsync = {
-      SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
-      SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
-      SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
-      NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
-      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
+      SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || d1cfg.SLACK_WEBHOOK_URL || undefined,
+      SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || d1cfg.SLACK_BOT_TOKEN || undefined,
+      SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || d1cfg.SLACK_SIGNING_SECRET || undefined,
+      NOTION_API_KEY: envCfg.NOTION_API_KEY || d1cfg.NOTION_API_KEY || undefined,
+      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || d1cfg.NOTION_BLOG_DB_ID || undefined,
       NOTION_SUBMISSIONS_DB_ID:
-        envCfg.NOTION_SUBMISSIONS_DB_ID || ssm.NOTION_SUBMISSIONS_DB_ID || undefined,
-      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
-      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
-      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
-      NOTION_CALENDAR_DB_ID: envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
+        envCfg.NOTION_SUBMISSIONS_DB_ID || d1cfg.NOTION_SUBMISSIONS_DB_ID || undefined,
+      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || d1cfg.NOTION_DOCS_DB_ID || undefined,
+      NOTION_PROJECTS_DB_ID:
+        envCfg.NOTION_PROJECTS_DB_ID || d1cfg.NOTION_PROJECTS_DB_ID || undefined,
+      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || d1cfg.NOTION_TASKS_DB_ID || undefined,
+      NOTION_CALENDAR_DB_ID:
+        envCfg.NOTION_CALENDAR_DB_ID || d1cfg.NOTION_CALENDAR_DB_ID || undefined,
       NOTION_TESTIMONIALS_DB_ID:
-        envCfg.NOTION_TESTIMONIALS_DB_ID || ssm.NOTION_TESTIMONIALS_DB_ID || undefined,
+        envCfg.NOTION_TESTIMONIALS_DB_ID || d1cfg.NOTION_TESTIMONIALS_DB_ID || undefined,
       NOTION_CASE_STUDIES_DB_ID:
-        envCfg.NOTION_CASE_STUDIES_DB_ID || ssm.NOTION_CASE_STUDIES_DB_ID || undefined,
-      NOTION_SERVICES_DB_ID: envCfg.NOTION_SERVICES_DB_ID || ssm.NOTION_SERVICES_DB_ID || undefined,
-      NOTION_FAQS_DB_ID: envCfg.NOTION_FAQS_DB_ID || ssm.NOTION_FAQS_DB_ID || undefined,
-      GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
+        envCfg.NOTION_CASE_STUDIES_DB_ID || d1cfg.NOTION_CASE_STUDIES_DB_ID || undefined,
+      NOTION_SERVICES_DB_ID:
+        envCfg.NOTION_SERVICES_DB_ID || d1cfg.NOTION_SERVICES_DB_ID || undefined,
+      NOTION_FAQS_DB_ID: envCfg.NOTION_FAQS_DB_ID || d1cfg.NOTION_FAQS_DB_ID || undefined,
+      GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || d1cfg.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
-        envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
-      GOOGLE_PRIVATE_KEY: envCfg.GOOGLE_PRIVATE_KEY || ssm.GOOGLE_PRIVATE_KEY || undefined,
-      GOOGLE_CALENDAR_ID: envCfg.GOOGLE_CALENDAR_ID || ssm.GOOGLE_CALENDAR_ID || undefined,
-      STRIPE_SECRET_KEY: envCfg.STRIPE_SECRET_KEY || ssm.STRIPE_SECRET_KEY || undefined,
-      SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
-      SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || DEFAULT_SENTRY_ORG,
-      SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
-      NOTION_WEBHOOK_SECRET: envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+        envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL || d1cfg.GOOGLE_CLIENT_EMAIL || undefined,
+      GOOGLE_PRIVATE_KEY: envCfg.GOOGLE_PRIVATE_KEY || d1cfg.GOOGLE_PRIVATE_KEY || undefined,
+      GOOGLE_CALENDAR_ID: envCfg.GOOGLE_CALENDAR_ID || d1cfg.GOOGLE_CALENDAR_ID || undefined,
+      STRIPE_SECRET_KEY: envCfg.STRIPE_SECRET_KEY || d1cfg.STRIPE_SECRET_KEY || undefined,
+      SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || d1cfg.SENTRY_AUTH_TOKEN || undefined,
+      SENTRY_ORG: envCfg.SENTRY_ORG || d1cfg.SENTRY_ORG || DEFAULT_SENTRY_ORG,
+      SENTRY_PROJECT: envCfg.SENTRY_PROJECT || d1cfg.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
+      NOTION_WEBHOOK_SECRET:
+        envCfg.NOTION_WEBHOOK_SECRET || d1cfg.NOTION_WEBHOOK_SECRET || undefined,
       ACTIVECAMPAIGN_API_URL:
-        envCfg.ACTIVECAMPAIGN_API_URL || ssm.ACTIVECAMPAIGN_API_URL || undefined,
+        envCfg.ACTIVECAMPAIGN_API_URL || d1cfg.ACTIVECAMPAIGN_API_URL || undefined,
       ACTIVECAMPAIGN_API_TOKEN:
-        envCfg.ACTIVECAMPAIGN_API_TOKEN || ssm.ACTIVECAMPAIGN_API_TOKEN || undefined,
+        envCfg.ACTIVECAMPAIGN_API_TOKEN || d1cfg.ACTIVECAMPAIGN_API_TOKEN || undefined,
       GOOGLE_ADS_DEVELOPER_TOKEN:
-        envCfg.GOOGLE_ADS_DEVELOPER_TOKEN || ssm.GOOGLE_ADS_DEVELOPER_TOKEN || undefined,
+        envCfg.GOOGLE_ADS_DEVELOPER_TOKEN || d1cfg.GOOGLE_ADS_DEVELOPER_TOKEN || undefined,
       GOOGLE_ADS_CUSTOMER_ID:
-        envCfg.GOOGLE_ADS_CUSTOMER_ID || ssm.GOOGLE_ADS_CUSTOMER_ID || undefined,
-      LINKEDIN_CLIENT_ID: envCfg.LINKEDIN_CLIENT_ID || ssm.LINKEDIN_CLIENT_ID || undefined,
+        envCfg.GOOGLE_ADS_CUSTOMER_ID || d1cfg.GOOGLE_ADS_CUSTOMER_ID || undefined,
+      LINKEDIN_CLIENT_ID: envCfg.LINKEDIN_CLIENT_ID || d1cfg.LINKEDIN_CLIENT_ID || undefined,
       LINKEDIN_CLIENT_SECRET:
-        envCfg.LINKEDIN_CLIENT_SECRET || ssm.LINKEDIN_CLIENT_SECRET || undefined,
-      LINKEDIN_ACCESS_TOKEN: envCfg.LINKEDIN_ACCESS_TOKEN || ssm.LINKEDIN_ACCESS_TOKEN || undefined,
+        envCfg.LINKEDIN_CLIENT_SECRET || d1cfg.LINKEDIN_CLIENT_SECRET || undefined,
+      LINKEDIN_ACCESS_TOKEN:
+        envCfg.LINKEDIN_ACCESS_TOKEN || d1cfg.LINKEDIN_ACCESS_TOKEN || undefined,
       LINKEDIN_AD_ACCOUNT_ID:
-        envCfg.LINKEDIN_AD_ACCOUNT_ID || ssm.LINKEDIN_AD_ACCOUNT_ID || undefined,
+        envCfg.LINKEDIN_AD_ACCOUNT_ID || d1cfg.LINKEDIN_AD_ACCOUNT_ID || undefined,
       LINKEDIN_ORGANIZATION_URN:
-        envCfg.LINKEDIN_ORGANIZATION_URN || ssm.LINKEDIN_ORGANIZATION_URN || undefined,
-      TIKTOK_APP_ID: envCfg.TIKTOK_APP_ID || ssm.TIKTOK_APP_ID || undefined,
-      TIKTOK_APP_SECRET: envCfg.TIKTOK_APP_SECRET || ssm.TIKTOK_APP_SECRET || undefined,
-      TIKTOK_ACCESS_TOKEN: envCfg.TIKTOK_ACCESS_TOKEN || ssm.TIKTOK_ACCESS_TOKEN || undefined,
-      TIKTOK_ADVERTISER_ID: envCfg.TIKTOK_ADVERTISER_ID || ssm.TIKTOK_ADVERTISER_ID || undefined,
-      X_API_KEY: envCfg.X_API_KEY || ssm.X_API_KEY || undefined,
-      X_API_SECRET: envCfg.X_API_SECRET || ssm.X_API_SECRET || undefined,
-      X_ACCESS_TOKEN: envCfg.X_ACCESS_TOKEN || ssm.X_ACCESS_TOKEN || undefined,
-      X_ACCESS_SECRET: envCfg.X_ACCESS_SECRET || ssm.X_ACCESS_SECRET || undefined,
-      X_AD_ACCOUNT_ID: envCfg.X_AD_ACCOUNT_ID || ssm.X_AD_ACCOUNT_ID || undefined,
-      META_AD_ACCOUNT_ID: envCfg.META_AD_ACCOUNT_ID || ssm.META_AD_ACCOUNT_ID || undefined,
-      META_PIXEL_ID: envCfg.META_PIXEL_ID || ssm.META_PIXEL_ID || undefined,
+        envCfg.LINKEDIN_ORGANIZATION_URN || d1cfg.LINKEDIN_ORGANIZATION_URN || undefined,
+      TIKTOK_APP_ID: envCfg.TIKTOK_APP_ID || d1cfg.TIKTOK_APP_ID || undefined,
+      TIKTOK_APP_SECRET: envCfg.TIKTOK_APP_SECRET || d1cfg.TIKTOK_APP_SECRET || undefined,
+      TIKTOK_ACCESS_TOKEN: envCfg.TIKTOK_ACCESS_TOKEN || d1cfg.TIKTOK_ACCESS_TOKEN || undefined,
+      TIKTOK_ADVERTISER_ID: envCfg.TIKTOK_ADVERTISER_ID || d1cfg.TIKTOK_ADVERTISER_ID || undefined,
+      X_API_KEY: envCfg.X_API_KEY || d1cfg.X_API_KEY || undefined,
+      X_API_SECRET: envCfg.X_API_SECRET || d1cfg.X_API_SECRET || undefined,
+      X_ACCESS_TOKEN: envCfg.X_ACCESS_TOKEN || d1cfg.X_ACCESS_TOKEN || undefined,
+      X_ACCESS_SECRET: envCfg.X_ACCESS_SECRET || d1cfg.X_ACCESS_SECRET || undefined,
+      X_AD_ACCOUNT_ID: envCfg.X_AD_ACCOUNT_ID || d1cfg.X_AD_ACCOUNT_ID || undefined,
+      META_AD_ACCOUNT_ID: envCfg.META_AD_ACCOUNT_ID || d1cfg.META_AD_ACCOUNT_ID || undefined,
+      META_PIXEL_ID: envCfg.META_PIXEL_ID || d1cfg.META_PIXEL_ID || undefined,
       META_CAPI_ACCESS_TOKEN:
-        envCfg.META_CAPI_ACCESS_TOKEN || ssm.META_CAPI_ACCESS_TOKEN || undefined,
-      META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || ssm.META_ACCESS_TOKEN || undefined,
-      META_PAGE_ID: envCfg.META_PAGE_ID || ssm.META_PAGE_ID || undefined,
-      ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
-      ESPOCRM_BASE_URL: envCfg.ESPOCRM_BASE_URL || ssm.ESPOCRM_BASE_URL || undefined,
-      ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || ssm.ESPOCRM_API_KEY || undefined,
+        envCfg.META_CAPI_ACCESS_TOKEN || d1cfg.META_CAPI_ACCESS_TOKEN || undefined,
+      META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || d1cfg.META_ACCESS_TOKEN || undefined,
+      META_PAGE_ID: envCfg.META_PAGE_ID || d1cfg.META_PAGE_ID || undefined,
+      ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || d1cfg.ANTHROPIC_API_KEY || undefined,
+      ESPOCRM_BASE_URL: envCfg.ESPOCRM_BASE_URL || d1cfg.ESPOCRM_BASE_URL || undefined,
+      ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || d1cfg.ESPOCRM_API_KEY || undefined,
       ESPOCRM_WEBHOOK_SECRET:
-        envCfg.ESPOCRM_WEBHOOK_SECRET || ssm.ESPOCRM_WEBHOOK_SECRET || undefined,
-      APPFLOWY_API_URL: envCfg.APPFLOWY_API_URL || ssm.APPFLOWY_API_URL || undefined,
-      APPFLOWY_JWT_SECRET: envCfg.APPFLOWY_JWT_SECRET || ssm.APPFLOWY_JWT_SECRET || undefined,
-      N8N_API_URL: envCfg.N8N_API_URL || ssm.N8N_API_URL || undefined,
-      N8N_API_KEY: envCfg.N8N_API_KEY || ssm.N8N_API_KEY || undefined,
-      POSTIZ_API_URL: envCfg.POSTIZ_API_URL || ssm.POSTIZ_API_URL || undefined,
-      POSTIZ_API_KEY: envCfg.POSTIZ_API_KEY || ssm.POSTIZ_API_KEY || undefined,
-      CAL_API_KEY: envCfg.CAL_API_KEY || ssm.CAL_API_KEY || undefined,
+        envCfg.ESPOCRM_WEBHOOK_SECRET || d1cfg.ESPOCRM_WEBHOOK_SECRET || undefined,
+      APPFLOWY_API_URL: envCfg.APPFLOWY_API_URL || d1cfg.APPFLOWY_API_URL || undefined,
+      APPFLOWY_JWT_SECRET: envCfg.APPFLOWY_JWT_SECRET || d1cfg.APPFLOWY_JWT_SECRET || undefined,
+      N8N_API_URL: envCfg.N8N_API_URL || d1cfg.N8N_API_URL || undefined,
+      N8N_API_KEY: envCfg.N8N_API_KEY || d1cfg.N8N_API_KEY || undefined,
+      POSTIZ_API_URL: envCfg.POSTIZ_API_URL || d1cfg.POSTIZ_API_URL || undefined,
+      POSTIZ_API_KEY: envCfg.POSTIZ_API_KEY || d1cfg.POSTIZ_API_KEY || undefined,
+      CAL_API_KEY: envCfg.CAL_API_KEY || d1cfg.CAL_API_KEY || undefined,
     };
   } catch (err) {
-    console.warn("[Integrations] SSM fallback failed, using env-only config:", err);
+    console.warn("[Integrations] D1 config fallback failed, using env-only config:", err);
     cachedAsync = envCfg;
   }
 
@@ -280,7 +284,7 @@ export class IntegrationNotConfiguredError extends Error {
   constructor(keys: (keyof IntegrationConfig)[]) {
     super(
       `Integration not configured: missing ${keys.join(", ")}. ` +
-        "Set the env var(s) or add them to AWS SSM under /cloudless/production/."
+        "Set the env var(s) or add them to Cloudflare D1 app_config table."
     );
     this.name = "IntegrationNotConfiguredError";
     this.keys = keys;
@@ -376,7 +380,7 @@ export function getSlackConfig(): SlackConfig {
 let cachedSlackAsync: SlackConfig | null = null;
 
 /**
- * Async version that tries env vars first, then falls back to SSM
+ * Async version that tries env vars first, then falls back to D1 app_config
  * if SLACK_SIGNING_SECRET is empty.
  */
 export async function getSlackConfigAsync(): Promise<SlackConfig> {
@@ -388,18 +392,18 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   let webhookUrl = cfg.SLACK_WEBHOOK_URL ?? "";
   let defaultChannel = process.env.SLACK_DEFAULT_CHANNEL ?? "";
 
-  // SSM fallback when signing secret or default channel is missing from env
+  // D1 fallback when signing secret or default channel is missing from env
   if (!signingSecret || !defaultChannel) {
     try {
       const { getConfig } = await import("@/lib/ssm-config");
-      const ssmCfg = await getConfig();
-      const ssmRecord = ssmCfg as unknown as Record<string, string>;
-      if (!signingSecret) signingSecret = ssmRecord.SLACK_SIGNING_SECRET ?? "";
-      if (!token) token = ssmRecord.SLACK_BOT_TOKEN ?? "";
-      if (!webhookUrl) webhookUrl = ssmRecord.SLACK_WEBHOOK_URL ?? "";
-      if (!defaultChannel) defaultChannel = ssmRecord.SLACK_DEFAULT_CHANNEL ?? "";
+      const d1cfg = await getConfig();
+      const d1Record = d1cfg as unknown as Record<string, string>;
+      if (!signingSecret) signingSecret = d1Record.SLACK_SIGNING_SECRET ?? "";
+      if (!token) token = d1Record.SLACK_BOT_TOKEN ?? "";
+      if (!webhookUrl) webhookUrl = d1Record.SLACK_WEBHOOK_URL ?? "";
+      if (!defaultChannel) defaultChannel = d1Record.SLACK_DEFAULT_CHANNEL ?? "";
     } catch (err) {
-      console.warn("[Slack] SSM fallback failed:", err);
+      console.warn("[Slack] D1 config fallback failed:", err);
     }
   }
 
