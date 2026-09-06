@@ -161,11 +161,11 @@ This project enforces cryptography at two layers:
   - Middleware now redirects any production HTTP request to HTTPS with a 308 redirect.
 
 - At rest:
-  - Secrets are stored in AWS SSM Parameter Store as SecureString values.
-  - Runtime secret reads use AWS-managed encryption/decryption paths from SSM.
-  - Lambda environment and temporary storage are encrypted at rest by AWS-managed controls.
+  - Runtime secrets are stored in the Cloudflare D1 `app_config` table (`user-auth-db`).
+  - Writes go through the `set-d1-config.yml` workflow (`Actions → "Set D1 config value"`).
+  - Pod picks up new values within 5 minutes via the `getIntegrationsAsync()` TTL cache.
 
 Operational recommendation:
 
-- Keep all new secrets under the existing SSM prefix and store them as SecureString.
+- Add all new runtime secrets to D1 `app_config` via the GitHub Actions workflow — never commit them.
 - Do not add plaintext secrets to repository files or non-encrypted environment variables.

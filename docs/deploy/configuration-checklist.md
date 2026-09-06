@@ -56,14 +56,12 @@ Steps:
 2. Subscribe to: `issue` events
 3. Webhook URL: `https://cloudless.gr/api/webhooks/sentry`
 4. Copy Client Secret
-5. Run:
+5. Write to D1:
 
-   ```bash
-   aws ssm put-parameter \
-     --name /cloudless/production/SENTRY_WEBHOOK_SECRET \
-     --type SecureString \
-     --value <secret> \
-     --overwrite
+   ```
+   Actions → "Set D1 config value"
+     config_key:   SENTRY_WEBHOOK_SECRET
+     config_value: <secret>
    ```
 
 ### 2. Kuma Status Page
@@ -117,24 +115,35 @@ echo "$AUTH_SECRET" | npx wrangler secret put AUTH_SECRET
 
 ---
 
-## Pi k3s Cluster SSM Configuration
+## Pi k3s Cluster D1 Configuration
+
+All runtime secrets are written to Cloudflare D1 `app_config` table via:
+
+```
+Actions → "Set D1 config value" → Run workflow
+  config_key:   <KEY_NAME>
+  config_value: <secret value>
+```
+
+Workflow: `.github/workflows/set-d1-config.yml`  
+Database: `user-auth-db` (ID `7ca74513-23c3-412a-b9ca-b0c55835973d`)  
+Pod picks up changes within 5 minutes (TTL cache in `getIntegrationsAsync()`).
+
+### Cal.com (booking)
+
+```
+config_key:   CAL_API_KEY
+config_value: cal_live_xxxxxxxxxxxx
+```
 
 ### EspoCRM API Keys
 
-```bash
-# EspoCRM is live - API user 'cloudless-app' exists (ID: 6a36ef141808ed737)
-# Keys need to be added to SSM:
-aws ssm put-parameter \
-  --name /cloudless/production/ESPOCRM_BASE_URL \
-  --type SecureString \
-  --value "https://espocrm.cloudless.gr" \
-  --overwrite
+```
+config_key:   ESPOCRM_BASE_URL
+config_value: https://espocrm.cloudless.gr
 
-aws ssm put-parameter \
-  --name /cloudless/production/ESPOCRM_API_KEY \
-  --type SecureString \
-  --value "<api-key-from-app-user>" \
-  --overwrite
+config_key:   ESPOCRM_API_KEY
+config_value: <api-key-from-app-user>
 ```
 
 ### Meilisearch (Already Configured)
@@ -165,8 +174,8 @@ gh workflow run verify-cloudflare-token.yml
 # Check Workers secrets:
 npx wrangler secret list
 
-# Check SSM parameters (from Pi or AWS CLI):
-aws ssm get-parameters-by-path --path /cloudless/production --with-decryption
+# Check D1 app_config keys (via Cloudflare MCP):
+# mcp__cloudflare-bindings__d1_database_query  SELECT key, updated_at FROM app_config ORDER BY key
 
 # Check health endpoints:
 curl -s https://cloudless.gr/api/health

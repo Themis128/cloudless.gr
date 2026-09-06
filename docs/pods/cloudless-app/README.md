@@ -30,7 +30,7 @@ Admin cluster UI reads CronJobs through the in-pod ServiceAccount (`k8s-cluster.
 ## Secrets / config
 
 - k8s `cloudless-secrets`
-- SSM `/cloudless/production/*` (legacy) / D1 + CF tokens
+- Cloudflare D1 `app_config` table (runtime secrets via `set-d1-config.yml`)
 - build-time `NEXT_PUBLIC_*`
 
 ## Related workloads

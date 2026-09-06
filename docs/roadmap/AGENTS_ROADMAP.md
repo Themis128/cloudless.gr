@@ -34,7 +34,7 @@ Today `/api/chat` is a Workers AI tool-use loop (`workers-ai-chat.ts`) for pre-s
 Two read-only tools wired into `/api/chat`:
 
 1. `lookup_product(query: string)` — searches `getProducts()` (5 min cache, Stripe-backed when configured) and returns up to 3 matches with name, price, category, `/store/<id>` URL.
-2. `check_calendar_availability(days_ahead?: integer)` — wraps `getAvailableSlots()` and returns up to 5 30-minute Athens-local slots with a `/book` CTA. Days clamped to `[1, 14]`. Returns a graceful contact-page nudge when Google Calendar isn't configured.
+2. `check_calendar_availability(days_ahead?: integer)` — wraps `getAvailableSlots()` (Cal.com v2 API) and returns up to 5 30-minute Athens-local slots branded as "Themistoklis Baltzakis at Cloudless.gr". Days clamped to `[1, 14]`. Returns a graceful contact-page nudge when `CAL_API_KEY` is not configured (stored in D1 `app_config`).
 
 Implementation: replaced the single-turn streaming proxy with a non-streaming tool-use loop capped at 4 iterations / 20s upstream timeout. The final assistant text is chunk-encoded back to the browser as SSE so the existing `ChatWidget` event handlers keep working unchanged. Tools live in `src/lib/chat-tools.ts`; the `runTool` dispatcher always resolves to a string — errors are converted to user-facing nudges so a thrown tool can't crash the loop.
 
@@ -46,10 +46,10 @@ Detail: `src/lib/workers-ai-chat.ts` + `src/lib/chat-tools.ts`. The ANTHROPIC.md
 
 ### Phase 2b — booking agent — SHIPPED
 
-`POST /api/agent/book` takes natural-language intent ("schedule me for next Tuesday afternoon, 30 min") and runs a Bedrock tool-use loop with two tools (`check_calendar_availability`, `propose_slot`) to pick exactly one open slot. Two-phase:
+`POST /api/agent/book` takes natural-language intent ("schedule me for next Tuesday afternoon, 30 min") and runs a Workers AI tool-use loop with two tools (`check_calendar_availability`, `propose_slot`) to pick exactly one open slot. Two-phase:
 
 1. **Propose** — `POST { intent }` → `{ status: "proposed", proposed: { start, end, formatted }, reasoning }` (or `no_match`). Model never books on its own.
-2. **Confirm** — `POST { confirm: true, start, end, notes? }` → re-checks slot is free, creates the Google Calendar event with a Meet link, posts to Slack, emails confirmation.
+2. **Confirm** — `POST { confirm: true, start, end, notes? }` → re-checks slot is free via Cal.com v2, creates the booking with a Meet link, posts to Slack, emails confirmation.
 
 Guardrails:
 

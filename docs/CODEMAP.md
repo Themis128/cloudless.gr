@@ -33,7 +33,7 @@
 
 ### **Data & Storage**
 
-- **AWS SSM Parameter Store** (secrets management)
+- **Cloudflare D1 `app_config`** (runtime secrets / config store — replaces AWS SSM)
 - **AWS SES v2** (transactional email)
 - **AppFlowy Cloud** (headless CMS)
 - **Stripe** (payments, subscriptions)
@@ -93,7 +93,7 @@ cloudless.gr/
 │   │   └── CartContext.tsx     # Shopping cart state
 │   ├── lib/                    # Business logic & integrations
 │   │   ├── auth-d1.ts         # Cloudflare D1 auth
-│   │   ├── ssm-config.ts       # AWS SSM secrets loader
+│   │   ├── ssm-config.ts       # Runtime config loader (D1 app_config + env fallback)
 │   │   ├── slack-notify.ts     # Slack notifications
 │   │   ├── gsc.ts              # Google Search Console (11x functions)
 │   │   ├── appflowy-*.ts       # AppFlowy CMS integration
@@ -277,8 +277,8 @@ pnpm typecheck              # TypeScript type checking
 
 ## 🔐 **Security & Secrets**
 
-- **No .env files in production** - all secrets from AWS SSM
-- **SSM path prefix**: `/cloudless/production/`
+- **No .env files in production** - runtime secrets from Cloudflare D1 `app_config` table
+- **D1 config writes**: `Actions → "Set D1 config value"` (`.github/workflows/set-d1-config.yml`)
 - **Local dev**: `.env.local` (git-ignored)
 - **Secret caching**: 5-minute cache with stale-on-error fallback
 - **Rate limiting**: IP-based for API routes
