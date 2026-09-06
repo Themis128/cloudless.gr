@@ -43,6 +43,6 @@ export async function getPostizGroups(): Promise<PostizGroup[]> {
  * No-op for AppFlowy.
  */
 export async function syncCalendarEvents(): Promise<boolean> {
-  console.log("[AppFlowy Calendar] syncCalendarEvents called (no-op)");
+  console.warn("[AppFlowy Calendar] syncCalendarEvents called (no-op)");
   return false;
 }

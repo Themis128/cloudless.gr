@@ -45,7 +45,7 @@ export async function trackEvent(event: Omit<AnalyticsEvent, "timestamp">): Prom
     };
 
     // AppFlowy write API not yet implemented
-    console.log("[AppFlowy Analytics] Would track event:", fullEvent.event, fullEvent.path || "");
+    console.warn("[AppFlowy Analytics] Would track event:", fullEvent.event, fullEvent.path || "");
     return true;
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
@@ -58,7 +58,7 @@ export async function trackEvent(event: Omit<AnalyticsEvent, "timestamp">): Prom
  * Get analytics summary for the admin dashboard.
  * Returns mock data when not configured.
  */
-export async function getAnalyticsSummary(days = 7): Promise<{
+export async function getAnalyticsSummary(_days = 7): Promise<{
   totalEvents: number;
   uniqueVisitors: number;
   topPages: Array<{ path: string; views: number }>;
@@ -89,7 +89,7 @@ export async function getAnalyticsSummary(days = 7): Promise<{
  */
 export async function createWeeklyRollup(): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return true;
-  console.log("[AppFlowy Analytics] Would create weekly rollup");
+  console.warn("[AppFlowy Analytics] Would create weekly rollup");
   return true;
 }
 
@@ -99,6 +99,6 @@ export async function createWeeklyRollup(): Promise<boolean> {
  */
 export async function archiveOldEvents(olderThanDays = 90): Promise<number> {
   if (!(await isAppFlowyConfigured())) return 0;
-  console.log("[AppFlowy Analytics] Would archive events older than", olderThanDays, "days");
+  console.warn("[AppFlowy Analytics] Would archive events older than", olderThanDays, "days");
   return 0;
 }

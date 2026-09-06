@@ -26,10 +26,10 @@ function getHttpAuthDbFallback(): AuthDatabase | null {
   // We'll create a simple statement wrapper that uses fetch.
   // This is a minimal implementation mirroring the one in d1-http.ts.
   type Stmt = {
-    bind: (...args: unknown[]) => Stmt;
+    bind: (..._args: unknown[]) => Stmt;
     all: <T = Record<string, unknown>>() => Promise<{ results: T[]; success: boolean }>;
     run: () => Promise<{ success: boolean; meta?: { changes: number } }>;
-    first: <T = Record<string, unknown>>(col?: string) => Promise<T | null>;
+    first: <T = Record<string, unknown>>(_col?: string) => Promise<T | null>;
   };
 
   function prepareHttp(sql: string): Stmt {

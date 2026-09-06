@@ -27,7 +27,7 @@ export async function getReports(): Promise<Report[]> {
  * Get a single report by ID.
  * Returns null.
  */
-export async function getReport(id: string): Promise<Report | null> {
+export async function getReport(_id: string): Promise<Report | null> {
   return null;
 }
 
@@ -38,7 +38,7 @@ export async function getReport(id: string): Promise<Report | null> {
 export async function createReport(
   data: Omit<Report, "id" | "createdAt" | "updatedAt">
 ): Promise<string | null> {
-  console.log("[AppFlowy Reports] Would create report:", data.title);
+  console.warn("[AppFlowy Reports] Would create report:", data.title);
   return null;
 }
 
@@ -46,8 +46,8 @@ export async function createReport(
  * Update a report in AppFlowy.
  * No-op.
  */
-export async function updateReport(id: string, data: Partial<Report>): Promise<boolean> {
-  console.log("[AppFlowy Reports] Would update report:", id);
+export async function updateReport(id: string, _data: Partial<Report>): Promise<boolean> {
+  console.warn("[AppFlowy Reports] Would update report:", id);
   return false;
 }
 
@@ -56,6 +56,6 @@ export async function updateReport(id: string, data: Partial<Report>): Promise<b
  * No-op.
  */
 export async function deleteReport(id: string): Promise<boolean> {
-  console.log("[AppFlowy Reports] Would delete report:", id);
+  console.warn("[AppFlowy Reports] Would delete report:", id);
   return false;
 }

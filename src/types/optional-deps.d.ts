@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /** Ambient types for optional runtime dependencies not listed in package.json. */
 
 declare module "@duckdb/duckdb-wasm" {

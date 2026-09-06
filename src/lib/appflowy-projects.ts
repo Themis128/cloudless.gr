@@ -245,7 +245,7 @@ export async function createProject(_data: {
   if (!(await isAppFlowyConfigured())) return null;
 
   // AppFlowy write API not yet implemented
-  console.log("[AppFlowy Projects] Would create project (stub)");
+  console.warn("[AppFlowy Projects] Would create project (stub)");
   return null;
 }
 
@@ -254,13 +254,13 @@ export async function updateProjectStatus(
   _status: ProjectStatus
 ): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Projects] Would update status (stub)");
+  console.warn("[AppFlowy Projects] Would update status (stub)");
   return false;
 }
 
 export async function updateProjectProgress(_pageId: string, _progress: number): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Projects] Would update progress (stub)");
+  console.warn("[AppFlowy Projects] Would update progress (stub)");
   return false;
 }
 
@@ -354,13 +354,13 @@ export async function createTask(_data: {
   dueDate?: string;
 }): Promise<string | null> {
   if (!(await isAppFlowyConfigured())) return null;
-  console.log("[AppFlowy Tasks] Would create task (stub)");
+  console.warn("[AppFlowy Tasks] Would create task (stub)");
   return null;
 }
 
 export async function updateTaskStatus(_pageId: string, _status: TaskStatus): Promise<boolean> {
   if (!(await isAppFlowyConfigured())) return false;
-  console.log("[AppFlowy Tasks] Would update status (stub)");
+  console.warn("[AppFlowy Tasks] Would update status (stub)");
   return false;
 }
 
@@ -482,7 +482,7 @@ export async function rolloverSprintTasks(fromSprint: string, toSprint: string):
   for (const task of incomplete) {
     try {
       // AppFlowy write API not yet implemented
-      console.log("[AppFlowy Tasks] Would move task", task.id, "from", fromSprint, "to", toSprint);
+      console.warn("[AppFlowy Tasks] Would move task", task.id, "from", fromSprint, "to", toSprint);
       moved++;
     } catch (err) {
       const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");

@@ -17,7 +17,7 @@ export async function invalidateCache(): Promise<void> {
 
   // AppFlowy doesn't have webhook-based cache invalidation
   // Cache is handled by TTL in the appflowy.ts client
-  console.log("[AppFlowy Cache] invalidateCache called (no-op, TTL-based caching)");
+  console.warn("[AppFlowy Cache] invalidateCache called (no-op, TTL-based caching)");
 }
 
 /**
@@ -26,5 +26,5 @@ export async function invalidateCache(): Promise<void> {
  */
 export async function invalidateCacheKeys(keys: string[]): Promise<void> {
   if (!(await isAppFlowyConfigured())) return;
-  console.log("[AppFlowy Cache] invalidateCacheKeys called for:", keys, "(no-op)");
+  console.warn("[AppFlowy Cache] invalidateCacheKeys called for:", keys, "(no-op)");
 }

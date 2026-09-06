@@ -21,7 +21,7 @@ import {
 } from "./appflowy";
 
 const SOURCE_CONTACT = "contact";
-const SOURCE_SUBSCRIBE = "subscribe";
+const _SOURCE_SUBSCRIBE = "subscribe";
 
 export interface ContactSubmission {
   name: string;
@@ -46,7 +46,7 @@ export interface SubmissionRecord {
   url: string;
 }
 
-function slugify(name: string): string {
+function _slugify(name: string): string {
   return name
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
@@ -212,6 +212,6 @@ export async function updateSubmissionStatus(
 
   // AppFlowy write API not yet implemented in appflowy.ts
   // This would update the document's Status field
-  console.log("[AppFlowy Forms] Would update status (stub)");
+  console.warn("[AppFlowy Forms] Would update status (stub)");
   return false;
 }

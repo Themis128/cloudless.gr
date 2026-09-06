@@ -156,11 +156,11 @@ async function sendContactAdminEmail(input: {
         fromLabel: "Cloudless Contact Form",
       });
     } else {
-      console.log("[Contact API] Test/E2E environment detected, skipping email sending");
+      console.warn("[Contact API] Test/E2E environment detected, skipping email sending");
     }
   } catch (emailErr) {
     const emailMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-    console.log(`[Contact API] Email sending failed: ${emailMsg}`);
+    console.warn(`[Contact API] Email sending failed: ${emailMsg}`);
     if (
       emailMsg.toLowerCase().includes("not configured") ||
       emailMsg.includes("sending_disabled")
@@ -225,7 +225,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  console.log(`[Contact API] NODE_ENV: ${process.env.NODE_ENV}`);
+  console.warn(`[Contact API] NODE_ENV: ${process.env.NODE_ENV}`);
   const ip = getClientIp(request);
   const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);
   if (!rl.ok) return rl.response;

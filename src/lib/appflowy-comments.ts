@@ -17,7 +17,7 @@ export interface Comment {
  * List comments for a page.
  * AppFlowy doesn't support comments yet — returns empty array.
  */
-export async function listComments(pageId: string): Promise<Comment[]> {
+export async function listComments(_pageId: string): Promise<Comment[]> {
   // AppFlowy doesn't have comments API
   return [];
 }
@@ -28,6 +28,6 @@ export async function listComments(pageId: string): Promise<Comment[]> {
  */
 export async function addComment(_pageId: string, _text: string): Promise<boolean> {
   // AppFlowy doesn't have comments API — do not log pageId/text (log-injection).
-  console.log("[AppFlowy Comments] Would add comment (stub)");
+  console.warn("[AppFlowy Comments] Would add comment (stub)");
   return false;
 }

@@ -44,7 +44,7 @@ export async function getESP32Alerts(): Promise<ESP32Alert[]> {
  * No-op for AppFlowy.
  */
 export async function acknowledgeESP32Alert(alertId: string): Promise<boolean> {
-  console.log("[AppFlowy ESP32] acknowledgeESP32Alert called for", alertId, "(no-op)");
+  console.warn("[AppFlowy ESP32] acknowledgeESP32Alert called for", alertId, "(no-op)");
   return false;
 }
 
@@ -55,6 +55,6 @@ export async function acknowledgeESP32Alert(alertId: string): Promise<boolean> {
 export async function createESP32Alert(
   alert: Omit<ESP32Alert, "id" | "acknowledged" | "timestamp">
 ): Promise<string | null> {
-  console.log("[AppFlowy ESP32] Would create alert:", alert);
+  console.warn("[AppFlowy ESP32] Would create alert:", alert);
   return null;
 }
