@@ -96,7 +96,7 @@ vi.mock("@/lib/agent-book", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   bookConsultation: (...args: unknown[]) => mockBookConsultation(...args),
   getAvailableSlots: (...args: unknown[]) => mockGetAvailableSlots(...args),
 }));

@@ -16,7 +16,7 @@ vi.mock("@/lib/integrations", () => ({
 }));
 
 const mockGetUpcomingConsultations = vi.fn().mockResolvedValue([]);
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   getUpcomingConsultations: (...args: unknown[]) => mockGetUpcomingConsultations(...args),
 }));
 

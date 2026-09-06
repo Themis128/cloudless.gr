@@ -8,7 +8,7 @@ vi.mock("@/lib/integrations", () => ({
   isConfiguredAsync: (...keys: string[]) => isConfiguredAsyncMock(...keys),
 }));
 
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   getAvailableSlots: vi.fn(),
 }));
 
@@ -25,10 +25,10 @@ describe("agent-book.isAgentBookConfigured", () => {
     isConfiguredAsyncMock.mockReset();
   });
 
-  it("returns true when the required Google Calendar keys are configured", async () => {
+  it("returns true when the required Cal.com key is configured", async () => {
     isConfiguredAsyncMock.mockResolvedValueOnce(true);
     await expect(isAgentBookConfigured()).resolves.toBe(true);
-    expect(isConfiguredAsyncMock).toHaveBeenCalledWith("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY");
+    expect(isConfiguredAsyncMock).toHaveBeenCalledWith("CAL_API_KEY");
   });
 
   it("returns false when integration keys are missing", async () => {

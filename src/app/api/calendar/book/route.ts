@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
   if (!rl.ok) return rl.response;
 
-  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
+  if (!(await isConfiguredAsync("CAL_API_KEY"))) {
     return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 503 });
   }
 

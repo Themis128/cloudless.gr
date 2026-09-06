@@ -8,7 +8,7 @@ const { mockGetProducts, mockGetAvailableSlots } = vi.hoisted(() => ({
 vi.mock("@/lib/store-products", () => ({
   getProducts: mockGetProducts,
 }));
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   getAvailableSlots: mockGetAvailableSlots,
 }));
 vi.mock("@/lib/integrations", async (importOriginal) => {
@@ -49,8 +49,7 @@ const SAMPLE_PRODUCTS = [
 describe("chat-tools.runTool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.GOOGLE_CLIENT_EMAIL = "svc@example.iam.gserviceaccount.com";
-    process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nABC\n";
+    process.env.CAL_API_KEY = "cal_live_test_key";
     mockGetProducts.mockResolvedValue(SAMPLE_PRODUCTS);
   });
 
@@ -87,8 +86,7 @@ describe("chat-tools.runTool", () => {
   });
 
   it("check_calendar_availability returns a graceful message when calendar isn't configured", async () => {
-    delete process.env.GOOGLE_CLIENT_EMAIL;
-    delete process.env.GOOGLE_PRIVATE_KEY;
+    delete process.env.CAL_API_KEY;
     const out = await runTool("check_calendar_availability", {});
     expect(out.toLowerCase()).toContain("not yet wired");
   });

@@ -21,7 +21,7 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 const mockGetAvailableSlots = vi.fn();
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   getAvailableSlots: mockGetAvailableSlots,
   bookConsultation: vi.fn(),
 }));
