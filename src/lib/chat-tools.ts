@@ -185,7 +185,7 @@ async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<
     capped.map((s, i) => ({ row: i + 1, start: s.start, end: s.end }))
   );
   return [
-    `Available consultation slots (Athens time):\n\n${table}`,
+    `Here are the available **30-min consultation slots** with **Themistoklis Baltzakis** at **Cloudless.gr** (Athens time):\n\n${table}`,
     `BOOKING_ISO_DATA:${isoData}`,
     `ASK THE VISITOR: "Which row would you like? Please reply with your row number, full name, and email all at once — e.g. '1, Jane Smith, jane@example.com'." Then call book_slot with row=<number>, start=<ISO>, end=<ISO> (copy verbatim from BOOKING_ISO_DATA for that row), name, and email.`,
   ].join("\n\n");
@@ -292,12 +292,11 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   }).catch((err) => console.warn("[chat-tools] recordNotification failed:", err));
 
   return [
-    `Booking confirmed!`,
-    `Slot: ${slotLabel}`,
-    `Name: ${name}`,
-    `Email: ${email}`,
-    meetLink ? `Google Meet: ${meetLink}` : "",
-    `A calendar invite and confirmation email have been sent to ${email}.`,
+    `Your consultation with **Themistoklis Baltzakis** at **Cloudless.gr** is confirmed! 🎉`,
+    `**When:** ${slotLabel}`,
+    `**Who:** ${name} (${email}) with Themistoklis Baltzakis`,
+    meetLink ? `**Google Meet:** ${meetLink}` : "",
+    `A calendar invite has been sent to ${email}. We look forward to speaking with you!`,
   ]
     .filter(Boolean)
     .join("\n");

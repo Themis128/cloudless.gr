@@ -80,7 +80,9 @@ describe("chat-tools.runTool", () => {
     const out = await runTool("check_calendar_availability", {
       days_ahead: 7,
     });
-    expect(out).toContain("Available consultation slots");
+    expect(out).toContain("30-min consultation slots");
+    expect(out).toContain("Themistoklis Baltzakis");
+    expect(out).toContain("Cloudless.gr");
     expect(out).toContain("Athens");
     expect(out).toContain("BOOKING_ISO_DATA");
   });
