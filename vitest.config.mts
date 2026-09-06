@@ -122,10 +122,10 @@ export default defineConfig({
       // codebase grew substantially (many new admin pages with no unit tests).
       // Raise these as coverage improves; never lower them.
       thresholds: {
-        lines: 33,
-        functions: 28,
-        branches: 27,
-        statements: 32,
+        lines: 39,
+        functions: 35,
+        branches: 31,
+        statements: 38,
       },
     },
   },
