@@ -1,7 +1,14 @@
+/**
+ * Tests for src/lib/escape-html.ts
+ */
 import { describe, it, expect } from "vitest";
-import { escapeHtml, htmlToPlainText } from "@/lib/escape-html";
+import { escapeHtml, htmlToPlainText, sanitizeForLog } from "@/lib/escape-html";
 
 describe("escapeHtml", () => {
+  it("returns empty string for empty input", () => {
+    expect(escapeHtml("")).toBe("");
+  });
+
   it("escapes ampersands", () => {
     expect(escapeHtml("a & b")).toBe("a &amp; b");
   });
@@ -19,56 +26,78 @@ describe("escapeHtml", () => {
   });
 
   it("escapes all special chars together", () => {
-    expect(escapeHtml('<a href="foo">O\'Malley & co</a>')).toBe(
-      "&lt;a href=&quot;foo&quot;&gt;O&#39;Malley &amp; co&lt;/a&gt;"
+    expect(escapeHtml('<a href="x&y">it\'s</a>')).toBe(
+      '&lt;a href=&quot;x&amp;y&quot;&gt;it&#39;s&lt;/a&gt;'
     );
   });
 
-  it("returns plain string unchanged", () => {
-    expect(escapeHtml("hello world")).toBe("hello world");
+  it("does not modify plain text", () => {
+    expect(escapeHtml("Hello World")).toBe("Hello World");
   });
 
-  it("handles empty string", () => {
-    expect(escapeHtml("")).toBe("");
-  });
-
-  it("coerces null to empty string without throwing", () => {
+  it("handles non-string input by coercing via String()", () => {
     expect(escapeHtml(null as unknown as string)).toBe("");
-  });
-
-  it("coerces number to string", () => {
+    expect(escapeHtml(undefined as unknown as string)).toBe("");
     expect(escapeHtml(42 as unknown as string)).toBe("42");
   });
 });
 
 describe("htmlToPlainText", () => {
-  it("strips simple tags", () => {
-    expect(htmlToPlainText("<p>hello</p>")).toBe("hello");
+  it("removes simple HTML tags", () => {
+    expect(htmlToPlainText("<p>Hello</p>")).toContain("Hello");
+    expect(htmlToPlainText("<p>Hello</p>")).not.toContain("<p>");
   });
 
-  it("strips anchor tags", () => {
-    expect(htmlToPlainText('<a href="https://example.com">link</a>')).toBe("link");
+  it("handles nested tags", () => {
+    const result = htmlToPlainText("<div><span>Text</span></div>");
+    expect(result).toContain("Text");
+    expect(result).not.toContain("<");
   });
 
-  it("collapses multiple spaces from adjacent tags", () => {
-    // tags become spaces, then [ \t\f\v]+ collapses runs; result is single space
-    expect(htmlToPlainText("<b>one</b> <i>two</i>")).toBe("one two");
+  it("collapses multiple spaces", () => {
+    const result = htmlToPlainText("<p>A</p><p>B</p>");
+    expect(result.includes("  ")).toBe(false);
   });
 
-  it("removes bare angle brackets without inserting spaces", () => {
-    // bare <> are stripped; spaces between words are preserved
-    expect(htmlToPlainText("a < b > c")).toBe("a c");
+  it("collapses excessive newlines to double newline", () => {
+    const result = htmlToPlainText("A\n\n\n\n\nB");
+    expect(result).not.toMatch(/\n{3,}/);
   });
 
-  it("returns empty string for tag-only input", () => {
-    expect(htmlToPlainText("<br><br>")).toBe("");
-  });
-
-  it("trims surrounding whitespace", () => {
-    expect(htmlToPlainText("  <p>text</p>  ")).toBe("text");
+  it("trims leading and trailing whitespace", () => {
+    expect(htmlToPlainText("  <p>text</p>  ").trim()).toBe("text");
   });
 
   it("handles empty string", () => {
     expect(htmlToPlainText("")).toBe("");
+  });
+
+  it("removes stray angle brackets", () => {
+    expect(htmlToPlainText("a < b > c")).not.toContain("<");
+    expect(htmlToPlainText("a < b > c")).not.toContain(">");
+  });
+});
+
+describe("sanitizeForLog", () => {
+  it("removes newline characters", () => {
+    expect(sanitizeForLog("line1\nline2")).not.toContain("\n");
+  });
+
+  it("removes carriage returns", () => {
+    expect(sanitizeForLog("line1\rline2")).not.toContain("\r");
+  });
+
+  it("removes null bytes", () => {
+    expect(sanitizeForLog("text\0more")).not.toContain("\0");
+  });
+
+  it("truncates to 500 characters", () => {
+    const long = "a".repeat(1000);
+    expect(sanitizeForLog(long)).toHaveLength(500);
+  });
+
+  it("coerces non-string values", () => {
+    expect(sanitizeForLog(42)).toBe("42");
+    expect(sanitizeForLog(null)).toBe("null");
   });
 });

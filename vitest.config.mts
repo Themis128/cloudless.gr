@@ -65,8 +65,6 @@ export default defineConfig({
       "@aws-sdk/client-dynamodb": path.resolve(__dirname, "__tests__/stubs/aws-dynamodb-stub.js"),
       // @aws-sdk/client-sesv2 shares the same crash. Tests mock email.ts directly.
       "@aws-sdk/client-sesv2": path.resolve(__dirname, "__tests__/stubs/aws-sesv2-stub.js"),
-      // node:sqlite is a Node 22+ built-in that Vite cannot bundle under JSDOM.
-      "node:sqlite": path.resolve(__dirname, "__tests__/stubs/node-sqlite-stub.js"),
     },
   },
   define: {
