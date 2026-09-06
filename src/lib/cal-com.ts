@@ -150,6 +150,7 @@ export async function bookConsultation(data: {
           timeZone: APP_TIMEZONE,
           language: "el",
         },
+        guests: ["tbaltzakis@cloudless.gr"],
         metadata: {},
         bookingFieldsResponses: data.notes ? { notes: data.notes } : undefined,
       }),
