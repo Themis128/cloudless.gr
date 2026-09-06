@@ -71,7 +71,7 @@ export const CHAT_TOOLS = [
   {
     name: "book_slot",
     description:
-      "Confirm a consultation booking. Use this after the visitor has picked a slot and provided their name and email. Prefer the `row` number from the most recent check_calendar_availability table. Creates a Google Calendar event with a Google Meet link and emails a calendar invite to the visitor.",
+      "Confirm a consultation booking. Use this after the visitor has picked a slot and provided their name and email. Always pass both the row number AND the start/end ISO values from BOOKING_ISO_DATA so the booking targets the exact slot the visitor chose. Creates a Google Calendar event with a Google Meet link and emails a calendar invite to the visitor.",
     input_schema: {
       type: "object",
       properties: {
@@ -88,17 +88,17 @@ export const CHAT_TOOLS = [
           minimum: 1,
           maximum: 5,
           description:
-            "Row number the visitor picked from the latest check_calendar_availability table (1-indexed). Use this instead of start/end for a better user experience.",
+            "Row number the visitor picked from the latest check_calendar_availability table (1-indexed).",
         },
         start: {
           type: "string",
           description:
-            "Optional: slot start time in ISO 8601 format. Use only if the visitor gives exact times instead of a row number.",
+            "Slot start time in ISO 8601 format — copy verbatim from BOOKING_ISO_DATA for the chosen row. Required when row is provided.",
         },
         end: {
           type: "string",
           description:
-            "Optional: slot end time in ISO 8601 format. Use only if the visitor gives exact times instead of a row number.",
+            "Slot end time in ISO 8601 format — copy verbatim from BOOKING_ISO_DATA for the chosen row. Required when row is provided.",
         },
         notes: {
           type: "string",
@@ -187,7 +187,7 @@ async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<
   return [
     `Available consultation slots (Athens time):\n\n${table}`,
     `BOOKING_ISO_DATA:${isoData}`,
-    `ASK THE VISITOR: "Which row would you like? Please reply with your row number, full name, and email all at once — e.g. '1, Jane Smith, jane@example.com'." Then call book_slot with row=<number>, name, and email. Only use start/end from BOOKING_ISO_DATA if the visitor gives exact times instead of a row.`,
+    `ASK THE VISITOR: "Which row would you like? Please reply with your row number, full name, and email all at once — e.g. '1, Jane Smith, jane@example.com'." Then call book_slot with row=<number>, start=<ISO>, end=<ISO> (copy verbatim from BOOKING_ISO_DATA for that row), name, and email.`,
   ].join("\n\n");
 }
 
@@ -208,28 +208,44 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   if (!email || !email.includes("@"))
     return "Missing or invalid email address. Ask the visitor for a valid email.";
 
-  if (rawRow && rawRow >= 1 && rawRow <= MAX_SLOT_RESULTS) {
-    let slots: { start: string; end: string }[];
-    try {
-      slots = await getAvailableSlots();
-    } catch {
-      return "Could not re-check the calendar. Ask the visitor to use the Contact page or try again in a moment.";
+  if (!start && !rawRow) {
+    return "Missing slot. Call check_calendar_availability first, then ask the visitor to pick a row (e.g., '1, Jane Smith, jane@example.com').";
+  }
+
+  // Re-fetch availability to verify the exact slot is still open.
+  // Using start (ISO) as the key, not row index — the list can shift between
+  // check and book if another booking lands in that window.
+  let freshSlots: { start: string; end: string }[];
+  try {
+    freshSlots = await getAvailableSlots();
+  } catch {
+    return "Could not re-check the calendar. Ask the visitor to use the Contact page or try again in a moment.";
+  }
+
+  if (start) {
+    // Prefer exact ISO match — guards against row-index drift.
+    const matched = freshSlots.find((s) => s.start === start);
+    if (!matched) {
+      return `That slot (${formatAthensSlot(start, end || start)}) is no longer available. Call check_calendar_availability again to get the latest open slots and ask the visitor to pick a new one.`;
     }
-    const slot = slots[rawRow - 1];
+    end = matched.end;
+  } else if (rawRow && rawRow >= 1 && rawRow <= MAX_SLOT_RESULTS) {
+    // Fallback: row only (model didn't pass ISO times).
+    const slot = freshSlots[rawRow - 1];
     if (!slot) {
-      return `Row ${rawRow} is not a valid slot. Call check_calendar_availability again and ask the visitor to pick a new row.`;
+      return `Row ${rawRow} is no longer available. Call check_calendar_availability again and ask the visitor to pick a new row.`;
     }
     start = slot.start;
     end = slot.end;
   }
 
   if (!start || !end) {
-    return "Missing slot. Call check_calendar_availability first, then ask the visitor to pick a row (e.g., '1, Jane Smith, jane@example.com') or provide the exact start/end ISO times.";
+    return "Missing slot. Call check_calendar_availability first, then ask the visitor to pick a row (e.g., '1, Jane Smith, jane@example.com').";
   }
 
   const result = await bookConsultation({ name, email, start, end, notes });
   if (!result) {
-    return `That slot was just taken. Call check_calendar_availability again to get the latest open slots and ask the visitor to pick a new row.`;
+    return "Booking failed — the calendar service returned an error. Please try again in a moment, or use the Contact page at cloudless.gr/contact to request a time manually.";
   }
 
   invalidateConsultationCache();
