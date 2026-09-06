@@ -78,7 +78,7 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/google-calendar", () => ({
+vi.mock("@/lib/cal-com", () => ({
   getConsultationsByEmail: getConsultationsByEmailMock,
 }));
 

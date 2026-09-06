@@ -42,6 +42,7 @@ describe("GET /api/calendar/availability", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetIntegrationCache();
+    process.env.CAL_API_KEY = "cal_live_test_key";
     mockGetAvailableSlots.mockResolvedValue([
       {
         start: "2026-05-01T10:00:00Z",
@@ -56,9 +57,8 @@ describe("GET /api/calendar/availability", () => {
     ]);
   });
 
-  it("returns 503 when Google Calendar is not configured", async () => {
-    process.env.GOOGLE_CLIENT_EMAIL = "";
-    process.env.GOOGLE_PRIVATE_KEY = "";
+  it("returns 503 when calendar is not configured", async () => {
+    process.env.CAL_API_KEY = "";
     resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(new Request(AVAILABILITY_URL));
@@ -123,19 +123,19 @@ describe("POST /api/calendar/book", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     resetIntegrationCache();
+    process.env.CAL_API_KEY = "cal_live_test_key";
 
     const { bookConsultation } = vi.mocked(
-      await vi.importMock<typeof import("@/lib/google-calendar")>("@/lib/google-calendar")
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
     );
     (bookConsultation as ReturnType<typeof vi.fn>).mockResolvedValue({
       eventId: "evt_abc123",
-      htmlLink: "https://calendar.google.com/event?eid=abc",
+      htmlLink: "https://cal.com/booking/evt_abc123",
     });
   });
 
-  it("returns 503 when Google Calendar is not configured", async () => {
-    process.env.GOOGLE_CLIENT_EMAIL = "";
-    process.env.GOOGLE_PRIVATE_KEY = "";
+  it("returns 503 when calendar is not configured", async () => {
+    process.env.CAL_API_KEY = "";
     resetIntegrationCache();
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
@@ -229,7 +229,7 @@ describe("POST /api/calendar/book", () => {
 
   it("returns 500 when bookConsultation returns null", async () => {
     const { bookConsultation } = vi.mocked(
-      await vi.importMock<typeof import("@/lib/google-calendar")>("@/lib/google-calendar")
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
     );
     (bookConsultation as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
