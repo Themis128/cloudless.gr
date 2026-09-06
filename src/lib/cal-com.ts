@@ -148,7 +148,7 @@ export async function bookConsultation(data: {
           name: data.name,
           email: data.email,
           timeZone: APP_TIMEZONE,
-          language: "el",
+          language: "en",
         },
         guests: ["tbaltzakis@cloudless.gr"],
         metadata: {},
