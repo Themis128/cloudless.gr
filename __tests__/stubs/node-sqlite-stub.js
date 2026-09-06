@@ -1,39 +1,14 @@
-/**
- * Mock for node:sqlite — used in tests running in jsdom environment
- * where node:sqlite is not available.
- * Tests that need real sqlite should use @vitest-environment node.
- */
-
-export class DatabaseSync {
-  constructor() {}
-
-  exec() {}
-
-  prepare() {
-    return {
-      bind: function() { return this; },
-      all: async () => ({ results: [], success: true }),
-      run: async () => ({ success: true, meta: { changes: 0 } }),
-      first: async () => ({ ok: 1n }),
-      get: () => undefined,
-    };
-  }
-
-  close() {}
-}
-
-export const Session = class {};
-
-export const StatementSync = class {};
-
-export const backup = () => {};
-
-export const constants = {};
-
-export default {
-  DatabaseSync,
-  Session,
-  StatementSync,
-  backup,
-  constants,
+/* jshint esversion: 11, node: true */
+// Stub for node:sqlite (Node.js 22+ built-in).
+// Prevents Vite from failing to bundle it under JSDOM.
+// Tests that need real sqlite behaviour must mock auth-db-local directly.
+module.exports = {
+  DatabaseSync: class {
+    constructor() {}
+    exec() {}
+    prepare() {
+      return { get: () => null, all: () => [], run: () => ({}) };
+    }
+    close() {}
+  },
 };
