@@ -121,14 +121,11 @@ export async function submitSitemap(
   const token = await getWebmastersToken();
   const encoded = encodeURIComponent(siteUrl);
   const feedEncoded = encodeURIComponent(feedPath);
-  const res = await fetchWithTimeout(
-    `${GSC_API}/${encoded}/sitemaps/${feedEncoded}`,
-    {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ path: feedPath }),
-    }
-  );
+  const res = await fetchWithTimeout(`${GSC_API}/${encoded}/sitemaps/${feedEncoded}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ path: feedPath }),
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`GSC sitemap submit ${res.status}: ${text.slice(0, 200)}`);
@@ -146,13 +143,10 @@ export async function deleteSitemap(
   const token = await getWebmastersToken();
   const encoded = encodeURIComponent(siteUrl);
   const feedEncoded = encodeURIComponent(feedPath);
-  const res = await fetchWithTimeout(
-    `${GSC_API}/${encoded}/sitemaps/${feedEncoded}`,
-    {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  const res = await fetchWithTimeout(`${GSC_API}/${encoded}/sitemaps/${feedEncoded}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`GSC sitemap delete ${res.status}: ${text.slice(0, 200)}`);
@@ -192,9 +186,7 @@ export async function inspectUrl(
  * Notify Google that a URL has been updated and should be re-crawled.
  * Uses the Google Indexing API (separate from GSC).
  */
-export async function requestIndexing(
-  url: string
-): Promise<IndexingNotificationResponse> {
+export async function requestIndexing(url: string): Promise<IndexingNotificationResponse> {
   const token = await getIndexingToken();
   const res = await fetchWithTimeout(INDEXING_API, {
     method: "POST",
@@ -214,17 +206,12 @@ export async function requestIndexing(
 /**
  * Get the status of the most recent indexing notification for a URL.
  */
-export async function getIndexingStatus(
-  url: string
-): Promise<IndexingNotificationResponse> {
+export async function getIndexingStatus(url: string): Promise<IndexingNotificationResponse> {
   const token = await getIndexingToken();
   const encoded = encodeURIComponent(url);
-  const res = await fetchWithTimeout(
-    `${INDEXING_API}/metadata?url=${encoded}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  const res = await fetchWithTimeout(`${INDEXING_API}/metadata?url=${encoded}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Indexing API status ${res.status}: ${text.slice(0, 200)}`);

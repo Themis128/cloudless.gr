@@ -1,21 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { NextRequest } from "next/server";
 import { getCrawlStats } from "@/lib/gsc-admin";
+import { guardAdmin, runGscOperation } from "../_helpers";
 
 /**
  * GET /api/admin/gsc/crawl-stats — crawl error samples and stats
  * Returns: { samples: [{ category, pageCount, sampleUrls }], siteUrl }
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await guardAdmin(request);
   if (!auth.ok) return auth.response;
-
-  try {
-    const result = await getCrawlStats();
-    return NextResponse.json(result);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[GSC crawl-stats] error:", msg);
-    return NextResponse.json({ error: msg }, { status: 502 });
-  }
+  return runGscOperation("crawl-stats", () => getCrawlStats());
 }
