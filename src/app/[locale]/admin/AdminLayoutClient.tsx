@@ -45,6 +45,7 @@ import {
   HelpCircle,
   Package,
   Share2,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +68,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/analytics/engine", label: "Edge AE", Icon: Activity },
       { href: "/admin/analytics/unified", label: "Unified View", Icon: Layers },
       { href: "/admin/analytics/seo", label: "SEO", Icon: BarChart2 },
+      { href: "/admin/gsc", label: "Search Console", Icon: Search },
       { href: "/admin/analytics/funnel", label: "Funnel", Icon: Filter },
       { href: "/admin/analytics/social", label: "Social", Icon: Share2 },
       { href: "/admin/kpi", label: "KPI", Icon: Gauge },
