@@ -107,10 +107,12 @@ export async function callWorkersAiChat(
 
     // Handle both legacy format (result.response) and OpenAI-compatible format
     // (result.choices[0].message.content) returned by -fast model variants.
+    // Use || not ?? because the -fast variant returns result.response="" alongside
+    // the populated choices array — ?? would short-circuit on the empty string.
     const rawText =
-      data.result?.response ??
-      data.result?.choices?.[0]?.message?.content ??
-      data.result?.choices?.[0]?.text ??
+      data.result?.response ||
+      data.result?.choices?.[0]?.message?.content ||
+      data.result?.choices?.[0]?.text ||
       "";
     const text = stripThinkingTags(rawText);
     recordAdminAiCall({

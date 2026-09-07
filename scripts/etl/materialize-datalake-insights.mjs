@@ -129,13 +129,12 @@ async function callWorkersAi(prompt) {
   const body = await res.json();
   // Handle both legacy format (result.response) and OpenAI-compatible format
   // (result.choices[0].message.content) returned by -fast model variants.
+  // Use || not ?? because the -fast variant returns result.response="" alongside
+  // the populated choices array — ?? would short-circuit on the empty string.
   const choices = body?.result?.choices ?? [];
-  const text = body?.result?.response ?? choices?.[0]?.message?.content ?? choices?.[0]?.text ?? "";
+  const text = body?.result?.response || choices?.[0]?.message?.content || choices?.[0]?.text || "";
   if (typeof text !== "string" || !text.trim()) {
-    const choiceInfo = choices.length
-      ? `choices[0]=${JSON.stringify(choices[0]).slice(0, 200)}`
-      : `choices=[]`;
-    throw new Error(`Workers AI empty response (${choiceInfo})`);
+    throw new Error("Workers AI empty response");
   }
   return { text, provider: "workers-ai", model: WORKERS_MODEL };
 }
