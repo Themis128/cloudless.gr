@@ -52,7 +52,7 @@ jobs:
 
     - name: Ping Kuma on success
       if: always() && github.event_name != 'push'
-      uses: actions/github-script@v9.0.0
+      uses: actions/github-script@v9
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         KUMA_PUSH_URL: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
@@ -65,7 +65,7 @@ jobs:
 
     - name: Notify Slack on failure
       if: failure()
-      uses: actions/github-script@v9.0.0
+      uses: actions/github-script@v9
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
