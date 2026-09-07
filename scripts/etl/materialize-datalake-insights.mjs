@@ -127,12 +127,15 @@ async function callWorkersAi(prompt) {
     throw new Error(`Workers AI ${res.status}: ${text.slice(0, 200)}`);
   }
   const body = await res.json();
-  const text = body?.result?.response;
+  // Handle both legacy format (result.response) and OpenAI-compatible format
+  // (result.choices[0].message.content) returned by -fast model variants.
+  const text =
+    body?.result?.response ??
+    body?.result?.choices?.[0]?.message?.content ??
+    body?.result?.choices?.[0]?.text ??
+    "";
   if (typeof text !== "string" || !text.trim()) {
-    const bodyKeys = Object.keys(body?.result ?? {}).join(",");
-    throw new Error(
-      `Workers AI empty response (success=${body?.success}, resultKeys=[${bodyKeys}], body=${JSON.stringify(body).slice(0, 300)})`
-    );
+    throw new Error("Workers AI empty response");
   }
   return { text, provider: "workers-ai", model: WORKERS_MODEL };
 }
@@ -277,6 +280,11 @@ async function main() {
       has_error: Boolean(insight.error),
       summary_preview: String(insight.summary ?? "").slice(0, 160),
     });
+    // Pace Gemini free tier (15 RPM) — only needed when Workers AI fails and
+    // Gemini fallback is used for consecutive domains.
+    if (insight.provider !== "workers-ai") {
+      await new Promise((r) => setTimeout(r, 4500));
+    }
   }
 
   const index = {

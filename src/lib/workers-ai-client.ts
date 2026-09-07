@@ -48,7 +48,12 @@ export function workersAiRunUrl(accountId: string, model: string): string {
 }
 
 interface CfAiResult {
-  result?: { response?: string; data?: number[][]; shape?: number[] };
+  result?: {
+    response?: string;
+    data?: number[][];
+    shape?: number[];
+    choices?: Array<{ message?: { content?: string }; text?: string }>;
+  };
   errors?: { message?: string }[];
   success?: boolean;
 }
@@ -100,7 +105,14 @@ export async function callWorkersAiChat(
       throw err;
     }
 
-    const text = stripThinkingTags(data.result?.response ?? "");
+    // Handle both legacy format (result.response) and OpenAI-compatible format
+    // (result.choices[0].message.content) returned by -fast model variants.
+    const rawText =
+      data.result?.response ??
+      data.result?.choices?.[0]?.message?.content ??
+      data.result?.choices?.[0]?.text ??
+      "";
+    const text = stripThinkingTags(rawText);
     recordAdminAiCall({
       ok: true,
       model,
