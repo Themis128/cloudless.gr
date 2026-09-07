@@ -18,7 +18,7 @@ import { getProducts } from "@/lib/store-products";
 
 const CF_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-const CF_MODEL = process.env.WORKERS_AI_PRD_DESC_MODEL || "@cf/meta/llama-3.1-8b-instruct";
+const CF_MODEL = process.env.WORKERS_AI_PRD_DESC_MODEL || "@cf/meta/llama-3.1-8b-instruct-fast";
 
 type AiResult = {
   errors?: Array<{ message?: string }>;
@@ -42,14 +42,15 @@ async function generateWithWorkersAI(prompt: string): Promise<string> {
   );
 
   if (!response.ok) {
-    const data = await response.json().catch(() => ({})) as AiResult;
-    throw new Error(`Workers AI failed: ${response.status} ${data.errors?.[0]?.message ?? "unknown"}`);
+    const data = (await response.json().catch(() => ({}))) as AiResult;
+    throw new Error(
+      `Workers AI failed: ${response.status} ${data.errors?.[0]?.message ?? "unknown"}`
+    );
   }
 
   const result = await response.json();
   return result.result?.response ?? "";
 }
-
 
 const SYSTEM_PROMPT = `You are a product copywriter for Cloudless.gr, a Cloudflare-native SaaS company.
 Generate clear, compelling product descriptions (3-5 sentences) that:

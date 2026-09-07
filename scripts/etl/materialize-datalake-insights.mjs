@@ -36,7 +36,7 @@ const DOMAINS = [
   { domain: "orchestration", sections: ["stripe_revenue", "acquisition_funnel", "attribution"] },
 ];
 
-const WORKERS_MODEL = process.env.WORKERS_AI_CHAT_MODEL || "@cf/meta/llama-3.1-8b-instruct";
+const WORKERS_MODEL = process.env.WORKERS_AI_CHAT_MODEL || "@cf/meta/llama-3.1-8b-instruct-fast";
 
 async function loadGold() {
   try {

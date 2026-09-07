@@ -8,7 +8,7 @@
 
 import { recordAdminAiCall } from "@/lib/admin-ai-usage";
 
-const DEFAULT_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const DEFAULT_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 export function isWorkersAiConfigured(): boolean {
   return Boolean(

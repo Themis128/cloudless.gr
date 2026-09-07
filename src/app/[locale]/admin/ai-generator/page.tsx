@@ -14,8 +14,8 @@ interface GenerateResponse {
 }
 
 const MODELS = [
-  { id: "@cf/meta/llama-3-8b-instruct", label: "Llama 3 (8B) — fast" },
-  { id: "@cf/meta/llama-3-70b-instruct", label: "Llama 3 (70B) — slower, better" },
+  { id: "@cf/meta/llama-3.1-8b-instruct-fast", label: "Llama 3.1 (8B) — fast" },
+  { id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", label: "Llama 3.3 (70B) — slower, better" },
 ] as const;
 
 export default function AiGeneratorPage() {
