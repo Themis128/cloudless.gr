@@ -4,7 +4,7 @@
  */
 
 // Gemini model configuration
-export const GEMINI_MODEL_ID = "gemini-1.5-flash";
+export const GEMINI_MODEL_ID = "gemini-2.5-flash";
 
 // Function to get Gemini API key from environment
 export function getGeminiApiKey(): string | undefined {

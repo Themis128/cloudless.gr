@@ -6,7 +6,7 @@
 import { getConfig } from "@/lib/ssm-config";
 
 const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const VERIFY_TIMEOUT_MS = 8_000;
 
 export type GeminiTokenStatus = "valid" | "rejected" | "not_configured" | "error";

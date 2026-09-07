@@ -64,7 +64,7 @@ function sectionPack(gold, sectionNames) {
     }
     packs.push({
       section: name,
-      rowCount: section.rowCount ?? (section.rows?.length ?? 0),
+      rowCount: section.rowCount ?? section.rows?.length ?? 0,
       rows: (section.rows ?? []).slice(0, 15),
     });
   }
@@ -106,7 +106,7 @@ async function callWorkersAi(prompt) {
 
   const res = await fetch(workersAiUrl(accountId, WORKERS_MODEL), {
     method: "POST",
-      headers: {
+    headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": CONTENT_TYPE_JSON,
     },
@@ -137,7 +137,7 @@ async function callWorkersAi(prompt) {
 async function callGemini(prompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": CONTENT_TYPE_JSON },
@@ -153,7 +153,7 @@ async function callGemini(prompt) {
   const body = await res.json();
   const text = body?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
   if (!text.trim()) throw new Error("Gemini empty response");
-  return { text, provider: "gemini", model: "gemini-1.5-flash" };
+  return { text, provider: "gemini", model: "gemini-2.5-flash" };
 }
 
 function parseInsightJson(text) {
