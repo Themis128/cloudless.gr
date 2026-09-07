@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
 import { inspectUrl } from "@/lib/gsc-admin";
+import { guardAdmin, parseJsonBody, runGscOperation } from "../_helpers";
 
 /**
  * POST /api/admin/gsc/inspect — inspect a URL's index status
@@ -8,27 +8,13 @@ import { inspectUrl } from "@/lib/gsc-admin";
  * Returns: GSC URL Inspection result (index status, coverage, mobile usability)
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await guardAdmin(request);
   if (!auth.ok) return auth.response;
 
-  let body: { url?: string };
-  try {
-    body = (await request.json()) as { url?: string };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsed = await parseJsonBody<{ url?: string }>(request);
+  if ("error" in parsed) return parsed.error;
 
-  const url = body.url?.trim();
-  if (!url) {
-    return NextResponse.json({ error: "url is required" }, { status: 400 });
-  }
-
-  try {
-    const result = await inspectUrl(url);
-    return NextResponse.json({ url, ...result });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[GSC inspect] error:", msg);
-    return NextResponse.json({ error: msg }, { status: 502 });
-  }
+  const url = parsed.data.url?.trim();
+  if (!url) return NextResponse.json({ error: "url is required" }, { status: 400 });
+  return runGscOperation("inspect", () => inspectUrl(url));
 }
