@@ -129,7 +129,10 @@ async function callWorkersAi(prompt) {
   const body = await res.json();
   const text = body?.result?.response;
   if (typeof text !== "string" || !text.trim()) {
-    throw new Error("Workers AI empty response");
+    const bodyKeys = Object.keys(body?.result ?? {}).join(",");
+    throw new Error(
+      `Workers AI empty response (success=${body?.success}, resultKeys=[${bodyKeys}], body=${JSON.stringify(body).slice(0, 300)})`
+    );
   }
   return { text, provider: "workers-ai", model: WORKERS_MODEL };
 }
