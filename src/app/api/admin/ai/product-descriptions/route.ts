@@ -40,7 +40,7 @@ function getAiBinding(): AiBinding | null {
   return (process.env as unknown as AiEnv).AI ?? null;
 }
 
-const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 // ---------------------------------------------------------------------------
 // Types

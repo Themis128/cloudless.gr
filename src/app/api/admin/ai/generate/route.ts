@@ -15,8 +15,11 @@ import { requireAdmin } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 
-const DEFAULT_MODEL = "@cf/meta/llama-3-8b-instruct";
-const ALLOWED_MODELS = new Set(["@cf/meta/llama-3-8b-instruct", "@cf/meta/llama-3-70b-instruct"]);
+const DEFAULT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
+const ALLOWED_MODELS = new Set([
+  "@cf/meta/llama-3.1-8b-instruct-fast",
+  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+]);
 
 interface GenerateRequest {
   prompt?: string;

@@ -4,7 +4,7 @@
 #
 # Checks (each skipped gracefully when its credential isn't available):
 #   1. Cloudflare token validity + Workers AI scope (needs CLOUDFLARE_API_TOKEN)
-#      — runs a real 1-token inference against llama-3-8b-instruct.
+#      — runs a real 1-token inference against llama-3.1-8b-instruct-fast.
 #   2. Production Lambda env carries CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN
 #      (needs AWS credentials with lambda:GetFunctionConfiguration).
 #   3. Live endpoint is deployed and auth-gated: unauthenticated POST
@@ -43,7 +43,7 @@ if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
     -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"messages":[{"role":"user","content":"ping"}],"max_tokens":1}' \
-    "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai/run/@cf/meta/llama-3-8b-instruct")
+    "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct-fast")
   if [ "$RUN_CODE" = "200" ]; then
     say "   Workers AI scope: OK (inference HTTP 200)"
   else
