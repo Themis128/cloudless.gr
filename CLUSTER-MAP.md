@@ -2,7 +2,7 @@
 
 Live topology notes for the omv k3s cluster.
 
-## Current topology (2026-08)
+## Current topology (2026-09)
 
 - **Single-node k3s:** `omv` (Pi 5) only — control-plane + workloads
 - **Edge path:** `cloudless.gr` → Worker `cloudless2` (`workers/pi-origin-proxy`) → Tunnel `pi-origin.cloudless.gr` → `cloudless-app` NodePort `30300`
