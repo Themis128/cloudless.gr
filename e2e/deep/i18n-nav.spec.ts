@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { GUEST_STORAGE } from "./_helpers";
+import { api, GUEST_STORAGE } from "./_helpers";
 import { clickNavHref, openMobileNavIfNeeded } from "../helpers/mobile-nav";
 
 test.use({ storageState: GUEST_STORAGE });
@@ -16,15 +16,10 @@ test.describe("i18n routing and primary navigation", () => {
   test("unprefixed /store 307s to /en/store; file-like paths stay unprefixed", async ({
     request,
   }) => {
-    // Retry on 404 — the Next.js dev server can return 404 during compilation
-    let store;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      store = await request.get("/store", { maxRedirects: 0 });
-      if (store.status() !== 404) break;
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-    expect(store!.status()).toBe(307);
-    expect(store!.headers()["location"] ?? "").toMatch(/\/en\/store/);
+    // Use api() helper which retries on 404 during Turbopack compilation
+    const store = await api(request, "get", "/store", { maxRedirects: 0 });
+    expect(store.status()).toBe(307);
+    expect(store.headers()["location"] ?? "").toMatch(/\/en\/store/);
 
     const robots = await request.get("/robots.txt", { maxRedirects: 0 });
     expect(robots.status()).toBeLessThan(400);

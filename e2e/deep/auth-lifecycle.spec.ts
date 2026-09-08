@@ -48,15 +48,10 @@ test.describe("Auth lifecycle", () => {
   });
 
   test("unprefixed /auth/login 307s onto the default locale", async ({ request }) => {
-    // Retry on 404 — the Next.js dev server can return 404 during compilation
-    let res;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      res = await request.get("/auth/login", { maxRedirects: 0 });
-      if (res.status() !== 404) break;
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-    expect(res!.status()).toBe(307);
-    const loc = res!.headers()["location"] ?? "";
+    // Use api() helper which retries on 404 during Turbopack compilation
+    const res = await api(request, "get", "/auth/login", { maxRedirects: 0 });
+    expect(res.status()).toBe(307);
+    const loc = res.headers()["location"] ?? "";
     expect(loc).toMatch(/\/en\/auth\/login/);
   });
 

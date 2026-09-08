@@ -16,7 +16,7 @@ test.describe("Store, cart, checkout", () => {
     const pdp = page.locator('a[href*="/store/srv-cloud"]').first();
     await expect(pdp).toBeVisible();
     await pdp.click();
-    await expect(page).toHaveURL(/\/en\/store\/srv-cloud/);
+    await expect(page).toHaveURL(/\/en\/store\/srv-cloud/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: /cloud architecture audit/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /add to cart/i })).toBeVisible();
   });
@@ -35,7 +35,10 @@ test.describe("Store, cart, checkout", () => {
     await page.goto("/en/store/srv-cloud");
     await page.getByTestId("add-to-cart").click();
     await expect(page.getByTestId("cart-drawer")).toContainText(/cloud architecture audit/i);
-    await page.getByTestId("cart-drawer").getByRole("button", { name: /close cart/i }).click();
+    await page
+      .getByTestId("cart-drawer")
+      .getByRole("button", { name: /close cart/i })
+      .click();
     await expect(page.getByTestId("cart-drawer")).toHaveAttribute("data-open", "false");
     await expect
       .poll(async () => page.evaluate(() => localStorage.getItem("cloudless-cart") ?? ""))

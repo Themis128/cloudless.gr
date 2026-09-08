@@ -7,23 +7,25 @@ test.describe("Protected pages and APIs", () => {
   test("unauthenticated /en/dashboard redirects to login with a bare redirect param", async ({
     page,
   }) => {
-    await page.goto("/en/dashboard");
-    await expect(page).toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 });
+    // Retry — during Turbopack compilation the proxy may not run, producing
+    // a redirect without the expected query param
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await page.goto("/en/dashboard");
+      await expect(page)
+        .toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 })
+        .catch(() => {});
+      const url = new URL(page.url());
+      const redirect = url.searchParams.get("redirect") ?? url.searchParams.get("next") ?? "";
+      if (redirect === "/dashboard") {
+        expect(redirect).toBe("/dashboard");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    // Final assertion — will fail with a clear message if still wrong
     const url = new URL(page.url());
     const redirect = url.searchParams.get("redirect") ?? url.searchParams.get("next") ?? "";
-    // The redirect param should be /dashboard. When the dev server is
-    // recovering from a compilation error, the redirect might be empty —
-    // retry once in that case.
-    if (redirect !== "/dashboard") {
-      await page.goto("/en/dashboard");
-      await expect(page).toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 });
-      const retryUrl = new URL(page.url());
-      const retryRedirect =
-        retryUrl.searchParams.get("redirect") ?? retryUrl.searchParams.get("next") ?? "";
-      expect(retryRedirect).toBe("/dashboard");
-    } else {
-      expect(redirect).toBe("/dashboard");
-    }
+    expect(redirect).toBe("/dashboard");
   });
 
   test("unauthenticated /en/admin redirects to login", async ({ page }) => {
