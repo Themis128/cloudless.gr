@@ -311,6 +311,8 @@ warm_routes() {
     /en/auth/signup
     /api/auth/session
     /api/auth/login
+    /auth/login
+    /store
   )
   for path in "${paths[@]}"; do
     ok=0
