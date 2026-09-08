@@ -11,6 +11,7 @@ import { recordNotification } from "@/lib/admin-notifications";
 import { sendActivationEmail, notifyTeam } from "@/lib/email";
 import { slackRegistrationNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { isD1WriteLimitError } from "@/lib/d1-http";
 
 /**
  * Fallback to HTTP D1 client if the bindings are not available.
@@ -215,6 +216,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, token });
   } catch (err) {
+    if (isD1WriteLimitError(err)) {
+      console.warn("[auth/register] D1 write limit exceeded — returning 503");
+      return NextResponse.json(
+        { error: "Registration temporarily unavailable (D1 write limit)" },
+        { status: 503 }
+      );
+    }
     console.error("[auth/register] registration failed:", err);
     return NextResponse.json({ error: "Sign up failed" }, { status: 500 });
   }

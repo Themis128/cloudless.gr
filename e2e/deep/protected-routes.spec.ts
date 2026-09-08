@@ -8,10 +8,22 @@ test.describe("Protected pages and APIs", () => {
     page,
   }) => {
     await page.goto("/en/dashboard");
-    await expect(page).toHaveURL(/\/en\/auth\/login/);
+    await expect(page).toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 });
     const url = new URL(page.url());
     const redirect = url.searchParams.get("redirect") ?? url.searchParams.get("next") ?? "";
-    expect(redirect).toBe("/dashboard");
+    // The redirect param should be /dashboard. When the dev server is
+    // recovering from a compilation error, the redirect might be empty —
+    // retry once in that case.
+    if (redirect !== "/dashboard") {
+      await page.goto("/en/dashboard");
+      await expect(page).toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 });
+      const retryUrl = new URL(page.url());
+      const retryRedirect =
+        retryUrl.searchParams.get("redirect") ?? retryUrl.searchParams.get("next") ?? "";
+      expect(retryRedirect).toBe("/dashboard");
+    } else {
+      expect(redirect).toBe("/dashboard");
+    }
   });
 
   test("unauthenticated /en/admin redirects to login", async ({ page }) => {

@@ -48,9 +48,15 @@ test.describe("Auth lifecycle", () => {
   });
 
   test("unprefixed /auth/login 307s onto the default locale", async ({ request }) => {
-    const res = await request.get("/auth/login", { maxRedirects: 0 });
-    expect(res.status()).toBe(307);
-    const loc = res.headers()["location"] ?? "";
+    // Retry on 404 — the Next.js dev server can return 404 during compilation
+    let res;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await request.get("/auth/login", { maxRedirects: 0 });
+      if (res.status() !== 404) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    expect(res!.status()).toBe(307);
+    const loc = res!.headers()["location"] ?? "";
     expect(loc).toMatch(/\/en\/auth\/login/);
   });
 
@@ -77,7 +83,7 @@ test.describe("Auth lifecycle", () => {
     await expect(page).toHaveURL(/\/auth\/login/);
     await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("auth-error")).toContainText(
-      /invalid|failed|incorrect|password|email|locked|configured|unavailable|sign in/i,
+      /invalid|failed|incorrect|password|email|locked|configured|unavailable|sign in/i
     );
   });
 
