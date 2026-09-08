@@ -13,6 +13,24 @@ import type { AuthDatabase } from "./auth-d1";
 /** Production user-auth-db — must match wrangler.jsonc `database_id`. */
 export const DEFAULT_AUTH_D1_DATABASE_ID = "7ca74513-23c3-412a-b9ca-b0c55835973d";
 
+/**
+ * Thrown when D1 returns a 400 indicating the free-tier daily row write limit
+ * has been exceeded. Callers can catch this to return a 503 instead of 500.
+ */
+export class D1WriteLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "D1WriteLimitError";
+  }
+}
+
+/** True when the D1 error message indicates a free-tier write limit. */
+export function isD1WriteLimitError(err: unknown): boolean {
+  if (err instanceof D1WriteLimitError) return true;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /exceeded.*D1.*free tier.*write.*limit/i.test(msg);
+}
+
 type D1HttpQueryResult = {
   results?: Record<string, unknown>[];
   success?: boolean;
@@ -77,6 +95,9 @@ async function queryRemote(sql: string, params: unknown[]): Promise<D1HttpQueryR
         ?.map((e) => e.message)
         .filter(Boolean)
         .join("; ") || res.statusText;
+    if (/exceeded.*D1.*free tier.*write.*limit/i.test(msg)) {
+      throw new D1WriteLimitError(msg);
+    }
     throw new Error(`D1 HTTP query failed (${res.status}): ${msg}`);
   }
 

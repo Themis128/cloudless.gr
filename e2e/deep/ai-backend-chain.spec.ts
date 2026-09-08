@@ -151,7 +151,9 @@ test.describe("POST /api/admin/ai/copy", () => {
     expect(AI_OK).toContain(res.status());
     if (res.status() === 200) {
       const body = await expectJson(res);
-      expect(typeof (body.text ?? body.result ?? body.copy)).toBe("string");
+      // The copy route returns { variants, provider } — variants is either
+      // a parsed JSON array or { raw: string } when the LLM output isn't JSON
+      expect(body.variants).toBeTruthy();
     }
   });
 
@@ -274,7 +276,9 @@ test.describe("POST /api/admin/ai/generate", () => {
     expect([401, 403]).toContain(res.status());
   });
 
-  test("valid prompt responds with result or 503 when Workers AI not configured", async ({ request }) => {
+  test("valid prompt responds with result or 503 when Workers AI not configured", async ({
+    request,
+  }) => {
     const res = await api(request, "post", "/api/admin/ai/generate", {
       headers: authHeaders,
       data: { prompt: "Write one sentence about cloud hosting." },
@@ -322,7 +326,12 @@ test.describe("provider field contract — assistant + copy return known provide
   test("copy response.provider is one of the four known backends", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/copy", {
       headers: authHeaders,
-      data: { service: "cloud infrastructure", platform: "Meta", objective: "awareness", language: "English" },
+      data: {
+        service: "cloud infrastructure",
+        platform: "Meta",
+        objective: "awareness",
+        language: "English",
+      },
     });
     if (res.status() !== 200) return;
     const body = await expectJson(res);

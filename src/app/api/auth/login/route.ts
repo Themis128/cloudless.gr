@@ -11,6 +11,7 @@ import {
   type AuthDatabase,
 } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { isD1WriteLimitError } from "@/lib/d1-http";
 
 /** Zod parse (throw) so missing credentials are not modeled as a user-controlled security bypass. */
 const LoginBodySchema = z.object({
@@ -257,6 +258,14 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (err) {
+    // D1 write limit → 503 (service unavailable, not a server error)
+    if (isD1WriteLimitError(err)) {
+      console.warn("[auth/login] D1 write limit exceeded — returning 503");
+      return NextResponse.json(
+        { error: "Authentication temporarily unavailable (D1 write limit)" },
+        { status: 503 }
+      );
+    }
     // D1 binding / network / unexpected auth-lib failures land here so the
     // client sees a structured 500 instead of an unhandled crash, and the
     // real cause is surfaced in Workers/Lambda logs.

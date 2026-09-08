@@ -16,9 +16,15 @@ test.describe("i18n routing and primary navigation", () => {
   test("unprefixed /store 307s to /en/store; file-like paths stay unprefixed", async ({
     request,
   }) => {
-    const store = await request.get("/store", { maxRedirects: 0 });
-    expect(store.status()).toBe(307);
-    expect(store.headers()["location"] ?? "").toMatch(/\/en\/store/);
+    // Retry on 404 — the Next.js dev server can return 404 during compilation
+    let store;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      store = await request.get("/store", { maxRedirects: 0 });
+      if (store.status() !== 404) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    expect(store!.status()).toBe(307);
+    expect(store!.headers()["location"] ?? "").toMatch(/\/en\/store/);
 
     const robots = await request.get("/robots.txt", { maxRedirects: 0 });
     expect(robots.status()).toBeLessThan(400);
@@ -42,7 +48,10 @@ test.describe("i18n routing and primary navigation", () => {
     const languageBtn = page.getByRole("button", { name: /language:/i }).filter({ visible: true });
     await expect(languageBtn).toBeVisible({ timeout: 10_000 });
     await languageBtn.click();
-    await page.getByRole("option", { name: /ελληνικά/i }).filter({ visible: true }).click();
+    await page
+      .getByRole("option", { name: /ελληνικά/i })
+      .filter({ visible: true })
+      .click();
     await expect(page).toHaveURL(/\/el\/services/);
     await expect(page.locator("html")).toHaveAttribute("lang", "el", { timeout: 10_000 });
   });
@@ -76,7 +85,9 @@ test.describe("i18n routing and primary navigation", () => {
   test("theme switcher writes data-theme and survives reload", async ({ page }) => {
     await page.goto("/en");
     await openMobileNavIfNeeded(page);
-    const inlineLight = page.getByRole("radio", { name: /theme: light/i }).filter({ visible: true });
+    const inlineLight = page
+      .getByRole("radio", { name: /theme: light/i })
+      .filter({ visible: true });
     if (await inlineLight.count()) {
       await inlineLight.click();
     } else {
