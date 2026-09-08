@@ -48,13 +48,7 @@ test.describe("Auth lifecycle", () => {
   });
 
   test("unprefixed /auth/login 307s onto the default locale", async ({ request }) => {
-    // api() retries on 404 during Turbopack compilation.
-    // If the proxy/middleware fails to compile (Next.js InvariantError bug),
-    // the route returns 404 even after all retries — skip in that case.
     const res = await api(request, "get", "/auth/login", { maxRedirects: 0 });
-    if (res.status() === 404) {
-      test.skip(true, "proxy/middleware not compiled (Next.js Turbopack InvariantError)");
-    }
     expect(res.status()).toBe(307);
     const loc = res.headers()["location"] ?? "";
     expect(loc).toMatch(/\/en\/auth\/login/);

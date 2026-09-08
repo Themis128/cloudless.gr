@@ -7,23 +7,11 @@ test.describe("Protected pages and APIs", () => {
   test("unauthenticated /en/dashboard redirects to login with a bare redirect param", async ({
     page,
   }) => {
-    // Retry — during Turbopack compilation the proxy may not run, producing
-    // a redirect without the expected query param
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await page.goto("/en/dashboard");
-      await expect(page)
-        .toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 })
-        .catch(() => {});
-      const url = new URL(page.url());
-      const redirect = url.searchParams.get("redirect") ?? url.searchParams.get("next") ?? "";
-      if (redirect === "/dashboard") {
-        expect(redirect).toBe("/dashboard");
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 1500));
-    }
-    // Proxy not working — skip instead of failing on a Turbopack bug
-    test.skip(true, "proxy/middleware not compiled (Next.js Turbopack InvariantError)");
+    await page.goto("/en/dashboard");
+    await expect(page).toHaveURL(/\/en\/auth\/login/, { timeout: 15_000 });
+    const url = new URL(page.url());
+    const redirect = url.searchParams.get("redirect") ?? url.searchParams.get("next") ?? "";
+    expect(redirect).toBe("/dashboard");
   });
 
   test("unauthenticated /en/admin redirects to login", async ({ page }) => {
