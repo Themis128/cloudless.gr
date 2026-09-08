@@ -5,15 +5,16 @@ test.use({ storageState: GUEST_STORAGE });
 
 test.describe("Security headers and webhook auth", () => {
   test("HTML pages send CSP, frame deny, and nosniff", async ({ request }) => {
-    // Retry on 404/500 — the Next.js dev server can return errors during compilation
-    let res;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      res = await api(request, "get", "/en");
-      if (res.status() < 400) break;
-      await new Promise((r) => setTimeout(r, 2000));
+    // Retry until we get a response with security headers — during Turbopack
+    // compilation the proxy/middleware may not run, producing headerless 200s
+    let h: Record<string, string> = {};
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const res = await api(request, "get", "/en");
+      if (res.status() >= 400) continue;
+      h = res.headers();
+      if (h["content-security-policy"] ?? h["content-security-policy-report-only"]) break;
+      await new Promise((r) => setTimeout(r, 1000));
     }
-    expect(res!.status()).toBeLessThan(400);
-    const h = res!.headers();
     expect(h["content-security-policy"] ?? h["content-security-policy-report-only"]).toBeTruthy();
     expect(h["x-frame-options"]?.toLowerCase()).toBe("deny");
     expect(h["x-content-type-options"]?.toLowerCase()).toBe("nosniff");
