@@ -5,20 +5,9 @@ test.use({ storageState: GUEST_STORAGE });
 
 test.describe("Security headers and webhook auth", () => {
   test("HTML pages send CSP, frame deny, and nosniff", async ({ request }) => {
-    // Retry until we get a response with security headers — during Turbopack
-    // compilation the proxy/middleware may not run, producing headerless 200s.
-    // If the proxy never compiles (Next.js InvariantError bug), skip.
-    let h: Record<string, string> = {};
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const res = await api(request, "get", "/en");
-      if (res.status() >= 400) continue;
-      h = res.headers();
-      if (h["content-security-policy"] ?? h["content-security-policy-report-only"]) break;
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    if (!h["content-security-policy"] && !h["content-security-policy-report-only"]) {
-      test.skip(true, "proxy/middleware not compiled (Next.js Turbopack InvariantError)");
-    }
+    const res = await api(request, "get", "/en");
+    expect(res.status()).toBeLessThan(400);
+    const h = res.headers();
     expect(h["content-security-policy"] ?? h["content-security-policy-report-only"]).toBeTruthy();
     expect(h["x-frame-options"]?.toLowerCase()).toBe("deny");
     expect(h["x-content-type-options"]?.toLowerCase()).toBe("nosniff");
