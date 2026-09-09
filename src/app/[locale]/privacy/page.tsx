@@ -1,16 +1,56 @@
 import type { Metadata } from "next";
+import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description:
-    "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant.",
+const BASE_URL = "https://cloudless.gr";
+const canonical = `${BASE_URL}/privacy`;
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as
+    Record<string, Record<string, string>> | undefined;
+  const title = meta?.privacy?.title ?? "Privacy Policy";
+  const description =
+    meta?.privacy?.description ??
+    "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant.";
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/privacy`,
+        el: `${BASE_URL}/el/privacy`,
+        de: `${BASE_URL}/de/privacy`,
+        fr: `${BASE_URL}/fr/privacy`,
+        "x-default": `${BASE_URL}/en/privacy`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 /* ── Section helper ──────────────────────────────────────── */
 
@@ -33,7 +73,13 @@ function Section({
 
 /* ── Page ─────────────────────────────────────────────────── */
 
-export default async function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  setRequestLocale(rawLocale);
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 

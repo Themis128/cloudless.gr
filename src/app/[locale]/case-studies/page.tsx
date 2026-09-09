@@ -2,36 +2,58 @@ export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 import type { Metadata } from "next";
+import { setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/appflowy-case-studies";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 
 const BASE_URL = "https://cloudless.gr";
 const canonical = `${BASE_URL}/case-studies`;
 
-export const metadata: Metadata = {
-  title: "Case Studies",
-  description:
-    "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
-  alternates: {
-    canonical,
-    languages: {
-      en: `${BASE_URL}/en/case-studies`,
-      el: `${BASE_URL}/el/case-studies`,
-      "x-default": `${BASE_URL}/en/case-studies`,
-    },
-  },
-  openGraph: {
-    type: "website",
-    title: "Case Studies",
-    description:
-      "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
-    url: canonical,
-    siteName: "Cloudless",
-  },
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as
+    Record<string, Record<string, string>> | undefined;
+  const title = meta?.caseStudies?.title ?? "Case Studies";
+  const description =
+    meta?.caseStudies?.description ??
+    "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.";
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/case-studies`,
+        el: `${BASE_URL}/el/case-studies`,
+        de: `${BASE_URL}/de/case-studies`,
+        fr: `${BASE_URL}/fr/case-studies`,
+        "x-default": `${BASE_URL}/en/case-studies`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {
   try {
@@ -96,7 +118,12 @@ function CaseStudyCard({ cs }: { cs: CaseStudy }) {
   );
 }
 
-export default async function CaseStudiesPage() {
+export default async function CaseStudiesPage({ params }: PageProps) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
+  setRequestLocale(rawLocale);
+  const t = (key: string, fallback: string) => translate(locale, key, fallback);
+
   const caseStudies = await loadCaseStudies();
 
   return (
@@ -105,12 +132,16 @@ export default async function CaseStudiesPage() {
       <section className="px-4 pt-24 pb-16 text-center">
         <ScrollReveal>
           <span className="mb-4 inline-block rounded-full border border-[#00fff5]/30 bg-[#00fff5]/10 px-4 py-1 text-sm text-[#00fff5]">
-            Results that speak for themselves
+            {t("caseStudiesPage.badge", "Results that speak for themselves")}
           </span>
-          <h1 className="mb-4 text-4xl font-bold md:text-5xl">Case Studies</h1>
+          <h1 className="mb-4 text-4xl font-bold md:text-5xl">
+            {t("caseStudiesPage.title", "Case Studies")}
+          </h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-400">
-            Real engagements, real numbers. Here&apos;s how Cloudless helped businesses reduce cloud
-            spend, modernise infrastructure, and ship faster.
+            {t(
+              "caseStudiesPage.subtitle",
+              "Real engagements, real numbers. Here's how Cloudless helped businesses reduce cloud spend, modernise infrastructure, and ship faster."
+            )}
           </p>
         </ScrollReveal>
       </section>
@@ -120,9 +151,11 @@ export default async function CaseStudiesPage() {
         {caseStudies.length === 0 ? (
           <ScrollReveal>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-              <p className="text-gray-400">Case studies coming soon.</p>
+              <p className="text-gray-400">
+                {t("caseStudiesPage.empty", "Case studies coming soon.")}
+              </p>
               <Link href="/contact" className="mt-4 inline-block text-[#00fff5] hover:underline">
-                Book a free consultation →
+                {t("caseStudiesPage.emptyCta", "Book a free consultation →")}
               </Link>
             </div>
           </ScrollReveal>
@@ -138,15 +171,20 @@ export default async function CaseStudiesPage() {
       {/* CTA */}
       <section className="border-t border-white/10 px-4 py-20 text-center">
         <ScrollReveal>
-          <h2 className="mb-4 text-3xl font-bold">Ready to be next?</h2>
+          <h2 className="mb-4 text-3xl font-bold">
+            {t("caseStudiesPage.ctaTitle", "Ready to be next?")}
+          </h2>
           <p className="mb-8 text-gray-400">
-            Book a free 30-minute cloud audit and see what&apos;s possible.
+            {t(
+              "caseStudiesPage.ctaSubtitle",
+              "Book a free 30-minute cloud audit and see what's possible."
+            )}
           </p>
           <Link
             href="/contact"
             className="inline-block rounded-xl bg-[#00fff5] px-8 py-4 font-semibold text-[#0a0a0f] transition hover:opacity-90"
           >
-            Book a free audit
+            {t("caseStudiesPage.ctaButton", "Book a free audit")}
           </Link>
         </ScrollReveal>
       </section>

@@ -9,16 +9,33 @@ import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getLiveCampaigns, isCampaignLocale, type Locale } from "@/data/campaigns";
+import { getMessages, isSupportedLocale, type Locale as AppLocale } from "@/lib/i18n";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-export const metadata: Metadata = {
-  title: "Campaigns — Cloudless",
-  description: "Active offers and time-bound campaigns from Cloudless. Greek SMB focus.",
-  robots: { index: false, follow: true },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: AppLocale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as
+    Record<string, Record<string, string>> | undefined;
+  const title = meta?.campaigns?.title ?? "Campaigns — Cloudless";
+  const description =
+    meta?.campaigns?.description ??
+    "Active offers and time-bound campaigns from Cloudless. Greek SMB focus.";
+
+  return {
+    title,
+    description,
+    robots: { index: false, follow: true },
+  };
+}
 
 const COPY = {
   el: {

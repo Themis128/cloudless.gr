@@ -38,7 +38,12 @@
   "hero": {
     "badge": "v2.0 — Nouveaux clients acceptés",
     "titleStatic": "Ciel dégagé.",
-    "typingTexts": ["Zéro friction.", "Contrôle total.", "Vitesse pure.", "Résultats concrets."],
+    "typingTexts": [
+      "Zéro friction.",
+      "Contrôle total.",
+      "Vitesse pure.",
+      "Résultats concrets."
+    ],
     "subtitle": "Le cloud enterprise ? Trop cher. L'infrastructure DIY ? Trop risqué. Nous sommes la troisième voie — serverless, croissance data-driven, et mise à l'échelle adaptée aux équipes de 2 à 20 personnes.",
     "subtitleHighlight": "Enfin.",
     "ctaPrimary": "Réserver un audit gratuit",
@@ -455,6 +460,165 @@
     "blog": {
       "title": "Blog",
       "description": "Perspectives sur le cloud computing, l'architecture serverless, l'analyse de données et le marketing IA pour les entreprises en croissance."
+    },
+    "work": {
+      "title": "Nos Réalisations",
+      "description": "Projets clients livrés par Cloudless — migrations serverless, pipelines analytics et plateformes marketing IA."
+    },
+    "docs": {
+      "title": "Documentation",
+      "description": "Guides internes, références d'intégration et documentation how-to pour la plateforme Cloudless."
+    },
+    "caseStudies": {
+      "title": "Études de Cas",
+      "description": "Résultats concrets : comment Cloudless a aidé des startups et entreprises en croissance à réduire leurs coûts cloud, migrer vers le serverless et livrer plus rapidement."
+    },
+    "privacy": {
+      "title": "Politique de Confidentialité",
+      "description": "Comment Cloudless.gr collecte, utilise et protège vos données personnelles. Conforme au RGPD et au CCPA."
+    },
+    "terms": {
+      "title": "Conditions d'Utilisation",
+      "description": "Conditions générales d'utilisation des services et de la boutique Cloudless.gr. Conforme à la Directive sur les droits des consommateurs de l'UE."
+    },
+    "refund": {
+      "title": "Politique de Remboursement et de Retour",
+      "description": "Notre politique de remboursement et de retour, incluant le droit de rétractation de 14 jours de l'UE pour les consommateurs."
+    },
+    "accessibility": {
+      "title": "Déclaration d'Accessibilité",
+      "description": "Déclaration d'accessibilité Cloudless.gr — conformité WCAG 2.1 AA et contact pour assistance."
+    },
+    "agents": {
+      "title": "Agents",
+      "description": "Cloudless Agent Workers — Démos interactives et outils."
+    },
+    "campaigns": {
+      "title": "Campagnes — Cloudless",
+      "description": "Offres actives et campagnes à durée limitée de Cloudless. Axé sur les PME grecques."
     }
+  },
+  "workPage": {
+    "badge": "NOS RÉALISATIONS",
+    "title": "Projets qui",
+    "titleHighlight": "ont réellement livré",
+    "subtitle": "Migrations serverless, pipelines analytics et plateformes marketing IA — conçus pour les équipes qui doivent avancer vite.",
+    "active": "▶ Actifs",
+    "completed": "✓ Terminés",
+    "emptyTitle": "Aucun projet client à afficher pour le moment.",
+    "emptyDesc": "Revenez bientôt — nous construisons en permanence."
+  },
+  "docsPage": {
+    "label": "[ DOCS ]",
+    "title": "Documentation &",
+    "titleHighlight": "guides",
+    "subtitle": "Tout ce dont vous avez besoin pour intégrer, configurer et étendre la plateforme Cloudless.",
+    "searchPlaceholder": "Rechercher docs…",
+    "searchLabel": "Rechercher docs",
+    "status": "Statut :",
+    "all": "Tous",
+    "verified": "✓ Vérifiés",
+    "needsReview": "⟳ À vérifier",
+    "unverified": "? Non vérifiés",
+    "noResults": "Aucun doc ne correspond à vos filtres.",
+    "noDocs": "Aucune documentation publiée pour le moment.",
+    "viewAll": "Voir tous les docs",
+    "resultSingular": "résultat",
+    "resultPlural": "résultats",
+    "for": "pour",
+    "owner": "Propriétaire :",
+    "verifiedLabel": "Vérifié :",
+    "allDocs": "← Tous les docs",
+    "backToAllDocs": "← Retour aux docs",
+    "noContent": "Aucun contenu disponible.",
+    "onThisPage": "Sur cette page"
+  },
+  "caseStudiesPage": {
+    "badge": "Des résultats qui parlent d'eux-mêmes",
+    "title": "Études de Cas",
+    "subtitle": "Véritables engagements, véritables chiffres. Voici comment Cloudless a aidé des entreprises à réduire leurs dépenses cloud, moderniser leur infrastructure et livrer plus rapidement.",
+    "empty": "Études de cas à venir bientôt.",
+    "emptyCta": "Réserver une consultation gratuite →",
+    "ctaTitle": "Prêt à être le prochain ?",
+    "ctaSubtitle": "Réservez un audit cloud gratuit de 30 minutes et voyez ce qui est possible.",
+    "ctaButton": "Réserver un audit gratuit",
+    "challenge": "Le Défi",
+    "approach": "Notre Approche",
+    "results": "Résultats",
+    "similarTitle": "Vous voulez des résultats similaires ?",
+    "similarDesc": "Réservez un appel gratuit de 30 minutes et parlons de votre configuration cloud.",
+    "backToAll": "← Toutes les études de cas"
+  },
+  "accessibilityPage": {
+    "legalDocument": "DOCUMENT JURIDIQUE",
+    "title": "Déclaration d'Accessibilité",
+    "lastUpdated": "Dernière mise à jour : juin 2026",
+    "intro": "Cloudless s'engage à garantir l'accessibilité numérique pour les personnes en situation de handicap. Nous améliorons continuellement l'expérience utilisateur pour tous et appliquons les normes d'accessibilité pertinentes.",
+    "conformanceTitle": "Statut de Conformité",
+    "conformanceText": "Cloudless.gr vise à se conformer aux Web Content Accessibility Guidelines (WCAG) 2.1 Niveau AA comme l'exige la Directive européenne sur l'accessibilité du Web (Directive 2016/2102) et la Loi européenne sur l'accessibilité (Directive 2019/882).",
+    "conformancePartial": "Nous sommes partiellement conformes — la plupart du contenu respecte WCAG 2.1 AA. Les limitations connues sont listées ci-dessous.",
+    "measuresTitle": "Mesures Prises",
+    "measuresIntro": "Nous avons mis en place les éléments suivants pour soutenir l'accessibilité :",
+    "measuresList": [
+      "Structure HTML5 sémantique et hiérarchie de titres sur toutes les pages",
+      "Navigabilité au clavier sur tous les éléments interactifs",
+      "Étiquettes ARIA sur les boutons à icône seule et les contrôles de formulaire",
+      "Ratio de contraste de couleur minimum 4.5:1 pour le texte (AA)",
+      "Cibles tactiles minimum 44×44px pour tous les éléments interactifs",
+      "Lien skip-to-content sur chaque page",
+      "Focus trap et gestion de la touche Échap dans tous les dialogues modaux",
+      "Support reduced-motion via prefers-reduced-motion",
+      "Toutes les images ont des attributs alt descriptifs",
+      "Les formulaires incluent des étiquettes visibles et des attributs autocomplete"
+    ],
+    "limitationsTitle": "Limitations Connues",
+    "limitationsIntro": "Les problèmes connus suivants sont en cours de résolution :",
+    "limitationsList": [
+      "Certains contenus intégrés tiers (ex. formulaires EspoCRM) peuvent ne pas entièrement respecter WCAG 2.1 AA — nous travaillons avec les fournisseurs sur la remédiation",
+      "Les effets 3D de particules sont décoratifs et cachés des technologies d'assistance ; ils respectent prefers-reduced-motion"
+    ],
+    "feedbackTitle": "Retour d'Information & Contact",
+    "feedbackText": "Si vous rencontrez un obstacle d'accessibilité sur cloudless.gr, veuillez nous contacter :",
+    "feedbackResponse": "Nous visons à répondre aux retours d'accessibilité dans les 5 jours ouvrables.",
+    "enforcementTitle": "Application",
+    "enforcementText": "Si vous n'êtes pas satisfait de notre réponse, vous pouvez contacter l'Autorité Hellénique de Protection des Données (HDPA) ou votre autorité de surveillance nationale.",
+    "enforcementUs": "Les utilisateurs américains peuvent nous contacter directement ou déposer une plainte en vertu de la Section 508 du Rehabilitation Act le cas échéant.",
+    "privacyLink": "Politique de Confidentialité",
+    "termsLink": "Conditions d'Utilisation",
+    "cookiesLink": "Politique de Cookies"
+  },
+  "agentsPage": {
+    "label": "AGENTS",
+    "title": "Cloudless Agent Worker"
+  },
+  "storeSuccess": {
+    "title": "Commande",
+    "titleHighlight": "confirmée",
+    "subtitle": "Merci pour votre achat. Un email de confirmation avec les détails de votre commande et les liens de téléchargement est en route.",
+    "nextStepsLabel": "[ CE QUI SUIT ]",
+    "nextStepsTitle": "Prochaines étapes pour votre commande",
+    "servicePurchasesTitle": "Achats de services",
+    "servicePurchasesDesc": "Notre équipe vous contactera dans les 24 heures pour planifier votre appel de lancement. Vérifiez votre boîte de réception pour une invitation calendrier.",
+    "digitalProductsTitle": "Produits numériques",
+    "digitalProductsDesc": "Les liens de téléchargement ont été envoyés à votre email. Vous pouvez accéder à vos fichiers immédiatement. Les mises à jour sont incluses à vie.",
+    "physicalItemsTitle": "Articles physiques",
+    "physicalItemsDesc": "Votre commande est en préparation. Vous recevrez une confirmation d'expédition avec suivi dans les 2 jours ouvrables. Livraison UE gratuite.",
+    "questions": "Questions ? Contactez-nous à",
+    "continueShopping": "Continuer mes achats",
+    "backToHome": "Retour à l'accueil"
+  },
+  "storeProduct": {
+    "breadcrumbStore": "Boutique",
+    "whatsIncluded": "CE QUI EST INCLUS",
+    "youMayAlsoLike": "Vous aimerez peut-être aussi",
+    "noRelated": "Aucun produit connexe trouvé.",
+    "secureCheckout": "Paiement sécurisé par Stripe. Garantie de remboursement de 30 jours.",
+    "notFound": "Produit introuvable"
+  },
+  "blogPost": {
+    "backToBlog": "Retour au Blog",
+    "ctaTitle": "Besoin d'aide pour la mise en œuvre ?",
+    "ctaDesc": "Réservez un audit gratuit de 30 minutes et nous vous montrerons exactement par où commencer.",
+    "ctaButton": "Obtenir un Audit Gratuit"
   }
 }

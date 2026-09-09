@@ -8,6 +8,7 @@ export const dynamicParams = false;
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
   getProductById,
@@ -21,15 +22,18 @@ import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
 import { formatPrice } from "@/lib/format-price";
 import { getProductSchema, getBreadcrumbSchema } from "@/lib/structured-data";
+import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string; id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { locale, id } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const t = (key: string, fallback: string) => translate(safeLocale, key, fallback);
   const product = getProductById(id);
-  if (!product) return { title: "Product Not Found" };
+  if (!product) return { title: t("storeProduct.notFound", "Product Not Found") };
   return {
     title: product.name,
     description: product.description,
@@ -41,7 +45,10 @@ export default async function ProductPage({
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale: rawLocale, id } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
+  setRequestLocale(rawLocale);
+  const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const product = getProductById(id);
 
   if (!product) notFound();
@@ -70,7 +77,7 @@ export default async function ProductPage({
         <div className="mx-auto max-w-6xl px-6 py-4">
           <nav className="flex items-center gap-2 font-mono text-sm text-slate-500">
             <Link href="/store" className="hover:text-neon-cyan text-xs transition-colors">
-              Store
+              {t("storeProduct.breadcrumbStore", "Store")}
             </Link>
             <span className="text-slate-700">/</span>
             <span className="text-xs text-slate-400">{product.name}</span>

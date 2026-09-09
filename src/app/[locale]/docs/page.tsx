@@ -1,21 +1,61 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-docs";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Documentation",
-  description:
-    "Internal guides, integration references, and how-to documentation for the Cloudless platform.",
+const BASE_URL = "https://cloudless.gr";
+const canonical = `${BASE_URL}/docs`;
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export const revalidate = 3600; // Revalidate hourly
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as
+    Record<string, Record<string, string>> | undefined;
+  const title = meta?.docs?.title ?? "Documentation";
+  const description =
+    meta?.docs?.description ??
+    "Internal guides, integration references, and how-to documentation for the Cloudless platform.";
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/docs`,
+        el: `${BASE_URL}/el/docs`,
+        de: `${BASE_URL}/de/docs`,
+        fr: `${BASE_URL}/fr/docs`,
+        "x-default": `${BASE_URL}/en/docs`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
+
+export const revalidate = 3600; // Revalidate hourly
 
 type DocsListItem = {
   id: string;
@@ -77,7 +117,12 @@ async function loadPublicDocs(): Promise<DocsListItem[]> {
   }
 }
 
-export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function DocsPage({ params, searchParams }: PageProps) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
+  setRequestLocale(rawLocale);
+  const t = (key: string, fallback: string) => translate(locale, key, fallback);
+
   const resolvedParams = await searchParams;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =
@@ -137,16 +182,19 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
         <div className="cyber-grid absolute inset-0 opacity-30" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="text-neon-cyan animate-fade-in-up mb-3 font-mono text-xs font-medium tracking-[0.3em]">
-            [ DOCS ]
+            {t("docsPage.label", "[ DOCS ]")}
           </p>
           <h1 className="font-heading animate-fade-in-up text-3xl leading-tight font-bold delay-100 md:text-5xl">
-            Documentation &amp;{" "}
+            {t("docsPage.title", "Documentation &")}{" "}
             <span className="from-neon-cyan to-neon-magenta bg-linear-to-r bg-clip-text text-transparent">
-              guides
+              {t("docsPage.titleHighlight", "guides")}
             </span>
           </h1>
           <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
-            Everything you need to integrate, configure, and extend the Cloudless platform.
+            {t(
+              "docsPage.subtitle",
+              "Everything you need to integrate, configure, and extend the Cloudless platform."
+            )}
           </p>
 
           {/* Search */}
@@ -156,8 +204,8 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                 type="text"
                 name="q"
                 defaultValue={searchQuery}
-                placeholder="Search docs…"
-                aria-label="Search docs"
+                placeholder={t("docsPage.searchPlaceholder", "Search docs…")}
+                aria-label={t("docsPage.searchLabel", "Search docs")}
                 className="bg-void-light/50 focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-2.5 pl-10 font-mono text-sm text-white placeholder-slate-600 backdrop-blur-sm transition-colors focus:outline-none"
               />
               <svg
@@ -182,7 +230,9 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
           {/* Verification filter chips */}
           {allDocs.length > 0 && (
             <div className="mb-8 flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs text-slate-500">Status:</span>
+              <span className="font-mono text-xs text-slate-500">
+                {t("docsPage.status", "Status:")}
+              </span>
               <Link
                 href={filterUrl({ status: null })}
                 className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
@@ -191,7 +241,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                     : "border-slate-700 text-slate-500 hover:border-slate-600"
                 }`}
               >
-                All ({allDocs.length})
+                {t("docsPage.all", "All")} ({allDocs.length})
               </Link>
               <Link
                 href={filterUrl({
@@ -203,7 +253,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                     : "border-slate-700 text-slate-500 hover:border-slate-600"
                 }`}
               >
-                ✓ Verified ({verifiedCount})
+                {t("docsPage.verified", "✓ Verified")} ({verifiedCount})
               </Link>
               <Link
                 href={filterUrl({
@@ -216,7 +266,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                     : "border-slate-700 text-slate-500 hover:border-slate-600"
                 }`}
               >
-                ⟳ Needs Review ({needsReviewCount})
+                {t("docsPage.needsReview", "⟳ Needs Review")} ({needsReviewCount})
               </Link>
               <Link
                 href={filterUrl({
@@ -228,7 +278,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                     : "border-slate-700 text-slate-500 hover:border-slate-600"
                 }`}
               >
-                ? Unverified ({unverifiedCount})
+                {t("docsPage.unverified", "? Unverified")} ({unverifiedCount})
               </Link>
             </div>
           )}
@@ -237,13 +287,17 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
           {searchQuery && (
             <div className="mb-6 flex items-center gap-2">
               <span className="font-mono text-xs text-slate-500">
-                {docs.length} result{docs.length !== 1 ? "s" : ""} for
+                {docs.length}{" "}
+                {docs.length !== 1
+                  ? t("docsPage.resultPlural", "results")
+                  : t("docsPage.resultSingular", "result")}{" "}
+                {t("docsPage.for", "for")}
               </span>
               <Link
                 href={filterUrl({ q: null })}
                 className="border-neon-cyan/20 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-xs transition-colors"
               >
-                &quot;{searchQuery}&quot; ✕
+                "{searchQuery}" ✕
               </Link>
             </div>
           )}
@@ -252,15 +306,15 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
             <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
               <p className="font-mono text-slate-500">
                 {searchQuery || filterVerification
-                  ? "No docs match your filters."
-                  : "No documentation published yet."}
+                  ? t("docsPage.noResults", "No docs match your filters.")
+                  : t("docsPage.noDocs", "No documentation published yet.")}
               </p>
               {(searchQuery || filterVerification) && (
                 <Link
                   href="/docs"
                   className="text-neon-cyan mt-2 inline-block font-mono text-sm hover:underline"
                 >
-                  View all docs
+                  {t("docsPage.viewAll", "View all docs")}
                 </Link>
               )}
             </div>
@@ -304,12 +358,12 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                             <div className="mt-auto flex flex-wrap gap-2 pt-3">
                               {doc.owner && (
                                 <span className="font-mono text-[9px] text-slate-600">
-                                  Owner: {doc.owner}
+                                  {t("docsPage.owner", "Owner:")} {doc.owner}
                                 </span>
                               )}
                               {doc.lastVerified && (
                                 <span className="font-mono text-[9px] text-slate-600">
-                                  Verified:{" "}
+                                  {t("docsPage.verifiedLabel", "Verified:")}{" "}
                                   {new Date(doc.lastVerified).toLocaleDateString("en-GB", {
                                     day: "2-digit",
                                     month: "short",

@@ -38,7 +38,12 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
+    "typingTexts": [
+      "Zero friction.",
+      "Full control.",
+      "Pure speed.",
+      "Real results."
+    ],
     "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't have to. We're the third way — serverless infra, data-driven growth, and scaling that fits a 2–20-person team.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",
@@ -455,6 +460,165 @@
     "blog": {
       "title": "Blog",
       "description": "Insights on cloud computing, serverless architecture, data analytics, and AI-powered marketing for growing businesses."
+    },
+    "work": {
+      "title": "Our Work",
+      "description": "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms."
+    },
+    "docs": {
+      "title": "Documentation",
+      "description": "Internal guides, integration references, and how-to documentation for the Cloudless platform."
+    },
+    "caseStudies": {
+      "title": "Case Studies",
+      "description": "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "description": "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive."
+    },
+    "refund": {
+      "title": "Refund & Returns Policy",
+      "description": "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers."
+    },
+    "accessibility": {
+      "title": "Accessibility Statement",
+      "description": "Cloudless.gr accessibility statement — WCAG 2.1 AA compliance and contact for assistance."
+    },
+    "agents": {
+      "title": "Agents",
+      "description": "Cloudless Agent Workers — Interactive demos and tools."
+    },
+    "campaigns": {
+      "title": "Campaigns — Cloudless",
+      "description": "Active offers and time-bound campaigns from Cloudless. Greek SMB focus."
     }
+  },
+  "workPage": {
+    "badge": "OUR WORK",
+    "title": "Projects that",
+    "titleHighlight": "actually shipped",
+    "subtitle": "Serverless migrations, analytics pipelines, and AI-powered marketing platforms — built for teams that need to move fast.",
+    "active": "▶ Active",
+    "completed": "✓ Completed",
+    "emptyTitle": "No client projects to show yet.",
+    "emptyDesc": "Check back soon — we're always building."
+  },
+  "docsPage": {
+    "label": "[ DOCS ]",
+    "title": "Documentation &",
+    "titleHighlight": "guides",
+    "subtitle": "Everything you need to integrate, configure, and extend the Cloudless platform.",
+    "searchPlaceholder": "Search docs…",
+    "searchLabel": "Search docs",
+    "status": "Status:",
+    "all": "All",
+    "verified": "✓ Verified",
+    "needsReview": "⟳ Needs Review",
+    "unverified": "? Unverified",
+    "noResults": "No docs match your filters.",
+    "noDocs": "No documentation published yet.",
+    "viewAll": "View all docs",
+    "resultSingular": "result",
+    "resultPlural": "results",
+    "for": "for",
+    "owner": "Owner:",
+    "verifiedLabel": "Verified:",
+    "allDocs": "← All docs",
+    "backToAllDocs": "← Back to all docs",
+    "noContent": "No content available.",
+    "onThisPage": "On this page"
+  },
+  "caseStudiesPage": {
+    "badge": "Results that speak for themselves",
+    "title": "Case Studies",
+    "subtitle": "Real engagements, real numbers. Here's how Cloudless helped businesses reduce cloud spend, modernise infrastructure, and ship faster.",
+    "empty": "Case studies coming soon.",
+    "emptyCta": "Book a free consultation →",
+    "ctaTitle": "Ready to be next?",
+    "ctaSubtitle": "Book a free 30-minute cloud audit and see what's possible.",
+    "ctaButton": "Book a free audit",
+    "challenge": "The Challenge",
+    "approach": "Our Approach",
+    "results": "Results",
+    "similarTitle": "Want similar results?",
+    "similarDesc": "Book a free 30-minute call and let's talk about your cloud setup.",
+    "backToAll": "← All case studies"
+  },
+  "accessibilityPage": {
+    "legalDocument": "LEGAL DOCUMENT",
+    "title": "Accessibility Statement",
+    "lastUpdated": "Last updated: June 2026",
+    "intro": "Cloudless is committed to ensuring digital accessibility for people with disabilities. We continually improve the user experience for everyone and apply relevant accessibility standards.",
+    "conformanceTitle": "Conformance Status",
+    "conformanceText": "Cloudless.gr aims to conform to the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA as required by the EU Web Accessibility Directive (Directive 2016/2102) and the European Accessibility Act (Directive 2019/882).",
+    "conformancePartial": "We are partially conformant — most content meets WCAG 2.1 AA. Known limitations are listed below.",
+    "measuresTitle": "Measures Taken",
+    "measuresIntro": "We have implemented the following to support accessibility:",
+    "measuresList": [
+      "Semantic HTML5 landmarks and heading hierarchy on all pages",
+      "Keyboard navigability across all interactive elements",
+      "ARIA labels on icon-only buttons and form controls",
+      "Minimum 4.5:1 colour contrast ratio for body text (AA)",
+      "Minimum 44×44px touch targets for all interactive elements",
+      "Skip-to-content link on every page",
+      "Focus trap and Escape-key handling in all modal dialogs",
+      "Reduced-motion support via prefers-reduced-motion",
+      "All images have descriptive alt attributes",
+      "Forms include visible labels and autocomplete attributes"
+    ],
+    "limitationsTitle": "Known Limitations",
+    "limitationsIntro": "The following known issues are being addressed:",
+    "limitationsList": [
+      "Some third-party embedded content (e.g. EspoCRM forms) may not fully meet WCAG 2.1 AA — we are working with vendors on remediation",
+      "3D particle effects are decorative and hidden from assistive technologies; they respect prefers-reduced-motion"
+    ],
+    "feedbackTitle": "Feedback & Contact",
+    "feedbackText": "If you experience any accessibility barrier on cloudless.gr, please contact us:",
+    "feedbackResponse": "We aim to respond to accessibility feedback within 5 business days.",
+    "enforcementTitle": "Enforcement",
+    "enforcementText": "If you are not satisfied with our response, you may contact the Hellenic Data Protection Authority (HDPA) or your national supervisory body.",
+    "enforcementUs": "US users may contact us directly or file a complaint under Section 508 of the Rehabilitation Act where applicable.",
+    "privacyLink": "Privacy Policy",
+    "termsLink": "Terms of Service",
+    "cookiesLink": "Cookie Policy"
+  },
+  "agentsPage": {
+    "label": "AGENTS",
+    "title": "Cloudless Agent Worker"
+  },
+  "storeSuccess": {
+    "title": "Order",
+    "titleHighlight": "confirmed",
+    "subtitle": "Thanks for your purchase. A confirmation email with your order details and any download links is on its way.",
+    "nextStepsLabel": "[ WHAT HAPPENS NEXT ]",
+    "nextStepsTitle": "Next steps for your order",
+    "servicePurchasesTitle": "Service purchases",
+    "servicePurchasesDesc": "Our team will reach out within 24 hours to schedule your kickoff call. Check your inbox for a calendar invite.",
+    "digitalProductsTitle": "Digital products",
+    "digitalProductsDesc": "Download links have been sent to your email. You can access your files immediately. Updates are included for life.",
+    "physicalItemsTitle": "Physical items",
+    "physicalItemsDesc": "Your order is being prepared. You will receive a shipping confirmation with tracking within 2 business days. Free EU shipping.",
+    "questions": "Questions? Reach us at",
+    "continueShopping": "Continue Shopping",
+    "backToHome": "Back to Home"
+  },
+  "storeProduct": {
+    "breadcrumbStore": "Store",
+    "whatsIncluded": "WHAT'S INCLUDED",
+    "youMayAlsoLike": "You may also like",
+    "noRelated": "No related products found.",
+    "secureCheckout": "Secure checkout powered by Stripe. 30-day money-back guarantee.",
+    "notFound": "Product Not Found"
+  },
+  "blogPost": {
+    "backToBlog": "Back to Blog",
+    "ctaTitle": "Need help implementing this?",
+    "ctaDesc": "Book a free 30-minute audit and we'll show you exactly where to start.",
+    "ctaButton": "Get a Free Audit"
   }
 }

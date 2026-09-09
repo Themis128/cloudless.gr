@@ -1,16 +1,56 @@
 import type { Metadata } from "next";
+import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.",
+const BASE_URL = "https://cloudless.gr";
+const canonical = `${BASE_URL}/terms`;
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as
+    Record<string, Record<string, string>> | undefined;
+  const title = meta?.terms?.title ?? "Terms of Service";
+  const description =
+    meta?.terms?.description ??
+    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.";
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/terms`,
+        el: `${BASE_URL}/el/terms`,
+        de: `${BASE_URL}/de/terms`,
+        fr: `${BASE_URL}/fr/terms`,
+        "x-default": `${BASE_URL}/en/terms`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 function Section({
   id,
@@ -29,7 +69,9 @@ function Section({
   );
 }
 
-export default async function TermsPage() {
+export default async function TermsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  setRequestLocale(rawLocale);
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
