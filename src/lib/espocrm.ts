@@ -758,6 +758,8 @@ export interface LeadData {
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
+  /** Extra free-text lines added to Lead.description (used for webhook ingests). */
+  description?: string;
   /** Campaign slug (e.g., "shop-online") — stored in description for
    *  campaign-attributed Lead aggregation in `countLeadsForCampaign`. */
   campaignSlug?: string;
@@ -790,6 +792,7 @@ export interface LeadData {
 export async function createLead(data: LeadData): Promise<string | null> {
   try {
     const descLines = [
+      data.description,
       data.campaignSlug && `Campaign: ${data.campaignSlug}`,
       data.tier && `Tier: ${data.tier}`,
       data.orderId && `Order: ${data.orderId}`,
