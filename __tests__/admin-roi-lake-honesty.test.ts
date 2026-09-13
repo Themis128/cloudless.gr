@@ -13,6 +13,11 @@ vi.mock("@/lib/r2-client", () => ({
 
 describe("getRoiFromLake honesty", () => {
   beforeEach(() => {
+    // This suite asserts behavior for a 30d vs 120d rolling window. Freeze
+    // time so the fixture rows remain inside/outside the window regardless
+    // of when the tests are run.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-14T12:00:00.000Z"));
     vi.clearAllMocks();
     getDatalakeDashboardMock.mockResolvedValue({
       generated_at: "2026-08-14T00:00:00.000Z",
