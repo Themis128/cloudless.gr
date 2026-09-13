@@ -19,9 +19,11 @@ test.describe("k3s static assets", () => {
   });
 
   test("favicon is reachable", async ({ request }) => {
-    const host = process.env.K3S_HOST ?? "cloudless.gr";
-    const r = await getWithRetry(request, `https://${host}/favicon.ico`, 4);
-    expect([200, 301, 302, 304].includes(r.status)).toBe(true);
+    // Exercise the Pi origin (suite base) — apex may differ under CF.
+    const base = process.env.K3S_BASE_URL ?? "https://pi-origin.cloudless.gr";
+    const r = await getWithRetry(request, `${base.replace(/\/$/, "")}/favicon.ico`, 4);
+    // 302 to an absolute favicon URL is fine; getWithRetry already accepts 3xx.
+    expect([200, 301, 302, 304, 307, 308].includes(r.status)).toBe(true);
   });
 
   test("no fatal page errors on homepage load", async ({ page }) => {
