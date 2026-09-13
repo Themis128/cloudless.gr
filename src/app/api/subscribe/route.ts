@@ -7,6 +7,8 @@ import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { sendContactEvent } from "@/lib/meta-capi";
+import { generateEventId } from "@/lib/meta-pixel";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
@@ -75,7 +77,17 @@ export async function POST(request: Request) {
       route: "/api/subscribe",
     });
 
-    return Response.json({ success: true });
+    const eventId = generateEventId("contact");
+    sendContactEvent({
+      eventId,
+      email,
+      clientIpAddress: ip === "unknown" ? undefined : ip,
+      clientUserAgent: request.headers.get("user-agent") ?? undefined,
+      eventSourceUrl: "https://cloudless.gr",
+      customData: { content_name: "newsletter_signup" },
+    }).catch(() => {});
+
+    return Response.json({ success: true, eventId });
   } catch (error) {
     console.error(
       "[subscribe] Internal error:",

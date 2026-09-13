@@ -1,17 +1,13 @@
 /**
  * Meta Conversions API (CAPI) — server-side event helper.
  *
- * STATUS: Staged but not yet wired up. Activated once all of these are done:
- *   1. Pixel created in Events Manager (Phase C of meta-account-runbook.md).
- *   2. CAPI access token generated from the Pixel settings.
- *   3. Env vars populated:
- *        NEXT_PUBLIC_META_PIXEL_ID   (SSM /cloudless/production/NEXT_PUBLIC_META_PIXEL_ID)
- *        META_CAPI_ACCESS_TOKEN      (SSM /cloudless/production/META_CAPI_ACCESS_TOKEN — SecureString)
- *   4. sendLeadEvent called from src/app/api/contact/route.ts after the
- *      SES send succeeds (see runbook step C.6).
+ * Wiring:
+ *   - sendLeadEvent → POST /api/contact
+ *   - sendContactEvent → POST /api/subscribe
+ *   - sendPurchaseEvent → Stripe checkout.session.completed webhook
  *
- * Until the env vars are populated, every call short-circuits and returns
- * { ok: false, skipped: true } — safe to import and call early.
+ * Until NEXT_PUBLIC_META_PIXEL_ID + META_CAPI_ACCESS_TOKEN are set, every
+ * call short-circuits with { ok: false, skipped: true }.
  *
  * PII handling: email and phone are SHA-256 hashed per Meta requirements
  * before transmission. Raw values never leave this module.
@@ -22,8 +18,8 @@
  */
 
 import crypto from "node:crypto";
+import { metaGraphUrl } from "@/lib/meta-graph";
 
-const GRAPH_API_VERSION = "v19.0";
 const CAPI_REQUEST_TIMEOUT_MS = 5000;
 
 type CapiResult =
@@ -169,7 +165,7 @@ export async function sendCapiEvent(
 
   // Sending the token in the request body (rather than as a query
   // parameter) keeps it out of CloudWatch / Sentry / proxy URL logs.
-  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${pixelId}/events`;
+  const url = metaGraphUrl(`/${pixelId}/events`);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CAPI_REQUEST_TIMEOUT_MS);

@@ -13,6 +13,7 @@ import {
   markStripeEventProcessed,
   markStripeEventFailed,
 } from "@/lib/stripe-transactions";
+import { sendPurchaseEvent } from "@/lib/meta-capi";
 
 /**
  * Pull UTM fields out of the Stripe Checkout Session's `metadata` (the
@@ -140,6 +141,28 @@ async function handleCheckoutCompleted(
 
   if (session.customer_email) {
     syncEspoCRMDeal(session).catch(() => {});
+  }
+
+  // Meta CAPI Purchase — fire after payment is collected. Use a stable
+  // event_id derived from the Stripe session so webhook retries dedupe.
+  if (paymentCollected) {
+    const nameParts = (session.customer_details?.name ?? "").trim().split(/\s+/).filter(Boolean);
+    sendPurchaseEvent({
+      eventId: `purchase_${session.id}`,
+      email: session.customer_email ?? undefined,
+      phone: session.customer_details?.phone ?? undefined,
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(" ") || undefined,
+      value: (session.amount_total ?? 0) / 100,
+      currency: (session.currency ?? "eur").toUpperCase(),
+      eventSourceUrl: "https://cloudless.gr/store",
+      customData: {
+        content_name: session.metadata?.campaign ?? session.metadata?.tier ?? "checkout",
+        order_id: session.id,
+      },
+    }).catch((err) => {
+      console.error("[Stripe→Meta CAPI] Purchase event failed:", err);
+    });
   }
 }
 

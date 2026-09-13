@@ -1,31 +1,31 @@
 import { getConfig } from "@/lib/ssm-config";
+import { META_GRAPH_API_BASE, normalizeMetaAdAccountId } from "@/lib/meta-graph";
 
 /**
  * Meta (Facebook/Instagram) Ads — read-only Marketing API insights.
  * Mirrors the google-ads/linkedin/tiktok/x-ads module pattern: silent
  * empty results on API errors, isMetaAdsConfigured() gate for 503s.
  *
- * Same Graph API version as meta-capi.ts — bump both together.
+ * Graph version comes from `@/lib/meta-graph` (bump there once).
  */
-const GRAPH_API_VERSION = "v19.0";
-const GRAPH_API = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 async function getMetaAdsConfig(): Promise<{ accessToken: string; adAccountId: string }> {
   const cfg = await getConfig();
   if (!cfg.META_ACCESS_TOKEN || !cfg.META_AD_ACCOUNT_ID) {
     throw new Error("Meta Ads not configured");
   }
-  // Account IDs in the Marketing API are prefixed with "act_".
-  const adAccountId = cfg.META_AD_ACCOUNT_ID.startsWith("act_")
-    ? cfg.META_AD_ACCOUNT_ID
-    : `act_${cfg.META_AD_ACCOUNT_ID}`;
-  return { accessToken: cfg.META_ACCESS_TOKEN, adAccountId };
+  return {
+    accessToken: cfg.META_ACCESS_TOKEN,
+    adAccountId: normalizeMetaAdAccountId(cfg.META_AD_ACCOUNT_ID),
+  };
 }
 
 async function metaFetch(path: string): Promise<Response> {
   const { accessToken } = await getMetaAdsConfig();
-  const sep = path.includes("?") ? "&" : "?";
-  return fetch(`${GRAPH_API}${path}${sep}access_token=${encodeURIComponent(accessToken)}`, {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  // Prefer Authorization header so the token never lands in access-log URLs.
+  return fetch(`${META_GRAPH_API_BASE}${normalized}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(10_000),
   });
 }

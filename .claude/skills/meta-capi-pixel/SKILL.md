@@ -56,7 +56,7 @@ intent ID) so retries dedupe correctly.
 
 ## CAPI — server side
 
-**Endpoint:** `POST https://graph.facebook.com/v19.0/{PIXEL_ID}/events`
+**Endpoint:** `POST https://graph.facebook.com/v26.0/{PIXEL_ID}/events`
 **Auth:** `access_token` in the **request body** (NOT a header — keeps it
 out of CloudWatch URL logs).
 
@@ -220,7 +220,7 @@ parameter when first integrating, then remove the test code before shipping.
   the matching pixel event_id** = double-count on every conversion. Always pair.
 - **Different `event_id`s on the two sides** = no dedup. Server generates,
   passes to client.
-- **Graph API version**: lib pins `v19.0`. Bump cautiously — the `events`
+- **Graph API version**: lib pins `v26.0` via `src/lib/meta-graph.ts`. Bump cautiously — the `events`
   endpoint shape is stable but Meta deprecates versions on a 2-year cycle.
 
 ## Reference

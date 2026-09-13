@@ -41,12 +41,14 @@ describe("isMetaAdsConfigured", () => {
 });
 
 describe("listMetaCampaigns", () => {
-  it("prefixes the account id with act_ and appends the access token", async () => {
+  it("prefixes the account id with act_ and sends Bearer auth (not query token)", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ data: [] }));
     await listMetaCampaigns();
     const url = mockFetch.mock.calls[0][0] as string;
-    expect(url).toContain("/act_1234567890/campaigns");
-    expect(url).toContain("access_token=EAAtoken");
+    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(url).toContain("/v26.0/act_1234567890/campaigns");
+    expect(url).not.toContain("access_token=");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer EAAtoken");
   });
 
   it("does not double-prefix an already-prefixed account id", async () => {
