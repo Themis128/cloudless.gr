@@ -100,7 +100,7 @@ async function pingPostiz(baseUrl: string, apiKey: string): Promise<PingResult> 
       headers: { Authorization: apiKey },
       signal: AbortSignal.timeout(3000),
     }).catch(() => null);
-    if (groupsRes && groupsRes.status === 404) {
+    if (groupsRes?.status === 404) {
       return {
         status: "configured",
         message:
@@ -338,6 +338,32 @@ function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
 }
 
 /** Meta Marketing API account_status: 1=ACTIVE, 2=DISABLED, 3=UNSETTLED, … */
+function interpretMetaAccount(data: {
+  account_status?: number;
+  disable_reason?: number;
+  name?: string;
+}): PingResult {
+  const accountLabel = data.name ? `Ad account: ${data.name}` : "Ad account";
+  if (data.account_status === 1) {
+    return { status: "configured", message: accountLabel };
+  }
+  if (data.account_status === 2) {
+    const reason = formatMetaDisableReason(data.disable_reason);
+    return {
+      status: "degraded",
+      message: `${accountLabel} DISABLED (${reason}). Page advertising may be blocked — check Account Quality / Business Support Home, then appeal before running ads.`,
+    };
+  }
+  const statusName =
+    data.account_status !== undefined
+      ? (META_ACCOUNT_STATUS_LABEL[data.account_status] ?? String(data.account_status))
+      : "unknown";
+  return {
+    status: "degraded",
+    message: `${accountLabel} not active (account_status=${statusName}).`,
+  };
+}
+
 async function pingMeta(accessToken: string, adAccountId: string): Promise<PingResult> {
   try {
     const actId = normalizeMetaAdAccountId(adAccountId);
@@ -355,27 +381,7 @@ async function pingMeta(accessToken: string, adAccountId: string): Promise<PingR
       disable_reason?: number;
       name?: string;
     };
-    const accountLabel = data.name ? `Ad account: ${data.name}` : "Ad account";
-    if (data.account_status === 1) {
-      return { status: "configured", message: accountLabel };
-    }
-    if (data.account_status === 2) {
-      const reason = formatMetaDisableReason(data.disable_reason);
-      return {
-        status: "degraded",
-        message:
-          `${accountLabel} DISABLED (${reason}). Appeal at business.facebook.com/business-support-home ` +
-          `or Account Quality before running ads.`,
-      };
-    }
-    const statusName =
-      data.account_status !== undefined
-        ? (META_ACCOUNT_STATUS_LABEL[data.account_status] ?? String(data.account_status))
-        : "unknown";
-    return {
-      status: "degraded",
-      message: `${accountLabel} not active (account_status=${statusName}).`,
-    };
+    return interpretMetaAccount(data);
   } catch {
     return { status: "error", message: "Connection failed." };
   }
@@ -414,8 +420,42 @@ async function pingN8n(baseUrl: string, apiKey: string): Promise<PingResult> {
   }
 }
 
+function pingWhen(ready: boolean, ping: () => Promise<PingResult>): Promise<PingResult> {
+  return ready ? ping() : Promise.resolve(NOT_CONFIGURED);
+}
+
+function activeCampaignMessage(
+  acResult: { status: string; message?: string },
+  leadAutomationIdSet: boolean,
+  cfg: Cfg
+): { status: IntegrationStatus; message?: string } {
+  const acStatusMap: Record<string, IntegrationStatus> = {
+    valid: "configured",
+    rejected: "degraded",
+    not_configured: "not_configured",
+    error: "error",
+  };
+  const acMissingToken =
+    acResult.status === "not_configured" &&
+    Boolean(cfg.ACTIVECAMPAIGN_API_URL) &&
+    !cfg.ACTIVECAMPAIGN_API_TOKEN;
+  let acMessage = acMissingToken
+    ? "URL configured but API token missing. Renew account then get token from Settings > Developer > API Access."
+    : acResult.message;
+  if (acResult.status === "valid" && !leadAutomationIdSet) {
+    acMessage =
+      "API OK, but ACTIVECAMPAIGN_LEAD_AUTOMATION_ID is unset — contact form enrollments are a no-op.";
+  } else if (acResult.status === "valid" && leadAutomationIdSet) {
+    acMessage = `${acResult.message} Lead automation ID is set.`;
+  }
+  const status: IntegrationStatus =
+    acResult.status === "valid" && !leadAutomationIdSet
+      ? "degraded"
+      : (acStatusMap[acResult.status] ?? "error");
+  return { status, message: acMessage };
+}
+
 async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
-  const metaReady = Boolean(cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID);
   const [
     stripeResult,
     espocrmResult,
@@ -428,45 +468,27 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
     n8nResult,
     metaResult,
   ] = await Promise.all([
-    cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
-    cfg.ESPOCRM_BASE_URL && cfg.ESPOCRM_API_KEY
-      ? pingEspoCRM(cfg.ESPOCRM_BASE_URL, cfg.ESPOCRM_API_KEY)
-      : Promise.resolve(NOT_CONFIGURED),
-    cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
-    cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+    pingWhen(Boolean(cfg.STRIPE_SECRET_KEY), () => pingStripe(cfg.STRIPE_SECRET_KEY)),
+    pingWhen(Boolean(cfg.ESPOCRM_BASE_URL && cfg.ESPOCRM_API_KEY), () =>
+      pingEspoCRM(cfg.ESPOCRM_BASE_URL, cfg.ESPOCRM_API_KEY)
+    ),
+    pingWhen(Boolean(cfg.SLACK_BOT_TOKEN), () => pingSlack(cfg.SLACK_BOT_TOKEN)),
+    pingWhen(Boolean(cfg.NOTION_API_KEY), () => pingNotion(cfg.NOTION_API_KEY)),
     verifyActiveCampaignToken(),
     getLeadAutomationStatus(),
-    cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY
-      ? pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
-      : Promise.resolve(NOT_CONFIGURED),
-    cfg.APPFLOWY_API_URL ? pingAppFlowy(cfg.APPFLOWY_API_URL) : Promise.resolve(NOT_CONFIGURED),
-    cfg.N8N_API_URL && cfg.N8N_API_KEY
-      ? pingN8n(cfg.N8N_API_URL, cfg.N8N_API_KEY)
-      : Promise.resolve(NOT_CONFIGURED),
-    metaReady
-      ? pingMeta(cfg.META_ACCESS_TOKEN, cfg.META_AD_ACCOUNT_ID)
-      : Promise.resolve(NOT_CONFIGURED),
+    pingWhen(Boolean(cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY), () =>
+      pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
+    ),
+    pingWhen(Boolean(cfg.APPFLOWY_API_URL), () => pingAppFlowy(cfg.APPFLOWY_API_URL)),
+    pingWhen(Boolean(cfg.N8N_API_URL && cfg.N8N_API_KEY), () =>
+      pingN8n(cfg.N8N_API_URL, cfg.N8N_API_KEY)
+    ),
+    pingWhen(Boolean(cfg.META_AD_ACCOUNT_ID && cfg.META_ACCESS_TOKEN && cfg.META_PIXEL_ID), () =>
+      pingMeta(cfg.META_ACCESS_TOKEN, cfg.META_AD_ACCOUNT_ID)
+    ),
   ]);
 
-  const acStatusMap: Record<string, IntegrationStatus> = {
-    valid: "configured",
-    rejected: "degraded",
-    not_configured: "not_configured",
-    error: "error",
-  };
-  const acMissingToken =
-    acResult.status === "not_configured" &&
-    cfg.ACTIVECAMPAIGN_API_URL &&
-    !cfg.ACTIVECAMPAIGN_API_TOKEN;
-  let acMessage = acMissingToken
-    ? "URL configured but API token missing. Renew account then get token from Settings > Developer > API Access."
-    : acResult.message;
-  if (acResult.status === "valid" && !acLead.leadAutomationIdSet) {
-    acMessage =
-      "API OK, but ACTIVECAMPAIGN_LEAD_AUTOMATION_ID is unset — contact form enrollments are a no-op.";
-  } else if (acResult.status === "valid" && acLead.leadAutomationIdSet) {
-    acMessage = `${acResult.message} Lead automation ID is set.`;
-  }
+  const ac = activeCampaignMessage(acResult, acLead.leadAutomationIdSet, cfg);
 
   return [
     {
@@ -501,11 +523,8 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       id: "activecampaign",
       name: "ActiveCampaign",
       category: "email_marketing",
-      status:
-        acResult.status === "valid" && !acLead.leadAutomationIdSet
-          ? "degraded"
-          : (acStatusMap[acResult.status] ?? "error"),
-      message: acMessage,
+      status: ac.status,
+      message: ac.message,
       setupUrl: "https://www.activecampaign.com",
     },
     {

@@ -19,17 +19,23 @@ Work through phases in order. Do not skip Phase A — Phase B's ad account canno
 
 ---
 
-## Known State (as of 2026-04-21)
+## Known State (as of 2026-09-14, Tailscale Graph probe)
 
 | Asset | ID | State |
-|-------|----|----|
-| Primary Portfolio | `1558125105019725` | ✅ Owns Page 116436681562585. No ad account. |
-| Secondary Portfolio | `1526956002406847` | ⚠️ Empty except @cloudless_gr attached under People (legacy migration artifact) |
-| FB Page | `116436681562585` | ✅ Portfolio-owned, you are Admin |
-| Instagram | @cloudless_gr | ⚠️ Business account, but linked to FB in **lite mode** via IG Account Center |
-| Ad account | — | ❌ Does not exist |
-| Pixel | — | ❌ Does not exist |
-| CAPI | — | ❌ Not configured |
+|-------|----|-------|
+| Primary Portfolio | `1558125105019725` | Owns pages (see below) |
+| FB Page (env `META_PAGE_ID`) | `1163886186808102` | Cloudless.gr — published, **not verified**; ads blocked (“Page isn't allowed to advertise”) |
+| FB Page (legacy / runbook) | `116436681562585` | cloudless.gr — still listed on the user token; confirm which Page owns ads creatives |
+| Ad account | `act_657781691826702` | **DISABLED** (`account_status=2`, `disable_reason=1` = `ADS_INTEGRITY_POLICY`) |
+| Stale campaign | `23846705231200535` “Nouvelle campagne” | **PAUSED** via API (2026-09-14); ads remain DISAPPROVED |
+| Pixel / CAPI | configured in prod pod | ✅ Events accepted (`events_received=1` on v26) |
+| Token | long-lived USER, app `1936126137016578` | Valid; scopes include `ads_management`, `ads_read`, pages + IG |
+
+**Root cause of DISABLED (not payment):** ad review feedback on all ads in the 2021 campaign:
+
+> “This ad was disabled because **this Page isn't allowed to advertise**.”
+
+VAT/`tax_id_status=3` (submitted) and `amount_spent=0` — this is **policy / Page advertising eligibility**, not a billing failure.
 
 ---
 
@@ -509,6 +515,7 @@ Once Phase C has ~7 days of Lead events accumulated, run the first real campaign
 | Date | Run By | Notes |
 |------|--------|-------|
 | 2026-04-21 | (runbook authored) | Initial version; none of the phases executed yet |
+| 2026-09-14 | agent + Tailscale | Diagnosed DISABLED + Page advertise block; paused campaign `23846705231200535`; documented Phase D |
 
 ---
 
@@ -520,10 +527,47 @@ After the whole runbook succeeds, update `/sessions/brave-epic-shannon/mnt/.auto
 - `social_media_integration.md` → Phase 1 Windsor IG marked complete; Phase 2 Meta Graph API in Next.js note Pixel+CAPI live
 - Add a new `meta_ads_pixel_setup.md` capturing the Pixel ID, CAPI token SSM path, and event list
 
-## Ad account DISABLED (ops)
+## Phase D — Ad account / Page advertising restriction (ops)
 
-Live Graph probes (2026-09) returned `account_status=2` with `disable_reason=1` (`ADS_INTEGRITY_POLICY`).
+Live Graph (2026-09-14, Tailscale → prod pod):
 
-- Pixel / CAPI can still accept events; **paid ads will not deliver** until the account is reinstated.
-- Appeal: [Meta Business Support Home](https://business.facebook.com/business-support-home) and Account Quality.
-- Admin integrations status surfaces this as `degraded` with the disable reason label.
+| Field | Value |
+|-------|-------|
+| Account | `act_657781691826702` “Themistoklis Baltzakis” |
+| `account_status` | `2` DISABLED |
+| `disable_reason` | `1` `ADS_INTEGRITY_POLICY` |
+| Campaign | `Nouvelle campagne` (`23846705231200535`) → **PAUSED** via API |
+| Ads | still `DISAPPROVED`; review text: **Page isn't allowed to advertise** |
+| Pixel / CAPI | still OK — do not revoke tokens while appealing |
+
+### Root cause
+
+Not billing (`amount_spent=0`, VAT `tax_id_status=3` submitted). Ad review feedback on all 2021 creatives:
+
+> “This ad was disabled because this Page isn't allowed to advertise.”
+
+The **Page** (and then the ad account under `ADS_INTEGRITY_POLICY`) must be cleared in Meta UI. There is no public Graph appeal API.
+
+### What you must do (browser login required)
+
+1. Sign in as the Page / ad-account admin.
+2. **Account Quality:** https://business.facebook.com/accountquality/  
+   (portfolio-scoped: `?business_id=1558125105019725`)
+3. **Business Support Home:** https://business.facebook.com/business-support-home
+4. Appeal restrictions on:
+   - Page **Cloudless.gr** (`1163886186808102`, current `META_PAGE_ID`)
+   - Also check legacy Page `cloudless.gr` (`116436681562585`) if still linked to ads
+   - Ad account `act_657781691826702`
+5. Keep creatives paused until the Page is cleared; archive the 2021 campaign after unlock if unused.
+6. Re-check after Meta clears the restriction:
+
+   ```bash
+   curl -sS -H "Authorization: Bearer $META_ACCESS_TOKEN" \
+     "https://graph.facebook.com/v26.0/act_657781691826702?fields=account_status,disable_reason"
+   ```
+
+   Expect `account_status=1`. Admin → Integrations Meta card should leave `degraded`.
+
+### Dual Page note
+
+The user token lists both Pages. Confirm Account Quality covers the Page tied to the disapproved ads; consolidate to one Page in Business Manager when possible.
