@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { adminAiNotConfiguredResponse, isAdminAiConfiguredAsync } from "@/lib/admin-ai";
+import {
+  adminAiNotConfiguredResponse,
+  generateAdminAiText,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
 import {
   buildWorkersAiToolProtocol,
@@ -10,7 +14,6 @@ import {
 } from "@/lib/workers-ai-client";
 import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
 import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
-import { generateAdminAiText } from "@/lib/admin-ai";
 import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
 const MAX_ITERATIONS = 4;
@@ -42,10 +45,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  if (!(await isAdminAiConfiguredAsync())) {
-    return adminAiNotConfiguredResponse();
-  }
-
+  // Validate body before the "AI configured" gate so bad requests stay 400
+  // even when backends are down (e2e + API contract).
   let messages: AssistantMessage[];
   try {
     const body = (await req.json()) as { messages: AssistantMessage[] };
@@ -55,6 +56,10 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   const toolsUsed: string[] = [];
@@ -68,13 +73,18 @@ export async function POST(req: NextRequest) {
   const useOllama = !useNvidia && !useWorkersAi && isOllamaConfigured();
 
   if (useNvidia || useWorkersAi || useOllama) {
-    const provider = useNvidia ? "nvidia-proxy" : useWorkersAi ? "workers-ai" : "ollama";
-    const callBackend = (msgs: { role: string; content: string }[]) =>
-      useNvidia
-        ? callNvidiaProxyChat(msgs, { maxTokens: 2000 })
-        : useWorkersAi
-          ? callWorkersAiChat(msgs, { maxTokens: 2000 })
-          : callOllamaChat(msgs, { maxTokens: 2000 });
+    let provider: string;
+    if (useNvidia) provider = "nvidia-proxy";
+    else if (useWorkersAi) provider = "workers-ai";
+    else provider = "ollama";
+    let callBackend: (msgs: { role: string; content: string }[]) => Promise<string>;
+    if (useNvidia) {
+      callBackend = (msgs) => callNvidiaProxyChat(msgs, { maxTokens: 2000 });
+    } else if (useWorkersAi) {
+      callBackend = (msgs) => callWorkersAiChat(msgs, { maxTokens: 2000 });
+    } else {
+      callBackend = (msgs) => callOllamaChat(msgs, { maxTokens: 2000 });
+    }
 
     const loopMessages: { role: string; content: string }[] = [
       {

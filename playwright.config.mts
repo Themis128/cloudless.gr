@@ -82,11 +82,17 @@ export default defineConfig({
   },
 
   webServer: {
-    command: "pnpm dev",
+    // Wipe the isolated dist dir before boot. Under parallel e2e load a stale
+    // .next-e2e cache has produced cascading
+    // "Unexpected non-whitespace character after JSON at position …" errors
+    // that take down :4010 (ECONNREFUSED / blank pages). Next 15.5 defaults
+    // to webpack — do not pass --webpack (unknown option on this CLI).
+    command:
+      'bash -c \'rm -rf "${NEXT_DIST_DIR:-.next-e2e}" && exec bash scripts/dev-server.sh\'',
     // Hit a real route — bare `/` can 308 and confuse the readiness probe
-    // while Next 16 is still compiling proxy.
+    // while Next is still compiling proxy.
     url: `${E2E_ORIGIN}/api/health`,
-    timeout: 180_000,
+    timeout: 300_000,
     // Never reuse a foreign `pnpm dev` — it lacks E2E_ADMIN_TOKEN.
     // Local default port is 4010 (see e2e/_port.ts) so :4000 can stay for
     // interactive `pnpm dev`. CI uses 4000.
@@ -103,7 +109,7 @@ export default defineConfig({
       ),
       DEV_PORT: E2E_PORT,
       DEV_HOST: E2E_HOST,
-      // Isolate Turbopack cache from interactive `pnpm dev` on :4000.
+      // Isolate dist cache from interactive `pnpm dev` on :4000.
       NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || (isCi ? ".next" : ".next-e2e"),
       NEXT_PUBLIC_E2E: "1",
       NEXT_PUBLIC_AUTH_PROVIDER: "d1",
@@ -167,6 +173,12 @@ export default defineConfig({
         "**/deep/auth-lifecycle.spec.ts",
         "**/deep/protected-routes.spec.ts",
         "**/deep/contact-subscribe.spec.ts",
+        // Chromium already covers these page/API suites; re-running them on
+        // Pixel 7 under workers=2 wedges next-dev (CMS/D1/R2/AI fan-out).
+        "**/deep/cms-campaigns.spec.ts",
+        "**/deep/store-cart-checkout.spec.ts",
+        "**/deep/postiz-ai-proxy.spec.ts",
+        "**/deep/ai-backend-chain.spec.ts",
       ],
     },
   ],

@@ -40,7 +40,9 @@ const xml = await smRes.text();
 
 // Naive extraction — sitemap.xml grammar is tiny.
 const locs = Array.from(xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)).map((m) => m[1]);
-console.log(`Found ${locs.length} URLs in sitemap, probing first ${Math.min(locs.length, MAX_URLS)}`);
+console.log(
+  `Found ${locs.length} URLs in sitemap, probing first ${Math.min(locs.length, MAX_URLS)}`
+);
 
 const sample = locs.slice(0, MAX_URLS);
 const out = [];
@@ -50,15 +52,35 @@ async function probe(url) {
   let res = null;
   let method = "HEAD";
   try {
-    res = await fetch(url, { method: "HEAD", redirect: "manual", headers: { "user-agent": "cloudless-audit/1.0" } });
+    res = await fetch(url, {
+      method: "HEAD",
+      redirect: "manual",
+      headers: { "user-agent": "cloudless-audit/1.0" },
+    });
     if (res.status === 405 || res.status === 501) {
       method = "GET";
-      res = await fetch(url, { method: "GET", redirect: "manual", headers: { "user-agent": "cloudless-audit/1.0" } });
+      res = await fetch(url, {
+        method: "GET",
+        redirect: "manual",
+        headers: { "user-agent": "cloudless-audit/1.0" },
+      });
     }
   } catch (err) {
-    return { url, status: 0, method, ms: Math.round(performance.now() - t0), error: String(err?.message ?? err) };
+    return {
+      url,
+      status: 0,
+      method,
+      ms: Math.round(performance.now() - t0),
+      error: String(err?.message ?? err),
+    };
   }
-  return { url, status: res.status, method, ms: Math.round(performance.now() - t0), location: res.headers.get("location") };
+  return {
+    url,
+    status: res.status,
+    method,
+    ms: Math.round(performance.now() - t0),
+    location: res.headers.get("location"),
+  };
 }
 
 // Probe in batches of 10 to avoid the origin throttling us
@@ -79,12 +101,43 @@ function category(r) {
   return "unknown";
 }
 
-const buckets = { ok: 0, slow: 0, redirect: 0, client_error: 0, server_error: 0, unreachable: 0, unknown: 0 };
+/** Locale-prefix redirects (307 → /en/…) are expected with localePrefix=always. */
+function isLocaleRedirect(r) {
+  if (r.category !== "redirect" || !r.location) return false;
+  try {
+    const to = new URL(r.location, r.url);
+    const from = new URL(r.url);
+    if (to.origin !== from.origin) return false;
+    return /^\/(en|el|fr|de)(\/|$)/.test(to.pathname);
+  } catch {
+    return false;
+  }
+}
+
+const buckets = {
+  ok: 0,
+  slow: 0,
+  redirect: 0,
+  client_error: 0,
+  server_error: 0,
+  unreachable: 0,
+  unknown: 0,
+};
 const problems = [];
 for (const r of out) {
   r.category = category(r);
   buckets[r.category]++;
-  if (r.category !== "ok") problems.push(r);
+  // Report actionable failures only — locale redirects and slow-but-2xx are
+  // informational (shown in buckets), not "problems" that fail STRICT mode.
+  if (
+    r.category === "client_error" ||
+    r.category === "server_error" ||
+    r.category === "unreachable"
+  ) {
+    problems.push(r);
+  } else if (r.category === "redirect" && !isLocaleRedirect(r)) {
+    problems.push(r);
+  }
 }
 
 const summary = {
@@ -125,7 +178,7 @@ if (mdOut) {
       lines.push(
         `| ${p.url} | ${p.status || "—"} | ${p.category} | ${p.ms}ms | ${
           p.error ? p.error : p.location ? `→ ${p.location}` : ""
-        } |`,
+        } |`
       );
     }
     if (problems.length > 50) {

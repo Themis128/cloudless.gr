@@ -12,10 +12,13 @@
  *   GSC_SITE_URL                 e.g. "sc-domain:cloudless.gr"
  *   GOOGLE_CLIENT_EMAIL          service-account email with GSC access
  *   GOOGLE_PRIVATE_KEY           PEM (PKCS#8 or PKCS#1) or SA JSON; escaped \\n OK
- *   APPFLOWY_API_URL             AppFlowy base URL (e.g. https://appflowy.cloudless.gr)
+ *   APPFLOWY_API_URL             AppFlowy base URL. Prefer Tailscale NodePort
+ *                                http://100.74.191.58:30810 from GH Actions —
+ *                                https://appflowy.cloudless.gr is Access-gated.
  *   APPFLOWY_EMAIL               AppFlowy login email
  *   APPFLOWY_PASSWORD            AppFlowy login password
  *   APPFLOWY_GSC_REPORTS_FOLDER  parent view id (optional, uses first space as default)
+ *   CF_ACCESS_CLIENT_ID/SECRET   optional; only needed for the public hostname
  */
 
 import { SignJWT } from "jose";
@@ -39,6 +42,36 @@ function requireEnv(name: string): string {
     process.exit(1);
   }
   return v;
+}
+
+/** Optional Cloudflare Access service-token headers (public hostname only). */
+function appflowyHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const cfId = process.env.CF_ACCESS_CLIENT_ID;
+  const cfSecret = process.env.CF_ACCESS_CLIENT_SECRET;
+  if (cfId && cfSecret) {
+    headers["CF-Access-Client-Id"] = cfId;
+    headers["CF-Access-Client-Secret"] = cfSecret;
+  }
+  return headers;
+}
+
+async function readJsonOrThrow(res: Response, label: string): Promise<unknown> {
+  const text = await res.text();
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("<!") || trimmed.startsWith("<html")) {
+    throw new Error(
+      `${label}: got HTML instead of JSON (HTTP ${res.status}) — ` +
+        `AppFlowy URL is likely behind Cloudflare Access. Prefer the Tailscale ` +
+        `omv AppFlowy NodePort (port 30810) or set CF_ACCESS_CLIENT_ID/SECRET.`
+    );
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`${label}: invalid JSON (HTTP ${res.status}; ${reason}; len=${text.length})`);
+  }
 }
 
 export function dateRange(): { startDate: string; endDate: string } {
@@ -139,18 +172,22 @@ async function appflowyLogin(): Promise<{ token: string; workspaceId: string; ba
   const password = requireEnv("APPFLOWY_PASSWORD");
   const res = await fetch(`${base}/gotrue/token?grant_type=password`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: appflowyHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) throw new Error(`AppFlowy login failed: ${res.status}`);
-  const data = (await res.json()) as { access_token: string };
+  const data = (await readJsonOrThrow(res, "AppFlowy login")) as { access_token?: string };
+  if (!res.ok || !data.access_token) {
+    throw new Error(`AppFlowy login failed: ${res.status}`);
+  }
   const token = data.access_token;
   const wsRes = await fetch(`${base}/api/workspace`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: appflowyHeaders({ Authorization: `Bearer ${token}` }),
   });
+  const wsData = (await readJsonOrThrow(wsRes, "AppFlowy workspace")) as {
+    data?: Array<{ workspace_id: string }>;
+  };
   if (!wsRes.ok) throw new Error(`AppFlowy workspace fetch failed: ${wsRes.status}`);
-  const wsData = (await wsRes.json()) as { data: Array<{ workspace_id: string }> };
-  const workspaceId = wsData.data[0]?.workspace_id ?? "";
+  const workspaceId = wsData.data?.[0]?.workspace_id ?? "";
   if (!workspaceId) throw new Error("No AppFlowy workspace found");
   return { token, workspaceId, base };
 }
@@ -159,13 +196,18 @@ async function appflowyLogin(): Promise<{ token: string; workspaceId: string; ba
 async function findFirstSpace(token: string, workspaceId: string): Promise<string | null> {
   const base = process.env.APPFLOWY_API_URL!.replace(/\/$/, "");
   const res = await fetch(`${base}/api/workspace/${workspaceId}/folder?depth=2`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: appflowyHeaders({ Authorization: `Bearer ${token}` }),
   });
   if (!res.ok) return null;
-  const body = (await res.json()) as {
+  let body: {
     code?: number;
     data?: { children?: Array<{ view_id?: string; space_permission?: unknown }> };
   };
+  try {
+    body = (await readJsonOrThrow(res, "AppFlowy folder")) as typeof body;
+  } catch {
+    return null;
+  }
   if (body.code != null && body.code !== 0) return null; // uninitialized workspace
   const children = body.data?.children ?? [];
   const space = children.find((c) => c.space_permission != null) || children[0];
@@ -208,10 +250,10 @@ async function createReportPage(
 
   const res = await fetch(`${base}/api/workspace/${workspaceId}/page-view`, {
     method: "POST",
-    headers: {
+    headers: appflowyHeaders({
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(payload),
   });
 
@@ -299,7 +341,7 @@ async function main(): Promise<void> {
   );
 
   // Login to AppFlowy and create report
-  const { token: afToken, workspaceId, base } = await appflowyLogin();
+  const { token: afToken, workspaceId } = await appflowyLogin();
   console.log(`[weekly-gsc-sync-af] logged into AppFlowy`);
 
   // Get parent folder/view

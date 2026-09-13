@@ -86,9 +86,21 @@ async function queryRemote(sql: string, params: unknown[]): Promise<D1HttpQueryR
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ sql, params }),
+    // Bound every D1 REST call — unbounded fetch wedges next-dev under
+    // parallel Playwright (TCP accept, 0-byte response, ~0% CPU).
+    signal: AbortSignal.timeout(8_000),
   });
 
-  const body = (await res.json()) as D1HttpApiResponse;
+  const raw = await res.text();
+  let body: D1HttpApiResponse;
+  try {
+    body = JSON.parse(raw) as D1HttpApiResponse;
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `D1 HTTP query returned invalid JSON (${res.status}; ${reason}; len=${raw.length})`
+    );
+  }
   if (!res.ok || body.success === false) {
     const msg =
       body.errors

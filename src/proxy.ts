@@ -36,6 +36,13 @@ function redirectUnprefixedToDefaultLocale(
   ) {
     return null;
   }
+  // localePrefix is "always" — bare / must become /{defaultLocale}
+  if (pathname === "/" || pathname === "") {
+    return NextResponse.redirect(
+      appUrl(`/${DEFAULT_LOCALE}${request.nextUrl.search}`, request),
+      307
+    );
+  }
   const first = pathname.split("/")[1] ?? "";
   if (!first || LOCALES.includes(first)) return null;
   const last = pathname.split("/").pop() ?? "";
@@ -168,7 +175,12 @@ function cleanupStaleEntries(
 }
 
 function generateNonce(): string {
-  return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Forward CSP nonce + pathname into the App Router request headers (for layout Scripts). */
@@ -337,7 +349,7 @@ async function handleApiRoute(
     return addCorsHeaders(addSecurityHeaders(response, nonce), request);
   }
 
-  if (Math.random() < 0.01) {
+  if (shouldSampleCleanup()) {
     cleanupStaleEntries(authRequestMap);
     cleanupStaleEntries(ipRequestMap);
   }
@@ -351,6 +363,13 @@ async function handleApiRoute(
   response.headers.set("X-RateLimit-Limit", String(limitConfig.limit));
   response.headers.set("X-RateLimit-Remaining", String(remaining));
   return addCorsHeaders(addSecurityHeaders(response, nonce), request);
+}
+
+/** Cryptographic coin-flip for rare map cleanup (avoids Math.random S2245). */
+function shouldSampleCleanup(probability = 0.01): boolean {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] as number) / 2 ** 32 < probability;
 }
 
 /** Builds the locale-aware `/auth/login?redirect=...` path for unauthenticated redirects. */
@@ -385,10 +404,10 @@ async function handleD1SessionRoute(
     const isAdminUser = await isAdmin(db, user.id);
 
     if (isPostLoginRoute) {
-      const dest = isAdminUser
-        ? (pathname.startsWith("/en") ? ADMIN_PATH_EN : ADMIN_PATH)
-        : (pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH);
-      return NextResponse.redirect(appUrl(dest, request), 307);
+      const preferEn = pathname.startsWith("/en");
+      const adminDest = preferEn ? ADMIN_PATH_EN : ADMIN_PATH;
+      const dashDest = preferEn ? DASHBOARD_PATH_EN : DASHBOARD_PATH;
+      return NextResponse.redirect(appUrl(isAdminUser ? adminDest : dashDest, request), 307);
     }
 
     if (isAdminRoute && !isAdminUser) {
@@ -419,10 +438,13 @@ async function handleNextAuthRoute(
     }
 
     if (isPostLoginRoute) {
-      const dest = isAdminFromSession(session)
-        ? (pathname.startsWith("/en") ? ADMIN_PATH_EN : ADMIN_PATH)
-        : (pathname.startsWith("/en") ? DASHBOARD_PATH_EN : DASHBOARD_PATH);
-      return NextResponse.redirect(appUrl(dest, request), 307);
+      const preferEn = pathname.startsWith("/en");
+      const adminDest = preferEn ? ADMIN_PATH_EN : ADMIN_PATH;
+      const dashDest = preferEn ? DASHBOARD_PATH_EN : DASHBOARD_PATH;
+      return NextResponse.redirect(
+        appUrl(isAdminFromSession(session) ? adminDest : dashDest, request),
+        307
+      );
     }
 
     if (isAdminRoute && !isAdminFromSession(session)) {
@@ -434,6 +456,56 @@ async function handleNextAuthRoute(
   } catch {
     return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
   }
+}
+
+function isPostLoginPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/auth/post-login") ||
+    pathname === "/auth/post-login" ||
+    pathname.startsWith("/en/auth/post-login")
+  );
+}
+
+async function handleProtectedPageRoute(
+  request: NextRequest,
+  pathname: string,
+  nonce: string,
+  isAdminRoute: boolean,
+  isPostLoginRoute: boolean
+): Promise<NextResponse> {
+  // E2E bypass: if e2e_admin cookie is set, allow access to admin routes
+  if (request.cookies.get("e2e_admin")?.value === "1" && isAdminRoute) {
+    return continueToApp(request, pathname, nonce);
+  }
+
+  const sessionToken = readNextAuthJwt(request);
+  const sessionCookie = request.cookies.get("authjs.session-token")?.value;
+  const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
+  const d1SessionToken = request.cookies.get("session_token")?.value;
+  const hasSessionToken = sessionToken || sessionCookie || chunkedCookie || d1SessionToken;
+
+  if (!hasSessionToken) {
+    if (isPostLoginRoute) {
+      const basePath = pathname.split("/")[1] || "";
+      const loginPath = LOCALES.includes(basePath) ? `/${basePath}/auth/login` : "/auth/login";
+      return NextResponse.redirect(appUrl(loginPath, request), 307);
+    }
+    return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
+  }
+
+  if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
+    const d1Result = await handleD1SessionRoute(
+      request,
+      pathname,
+      nonce,
+      d1SessionToken,
+      isAdminRoute,
+      isPostLoginRoute
+    );
+    if (d1Result) return d1Result;
+  }
+
+  return handleNextAuthRoute(request, pathname, nonce, isAdminRoute, isPostLoginRoute);
 }
 
 async function handlePageRoute(
@@ -454,7 +526,7 @@ async function handlePageRoute(
     }
   }
 
-  if (Math.random() < 0.01) {
+  if (shouldSampleCleanup()) {
     cleanupStaleEntries(ipRequestMap);
   }
 
@@ -464,42 +536,18 @@ async function handlePageRoute(
   }
 
   const isAdminRoute = pathname.startsWith(ADMIN_PATH) || pathname.startsWith(ADMIN_PATH_EN);
-  const isDashboardRoute = pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(DASHBOARD_PATH_EN);
-  const isPostLoginRoute =
-    pathname.startsWith("/auth/post-login") ||
-    pathname === "/auth/post-login" ||
-    pathname.startsWith("/en/auth/post-login");
+  const isDashboardRoute =
+    pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(DASHBOARD_PATH_EN);
+  const isPostLoginRoute = isPostLoginPath(pathname);
 
   if (isAdminRoute || isDashboardRoute || isPostLoginRoute) {
-    // E2E bypass: if e2e_admin cookie is set, allow access to admin routes
-    const e2eAdminCookie = request.cookies.get("e2e_admin")?.value === "1";
-    if (e2eAdminCookie && isAdminRoute) {
-      return continueToApp(request, pathname, nonce);
-    }
-
-    const sessionToken = readNextAuthJwt(request);
-    const sessionCookie = request.cookies.get("authjs.session-token")?.value;
-    const chunkedCookie = request.cookies.get("authjs.session-token.0")?.value;
-    const d1SessionToken = request.cookies.get("session_token")?.value;
-    const hasSessionToken = sessionToken || sessionCookie || chunkedCookie || d1SessionToken;
-
-    if (!hasSessionToken) {
-      if (isPostLoginRoute) {
-        const basePath = pathname.split("/")[1] || "";
-        const loginPath = LOCALES.includes(basePath) ? `/${basePath}/auth/login` : "/auth/login";
-        return NextResponse.redirect(appUrl(loginPath, request), 307);
-      }
-      return NextResponse.redirect(appUrl(buildLoginRedirectPath(pathname), request), 307);
-    }
-
-    if (d1SessionToken && !sessionToken && !sessionCookie && !chunkedCookie) {
-      const d1Result = await handleD1SessionRoute(
-        request, pathname, nonce, d1SessionToken, isAdminRoute, isPostLoginRoute
-      );
-      if (d1Result) return d1Result;
-    }
-
-    return handleNextAuthRoute(request, pathname, nonce, isAdminRoute, isPostLoginRoute);
+    return handleProtectedPageRoute(
+      request,
+      pathname,
+      nonce,
+      isAdminRoute,
+      isPostLoginRoute
+    );
   }
 
   return continueToApp(request, pathname, nonce);
@@ -518,7 +566,7 @@ export const config = {
      * - .well-known/ (well-known URLs)
      * - files with extensions: svg, png, jpg, jpeg, gif, webp, ico, css, js, mjs, map, woff, woff2, ttf, eot, otf, html
      */
-    "/((?!api/health|_next/static|_next/image|manifest\\.webmanifest|sw\\.js|offline\\.html|\\.well-known|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)",
+    String.raw`/((?!api/health|_next/static|_next/image|manifest\.webmanifest|sw\.js|offline\.html|\.well-known|[^/]+\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)`,
   ],
 };
 

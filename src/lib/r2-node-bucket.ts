@@ -15,6 +15,13 @@ import type {
 } from "@cloudflare/workers-types";
 import { createR2ClientFromEnv, r2ObjectUrl } from "@/lib/r2-upload";
 
+/** Bound R2 S3 fetches so a wedged upstream cannot hang next-dev / RSC. */
+const R2_FETCH_TIMEOUT_MS = 15_000;
+
+function r2Signal(): AbortSignal {
+  return AbortSignal.timeout(R2_FETCH_TIMEOUT_MS);
+}
+
 function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const ab = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(ab).set(bytes);
@@ -124,7 +131,10 @@ export function createNodeDataLakeBucket(
   const client = createR2ClientFromEnv();
 
   const get = async (key: string, _options?: R2GetOptions): Promise<R2ObjectBody | null> => {
-    const res = await client.fetch(r2ObjectUrl(key, bucketName), { method: "GET" });
+    const res = await client.fetch(r2ObjectUrl(key, bucketName), {
+      method: "GET",
+      signal: r2Signal(),
+    });
     if (res.status === 404) return null;
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -135,7 +145,10 @@ export function createNodeDataLakeBucket(
   };
 
   const head = async (key: string): Promise<R2Object | null> => {
-    const res = await client.fetch(r2ObjectUrl(key, bucketName), { method: "HEAD" });
+    const res = await client.fetch(r2ObjectUrl(key, bucketName), {
+      method: "HEAD",
+      signal: r2Signal(),
+    });
     if (res.status === 404) return null;
     if (!res.ok) {
       throw new Error(`R2 HEAD ${bucketName}/${key} → ${res.status}`);
@@ -160,6 +173,7 @@ export function createNodeDataLakeBucket(
       method: "PUT",
       headers: { "Content-Type": contentType },
       body: toBodyInit(bytes),
+      signal: r2Signal(),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -175,7 +189,10 @@ export function createNodeDataLakeBucket(
   const del = async (keys: string | string[]): Promise<void> => {
     const list = Array.isArray(keys) ? keys : [keys];
     for (const key of list) {
-      const res = await client.fetch(r2ObjectUrl(key, bucketName), { method: "DELETE" });
+      const res = await client.fetch(r2ObjectUrl(key, bucketName), {
+        method: "DELETE",
+        signal: r2Signal(),
+      });
       if (!res.ok && res.status !== 404) {
         throw new Error(`R2 DELETE ${bucketName}/${key} → ${res.status}`);
       }
@@ -193,7 +210,10 @@ export function createNodeDataLakeBucket(
     listUrl.searchParams.set("max-keys", String(limit));
     if (options?.delimiter) listUrl.searchParams.set("delimiter", options.delimiter);
 
-    const res = await client.fetch(listUrl.toString(), { method: "GET" });
+    const res = await client.fetch(listUrl.toString(), {
+      method: "GET",
+      signal: r2Signal(),
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`R2 LIST ${bucketName} → ${res.status}: ${text.slice(0, 300)}`);

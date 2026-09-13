@@ -40,46 +40,56 @@ function localeAlternates(path: string) {
   };
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+/** Canonical <loc> uses default locale — localePrefix is "always". */
+function localeUrl(path: string): string {
   const baseUrl = "https://cloudless.gr";
+  if (!path || path === "/") return `${baseUrl}/en`;
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}/en${suffix}`;
+}
 
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: localeUrl("/"),
       lastModified: new Date(LAST_MODIFIED["/"]),
       changeFrequency: "weekly",
       priority: 1,
       alternates: localeAlternates(""),
     },
     {
-      url: `${baseUrl}/services`,
+      url: localeUrl("/services"),
       lastModified: new Date(LAST_MODIFIED["/services"]),
       changeFrequency: "monthly",
       priority: 0.9,
+      alternates: localeAlternates("/services"),
     },
     {
-      url: `${baseUrl}/store`,
+      url: localeUrl("/store"),
       lastModified: new Date(LAST_MODIFIED["/store"]),
       changeFrequency: "weekly",
       priority: 0.8,
+      alternates: localeAlternates("/store"),
     },
     {
-      url: `${baseUrl}/blog`,
+      url: localeUrl("/blog"),
       lastModified: new Date(LAST_MODIFIED["/blog"]),
       changeFrequency: "weekly",
       priority: 0.8,
+      alternates: localeAlternates("/blog"),
     },
     {
-      url: `${baseUrl}/contact`,
+      url: localeUrl("/contact"),
       lastModified: new Date(LAST_MODIFIED["/contact"]),
       changeFrequency: "monthly",
       priority: 0.7,
+      alternates: localeAlternates("/contact"),
     },
   ];
 
   // Blog posts already carry their own publish date — use it directly
   const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
+    url: localeUrl(`/blog/${post.slug}`),
     lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: 0.6,
@@ -90,10 +100,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // catalogue date so it only resets when the catalogue is actually updated
   const catalogueDate = new Date(LAST_MODIFIED["/store/products"]);
   const productPages: MetadataRoute.Sitemap = defaultProducts.map((product) => ({
-    url: `${baseUrl}/store/${product.id}`,
+    url: localeUrl(`/store/${product.id}`),
     lastModified: catalogueDate,
     changeFrequency: "monthly" as const,
     priority: 0.5,
+    alternates: localeAlternates(`/store/${product.id}`),
   }));
 
   // Case studies (AppFlowy with static fallback)
@@ -104,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // fall back to static list
   }
   const caseStudyPages: MetadataRoute.Sitemap = caseStudyList.map((cs) => ({
-    url: `${baseUrl}/case-studies/${cs.slug}`,
+    url: localeUrl(`/case-studies/${cs.slug}`),
     lastModified: new Date(cs.date),
     changeFrequency: "monthly" as const,
     priority: 0.7,
@@ -119,7 +130,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       docPages = docs
         .filter((d) => d.published)
         .map((d) => ({
-          url: `${baseUrl}/docs/${d.slug}`,
+          url: localeUrl(`/docs/${d.slug}`),
           lastModified: new Date(d.lastModified ?? Date.now()),
           changeFrequency: "weekly" as const,
           priority: 0.6,

@@ -83,12 +83,25 @@ describe("POST /api/admin/ai/assistant", () => {
     expect(res.status).toBe(503);
   });
 
+  it("returns 400 when messages missing even if AI is not configured", async () => {
+    vi.mocked(isAdminAiConfiguredAsync).mockResolvedValue(false);
+    const res = await POST(makeReq({}));
+    expect(res.status).toBe(400);
+    expect(isAdminAiConfiguredAsync).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when messages missing", async () => {
     const res = await POST(makeReq({}));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when messages is empty array", async () => {
+    const res = await POST(makeReq({ messages: [] }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for empty messages before the not-configured 503", async () => {
+    vi.mocked(isAdminAiConfiguredAsync).mockResolvedValue(false);
     const res = await POST(makeReq({ messages: [] }));
     expect(res.status).toBe(400);
   });

@@ -262,8 +262,9 @@ raise SystemExit(0 if ok else 1)
 }
 
 clear_cache() {
-  log "clearing .next and tmp"
-  rm -rf "$ROOT/.next" "$ROOT/tmp"
+  local dist="${NEXT_DIST_DIR:-.next}"
+  log "clearing ${dist} and tmp"
+  rm -rf "$ROOT/$dist" "$ROOT/tmp"
 }
 
 if [[ "$CLEAN" -eq 1 ]]; then

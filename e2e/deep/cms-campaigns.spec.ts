@@ -36,10 +36,12 @@ test.describe("CMS, campaigns, legal", () => {
 
   test("legal pages have a heading and a main landmark", async ({ page }) => {
     for (const path of ["/en/privacy", "/en/terms", "/en/cookies", "/en/refund"]) {
-      const res = await page.goto(path);
+      // domcontentloaded: legal pages can stall on `load` while RSC/CMS work
+      // finishes in the background under a busy e2e webServer.
+      const res = await page.goto(path, { waitUntil: "domcontentloaded" });
       expect(res?.status(), path).toBeLessThan(400);
-      await expect(page.locator("main#main-content")).toBeVisible();
-      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(page.locator("main#main-content")).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
     }
   });
 

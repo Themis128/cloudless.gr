@@ -116,7 +116,13 @@ async function callThrowing<T>(
   if (res.status === 204) return undefined as T;
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) return undefined as T;
-  return (await res.json()) as T;
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new PostizApiError(res.status, `invalid JSON (${reason}; len=${text.length}; ct=${ct})`);
+  }
 }
 
 // --- Calendar-side surface (preserved) -----------------------------------
