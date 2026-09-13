@@ -23,7 +23,9 @@ async function verifySecret(req: NextRequest): Promise<boolean | Response> {
 
   const headerSecret = req.headers.get("x-socialauto-webhook-secret") ?? "";
   const auth = req.headers.get("authorization") ?? "";
-  const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice("bearer ".length).trim() : "";
+  const bearer = auth.toLowerCase().startsWith("bearer ")
+    ? auth.slice("bearer ".length).trim()
+    : "";
   const provided = headerSecret || bearer;
 
   if (!provided) {
@@ -52,7 +54,10 @@ export async function POST(req: NextRequest) {
 
   const leads: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
   if (leads.length === 0) {
-    return NextResponse.json({ ok: true, results: [] as Array<{ ok: boolean; espocrm_lead_id: string | null }> });
+    return NextResponse.json({
+      ok: true,
+      results: [] as Array<{ ok: boolean; espocrm_lead_id: string | null }>,
+    });
   }
   if (leads.length > 100) {
     return NextResponse.json({ error: "too_many_items" }, { status: 413 });
@@ -73,4 +78,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, results });
 }
-

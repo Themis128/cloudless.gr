@@ -1,6 +1,7 @@
 import type { LeadData } from "@/lib/espocrm";
 
-export type SocialAutoSource = "whatsapp_flow" | "whatsapp_dm" | "facebook_messenger" | "instagram_dm";
+export type SocialAutoSource =
+  "whatsapp_flow" | "whatsapp_dm" | "facebook_messenger" | "instagram_dm";
 export type SocialAutoInterest = "cloud" | "growth" | "audit";
 
 export interface SocialAutoLead {
@@ -65,7 +66,9 @@ function toDescription(lead: SocialAutoLead): string {
   const lines = [
     `Source: ${lead.source} (${channelLabel})`,
     lead.interest ? `Interest: ${lead.interest}` : null,
-    lead.company_size != null && lead.company_size !== "" ? `Company size: ${String(lead.company_size)}` : null,
+    lead.company_size != null && lead.company_size !== ""
+      ? `Company size: ${String(lead.company_size)}`
+      : null,
     lead.thread_id ? `Thread ID: ${lead.thread_id}` : null,
     lead.social_account_id ? `Social account ID: ${lead.social_account_id}` : null,
     lead.id ? `SocialAuto lead ID: ${lead.id}` : null,
@@ -104,4 +107,3 @@ export function isSocialAutoLead(input: unknown): input is SocialAutoLead {
     typeof obj.email === "string"
   );
 }
-
