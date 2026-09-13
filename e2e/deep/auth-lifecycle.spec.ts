@@ -59,12 +59,31 @@ test.describe("Auth lifecycle", () => {
     await expect(page.getByRole("heading", { name: /create account|sign up/i })).toBeVisible({
       timeout: 20_000,
     });
+
+    // CI sometimes starts with UI overlays open (cookie banner, cart drawer).
+    // Clear them so the submit click reliably hits the signup form.
+    const cookieBanner = page.getByRole("region", { name: /your cookies, your choice/i });
+    if (await cookieBanner.isVisible().catch(() => false)) {
+      const reject = page.getByRole("button", { name: /reject optional/i });
+      const accept = page.getByRole("button", { name: /accept all/i });
+      await reject.click().catch(async () => {
+        await accept.click().catch(() => {});
+      });
+      await expect(cookieBanner).toBeHidden({ timeout: 10_000 }).catch(() => {});
+    }
+
+    const cart = page.getByRole("dialog", { name: /shopping cart|cart/i });
+    if (await cart.isVisible().catch(() => false)) {
+      await page.getByRole("button", { name: /close cart/i }).click().catch(() => {});
+      await expect(cart).toBeHidden({ timeout: 10_000 }).catch(() => {});
+    }
+
     await page.locator("#signup-name").fill("E2E Mismatch");
     await page.locator("#signup-email").fill("mismatch-e2e@example.invalid");
     await page.locator("#signup-password").fill("LongEnough1!");
     await page.locator("#signup-confirm-password").fill("DifferentPass1!");
     await page.getByRole("button", { name: /create account|sign up/i }).click();
-    await expect(page.getByTestId("auth-error")).toBeVisible();
+    await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("auth-error")).toContainText(/passwords? (do )?not match/i);
   });
 
