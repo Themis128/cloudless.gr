@@ -62,8 +62,8 @@ async function readJsonOrThrow(res: Response, label: string): Promise<unknown> {
   if (trimmed.startsWith("<!") || trimmed.startsWith("<html")) {
     throw new Error(
       `${label}: got HTML instead of JSON (HTTP ${res.status}) — ` +
-        `AppFlowy URL is likely behind Cloudflare Access. Use Tailscale NodePort ` +
-        `(http://100.74.191.58:30810) or set CF_ACCESS_CLIENT_ID/SECRET.`
+        `AppFlowy URL is likely behind Cloudflare Access. Prefer the Tailscale ` +
+        `omv AppFlowy NodePort (port 30810) or set CF_ACCESS_CLIENT_ID/SECRET.`
     );
   }
   try {
@@ -73,7 +73,6 @@ async function readJsonOrThrow(res: Response, label: string): Promise<unknown> {
     throw new Error(`${label}: invalid JSON (HTTP ${res.status}; ${reason}; len=${text.length})`);
   }
 }
-
 
 export function dateRange(): { startDate: string; endDate: string } {
   const end = new Date();
@@ -342,7 +341,7 @@ async function main(): Promise<void> {
   );
 
   // Login to AppFlowy and create report
-  const { token: afToken, workspaceId, base } = await appflowyLogin();
+  const { token: afToken, workspaceId } = await appflowyLogin();
   console.log(`[weekly-gsc-sync-af] logged into AppFlowy`);
 
   // Get parent folder/view

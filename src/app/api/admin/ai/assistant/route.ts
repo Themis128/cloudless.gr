@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { adminAiNotConfiguredResponse, isAdminAiConfiguredAsync } from "@/lib/admin-ai";
+import {
+  adminAiNotConfiguredResponse,
+  generateAdminAiText,
+  isAdminAiConfiguredAsync,
+} from "@/lib/admin-ai";
 import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
 import {
   buildWorkersAiToolProtocol,
@@ -10,7 +14,6 @@ import {
 } from "@/lib/workers-ai-client";
 import { isNvidiaProxyConfigured, callNvidiaProxyChat } from "@/lib/nvidia-proxy-client";
 import { isOllamaConfigured, callOllamaChat } from "@/lib/ollama-client";
-import { generateAdminAiText } from "@/lib/admin-ai";
 import { retrieveAdminRagContext } from "@/lib/admin-rag";
 
 const MAX_ITERATIONS = 4;

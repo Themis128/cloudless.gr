@@ -44,7 +44,8 @@ function localeAlternates(path: string) {
 function localeUrl(path: string): string {
   const baseUrl = "https://cloudless.gr";
   if (!path || path === "/") return `${baseUrl}/en`;
-  return `${baseUrl}/en${path.startsWith("/") ? path : `/${path}`}`;
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}/en${suffix}`;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
