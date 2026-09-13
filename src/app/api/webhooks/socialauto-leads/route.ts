@@ -52,24 +52,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const leads: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-  if (leads.length === 0) {
+  const items: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+
+  const workItems: Array<SocialAutoLead | { invalid: true }> = [];
+  for (const item of items) {
+    const candidates = extractLeadCandidates(item);
+    if (!candidates || candidates.length === 0) {
+      workItems.push({ invalid: true });
+      continue;
+    }
+    for (const candidate of candidates) {
+      if (isSocialAutoLead(candidate)) workItems.push(candidate);
+      else workItems.push({ invalid: true });
+    }
+  }
+
+  if (workItems.length === 0) {
     return NextResponse.json({
       ok: true,
       results: [] as Array<{ ok: boolean; espocrm_lead_id: string | null }>,
     });
   }
-  if (leads.length > 100) {
+  if (workItems.length > 100) {
     return NextResponse.json({ error: "too_many_items" }, { status: 413 });
   }
 
   const results = await Promise.all(
-    leads.map(async (item): Promise<{ ok: boolean; espocrm_lead_id: string | null }> => {
-      if (!isSocialAutoLead(item)) {
+    workItems.map(async (item): Promise<{ ok: boolean; espocrm_lead_id: string | null }> => {
+      if ("invalid" in item) {
         return { ok: false, espocrm_lead_id: null };
       }
-      const lead = item as SocialAutoLead;
-      const data = toEspoLeadData(lead);
+      const data = toEspoLeadData(item);
       if (!data.emailAddress) return { ok: false, espocrm_lead_id: null };
       const id = await createLead(data);
       return { ok: Boolean(id), espocrm_lead_id: id };
@@ -77,4 +90,14 @@ export async function POST(req: NextRequest) {
   );
 
   return NextResponse.json({ ok: true, results });
+}
+
+function extractLeadCandidates(item: unknown): unknown[] | null {
+  if (!item || typeof item !== "object") return null;
+  if (isSocialAutoLead(item)) return [item];
+
+  const obj = item as Record<string, unknown>;
+  if (Array.isArray(obj.leads)) return obj.leads;
+  if (obj.lead !== undefined) return [obj.lead];
+  return null;
 }

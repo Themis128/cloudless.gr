@@ -83,6 +83,59 @@ describe("POST /api/webhooks/socialauto-leads", () => {
     expect(payload.results).toEqual([{ ok: true, espocrm_lead_id: "lead-123" }]);
   });
 
+  it("accepts the SocialAuto envelope shape with lead field", async () => {
+    const res = await POST(
+      req(
+        { "x-socialauto-webhook-secret": SECRET },
+        {
+          event: "lead.upserted",
+          operation: "created",
+          lead: {
+            source: "instagram_dm",
+            name: "Grace Hopper",
+            email: "grace@example.com",
+            interest: "growth",
+          },
+        }
+      )
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockCreateLead).toHaveBeenCalledTimes(1);
+    const call = mockCreateLead.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(call.emailAddress).toBe("grace@example.com");
+    expect(call.source).toBe("Instagram");
+    expect(call.campaignSlug).toBe("socialauto-instagram_dm");
+
+    const payload = await res.json();
+    expect(payload.ok).toBe(true);
+    expect(payload.results).toEqual([{ ok: true, espocrm_lead_id: "lead-123" }]);
+  });
+
+  it("accepts envelope shape with leads array", async () => {
+    mockCreateLead.mockResolvedValueOnce("lead-1").mockResolvedValueOnce("lead-2");
+    const res = await POST(
+      req(
+        { "x-socialauto-webhook-secret": SECRET },
+        {
+          leads: [
+            { source: "whatsapp_dm", name: "First User", email: "first@example.com" },
+            { source: "facebook_messenger", name: "Second User", email: "second@example.com" },
+          ],
+        }
+      )
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockCreateLead).toHaveBeenCalledTimes(2);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.results).toEqual([
+      { ok: true, espocrm_lead_id: "lead-1" },
+      { ok: true, espocrm_lead_id: "lead-2" },
+    ]);
+  });
+
   it("accepts a batch array and returns per-item results", async () => {
     mockCreateLead.mockResolvedValueOnce("lead-1").mockResolvedValueOnce(null);
     const res = await POST(
@@ -90,7 +143,11 @@ describe("POST /api/webhooks/socialauto-leads", () => {
         { Authorization: `Bearer ${SECRET}` },
         [
           { source: "whatsapp_flow", name: "First User", email: "first@example.com" },
-          { source: "instagram_dm", name: "Second User", email: "second@example.com" },
+          {
+            event: "lead.upserted",
+            operation: "updated",
+            lead: { source: "instagram_dm", name: "Second User", email: "second@example.com" },
+          },
         ]
       )
     );
