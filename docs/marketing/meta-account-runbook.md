@@ -560,10 +560,12 @@ The **Page** (and then the ad account under `ADS_INTEGRITY_POLICY`) must be clea
    - Ad account `act_657781691826702`
 5. Keep creatives paused until the Page is cleared; archive the 2021 campaign after unlock if unused.
 6. Re-check after Meta clears the restriction:
+
    ```bash
    curl -sS -H "Authorization: Bearer $META_ACCESS_TOKEN" \
      "https://graph.facebook.com/v26.0/act_657781691826702?fields=account_status,disable_reason"
    ```
+
    Expect `account_status=1`. Admin → Integrations Meta card should leave `degraded`.
 
 ### Dual Page note
