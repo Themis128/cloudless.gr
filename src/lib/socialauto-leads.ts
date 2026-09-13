@@ -77,7 +77,7 @@ function toDescription(lead: SocialAutoLead): string {
 }
 
 export function toEspoLeadData(lead: SocialAutoLead): LeadData {
-  const emailAddress = normalizeWhitespace(String(lead.email ?? ""));
+  const emailAddress = normalizeWhitespace(String(lead.email ?? "")).toLowerCase();
   const { espoSource } = mapSourceToEspo(lead.source);
   const name = normalizeWhitespace(String(lead.name ?? ""));
   const { firstName, lastName } = splitName(name);
