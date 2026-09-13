@@ -364,8 +364,7 @@ async function pingMeta(accessToken: string, adAccountId: string): Promise<PingR
       return {
         status: "degraded",
         message:
-          `${accountLabel} DISABLED (${reason}). Appeal at business.facebook.com/business-support-home ` +
-          `or Account Quality before running ads.`,
+          `${accountLabel} DISABLED (${reason}). Page advertising may be blocked — check Account Quality / Business Support Home, then appeal before running ads.`,
       };
     }
     const statusName =
