@@ -4,6 +4,7 @@
  * the canary for Lambda response-size limits (6 MB hard cap for binary).
  */
 import { test, expect } from "../coverage";
+import { getWithRetry } from "./_helpers";
 
 test.describe("k3s static assets", () => {
   test("homepage chunks all return 200", async ({ page }) => {
@@ -18,10 +19,9 @@ test.describe("k3s static assets", () => {
   });
 
   test("favicon is reachable", async ({ request }) => {
-    const r = await request.get(`https://${process.env.K3S_HOST ?? "cloudless.gr"}/favicon.ico`, {
-      failOnStatusCode: false,
-    });
-    expect([200, 301, 302, 304].includes(r.status())).toBe(true);
+    const host = process.env.K3S_HOST ?? "cloudless.gr";
+    const r = await getWithRetry(request, `https://${host}/favicon.ico`, 4);
+    expect([200, 301, 302, 304].includes(r.status)).toBe(true);
   });
 
   test("no fatal page errors on homepage load", async ({ page }) => {

@@ -28,22 +28,36 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
-  workers: isCi ? 4 : undefined,
-  reporter: process.env.COVERAGE === "1"
-    ? [
-        ["list"],
-        ["monocart-reporter", {
-          name: "cloudless.gr k3s coverage",
-          outputFile: "./coverage/k3s/index.html",
-          coverage: {
-            entryFilter: { "**/src/**": true, "**/_next/static/chunks/main-app*": false, "**/_next/static/chunks/webpack*": false, "**/_next/static/chunks/framework*": false, "**/_next/static/chunks/polyfills*": false },
-            sourceFilter: { "**/src/**": true, "**/node_modules/**": false },
-            reports: ["v8", "html", "lcov", "console-summary"],
-            outputDir: "./coverage/k3s",
-          },
-        }],
-      ]
-    : isCi ? "github" : [["html", { open: "never" }], ["list"]],
+  // CI runners share one egress IP — 4 parallel workers trip the live
+  // 100-req/10s proxy rate limit and cascade into false 429 failures.
+  workers: isCi ? 2 : undefined,
+  reporter:
+    process.env.COVERAGE === "1"
+      ? [
+          ["list"],
+          [
+            "monocart-reporter",
+            {
+              name: "cloudless.gr k3s coverage",
+              outputFile: "./coverage/k3s/index.html",
+              coverage: {
+                entryFilter: {
+                  "**/src/**": true,
+                  "**/_next/static/chunks/main-app*": false,
+                  "**/_next/static/chunks/webpack*": false,
+                  "**/_next/static/chunks/framework*": false,
+                  "**/_next/static/chunks/polyfills*": false,
+                },
+                sourceFilter: { "**/src/**": true, "**/node_modules/**": false },
+                reports: ["v8", "html", "lcov", "console-summary"],
+                outputDir: "./coverage/k3s",
+              },
+            },
+          ],
+        ]
+      : isCi
+        ? "github"
+        : [["html", { open: "never" }], ["list"]],
   timeout: 60_000,
   expect: { timeout: 15_000 },
 
@@ -56,8 +70,7 @@ export default defineConfig({
     actionTimeout: 15_000,
     extraHTTPHeaders: {
       // Identify these tests in any access log (Pi Traefik, APIGW, Lambda).
-      "User-Agent":
-        "cloudless-k3s-e2e/1.0 (+https://github.com/Themis128/cloudless.gr)",
+      "User-Agent": "cloudless-k3s-e2e/1.0 (+https://github.com/Themis128/cloudless.gr)",
     },
     ignoreHTTPSErrors: false,
   },

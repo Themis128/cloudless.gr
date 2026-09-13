@@ -3,6 +3,7 @@
  * All three locales must serve via the standby path identically to PRIMARY.
  */
 import { test, expect } from "../coverage";
+import { getWithRetry } from "./_helpers";
 
 const LOCALES = ["en", "el", "fr"] as const;
 
@@ -28,16 +29,28 @@ test.describe("k3s i18n", () => {
   }
 
   test("/ root redirects to a locale-prefixed path", async ({ page }) => {
-    const r = await page.goto("/", { waitUntil: "domcontentloaded" });
+    // May briefly 429 under suite load — retry once after backoff.
+    let r = await page.goto("/", { waitUntil: "domcontentloaded" });
+    if (r?.status() === 429) {
+      await page.waitForTimeout(4_000);
+      r = await page.goto("/", { waitUntil: "domcontentloaded" });
+    }
     expect(r?.status()).toBeLessThan(400);
     expect(page.url()).toMatch(/\/(en|el|fr)(\/|$)/);
   });
 
   test("unknown locale returns 404 (not silently routed)", async ({ request }) => {
-    const r = await request.get(`https://${process.env.K3S_HOST ?? "cloudless.gr"}/zz`, {
+    const host = process.env.K3S_HOST ?? "cloudless.gr";
+    const r = await request.get(`https://${host}/zz`, {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
+    if (r.status() === 429) {
+      await new Promise((res) => setTimeout(res, 4_000));
+      const again = await getWithRetry(request, `https://${host}/zz`, 3);
+      expect([200, 301, 302, 307, 308, 404].includes(again.status)).toBe(true);
+      return;
+    }
     // Either 404 (Next.js notFound) or 308 to a default locale — both fine.
     expect([200, 301, 302, 307, 308, 404].includes(r.status())).toBe(true);
   });
