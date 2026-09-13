@@ -33,58 +33,40 @@ jobs:
 
     - run: pnpm install --frozen-lockfile --prefer-offline
 
-    # appflowy.cloudless.gr is Cloudflare Access-gated; NodePort is ACL-blocked
-    # for tag:ci. Use kubectl port-forward over the k8s tailnet tag instead.
+    # appflowy.cloudless.gr is Access-gated; k8s API :6443 times out from GH
+    # runners even on the tailnet. SSH local-forward to omv NodePort 30810.
     - name: Join Tailscale
       uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
+        tags: tag:ci
         ping: 100.74.191.58
 
-    - name: Install kubectl
+    - name: SSH tunnel to AppFlowy NodePort
       run: |
         set -euo pipefail
-        KVER=v1.31.0
-        curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
-        chmod +x /tmp/kubectl
-        sudo mv /tmp/kubectl /usr/local/bin/kubectl
-        kubectl version --client
-
-    - name: Configure kubectl
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
-        kubectl version --client
-        kubectl -n appflowy get svc nginx
-
-    - name: Port-forward AppFlowy nginx
-      run: |
-        set -euo pipefail
-        kubectl -n appflowy port-forward svc/nginx 18080:80 >/tmp/af-pf.log 2>&1 &
-        echo $! > /tmp/af-pf.pid
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+          -i ~/.ssh/id_ed25519 \
+          -L 18080:127.0.0.1:30810 -N -f \
+          tbaltzakis@100.74.191.58
+        for i in 1 2 3 4 5 6 7 8 9 10; do
           if curl -fsS -m2 http://127.0.0.1:18080/gotrue/health >/dev/null; then
-            echo "AppFlowy port-forward ready"
+            echo "AppFlowy SSH tunnel ready"
             exit 0
           fi
-          if ! kill -0 "$(cat /tmp/af-pf.pid)" 2>/dev/null; then
-            echo "port-forward process exited early:" >&2
-            cat /tmp/af-pf.log >&2 || true
-            exit 1
-          fi
-          sleep 2
+          sleep 1
         done
-        echo "port-forward timed out:" >&2
-        cat /tmp/af-pf.log >&2 || true
+        echo "SSH tunnel to AppFlowy NodePort failed" >&2
         exit 1
 
     - name: Run GSC sync to AppFlowy
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        # Canonical GH secret is GOOGLE_CLIENT_EMAIL (not GOOGLE_SERVICE_ACCOUNT_EMAIL).
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
@@ -93,11 +75,6 @@ jobs:
         APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
       run: |
         npx tsx scripts/weekly-gsc-sync-af.ts
-
-    - name: Stop port-forward
-      if: always()
-      run: |
-        if [ -f /tmp/af-pf.pid ]; then kill "$(cat /tmp/af-pf.pid)" 2>/dev/null || true; fi
 
   session-cleanup:
     runs-on: ubuntu-latest
@@ -125,10 +102,8 @@ jobs:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
-        # Call admin endpoint to trigger cleanup
         curl -X POST https://cloudless.gr/api/admin/cleanup-sessions
 
-  # Optional: Weekly full sync with additional reports
   weekly-full-sync:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' && github.event.schedule == '0 1 * * 1'
@@ -156,43 +131,28 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
+        tags: tag:ci
         ping: 100.74.191.58
 
-    - name: Install kubectl
+    - name: SSH tunnel to AppFlowy NodePort
       run: |
         set -euo pipefail
-        KVER=v1.31.0
-        curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
-        chmod +x /tmp/kubectl
-        sudo mv /tmp/kubectl /usr/local/bin/kubectl
-        kubectl version --client
-
-    - name: Configure kubectl
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
-
-    - name: Port-forward AppFlowy nginx
-      run: |
-        set -euo pipefail
-        kubectl -n appflowy port-forward svc/nginx 18080:80 >/tmp/af-pf.log 2>&1 &
-        echo $! > /tmp/af-pf.pid
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        mkdir -p ~/.ssh
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+          -i ~/.ssh/id_ed25519 \
+          -L 18080:127.0.0.1:30810 -N -f \
+          tbaltzakis@100.74.191.58
+        for i in 1 2 3 4 5 6 7 8 9 10; do
           if curl -fsS -m2 http://127.0.0.1:18080/gotrue/health >/dev/null; then
-            echo "AppFlowy port-forward ready"
+            echo "AppFlowy SSH tunnel ready"
             exit 0
           fi
-          if ! kill -0 "$(cat /tmp/af-pf.pid)" 2>/dev/null; then
-            echo "port-forward process exited early:" >&2
-            cat /tmp/af-pf.log >&2 || true
-            exit 1
-          fi
-          sleep 2
+          sleep 1
         done
-        echo "port-forward timed out:" >&2
-        cat /tmp/af-pf.log >&2 || true
+        echo "SSH tunnel to AppFlowy NodePort failed" >&2
         exit 1
 
     - name: Run full analytics sync to AppFlowy
@@ -206,8 +166,3 @@ jobs:
         APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
       run: |
         npx tsx scripts/weekly-gsc-sync-af.ts --full || echo "Full sync completed"
-
-    - name: Stop port-forward
-      if: always()
-      run: |
-        if [ -f /tmp/af-pf.pid ]; then kill "$(cat /tmp/af-pf.pid)" 2>/dev/null || true; fi
