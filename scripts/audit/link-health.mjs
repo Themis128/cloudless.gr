@@ -79,12 +79,31 @@ function category(r) {
   return "unknown";
 }
 
+/** Locale-prefix redirects (307 → /en/…) are expected with localePrefix=always. */
+function isLocaleRedirect(r) {
+  if (r.category !== "redirect" || !r.location) return false;
+  try {
+    const to = new URL(r.location, r.url);
+    const from = new URL(r.url);
+    if (to.origin !== from.origin) return false;
+    return /^\/(en|el|fr|de)(\/|$)/.test(to.pathname);
+  } catch {
+    return false;
+  }
+}
+
 const buckets = { ok: 0, slow: 0, redirect: 0, client_error: 0, server_error: 0, unreachable: 0, unknown: 0 };
 const problems = [];
 for (const r of out) {
   r.category = category(r);
   buckets[r.category]++;
-  if (r.category !== "ok") problems.push(r);
+  // Report actionable failures only — locale redirects and slow-but-2xx are
+  // informational (shown in buckets), not "problems" that fail STRICT mode.
+  if (r.category === "client_error" || r.category === "server_error" || r.category === "unreachable") {
+    problems.push(r);
+  } else if (r.category === "redirect" && !isLocaleRedirect(r)) {
+    problems.push(r);
+  }
 }
 
 const summary = {

@@ -33,6 +33,16 @@ jobs:
 
     - run: pnpm install --frozen-lockfile --prefer-offline
 
+    # appflowy.cloudless.gr is behind Cloudflare Access — GH runners get HTML
+    # login pages. Reach AppFlowy nginx NodePort on the tailnet instead.
+    - name: Join Tailscale
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:ci
+        ping: 100.74.191.58
+
     - name: Run GSC sync to AppFlowy
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -40,9 +50,12 @@ jobs:
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
-        APPFLOWY_API_URL: https://appflowy.cloudless.gr
+        # AppFlowy nginx NodePort on omv (bypasses Cloudflare Access).
+        APPFLOWY_API_URL: http://100.74.191.58:30810
         APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
         APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
+        CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+        CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       run: |
         npx tsx scripts/weekly-gsc-sync-af.ts
 
@@ -98,14 +111,24 @@ jobs:
 
     - run: pnpm install --frozen-lockfile --prefer-offline
 
+    - name: Join Tailscale
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      with:
+        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+        tags: tag:ci
+        ping: 100.74.191.58
+
     - name: Run full analytics sync to AppFlowy
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
         GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
-        APPFLOWY_API_URL: https://appflowy.cloudless.gr
+        APPFLOWY_API_URL: http://100.74.191.58:30810
         APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
         APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
+        CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+        CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       run: |
         npx tsx scripts/weekly-gsc-sync-af.ts --full || echo "Full sync completed"

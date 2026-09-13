@@ -36,6 +36,13 @@ function redirectUnprefixedToDefaultLocale(
   ) {
     return null;
   }
+  // localePrefix is "always" — bare / must become /{defaultLocale}
+  if (pathname === "/" || pathname === "") {
+    return NextResponse.redirect(
+      appUrl(`/${DEFAULT_LOCALE}${request.nextUrl.search}`, request),
+      307
+    );
+  }
   const first = pathname.split("/")[1] ?? "";
   if (!first || LOCALES.includes(first)) return null;
   const last = pathname.split("/").pop() ?? "";

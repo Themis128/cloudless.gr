@@ -30,6 +30,18 @@ fi
 
 cd "$REPO_ROOT"
 
+# Pin browsers outside the rotating Cursor sandbox cache so
+# `npx playwright install` survives sandbox id changes.
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+
+# Optional user-local Chromium sysroot (when apt install-deps needs sudo).
+# Built by extracting Playwright OS .debs into ~/.local/pw-sysroot.
+PW_SYSROOT="${PW_SYSROOT:-$HOME/.local/pw-sysroot}"
+if [ -d "$PW_SYSROOT/usr/lib/x86_64-linux-gnu" ]; then
+  export LD_LIBRARY_PATH="$PW_SYSROOT/usr/lib/x86_64-linux-gnu:$PW_SYSROOT/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  printf "\033[1;36m[e2e]\033[0m Using Chromium sysroot %s\n" "$PW_SYSROOT"
+fi
+
 # In coverage mode, ensure a dev server is running with NODE_V8_COVERAGE.
 # If one is already up on 4000 without NODE_V8_COVERAGE, restart it.
 if [ "$COVERAGE" = "1" ]; then

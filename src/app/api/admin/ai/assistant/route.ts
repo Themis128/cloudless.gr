@@ -42,10 +42,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  if (!(await isAdminAiConfiguredAsync())) {
-    return adminAiNotConfiguredResponse();
-  }
-
+  // Validate body before the "AI configured" gate so bad requests stay 400
+  // even when backends are down (e2e + API contract).
   let messages: AssistantMessage[];
   try {
     const body = (await req.json()) as { messages: AssistantMessage[] };
@@ -55,6 +53,10 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (!(await isAdminAiConfiguredAsync())) {
+    return adminAiNotConfiguredResponse();
   }
 
   const toolsUsed: string[] = [];
