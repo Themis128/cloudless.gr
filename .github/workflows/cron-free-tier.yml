@@ -44,9 +44,13 @@ jobs:
         ping: 100.74.191.58
 
     - name: Install kubectl
-      uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e1e6e10         # v4
-      with:
-        version: v1.31.0
+      run: |
+        set -euo pipefail
+        KVER=v1.31.0
+        curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
+        chmod +x /tmp/kubectl
+        sudo mv /tmp/kubectl /usr/local/bin/kubectl
+        kubectl version --client
 
     - name: Configure kubectl
       run: |
@@ -156,9 +160,13 @@ jobs:
         ping: 100.74.191.58
 
     - name: Install kubectl
-      uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e1e6e10         # v4
-      with:
-        version: v1.31.0
+      run: |
+        set -euo pipefail
+        KVER=v1.31.0
+        curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
+        chmod +x /tmp/kubectl
+        sudo mv /tmp/kubectl /usr/local/bin/kubectl
+        kubectl version --client
 
     - name: Configure kubectl
       run: |

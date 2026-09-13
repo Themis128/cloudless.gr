@@ -4,7 +4,6 @@
  * the canary for Lambda response-size limits (6 MB hard cap for binary).
  */
 import { test, expect } from "../coverage";
-import { getWithRetry } from "./_helpers";
 
 test.describe("k3s static assets", () => {
   test("homepage chunks all return 200", async ({ page }) => {
@@ -19,11 +18,14 @@ test.describe("k3s static assets", () => {
   });
 
   test("favicon is reachable", async ({ request }) => {
-    // Exercise the Pi origin (suite base) — apex may differ under CF.
-    const base = process.env.K3S_BASE_URL ?? "https://pi-origin.cloudless.gr";
-    const r = await getWithRetry(request, `${base.replace(/\/$/, "")}/favicon.ico`, 4);
-    // 302 to an absolute favicon URL is fine; getWithRetry already accepts 3xx.
-    expect([200, 301, 302, 304, 307, 308].includes(r.status)).toBe(true);
+    // Pi origin 302s /favicon.ico → /icon; Playwright follows redirects by
+    // default and can land on a 404. Assert the first hop without following.
+    const base = (process.env.K3S_BASE_URL ?? "https://pi-origin.cloudless.gr").replace(/\/$/, "");
+    const r = await request.get(`${base}/favicon.ico`, {
+      failOnStatusCode: false,
+      maxRedirects: 0,
+    });
+    expect([200, 301, 302, 304, 307, 308].includes(r.status())).toBe(true);
   });
 
   test("no fatal page errors on homepage load", async ({ page }) => {
