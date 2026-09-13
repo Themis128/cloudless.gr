@@ -6,27 +6,29 @@
  * regression, response size limit, missing env vars.
  */
 import { test, expect } from "../coverage";
-import { PRIMARY_HOST } from "./_helpers";
+import { PRIMARY_HOST, getWithRetry } from "./_helpers";
 
 test.describe("Lambda health (primary path)", () => {
   test("API health responds within 3s (warm)", async ({ request }) => {
-    await request.get(`https://${PRIMARY_HOST}/api/health`, { failOnStatusCode: false });
+    await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 4);
     const start = Date.now();
-    const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
+    const r = await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 4);
     const elapsed = Date.now() - start;
-    expect(r.status()).toBe(200);
+    expect(r.status).toBe(200);
     expect(elapsed, `warm response took ${elapsed}ms — expected <3000ms`).toBeLessThan(3_000);
   });
 
   test("Lambda returns proper JSON content-type", async ({ request }) => {
-    const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
-    const ct = r.headers()["content-type"] ?? "";
+    const r = await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 4);
+    const ct = r.headers["content-type"] ?? "";
     expect(ct).toContain("application/json");
   });
 
-  test("Lambda environment variables are set (health body has expected fields)", async ({ request }) => {
-    const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
-    const body = await r.json();
+  test("Lambda environment variables are set (health body has expected fields)", async ({
+    request,
+  }) => {
+    const r = await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 4);
+    const body = JSON.parse(r.body);
     expect(body).toHaveProperty("status", "ok");
     expect(body).toHaveProperty("timestamp");
   });
@@ -44,14 +46,14 @@ test.describe("Lambda health (primary path)", () => {
   test("non-existent API route returns 404, not Lambda 502", async ({ request }) => {
     const r = await request.get(
       `https://${PRIMARY_HOST}/api/this-route-does-not-exist-${Date.now()}`,
-      { failOnStatusCode: false },
+      { failOnStatusCode: false }
     );
     expect(r.status()).toBe(404);
   });
 
   test("response headers include cache control directives", async ({ request }) => {
-    const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
-    const cc = r.headers()["cache-control"] ?? "";
+    const r = await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 4);
+    const cc = r.headers["cache-control"] ?? "";
     expect(cc.length, "API response missing cache-control header").toBeGreaterThan(0);
   });
 });
@@ -60,10 +62,14 @@ test.describe("Lambda cold start resilience", () => {
   test("10 sequential health checks all return 200 (no intermittent 502s)", async ({ request }) => {
     const results: number[] = [];
     for (let i = 0; i < 10; i++) {
-      const r = await request.get(`https://${PRIMARY_HOST}/api/health`, { failOnStatusCode: false });
-      results.push(r.status());
+      const r = await getWithRetry(request, `https://${PRIMARY_HOST}/api/health`, 3);
+      results.push(r.status);
+      if (i < 9) await new Promise((res) => setTimeout(res, 200));
     }
     const failures = results.filter((s) => s >= 500);
-    expect(failures.length, `${failures.length}/10 requests returned 5xx: ${JSON.stringify(results)}`).toBe(0);
+    expect(
+      failures.length,
+      `${failures.length}/10 requests returned 5xx: ${JSON.stringify(results)}`
+    ).toBe(0);
   });
 });

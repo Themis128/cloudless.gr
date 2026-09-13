@@ -32,11 +32,9 @@ export async function probeHealth(req: APIRequestContext, host = STANDBY_HOST) {
  */
 export function isLikelyAppResponse(headers: Record<string, string>): boolean {
   const csp = headers["content-security-policy"] ?? "";
-  return (
-    csp.includes("frame-ancestors 'none'") &&
-    csp.includes("object-src 'none'") &&
-    csp.includes("https://*.sentry.io")
-  );
+  // Match the live Next proxy CSP — sentry was removed from connect-src;
+  // frame-ancestors + object-src are the durable "our app" markers.
+  return csp.includes("frame-ancestors 'none'") && csp.includes("object-src 'none'");
 }
 
 /**
@@ -76,7 +74,9 @@ export async function getWithRetry(
       headers: r.headers(),
     };
     if (last.status >= 200 && last.status < 400) return last;
-    await new Promise((res) => setTimeout(res, 1_000 * (i + 1)));
+    // 429 from edge/proxy rate limits — back off harder than a brief 502.
+    const backoffMs = last.status === 429 ? 3_000 * (i + 1) : 1_000 * (i + 1);
+    await new Promise((res) => setTimeout(res, backoffMs));
   }
   return last;
 }
