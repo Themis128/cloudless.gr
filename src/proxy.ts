@@ -175,7 +175,12 @@ function cleanupStaleEntries(
 }
 
 function generateNonce(): string {
-  return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Forward CSP nonce + pathname into the App Router request headers (for layout Scripts). */

@@ -73,13 +73,18 @@ export async function POST(req: NextRequest) {
   const useOllama = !useNvidia && !useWorkersAi && isOllamaConfigured();
 
   if (useNvidia || useWorkersAi || useOllama) {
-    const provider = useNvidia ? "nvidia-proxy" : useWorkersAi ? "workers-ai" : "ollama";
-    const callBackend = (msgs: { role: string; content: string }[]) =>
-      useNvidia
-        ? callNvidiaProxyChat(msgs, { maxTokens: 2000 })
-        : useWorkersAi
-          ? callWorkersAiChat(msgs, { maxTokens: 2000 })
-          : callOllamaChat(msgs, { maxTokens: 2000 });
+    let provider: string;
+    if (useNvidia) provider = "nvidia-proxy";
+    else if (useWorkersAi) provider = "workers-ai";
+    else provider = "ollama";
+    let callBackend: (msgs: { role: string; content: string }[]) => Promise<string>;
+    if (useNvidia) {
+      callBackend = (msgs) => callNvidiaProxyChat(msgs, { maxTokens: 2000 });
+    } else if (useWorkersAi) {
+      callBackend = (msgs) => callWorkersAiChat(msgs, { maxTokens: 2000 });
+    } else {
+      callBackend = (msgs) => callOllamaChat(msgs, { maxTokens: 2000 });
+    }
 
     const loopMessages: { role: string; content: string }[] = [
       {

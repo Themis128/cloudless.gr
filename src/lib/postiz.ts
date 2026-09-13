@@ -121,10 +121,7 @@ async function callThrowing<T>(
     return JSON.parse(text) as T;
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    throw new PostizApiError(
-      res.status,
-      `invalid JSON (${reason}; len=${text.length}; ct=${ct})`
-    );
+    throw new PostizApiError(res.status, `invalid JSON (${reason}; len=${text.length}; ct=${ct})`);
   }
 }
 
