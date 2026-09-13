@@ -74,9 +74,10 @@ describe("POST /api/webhooks/socialauto-leads", () => {
     expect(call.emailAddress).toBe("ada@example.com");
     expect(call.firstName).toBe("Ada");
     expect(call.lastName).toBe("Lovelace");
-    expect(call.source).toBe("Messenger");
+    expect(call.source).toBe("Other");
     expect(call.campaignSlug).toBe("socialauto-facebook_messenger");
     expect(String(call.description)).toContain("Interest: cloud");
+    expect(String(call.description)).toContain("Facebook Messenger");
 
     const payload = await res.json();
     expect(payload.ok).toBe(true);
@@ -104,8 +105,9 @@ describe("POST /api/webhooks/socialauto-leads", () => {
     expect(mockCreateLead).toHaveBeenCalledTimes(1);
     const call = mockCreateLead.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(call.emailAddress).toBe("grace@example.com");
-    expect(call.source).toBe("Instagram");
+    expect(call.source).toBe("Other");
     expect(call.campaignSlug).toBe("socialauto-instagram_dm");
+    expect(String(call.description)).toContain("Instagram DM");
 
     const payload = await res.json();
     expect(payload.ok).toBe(true);
