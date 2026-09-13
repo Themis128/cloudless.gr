@@ -1,0 +1,332 @@
+name: Engineering digest
+
+# Daily Slack summary of merges + pushes on this repo.
+# Replaces the Cursor "Summarize changes daily" automation for repo activity
+# (that run had an empty workspace and unauthenticated `gh`, so it reported
+# false "no activity"). This workflow always has contents:read + GITHUB_TOKEN.
+#
+# Schedule: 07:00 UTC daily — covers the previous UTC calendar day.
+# Manual: workflow_dispatch (same window, or override via inputs).
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+    inputs:
+      since:
+        description: ISO start (default yesterday 00:00 UTC)
+        required: false
+        type: string
+      until:
+        description: ISO end exclusive (default today 00:00 UTC)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve window (previous UTC day)
+        id: window
+        env:
+          INPUT_SINCE: ${{ github.event.inputs.since }}
+          INPUT_UNTIL: ${{ github.event.inputs.until }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from datetime import datetime, timedelta, timezone
+
+          now = datetime.now(timezone.utc)
+          today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+          default_until = today
+          default_since = today - timedelta(days=1)
+
+          since_raw = (os.environ.get("INPUT_SINCE") or "").strip()
+          until_raw = (os.environ.get("INPUT_UNTIL") or "").strip()
+
+          def parse(value: str, fallback: datetime) -> datetime:
+              if not value:
+                  return fallback
+              # Accept date-only or full ISO
+              if len(value) == 10:
+                  return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+              dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+              if dt.tzinfo is None:
+                  dt = dt.replace(tzinfo=timezone.utc)
+              return dt.astimezone(timezone.utc)
+
+          since = parse(since_raw, default_since)
+          until = parse(until_raw, default_until)
+          if until <= since:
+              raise SystemExit(f"until ({until.isoformat()}) must be after since ({since.isoformat()})")
+
+          # GitHub `merged:YYYY-MM-DD..YYYY-MM-DD` is inclusive on both ends.
+          inclusive_end = (until - timedelta(seconds=1)).date()
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"since={since.strftime('%Y-%m-%dT%H:%M:%SZ')}\n")
+              out.write(f"until={until.strftime('%Y-%m-%dT%H:%M:%SZ')}\n")
+              out.write(f"merged_range={since.date().isoformat()}..{inclusive_end.isoformat()}\n")
+              out.write(f"label={since.date().isoformat()} UTC\n")
+          print(f"Window: {since.isoformat()} → {until.isoformat()}")
+          PY
+
+      - name: Collect merges and commits
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SINCE: ${{ steps.window.outputs.since }}
+          UNTIL: ${{ steps.window.outputs.until }}
+          MERGED_RANGE: ${{ steps.window.outputs.merged_range }}
+        run: |
+          set -euo pipefail
+          # Merged PRs whose merge commit landed in the window
+          MERGES_JSON=$(gh search prs \
+            --repo "${REPO}" \
+            --merged \
+            --merged-at "${MERGED_RANGE}" \
+            --limit 50 \
+            --json number,title,url,author \
+            --jq '{total: length, items: [.[] | {number, title, url, user: (.author.login // "unknown")}]}')
+
+          # Commits on default branch in the window (may include merge commits)
+          COMMITS_JSON=$(gh api \
+            -X GET \
+            "repos/${REPO}/commits?since=${SINCE}&until=${UNTIL}&per_page=100" \
+            --jq '[.[] | {sha:.sha[0:7], msg:(.commit.message | split("\n")[0]), author:(.commit.author.name // .author.login // "unknown"), url:.html_url}]')
+
+          {
+            echo "merges<<EOF"
+            echo "$MERGES_JSON"
+            echo "EOF"
+            echo "commits<<EOF"
+            echo "$COMMITS_JSON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Merged PRs:"
+          echo "$MERGES_JSON" | python3 -m json.tool | head -80
+          echo "Commits:"
+          echo "$COMMITS_JSON" | python3 -m json.tool | head -80
+
+      - name: Resolve Slack channel
+        id: slack-channel
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          CHANNEL_OVERRIDE: ${{ secrets.SLACK_ENGINEERING_DIGEST_CHANNEL }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = (os.environ.get("SLACK_BOT_TOKEN") or "").strip()
+          if not token:
+              raise SystemExit("SLACK_BOT_TOKEN is empty — cannot post digest")
+
+          override = (os.environ.get("CHANNEL_OVERRIDE") or "").strip()
+
+          def call(method, payload=None, params=None):
+              url = f"https://slack.com/api/{method}"
+              if params:
+                  url = f"{url}?{urllib.parse.urlencode(params)}"
+              data = json.dumps(payload).encode() if payload is not None else None
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json; charset=utf-8",
+                  },
+                  method="POST" if payload is not None else "GET",
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  result = json.load(resp)
+              if not result.get("ok"):
+                  raise SystemExit(f"Slack {method} failed: {result.get('error', 'unknown')}")
+              return result
+
+          auth = call("auth.test", {})
+          print(f"Slack bot: {auth.get('user')} in {auth.get('team')}")
+
+          if override:
+              channel_id = override
+              print(f"Using channel override: {channel_id}")
+          else:
+              # Prefer #deployments, then #notifications
+              preferred = ("deployments", "notifications", "general")
+              cursor = None
+              found = {}
+              while True:
+                  params = {
+                      "exclude_archived": "true",
+                      "limit": "200",
+                      "types": "public_channel,private_channel",
+                  }
+                  if cursor:
+                      params["cursor"] = cursor
+                  listing = call("conversations.list", params=params)
+                  for ch in listing.get("channels") or []:
+                      name = ch.get("name") or ""
+                      if name in preferred:
+                          found[name] = ch["id"]
+                  cursor = (listing.get("response_metadata") or {}).get("next_cursor") or ""
+                  if not cursor:
+                      break
+              channel_id = None
+              for name in preferred:
+                  if name in found:
+                      channel_id = found[name]
+                      print(f"Resolved #{name} → {channel_id}")
+                      break
+              if not channel_id:
+                  raise SystemExit(
+                      "No #deployments/#notifications/#general found. "
+                      "Set secret SLACK_ENGINEERING_DIGEST_CHANNEL to a channel ID."
+                  )
+
+          # Ensure the bot can post (join public channels when needed)
+          join_url = "https://slack.com/api/conversations.join"
+          join_req = urllib.request.Request(
+              join_url,
+              data=json.dumps({"channel": channel_id}).encode(),
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json; charset=utf-8",
+              },
+          )
+          with urllib.request.urlopen(join_req, timeout=30) as resp:
+              join_result = json.load(resp)
+          if not join_result.get("ok"):
+              err = join_result.get("error", "unknown")
+              # Private channels / DMs / already joined — still try postMessage
+              if err not in (
+                  "already_in_channel",
+                  "method_not_supported_for_channel_type",
+                  "is_archived",
+              ):
+                  print(f"conversations.join note: {err}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"channel_id={channel_id}\n")
+          PY
+
+      - name: Post digest to Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          CHANNEL_ID: ${{ steps.slack-channel.outputs.channel_id }}
+          LABEL: ${{ steps.window.outputs.label }}
+          SINCE: ${{ steps.window.outputs.since }}
+          UNTIL: ${{ steps.window.outputs.until }}
+          MERGES_JSON: ${{ steps.collect.outputs.merges }}
+          COMMITS_JSON: ${{ steps.collect.outputs.commits }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          merges = json.loads(os.environ["MERGES_JSON"])
+          commits = json.loads(os.environ["COMMITS_JSON"])
+          items = merges.get("items") or []
+          # Prefer PR list; fall back to commit subjects when search is empty
+          # but commits exist (e.g. direct pushes).
+          label = os.environ["LABEL"]
+          repo = os.environ["REPO"]
+
+          if items:
+              pr_lines = [
+                  f"• <{p['url']}|#{p['number']}> {p['title']} (_{p.get('user') or 'unknown'}_)"
+                  for p in items[:25]
+              ]
+              body_pr = "\n".join(pr_lines)
+              if merges.get("total", len(items)) > len(items):
+                  body_pr += f"\n_…and {merges['total'] - len(items)} more_"
+              summary = f"{len(items)} merged PR(s)"
+          else:
+              body_pr = "_No pull requests merged in this window._"
+              summary = "0 merged PRs"
+
+          if commits:
+              commit_lines = [
+                  f"• `{c['sha']}` {c['msg']} — {c['author']}"
+                  for c in commits[:20]
+              ]
+              body_commits = "\n".join(commit_lines)
+              if len(commits) > 20:
+                  body_commits += f"\n_…and {len(commits) - 20} more_"
+              summary = f"{summary}, {len(commits)} commit(s) on default branch"
+          else:
+              body_commits = "_No commits on the default branch in this window._"
+              if not items:
+                  summary = "no repo activity"
+
+          header = f"Daily engineering digest — {label}"
+          text = f"{header}: {summary} · {repo}"
+
+          blocks = [
+              {
+                  "type": "header",
+                  "text": {"type": "plain_text", "text": header, "emoji": True},
+              },
+              {
+                  "type": "section",
+                  "text": {
+                      "type": "mrkdwn",
+                      "text": (
+                          f"*Repo:* `{repo}`\n"
+                          f"*Window:* `{os.environ['SINCE']}` → `{os.environ['UNTIL']}` (UTC)\n"
+                          f"*Summary:* {summary}"
+                      ),
+                  },
+              },
+              {"type": "divider"},
+              {
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": f"*Merged PRs*\n{body_pr}"},
+              },
+              {
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": f"*Commits*\n{body_commits}"},
+              },
+              {
+                  "type": "context",
+                  "elements": [
+                      {
+                          "type": "mrkdwn",
+                          "text": f"<{os.environ['RUN_URL']}|Workflow run> · GitHub Actions (not Cursor Automations)",
+                      }
+                  ],
+              },
+          ]
+
+          payload = {
+              "channel": os.environ["CHANNEL_ID"],
+              "text": text,
+              "blocks": blocks,
+              "unfurl_links": False,
+              "unfurl_media": False,
+          }
+          req = urllib.request.Request(
+              "https://slack.com/api/chat.postMessage",
+              data=json.dumps(payload).encode(),
+              headers={
+                  "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}",
+                  "Content-Type": "application/json; charset=utf-8",
+              },
+          )
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              result = json.load(resp)
+          if not result.get("ok"):
+              raise SystemExit(f"chat.postMessage failed: {result.get('error', 'unknown')}")
+          print(f"Posted digest: {summary}")
+          PY
