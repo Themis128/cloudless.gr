@@ -37,13 +37,13 @@ function splitName(name: string): { firstName?: string; lastName?: string } {
 function mapSourceToEspo(source: SocialAutoSource): { espoSource: string; channelLabel: string } {
   switch (source) {
     case "facebook_messenger":
-      return { espoSource: "Messenger", channelLabel: "Facebook Messenger" };
+      return { espoSource: "Other", channelLabel: "Facebook Messenger" };
     case "instagram_dm":
-      return { espoSource: "Instagram", channelLabel: "Instagram DM" };
+      return { espoSource: "Other", channelLabel: "Instagram DM" };
     case "whatsapp_flow":
-      return { espoSource: "WhatsApp", channelLabel: "WhatsApp Flow" };
+      return { espoSource: "Other", channelLabel: "WhatsApp Flow" };
     case "whatsapp_dm":
-      return { espoSource: "WhatsApp", channelLabel: "WhatsApp DM" };
+      return { espoSource: "Other", channelLabel: "WhatsApp DM" };
     default:
       return { espoSource: "Other", channelLabel: "Other" };
   }
