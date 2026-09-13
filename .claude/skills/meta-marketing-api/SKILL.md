@@ -4,7 +4,7 @@
 
 The Meta Marketing API enables creating, managing, and reporting on ad campaigns across Facebook, Instagram, Messenger, and Audience Network. This skill documents the full campaign hierarchy, targeting, optimization, and reporting for cloudless.gr's Meta Ads.
 
-**Base URL:** `https://graph.facebook.com/v25.0`  
+**Base URL:** `https://graph.facebook.com/v26.0`  
 **Auth:** Bearer token (same as Graph API — needs `ads_management` + `ads_read` permissions)
 
 **Cloudless Account IDs:**

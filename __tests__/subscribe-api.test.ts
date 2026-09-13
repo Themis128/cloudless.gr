@@ -30,6 +30,19 @@ vi.mock("@/lib/ses-suppression", () => ({
   removeFromSuppressionList: removeFromSuppressionListMock,
 }));
 
+const sendContactEventMock = vi.fn();
+vi.mock("@/lib/meta-capi", () => ({
+  sendContactEvent: sendContactEventMock,
+}));
+
+vi.mock("@/lib/turnstile", () => ({
+  verifyTurnstileToken: vi.fn(async () => ({ ok: true })),
+}));
+
+vi.mock("@/lib/admin-notifications", () => ({
+  recordNotification: vi.fn(),
+}));
+
 function makeRequest(body: unknown): Request {
   return new globalThis.Request("http://localhost:4000/api/subscribe", {
     method: "POST",
@@ -46,6 +59,7 @@ describe("POST /api/subscribe", () => {
     slackSubscriberNotifyMock.mockResolvedValue(undefined);
     setNewsletterStatusMock.mockResolvedValue(true);
     removeFromSuppressionListMock.mockResolvedValue(true);
+    sendContactEventMock.mockResolvedValue({ ok: true, eventsReceived: 1 });
   });
 
   it("returns 400 for invalid email payload", async () => {

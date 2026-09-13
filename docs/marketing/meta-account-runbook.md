@@ -411,11 +411,11 @@ export async function sendLeadEvent(opts: {
   };
 
   const res = await fetch(
-    `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${TOKEN}`,
+    `https://graph.facebook.com/v26.0/${PIXEL_ID}/events`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, access_token: TOKEN }),
     }
   );
 
@@ -519,3 +519,11 @@ After the whole runbook succeeds, update `/sessions/brave-epic-shannon/mnt/.auto
 - `meta_business_portfolio_diagnosis.md` → mark as RESOLVED; note new ad account ID + IG full-mode confirmed
 - `social_media_integration.md` → Phase 1 Windsor IG marked complete; Phase 2 Meta Graph API in Next.js note Pixel+CAPI live
 - Add a new `meta_ads_pixel_setup.md` capturing the Pixel ID, CAPI token SSM path, and event list
+
+## Ad account DISABLED (ops)
+
+Live Graph probes (2026-09) returned `account_status=2` with `disable_reason=1` (`ADS_INTEGRITY_POLICY`).
+
+- Pixel / CAPI can still accept events; **paid ads will not deliver** until the account is reinstated.
+- Appeal: [Meta Business Support Home](https://business.facebook.com/business-support-home) and Account Quality.
+- Admin integrations status surfaces this as `degraded` with the disable reason label.

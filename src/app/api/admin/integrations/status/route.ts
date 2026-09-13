@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig, type AppConfig } from "@/lib/ssm-config";
 import { getLeadAutomationStatus, verifyActiveCampaignToken } from "@/lib/activecampaign";
+import {
+  META_ACCOUNT_STATUS_LABEL,
+  formatMetaDisableReason,
+  metaGraphUrl,
+  normalizeMetaAdAccountId,
+} from "@/lib/meta-graph";
 
 export type IntegrationStatus = "configured" | "not_configured" | "degraded" | "error";
 
@@ -334,10 +340,13 @@ function buildSocialAdsReports(cfg: Cfg): IntegrationReport[] {
 /** Meta Marketing API account_status: 1=ACTIVE, 2=DISABLED, 3=UNSETTLED, … */
 async function pingMeta(accessToken: string, adAccountId: string): Promise<PingResult> {
   try {
-    const url = new URL(`https://graph.facebook.com/v21.0/${adAccountId}`);
+    const actId = normalizeMetaAdAccountId(adAccountId);
+    const url = new URL(metaGraphUrl(`/${actId}`));
     url.searchParams.set("fields", "id,name,account_status,disable_reason");
-    url.searchParams.set("access_token", accessToken);
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(5000),
+    });
     if (res.status === 401 || res.status === 403)
       return { status: "degraded", message: "Access token rejected by Graph API." };
     if (!res.ok) return { status: "error", message: `Graph API returned ${res.status}` };
@@ -346,22 +355,26 @@ async function pingMeta(accessToken: string, adAccountId: string): Promise<PingR
       disable_reason?: number;
       name?: string;
     };
+    const accountLabel = data.name ? `Ad account: ${data.name}` : "Ad account";
     if (data.account_status === 1) {
-      return {
-        status: "configured",
-        message: data.name ? `Ad account: ${data.name}` : undefined,
-      };
+      return { status: "configured", message: accountLabel };
     }
     if (data.account_status === 2) {
+      const reason = formatMetaDisableReason(data.disable_reason);
       return {
         status: "degraded",
         message:
-          "Ad account DISABLED (policy/payment). Appeal in Meta Business Manager before running ads.",
+          `${accountLabel} DISABLED (${reason}). Appeal at business.facebook.com/business-support-home ` +
+          `or Account Quality before running ads.`,
       };
     }
+    const statusName =
+      data.account_status !== undefined
+        ? (META_ACCOUNT_STATUS_LABEL[data.account_status] ?? String(data.account_status))
+        : "unknown";
     return {
       status: "degraded",
-      message: `Ad account not active (account_status=${data.account_status ?? "unknown"}).`,
+      message: `${accountLabel} not active (account_status=${statusName}).`,
     };
   } catch {
     return { status: "error", message: "Connection failed." };

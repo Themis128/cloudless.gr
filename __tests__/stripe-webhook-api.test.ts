@@ -32,6 +32,24 @@ vi.mock("@/lib/stripe-transactions", () => ({
   markStripeEventFailed: markStripeEventFailedMock,
 }));
 
+vi.mock("@/lib/meta-capi", () => ({
+  sendPurchaseEvent: vi.fn(async () => ({ ok: true, eventsReceived: 1 })),
+}));
+
+vi.mock("@/lib/espocrm", () => ({
+  upsertContact: vi.fn(async () => "contact_1"),
+  createDeal: vi.fn(async () => "deal_1"),
+  associateDealWithContact: vi.fn(async () => true),
+}));
+
+vi.mock("@/lib/slack-notify", () => ({
+  slackOrderNotify: vi.fn(async () => undefined),
+}));
+
+vi.mock("@/lib/admin-notifications", () => ({
+  recordNotification: vi.fn(),
+}));
+
 function makeRequest(body: string, signature?: string) {
   return new NextRequest("http://localhost:4000/api/webhooks/stripe", {
     method: "POST",
