@@ -363,8 +363,7 @@ async function pingMeta(accessToken: string, adAccountId: string): Promise<PingR
       const reason = formatMetaDisableReason(data.disable_reason);
       return {
         status: "degraded",
-        message:
-          `${accountLabel} DISABLED (${reason}). Page advertising may be blocked — check Account Quality / Business Support Home, then appeal before running ads.`,
+        message: `${accountLabel} DISABLED (${reason}). Page advertising may be blocked — check Account Quality / Business Support Home, then appeal before running ads.`,
       };
     }
     const statusName =
