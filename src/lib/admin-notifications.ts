@@ -2,6 +2,7 @@ import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { APP_TIMEZONE } from "@/lib/timezone";
 import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
+import { secureId } from "@/lib/secure-id";
 
 /**
  * Durable admin notifications store.
@@ -40,7 +41,7 @@ export interface AdminNotification {
 const PK_ALL = "NOTIF";
 
 function randomId(): string {
-  return `n_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return secureId("n_");
 }
 
 function buildSk(createdAt: string, id: string): string {

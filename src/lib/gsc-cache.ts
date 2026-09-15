@@ -1,6 +1,10 @@
-import { createHash } from "crypto";
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
+import { paramsHash } from "@/lib/d1-params-hash";
+import { rowToEntry, type CacheEntry } from "@/lib/d1-cache-entry";
+
+export type { CacheEntry };
+export { paramsHash };
 
 /**
  * Read-through cache for slow third-party data (Google Search Console).
@@ -24,59 +28,6 @@ import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
  */
 
 /**
- * Hash an arbitrary params object into a short deterministic key suffix.
- * Same input → same hash, regardless of property order.
- */
-export function paramsHash(params: Record<string, unknown> = {}): string {
-  // Sort keys so {a:1, b:2} and {b:2, a:1} hash to the same value.
-  const entries = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null)
-    .sort(([a], [b]) => a.localeCompare(b));
-  if (entries.length === 0) return "default";
-  const canonical = JSON.stringify(entries);
-  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
-}
-
-export interface CacheEntry<T> {
-  payload: T;
-  storedAt: string;
-  ageSeconds: number;
-  stale: boolean;
-}
-
-interface CacheRow {
-  result_json: string | null;
-  cached_at: number | null;
-  expires_at: number | null;
-}
-
-function rowToEntry<T>(row: CacheRow, ttlSeconds: number): CacheEntry<T> | null {
-  const raw = row.result_json;
-  const cachedAt = row.cached_at;
-  if (!raw || typeof cachedAt !== "number") return null;
-
-  let payload: T;
-  try {
-    payload = JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-
-  const storedAt = new Date(cachedAt * 1000).toISOString();
-  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - cachedAt);
-  const staleByTtl = ageSeconds > ttlSeconds;
-  const staleByExpiry =
-    typeof row.expires_at === "number" ? Math.floor(Date.now() / 1000) > row.expires_at : false;
-
-  return {
-    payload,
-    storedAt,
-    ageSeconds,
-    stale: staleByTtl || staleByExpiry,
-  };
-}
-
-/**
  * Read a cached entry. Returns null if:
  *   - AUTH_DB is not bound
  *   - no entry exists for (route, hash)
@@ -98,7 +49,11 @@ export async function getCached<T = unknown>(
         "SELECT result_json, cached_at, expires_at FROM analytics_cache WHERE pk = ? AND sk = ?"
       )
       .bind(route, hash)
-      .first<CacheRow>();
+      .first<{
+        result_json: string | null;
+        cached_at: number | null;
+        expires_at: number | null;
+      }>();
     if (!row) return null;
     return rowToEntry<T>(row, ttlSeconds);
   } catch (err) {
@@ -158,7 +113,7 @@ export async function readThrough<T>(
 
   try {
     const live = await fetcher();
-    void setCached(route, params, live, ttlSeconds);
+    setCached(route, params, live, ttlSeconds).catch(() => {});
     return { value: live, source: "live", ageSeconds: 0 };
   } catch (err) {
     if (cached && cached.ageSeconds <= acceptStaleSeconds) {

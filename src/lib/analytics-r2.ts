@@ -6,6 +6,7 @@
  */
 
 import type { R2Bucket } from "@cloudflare/workers-types";
+import { secureId } from "@/lib/secure-id";
 
 export interface AnalyticsEvent {
   event: string;
@@ -38,7 +39,7 @@ export async function trackR2Event(env: AnalyticsR2Env, evt: AnalyticsEvent): Pr
   const y = now.getUTCFullYear();
   const m = String(now.getUTCMonth() + 1).padStart(2, "0");
   const d = String(now.getUTCDate()).padStart(2, "0");
-  const key = `events/year=${y}/month=${m}/day=${d}/${now.getTime()}-${Math.random().toString(36).slice(2, 8)}.ndjson`;
+  const key = `events/year=${y}/month=${m}/day=${d}/${now.getTime()}-${secureId()}.ndjson`;
 
   const record = JSON.stringify({
     timestamp: now.toISOString(),

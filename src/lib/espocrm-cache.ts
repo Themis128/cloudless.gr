@@ -1,6 +1,10 @@
-import { createHash } from "crypto";
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
+import { paramsHash } from "@/lib/d1-params-hash";
+import { rowToEntry, type CacheEntry } from "@/lib/d1-cache-entry";
+
+export type { CacheEntry };
+export { paramsHash };
 
 /**
  * Read-through D1 cache for EspoCRM admin latency (not a second CRM).
@@ -8,52 +12,6 @@ import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
  * Table: AUTH_DB.espocrm_cache (migration 0017)
  * Soft-fails when AUTH_DB is unbound — callers always get a live (or empty) result.
  */
-
-export function paramsHash(params: Record<string, unknown> = {}): string {
-  const entries = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null)
-    .sort(([a], [b]) => a.localeCompare(b));
-  if (entries.length === 0) return "default";
-  return createHash("sha256").update(JSON.stringify(entries)).digest("hex").slice(0, 16);
-}
-
-export interface CacheEntry<T> {
-  payload: T;
-  storedAt: string;
-  ageSeconds: number;
-  stale: boolean;
-}
-
-interface CacheRow {
-  result_json: string | null;
-  cached_at: number | null;
-  expires_at: number | null;
-}
-
-function rowToEntry<T>(row: CacheRow, ttlSeconds: number): CacheEntry<T> | null {
-  const raw = row.result_json;
-  const cachedAt = row.cached_at;
-  if (!raw || typeof cachedAt !== "number") return null;
-
-  let payload: T;
-  try {
-    payload = JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-
-  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - cachedAt);
-  const staleByTtl = ageSeconds > ttlSeconds;
-  const staleByExpiry =
-    typeof row.expires_at === "number" ? Math.floor(Date.now() / 1000) > row.expires_at : false;
-
-  return {
-    payload,
-    storedAt: new Date(cachedAt * 1000).toISOString(),
-    ageSeconds,
-    stale: staleByTtl || staleByExpiry,
-  };
-}
 
 export async function getCached<T = unknown>(
   route: string,
@@ -69,7 +27,11 @@ export async function getCached<T = unknown>(
         "SELECT result_json, cached_at, expires_at FROM espocrm_cache WHERE pk = ? AND sk = ?"
       )
       .bind(route, hash)
-      .first<CacheRow>();
+      .first<{
+        result_json: string | null;
+        cached_at: number | null;
+        expires_at: number | null;
+      }>();
     if (!row) return null;
     return rowToEntry<T>(row, ttlSeconds);
   } catch (err) {
@@ -118,7 +80,7 @@ export async function readThrough<T>(
 
   try {
     const live = await fetcher();
-    void setCached(route, params, live, ttlSeconds);
+    setCached(route, params, live, ttlSeconds).catch(() => {});
     return { value: live, source: "live", ageSeconds: 0 };
   } catch (err) {
     if (cached && cached.ageSeconds <= acceptStaleSeconds) {

@@ -5,12 +5,13 @@
  * No-ops gracefully when AUTH_DB is unavailable (local/dev without bindings).
  */
 
-import type { AuthDatabase } from "@/lib/auth-d1";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import {
   allowDiscretionaryD1Write,
   funnelImpressionsEnabled,
   passSample,
 } from "@/lib/d1-write-budget";
+import { secureId } from "@/lib/secure-id";
 
 export const FUNNEL_EVENT_TYPES = [
   "search_query",
@@ -35,26 +36,8 @@ export interface FunnelEventInput {
   user_id?: string;
 }
 
-interface WorkersGlobal {
-  __AUTH_DB__?: AuthDatabase;
-}
-
-interface ProcessWithAuthDb {
-  env?: { AUTH_DB?: AuthDatabase };
-}
-
-function workersGlobal(): WorkersGlobal {
-  return globalThis as unknown as WorkersGlobal;
-}
-
-function getProcessEnv(): ProcessWithAuthDb["env"] {
-  return (process as unknown as ProcessWithAuthDb).env;
-}
-
 export function getFunnelD1Binding(): AuthDatabase | null {
-  const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
-  if (db && typeof db.prepare === "function") return db;
-  return null;
+  return getAuthDbFromEnv();
 }
 
 export function isFunnelEventType(value: string): value is FunnelEventType {
@@ -91,18 +74,6 @@ export function normalizeFunnelEvent(
   };
 }
 
-function newEventId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  if (typeof globalThis.crypto?.getRandomValues === "function") {
-    const bytes = new Uint8Array(8);
-    globalThis.crypto.getRandomValues(bytes);
-    return `funnel_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
-  }
-  return `funnel_${Date.now()}`;
-}
-
 /**
  * Insert one funnel event into D1. Returns true when written, false when skipped.
  */
@@ -130,7 +101,7 @@ export async function recordFunnelEvent(raw: FunnelEventInput): Promise<boolean>
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))`
       )
       .bind(
-        newEventId(),
+        secureId("funnel_"),
         event.session_id,
         event.event_type,
         event.query ?? null,
