@@ -145,39 +145,21 @@ jobs:
                 ln -sfn "$DATA_DIR" /var/lib/rancher/k3s
                 echo "OK symlink /var/lib/rancher/k3s -> $DATA_DIR"
               elif [ ! -f /var/lib/rancher/k3s/server/token ] && [ -f "$DATA_DIR/server/token" ]; then
-                echo "WARN: /var/lib/rancher/k3s exists but has no token; leaving in place"
+                bak="/var/lib/rancher/k3s.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+                mv /var/lib/rancher/k3s "$bak"
+                ln -sfn "$DATA_DIR" /var/lib/rancher/k3s
+                echo "OK replaced empty k3s dir with symlink (bak=$bak)"
               fi
             ' 2>&1 | tee -a /tmp/snap.out || true
           fi
 
-          # etcd-snapshot validates token against the LIVE supervisor /cacerts hash
-          # (not necessarily on-disk server-ca.crt). Drift → fatal CA-hash mismatch.
-          repair_token_ca_hash() {
-            "${HOST[@]}" env DATA_DIR="$DATA_DIR" bash -c '
+          # etcd-snapshot validates token against the supervisor Cluster CA hash.
+          # Prefer :9345 /cacerts (supervisor). :6443 often returns a different bundle.
+          apply_token_hash() {
+            local HASH="$1"
+            local SRC="$2"
+            "${HOST[@]}" env DATA_DIR="$DATA_DIR" HASH="$HASH" SRC="$SRC" bash -c '
               set -euo pipefail
-              HASH=""
-              SRC=""
-              for url in \
-                https://127.0.0.1:6443/cacerts \
-                https://127.0.0.1:9345/cacerts
-              do
-                BUNDLE=$(curl -ksS --max-time 8 "$url" 2>/dev/null || true)
-                if [ -n "$BUNDLE" ] && printf "%s" "$BUNDLE" | grep -q "BEGIN CERTIFICATE"; then
-                  HASH=$(printf "%s" "$BUNDLE" | sha256sum | awk "{print \$1}")
-                  SRC="$url"
-                  break
-                fi
-              done
-              if [ -z "$HASH" ]; then
-                CA="${DATA_DIR}/server/tls/server-ca.crt"
-                if [ -f "$CA" ]; then
-                  HASH=$(sha256sum "$CA" | awk "{print \$1}")
-                  SRC="$CA (fallback)"
-                else
-                  echo "WARN: no /cacerts and no server-ca.crt — skip token repair" >&2
-                  exit 0
-                fi
-              fi
               echo "cluster CA hash source: ${SRC} → ${HASH:0:12}…"
               for tf in "${DATA_DIR}/server/token" "${DATA_DIR}/server/agent-token"; do
                 [ -f "$tf" ] || continue
@@ -191,7 +173,7 @@ jobs:
                 esac
                 NEW="K10${HASH}::${REST}"
                 if [ "$OLD" = "$NEW" ]; then
-                  echo "OK token CA hash already matches live cluster ($(basename "$tf"))"
+                  echo "OK token CA hash already set ($(basename "$tf"))"
                   continue
                 fi
                 cp -a "$tf" "${tf}.bak.$(date -u +%Y%m%dT%H%M%SZ)"
@@ -201,42 +183,87 @@ jobs:
               done
             '
           }
-          echo "→ repair token CA hash vs live /cacerts"
-          repair_token_ca_hash 2>&1 | tee -a /tmp/snap.out || true
+
+          repair_token_ca_hash() {
+            HASH=""
+            SRC=""
+            # Supervisor first — this is what node-join / etcd-snapshot validate against.
+            for url in \
+              https://127.0.0.1:9345/cacerts \
+              https://127.0.0.1:6443/cacerts
+            do
+              BUNDLE=$("${HOST[@]}" curl -ksS --max-time 8 "$url" 2>/dev/null || true)
+              if [ -n "$BUNDLE" ] && printf "%s" "$BUNDLE" | grep -q "BEGIN CERTIFICATE"; then
+                HASH=$(printf "%s" "$BUNDLE" | sha256sum | awk "{print \$1}")
+                SRC="$url"
+                break
+              fi
+            done
+            if [ -z "$HASH" ]; then
+              CA="${DATA_DIR}/server/tls/server-ca.crt"
+              if sudo test -f "/proc/1/root${CA}" || sudo test -f "$CA"; then
+                HASH=$("${HOST[@]}" sha256sum "$CA" | awk "{print \$1}")
+                SRC="$CA (fallback)"
+              else
+                echo "WARN: no /cacerts and no server-ca.crt — skip token repair" | tee -a /tmp/snap.out
+                return 0
+              fi
+            fi
+            apply_token_hash "$HASH" "$SRC" 2>&1 | tee -a /tmp/snap.out || true
+          }
+          echo "→ repair token CA hash vs live /cacerts (9345 preferred)"
+          repair_token_ca_hash
 
           TS=$(date +%s)
           NAME="verify-r2-${TS}"
           SNAP_OK=0
 
+          try_native_snapshot() {
+            local label="$1"
+            shift
+            echo "→ k3s etcd-snapshot save ${NAME} ${label}"
+            set +e
+            OUT=$("${HOST[@]}" timeout -k 10 90 k3s etcd-snapshot save "$@" --name "$NAME" 2>&1)
+            rc=$?
+            set -e
+            printf "%s\n" "$OUT" | tee -a /tmp/snap.out
+            if [ "$rc" -eq 0 ]; then
+              SNAP_OK=1
+              return 0
+            fi
+            # If CA hash still drifts, rewrite token to the EXPECTED hash from the error and retry once.
+            EXPECTED=$(printf "%s\n" "$OUT" | sed -n 's/.*!= \([a-f0-9]\{64\}\).*/\1/p' | head -1 || true)
+            CURRENT=$(printf "%s\n" "$OUT" | sed -n 's/.*hash: \([a-f0-9]\{64\}\) !=.*/\1/p' | head -1 || true)
+            if [ -n "${EXPECTED:-}" ] && [ "${EXPECTED}" != "${CURRENT:-}" ]; then
+              echo "→ retry with Cluster CA hash from error (${EXPECTED:0:12}…)" | tee -a /tmp/snap.out
+              apply_token_hash "$EXPECTED" "etcd-snapshot error" 2>&1 | tee -a /tmp/snap.out || true
+              set +e
+              OUT2=$("${HOST[@]}" timeout -k 10 90 k3s etcd-snapshot save "$@" --name "$NAME" 2>&1)
+              rc2=$?
+              set -e
+              printf "%s\n" "$OUT2" | tee -a /tmp/snap.out
+              if [ "$rc2" -eq 0 ]; then
+                SNAP_OK=1
+                return 0
+              fi
+              rc=$rc2
+            fi
+            echo "WARN: etcd-snapshot ${label} failed/timed out (rc=${rc})" | tee -a /tmp/snap.out
+            return 1
+          }
+
           # 1) Native snapshot with explicit data-dir (correct token path on OMV SSD).
-          # k3s etcd-snapshot can hang indefinitely on CA drift — hard-cap it.
-          echo "→ k3s etcd-snapshot save ${NAME} --data-dir ${DATA_DIR}"
-          set +e
-          "${HOST[@]}" timeout -k 10 90 k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
-            | tee -a /tmp/snap.out
-          rc=${PIPESTATUS[0]}
-          set -e
-          if [ "$rc" -eq 0 ]; then
-            SNAP_OK=1
+          if try_native_snapshot "--data-dir ${DATA_DIR}" --data-dir "$DATA_DIR"; then
             "${HOST[@]}" timeout -k 5 30 k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
               | head -15 | tee -a /tmp/snap.out || true
-          else
-            echo "WARN: etcd-snapshot --data-dir failed/timed out (rc=${rc})" | tee -a /tmp/snap.out
           fi
 
           # 2) Native snapshot without --data-dir (default /var/lib/rancher/k3s).
           if [ "$SNAP_OK" -ne 1 ]; then
-            echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
-            set +e
-            "${HOST[@]}" timeout -k 10 60 k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
-            rc=${PIPESTATUS[0]}
-            set -e
-            if [ "$rc" -eq 0 ]; then
-              SNAP_OK=1
+            if try_native_snapshot "(host default data-dir)"; then
               "${HOST[@]}" timeout -k 5 30 k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
             else
-              echo "WARN: default-path etcd-snapshot failed/timed out (rc=${rc}); falling back to etcdctl + rclone" \
-                | tee -a /tmp/snap.out
+              echo "WARN: falling back to etcdctl + rclone" | tee -a /tmp/snap.out
             fi
           fi
 
