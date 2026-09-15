@@ -79,9 +79,7 @@ export function verifyLiSignature(
   clientSecret: string
 ): boolean {
   if (!signatureHeader || !clientSecret) return false;
-  const expected = createHmac("sha256", clientSecret)
-    .update(`hmacsha256=${rawBody}`)
-    .digest("hex");
+  const expected = createHmac("sha256", clientSecret).update(`hmacsha256=${rawBody}`).digest("hex");
   return safeEqHex(expected.toLowerCase(), signatureHeader.trim().toLowerCase());
 }
 
@@ -185,7 +183,8 @@ export function toEspoLeadDataFromLeadGen(opts: {
   const campaignUrn = opts.response.leadMetadata?.sponsoredLeadMetadata?.campaign;
   const campaignId = parseSponsoredCampaignId(campaignUrn);
   const campaignSlug = resolveCampaignSlugFromLinkedInCampaignId(campaignId);
-  const responseId = opts.response.id ?? parseLeadGenFormResponseId(opts.notification?.leadGenFormResponse);
+  const responseId =
+    opts.response.id ?? parseLeadGenFormResponseId(opts.notification?.leadGenFormResponse);
 
   const descLines = [
     "Source: LinkedIn Lead Gen Form",
@@ -251,9 +250,7 @@ export async function fetchLeadFormResponse(opts: {
   const leadType = opts.leadType ?? "SPONSORED";
   // Prefer the finder that includes owner (required for many tokens).
   if (opts.ownerSponsoredAccount) {
-    const owner = encodeURIComponent(
-      `(sponsoredAccount:${opts.ownerSponsoredAccount})`
-    );
+    const owner = encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`);
     const ids = encodeURIComponent(`List(${opts.responseId})`);
     const path =
       `/leadFormResponses?ids=${ids}` +

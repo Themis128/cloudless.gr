@@ -113,8 +113,7 @@ export async function POST(request: NextRequest) {
         return { ok: false, espocrm_lead_id: null };
       }
 
-      const ownerSponsoredAccount =
-        n.owner?.sponsoredAccount ?? ownerUrn ?? undefined;
+      const ownerSponsoredAccount = n.owner?.sponsoredAccount ?? ownerUrn ?? undefined;
       const leadType = n.leadType ?? "SPONSORED";
 
       const response = await fetchLeadFormResponse({
@@ -129,8 +128,7 @@ export async function POST(request: NextRequest) {
       }
 
       const formId =
-        parseLeadGenFormId(n.leadGenForm) ??
-        parseLeadGenFormId(response.versionedLeadGenFormUrn);
+        parseLeadGenFormId(n.leadGenForm) ?? parseLeadGenFormId(response.versionedLeadGenFormUrn);
       const questions = formId
         ? await fetchLeadFormQuestions({
             formId,
