@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   sendSocialAutoEventServer,
   type SocialAutoAnalyticsEvent,
-} from "@/lib/socialauto-analytics";
+} from "@/lib/socialauto-analytics-server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
