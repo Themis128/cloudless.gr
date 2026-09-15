@@ -1,0 +1,62 @@
+# Exchange a LinkedIn OAuth authorization code → update GH ACCESS/REFRESH secrets.
+#
+# Use when refresh_token is expired. Operator flow:
+#   1. Add http://127.0.0.1:8765/callback to the Developer App redirect URLs
+#      (or use Postiz redirect and paste the ?code= from the blocked URL).
+#   2. Open the authorize URL printed by:
+#        node scripts/linkedin-reauth-and-register.mjs --no-leadgen
+#   3. Paste the code here:
+#        gh workflow run "Exchange LinkedIn OAuth code" -f code='AQ…' -f no_leadgen=true
+
+name: Exchange LinkedIn OAuth code
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: OAuth authorization code (or full redirect URL containing code=)
+        required: true
+        type: string
+      no_leadgen:
+        description: Skip Lead Gen webhook registration
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Exchange code and update secrets
+        env:
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          LINKEDIN_REDIRECT_URI: https://postiz.cloudless.gr/integrations/social/linkedin
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_REPO: ${{ github.repository }}
+          GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
+          CODE_INPUT: ${{ inputs.code }}
+          NO_LEADGEN: ${{ inputs.no_leadgen }}
+        run: |
+          set -euo pipefail
+          if [ "${GH_PAT_SET}" != "true" ]; then
+            echo "::error::GH_PAT is required to write LINKEDIN_ACCESS_TOKEN / LINKEDIN_REFRESH_TOKEN"
+            exit 1
+          fi
+          args=(--code "${CODE_INPUT}")
+          if [ "${NO_LEADGEN}" = "true" ]; then
+            args+=(--no-leadgen)
+          fi
+          node scripts/linkedin-reauth-and-register.mjs "${args[@]}"
