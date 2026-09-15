@@ -7,6 +7,7 @@
  */
 
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
 import type { AdMetrics, AdPlatformId } from "./types";
 import type { AnomalyFinding, AnomalyRuleId } from "./anomaly";
 import { findingDedupKey } from "./anomaly";
@@ -88,6 +89,7 @@ export async function recordAnomalyEvents(opts: RecordAnomalyEventsOpts): Promis
     }
 
     try {
+      if (!allowDiscretionaryD1Write(1)) continue;
       await db
         .prepare(
           `INSERT OR REPLACE INTO ad_analytics_anomaly_event

@@ -134,6 +134,7 @@ export async function readThrough<T>(
 
 /** Best-effort delete of all keys whose pk equals or starts with prefix. */
 export async function invalidatePrefix(pkPrefix: string): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const db = getAuthDbFromEnv();
   if (!db) return;
   try {
@@ -153,6 +154,7 @@ export async function invalidateKey(
   route: string,
   params: Record<string, unknown> = {}
 ): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const db = getAuthDbFromEnv();
   if (!db) return;
   try {

@@ -1,0 +1,96 @@
+name: D1 Free-tier kill switch
+
+# Stay on Workers Free forever — never upgrade to Paid for D1.
+# Flips D1_DISCRETIONARY_WRITES on the live cloudless-app ConfigMap so
+# analytics/cache/funnel/notification D1 writes stop immediately (auth stays up).
+# Daily CF rows_written resets 00:00 UTC.
+#
+# Trigger: workflow_dispatch, or push this file to main (auto-kill).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: kill=stop discretionary D1 writes; restore=re-enable; status=show env
+        type: choice
+        options: [kill, restore, status]
+        default: kill
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/d1-free-tier-killswitch.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: d1-free-tier-killswitch
+  cancel-in-progress: false
+
+jobs:
+  flip:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ github.event.inputs.mode || 'kill' }}
+      ISSUE: "382"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Apply D1 discretionary write mode
+        run: |
+          set -euo pipefail
+          NS=cloudless
+          CM=cloudless-app-config
+          DEPLOY=cloudless-app
+          echo "mode=$MODE"
+          case "$MODE" in
+            kill)
+              kubectl -n "$NS" patch configmap "$CM" --type merge -p '{"data":{"D1_DISCRETIONARY_WRITES":"0","D1_DISCRETIONARY_DAILY_BUDGET":"10000","D1_FUNNEL_SAMPLE":"0.05","D1_ANALYTICS_SAMPLE":"0.05"}}'
+              kubectl -n "$NS" rollout restart "deployment/$DEPLOY"
+              kubectl -n "$NS" rollout status "deployment/$DEPLOY" --timeout=180s
+              ;;
+            restore)
+              kubectl -n "$NS" patch configmap "$CM" --type merge -p '{"data":{"D1_DISCRETIONARY_WRITES":"1","D1_DISCRETIONARY_DAILY_BUDGET":"10000","D1_FUNNEL_SAMPLE":"0.05","D1_ANALYTICS_SAMPLE":"0.05"}}'
+              kubectl -n "$NS" rollout restart "deployment/$DEPLOY"
+              kubectl -n "$NS" rollout status "deployment/$DEPLOY" --timeout=180s
+              ;;
+            status)
+              kubectl -n "$NS" get configmap "$CM" -o jsonpath='{.data}' | jq '{D1_DISCRETIONARY_WRITES,D1_DISCRETIONARY_DAILY_BUDGET,D1_FUNNEL_SAMPLE,D1_ANALYTICS_SAMPLE}'
+              kubectl -n "$NS" get deploy "$DEPLOY" -o wide
+              ;;
+            *)
+              echo "unknown mode: $MODE" >&2
+              exit 1
+              ;;
+          esac
+          {
+            echo "# D1 Free-tier kill switch — $MODE"
+            echo
+            echo "Do **not** upgrade to Workers Paid. Cap resets daily 00:00 UTC."
+            echo
+            echo '```'
+            kubectl -n "$NS" get configmap "$CM" -o jsonpath='{.data}' | jq '{D1_DISCRETIONARY_WRITES,D1_DISCRETIONARY_DAILY_BUDGET,D1_FUNNEL_SAMPLE,D1_ANALYTICS_SAMPLE}'
+            echo '```'
+          } | tee summary.md
+
+      - name: Comment tracking issue
+        if: always()
+        run: |
+          if [ -s summary.md ]; then
+            gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file summary.md
+          fi

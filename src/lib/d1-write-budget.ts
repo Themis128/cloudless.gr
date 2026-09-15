@@ -3,19 +3,19 @@
  * (100k rows_written/day). Auth/session writes are NOT gated here.
  *
  * Counters are process-local (per Pi pod). Under-count is fine; goal is to
- * stop analytics/cache churn before CF hard-limits the account.
+ * stop analytics/cache/notification churn before CF hard-limits the account.
  *
  * Env:
- *   D1_DISCRETIONARY_WRITES=0     — disable all discretionary D1 writes
- *   D1_DISCRETIONARY_DAILY_BUDGET — default 50000 (leave ~50k headroom for auth)
+ *   D1_DISCRETIONARY_WRITES=0     — disable all discretionary D1 writes (kill switch)
+ *   D1_DISCRETIONARY_DAILY_BUDGET — default 10000 (leave ~90k headroom for auth)
  *   D1_FUNNEL_IMPRESSIONS=1      — allow rec_impression (off by default)
- *   D1_FUNNEL_SAMPLE             — 0..1, default 0.1 for non-impression funnel
- *   D1_ANALYTICS_SAMPLE          — 0..1, default 0.25 for analytics_events
+ *   D1_FUNNEL_SAMPLE             — 0..1, default 0.05 for non-impression funnel
+ *   D1_ANALYTICS_SAMPLE          — 0..1, default 0.05 for analytics_events
  */
 
 const FREE_TIER_DAILY_ROWS = 100_000;
-/** Default discretionary budget — leave room for auth under the free cap. */
-const DEFAULT_BUDGET = 50_000;
+/** Default discretionary budget — stay well under Free 100k with auth headroom. */
+const DEFAULT_BUDGET = 10_000;
 
 let dayKey = "";
 let used = 0;

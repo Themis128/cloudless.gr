@@ -116,7 +116,7 @@ export async function recordFunnelEvent(raw: FunnelEventInput): Promise<boolean>
     return false;
   }
 
-  if (!passSample("D1_FUNNEL_SAMPLE", 0.1)) return false;
+  if (!passSample("D1_FUNNEL_SAMPLE", 0.05)) return false;
   if (!allowDiscretionaryD1Write(1)) return false;
 
   const db = getFunnelD1Binding();
