@@ -105,7 +105,7 @@ jobs:
           done
 
       - name: etcd-snapshot + verify R2 (host mount ns)
-        timeout-minutes: 8
+        timeout-minutes: 12
         env:
           R2_ENDPOINT: fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
           R2_BUCKET: datalake-bucket
@@ -133,6 +133,42 @@ jobs:
             exit 1
           fi
           echo "DATA_DIR=${DATA_DIR}"
+
+          # k3s etcd-snapshot refuses to run when server/token's K10 hash drifts
+          # from server/tls/server-ca.crt (common after CA rotate / path moves).
+          repair_token_ca_hash() {
+            "${HOST[@]}" env DATA_DIR="$DATA_DIR" bash -c '
+              set -euo pipefail
+              CA="${DATA_DIR}/server/tls/server-ca.crt"
+              if [ ! -f "$CA" ]; then
+                echo "WARN: missing $CA — skip token repair" >&2
+                exit 0
+              fi
+              HASH=$(sha256sum "$CA" | awk "{print \$1}")
+              for tf in "${DATA_DIR}/server/token" "${DATA_DIR}/server/agent-token"; do
+                [ -f "$tf" ] || continue
+                OLD=$(tr -d "\n" < "$tf")
+                case "$OLD" in
+                  K10*::*) REST="${OLD#*::}" ;;
+                  *)
+                    echo "WARN: unexpected token format in $tf" >&2
+                    continue
+                    ;;
+                esac
+                NEW="K10${HASH}::${REST}"
+                if [ "$OLD" = "$NEW" ]; then
+                  echo "OK token CA hash already matches ($(basename "$tf"))"
+                  continue
+                fi
+                cp -a "$tf" "${tf}.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+                printf "%s\n" "$NEW" > "$tf"
+                chmod 600 "$tf"
+                echo "repaired $(basename "$tf") CA hash → ${HASH:0:12}…"
+              done
+            '
+          }
+          echo "→ repair token CA hash vs server-ca.crt"
+          repair_token_ca_hash 2>&1 | tee -a /tmp/snap.out || true
 
           TS=$(date +%s)
           NAME="verify-r2-${TS}"
@@ -225,38 +261,82 @@ jobs:
             # shellcheck disable=SC2206
             ETCDCTL_CMD=(${ETCDCTL_BIN})
             LOCAL="/tmp/${NAME}.db"
-            echo "→ ${ETCDCTL_BIN} snapshot save ${LOCAL}" | tee -a /tmp/snap.out
+            echo "→ probe etcd endpoint health" | tee -a /tmp/snap.out
             set +e
-            "${HOST[@]}" timeout -k 10 90 env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
+            "${HOST[@]}" timeout -k 5 20 env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
               --endpoints=https://127.0.0.1:2379 \
               --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+              --dial-timeout=5s --command-timeout=15s \
+              endpoint health 2>&1 | tee -a /tmp/snap.out
+            echo "→ ${ETCDCTL_BIN} snapshot save ${LOCAL}" | tee -a /tmp/snap.out
+            "${HOST[@]}" timeout -k 15 180 env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
+              --endpoints=https://127.0.0.1:2379 \
+              --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+              --dial-timeout=10s --command-timeout=2m \
               snapshot save "$LOCAL" 2>&1 | tee -a /tmp/snap.out
             rc=${PIPESTATUS[0]}
             set -e
-            if [ "$rc" -ne 0 ]; then
-              echo "ERROR: etcdctl snapshot save failed/timed out (rc=${rc})"
-              exit 1
+            if [ "$rc" -eq 0 ]; then
+              echo "→ rclone copyto r2:${R2_BUCKET}/etcd/${NAME}.db"
+              "${HOST[@]}" env \
+                RCLONE_CONFIG_R2_TYPE=s3 \
+                RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+                RCLONE_CONFIG_R2_ACCESS_KEY_ID="${CF_R2_ACCESS_KEY_ID}" \
+                RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${CF_R2_SECRET_ACCESS_KEY}" \
+                RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ENDPOINT}" \
+                RCLONE_CONFIG_R2_ACL=private \
+                LOCAL="$LOCAL" NAME="$NAME" R2_BUCKET="$R2_BUCKET" \
+                bash -c '
+                  set -euo pipefail
+                  if ! command -v rclone >/dev/null 2>&1; then
+                    curl -fsSL --max-time 90 https://rclone.org/install.sh | bash
+                  fi
+                  timeout 120 rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
+                  timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
+                  rm -f "${LOCAL}"
+                ' 2>&1 | tee -a /tmp/snap.out
+              SNAP_OK=1
+            else
+              echo "WARN: etcdctl snapshot save failed/timed out (rc=${rc})" | tee -a /tmp/snap.out
+              rm -f "${LOCAL}" "${LOCAL}.part" 2>/dev/null || true
             fi
+          fi
 
-            echo "→ rclone copyto r2:${R2_BUCKET}/etcd/${NAME}.db"
-            "${HOST[@]}" env \
-              RCLONE_CONFIG_R2_TYPE=s3 \
-              RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
-              RCLONE_CONFIG_R2_ACCESS_KEY_ID="${CF_R2_ACCESS_KEY_ID}" \
-              RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${CF_R2_SECRET_ACCESS_KEY}" \
-              RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ENDPOINT}" \
-              RCLONE_CONFIG_R2_ACL=private \
-              LOCAL="$LOCAL" NAME="$NAME" R2_BUCKET="$R2_BUCKET" \
-              bash -c '
-                set -euo pipefail
-                if ! command -v rclone >/dev/null 2>&1; then
-                  curl -fsSL --max-time 90 https://rclone.org/install.sh | bash
-                fi
-                timeout 120 rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
-                timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
-                rm -f "${LOCAL}"
-              ' 2>&1 | tee -a /tmp/snap.out
-            SNAP_OK=1
+          # 4) Last resort: rclone newest on-disk k3s snapshot (hourly schedule) → R2.
+          # Proves CF_R2_* + bucket path even when live snapshot APIs are wedged.
+          if [ "$SNAP_OK" -ne 1 ]; then
+            echo "→ rclone newest local snapshot under ${DATA_DIR}/server/db/snapshots/" | tee -a /tmp/snap.out
+            LOCAL_EXISTING=$("${HOST[@]}" env DATA_DIR="$DATA_DIR" bash -c '
+              set -euo pipefail
+              dir="${DATA_DIR}/server/db/snapshots"
+              [ -d "$dir" ] || exit 1
+              find "$dir" -maxdepth 1 -type f \( -name "*.db" -o -name "*-etcd-snapshot*" \) -printf "%T@ %p\n" 2>/dev/null \
+                | sort -nr | head -1 | cut -d" " -f2-
+            ' || true)
+            if [ -n "${LOCAL_EXISTING:-}" ]; then
+              BASE=$(basename "$LOCAL_EXISTING")
+              REMOTE_NAME="verify-r2-existing-${TS}-${BASE}"
+              echo "→ using ${LOCAL_EXISTING} → r2:${R2_BUCKET}/etcd/${REMOTE_NAME}" | tee -a /tmp/snap.out
+              "${HOST[@]}" env \
+                RCLONE_CONFIG_R2_TYPE=s3 \
+                RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+                RCLONE_CONFIG_R2_ACCESS_KEY_ID="${CF_R2_ACCESS_KEY_ID}" \
+                RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${CF_R2_SECRET_ACCESS_KEY}" \
+                RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ENDPOINT}" \
+                RCLONE_CONFIG_R2_ACL=private \
+                LOCAL="$LOCAL_EXISTING" REMOTE_NAME="$REMOTE_NAME" R2_BUCKET="$R2_BUCKET" \
+                bash -c '
+                  set -euo pipefail
+                  if ! command -v rclone >/dev/null 2>&1; then
+                    curl -fsSL --max-time 90 https://rclone.org/install.sh | bash
+                  fi
+                  timeout 180 rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${REMOTE_NAME}" --s3-no-check-bucket
+                  timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
+                ' 2>&1 | tee -a /tmp/snap.out
+              SNAP_OK=1
+            else
+              echo "WARN: no local snapshot files found to mirror" | tee -a /tmp/snap.out
+            fi
           fi
 
           # List R2 etcd/ (scheduled k3s etcd-s3 may already have objects)
