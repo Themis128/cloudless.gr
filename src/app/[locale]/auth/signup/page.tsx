@@ -363,7 +363,17 @@ function SignUpForm() {
                     id="signup-confirm-password"
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setConfirmPassword(next);
+                      // Surface mismatch as soon as confirm diverges so e2e and
+                      // users aren't blocked by silent HTML5 / autofill races.
+                      if (next.length > 0 && password.length > 0 && next !== password) {
+                        setError(t("auth.passwordsNoMatch", "Passwords do not match"));
+                      } else if (error === t("auth.passwordsNoMatch", "Passwords do not match")) {
+                        setError("");
+                      }
+                    }}
                     required
                     minLength={8}
                     autoComplete="new-password"
