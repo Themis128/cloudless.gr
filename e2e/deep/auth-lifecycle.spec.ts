@@ -59,6 +59,10 @@ test.describe("Auth lifecycle", () => {
     await expect(page.getByRole("heading", { name: /create account|sign up/i })).toBeVisible({
       timeout: 20_000,
     });
+    // Wait for the controlled form to hydrate before filling — a remount after
+    // fill() leaves React state empty and HTML5 required blocks submit silently.
+    const signupForm = page.locator("form").filter({ has: page.locator("#signup-password") });
+    await expect(signupForm).toBeVisible({ timeout: 20_000 });
 
     // CI sometimes starts with UI overlays open (cookie banner, cart drawer).
     // Clear them so the submit click reliably hits the signup form.
@@ -80,11 +84,23 @@ test.describe("Auth lifecycle", () => {
 
     await page.locator("#signup-name").fill("E2E Mismatch");
     await page.locator("#signup-email").fill("mismatch-e2e@example.invalid");
+    // Type (don't only fill) confirm last so password-managers can't sync both
+    // fields to the same value before submit.
     await page.locator("#signup-password").fill("LongEnough1!");
-    await page.locator("#signup-confirm-password").fill("DifferentPass1!");
-    await page.getByRole("button", { name: /create account|sign up/i }).click();
-    await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("auth-error")).toContainText(/passwords? (do )?not match/i);
+    await page.locator("#signup-confirm-password").click();
+    await page.locator("#signup-confirm-password").fill("");
+    await page.locator("#signup-confirm-password").pressSequentially("DifferentPass1!", {
+      delay: 15,
+    });
+    await expect(page.locator("#signup-password")).toHaveValue("LongEnough1!");
+    await expect(page.locator("#signup-confirm-password")).toHaveValue("DifferentPass1!");
+    // Mismatch is surfaced on confirm onChange (and again on submit).
+    await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("auth-error")).toContainText(
+      /passwords? (do )?not match|mots de passe|passwörter|κωδικοί/i
+    );
+    await signupForm.evaluate((form) => (form as HTMLFormElement).requestSubmit());
+    await expect(page.getByTestId("auth-error")).toBeVisible();
   });
 
   test("login form shows an accessible error for bad credentials", async ({ page }) => {
