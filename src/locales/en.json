@@ -39,7 +39,7 @@
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
     "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
-    "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't have to. We're the third way — serverless infra, data-driven growth, and scaling that fits a 2–20-person team.",
+    "subtitle": "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",
     "ctaSecondary": "View Services",
@@ -95,6 +95,26 @@
     "notReady": "Not ready for a call? No problem.",
     "playbookTitle": "Get the free Cloud Migration Playbook — the framework we use with clients.",
     "playbookCta": "Download the Playbook"
+  },
+  "blogHighlights": {
+    "label": "[ FROM THE BLOG ]",
+    "title": "Latest",
+    "titleHighlight": "insights",
+    "subtitle": "Cloud cost saves, serverless patterns, and AI marketing tactics.",
+    "viewAll": "View all articles",
+    "readMore": "Read more"
+  },
+  "newsletterSection": {
+    "label": "[ STAY UPDATED ]",
+    "title": "Weekly",
+    "titleHighlight": "cloud insights",
+    "subtitle": "One actionable idea every week: cost saves, serverless patterns, and growth tactics. No spam."
+  },
+  "contactBanner": {
+    "label": "[ READY TO TALK? ]",
+    "title": "Book your free",
+    "titleHighlight": "30-minute audit",
+    "subtitle": "Tell us where it hurts — infrastructure, marketing, or both. We'll reply with a concrete action plan within 24 hours."
   },
   "faq": {
     "label": "[ FAQ ]",
