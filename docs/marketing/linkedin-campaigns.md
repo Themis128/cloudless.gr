@@ -165,26 +165,24 @@ PII is fetched with `LINKEDIN_ACCESS_TOKEN` which **must** include
    **Lead Sync** / Marketing Developer Platform product enabled. Without it,
    authorize returns `unauthorized_scope_error` for
    `r_marketing_leadgen_automation` and `leadNotifications` CREATE returns 403.
-2. **Redirect URI allowlist** must include exactly
-   `https://postiz.cloudless.gr/integrations/social/linkedin` (current sole match).
-3. **Refresh tokens** on the Pi (`LINKEDIN_ACCESS_TOKEN` /
-   `LINKEDIN_REFRESH_TOKEN`) were **expired** as of 2026-09-15. Prefer
-   non-interactive refresh first:
+2. **Redirect URI allowlist** should include
+   `https://postiz.cloudless.gr/integrations/social/linkedin` and, for
+   operator re-auth without Cloudflare Access,
+   `http://127.0.0.1:8765/callback` (used by `--listen`).
+3. **Refresh tokens** on the Pi / GH secrets were **expired** as of
+   2026-09-15. Non-interactive refresh was tried the same day and failed with
+   `invalid_grant` (refresh revoked). Browser OAuth is required:
 
    ```bash
-   gh workflow run "Refresh LinkedIn marketing token"
+   # Once: add http://127.0.0.1:8765/callback to Developer App → Auth → Redirect URLs
+   LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs --listen --no-leadgen
+   # After enabling Lead Sync: drop --no-leadgen so the webhook registers too
    ```
 
-   If that fails (refresh expired), browser OAuth:
-
-   ```bash
-   LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs --no-leadgen
-   # after enabling Lead Sync: drop --no-leadgen so webhook registers too
-   ```
-
-   Postiz OAuth redirect is behind Cloudflare Access. If OTP never arrives, open
-   Postiz over Tailscale (`http://100.74.191.58:30500/`) or copy `?code=` from
-   the Access-blocked redirect URL after approving LinkedIn.
+   Fallback without localhost URI: open the printed authorize URL, then paste
+   `?code=` from the Postiz redirect (Cloudflare Access may block; Tailscale
+   Postiz UI is `http://100.74.191.58:30500/` but LinkedIn still redirects to
+   the public HTTPS URI — copy the code from the blocked URL bar).
 
 4. Website destination campaigns still use the Insight Tag + CAPI path (no Lead
    Sync product required). CAPI token alone is valid for ad account reads but
