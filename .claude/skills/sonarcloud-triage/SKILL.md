@@ -112,12 +112,19 @@ globalThis.fetch(...)
 
 - **Organization:** `Themis128` (NOT `baltzakisthemiscom` — that is the Sentry org)
 - **Project key:** `Themis128_cloudless.gr`
-- **Dashboard:** `sonarcloud.io/dashboard?id=Themis128_cloudless.gr`
+- **Region:** **EU** → `https://sonarcloud.io` (US is a different host: `https://sonarqube.us`)
+- **Dashboard:** `https://sonarcloud.io/dashboard?id=Themis128_cloudless.gr`
+
+Unauthenticated visits (or the wrong region / wrong GitHub account) show:
+“The requested project does not exist, or you have not authenticated…” — that is a
+login/region wall, not a deleted project. Log in with GitHub as `Themis128` on **EU**.
+
+Private Free plan is capped near **50k ncloc**. Scope lives in `.sonarcloud.properties`
+(`src/lib` + `src/app/api` + `src/context` + `src/proxy.ts`). Full `src/` is ~95k and
+makes Automatic Analysis on `main` fail while PR checks can still pass.
 
 Analysis runs via SonarCloud's **automatic analysis** (the GitHub App) — there is no
-`sonar-project.properties` or Sonar step in the workflows, so the project key is only
-discoverable from the bot comment's dashboard URL (`?id=...`). SonarCloud keys follow the
-`{org}_{repo}` convention, hence org `Themis128`.
+Sonar step in most workflows; keys are in `.sonarcloud.properties`.
 
 Hotspot review URL for a PR:
 `sonarcloud.io/project/security_hotspots?id=Themis128_cloudless.gr&pullRequest=<PR#>&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true`
