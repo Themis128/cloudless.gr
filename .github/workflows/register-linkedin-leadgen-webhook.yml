@@ -1,0 +1,56 @@
+# Register LinkedIn Lead Gen Forms webhook → cloudless.gr
+#
+# Creates an owner-level leadNotifications subscription so native Lead Gen
+# Form submissions POST to /api/webhooks/linkedin-leads → EspoCRM.
+#
+# Trigger: workflow_dispatch, or push to this file (cloud-session fallback).
+# Requires: secrets.LINKEDIN_ACCESS_TOKEN with r_marketing_leadgen_automation.
+# Account: vars.LINKEDIN_AD_ACCOUNT_ID (default 512642510).
+
+name: Register LinkedIn Lead Gen webhook
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/register-linkedin-leadgen-webhook.yml
+      - scripts/register-linkedin-leadgen-webhook.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Probe webhook challenge endpoint
+        run: |
+          set -euo pipefail
+          code="ci-$(date +%s)"
+          url="https://cloudless.gr/api/webhooks/linkedin-leads?challengeCode=${code}"
+          body="$(curl -fsS --max-time 15 "$url")"
+          echo "$body" | tee /tmp/challenge.json
+          echo "$body" | grep -q '"challengeResponse"'
+
+      - name: Register Lead Gen subscription
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AD_ACCOUNT_ID: ${{ vars.LINKEDIN_AD_ACCOUNT_ID }}
+          WEBHOOK_URL: https://cloudless.gr/api/webhooks/linkedin-leads
+        run: |
+          set -euo pipefail
+          if [ -z "${LINKEDIN_ACCESS_TOKEN:-}" ]; then
+            echo "::error::LINKEDIN_ACCESS_TOKEN secret is empty"
+            exit 1
+          fi
+          export LINKEDIN_AD_ACCOUNT_ID="${LINKEDIN_AD_ACCOUNT_ID:-512642510}"
+          node scripts/register-linkedin-leadgen-webhook.mjs

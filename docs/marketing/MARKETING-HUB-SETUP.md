@@ -14,7 +14,7 @@ The Marketing Hub is fully implemented in code. Every platform degrades graceful
 | LinkedIn | `/admin/campaigns/linkedin` | `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_AD_ACCOUNT_ID`, `LINKEDIN_ORGANIZATION_URN` | Needs keys |
 | TikTok | `/admin/campaigns/tiktok` | `TIKTOK_ACCESS_TOKEN`, `TIKTOK_ADVERTISER_ID` | Needs keys |
 | X (Twitter) | `/admin/campaigns/x` | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`, `X_AD_ACCOUNT_ID` | Needs keys |
-| Meta/Instagram | `/admin/campaigns/meta` | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` | Blocked (policy appeal) |
+| Meta/Instagram | `/admin/campaigns/meta` | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` | Blocked — old `act_6577…` unappealable (disabled 2021); create new BM ad account |
 | AI Assistant | `/admin/ai-assistant` | `ANTHROPIC_API_KEY` | Needs key |
 | Content Calendar | `/admin/calendar` | None (in-memory store) | Ready |
 | Client Reports | `/admin/reports` | Uses EspoCRM + AC for data; `ANTHROPIC_API_KEY` for AI insights | Ready (no AI insights until key set) |
