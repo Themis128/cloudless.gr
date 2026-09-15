@@ -3,18 +3,17 @@
 # Creates an owner-level leadNotifications subscription so native Lead Gen
 # Form submissions POST to /api/webhooks/linkedin-leads → EspoCRM.
 #
-# Trigger: workflow_dispatch, or push to this file (cloud-session fallback).
-# Requires: secrets.LINKEDIN_ACCESS_TOKEN with r_marketing_leadgen_automation.
-# Account: vars.LINKEDIN_AD_ACCOUNT_ID (default 512642510).
+# Trigger: workflow_dispatch only (needs a valid ACCESS_TOKEN with
+# r_marketing_leadgen_automation). Do not path-push from feature branches —
+# expired tokens fail the job and noise CI.
+#
+# If registration returns 401/403, re-auth first:
+#   LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs
 
 name: Register LinkedIn Lead Gen webhook
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - .github/workflows/register-linkedin-leadgen-webhook.yml
-      - scripts/register-linkedin-leadgen-webhook.mjs
 
 permissions:
   contents: read

@@ -151,12 +151,30 @@ Native LinkedIn Lead Gen Form submissions sync via:
 | ----- | ---- |
 | Webhook | `POST/GET /api/webhooks/linkedin-leads` |
 | Helpers | `src/lib/linkedin-leadgen.ts` |
-| Register | `node scripts/register-linkedin-leadgen-webhook.mjs` |
+| Register | `gh workflow run "Register LinkedIn Lead Gen webhook"` |
+| Re-auth | `scripts/linkedin-reauth-and-register.mjs` |
 
 Auth uses `LINKEDIN_CLIENT_SECRET` (challenge HMAC + `X-LI-Signature`). Lead
-PII is fetched with `LINKEDIN_ACCESS_TOKEN` (`r_marketing_leadgen_automation`)
-and written to EspoCRM via `createLead`. Website destination campaigns still
-use the Insight Tag + CAPI path above.
+PII is fetched with `LINKEDIN_ACCESS_TOKEN` which **must** include
+`r_marketing_leadgen_automation`.
+
+### Operator checklist (verified 2026-09-15 via Tailscale → omv)
+
+1. **Developer App product:** LinkedIn app `77tf4oysp8u3fz` must have the
+   **Lead Sync** / Marketing Developer Platform product enabled. Without it,
+   authorize returns `unauthorized_scope_error` for
+   `r_marketing_leadgen_automation` and `leadNotifications` CREATE returns 403.
+2. **Redirect URI allowlist** must include exactly
+   `https://postiz.cloudless.gr/integrations/social/linkedin` (current sole match).
+3. **Refresh tokens** on the Pi (`LINKEDIN_ACCESS_TOKEN` /
+   `LINKEDIN_REFRESH_TOKEN`) were **expired** as of 2026-09-15. Re-auth with:
+   ```bash
+   LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs
+   # after enabling Lead Sync on the app; or --no-leadgen for ads-only refresh
+   ```
+4. Website destination campaigns still use the Insight Tag + CAPI path (no Lead
+   Sync product required). CAPI token alone is valid for ad account reads but
+   **not** for Lead Gen webhook registration.
 
 ## Sources
 
