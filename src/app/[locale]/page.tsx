@@ -7,7 +7,6 @@ import TypingText from "@/components/TypingText";
 import JsonLd from "@/components/JsonLd";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getBlogPostsWithSource } from "@/lib/blog-source";
-import { formatDate } from "@/lib/blog";
 
 // CloudCockpit is a ~10 KB-gzipped client widget rendered only inside
 // the hero's right column on lg screens. Splitting it into its own
@@ -34,8 +33,9 @@ import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
-import NewsletterForm from "@/components/NewsletterForm";
+import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
+import TrackedBlogCard from "@/components/TrackedBlogCard";
 
 export const revalidate = 3600;
 
@@ -778,62 +778,7 @@ export default async function Home({
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {latestPosts.map((post, i) => (
-                <ScrollReveal key={post.slug} delay={i * 100}>
-                  <Link
-                    href={`/blog/${post.slug}`}
-                    className="group block h-full rounded-xl border p-6 transition-all duration-200 hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
-                    style={{
-                      background: "var(--surface-raised)",
-                      borderColor: "var(--border-subtle)",
-                    }}
-                  >
-                    <div
-                      className="mb-3 flex items-center gap-3 font-mono text-[10px]"
-                      style={{ color: "var(--ink-muted)" }}
-                    >
-                      <span
-                        className="rounded-full px-2 py-0.5 tracking-wider"
-                        style={{
-                          background: "color-mix(in srgb, var(--accent) 8%, transparent)",
-                          color: "var(--accent)",
-                        }}
-                      >
-                        {post.category}
-                      </span>
-                      <span>{formatDate(post.date)}</span>
-                      <span>•</span>
-                      <span>{post.readTime}</span>
-                    </div>
-                    <h3
-                      className="font-heading mb-3 text-lg font-semibold transition-colors group-hover:text-[var(--accent)]"
-                      style={{ color: "var(--ink-primary)" }}
-                    >
-                      {post.title}
-                    </h3>
-                    <p
-                      className="mb-4 line-clamp-3 text-sm leading-relaxed"
-                      style={{ color: "var(--ink-body)" }}
-                    >
-                      {post.excerpt}
-                    </p>
-                    <span
-                      className="inline-flex items-center gap-1 font-mono text-xs font-semibold"
-                      style={{ color: "var(--accent)" }}
-                    >
-                      {t("blogHighlights.readMore", "Read more")}
-                      <svg
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="transition-transform group-hover:translate-x-1"
-                      >
-                        <path d="M5 2l5 5-5 5" />
-                      </svg>
-                    </span>
-                  </Link>
-                </ScrollReveal>
+                <TrackedBlogCard key={post.slug} post={post} delay={i * 100} />
               ))}
             </div>
           </div>
@@ -872,7 +817,7 @@ export default async function Home({
               className="rounded-xl border p-8 text-left"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
             >
-              <NewsletterForm />
+              <HomeNewsletterForm />
             </div>
           </ScrollReveal>
         </div>
@@ -1058,7 +1003,7 @@ export default async function Home({
               </div>
             }
           >
-            <ContactFormSection />
+            <ContactFormSection source="homepage" />
           </Suspense>
         </div>
       </section>
