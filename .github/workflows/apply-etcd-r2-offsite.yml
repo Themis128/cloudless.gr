@@ -28,7 +28,7 @@ env:
 jobs:
   apply:
     runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 25
+    timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: "382"
@@ -105,6 +105,7 @@ jobs:
           done
 
       - name: etcd-snapshot + verify R2 (host mount ns)
+        timeout-minutes: 8
         env:
           R2_ENDPOINT: fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
           R2_BUCKET: datalake-bucket
@@ -138,44 +139,45 @@ jobs:
           SNAP_OK=0
 
           # 1) Native snapshot with explicit data-dir (correct token path on OMV SSD).
+          # k3s etcd-snapshot can hang indefinitely on CA drift — hard-cap it.
           echo "→ k3s etcd-snapshot save ${NAME} --data-dir ${DATA_DIR}"
           set +e
-          "${HOST[@]}" k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
+          timeout 90 "${HOST[@]}" k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
             | tee -a /tmp/snap.out
           rc=${PIPESTATUS[0]}
           set -e
           if [ "$rc" -eq 0 ]; then
             SNAP_OK=1
-            "${HOST[@]}" k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
+            timeout 30 "${HOST[@]}" k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
               | head -15 | tee -a /tmp/snap.out || true
           else
-            echo "WARN: etcd-snapshot --data-dir failed (often CA hash mismatch)" | tee -a /tmp/snap.out
+            echo "WARN: etcd-snapshot --data-dir failed/timed out (rc=${rc})" | tee -a /tmp/snap.out
           fi
 
           # 2) Native snapshot without --data-dir (default /var/lib/rancher/k3s).
           if [ "$SNAP_OK" -ne 1 ]; then
             echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
             set +e
-            "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
+            timeout 60 "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
             rc=${PIPESTATUS[0]}
             set -e
             if [ "$rc" -eq 0 ]; then
               SNAP_OK=1
-              "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
+              timeout 30 "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
             else
-              echo "WARN: default-path etcd-snapshot failed; falling back to etcdctl + rclone" \
+              echo "WARN: default-path etcd-snapshot failed/timed out (rc=${rc}); falling back to etcdctl + rclone" \
                 | tee -a /tmp/snap.out
             fi
           fi
 
           # Resolve a working etcdctl (k3s subcommand → bundled binary → download).
           resolve_etcdctl() {
-            if "${HOST[@]}" k3s etcdctl version >/dev/null 2>&1; then
+            if timeout 15 "${HOST[@]}" k3s etcdctl version >/dev/null 2>&1; then
               echo "k3s etcdctl"
               return 0
             fi
-            FOUND=$("${HOST[@]}" bash -c "
-              find '${DATA_DIR}/data' /usr/local/bin /usr/bin -name etcdctl -type f 2>/dev/null | head -1
+            FOUND=$(timeout 30 "${HOST[@]}" bash -c "
+              find '${DATA_DIR}/data' /usr/local/bin /usr/bin -maxdepth 4 -name etcdctl -type f 2>/dev/null | head -1
             " || true)
             if [ -n "${FOUND}" ]; then
               echo "${FOUND}"
@@ -191,11 +193,15 @@ jobs:
                 ;;
             esac
             DEST="/tmp/etcdctl-${ETCDCTL_VERSION}"
+            if sudo test -x "/proc/1/root${DEST}" || sudo test -x "$DEST"; then
+              echo "${DEST}"
+              return 0
+            fi
             echo "→ downloading etcdctl ${ETCDCTL_VERSION} (${ETCD_ARCH})" | tee -a /tmp/snap.out
-            "${HOST[@]}" bash -c "
+            timeout 150 "${HOST[@]}" bash -c "
               set -euo pipefail
               TMP=\$(mktemp -d)
-              curl -fsSL --max-time 120 \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \\
+              curl -fsSL --max-time 90 \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \\
                 | tar -xz -C \"\$TMP\" --strip-components=1
               install -m 0755 \"\$TMP/etcdctl\" '${DEST}'
               rm -rf \"\$TMP\"
@@ -220,10 +226,17 @@ jobs:
             ETCDCTL_CMD=(${ETCDCTL_BIN})
             LOCAL="/tmp/${NAME}.db"
             echo "→ ${ETCDCTL_BIN} snapshot save ${LOCAL}" | tee -a /tmp/snap.out
-            "${HOST[@]}" env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
+            set +e
+            timeout 90 "${HOST[@]}" env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
               --endpoints=https://127.0.0.1:2379 \
               --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
               snapshot save "$LOCAL" 2>&1 | tee -a /tmp/snap.out
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              echo "ERROR: etcdctl snapshot save failed/timed out (rc=${rc})"
+              exit 1
+            fi
 
             echo "→ rclone copyto r2:${R2_BUCKET}/etcd/${NAME}.db"
             "${HOST[@]}" env \
@@ -237,7 +250,7 @@ jobs:
               bash -c '
                 set -euo pipefail
                 if ! command -v rclone >/dev/null 2>&1; then
-                  curl -fsSL --max-time 120 https://rclone.org/install.sh | bash
+                  curl -fsSL --max-time 90 https://rclone.org/install.sh | bash
                 fi
                 timeout 120 rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
                 timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
@@ -258,7 +271,7 @@ jobs:
             R2_BUCKET="$R2_BUCKET" \
             bash -c '
               set -euo pipefail
-              command -v rclone >/dev/null 2>&1 || curl -fsSL --max-time 120 https://rclone.org/install.sh | bash
+              command -v rclone >/dev/null 2>&1 || curl -fsSL --max-time 90 https://rclone.org/install.sh | bash
               timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -15
             ' 2>&1 | tee -a /tmp/snap.out || true
 
