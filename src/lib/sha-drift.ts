@@ -1,28 +1,22 @@
 /**
- * Pure SHA drift comparison logic.
+ * Pure SHA drift comparison logic (Cloudflare Free — no AWS SSM).
  *
- * I/O lives in scripts/detect-sha-drift.mts (which imports from this
- * module). Keeping the comparison pure makes it directly unit-testable
- * without mocking SSM clients or HTTPS requests.
- *
- * Each surface (cloud / Pi) has its own SSM source-of-truth param so
- * that the two independent deploy pipelines don't overwrite each other:
- *   deploy.yml       → /cloudless/production/cloud-sha  (full GITHUB_SHA)
- *   deploy-pi.yml    → /cloudless/production/pi-sha     (12-char short SHA)
+ * I/O lives in scripts/detect-sha-drift.mts. Expected SHAs come from peer
+ * /api/health versions (apex + pi-origin), not SSM params.
  */
 
 export interface DriftSnapshot {
-  /** deploy.yml SHA — source of truth for cloudless.gr. */
+  /** Expected SHA for cloudless.gr (usually apex /api/health version). */
   cloudExpected: string;
-  /** deploy-pi.yml SHA — source of truth for the Pi surface. */
+  /** Expected SHA for pi-origin (usually same Pi deploy SHA). */
   piExpected: string;
-  /** www.cloudless.gr/api/health.version, or null if unreachable. */
+  /** cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
   /** pi-origin.cloudless.gr/api/health.version, or null if unreachable. */
   pi: string | null;
-  /** When the cloud SSM param was last updated; null if unknown. */
+  /** Legacy field; unused in CF-only mode (always null). */
   cloudSsmModifiedAt: Date | null;
-  /** When the Pi SSM param was last updated; null if unknown. */
+  /** Legacy field; unused in CF-only mode (always null). */
   piSsmModifiedAt: Date | null;
 }
 
@@ -41,9 +35,8 @@ export interface DriftReport {
 }
 
 /**
- * Newly published SSM SHA needs this long for both surfaces to converge
- * (Lambda cold start + Pi K3s rolling update). Drift inside this window
- * is normal mid-rollout and should not page.
+ * Optional grace window after a deploy timestamp. CF-only mode leaves
+ * modified-at null so grace never applies (peer health versions should match).
  */
 export const GRACE_WINDOW_MS = 10 * 60 * 1000;
 
@@ -71,20 +64,15 @@ function classifySurface(
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
     reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
-  } else if (!matches) reason = "SHA differs from SSM source of truth";
+  } else if (!matches) reason = "SHA differs from peer /api/health version";
   return { name, actual, matches, reason };
 }
 
 /**
  * Build a DriftReport from a snapshot. Pure; takes `now` so tests can pin
  * the clock and exercise the grace-window edges deterministically.
- *
- * Grace window is computed from the most recently updated SSM param so
- * that a fresh deploy to either surface suppresses false-positive drift
- * alerts during rollout convergence.
  */
 export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
-  // Use the most recent SSM write across both surfaces for the grace window.
   const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
     (d): d is Date => d !== null
   );
@@ -99,7 +87,6 @@ export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now())
   ];
 
   const anyMismatch = surfaces.some((s) => !s.matches);
-  // During grace window we count mismatches as expected and don't fail.
   const drifted = anyMismatch && !withinGrace;
   return { drifted, ageMs, withinGrace, surfaces };
 }

@@ -14,39 +14,14 @@ permissions:
 
 jobs:
   unit:
-    name: Vitest with LocalStack (AWS unit coverage)
+    name: Vitest coverage (D1 / Cloudflare Free)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      localstack:
-        image: localstack/localstack:3
-        ports:
-        - 4566:4566
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-          SERVICES: ssm,dynamodb,ses
-          DEBUG: '0'
-          AWS_DEFAULT_REGION: us-east-1
-          HOSTNAME_EXTERNAL: localstack
-        options: >-
-          --health-cmd "curl -sf http://localhost:4566/_localstack/health || exit
-          1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      # AWS SDK v3 reads AWS_ENDPOINT_URL_* per-service or AWS_ENDPOINT_URL globally.
-      AWS_ENDPOINT_URL: http://localhost:4566
-      AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      SSM_PREFIX: /cloudless/test
-      STRIPE_TRANSACTIONS_TABLE: cloudless-test-StripeTransactions
-      DYNAMODB_ENDPOINT: http://localhost:4566
       CI: 'true'
+      # No LocalStack / AWS — ssm-config is D1+env; stripe idempotency is D1.
 
     steps:
     - uses: actions/checkout@v7
@@ -66,29 +41,18 @@ jobs:
     - name: Install deps
       run: pnpm install --frozen-lockfile
 
-    - name: Wait for LocalStack
-      run: |
-        for i in $(seq 1 30); do
-          if curl -sf http://localhost:4566/_localstack/health >/dev/null; then
-            echo "LocalStack ready"; exit 0
-          fi
-          sleep 2
-        done
-        echo "LocalStack failed to start" >&2; exit 1
-
-    - name: Seed LocalStack (SSM params + DynamoDB tables)
-      run: bash scripts/localstack-seed.sh
-
-    - name: Run integration tests against LocalStack
+    - name: Run unit tests with coverage (no AWS)
       run: |
         pnpm exec vitest run \
-          --config vitest.integration.config.mts \
+          --config vitest.config.mts \
           --coverage \
           --coverage.provider=v8 \
           --coverage.reporter=text-summary \
           --coverage.reporter=json-summary \
           --coverage.include='src/lib/ssm-config.ts' \
+          --coverage.include='src/lib/ssm-config-d1.ts' \
           --coverage.include='src/lib/stripe-transactions.ts' \
+          --coverage.include='src/lib/d1-write-budget.ts' \
           --reporter=default
 
     - name: Upload coverage report
