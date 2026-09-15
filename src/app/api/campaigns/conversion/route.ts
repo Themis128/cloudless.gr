@@ -34,6 +34,8 @@ type Body = {
   url?: string | null;
   userAgent?: string | null;
   liFatId?: string | null;
+  /** Present for inline lead forms / contact — Stripe path fills this from the session. */
+  customer?: { name?: string; email?: string; phone?: string } | null;
   utm?: {
     source?: string;
     medium?: string;
@@ -55,9 +57,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing campaign" }, { status: 400 });
   }
 
-  // Enrich with Stripe customer details when orderId is a checkout session
-  let customer: { name?: string; email?: string; phone?: string } | undefined;
-  if (body.orderId && body.orderId.startsWith("cs_")) {
+  // Prefer client-provided customer (tier form / contact). Enrich from Stripe
+  // when orderId is a checkout session and email is still missing.
+  let customer: { name?: string; email?: string; phone?: string } | undefined = body.customer?.email
+    ? {
+        name: body.customer.name ?? undefined,
+        email: body.customer.email,
+        phone: body.customer.phone ?? undefined,
+      }
+    : undefined;
+
+  if ((!customer?.email || !customer.name) && body.orderId?.startsWith("cs_")) {
     try {
       const stripe = await getStripe();
       if (stripe) {
@@ -65,9 +75,9 @@ export async function POST(request: NextRequest) {
         const d = session.customer_details;
         if (d) {
           customer = {
-            name: d.name ?? undefined,
-            email: d.email ?? undefined,
-            phone: d.phone ?? undefined,
+            name: customer?.name ?? d.name ?? undefined,
+            email: customer?.email ?? d.email ?? undefined,
+            phone: customer?.phone ?? d.phone ?? undefined,
           };
         }
       }
@@ -81,6 +91,7 @@ export async function POST(request: NextRequest) {
   // The `Lead.create` webhook → SlackClient → `#leads` channel is already
   // wired (PR #1030). We never block the conversion response on this —
   // CRM hiccups must not slow down the user's success path.
+  // Covers Stripe (`cs_*`) and inline form (`lead-*`) orderIds alike.
   if (customer?.email) {
     const [firstName, ...rest] = (customer.name ?? "").trim().split(/\s+/);
     void createLead({

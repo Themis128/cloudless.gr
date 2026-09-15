@@ -103,7 +103,7 @@ export const campaigns: Campaign[] = [
     slug: "shop-online",
     status: "live",
     startsAt: "2026-06-19",
-    endsAt: "2026-07-01",
+    endsAt: "2026-12-31",
     tagline: {
       el: "Clear skies. Zero friction.",
       en: "Clear skies. Zero friction.",

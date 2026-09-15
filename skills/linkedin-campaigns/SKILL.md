@@ -45,15 +45,22 @@ is needed.
    `lintrk("track", …)`; `/api/campaigns/conversion` also pings LinkedIn's
    Conversions API. LinkedIn dedupes via `eventId` — when `orderId` is the
    Stripe session ID the two fires collapse to one counted conversion.
-3. **Partner ID is `NEXT_PUBLIC_*`, CAPI token is server-only.** The partner
+   The same helper (`fireCampaignConversion`) is used from the thanks page,
+   TierTable inline form, and contact fit-call flow so browser + CAPI stay
+   aligned. Inline / contact leads also pass `customer` so EspoCRM
+   `createLead` runs for non-Stripe `lead-*` orderIds.
+3. **Lead Gen Forms webhook.** Native LinkedIn Lead Gen submissions hit
+   `/api/webhooks/linkedin-leads` (challenge GET + signed POST) and land in
+   EspoCRM. Register with `scripts/register-linkedin-leadgen-webhook.mjs`.
+4. **Partner ID is `NEXT_PUBLIC_*`, CAPI token is server-only.** The partner
    ID is baked into the client bundle at build time. The CAPI Bearer token
    must never leak to the browser.
-4. **Campaign data is static.** `src/data/campaigns.ts` ships in the bundle
+5. **Campaign data is static.** `src/data/campaigns.ts` ships in the bundle
    — no CMS, no runtime fetch on the landing page. Edits flow through CI.
-5. **`/<locale>/` prefix is mandatory.** Use `@/i18n/navigation`; any
+6. **`/<locale>/` prefix is mandatory.** Use `@/i18n/navigation`; any
    `next/link` import on a campaign page is a bug (see CLAUDE.md
    "Locale-Aware Navigation").
-6. **EL + EN only for campaigns.** `CAMPAIGN_LOCALES` in
+7. **EL + EN only for campaigns.** `CAMPAIGN_LOCALES` in
    `src/data/campaigns.ts` is `["el", "en"]`. The pages accept any global
    locale prefix and fall back to EN — but copy is authored in EL and EN.
 

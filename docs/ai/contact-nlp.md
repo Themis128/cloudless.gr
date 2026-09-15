@@ -31,7 +31,7 @@ in Slack and EspoCRM notes.
 ## References
 
 - [Cloudflare RAG architecture](https://developers.cloudflare.com/reference-architecture/diagrams/ai/ai-rag/)
-- Intent-router pattern (small model classifies): [NL CLI / RAG writeup](https://sndp.co/writing/building-a-natural-language-cli/)
+- Intent-router pattern (small model classifies): [NL CLI / RAG writeup](https://www.anthropic.com/engineering/building-effective-agents)
 
 ## Future (not in this MVP)
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { trackLinkedInConversion } from "@/lib/linkedin-track";
-import { getStoredAttribution } from "@/lib/lead-attribution";
+import { fireCampaignConversion } from "@/lib/fire-campaign-conversion";
 
 /**
  * Dual-fires the LinkedIn conversion exactly once:
@@ -30,41 +29,11 @@ export default function ThanksConversion({
     if (firedRef.current) return;
     firedRef.current = true;
 
-    if (conversionId != null) {
-      trackLinkedInConversion(conversionId);
-    }
-
-    const attribution = getStoredAttribution();
-    const liFatId =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("li_fat_id")
-        : null;
-    const utm = attribution
-      ? {
-          source: attribution.utmSource,
-          medium: attribution.utmMedium,
-          campaign: attribution.utmCampaign,
-          content: attribution.utmContent,
-          term: attribution.utmTerm,
-        }
-      : null;
-
-    fetch("/api/campaigns/conversion", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        campaign,
-        tier,
-        orderId,
-        liFatId,
-        conversionId,
-        url: typeof window !== "undefined" ? window.location.href : null,
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-        utm,
-      }),
-    }).catch(() => {
-      // CAPI is purely additive — the browser-side Insight Tag fire above
-      // already counts the conversion. Server outages are silent.
+    fireCampaignConversion({
+      campaign,
+      tier,
+      orderId,
+      conversionId,
     });
   }, [conversionId, campaign, tier, orderId]);
 

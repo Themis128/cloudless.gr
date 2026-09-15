@@ -141,6 +141,7 @@ export const WEBHOOK_APIS = [
   "/api/webhooks/stripe",
   "/api/webhooks/content",
   "/api/webhooks/espocrm",
+  "/api/webhooks/linkedin-leads",
 ] as const;
 
 export const SLACK_APIS = [
