@@ -1,0 +1,133 @@
+name: Apply etcd off-site snapshots → R2
+
+# Installs infrastructure/etcd-backup/config.yaml on omv with R2 S3 creds from
+# CF_R2_* (Cloudflare Free). Never commits keys. Restarts k3s briefly.
+# Do not upgrade to Workers Paid.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-etcd-r2-offsite.yml
+      - infrastructure/etcd-backup/config.yaml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-etcd-r2-offsite
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_HOST: 100.74.191.58
+      PI_USER: tbaltzakis
+      ISSUE: "382"
+      CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+      CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
+
+      - name: Validate R2 secrets
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_R2_ACCESS_KEY_ID:-}" ] || [ -z "${CF_R2_SECRET_ACCESS_KEY:-}" ]; then
+            echo "::error::Need CF_R2_ACCESS_KEY_ID and CF_R2_SECRET_ACCESS_KEY (Store R2 Backup Credentials)."
+            exit 1
+          fi
+          echo "::add-mask::${CF_R2_ACCESS_KEY_ID}"
+          echo "::add-mask::${CF_R2_SECRET_ACCESS_KEY}"
+          echo "OK R2 secrets present (masked)"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Build config with R2 keys (ephemeral)
+        run: |
+          set -euo pipefail
+          # Append k3s etcd-s3 credentials — never print the file.
+          {
+            cat infrastructure/etcd-backup/config.yaml
+            echo ""
+            echo "# Injected at apply time from CF_R2_* (not in git)"
+            echo "etcd-s3-access-key: ${CF_R2_ACCESS_KEY_ID}"
+            echo "etcd-s3-secret-key: ${CF_R2_SECRET_ACCESS_KEY}"
+          } > /tmp/k3s-config-r2.yaml
+          chmod 600 /tmp/k3s-config-r2.yaml
+          # Sanity: keys present as YAML lines without dumping values
+          grep -q '^etcd-s3-access-key: .' /tmp/k3s-config-r2.yaml
+          grep -q '^etcd-s3-secret-key: .' /tmp/k3s-config-r2.yaml
+          grep -q 'r2.cloudflarestorage.com' /tmp/k3s-config-r2.yaml
+          grep -q 'datalake-bucket' /tmp/k3s-config-r2.yaml
+          echo "OK ephemeral config built"
+
+      - name: Install on omv + restart k3s
+        run: |
+          set -euo pipefail
+          SSH=(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=20)
+          SCP=(scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=20)
+          "${SCP[@]}" /tmp/k3s-config-r2.yaml "$PI_USER@$PI_HOST:/tmp/k3s-config-r2.yaml"
+          "${SSH[@]}" "$PI_USER@$PI_HOST" bash <<'REMOTE' | tee /tmp/etcd-r2-apply.log
+          set -euo pipefail
+          sudo cp /etc/rancher/k3s/config.yaml \
+            "/etc/rancher/k3s/config.yaml.bak.$(date -u +%Y%m%dT%H%M%SZ)" || true
+          sudo install -m 0600 -o root -g root /tmp/k3s-config-r2.yaml /etc/rancher/k3s/config.yaml
+          shred -u /tmp/k3s-config-r2.yaml 2>/dev/null || rm -f /tmp/k3s-config-r2.yaml
+          # Confirm R2 endpoint without printing secrets
+          sudo grep -E 'etcd-s3-endpoint|etcd-s3-bucket|etcd-s3-folder|etcd-s3:|r2\.cloudflare' /etc/rancher/k3s/config.yaml \
+            | sed -E 's/(access-key|secret-key):.*/\1: ***/'
+          echo "→ restarting k3s (brief control-plane blip)"
+          sudo systemctl restart k3s
+          for i in $(seq 1 36); do
+            if sudo k3s kubectl get --raw=/readyz >/dev/null 2>&1; then
+              echo "OK k3s ready after ${i}0s"
+              break
+            fi
+            sleep 10
+            if [ "$i" -eq 36 ]; then
+              echo "ERROR k3s not ready after 6m"
+              exit 1
+            fi
+          done
+          TS=$(date +%s)
+          echo "→ etcd-snapshot save verify-${TS}"
+          sudo k3s etcd-snapshot save --name "verify-r2-${TS}" || true
+          sudo k3s etcd-snapshot ls 2>/dev/null | head -8 || true
+          echo "DONE etcd R2 off-site config applied"
+          REMOTE
+          shred -u /tmp/k3s-config-r2.yaml 2>/dev/null || rm -f /tmp/k3s-config-r2.yaml
+
+      - name: Comment tracking issue
+        if: always()
+        run: |
+          {
+            echo "# etcd off-site → Cloudflare R2 — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo "**Target:** \`datalake-bucket/etcd/\` via k3s etcd-s3 (Free)"
+            echo ""
+            echo '```'
+            cat /tmp/etcd-r2-apply.log 2>/dev/null | head -80 || echo "(no log)"
+            echo '```'
+          } > c.md
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file c.md || true
