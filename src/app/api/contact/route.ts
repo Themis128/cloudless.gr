@@ -33,6 +33,8 @@ interface ContactRequestBody {
   attribution?: string | LeadAttribution;
   turnstileToken?: string;
   locale?: string;
+  // Distinguishes inline placements (e.g. homepage) from the /contact page.
+  source?: string;
 }
 
 const MAX_MESSAGE_CHARS = 10_000;
@@ -241,7 +243,8 @@ export async function POST(request: Request) {
     const fields = validateContactFields(parsed);
     if (fields instanceof Response) return fields;
 
-    const { name, email, company, service, message, phone, attribution, turnstileToken } = fields;
+    const { name, email, company, service, message, phone, attribution, turnstileToken, source } =
+      fields;
     const turnstile = await verifyTurnstileToken(turnstileToken, ip);
     if (!turnstile.ok) {
       return jsonError(turnstile.error, 403);
@@ -387,10 +390,13 @@ export async function POST(request: Request) {
         console.error("[Contact] Background allSettled error:", err);
       });
 
+    const formSource = source || service || "website_contact_form";
     trackEvent({
       event: "contact_submit",
-      path: "/contact",
-      metadata: { source: service ?? "website_contact_form" },
+      path: "/",
+      referrer: request.headers.get("referer") ?? undefined,
+      userAgent: request.headers.get("user-agent") ?? undefined,
+      metadata: { source: formSource, service: service || null },
     }).catch(() => {});
 
     const eventId = generateEventId("lead");
@@ -404,8 +410,8 @@ export async function POST(request: Request) {
       clientUserAgent: request.headers.get("user-agent") ?? undefined,
       fbp,
       fbc,
-      eventSourceUrl: "https://cloudless.gr/contact",
-      source: service ?? attributionData?.utmSource ?? undefined,
+      eventSourceUrl: request.headers.get("referer") ?? "https://cloudless.gr/contact",
+      source: formSource,
     }).catch(() => {});
 
     return Response.json({ success: true, eventId });

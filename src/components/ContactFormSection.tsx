@@ -96,6 +96,8 @@ export default function ContactFormSection({ source = "" }: { source?: string })
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
       turnstileToken: turnstileToken ?? undefined,
+      // Distinguishes inline homepage form from /contact page.
+      source: source || undefined,
     };
 
     try {
