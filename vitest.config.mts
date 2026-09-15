@@ -65,6 +65,8 @@ export default defineConfig({
       "@aws-sdk/client-dynamodb": path.resolve(__dirname, "__tests__/stubs/aws-dynamodb-stub.js"),
       // @aws-sdk/client-sesv2 shares the same crash. Tests mock email.ts directly.
       "@aws-sdk/client-sesv2": path.resolve(__dirname, "__tests__/stubs/aws-sesv2-stub.js"),
+      // server-only throws in non-Server-Component contexts (Vitest/JSDOM).
+      "server-only": path.resolve(__dirname, "__tests__/stubs/server-only-stub.js"),
     },
   },
   define: {
