@@ -40,14 +40,11 @@ export async function getCachedFromTable<T = unknown>(
   if (!db) return null;
   const hash = paramsHash(params);
   try {
-    const row = await db
-      .prepare(SELECT_BY_PK_SK[table])
-      .bind(route, hash)
-      .first<{
-        result_json: string | null;
-        cached_at: number | null;
-        expires_at: number | null;
-      }>();
+    const row = await db.prepare(SELECT_BY_PK_SK[table]).bind(route, hash).first<{
+      result_json: string | null;
+      cached_at: number | null;
+      expires_at: number | null;
+    }>();
     if (!row) return null;
     return rowToEntry<T>(row, ttlSeconds);
   } catch (err) {

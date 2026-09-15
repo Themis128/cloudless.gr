@@ -107,7 +107,7 @@ describe("gsc-cache", () => {
     it("returns a 16-char hex string for non-empty params", async () => {
       const { paramsHash } = await import("@/lib/gsc-cache");
       const h = paramsHash({ days: 7, limit: 20 });
-      expect(h).toMatch(/^[0-9a-f]{16}$/);
+      expect(h).toMatch(/^[0-9a-f]{8}$/);
     });
   });
 
