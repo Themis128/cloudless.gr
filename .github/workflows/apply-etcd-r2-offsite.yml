@@ -104,9 +104,12 @@ jobs:
         env:
           R2_ENDPOINT: fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
           R2_BUCKET: datalake-bucket
+          # Pinned etcdctl for hosts where `k3s etcdctl` is not a subcommand.
+          ETCDCTL_VERSION: v3.5.21
         run: |
           set -euo pipefail
           HOST=(sudo nsenter --target 1 --mount --uts --ipc --net --pid --)
+          : >/tmp/snap.out
 
           DATA_DIR=""
           for cand in \
@@ -130,17 +133,73 @@ jobs:
           NAME="verify-r2-${TS}"
           SNAP_OK=0
 
-          # Prefer native k3s snapshot WITHOUT --data-dir (avoids CA-hash mismatch
-          # when token/CA in an alternate path drift). Runs in host mount ns.
-          echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
-          if "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee /tmp/snap.out; then
+          # 1) Native snapshot with explicit data-dir (correct token path on OMV SSD).
+          echo "→ k3s etcd-snapshot save ${NAME} --data-dir ${DATA_DIR}"
+          set +e
+          "${HOST[@]}" k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
+            | tee -a /tmp/snap.out
+          rc=${PIPESTATUS[0]}
+          set -e
+          if [ "$rc" -eq 0 ]; then
             SNAP_OK=1
-            "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
+            "${HOST[@]}" k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
+              | head -15 | tee -a /tmp/snap.out || true
           else
-            echo "WARN: k3s etcd-snapshot failed (often CA hash mismatch); falling back to etcdctl + rclone"
+            echo "WARN: etcd-snapshot --data-dir failed (often CA hash mismatch)" | tee -a /tmp/snap.out
           fi
 
-          # Fallback: etcdctl snapshot + rclone → R2 etcd/ (proves off-site path)
+          # 2) Native snapshot without --data-dir (default /var/lib/rancher/k3s).
+          if [ "$SNAP_OK" -ne 1 ]; then
+            echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
+            set +e
+            "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              SNAP_OK=1
+              "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
+            else
+              echo "WARN: default-path etcd-snapshot failed; falling back to etcdctl + rclone" \
+                | tee -a /tmp/snap.out
+            fi
+          fi
+
+          # Resolve a working etcdctl (k3s subcommand → bundled binary → download).
+          resolve_etcdctl() {
+            if "${HOST[@]}" k3s etcdctl version >/dev/null 2>&1; then
+              echo "k3s etcdctl"
+              return 0
+            fi
+            FOUND=$("${HOST[@]}" bash -c "
+              find '${DATA_DIR}/data' /usr/local/bin /usr/bin -name etcdctl -type f 2>/dev/null | head -1
+            " || true)
+            if [ -n "${FOUND}" ]; then
+              echo "${FOUND}"
+              return 0
+            fi
+            ARCH=$("${HOST[@]}" uname -m)
+            case "$ARCH" in
+              x86_64|amd64) ETCD_ARCH=amd64 ;;
+              aarch64|arm64) ETCD_ARCH=arm64 ;;
+              *)
+                echo "ERROR: unsupported arch for etcdctl download: ${ARCH}" >&2
+                return 1
+                ;;
+            esac
+            DEST="/tmp/etcdctl-${ETCDCTL_VERSION}"
+            echo "→ downloading etcdctl ${ETCDCTL_VERSION} (${ETCD_ARCH})" | tee -a /tmp/snap.out
+            "${HOST[@]}" bash -c "
+              set -euo pipefail
+              TMP=\$(mktemp -d)
+              curl -fsSL \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \
+                | tar -xz -C \"\$TMP\" --strip-components=1
+              install -m 0755 \"\$TMP/etcdctl\" '${DEST}'
+              rm -rf \"\$TMP\"
+            "
+            echo "${DEST}"
+          }
+
+          # 3) Fallback: etcdctl snapshot + rclone → R2 etcd/ (proves off-site path).
           if [ "$SNAP_OK" -ne 1 ]; then
             ETCD_CA="${DATA_DIR}/server/tls/etcd/server-ca.crt"
             ETCD_CRT="${DATA_DIR}/server/tls/etcd/server-client.crt"
@@ -151,9 +210,13 @@ jobs:
                 exit 1
               fi
             done
+
+            ETCDCTL_BIN=$(resolve_etcdctl)
+            # shellcheck disable=SC2206
+            ETCDCTL_CMD=(${ETCDCTL_BIN})
             LOCAL="/tmp/${NAME}.db"
-            echo "→ etcdctl snapshot save ${LOCAL}"
-            "${HOST[@]}" k3s etcdctl \
+            echo "→ ${ETCDCTL_BIN} snapshot save ${LOCAL}" | tee -a /tmp/snap.out
+            "${HOST[@]}" env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
               --endpoints=https://127.0.0.1:2379 \
               --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
               snapshot save "$LOCAL" 2>&1 | tee -a /tmp/snap.out
