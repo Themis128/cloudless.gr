@@ -70,9 +70,7 @@ export default async function CampaignPage({ params }: PageProps) {
           {locale === "el"
             ? "Δεν είστε σίγουρος ποιο πακέτο ταιριάζει;"
             : "Not sure which tier fits?"}{" "}
-          <a
-            href={`/${rawLocale}/contact?topic=fit-call&campaign=${encodeURIComponent(c.slug)}`}
-          >
+          <a href={`/${rawLocale}/contact?topic=fit-call&campaign=${encodeURIComponent(c.slug)}`}>
             {locale === "el"
               ? "Κλείστε δωρεάν 20-λεπτη κουβέντα →"
               : "Book a free 20-min fit call →"}

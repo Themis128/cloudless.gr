@@ -59,14 +59,13 @@ export async function POST(request: NextRequest) {
 
   // Prefer client-provided customer (tier form / contact). Enrich from Stripe
   // when orderId is a checkout session and email is still missing.
-  let customer: { name?: string; email?: string; phone?: string } | undefined =
-    body.customer?.email
-      ? {
-          name: body.customer.name ?? undefined,
-          email: body.customer.email,
-          phone: body.customer.phone ?? undefined,
-        }
-      : undefined;
+  let customer: { name?: string; email?: string; phone?: string } | undefined = body.customer?.email
+    ? {
+        name: body.customer.name ?? undefined,
+        email: body.customer.email,
+        phone: body.customer.phone ?? undefined,
+      }
+    : undefined;
 
   if ((!customer?.email || !customer.name) && body.orderId?.startsWith("cs_")) {
     try {
