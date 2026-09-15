@@ -1,10 +1,9 @@
 name: SHA drift detector
 
-# Compares the SSM-published deploy SHA with what each surface
-# (cloud cloudless.gr, Pi cluster) actually serves via
-# /api/health.version. Fails the run when drift persists past the
-# 10-minute grace window so a stuck Pi rollout is caught before the
-# weekly CI health routine notices.
+# Compares /api/health `version` on cloudless.gr and pi-origin.cloudless.gr.
+# Fails the run when drift persists past the 10-minute grace window so a
+# stuck Pi rollout is caught before the weekly CI health routine notices.
+# Cloudflare Free only — no AWS SSM.
 #
 # Pure comparison logic in src/lib/sha-drift.ts is unit-tested by
 # __tests__/detect-sha-drift.test.ts; this workflow is the I/O wrapper.
@@ -23,7 +22,7 @@ on:
     # After free-tier proxy deploy and/or Pi image rollout converge.
     workflows:
     - Cloudflare Workers Deploy
-    - Deploy to Pi (ECR + k3s rollout)
+    - Deploy to Pi (R2 + k3s rollout)
     types: [completed]
 
 permissions:
@@ -56,11 +55,10 @@ jobs:
     - name: detect drift
       id: drift
         # Run the script; capture exit code (0 ok, 1 drift, 2 read error).
-        # Cloudflare-only mode: check health endpoints directly, skip SSM lookup
-        # This prevents false-positive drift alerts when Pi is unreachable (HA failover is acceptable)
+        # Compares /api/health versions directly; no SSM lookup.
       run: |
         set +e
-        CLOUDFLARE_ONLY=true pnpm exec tsx scripts/detect-sha-drift.mts --json > /tmp/drift.json
+        pnpm exec tsx scripts/detect-sha-drift.mts --json > /tmp/drift.json
         rc=$?
         set -e
         cat /tmp/drift.json

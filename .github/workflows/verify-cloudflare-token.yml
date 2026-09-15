@@ -1,10 +1,9 @@
 name: Verify Cloudflare API token
 
-# Read-only smoke test for the Cloudflare API token stored in SSM
-# /cloudless/production/CLOUDFLARE_API_TOKEN. Useful when:
+# Read-only smoke test for the Cloudflare API token from GitHub repository secrets.
+# Useful when:
 #   - An MCP tool returns "Invalid access token" and we need a clean CI
 #     log to attach to the rotation
-#   - An automated workflow (cloudflare-lb.yml, ...) fails with 401
 #   - After running store-cloudflare-token.yml to confirm scopes
 #
 # Companion to skills/cloudflare-token-doctor/SKILL.md Stage 3.
@@ -21,7 +20,6 @@ on:
         default: cloudless.gr
 
 permissions:
-  id-token: write   # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:GetParameter
   contents: read
 
 concurrency:
