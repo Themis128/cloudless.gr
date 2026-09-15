@@ -19,23 +19,24 @@ Work through phases in order. Do not skip Phase A — Phase B's ad account canno
 
 ---
 
-## Known State (as of 2026-09-14, Tailscale Graph probe)
+## Known State (as of 2026-09-14, Tailscale Graph + BM UI)
 
 | Asset | ID | State |
 |-------|----|-------|
-| Primary Portfolio | `1558125105019725` | Owns pages (see below) |
+| Primary Portfolio | `1558125105019725` (`cloudless.gr`) | **No advertising issues** on BM; **0 owned ad accounts**; only admin = Themistoklis |
 | FB Page (env `META_PAGE_ID`) | `1163886186808102` | Cloudless.gr — published, **not verified**; ads blocked (“Page isn't allowed to advertise”) |
-| FB Page (legacy / runbook) | `116436681562585` | cloudless.gr — still listed on the user token; confirm which Page owns ads creatives |
-| Ad account | `act_657781691826702` | **DISABLED** (`account_status=2`, `disable_reason=1` = `ADS_INTEGRITY_POLICY`) |
-| Stale campaign | `23846705231200535` “Nouvelle campagne” | **PAUSED** via API (2026-09-14); ads remain DISAPPROVED |
-| Pixel / CAPI | configured in prod pod | ✅ Events accepted (`events_received=1` on v26) |
+| FB Page (BM owned_pages) | `116436681562585` | cloudless.gr — `promotion_eligible: false` |
+| Personal ad account | `act_657781691826702` | **DISABLED since 2021-01-24** — **cannot be reviewed**. Do **not** use for production. |
+| Vera ad account | `act_2771400643144250` | DISABLED; **not** ours — do **not** advertise from it |
+| Personal Facebook user | `10239451610085137` | **Account restricted** (Advertising Standards, Feb 12, 2021). Blocks create-ad-account (`error_subcode: 2859015`) and Remove user on ad accounts |
+| Pixel / CAPI | prod pod + old personal act | Events can still post; **no BM-owned Pixel yet** — create under BM after new act exists |
 | Token | long-lived USER, app `1936126137016578` | Valid; scopes include `ads_management`, `ads_read`, pages + IG |
 
-**Root cause of DISABLED (not payment):** ad review feedback on all ads in the 2021 campaign:
+**Policy (operator decision 2026-09-14):** run ads **only** under BM `1558125105019725`. Never point `META_AD_ACCOUNT_ID` at `act_657781691826702` or Vera’s account again.
 
-> “This ad was disabled because **this Page isn't allowed to advertise**.”
+**Blocker:** Themistoklis cannot create the BM ad account while his Facebook advertising restriction is active (UI + Graph both return “Your account is restricted right now”). Meta offers **no Request review** on that 2021 user restriction (only court / EU dispute settlement).
 
-VAT/`tax_id_status=3` (submitted) and `amount_spent=0` — this is **policy / Page advertising eligibility**, not a billing failure.
+VAT/`tax_id_status=3` (submitted) and `amount_spent=0` — not a billing failure.
 
 ---
 
@@ -180,9 +181,21 @@ get_data(connector="instagram", fields=["date", "impressions", "reach"], date_pr
 
 ---
 
-# PHASE B — Create the ad account
+# PHASE B — Create the ad account (BM-only)
 
-Goal: `act_XXXXXXXXX` exists in Portfolio 1558125105019725 with working payment method.
+Goal: `act_XXXXXXXXX` exists **owned by** Portfolio `1558125105019725` with working payment method.
+
+## Step B.0 — Unblock create (required first)
+
+If the person clicking **Create ad account** sees `2859015` / “Your account is restricted right now”, **stop**. Creating as a restricted user will not work and can look like evasion.
+
+**Working path while Themistoklis stays restricted:**
+
+1. Business Settings → [People](https://business.facebook.com/latest/settings/people?business_id=1558125105019725) → **Add** a trusted person as **Admin** (full control).
+2. That person must **not** be advertising-restricted (new/clean FB ads access).
+3. They create the ad account (B.1) while logged in as themselves.
+4. Assign Themistoklis **Admin** on the new ad account after it exists (if Meta allows; otherwise keep him BM Admin and use a system user / their token for Ads API).
+5. Optional later: EU DSA dispute settlement / court to lift Themistoklis’s personal restriction (Account Quality → Other actions). Do **not** open a second personal ad account.
 
 ## Step B.1 — Create the ad account
 
@@ -195,11 +208,14 @@ Click **Add → Create a new ad account**. Fill:
 | Field | Value |
 |-------|-------|
 | Ad account name | `cloudless.gr — primary` |
-| Time zone | `(GMT+02:00) Europe/Athens` |
-| Currency | `EUR - Euro` |
+| Time zone | `(GMT+03:00) Europe/Athens` (summer) / Europe/Athens |
+| Currency | `EUR — Euro` |
+| Usage | **My business** (cloudless.gr) |
 | Payment method | Skip (set in B.4) |
 
-Click Next. On "Choose a business portfolio": confirm `1558125105019725`.
+Click Next → Confirm → accept Meta Commercial Terms → **Create ad account**.
+
+**Verified 2026-09-14:** wizard filled correctly (name / Athens / EUR / My business) then Meta rejected create with personal restriction — BM still shows **No ad accounts added**.
 
 **⚠️ Currency and timezone are IMMUTABLE after creation.** Double-check before clicking Create.
 
@@ -516,6 +532,7 @@ Once Phase C has ~7 days of Lead events accumulated, run the first real campaign
 |------|--------|-------|
 | 2026-04-21 | (runbook authored) | Initial version; none of the phases executed yet |
 | 2026-09-14 | agent + Tailscale | Diagnosed DISABLED + Page advertise block; paused campaign `23846705231200535`; documented Phase D |
+| 2026-09-14 | Account Quality UI | Confirmed appeal **closed** (disabled Jan 2021); Phase D → new BM ad account |
 
 ---
 
@@ -529,45 +546,54 @@ After the whole runbook succeeds, update `/sessions/brave-epic-shannon/mnt/.auto
 
 ## Phase D — Ad account / Page advertising restriction (ops)
 
-Live Graph (2026-09-14, Tailscale → prod pod):
+Live Graph + Account Quality UI (2026-09-14):
 
 | Field | Value |
 |-------|-------|
 | Account | `act_657781691826702` “Themistoklis Baltzakis” |
+| Disabled since | **2021-01-24** |
 | `account_status` | `2` DISABLED |
 | `disable_reason` | `1` `ADS_INTEGRITY_POLICY` |
 | Campaign | `Nouvelle campagne` (`23846705231200535`) → **PAUSED** via API |
 | Ads | still `DISAPPROVED`; review text: **Page isn't allowed to advertise** |
-| Pixel / CAPI | still OK — do not revoke tokens while appealing |
+| Appeal | **CLOSED** — Meta: decision cannot be reviewed |
 
-### Root cause
+### Verdict (Account Quality, 2026-09-14)
 
-Not billing (`amount_spent=0`, VAT `tax_id_status=3` submitted). Ad review feedback on all 2021 creatives:
+Meta Account Quality for this ad account:
 
-> “This ad was disabled because this Page isn't allowed to advertise.”
+> This ad account, its ads and some of its advertising assets are disabled because it didn't comply with our policy on Advertising Standards affecting business assets. **Too much time has passed since this account was disabled, so this decision can't be reviewed.**
 
-The **Page** (and then the ad account under `ADS_INTEGRITY_POLICY`) must be cleared in Meta UI. There is no public Graph appeal API.
+Restrictions on **this** account (permanent for `act_657781691826702`):
 
-### What you must do (browser login required)
+- Can't create or run ads
+- Can't use or share audiences
+- Can't use Meta Pixel, offline event sets or custom conversions (on this account)
+- Can't use app SDKs to send app events
 
-1. Sign in as the Page / ad-account admin.
-2. **Account Quality:** https://business.facebook.com/accountquality/  
-   (portfolio-scoped: `?business_id=1558125105019725`)
-3. **Business Support Home:** https://business.facebook.com/business-support-home
-4. Appeal restrictions on:
-   - Page **Cloudless.gr** (`1163886186808102`, current `META_PAGE_ID`)
-   - Also check legacy Page `cloudless.gr` (`116436681562585`) if still linked to ads
-   - Ad account `act_657781691826702`
-5. Keep creatives paused until the Page is cleared; archive the 2021 campaign after unlock if unused.
-6. Re-check after Meta clears the restriction:
+Meta’s prescribed path:
+
+> To continue advertising, **use another ad account**. You can add new ad accounts in Business Settings.
+
+Do **not** keep appealing `act_657781691826702`. Partner Appeals API and Meta AI “review disabled asset” cannot override this.
+
+### Path forward (new ad account)
+
+1. Business Settings → **cloudless.gr** BM `1558125105019725` → Ad accounts → **Add** a new ad account (own it under this BM; do not reuse the personal 2021 account).
+2. Confirm Page **Cloudless.gr** (`1163886186808102`) is `promotion_eligible: true` (or clear Page advertise restrictions in Account Quality). A new ad account still cannot advertise from a blocked Page.
+3. Assign the new ad account ADMIN to the token user; link Pixel + Page to the new account.
+4. Update Pi / D1 config: `META_AD_ACCOUNT_ID` → new `act_…` (or numeric ID). Redeploy / restart so Integrations + `meta-ads` read the new ID.
+5. Verify:
 
    ```bash
    curl -sS -H "Authorization: Bearer $META_ACCESS_TOKEN" \
-     "https://graph.facebook.com/v26.0/act_657781691826702?fields=account_status,disable_reason"
+     "https://graph.facebook.com/v26.0/act_<NEW_ID>?fields=account_status,disable_reason,name"
    ```
 
    Expect `account_status=1`. Admin → Integrations Meta card should leave `degraded`.
 
+6. Leave the old account paused/archived; do not point production at `657781691826702` again.
+
 ### Dual Page note
 
-The user token lists both Pages. Confirm Account Quality covers the Page tied to the disapproved ads; consolidate to one Page in Business Manager when possible.
+The user token lists both Pages. Confirm Account Quality covers the Page tied to ads; consolidate to one Page in Business Manager when possible.
