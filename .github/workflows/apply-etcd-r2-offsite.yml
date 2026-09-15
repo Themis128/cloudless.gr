@@ -83,9 +83,13 @@ jobs:
           sudo grep -E 'etcd-s3-endpoint|etcd-s3-bucket|etcd-s3-folder|^etcd-s3:' /etc/rancher/k3s/config.yaml \
             | sed -E 's/(access-key|secret-key):.*/\1: ***/'
 
-          echo "→ restarting ${K3S_UNIT}"
+          echo "→ restarting ${K3S_UNIT} (non-blocking; poll readyz)"
           sudo systemctl reset-failed "$K3S_UNIT" 2>/dev/null || true
-          sudo systemctl restart "$K3S_UNIT"
+          # systemctl restart waits for Type=notify units and can hang >20m if
+          # k3s is wedged. Kick restart asynchronously, then poll the API.
+          if ! sudo systemctl restart --no-block "$K3S_UNIT"; then
+            echo "WARN: systemctl restart --no-block returned non-zero; continuing to poll"
+          fi
 
           for i in $(seq 1 36); do
             if sudo k3s kubectl get --raw=/readyz >/dev/null 2>&1; then
@@ -191,7 +195,7 @@ jobs:
             "${HOST[@]}" bash -c "
               set -euo pipefail
               TMP=\$(mktemp -d)
-              curl -fsSL \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \
+              curl -fsSL --max-time 120 \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \\
                 | tar -xz -C \"\$TMP\" --strip-components=1
               install -m 0755 \"\$TMP/etcdctl\" '${DEST}'
               rm -rf \"\$TMP\"
@@ -233,10 +237,10 @@ jobs:
               bash -c '
                 set -euo pipefail
                 if ! command -v rclone >/dev/null 2>&1; then
-                  curl -fsSL https://rclone.org/install.sh | bash
+                  curl -fsSL --max-time 120 https://rclone.org/install.sh | bash
                 fi
-                rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
-                rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
+                timeout 120 rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
+                timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
                 rm -f "${LOCAL}"
               ' 2>&1 | tee -a /tmp/snap.out
             SNAP_OK=1
@@ -254,8 +258,8 @@ jobs:
             R2_BUCKET="$R2_BUCKET" \
             bash -c '
               set -euo pipefail
-              command -v rclone >/dev/null 2>&1 || curl -fsSL https://rclone.org/install.sh | bash
-              rclone ls "r2:${R2_BUCKET}/etcd/" | tail -15
+              command -v rclone >/dev/null 2>&1 || curl -fsSL --max-time 120 https://rclone.org/install.sh | bash
+              timeout 60 rclone ls "r2:${R2_BUCKET}/etcd/" | tail -15
             ' 2>&1 | tee -a /tmp/snap.out || true
 
           if [ "$SNAP_OK" -ne 1 ]; then
