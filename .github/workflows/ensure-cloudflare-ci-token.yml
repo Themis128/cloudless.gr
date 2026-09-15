@@ -1,0 +1,80 @@
+name: Ensure Cloudflare CI token scopes
+
+# Adds Workers Scripts Write + other CI scopes to an existing user API token
+# via Global API Key bootstrap (or a token that already has API Tokens Write).
+# Never prints secrets. Do not upgrade Workers to Paid.
+#
+# Required secrets (one auth path):
+#   CF_EMAIL + CF_GLOBAL_API_KEY  — dashboard Global API Key (preferred bootstrap)
+#   OR CLOUDFLARE_API_TOKEN that already has User API Tokens Write
+# Optional input token_name defaults to matching "Cloudflare Agent" / first active.
+
+on:
+  workflow_dispatch:
+    inputs:
+      token_name:
+        description: Exact Cloudflare user token name to patch (leave empty to auto-pick)
+        required: false
+        default: ""
+      dry_run:
+        description: If true, only list tokens / show plan (no PUT)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ensure-cloudflare-ci-token
+  cancel-in-progress: false
+
+jobs:
+  ensure:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      CF_EMAIL: ${{ secrets.CF_EMAIL }}
+      CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      TOKEN_NAME: ${{ github.event.inputs.token_name }}
+      DRY_RUN: ${{ github.event.inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
+
+      - name: Validate auth
+        run: |
+          set -euo pipefail
+          if [ -n "${CF_GLOBAL_API_KEY:-}" ] && [ -n "${CF_EMAIL:-}" ]; then
+            echo "OK  using Global API Key bootstrap"
+          elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "OK  using CLOUDFLARE_API_TOKEN (needs API Tokens Write)"
+          else
+            echo "::error::Set CF_EMAIL+CF_GLOBAL_API_KEY or a CLOUDFLARE_API_TOKEN with API Tokens Write"
+            exit 1
+          fi
+
+      - name: List / ensure-ci
+        run: |
+          set -euo pipefail
+          bash scripts/cf-token-permissions.sh list | tee /tmp/cf-tokens.txt
+          NAME="$TOKEN_NAME"
+          if [ -z "$NAME" ]; then
+            NAME="$(grep -E 'ACTIVE  ' /tmp/cf-tokens.txt | head -1 | sed -E 's/^ACTIVE  //; s/  \(id:.*//' || true)"
+          fi
+          if [ -z "$NAME" ]; then
+            echo "::error::Could not resolve token name — pass token_name input"
+            exit 1
+          fi
+          echo "token_name=$NAME"
+          if [ "$DRY_RUN" = "true" ]; then
+            bash scripts/cf-token-permissions.sh show "$NAME"
+            echo "::notice::dry_run — not calling ensure-ci"
+            exit 0
+          fi
+          bash scripts/cf-token-permissions.sh ensure-ci "$NAME"
+          bash scripts/cf-token-permissions.sh show "$NAME"
+
+      - name: Smoke-test GH secret token
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        run: bash scripts/cf-token-smoketest.sh

@@ -36,6 +36,7 @@ fi
 API="https://api.cloudflare.com/client/v4"
 PASS=0
 FAIL=0
+WARN=0
 
 check() {
   local label="$1" status="$2"
@@ -46,6 +47,12 @@ check() {
     printf "  \033[31m✗\033[0m  %s — %s\n" "$label" "$status"
     FAIL=$((FAIL + 1))
   fi
+}
+
+warn() {
+  local label="$1" status="$2"
+  printf "  \033[33m!\033[0m  %s — %s\n" "$label" "$status"
+  WARN=$((WARN + 1))
 }
 
 curl_cf() {
@@ -152,7 +159,7 @@ if [ -n "$ZONE_ID" ]; then
   fi
 fi
 
-# ── 5. User API Tokens:Read ──────────────────────────────────────────────────
+# ── 5. User API Tokens:Read (optional — needed only to inspect policies) ─────
 TL="$(curl_cf "$API/user/tokens")"
 TL_OK="$(echo "$TL" | jq -r '.success')"
 if [ "$TL_OK" = "true" ]; then
@@ -160,7 +167,7 @@ if [ "$TL_OK" = "true" ]; then
   check "User API Tokens:Read ($TL_N tokens visible)" ok
 else
   ERR_MSG="$(echo "$TL" | jq -r '.errors[0].message // "unknown"')"
-  check "User API Tokens:Read" "$ERR_MSG"
+  warn "User API Tokens:Read" "$ERR_MSG (optional; add API Tokens Read to inspect Workers Write)"
 fi
 
 # ── 6. Workers Scripts:Read (account-scoped) ─────────────────────────────────
@@ -183,15 +190,10 @@ else
 fi
 
 # ── 7. Workers Scripts:Write (required for cloudless2 wrangler deploy) ───────
-# Listing scripts only proves Read. Missing Write → wrangler API 10000 on
-# POST .../workers/scripts/cloudless2/versions. Probe via token policies when
-# User API Tokens:Read works; else try a non-mutating versions list (still Read)
-# and warn that Write must be confirmed via permissions.sh / dashboard.
+# Prefer policy inspection; else probe versions create (expect 400 validation
+# if Write is allowed, 401/403/10000 if not).
 WORKERS_WRITE_ID="e086da7e2179491d91ee5f35b3ca210a"
 if [ "$TL_OK" = "true" ]; then
-  # Prefer the token currently in use (verify does not return id — match by
-  # scanning policies for Workers Scripts Write on any active token that
-  # lists scripts). Fall back: any active token with that permission group.
   HAS_WS_WRITE="$(echo "$TL" | jq -r --arg pid "$WORKERS_WRITE_ID" '
     [.result[]?
       | select(.status == "active")
@@ -204,8 +206,22 @@ if [ "$TL_OK" = "true" ]; then
   else
     check "Workers Scripts:Write" "not found on active token policies — cloudflare-deploy.yml will 10000"
   fi
+elif [ -n "$ACCOUNT_ID" ]; then
+  PROBE="$(curl -sS -o /tmp/cf-ws-write-probe.json -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+    -d '{}' \
+    "$API/accounts/$ACCOUNT_ID/workers/scripts/cloudless2/versions" || echo "000")"
+  PROBE_BODY="$(cat /tmp/cf-ws-write-probe.json 2>/dev/null || true)"
+  PROBE_ERR="$(echo "$PROBE_BODY" | jq -r '.errors[0].code // empty' 2>/dev/null || true)"
+  if [ "$PROBE" = "400" ] || [ "$PROBE" = "422" ]; then
+    check "Workers Scripts:Write (versions create rejected as validation — auth OK)" ok
+  elif [ "$PROBE" = "401" ] || [ "$PROBE" = "403" ] || [ "$PROBE_ERR" = "10000" ] || [ "$PROBE_ERR" = "1001" ]; then
+    check "Workers Scripts:Write" "HTTP $PROBE code=${PROBE_ERR:-?} — add Workers Scripts Write for cloudless2 deploy"
+  else
+    warn "Workers Scripts:Write" "unexpected HTTP $PROBE — see cloudflare-workers-deploy skill"
+  fi
 else
-  check "Workers Scripts:Write" "skipped (need User API Tokens:Read to inspect policies)"
+  warn "Workers Scripts:Write" "skipped (no account id)"
 fi
 
 # ── 8. D1:Read (migrations need Write; list proves D1 access) ────────────────
@@ -231,14 +247,14 @@ if [ -n "$ACCOUNT_ID" ]; then
   else
     ERR_CODE="$(echo "$TN" | jq -r '.errors[0].code // "unknown"')"
     ERR_MSG="$(echo "$TN" | jq -r '.errors[0].message // "unknown"')"
-    check "Cloudflare Tunnel:Read" "code=$ERR_CODE: $ERR_MSG (CI soft-skips; set CLOUDFLARE_TUNNEL_API_TOKEN or Tunnel Write)"
+    warn "Cloudflare Tunnel:Read" "code=$ERR_CODE: $ERR_MSG (CI soft-skips; set CLOUDFLARE_TUNNEL_API_TOKEN or Tunnel Write)"
   fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo
 echo "---------------------------"
-echo "Pass: $PASS  Fail: $FAIL"
+echo "Pass: $PASS  Fail: $FAIL  Warn: $WARN"
 
 if [ "$FAIL" -gt 0 ]; then
   echo
@@ -247,4 +263,9 @@ if [ "$FAIL" -gt 0 ]; then
   echo "   .claude/skills/cloudflare-workers-deploy/SKILL.md"
   echo "   bash scripts/cf-token-permissions.sh ensure-ci \"<token-name>\""
   exit 1
+fi
+
+if [ "$WARN" -gt 0 ]; then
+  echo
+  echo "→ Warnings only — CI may still soft-skip tunnel/proxy deploy. Fix when convenient."
 fi

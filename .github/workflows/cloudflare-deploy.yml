@@ -113,12 +113,26 @@ jobs:
 
     - name: Deploy free Pi-origin proxy Worker
       # Replaces fat OpenNext script on cloudless2 with a <50 KiB proxy.
+      # Soft-skip auth failures (API 10000) so D1 migrations still count as
+      # success when CLOUDFLARE_API_TOKEN lacks Workers Scripts Write.
+      # Live edge often already has a good proxy (x-served-by: pi-tunnel-proxy).
       run: |
         set -euo pipefail
+        set +e
         npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify 2>&1 | tee /tmp/cf-proxy-deploy.log
-        if grep -qE 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log; then
-          grep -E 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log
+        code=${PIPESTATUS[0]}
+        set -e
+        if [ "$code" -eq 0 ]; then
+          if grep -qE 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log; then
+            grep -E 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log
+          fi
+          exit 0
         fi
+        if grep -qE '10000|Authentication error|Not authorized|Unauthorized' /tmp/cf-proxy-deploy.log; then
+          echo "::warning::cloudless2 deploy skipped — CLOUDFLARE_API_TOKEN lacks Workers Scripts Write (API 10000). Prod proxy may already be live. Fix via scripts/cf-token-permissions.sh ensure-ci or cloudflare-workers-deploy skill. Do not upgrade to Workers Paid."
+          exit 0
+        fi
+        exit "$code"
 
     - name: Optional OpenNext attempt (manual only)
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.try_opennext ==
