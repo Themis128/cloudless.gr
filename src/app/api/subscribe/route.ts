@@ -10,7 +10,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import { sendContactEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { trackEvent } from "@/lib/appflowy-analytics";
-import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics";
+import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics-server";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });

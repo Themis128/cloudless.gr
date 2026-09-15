@@ -22,7 +22,7 @@ import { analyzeLeadMessage } from "@/lib/nlp";
 import type { LeadNlpResult } from "@/lib/nlp/types";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
 import { verifyTurnstileToken } from "@/lib/turnstile";
-import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics";
+import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics-server";
 
 interface ContactRequestBody {
   name: string;
