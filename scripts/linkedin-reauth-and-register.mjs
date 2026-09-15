@@ -10,27 +10,31 @@
  *   0. Non-interactive (if refresh still valid):
  *      node scripts/linkedin-reauth-and-register.mjs --refresh --no-leadgen
  *      or: gh workflow run "Refresh LinkedIn marketing token"
- *   1. node scripts/linkedin-reauth-and-register.mjs [--no-leadgen]
- *      → prints authorize URL (open while logged into LinkedIn as ad-account admin)
- *   2. Paste ?code=… from redirect into:
+ *   1. Prefer local callback (add http://127.0.0.1:8765/callback to the
+ *      Developer App Auth → Redirect URLs once):
+ *      LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs --listen --no-leadgen
+ *   2. Or Postiz redirect: print URL, paste ?code= from the Access-blocked redirect:
  *      node scripts/linkedin-reauth-and-register.mjs --code <AUTH_CODE>
  *   3. Script exchanges code, updates GH secrets, syncs Pi secrets, registers webhook
  *      (skip webhook with --no-leadgen).
  *
  * Env (or GH vars/secrets):
  *   LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
- *   LINKEDIN_REDIRECT_URI (default: LinkedIn OAuth Token Tool)
+ *   LINKEDIN_REDIRECT_URI (default: Postiz LinkedIn callback)
  *   LINKEDIN_AD_ACCOUNT_ID (default 512642510)
  */
 
 import { createInterface } from "node:readline/promises";
+import { createServer } from "node:http";
 import { stdin as input, stdout as output } from "node:process";
 
 const CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || "77tf4oysp8u3fz";
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
+const LOCAL_CALLBACK = "http://127.0.0.1:8765/callback";
 // Must match the LinkedIn Developer App allowlist exactly (verified 2026-09-15:
-// only postiz.cloudless.gr/integrations/social/linkedin is registered).
-const REDIRECT_URI =
+// only postiz.cloudless.gr/integrations/social/linkedin is registered unless
+// you add LOCAL_CALLBACK for --listen).
+let REDIRECT_URI =
   process.env.LINKEDIN_REDIRECT_URI || "https://postiz.cloudless.gr/integrations/social/linkedin";
 const ACCOUNT_ID = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "https://cloudless.gr/api/webhooks/linkedin-leads";
@@ -72,6 +76,44 @@ function argValue(flag) {
   const i = process.argv.indexOf(flag);
   if (i === -1) return null;
   return process.argv[i + 1] ?? null;
+}
+
+/** Capture OAuth ?code= on http://127.0.0.1:8765/callback (requires app allowlist). */
+function listenForCode() {
+  return new Promise((resolve, reject) => {
+    const server = createServer((req, res) => {
+      try {
+        const u = new URL(req.url || "/", "http://127.0.0.1:8765");
+        const err = u.searchParams.get("error");
+        if (err) {
+          const desc = u.searchParams.get("error_description") || "";
+          res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end(`OAuth error: ${err} ${desc}`);
+          server.close();
+          reject(new Error(`oauth error: ${err} ${desc}`.trim()));
+          return;
+        }
+        const code = u.searchParams.get("code");
+        if (!code) {
+          res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("missing code");
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(
+          "<!doctype html><html><body><p>LinkedIn auth OK — you can close this tab.</p></body></html>"
+        );
+        server.close();
+        resolve(code);
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
+    });
+    server.on("error", reject);
+    server.listen(8765, "127.0.0.1", () => {
+      console.log(`Listening for OAuth redirect on ${LOCAL_CALLBACK}`);
+    });
+  });
 }
 
 async function tokenRequest(body) {
@@ -183,6 +225,7 @@ async function persistAndMaybeRegister(tokens, { registerLeadgen }) {
 async function main() {
   const skipLeadgen = process.argv.includes("--no-leadgen");
   const refreshOnly = process.argv.includes("--refresh") || process.argv.includes("--refresh-only");
+  const listen = process.argv.includes("--listen");
   let code = argValue("--code");
 
   if (refreshOnly) {
@@ -196,20 +239,31 @@ async function main() {
     return;
   }
 
-  if (!code) {
+  if (listen) {
+    REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || LOCAL_CALLBACK;
+    console.log(
+      "Add this Redirect URL in the LinkedIn Developer App (Auth tab) if missing:\n  " +
+        REDIRECT_URI +
+        "\n\nOpen this URL, approve scopes:\n"
+    );
+    console.log(authorizeUrl(!skipLeadgen));
+    console.log("");
+    code = await listenForCode();
+  } else if (!code) {
     console.log("Open this URL, approve scopes, then re-run with --code <AUTH_CODE>:\n");
     console.log(authorizeUrl(!skipLeadgen));
     console.log(
       "\nRedirect URI (must match Developer App allowlist):\n  " +
         REDIRECT_URI +
-        "\n\nPostiz is behind Cloudflare Access — use Tailscale NodePort if OTP fails:\n" +
-        "  http://100.74.191.58:30500/integrations/social/linkedin\n" +
+        "\n\nPreferred (avoids Cloudflare Access OTP): add then use --listen:\n  " +
+        LOCAL_CALLBACK +
+        "\n\nPostiz Tailscale (no Access): http://100.74.191.58:30500/\n" +
         "(LinkedIn still redirects to the public HTTPS URI; copy ?code= from the\n" +
-        "blocked URL bar, or add http://127.0.0.1:8765/callback to the app allowlist.)\n\n" +
+        "blocked URL bar if needed.)\n\n" +
         "If authorize fails with unauthorized_scope_error for\n" +
         "r_marketing_leadgen_automation: enable Lead Sync on the LinkedIn app,\n" +
         "or pass --no-leadgen to refresh marketing tokens without Lead Gen.\n\n" +
-        "Non-interactive: LINKEDIN_REFRESH_TOKEN=… node … --refresh --no-leadgen"
+        "Non-interactive refresh failed 2026-09-15 (invalid_grant) — browser OAuth required."
     );
     if (process.stdin.isTTY) {
       const rl = createInterface({ input, output });
