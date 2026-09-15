@@ -70,7 +70,10 @@ and store the output. This is the path you'll take if every prior token is gone.
    |---|---|---|
    | Account | User API Tokens | Edit |
    | Account | Account Settings | Read |
-   | Account | Workers Scripts | Read |
+   | Account | Workers Scripts | **Edit** (Write) — required for `cloudless2` wrangler deploy; Read-only → API **10000** |
+   | Account | D1 | Edit |
+   | Account | Cloudflare Tunnel | Edit (or use separate `CLOUDFLARE_TUNNEL_API_TOKEN`) |
+   | Account | Workers R2 Storage | Edit |
    | Zone | Zone | Read |
    | Zone | Analytics | Read |
    | Zone | Zone Settings | Edit |

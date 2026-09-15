@@ -182,6 +182,59 @@ else
   check "Workers Scripts:Read" "could not resolve account id"
 fi
 
+# ── 7. Workers Scripts:Write (required for cloudless2 wrangler deploy) ───────
+# Listing scripts only proves Read. Missing Write → wrangler API 10000 on
+# POST .../workers/scripts/cloudless2/versions. Probe via token policies when
+# User API Tokens:Read works; else try a non-mutating versions list (still Read)
+# and warn that Write must be confirmed via permissions.sh / dashboard.
+WORKERS_WRITE_ID="e086da7e2179491d91ee5f35b3ca210a"
+if [ "$TL_OK" = "true" ]; then
+  # Prefer the token currently in use (verify does not return id — match by
+  # scanning policies for Workers Scripts Write on any active token that
+  # lists scripts). Fall back: any active token with that permission group.
+  HAS_WS_WRITE="$(echo "$TL" | jq -r --arg pid "$WORKERS_WRITE_ID" '
+    [.result[]?
+      | select(.status == "active")
+      | .policies[]?.permission_groups[]?
+      | select(.id == $pid)
+    ] | length
+  ')"
+  if [ "$HAS_WS_WRITE" != "0" ] && [ -n "$HAS_WS_WRITE" ]; then
+    check "Workers Scripts:Write (present on an active user token policy)" ok
+  else
+    check "Workers Scripts:Write" "not found on active token policies — cloudflare-deploy.yml will 10000"
+  fi
+else
+  check "Workers Scripts:Write" "skipped (need User API Tokens:Read to inspect policies)"
+fi
+
+# ── 8. D1:Read (migrations need Write; list proves D1 access) ────────────────
+if [ -n "$ACCOUNT_ID" ]; then
+  D1="$(curl_cf "$API/accounts/$ACCOUNT_ID/d1/database")"
+  D1_OK="$(echo "$D1" | jq -r '.success')"
+  if [ "$D1_OK" = "true" ]; then
+    D1_N="$(echo "$D1" | jq -r '.result | length')"
+    check "D1:Read ($D1_N databases)" ok
+  else
+    ERR_MSG="$(echo "$D1" | jq -r '.errors[0].message // "unknown"')"
+    check "D1:Read" "$ERR_MSG"
+  fi
+fi
+
+# ── 9. Cloudflare Tunnel:Read (optional — soft-skipped in CI if missing) ─────
+TUNNEL_ID="${CLUSTER_CLOUDFLARED_TUNNEL_ID:-e977a490-58c5-4fdb-9155-86832e3e636a}"
+if [ -n "$ACCOUNT_ID" ]; then
+  TN="$(curl_cf "$API/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/configurations")"
+  TN_OK="$(echo "$TN" | jq -r '.success')"
+  if [ "$TN_OK" = "true" ]; then
+    check "Cloudflare Tunnel:Read (config)" ok
+  else
+    ERR_CODE="$(echo "$TN" | jq -r '.errors[0].code // "unknown"')"
+    ERR_MSG="$(echo "$TN" | jq -r '.errors[0].message // "unknown"')"
+    check "Cloudflare Tunnel:Read" "code=$ERR_CODE: $ERR_MSG (CI soft-skips; set CLOUDFLARE_TUNNEL_API_TOKEN or Tunnel Write)"
+  fi
+fi
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo
 echo "---------------------------"
@@ -189,7 +242,9 @@ echo "Pass: $PASS  Fail: $FAIL"
 
 if [ "$FAIL" -gt 0 ]; then
   echo
-  echo "→ Re-issue the token with the missing scopes. See"
-  echo "   skills/cloudflare-token-doctor/SKILL.md Stage 1."
+  echo "→ Re-issue / ensure-ci the token with the missing scopes. See"
+  echo "   skills/cloudflare-token-doctor/SKILL.md and"
+  echo "   .claude/skills/cloudflare-workers-deploy/SKILL.md"
+  echo "   bash scripts/cf-token-permissions.sh ensure-ci \"<token-name>\""
   exit 1
 fi
