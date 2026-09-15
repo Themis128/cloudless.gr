@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
 
 /**
  * Read-through D1 cache for EspoCRM admin latency (not a second CRM).
@@ -57,7 +58,7 @@ function rowToEntry<T>(row: CacheRow, ttlSeconds: number): CacheEntry<T> | null 
 export async function getCached<T = unknown>(
   route: string,
   params: Record<string, unknown> = {},
-  ttlSeconds = 45
+  ttlSeconds = 900
 ): Promise<CacheEntry<T> | null> {
   const db = getAuthDbFromEnv();
   if (!db) return null;
@@ -81,8 +82,9 @@ export async function setCached<T = unknown>(
   route: string,
   params: Record<string, unknown> = {},
   payload: T,
-  ttlSeconds = 45
+  ttlSeconds = 900
 ): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const db = getAuthDbFromEnv();
   if (!db) return;
   const hash = paramsHash(params);
@@ -106,8 +108,9 @@ export async function readThrough<T>(
   fetcher: () => Promise<T>,
   opts: { ttlSeconds?: number; acceptStaleSeconds?: number } = {}
 ): Promise<{ value: T; source: "cache" | "live" | "stale"; ageSeconds: number }> {
-  const ttlSeconds = opts.ttlSeconds ?? 45;
-  const acceptStaleSeconds = opts.acceptStaleSeconds ?? 300;
+  const ttlSeconds = opts.ttlSeconds ?? ESPO_CACHE_TTL.list;
+  const acceptStaleSeconds = opts.acceptStaleSeconds ?? 1800;
+
 
   const cached = await getCached<T>(route, params, ttlSeconds);
   if (cached && !cached.stale) {
@@ -186,7 +189,7 @@ export async function invalidateEspoContactCaches(contactId: string): Promise<vo
 }
 
 export const ESPO_CACHE_TTL = {
-  list: 45,
-  contact: 45,
-  pipeline: 60,
+  list: 900,
+  contact: 900,
+  pipeline: 900,
 } as const;

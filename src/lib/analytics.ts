@@ -6,6 +6,7 @@
  */
 
 import type { AuthDatabase } from "@/lib/auth-d1";
+import { allowDiscretionaryD1Write, passSample } from "@/lib/d1-write-budget";
 
 export interface AnalyticsEvent {
   event: string;
@@ -69,6 +70,9 @@ function newEventId(): string {
 export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean> {
   const event = typeof evt.event === "string" ? evt.event.trim().slice(0, 100) : "";
   if (!event) return false;
+
+  if (!passSample("D1_ANALYTICS_SAMPLE", 0.25)) return false;
+  if (!allowDiscretionaryD1Write(1)) return false;
 
   const db = getD1Binding();
   if (!db) return false;

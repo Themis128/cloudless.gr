@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   FUNNEL_EVENT_TYPES,
   isFunnelEventType,
@@ -6,8 +6,20 @@ import {
   recordFunnelEvent,
   getFunnelSummary,
 } from "@/lib/search-funnel";
+import { __resetDiscretionaryBudgetForTests } from "@/lib/d1-write-budget";
 
 describe("search-funnel helpers", () => {
+  beforeEach(() => {
+    __resetDiscretionaryBudgetForTests();
+    process.env.D1_FUNNEL_SAMPLE = "1";
+    process.env.D1_FUNNEL_IMPRESSIONS = "1";
+    delete process.env.D1_DISCRETIONARY_WRITES;
+  });
+
+  afterEach(() => {
+    delete process.env.D1_FUNNEL_SAMPLE;
+    delete process.env.D1_FUNNEL_IMPRESSIONS;
+  });
   it("lists expected funnel event types", () => {
     expect(FUNNEL_EVENT_TYPES).toContain("search_query");
     expect(FUNNEL_EVENT_TYPES).toContain("search_result");
@@ -88,6 +100,17 @@ describe("search-funnel helpers", () => {
 describe("POST /api/analytics/track funnel → D1", () => {
   beforeEach(() => {
     vi.resetModules();
+    __resetDiscretionaryBudgetForTests();
+    process.env.D1_FUNNEL_SAMPLE = "1";
+    process.env.D1_ANALYTICS_SAMPLE = "1";
+    process.env.D1_FUNNEL_IMPRESSIONS = "1";
+    delete process.env.D1_DISCRETIONARY_WRITES;
+  });
+
+  afterEach(() => {
+    delete process.env.D1_FUNNEL_SAMPLE;
+    delete process.env.D1_ANALYTICS_SAMPLE;
+    delete process.env.D1_FUNNEL_IMPRESSIONS;
   });
 
   it("silent no-op without analytics consent", async () => {
