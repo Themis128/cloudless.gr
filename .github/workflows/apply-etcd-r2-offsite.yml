@@ -1,8 +1,11 @@
 name: Apply etcd off-site snapshots → R2
 
-# Runs ON the omv Pi runner (no SSH hop). Installs etcd R2 off-site config
-# with CF_R2_* keys. Never commits keys. Restarts k3s-k3s-omv (or k3s).
+# GH-hosted + Tailscale SSH to omv. Installs etcd R2 off-site config with
+# CF_R2_* keys (never committed). Restarts OMV unit k3s-k3s-omv.service.
 # Cloudflare Free only — do not upgrade to Workers Paid.
+#
+# Why SSH (not the omv self-hosted runner): the runner mount namespace often
+# cannot see /var/lib/rancher/k3s (bind-mounted SSD); host SSH can.
 
 on:
   workflow_dispatch:
@@ -25,29 +28,71 @@ env:
 
 jobs:
   apply:
-    runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: "382"
+      PI_HOST: 100.74.191.58
+      PI_USER: tbaltzakis
       CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
       CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-      - name: Validate R2 secrets + k3s.service
+      - name: Validate secrets
         run: |
           set -euo pipefail
           if [ -z "${CF_R2_ACCESS_KEY_ID:-}" ] || [ -z "${CF_R2_SECRET_ACCESS_KEY:-}" ]; then
             echo "::error::Need CF_R2_ACCESS_KEY_ID and CF_R2_SECRET_ACCESS_KEY"
             exit 1
           fi
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::Need OMV_SSH_KEY"
+            exit 1
+          fi
           echo "::add-mask::${CF_R2_ACCESS_KEY_ID}"
           echo "::add-mask::${CF_R2_SECRET_ACCESS_KEY}"
-          echo "OK R2 secrets present"
+          echo "OK secrets present"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Install config + restart k3s-k3s-omv + snapshot
+        env:
+          R2_AK: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          R2_SK: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          {
+            cat infrastructure/etcd-backup/config.yaml
+            echo ""
+            echo "# Injected at apply time from CF_R2_* (not in git)"
+            echo "etcd-s3-access-key: ${R2_AK}"
+            echo "etcd-s3-secret-key: ${R2_SK}"
+          } > /tmp/k3s-config-r2.yaml
+          chmod 600 /tmp/k3s-config-r2.yaml
+
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            /tmp/k3s-config-r2.yaml "$PI_USER@$PI_HOST:/tmp/k3s-config-r2.yaml"
+          shred -u /tmp/k3s-config-r2.yaml 2>/dev/null || rm -f /tmp/k3s-config-r2.yaml
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
+            "$PI_USER@$PI_HOST" bash <<'REMOTE' 2>&1 | tee /tmp/etcd-r2-apply.log
+          set -euo pipefail
           hostname
-          # OMV packages k3s as k3s-k3s-omv.service (see install-pi5-tuning.sh).
-          # Never awk /^k3s/ — that matches k3s-etcd-defrag / snapshot-mirror.
+
+          # OMV packages control plane as k3s-k3s-omv.service (not k3s.service).
           K3S_UNIT=""
           for u in k3s-k3s-omv.service k3s.service; do
             if sudo systemctl cat "$u" >/dev/null 2>&1; then
@@ -56,27 +101,11 @@ jobs:
             fi
           done
           if [ -z "$K3S_UNIT" ]; then
-            echo "::error::No k3s control-plane unit on $(hostname)"
+            echo "ERROR: no k3s control-plane unit"
             sudo systemctl list-unit-files 'k3s*' --no-legend || true
             exit 1
           fi
-          echo "K3S_UNIT=${K3S_UNIT}" >> "$GITHUB_ENV"
-          echo "OK unit ${K3S_UNIT}"
-          sudo systemctl is-active "$K3S_UNIT" || true
-          sudo ls -la /var/lib/rancher/k3s/server/token 2>&1 | head -3 || true
-          command -v k3s
-
-      - name: Install config + restart k3s
-        run: |
-          set -euo pipefail
-          {
-            cat infrastructure/etcd-backup/config.yaml
-            echo ""
-            echo "# Injected at apply time from CF_R2_* (not in git)"
-            echo "etcd-s3-access-key: ${CF_R2_ACCESS_KEY_ID}"
-            echo "etcd-s3-secret-key: ${CF_R2_SECRET_ACCESS_KEY}"
-          } > /tmp/k3s-config-r2.yaml
-          chmod 600 /tmp/k3s-config-r2.yaml
+          echo "K3S_UNIT=$K3S_UNIT"
 
           sudo cp /etc/rancher/k3s/config.yaml \
             "/etc/rancher/k3s/config.yaml.bak.$(date -u +%Y%m%dT%H%M%SZ)" || true
@@ -86,7 +115,7 @@ jobs:
           sudo grep -E 'etcd-s3-endpoint|etcd-s3-bucket|etcd-s3-folder|^etcd-s3:' /etc/rancher/k3s/config.yaml \
             | sed -E 's/(access-key|secret-key):.*/\1: ***/'
 
-          echo "→ restarting ${K3S_UNIT}"
+          echo "→ restarting $K3S_UNIT"
           sudo systemctl reset-failed "$K3S_UNIT" 2>/dev/null || true
           sudo systemctl restart "$K3S_UNIT"
 
@@ -99,23 +128,38 @@ jobs:
             if [ "$i" -eq 36 ]; then
               echo "ERROR k3s API not ready after 6m"
               sudo systemctl status "$K3S_UNIT" --no-pager | head -40 || true
-              sudo journalctl -u "$K3S_UNIT" -n 40 --no-pager || true
               exit 1
             fi
           done
 
-          if ! sudo test -f /var/lib/rancher/k3s/server/token; then
-            echo "::error::Missing /var/lib/rancher/k3s/server/token after restart"
-            sudo ls -la /var/lib/rancher/k3s/server/ 2>&1 | head -20 || true
-            sudo readlink -f /var/lib/rancher/k3s/server 2>&1 || true
+          # Resolve token / data-dir (bind mount or SSD path)
+          TOKEN=""
+          for cand in \
+            /var/lib/rancher/k3s/server/token \
+            /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/token
+          do
+            if sudo test -f "$cand"; then
+              TOKEN=$cand
+              break
+            fi
+          done
+          if [ -z "$TOKEN" ]; then
+            echo "ERROR: server token not found"
+            sudo ls -la /var/lib/rancher/k3s/ 2>&1 | head -20 || true
+            sudo ls -la /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/ 2>&1 | head -20 || true
+            sudo systemctl cat "$K3S_UNIT" | head -60 || true
             exit 1
           fi
+          echo "OK token at $TOKEN"
+          DATA_DIR=$(dirname "$(dirname "$TOKEN")")
+          echo "DATA_DIR=$DATA_DIR"
 
           TS=$(date +%s)
           echo "→ etcd-snapshot save verify-r2-${TS}"
-          sudo k3s etcd-snapshot save --name "verify-r2-${TS}" 2>&1 | tee /tmp/snap.out
-          sudo k3s etcd-snapshot ls 2>&1 | head -15
-          echo "DONE etcd R2 off-site via ${K3S_UNIT} on $(hostname)" | tee /tmp/etcd-r2-apply.log
+          sudo k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "verify-r2-${TS}"
+          sudo k3s etcd-snapshot ls --data-dir "$DATA_DIR" | head -15
+          echo "DONE etcd R2 off-site via $K3S_UNIT on $(hostname)"
+          REMOTE
 
       - name: Comment tracking issue
         if: always()
@@ -124,18 +168,11 @@ jobs:
             echo "# etcd off-site → Cloudflare R2 — $(date -u '+%F %T')Z"
             echo ""
             echo "**Job:** ${{ job.status }}"
-            echo "**Runner:** self-hosted omv/pi"
+            echo "**Path:** GH-hosted → Tailscale SSH → omv"
             echo "**Target:** \`datalake-bucket/etcd/\` (Free)"
             echo ""
             echo '```'
             cat /tmp/etcd-r2-apply.log 2>/dev/null || echo "(see job log)"
             echo '```'
-            if [ -f /tmp/snap.out ]; then
-              echo ""
-              echo "### Snapshot"
-              echo '```'
-              head -20 /tmp/snap.out
-              echo '```'
-            fi
           } > c.md
           gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file c.md || true
