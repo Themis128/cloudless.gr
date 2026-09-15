@@ -48,7 +48,7 @@ type FormStatus =
   | typeof FORM_STATUS_SENT
   | typeof FORM_STATUS_ERROR;
 
-export default function ContactFormSection() {
+export default function ContactFormSection({ source = "" }: { source?: string }) {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const [status, setStatus] = useState<FormStatus>(FORM_STATUS_IDLE);
@@ -110,7 +110,14 @@ export default function ContactFormSection() {
         } | null;
         // Browser-side Lead event with the same eventId the server sent to CAPI.
         // No-ops if the pixel is not loaded.
-        trackPixelEvent("Lead", { content_name: payload.service || "contact_form" }, data?.eventId);
+        trackPixelEvent(
+          "Lead",
+          {
+            content_name: payload.service || "contact_form",
+            ...(source ? { source } : {}),
+          },
+          data?.eventId
+        );
 
         // Campaign / fit-call arrivals dual-fire LinkedIn Insight Tag + CAPI.
         if (campaign) {

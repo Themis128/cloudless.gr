@@ -10,7 +10,7 @@ const STATUS_LOADING = "loading";
 const STATUS_SUCCESS = "success";
 const STATUS_ERROR = "error";
 
-export default function NewsletterForm() {
+export default function NewsletterForm({ onSuccess }: { onSuccess?: () => void }) {
   const [locale] = useCurrentLocale();
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export default function NewsletterForm() {
         setStatus(STATUS_SUCCESS);
         setMessage(translate(locale, "newsletter.success", "You're in! Check your email."));
         setEmail("");
+        onSuccess?.();
       } else {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         setStatus(STATUS_ERROR);
