@@ -11,9 +11,13 @@ allowed-tools: Bash, Read, Grep, Glob, Edit, mcp__github__pull_request_read
 | Type | What it means | How to resolve |
 |---|---|---|
 | **Issue** | Code has a definite defect by SonarCloud's rules. Gate fails if new issues exist. | Fix the code |
-| **Hotspot** | Code pattern *may* be a security concern — needs human review. Gate passes even if hotspots are open. | Acknowledge in the SonarCloud UI (or fix if genuinely wrong) |
+| **Hotspot** | Code pattern *may* be a security concern — needs human review. | Acknowledge in the SonarCloud UI (or fix if genuinely wrong) |
+
+**This project's Quality Gate can fail on open Security Hotspots** (seen on `main`). Treat unreviwed hotspots as merge-blocking until Reviewed in the EU UI or the pattern is removed.
 
 **You cannot "fix" a hotspot by changing code** if the underlying pattern (e.g. any use of `node:crypto`) triggers it. The only resolution is a human marking it "Reviewed" in the SonarCloud web UI at `sonarcloud.io/project/...`.
+
+For login, `SONAR_TOKEN`, Free LOC, and `scripts/sonarcloud-doctor.mjs`, use **`sonarcloud-operator`**.
 
 ## Common rules in this codebase
 
@@ -99,7 +103,7 @@ globalThis.fetch(...)
 
 ## When SonarCloud gate still fails after code fix
 
-- Check if it's a **hotspot that looks like an issue** — the gate text says "X Security Hotspots" not "X New Issues". Hotspots never block the gate.
+- Check if it's **open Security Hotspots** — this gate may fail on them; run `sonarcloud-doctor.mjs --hotspots` and ask the operator to Review in UI.
 - Check if the code fix introduced a **new violation** in a different location.
 - Check if the PR branch is behind `main` — SonarCloud compares against the base branch. If `main` advanced, rebase first.
 
