@@ -11,6 +11,8 @@ import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { trackPixelEvent } from "@/lib/meta-pixel";
 import { getStoredAttribution } from "@/lib/lead-attribution";
+import { fireCampaignConversion } from "@/lib/fire-campaign-conversion";
+import { getCampaign } from "@/data/campaigns";
 
 const serviceOptions = [
   "Cloud Architecture & Migration",
@@ -54,17 +56,22 @@ export default function ContactFormSection() {
   const onTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
   const searchParams = useSearchParams();
 
-  // Pre-fill message from checkout redirect context
+  // Pre-fill message from checkout / campaign redirect context
   const topic = searchParams.get("topic");
   const products = searchParams.get("products");
   const campaign = searchParams.get("campaign");
   const tier = searchParams.get("tier");
   const price = searchParams.get("price");
   const isPurchaseFlow = topic === "purchase";
+  const isFitCallFlow = topic === "fit-call" || Boolean(campaign);
+  const showCampaignBanner = isPurchaseFlow || isFitCallFlow;
 
   let defaultMessage = "";
-  if (isPurchaseFlow) {
+  if (isPurchaseFlow || isFitCallFlow) {
     const parts: string[] = [];
+    if (isFitCallFlow && !isPurchaseFlow) {
+      parts.push("I'd like a free 20-min fit call.");
+    }
     if (products) parts.push(`Products: ${products}`);
     if (campaign) parts.push(`Campaign: ${campaign}`);
     if (tier) parts.push(`Tier: ${tier}`);
@@ -72,8 +79,8 @@ export default function ContactFormSection() {
     defaultMessage = parts.join("\n");
   }
 
-  // Auto-select service based on product context
-  const defaultService = isPurchaseFlow ? "Not sure yet — let's discuss" : "";
+  // Auto-select service based on product / campaign context
+  const defaultService = showCampaignBanner ? "Not sure yet — let's discuss" : "";
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -104,6 +111,22 @@ export default function ContactFormSection() {
         // Browser-side Lead event with the same eventId the server sent to CAPI.
         // No-ops if the pixel is not loaded.
         trackPixelEvent("Lead", { content_name: payload.service || "contact_form" }, data?.eventId);
+
+        // Campaign / fit-call arrivals dual-fire LinkedIn Insight Tag + CAPI.
+        if (campaign) {
+          const meta = getCampaign(campaign);
+          fireCampaignConversion({
+            campaign,
+            tier: tier ?? (topic === "fit-call" ? "fit-call" : null),
+            orderId: `lead-${Date.now()}`,
+            conversionId: meta?.linkedinConversionId ?? null,
+            customer: {
+              name: payload.name,
+              email: payload.email,
+            },
+          });
+        }
+
         setStatus(FORM_STATUS_SENT);
         form.reset();
       } else {
@@ -120,16 +143,25 @@ export default function ContactFormSection() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
           {/* Form */}
           <div className="lg:col-span-3" data-testid="contact-form-panel">
-            {isPurchaseFlow && status !== FORM_STATUS_SENT && (
+            {showCampaignBanner && status !== FORM_STATUS_SENT && (
               <div className="border-neon-cyan/30 bg-neon-cyan/5 mb-6 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-neon-cyan mt-0.5 text-lg">&#9889;</span>
                   <div>
                     <p className="font-mono text-sm font-semibold text-white">
-                      {t("contact.purchaseIntent", "Almost there! Tell us about your project.")}
+                      {isFitCallFlow && !isPurchaseFlow
+                        ? t(
+                            "contact.fitCallIntent",
+                            "Book your free fit call — leave your details below."
+                          )
+                        : t("contact.purchaseIntent", "Almost there! Tell us about your project.")}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {tier && price ? `${tier} — ${price}` : products || ""}
+                      {(() => {
+                        if (tier && price) return `${tier} — ${price}`;
+                        if (campaign) return `Campaign: ${campaign}`;
+                        return products || "";
+                      })()}
                       {" — "}
                       {t(
                         "contact.purchaseIntentSub",

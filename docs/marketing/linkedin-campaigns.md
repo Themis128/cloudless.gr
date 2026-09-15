@@ -142,8 +142,21 @@ genuine purchase. If it stays "Inactive":
 - **Offline conversions** (CRM-import retro events): the CAPI route is wired
   only for online events. To send offline conversions, add a second route or
   reuse the same payload with `conversionHappenedAt` in the past.
-- **LinkedIn Lead Gen Form events**: handled via a separate webhook from
-  LinkedIn — not covered by this stack.
+
+## LinkedIn Lead Gen Forms
+
+Native LinkedIn Lead Gen Form submissions sync via:
+
+| Piece | Path |
+| ----- | ---- |
+| Webhook | `POST/GET /api/webhooks/linkedin-leads` |
+| Helpers | `src/lib/linkedin-leadgen.ts` |
+| Register | `node scripts/register-linkedin-leadgen-webhook.mjs` |
+
+Auth uses `LINKEDIN_CLIENT_SECRET` (challenge HMAC + `X-LI-Signature`). Lead
+PII is fetched with `LINKEDIN_ACCESS_TOKEN` (`r_marketing_leadgen_automation`)
+and written to EspoCRM via `createLead`. Website destination campaigns still
+use the Insight Tag + CAPI path above.
 
 ## Sources
 

@@ -19,6 +19,11 @@ const WEBHOOK_ENDPOINTS = [
   { name: "EspoCRM webhook", path: "/api/webhooks/espocrm", expectedStatus: [401, 403, 400, 405] },
   { name: "Stripe webhook", path: "/api/webhooks/stripe", expectedStatus: [400, 401, 403] },
   { name: "CMS content webhook", path: "/api/webhooks/content", expectedStatus: [401, 403, 400] },
+  {
+    name: "LinkedIn Lead Gen webhook",
+    path: "/api/webhooks/linkedin-leads",
+    expectedStatus: [400, 401, 403, 503],
+  },
 ];
 
 test.describe("Webhook endpoints — route existence and auth rejection", () => {

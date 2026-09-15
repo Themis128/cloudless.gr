@@ -3,6 +3,7 @@
 import { useState, useRef, type FormEvent, type MouseEvent } from "react";
 import type { Campaign, Locale, Tier } from "@/data/campaigns";
 import { getStoredAttribution } from "@/lib/lead-attribution";
+import { fireCampaignConversion } from "@/lib/fire-campaign-conversion";
 
 // Design tokens — extracted to satisfy sonarjs/no-duplicate-string (S1192).
 // Each value is used 3+ times across the JSX and <style jsx> block.
@@ -73,28 +74,18 @@ export default function TierTable({ campaign, locale }: Props) {
       if (res.ok) {
         setFormStatus(FORM_STATUS_SENT);
         form.reset();
-        // Fire conversion event → #ads-realtime Slack notification
-        const attr = getStoredAttribution();
-        fetch("/api/campaigns/conversion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            campaign: campaign.slug,
-            tier: selectedTier.id,
-            orderId: `lead-${Date.now()}`,
-            url: window.location.href,
-            userAgent: navigator.userAgent,
-            utm: attr
-              ? {
-                  source: attr.utmSource,
-                  medium: attr.utmMedium,
-                  campaign: attr.utmCampaign,
-                  content: attr.utmContent,
-                  term: attr.utmTerm,
-                }
-              : undefined,
-          }),
-        }).catch(() => {});
+        // Dual-fire: Insight Tag (lintrk) + CAPI/Slack/EspoCRM Lead
+        fireCampaignConversion({
+          campaign: campaign.slug,
+          tier: selectedTier.id,
+          orderId: `lead-${Date.now()}`,
+          conversionId: campaign.linkedinConversionId,
+          customer: {
+            name: payload.name,
+            email: payload.email,
+            phone: payload.phone,
+          },
+        });
       } else {
         setFormStatus(FORM_STATUS_ERROR);
       }
