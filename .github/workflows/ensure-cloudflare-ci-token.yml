@@ -48,7 +48,8 @@ jobs:
           if [ -n "${CF_GLOBAL_API_KEY:-}" ] && [ -n "${CF_EMAIL:-}" ]; then
             echo "OK  using Global API Key bootstrap"
           elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "OK  using CLOUDFLARE_API_TOKEN (needs API Tokens Write)"
+            echo "OK  using CLOUDFLARE_API_TOKEN (must already have User API Tokens Write)"
+            echo "::notice::If list fails with 403, set repo secrets CF_EMAIL + CF_GLOBAL_API_KEY (My Profile → API Tokens → Global API Key). Do not upgrade Workers to Paid."
           else
             echo "::error::Set CF_EMAIL+CF_GLOBAL_API_KEY or a CLOUDFLARE_API_TOKEN with API Tokens Write"
             exit 1
@@ -57,7 +58,16 @@ jobs:
       - name: List / ensure-ci
         run: |
           set -euo pipefail
-          bash scripts/cf-token-permissions.sh list | tee /tmp/cf-tokens.txt
+          set +e
+          bash scripts/cf-token-permissions.sh list > /tmp/cf-tokens.txt 2> /tmp/cf-tokens.err
+          list_code=$?
+          set -e
+          cat /tmp/cf-tokens.txt
+          if [ "$list_code" -ne 0 ]; then
+            cat /tmp/cf-tokens.err || true
+            echo "::error::Cannot list user API tokens (HTTP 403/401). CLOUDFLARE_API_TOKEN lacks User API Tokens Read/Write. Add GitHub secrets CF_EMAIL and CF_GLOBAL_API_KEY from dash.cloudflare.com → My Profile → API Tokens → Global API Key, then re-run this workflow. Do not upgrade to Workers Paid."
+            exit 1
+          fi
           NAME="$TOKEN_NAME"
           if [ -z "$NAME" ]; then
             NAME="$(grep -E 'ACTIVE  ' /tmp/cf-tokens.txt | head -1 | sed -E 's/^ACTIVE  //; s/  \(id:.*//' || true)"
