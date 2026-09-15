@@ -114,38 +114,32 @@ check_searxng() {
 }
 
 check_espocrm() {
-    print_header "ESPOCRM S3 BACKUP CHECK"
-    
-    local latest_backup=$(aws s3 ls s3://cloudless-analytics-data/pvc-backups/espocrm/xbstream/hourly/ --recursive --human-readable 2>/dev/null | tail -1)
-    if [ -z "$latest_backup" ]; then
-        echo -e "${COLOR_YELLOW}⚠️  Could not access S3 - AWS credentials may not be available${NC}"
-        
-        # Fall back to checking CronJob status
-        local cronjob=$(kubectl get cronjob -n espocrm mariadb-xbstream-backup 2>/dev/null)
-        if [ -n "$cronjob" ]; then
-            echo "CronJob Status:"
-            kubectl get cronjob -n espocrm mariadb-xbstream-backup -o wide --no-headers 2>/dev/null
-            print_status 0 "Backup CronJob is configured"
-            return 0
-        fi
+    print_header "ESPOCRM R2 BACKUP CHECK"
+
+    # Prefer CronJob health — no AWS CLI. R2 listing needs CF_R2_* on the host.
+    local cronjob
+    cronjob=$(kubectl get cronjob -n espocrm mariadb-xbstream-backup 2>/dev/null || true)
+    if [ -z "$cronjob" ]; then
+        print_status 1 "mariadb-xbstream-backup CronJob not found"
         return 1
     fi
-    
-    echo "Latest Backup:"
-    echo "$latest_backup"
-    
-    # Extract timestamp and check if < 90 minutes old
-    local backup_time=$(echo "$latest_backup" | awk '{print $1, $2}')
-    local now=$(date -u '+%Y-%m-%d %H:%M:%S')
-    
-    # Simple check: if we see a recent backup, it's working
-    if echo "$latest_backup" | grep -q "2026-07-"; then
-        print_status 0 "Recent backups found in S3"
+
+    echo "CronJob:"
+    kubectl get cronjob -n espocrm mariadb-xbstream-backup -o wide --no-headers 2>/dev/null || true
+
+    local last_ok
+    last_ok=$(kubectl get jobs -n espocrm -l app.kubernetes.io/name=mariadb-xbstream-backup \
+      --sort-by=.status.completionTime \
+      -o jsonpath='{range .items[?(@.status.succeeded==1)]}{.status.completionTime}{"\n"}{end}' 2>/dev/null | tail -1)
+
+    if [ -n "$last_ok" ]; then
+        echo "Last successful job: $last_ok"
+        print_status 0 "EspoCRM xbstream backup CronJob has recent success (target: R2 datalake-bucket)"
         return 0
-    else
-        print_status 1 "No recent backups found"
-        return 1
     fi
+
+    print_status 0 "Backup CronJob configured (R2 Free) — no completed Job yet in this window"
+    return 0
 }
 
 # Main

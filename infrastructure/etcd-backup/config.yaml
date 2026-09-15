@@ -1,30 +1,19 @@
 # Source-of-truth for /etc/rancher/k3s/config.yaml on omv (Pi 5 control plane).
 #
 # History:
-#   2026-06-25 ~18:20 — config was stripped down to just tls-san +
-#     secrets-encryption (root cause unclear; probably a botched edit
-#     during the k3s flap window before the 20:23 service restart).
-#   2026-06-25 20:23 — k3s restarted, picked up the stripped config.
-#     Etcd snapshots fell back to the k3s default schedule
-#     ("0 */12 * * *", twice daily) instead of the hourly cadence
-#     CLAUDE.md requires. The omv-backup-verify CronJob (SLO 2h) started
-#     paging in Slack as the backup-mount copy aged past 6h, 12h, 22h...
-#   2026-06-26 14:39 — restored from this file via:
-#     sudo install -m 0600 infrastructure/etcd-backup/config.yaml \
-#       /etc/rancher/k3s/config.yaml && sudo systemctl restart k3s
-#   2026-07-03 — added etcd-snapshot-schedule-cron and etcd-snapshot-retention
-#     after discovering they were missing from live config.
-#   2026-07-03 — added S3 credentials for cloudless-etcd-backup user.
+#   2026-06-25 — restored hourly etcd snapshots after stripped config incident.
+#   2026-07-03 — added etcd-snapshot-schedule-cron + retention.
+#   2026-09-15 — off-site etcd S3 target moved from AWS to Cloudflare R2 (Free).
+#     Do NOT use AWS bucket cloudless-etcd-snapshots or SSM /k3s/etcd-s3/*.
 #
-# This file deliberately INCLUDES the etcd-s3-* directives with working
-# credentials. The S3 backup (cloudless-etcd-snapshots/etcd/) is fully
-# operational and receives hourly snapshots.
+# Off-site credentials (NOT in this file):
+#   Set on the host via environment / k3s secret files before restart:
+#     ETCD_S3_ACCESS_KEY / ETCD_S3_SECRET_KEY
+#   or k3s flags etcd-s3-access-key / etcd-s3-secret-key in a root-only overlay.
+#   Use the same Cloudflare R2 API token as other Free-tier backups (CF_R2_*).
 #
 # Do NOT add `data-dir` here. /var/lib/rancher/k3s/server is a symlink
-# to /srv/dev-disk-by-uuid-a9a5a108-*/k3s/server, so data already lives
-# on the dedicated SSD. The systemd ExecStart in /etc/systemd/system/
-# k3s.service still passes `--data-dir /srv/.../k3s` explicitly; keeping
-# both in sync is the job of scripts/configure-k3s.sh.
+# to /srv/dev-disk-by-uuid-a9a5a108-*/k3s/server.
 
 tls-san:
 - 192.168.1.128
@@ -42,14 +31,14 @@ secrets-encryption: true
 etcd-snapshot-schedule-cron: 0 */1 * * *
 etcd-snapshot-retention: 24
 
-# S3 backup configuration for off-site etcd snapshot replication.
-# Uses purpose-specific IAM user cloudless-etcd-backup.
-# Access key stored in SSM: /k3s/etcd-s3/access-key-id
-# Secret key stored in SSM: /k3s/etcd-s3/secret-access-key
+# Off-site etcd snapshots → Cloudflare R2 (S3-compatible, Free tier).
+# Folder etcd/ under existing datalake-bucket (no Workers Paid).
 etcd-s3: true
-etcd-s3-bucket: cloudless-etcd-snapshots
-etcd-s3-region: us-east-1
+etcd-s3-endpoint: fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
+etcd-s3-bucket: datalake-bucket
+etcd-s3-region: auto
 etcd-s3-folder: etcd
+etcd-s3-skip-ssl-verify: false
 
 etcd-arg:
 - --auto-compaction-mode=periodic

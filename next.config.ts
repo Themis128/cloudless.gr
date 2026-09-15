@@ -28,20 +28,9 @@ const nextConfig: NextConfig = {
       "./node_modules/server-only/**/*",
     ],
   },
-  // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
-  // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
-  // clients so Next uses Node's native resolver instead of bundling them.
-  // Also externalize next-intl to fix Turbopack bundling issue where all
-  // NextResponse static methods (next, rewrite, redirect, json) are not
-  // properly bound in the bundled module context.
+  // Keep Node sqlite/fs out of the proxy/edge webpack graph.
+  // AWS SDK clients removed — app uses D1 / R2 (aws4fetch) / Resend (Cloudflare Free).
   serverExternalPackages: [
-    "@aws-sdk/client-bedrock-runtime",
-    "@aws-sdk/client-cognito-identity-provider",
-    "@aws-sdk/client-dynamodb",
-    "@aws-sdk/client-ses",
-    "@aws-sdk/client-sesv2",
-    "@aws-sdk/client-ssm",
-    // Keep Node sqlite/fs out of the proxy/edge webpack graph.
     "node:sqlite",
     "node:fs",
     "node:path",

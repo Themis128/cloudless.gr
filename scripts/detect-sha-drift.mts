@@ -1,45 +1,26 @@
 /**
- * SHA drift detector — compares the source-of-truth deploy SHA in SSM
- * against the SHA each surface (cloud cloudless.gr, Pi pi-origin.cloudless.gr)
- * actually reports via /api/health → version field.
+ * SHA drift detector — Cloudflare Free only (no AWS SSM).
  *
- * Each surface has its own SSM param so the two deploy pipelines can't
- * overwrite each other:
- *   deploy.yml     → /cloudless/production/cloud-sha  (full GITHUB_SHA)
- *   deploy-pi.yml  → /cloudless/production/pi-sha     (12-char short SHA)
+ * Compares /api/health `version` on:
+ *   cloud: https://cloudless.gr/api/health       (Worker cloudless2 → Pi)
+ *   pi:    https://pi-origin.cloudless.gr/api/health
+ *
+ * Both should report the same Pi deploy SHA.
  *
  * Run:
  *   pnpm tsx scripts/detect-sha-drift.mts
- *   pnpm tsx scripts/detect-sha-drift.mts --json   # machine-readable
+ *   pnpm tsx scripts/detect-sha-drift.mts --json
  *
  * Exit:
- *   0 — all surfaces agree (or grace window applies)
- *   1 — drift detected outside the grace window
- *   2 — could not read SSM (no AWS creds, network, etc.)
+ *   0 — surfaces agree (or Bot Fight Mode blocked probes)
+ *   1 — drift detected
+ *   2 — could not build a snapshot (unreachable)
  *
- * Mode:
- *   Default: Cloudflare-only (no AWS SSM required) — compares /api/health version
- *   Legacy:  Set CLOUDFLARE_ONLY=false to use AWS SSM as source of truth
- *
- * NOTE on duplication
- * -------------------
- * The `shaEquivalent` + `evaluateDrift` logic below is intentionally
- * duplicated from src/lib/sha-drift.ts. The lib copy is what the unit
- * tests in __tests__/detect-sha-drift.test.ts exercise; the inline
- * copy here is what the CLI runs. Cross-importing through tsx in CI
- * has been brittle (tsx's loader doesn't always transform imported
- * .ts files when invoked via pnpm exec — the same export disappears
- * with `.ts`, `.js`, and the `@/` alias forms), so the script is
- * deliberately self-contained. The static check in
- * __tests__/sha-drift-inline-parity.test.ts pins the two copies to
- * stay in sync.
+ * NOTE on duplication — keep in sync with src/lib/sha-drift.ts
+ * (see __tests__/sha-drift-inline-parity.test.ts).
  */
 
 import { request as httpsRequest } from "node:https";
-
-// ───────────────────────────────────────────────────────────────────────
-// Inlined pure logic — keep in sync with src/lib/sha-drift.ts
-// ───────────────────────────────────────────────────────────────────────
 
 interface DriftSnapshot {
   cloudExpected: string;
@@ -80,12 +61,11 @@ function classifySurface(
   if (actual === null) reason = "endpoint unreachable or no version field";
   else if (actual === "0.1.0" || actual === "dev") {
     reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
-  } else if (!matches) reason = "SHA differs from SSM source of truth";
+  } else if (!matches) reason = "SHA differs from peer /api/health version";
   return { name, actual, matches, reason };
 }
 
 function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
-  // Use the most recent SSM write across both surfaces for the grace window.
   const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
     (d): d is Date => d !== null
   );
@@ -102,27 +82,13 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
   return { drifted, ageMs, withinGrace, surfaces };
 }
 
-// ───────────────────────────────────────────────────────────────────────
-// I/O
-// ───────────────────────────────────────────────────────────────────────
-
 const HEALTH_URLS = {
-  // Apex Worker (pi-origin-proxy) → Tunnel → Pi. Prefer apex over www.
   cloud: "https://cloudless.gr/api/health",
   pi: "https://pi-origin.cloudless.gr/api/health",
 } as const;
-const SSM_CLOUD = "/cloudless/production/cloud-sha";
-const SSM_PI = "/cloudless/production/pi-sha";
-// Default to Cloudflare-only mode (no AWS SSM required)
-// Override with CLOUDFLARE_ONLY=false to use SSM (legacy)
-const CLOUDFLARE_ONLY = process.env.CLOUDFLARE_ONLY !== "false";
-
-const REGION = process.env.AWS_REGION ?? "us-east-1";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    // Happy Eyeballs (RFC 8305): fall through to IPv4 after 250 ms instead
-    // of hanging the full 10 s timeout when IPv6 is unreachable from CI.
     const req = httpsRequest(
       url,
       {
@@ -131,22 +97,22 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
         autoSelectFamily: true,
         autoSelectFamilyAttemptTimeout: 250,
         headers: {
-          // Reduce chance of Bot Fight Mode interstitial for machine probes.
           "user-agent": "cloudless-sha-drift/1.0 (+https://github.com/Themis128/cloudless.gr)",
           accept: "application/json",
         },
       },
       (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (c: Buffer) => chunks.push(c));
-      res.on("end", () => {
-        try {
-          resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
-        } catch {
-          resolve(null);
-        }
-      });
-    });
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(c));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+    );
     req.on("error", () => resolve(null));
     req.on("timeout", () => {
       req.destroy();
@@ -156,31 +122,13 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   });
 }
 
-async function readSsmParam(
-  ssm: import("@aws-sdk/client-ssm").SSMClient,
-  name: string,
-): Promise<{ value: string; modifiedAt: Date } | null> {
-  const { GetParameterCommand } = await import("@aws-sdk/client-ssm");
-  try {
-    const out = await ssm.send(new GetParameterCommand({ Name: name }));
-    if (!out.Parameter?.Value) return null;
-    return {
-      value: out.Parameter.Value,
-      modifiedAt: out.Parameter.LastModifiedDate ?? new Date(0),
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function snapshotCloudflareOnly(): Promise<DriftSnapshot> {
+async function snapshot(): Promise<DriftSnapshot> {
   const [cloudJson, piJson] = await Promise.all([
     fetchJson(HEALTH_URLS.cloud),
     fetchJson(HEALTH_URLS.pi),
   ]);
   const cloud = typeof cloudJson?.version === "string" ? cloudJson.version : null;
   const pi = typeof piJson?.version === "string" ? piJson.version : null;
-  // Both surfaces should serve the same Pi image via Tunnel / proxy.
   const expected = cloud ?? pi ?? "unknown";
   return {
     cloudExpected: expected,
@@ -192,48 +140,13 @@ async function snapshotCloudflareOnly(): Promise<DriftSnapshot> {
   };
 }
 
-async function snapshot(): Promise<DriftSnapshot | null> {
-  if (CLOUDFLARE_ONLY) {
-    return snapshotCloudflareOnly();
-  }
-  const { SSMClient } = await import("@aws-sdk/client-ssm");
-  const ssmClient = new SSMClient({ region: REGION });
-  const [cloudSsm, piSsm, cloudJson, piJson] = await Promise.all([
-    readSsmParam(ssmClient, SSM_CLOUD),
-    readSsmParam(ssmClient, SSM_PI),
-    fetchJson(HEALTH_URLS.cloud),
-    fetchJson(HEALTH_URLS.pi),
-  ]);
-  if (!cloudSsm || !piSsm) return null;
-  return {
-    cloudExpected: cloudSsm.value,
-    piExpected: piSsm.value,
-    cloudSsmModifiedAt: cloudSsm.modifiedAt,
-    piSsmModifiedAt: piSsm.modifiedAt,
-    cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
-    pi: typeof piJson?.version === "string" ? piJson.version : null,
-  };
-}
-
 async function main(): Promise<void> {
   const jsonMode = process.argv.includes("--json");
 
   const data = await snapshot();
-  if (!data) {
-    const out = { error: "Could not read SSM parameters — check AWS credentials." };
-    if (jsonMode) console.log(JSON.stringify(out, null, 2));
-    else console.error("[sha-drift] " + out.error);
-    process.exit(2);
-  }
-
   const report = evaluateDrift(data);
 
-  // Bot Fight Mode (Free) returns HTML challenges to GHA — both surfaces null.
-  // That is not SHA drift; page the operator to disable BFM instead.
-  if (
-    CLOUDFLARE_ONLY &&
-    report.surfaces.every((s) => s.actual === null)
-  ) {
+  if (report.surfaces.every((s) => s.actual === null)) {
     const out = {
       ...report,
       drifted: false,
@@ -241,9 +154,7 @@ async function main(): Promise<void> {
       note: "Both /api/health probes returned no JSON (likely Cloudflare Bot Fight Mode). Disable Security → Bots → Bot Fight Mode, then re-run.",
     };
     if (jsonMode) console.log(JSON.stringify(out, null, 2));
-    else {
-      console.warn("[sha-drift] " + out.note);
-    }
+    else console.warn("[sha-drift] " + out.note);
     process.exit(0);
   }
 
@@ -251,13 +162,10 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(report, null, 2));
   } else {
     const icon = report.drifted ? "❌" : report.withinGrace ? "⏳" : "✅";
-    console.log(`${icon} SHA drift report`);
+    console.log(`${icon} SHA drift report (Cloudflare Free — no AWS)`);
     for (const s of report.surfaces) {
       const mark = s.matches ? "✓" : "✗";
       console.log(`  ${mark} ${s.name}: ${s.actual ?? "(null)"} — ${s.reason}`);
-    }
-    if (report.ageMs !== null) {
-      console.log(`  SSM age: ${Math.round(report.ageMs / 1000)}s`);
     }
   }
 

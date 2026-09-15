@@ -1,6 +1,6 @@
-# Hourly physical backup of EspoCRM MariaDB via mariadb-backup → S3 xbstream.
-# Fix 2026-06-27: switched from alpine:3.20 (dropped aws-cli + kubectl packages)
-# to alpine/k8s:1.35.5 which ships kubectl; aws-cli installed via pip.
+# Hourly physical backup of EspoCRM MariaDB → Cloudflare R2 (Free).
+# Replaces AWS S3 cloudless-analytics-data + pvc-backup-aws.
+# Uses same pvc-backup-r2 secret as infrastructure/backup/cronjob-espocrm.yaml.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -11,6 +11,7 @@ metadata:
     backup.cloudless.gr/type: physical
     backup.cloudless.gr/target: espocrm-mariadb
     backup.cloudless.gr/rpo: 1h
+    backup.cloudless.gr/storage: r2
 spec:
   schedule: 0 * * * *
   timeZone: Europe/Athens
@@ -27,20 +28,20 @@ spec:
           restartPolicy: Never
           containers:
           - name: backup
-              # alpine/k8s ships kubectl; we add aws-cli via pip (pip3 is in the image).
-              # alpine:3.20 dropped both aws-cli and kubectl from community repo.
             image: alpine/k8s:1.35.5
             imagePullPolicy: IfNotPresent
             resources:
               requests: {cpu: 100m, memory: 128Mi}
-              limits: {cpu: 500m, memory: 256Mi}
+              limits: {cpu: 500m, memory: 512Mi}
             env:
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: AWS_ACCESS_KEY_ID}}
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom: {secretKeyRef: {name: pvc-backup-aws, key: AWS_SECRET_ACCESS_KEY}}
-            - name: AWS_DEFAULT_REGION
-              value: us-east-1
+            - name: R2_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: pvc-backup-r2, key: ACCESS_KEY_ID}}
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: pvc-backup-r2, key: SECRET_ACCESS_KEY}}
+            - name: R2_ENDPOINT
+              value: https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
+            - name: R2_BUCKET
+              value: datalake-bucket
             - name: MARIADB_ROOT_PASSWORD
               valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-root-password}}
             command: [/bin/sh, -c]
@@ -51,21 +52,21 @@ spec:
               STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
               log() { echo "[${STAMP}] $*" >&2; }
 
-              log "→ installing aws-cli via pip"
-              pip3 install --quiet --no-cache-dir awscli
+              log "→ installing rclone"
+              apk add --no-cache rclone >/dev/null
 
               POD=$(kubectl get pod \
                 -n espocrm \
                 -l app=espocrm,component=mariadb \
                 --field-selector=status.phase=Running \
                 -o jsonpath='{.items[0].metadata.name}')
-              [ -n "${POD}" ] || { log "❌ no running MariaDB pod found"; exit 1; }
+              [ -n "${POD}" ] || { log "no running MariaDB pod found"; exit 1; }
               log "→ backing up via pod: ${POD}"
 
               DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
               KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
-              BUCKET="cloudless-analytics-data"
-              log "→ streaming xbstream → s3://${BUCKET}/${KEY}"
+              LOCAL="/tmp/${DATE}.xbstream"
+              log "→ streaming xbstream → ${LOCAL}"
 
               kubectl exec -n espocrm "${POD}" -- \
                 mariadb-backup \
@@ -76,16 +77,27 @@ spec:
                   --user=root \
                   --password="${MARIADB_ROOT_PASSWORD}" \
                   --target-dir=/tmp/mariadb-backup-tmp \
-                | aws s3 cp - "s3://${BUCKET}/${KEY}"
+                > "${LOCAL}"
 
-              SIZE=$(aws s3api head-object \
-                --bucket "${BUCKET}" \
-                --key "${KEY}" \
-                --query ContentLength \
-                --output text)
-              log "✅ uploaded ${SIZE} bytes"
+              SIZE=$(wc -c < "${LOCAL}")
+              log "→ local size ${SIZE} bytes"
+              [ "${SIZE}" -ge 10000 ] || { log "backup too small (${SIZE} bytes)"; exit 1; }
 
-              [ "${SIZE}" -ge 10000 ] || { log "❌ backup too small (${SIZE} bytes < 10KB)"; exit 1; }
+              export RCLONE_CONFIG_R2_TYPE=s3
+              export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+              export RCLONE_CONFIG_R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}"
+              export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}"
+              export RCLONE_CONFIG_R2_ENDPOINT="${R2_ENDPOINT}"
+              export RCLONE_CONFIG_R2_REGION=auto
+              export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+
+              log "→ uploading → r2://${R2_BUCKET}/${KEY}"
+              rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/${KEY}" --s3-no-check-bucket
+
+              REMOTE_SIZE=$(rclone lsjson "r2:${R2_BUCKET}/${KEY}" | sed -n 's/.*"Size": *\([0-9]*\).*/\1/p' | head -1)
+              log "remote size ${REMOTE_SIZE} bytes"
+              [ "${REMOTE_SIZE:-0}" -ge 10000 ] || { log "remote backup too small"; exit 1; }
 
               kubectl exec -n espocrm "${POD}" -- rm -rf /tmp/mariadb-backup-tmp || true
-              log "✅ xbstream backup complete"
+              rm -f "${LOCAL}"
+              log "xbstream backup complete (Cloudflare R2 Free)"
