@@ -208,6 +208,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "resend": "^6.22.0",
+    "server-only": "^0.0.1",
     "stripe": "^22.6.0",
     "three": "^0.185.1",
     "undici": "8.10.0",

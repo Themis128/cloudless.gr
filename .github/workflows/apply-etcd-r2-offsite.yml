@@ -100,43 +100,105 @@ jobs:
             fi
           done
 
-      - name: etcd-snapshot via host root (proc/1/root + nsenter)
+      - name: etcd-snapshot + verify R2 (host mount ns)
+        env:
+          R2_ENDPOINT: fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com
+          R2_BUCKET: datalake-bucket
         run: |
           set -euo pipefail
           HOST=(sudo nsenter --target 1 --mount --uts --ipc --net --pid --)
 
-          TOKEN=""
           DATA_DIR=""
           for cand in \
             /var/lib/rancher/k3s \
             /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s
           do
-            if sudo test -f "/proc/1/root${cand}/server/token"; then
-              TOKEN="${cand}/server/token"
-              DATA_DIR="$cand"
-              break
-            fi
-            if sudo test -f "${cand}/server/token"; then
-              TOKEN="${cand}/server/token"
+            if sudo test -f "/proc/1/root${cand}/server/token" \
+              || sudo test -f "${cand}/server/token"; then
               DATA_DIR="$cand"
               break
             fi
           done
-
           if [ -z "$DATA_DIR" ]; then
-            echo "ERROR: server token not found (runner ns or /proc/1/root)"
-            sudo ls -la /proc/1/root/var/lib/rancher/k3s/ 2>&1 | head -20 || true
-            sudo ls -la /proc/1/root/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/ 2>&1 | head -20 || true
-            "${HOST[@]}" find /var/lib/rancher /srv/dev-disk-by-uuid-a9a5a108* -name token 2>/dev/null | head -10 || true
-            sudo systemctl cat "$K3S_UNIT" | head -50 || true
+            echo "ERROR: no k3s data-dir with server/token"
+            sudo systemctl cat "$K3S_UNIT" | head -60 || true
             exit 1
           fi
-          echo "OK token at ${TOKEN} (DATA_DIR=${DATA_DIR})"
+          echo "DATA_DIR=${DATA_DIR}"
 
           TS=$(date +%s)
-          echo "→ etcd-snapshot save verify-r2-${TS}"
-          "${HOST[@]}" k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "verify-r2-${TS}" 2>&1 | tee /tmp/snap.out
-          "${HOST[@]}" k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 | head -15 | tee -a /tmp/snap.out
+          NAME="verify-r2-${TS}"
+          SNAP_OK=0
+
+          # Prefer native k3s snapshot WITHOUT --data-dir (avoids CA-hash mismatch
+          # when token/CA in an alternate path drift). Runs in host mount ns.
+          echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
+          if "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee /tmp/snap.out; then
+            SNAP_OK=1
+            "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
+          else
+            echo "WARN: k3s etcd-snapshot failed (often CA hash mismatch); falling back to etcdctl + rclone"
+          fi
+
+          # Fallback: etcdctl snapshot + rclone → R2 etcd/ (proves off-site path)
+          if [ "$SNAP_OK" -ne 1 ]; then
+            ETCD_CA="${DATA_DIR}/server/tls/etcd/server-ca.crt"
+            ETCD_CRT="${DATA_DIR}/server/tls/etcd/server-client.crt"
+            ETCD_KEY="${DATA_DIR}/server/tls/etcd/server-client.key"
+            for f in "$ETCD_CA" "$ETCD_CRT" "$ETCD_KEY"; do
+              if ! sudo test -f "/proc/1/root${f}" && ! sudo test -f "$f"; then
+                echo "ERROR: missing $f"
+                exit 1
+              fi
+            done
+            LOCAL="/tmp/${NAME}.db"
+            echo "→ etcdctl snapshot save ${LOCAL}"
+            "${HOST[@]}" k3s etcdctl \
+              --endpoints=https://127.0.0.1:2379 \
+              --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+              snapshot save "$LOCAL" 2>&1 | tee -a /tmp/snap.out
+
+            echo "→ rclone copyto r2:${R2_BUCKET}/etcd/${NAME}.db"
+            "${HOST[@]}" env \
+              RCLONE_CONFIG_R2_TYPE=s3 \
+              RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+              RCLONE_CONFIG_R2_ACCESS_KEY_ID="${CF_R2_ACCESS_KEY_ID}" \
+              RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${CF_R2_SECRET_ACCESS_KEY}" \
+              RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ENDPOINT}" \
+              RCLONE_CONFIG_R2_ACL=private \
+              LOCAL="$LOCAL" NAME="$NAME" R2_BUCKET="$R2_BUCKET" \
+              bash -c '
+                set -euo pipefail
+                if ! command -v rclone >/dev/null 2>&1; then
+                  curl -fsSL https://rclone.org/install.sh | bash
+                fi
+                rclone copyto "${LOCAL}" "r2:${R2_BUCKET}/etcd/${NAME}.db" --s3-no-check-bucket
+                rclone ls "r2:${R2_BUCKET}/etcd/" | tail -10
+                rm -f "${LOCAL}"
+              ' 2>&1 | tee -a /tmp/snap.out
+            SNAP_OK=1
+          fi
+
+          # List R2 etcd/ (scheduled k3s etcd-s3 may already have objects)
+          echo "→ list R2 ${R2_BUCKET}/etcd/"
+          "${HOST[@]}" env \
+            RCLONE_CONFIG_R2_TYPE=s3 \
+            RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+            RCLONE_CONFIG_R2_ACCESS_KEY_ID="${CF_R2_ACCESS_KEY_ID}" \
+            RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${CF_R2_SECRET_ACCESS_KEY}" \
+            RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ENDPOINT}" \
+            RCLONE_CONFIG_R2_ACL=private \
+            R2_BUCKET="$R2_BUCKET" \
+            bash -c '
+              set -euo pipefail
+              command -v rclone >/dev/null 2>&1 || curl -fsSL https://rclone.org/install.sh | bash
+              rclone ls "r2:${R2_BUCKET}/etcd/" | tail -15
+            ' 2>&1 | tee -a /tmp/snap.out || true
+
+          if [ "$SNAP_OK" -ne 1 ]; then
+            echo "ERROR: no snapshot produced"
+            exit 1
+          fi
           echo "DONE etcd R2 off-site via ${K3S_UNIT} on $(hostname)" | tee /tmp/etcd-r2-apply.log
 
       - name: Comment tracking issue
@@ -146,7 +208,7 @@ jobs:
             echo "# etcd off-site → Cloudflare R2 — $(date -u '+%F %T')Z"
             echo ""
             echo "**Job:** ${{ job.status }}"
-            echo "**Path:** self-hosted omv + /proc/1/root + nsenter"
+            echo "**Path:** self-hosted omv + nsenter (etcd-snapshot or etcdctl+rclone)"
             echo "**Target:** \`datalake-bucket/etcd/\` (Free)"
             echo ""
             echo '```'
