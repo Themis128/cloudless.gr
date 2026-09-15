@@ -53,30 +53,30 @@ operating notes) see [`skills/linkedin-campaigns/SKILL.md`](../../skills/linkedi
 
 ## File map
 
-| File                                                             | Purpose                                                          |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `src/components/LinkedInInsightTag.tsx`                          | Consent-gated Insight Tag loader. Mirrors `ConsentGatedPixel`.   |
-| `src/lib/linkedin-track.ts`                                      | `trackLinkedInConversion(conversionId)` helper.                  |
-| `src/data/campaigns.ts`                                          | Static campaign metadata (slug, tiers, conversion ID).           |
-| `src/app/[locale]/campaigns/<slug>/page.tsx`                     | Landing page — 3 tiers + CTAs.                                   |
-| `src/app/[locale]/campaigns/<slug>/thanks/page.tsx`              | Confirmation server component (`force-dynamic`).                 |
-| `src/app/[locale]/campaigns/<slug>/thanks/ThanksConversion.tsx`  | Client component that dual-fires the conversion exactly once.    |
-| `src/app/api/checkout/route.ts` (GET branch)                     | Campaign-aware Stripe adapter; stubs to thanks page until wired. |
-| `src/app/api/campaigns/conversion/route.ts`                      | Server-side CAPI mirror.                                         |
-| `__tests__/data/campaigns.test.ts`                               | Unit tests over the campaign metadata.                           |
-| `__tests__/lib/linkedin-track.test.ts`                           | Unit tests over the `lintrk` helper.                             |
-| `e2e/campaigns-shop-online.spec.ts`                              | Playwright spec covering the full flow.                          |
+| File                                                            | Purpose                                                          |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `src/components/LinkedInInsightTag.tsx`                         | Consent-gated Insight Tag loader. Mirrors `ConsentGatedPixel`.   |
+| `src/lib/linkedin-track.ts`                                     | `trackLinkedInConversion(conversionId)` helper.                  |
+| `src/data/campaigns.ts`                                         | Static campaign metadata (slug, tiers, conversion ID).           |
+| `src/app/[locale]/campaigns/<slug>/page.tsx`                    | Landing page — 3 tiers + CTAs.                                   |
+| `src/app/[locale]/campaigns/<slug>/thanks/page.tsx`             | Confirmation server component (`force-dynamic`).                 |
+| `src/app/[locale]/campaigns/<slug>/thanks/ThanksConversion.tsx` | Client component that dual-fires the conversion exactly once.    |
+| `src/app/api/checkout/route.ts` (GET branch)                    | Campaign-aware Stripe adapter; stubs to thanks page until wired. |
+| `src/app/api/campaigns/conversion/route.ts`                     | Server-side CAPI mirror.                                         |
+| `__tests__/data/campaigns.test.ts`                              | Unit tests over the campaign metadata.                           |
+| `__tests__/lib/linkedin-track.test.ts`                          | Unit tests over the `lintrk` helper.                             |
+| `e2e/campaigns-shop-online.spec.ts`                             | Playwright spec covering the full flow.                          |
 
 ## Env vars
 
-| Variable                          | Visibility  | Required? | Set in                                                                 |
-| --------------------------------- | ----------- | --------- | ---------------------------------------------------------------------- |
-| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | Client      | Yes       | `.env.local`, GitHub Secrets (CI), SST stage (`production`/`staging`)  |
-| `LINKEDIN_CAPI_ACCESS_TOKEN`      | Server-only | Optional  | SSM Parameter Store (preferred), or env at deploy time                 |
+| Variable                          | Visibility  | Required? | Set in                                                                |
+| --------------------------------- | ----------- | --------- | --------------------------------------------------------------------- |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | Client      | Yes       | `.env.local`, GitHub Secrets (CI), SST stage (`production`/`staging`) |
+| `LINKEDIN_CAPI_ACCESS_TOKEN`      | Server-only | Optional  | SSM Parameter Store (preferred), or env at deploy time                |
 
 The partner ID is **baked into the client bundle at build time** because Next.js
 inlines `NEXT_PUBLIC_*` at compile. Changes require a rebuild — they do NOT
-flow through SSM at runtime (see `CLAUDE.md`, *"NEXT_PUBLIC_* vars"*).
+flow through SSM at runtime (see `CLAUDE.md`, _"NEXT_PUBLIC__ vars"*).
 
 The CAPI token is a **server-only secret** — it grants
 `r_marketing_leadgen_automation` against the LinkedIn API. Treat it like a
@@ -147,16 +147,48 @@ genuine purchase. If it stays "Inactive":
 
 Native LinkedIn Lead Gen Form submissions sync via:
 
-| Piece | Path |
-| ----- | ---- |
-| Webhook | `POST/GET /api/webhooks/linkedin-leads` |
-| Helpers | `src/lib/linkedin-leadgen.ts` |
-| Register | `node scripts/register-linkedin-leadgen-webhook.mjs` |
+| Piece         | Path                                                   |
+| ------------- | ------------------------------------------------------ |
+| Webhook       | `POST/GET /api/webhooks/linkedin-leads`                |
+| Helpers       | `src/lib/linkedin-leadgen.ts`                          |
+| Register      | `gh workflow run "Register LinkedIn Lead Gen webhook"` |
+| Token refresh | `gh workflow run "Refresh LinkedIn marketing token"`   |
+| Re-auth       | `scripts/linkedin-reauth-and-register.mjs`             |
 
 Auth uses `LINKEDIN_CLIENT_SECRET` (challenge HMAC + `X-LI-Signature`). Lead
-PII is fetched with `LINKEDIN_ACCESS_TOKEN` (`r_marketing_leadgen_automation`)
-and written to EspoCRM via `createLead`. Website destination campaigns still
-use the Insight Tag + CAPI path above.
+PII is fetched with `LINKEDIN_ACCESS_TOKEN` which **must** include
+`r_marketing_leadgen_automation`.
+
+### Operator checklist (verified 2026-09-15 via Tailscale → omv)
+
+1. **Developer App product:** LinkedIn app `77tf4oysp8u3fz` must have the
+   **Lead Sync** / Marketing Developer Platform product enabled. Without it,
+   authorize returns `unauthorized_scope_error` for
+   `r_marketing_leadgen_automation` and `leadNotifications` CREATE returns 403.
+2. **Redirect URI allowlist** must include exactly
+   `https://postiz.cloudless.gr/integrations/social/linkedin` (current sole match).
+3. **Refresh tokens** on the Pi (`LINKEDIN_ACCESS_TOKEN` /
+   `LINKEDIN_REFRESH_TOKEN`) were **expired** as of 2026-09-15. Prefer
+   non-interactive refresh first:
+
+   ```bash
+   gh workflow run "Refresh LinkedIn marketing token"
+   ```
+
+   If that fails (refresh expired), browser OAuth:
+
+   ```bash
+   LINKEDIN_CLIENT_SECRET=… node scripts/linkedin-reauth-and-register.mjs --no-leadgen
+   # after enabling Lead Sync: drop --no-leadgen so webhook registers too
+   ```
+
+   Postiz OAuth redirect is behind Cloudflare Access. If OTP never arrives, open
+   Postiz over Tailscale (`http://100.74.191.58:30500/`) or copy `?code=` from
+   the Access-blocked redirect URL after approving LinkedIn.
+
+4. Website destination campaigns still use the Insight Tag + CAPI path (no Lead
+   Sync product required). CAPI token alone is valid for ad account reads but
+   **not** for Lead Gen webhook registration.
 
 ## Sources
 

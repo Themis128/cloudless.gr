@@ -1,0 +1,54 @@
+# Refresh LinkedIn Marketing API access token from LINKEDIN_REFRESH_TOKEN.
+#
+# Non-interactive. Does NOT register Lead Gen (needs Lead Sync product + scope).
+# After success, updates GH secrets (via GH_PAT) and dispatches
+# sync-campaign-ads-pi-secrets so the Pi pod gets the new tokens.
+#
+# If refresh_token is expired: run scripts/linkedin-reauth-and-register.mjs
+# locally (browser OAuth), then re-run this workflow as a health check.
+
+name: Refresh LinkedIn marketing token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Refresh token (no Lead Gen)
+        env:
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          LINKEDIN_REFRESH_TOKEN: ${{ secrets.LINKEDIN_REFRESH_TOKEN }}
+          # GITHUB_TOKEN cannot write Actions secrets
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_REPO: ${{ github.repository }}
+          GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
+        run: |
+          set -euo pipefail
+          if [ "${GH_PAT_SET}" != "true" ]; then
+            echo "::error::GH_PAT is required to write LINKEDIN_ACCESS_TOKEN / LINKEDIN_REFRESH_TOKEN"
+            exit 1
+          fi
+          if [ -z "${LINKEDIN_REFRESH_TOKEN:-}" ]; then
+            echo "::error::LINKEDIN_REFRESH_TOKEN secret is empty"
+            exit 1
+          fi
+          if [ -z "${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            echo "::error::LINKEDIN_CLIENT_SECRET secret is empty"
+            exit 1
+          fi
+          node scripts/linkedin-reauth-and-register.mjs --refresh --no-leadgen
