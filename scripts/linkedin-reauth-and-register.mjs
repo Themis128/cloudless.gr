@@ -7,11 +7,15 @@
  * leadNotifications.
  *
  * Flow:
- *   1. node scripts/linkedin-reauth-and-register.mjs
+ *   0. Non-interactive (if refresh still valid):
+ *      node scripts/linkedin-reauth-and-register.mjs --refresh --no-leadgen
+ *      or: gh workflow run "Refresh LinkedIn marketing token"
+ *   1. node scripts/linkedin-reauth-and-register.mjs [--no-leadgen]
  *      → prints authorize URL (open while logged into LinkedIn as ad-account admin)
  *   2. Paste ?code=… from redirect into:
  *      node scripts/linkedin-reauth-and-register.mjs --code <AUTH_CODE>
- *   3. Script exchanges code, updates GH secrets, syncs Pi secrets, registers webhook.
+ *   3. Script exchanges code, updates GH secrets, syncs Pi secrets, registers webhook
+ *      (skip webhook with --no-leadgen).
  *
  * Env (or GH vars/secrets):
  *   LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
@@ -27,11 +31,9 @@ const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
 // Must match the LinkedIn Developer App allowlist exactly (verified 2026-09-15:
 // only postiz.cloudless.gr/integrations/social/linkedin is registered).
 const REDIRECT_URI =
-  process.env.LINKEDIN_REDIRECT_URI ||
-  "https://postiz.cloudless.gr/integrations/social/linkedin";
+  process.env.LINKEDIN_REDIRECT_URI || "https://postiz.cloudless.gr/integrations/social/linkedin";
 const ACCOUNT_ID = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
-const WEBHOOK_URL =
-  process.env.WEBHOOK_URL || "https://cloudless.gr/api/webhooks/linkedin-leads";
+const WEBHOOK_URL = process.env.WEBHOOK_URL || "https://cloudless.gr/api/webhooks/linkedin-leads";
 const REPO = process.env.GH_REPO || "Themis128/cloudless.gr";
 
 const SCOPES = [
@@ -72,17 +74,10 @@ function argValue(flag) {
   return process.argv[i + 1] ?? null;
 }
 
-async function exchangeCode(code) {
+async function tokenRequest(body) {
   if (!CLIENT_SECRET) {
-    throw new Error("LINKEDIN_CLIENT_SECRET is required to exchange the code");
+    throw new Error("LINKEDIN_CLIENT_SECRET is required");
   }
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    code,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    redirect_uri: REDIRECT_URI,
-  });
   const res = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -95,13 +90,35 @@ async function exchangeCode(code) {
   return json;
 }
 
+async function exchangeCode(code) {
+  return tokenRequest(
+    new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      redirect_uri: REDIRECT_URI,
+    })
+  );
+}
+
+/** Non-interactive refresh using LINKEDIN_REFRESH_TOKEN (GH secret / Pi env). */
+async function refreshAccessToken(refreshToken) {
+  return tokenRequest(
+    new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+    })
+  );
+}
+
 async function ghSecretSet(name, value) {
   const { spawnSync } = await import("node:child_process");
-  const r = spawnSync(
-    "gh",
-    ["secret", "set", name, "--repo", REPO, "--body", value],
-    { encoding: "utf8" }
-  );
+  const r = spawnSync("gh", ["secret", "set", name, "--repo", REPO, "--body", value], {
+    encoding: "utf8",
+  });
   if (r.status !== 0) {
     throw new Error(`gh secret set ${name} failed: ${r.stderr || r.stdout}`);
   }
@@ -140,18 +157,59 @@ async function syncPiSecrets() {
   console.log("dispatched sync-campaign-ads-pi-secrets.yml");
 }
 
+async function persistAndMaybeRegister(tokens, { registerLeadgen }) {
+  console.log(
+    `got access_token (len=${tokens.access_token.length}), expires_in=${tokens.expires_in}`
+  );
+
+  await ghSecretSet("LINKEDIN_ACCESS_TOKEN", tokens.access_token);
+  if (tokens.refresh_token) {
+    await ghSecretSet("LINKEDIN_REFRESH_TOKEN", tokens.refresh_token);
+  }
+
+  await syncPiSecrets();
+
+  if (!registerLeadgen) {
+    console.log("Skipped Lead Gen webhook registration (--no-leadgen / --refresh-only).");
+    console.log("Done.");
+    return;
+  }
+
+  console.log("Registering Lead Gen webhook…");
+  await registerWebhook(tokens.access_token);
+  console.log("Done.");
+}
+
 async function main() {
+  const skipLeadgen = process.argv.includes("--no-leadgen");
+  const refreshOnly = process.argv.includes("--refresh") || process.argv.includes("--refresh-only");
   let code = argValue("--code");
+
+  if (refreshOnly) {
+    const refreshToken = process.env.LINKEDIN_REFRESH_TOKEN || "";
+    if (!refreshToken) {
+      throw new Error("LINKEDIN_REFRESH_TOKEN is required for --refresh");
+    }
+    console.log("Refreshing access token via refresh_token grant…");
+    const tokens = await refreshAccessToken(refreshToken);
+    await persistAndMaybeRegister(tokens, { registerLeadgen: !skipLeadgen });
+    return;
+  }
+
   if (!code) {
-    const skipLeadgen = process.argv.includes("--no-leadgen");
     console.log("Open this URL, approve scopes, then re-run with --code <AUTH_CODE>:\n");
     console.log(authorizeUrl(!skipLeadgen));
     console.log(
       "\nRedirect URI (must match Developer App allowlist):\n  " +
         REDIRECT_URI +
-        "\n\nIf authorize fails with unauthorized_scope_error for\n" +
+        "\n\nPostiz is behind Cloudflare Access — use Tailscale NodePort if OTP fails:\n" +
+        "  http://100.74.191.58:30500/integrations/social/linkedin\n" +
+        "(LinkedIn still redirects to the public HTTPS URI; copy ?code= from the\n" +
+        "blocked URL bar, or add http://127.0.0.1:8765/callback to the app allowlist.)\n\n" +
+        "If authorize fails with unauthorized_scope_error for\n" +
         "r_marketing_leadgen_automation: enable Lead Sync on the LinkedIn app,\n" +
-        "or pass --no-leadgen to refresh marketing tokens without Lead Gen."
+        "or pass --no-leadgen to refresh marketing tokens without Lead Gen.\n\n" +
+        "Non-interactive: LINKEDIN_REFRESH_TOKEN=… node … --refresh --no-leadgen"
     );
     if (process.stdin.isTTY) {
       const rl = createInterface({ input, output });
@@ -170,19 +228,7 @@ async function main() {
 
   console.log("Exchanging code…");
   const tokens = await exchangeCode(code);
-  console.log(
-    `got access_token (len=${tokens.access_token.length}), expires_in=${tokens.expires_in}`
-  );
-
-  await ghSecretSet("LINKEDIN_ACCESS_TOKEN", tokens.access_token);
-  if (tokens.refresh_token) {
-    await ghSecretSet("LINKEDIN_REFRESH_TOKEN", tokens.refresh_token);
-  }
-
-  await syncPiSecrets();
-  console.log("Registering Lead Gen webhook…");
-  await registerWebhook(tokens.access_token);
-  console.log("Done.");
+  await persistAndMaybeRegister(tokens, { registerLeadgen: !skipLeadgen });
 }
 
 main().catch((err) => {
