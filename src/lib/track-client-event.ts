@@ -16,6 +16,7 @@
  */
 
 import { trackPixelEvent } from "@/lib/meta-pixel";
+import { sendSocialAutoEvent, type SocialAutoAnalyticsEvent } from "@/lib/socialauto-analytics";
 
 type GtagFn = (
   _command: "event" | "config" | "consent" | "js",
@@ -42,8 +43,27 @@ function getAnalyticsWindow(): WindowWithAnalytics | null {
   return window as unknown as WindowWithAnalytics;
 }
 
-export function trackClientEvent(name: string, params: Record<string, unknown> = {}): void {
+export function trackClientEvent(
+  name: string,
+  params: Record<string, unknown> = {},
+  options: { path?: string; locale?: string } = {}
+): void {
   const w = getAnalyticsWindow();
+
+  // SocialAuto analytics hub — fire-and-forget; non-blocking.
+  if (typeof window !== "undefined") {
+    const saEvent: SocialAutoAnalyticsEvent = {
+      event: name,
+      domain: "cloudless.gr",
+      path: options.path ?? window.location?.pathname,
+      referrer: document.referrer || undefined,
+      locale: options.locale ?? document.documentElement.lang,
+      timestamp: Date.now(),
+      payload: params,
+    };
+    sendSocialAutoEvent(saEvent).catch(() => {});
+  }
+
   if (!w) return;
 
   // Google Analytics 4 / GTM — gtag("event", name, params)

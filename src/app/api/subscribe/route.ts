@@ -10,6 +10,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import { sendContactEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { trackEvent } from "@/lib/appflowy-analytics";
+import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
@@ -95,6 +96,17 @@ export async function POST(request: Request) {
       userAgent: request.headers.get("user-agent") ?? undefined,
       metadata: { source: "homepage_inline_form" },
     }).catch(() => {});
+
+    sendSocialAutoEventServer(
+      {
+        event: "home_newsletter_subscribe",
+        domain: "cloudless.gr",
+        path: "/",
+        locale: undefined,
+        payload: { source: "homepage_inline_form", email },
+      },
+      request
+    ).catch(() => {});
 
     return Response.json({ success: true, eventId });
   } catch (error) {

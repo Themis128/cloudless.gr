@@ -22,6 +22,7 @@ import { analyzeLeadMessage } from "@/lib/nlp";
 import type { LeadNlpResult } from "@/lib/nlp/types";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics";
 
 interface ContactRequestBody {
   name: string;
@@ -287,6 +288,7 @@ export async function POST(request: Request) {
       nlp,
     });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
+    const formSource = source || service || "website_contact_form";
 
     // All downstream services run fire-and-forget so a single integration
     // outage (email, Slack, CRM, etc.) never blocks the others or the
@@ -369,6 +371,26 @@ export async function POST(request: Request) {
         firstName: nameParts[0],
         lastName: nameParts.slice(1).join(" ") || undefined,
       }),
+      // 8. SocialAuto marketing analytics hub
+      sendSocialAutoEventServer(
+        {
+          event: "contact_submit",
+          domain: "cloudless.gr",
+          path: "/",
+          locale: pageLocale,
+          payload: {
+            source: formSource,
+            service: service || null,
+            service_slug: serviceSlug || null,
+            lead_score: lead.score,
+            lead_band: lead.band,
+            nlp_intent: nlp.intent,
+            nlp_locale: nlp.locale,
+            email,
+          },
+        },
+        request
+      ),
     ])
       .then((results) => {
         const labels = [
@@ -390,7 +412,6 @@ export async function POST(request: Request) {
         console.error("[Contact] Background allSettled error:", err);
       });
 
-    const formSource = source || service || "website_contact_form";
     trackEvent({
       event: "contact_submit",
       path: "/",

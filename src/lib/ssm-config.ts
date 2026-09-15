@@ -89,6 +89,8 @@ export interface AppConfig {
   SENTRY_WEBHOOK_SECRET: string;
   /** Shared secret authenticating SocialAuto lead ingest webhooks. */
   SOCIALAUTO_LEADS_WEBHOOK_SECRET: string;
+  /** Shared secret authenticating SocialAuto website-analytics webhooks. */
+  SOCIALAUTO_WEB_ANALYTICS_SECRET: string;
   SNS_PORTAL_TOPIC_ARN: string;
   // Monitoring / observability
   GRAFANA_BASE_URL: string;
@@ -223,6 +225,7 @@ function buildConfigFromEnv(): AppConfig {
     CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
     SOCIALAUTO_LEADS_WEBHOOK_SECRET: process.env.SOCIALAUTO_LEADS_WEBHOOK_SECRET || "",
+    SOCIALAUTO_WEB_ANALYTICS_SECRET: process.env.SOCIALAUTO_WEB_ANALYTICS_SECRET || "",
     SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
