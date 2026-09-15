@@ -18,6 +18,7 @@
 
 import type { AdMetrics, Bookmark, AdPlatformId } from "./types";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
 
 export interface BookmarkKeyOpts {
   campaignSlug: string;
@@ -96,6 +97,7 @@ class D1BookmarkStore implements IBookmarkStore {
   }
 
   async putBookmark(key: string, snapshot: AdMetrics): Promise<void> {
+    if (!allowDiscretionaryD1Write(1)) return;
     try {
       const lastPostedAt = new Date().toISOString();
       const updatedAt = Math.floor(Date.now() / 1000);

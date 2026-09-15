@@ -6,6 +6,11 @@
  */
 
 import type { AuthDatabase } from "@/lib/auth-d1";
+import {
+  allowDiscretionaryD1Write,
+  funnelImpressionsEnabled,
+  passSample,
+} from "@/lib/d1-write-budget";
 
 export const FUNNEL_EVENT_TYPES = [
   "search_query",
@@ -99,6 +104,15 @@ function newEventId(): string {
 export async function recordFunnelEvent(raw: FunnelEventInput): Promise<boolean> {
   const event = normalizeFunnelEvent(raw);
   if (!event) return false;
+
+  // rec_impression fires on every store recommendations mount — dominant free-tier
+  // rows_written consumer. Off unless explicitly enabled.
+  if (event.event_type === "rec_impression" && !funnelImpressionsEnabled()) {
+    return false;
+  }
+
+  if (!passSample("D1_FUNNEL_SAMPLE", 0.1)) return false;
+  if (!allowDiscretionaryD1Write(1)) return false;
 
   const db = getFunnelD1Binding();
   if (!db) return false;

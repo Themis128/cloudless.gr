@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
 
 /**
  * Read-through cache for slow third-party data (Google Search Console).
@@ -116,6 +117,7 @@ export async function setCached<T = unknown>(
   payload: T,
   ttlSeconds = 3600
 ): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const db = getAuthDbFromEnv();
   if (!db) return;
   const hash = paramsHash(params);
