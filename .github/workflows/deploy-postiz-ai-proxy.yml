@@ -6,6 +6,7 @@ name: Deploy postiz-ai-proxy Worker
 # previous deploy — wrangler deploy does not reset them.
 on:
   push:
+    branches: [main]
     paths:
       - .github/workflows/deploy-postiz-ai-proxy.yml
       - workers/postiz-ai-proxy/**
@@ -46,14 +47,19 @@ jobs:
 
       - name: Report result
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
             const outcome = '${{ job.status }}';
             const emoji = outcome === 'success' ? '✅' : '❌';
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 382,
-              body: `${emoji} **deploy-postiz-ai-proxy** ${outcome}\n\nWorker updated: Postiz captions → \`meta/llama-3.3-70b-instruct\`, chatbot \`?thinking=1\` → \`nvidia/nemotron-3.5-lightning-30b-a3b\` (reasoning stripped before returning).`
-            });
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: 382,
+                body: `${emoji} **deploy-postiz-ai-proxy** ${outcome}\n\nWorker updated: Postiz captions → \`meta/llama-3.3-70b-instruct\`, chatbot \`?thinking=1\` → \`nvidia/nemotron-3.5-lightning-30b-a3b\` (reasoning stripped before returning).`
+              });
+            } catch (err) {
+              core.warning(`issue comment skipped: ${err.message || err}`);
+            }
