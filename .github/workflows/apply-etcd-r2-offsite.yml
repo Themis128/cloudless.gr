@@ -142,13 +142,13 @@ jobs:
           # k3s etcd-snapshot can hang indefinitely on CA drift — hard-cap it.
           echo "→ k3s etcd-snapshot save ${NAME} --data-dir ${DATA_DIR}"
           set +e
-          timeout 90 "${HOST[@]}" k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
+          "${HOST[@]}" timeout -k 10 90 k3s etcd-snapshot save --data-dir "$DATA_DIR" --name "$NAME" 2>&1 \
             | tee -a /tmp/snap.out
           rc=${PIPESTATUS[0]}
           set -e
           if [ "$rc" -eq 0 ]; then
             SNAP_OK=1
-            timeout 30 "${HOST[@]}" k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
+            "${HOST[@]}" timeout -k 5 30 k3s etcd-snapshot ls --data-dir "$DATA_DIR" 2>&1 \
               | head -15 | tee -a /tmp/snap.out || true
           else
             echo "WARN: etcd-snapshot --data-dir failed/timed out (rc=${rc})" | tee -a /tmp/snap.out
@@ -158,12 +158,12 @@ jobs:
           if [ "$SNAP_OK" -ne 1 ]; then
             echo "→ k3s etcd-snapshot save ${NAME} (host default data-dir)"
             set +e
-            timeout 60 "${HOST[@]}" k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
+            "${HOST[@]}" timeout -k 10 60 k3s etcd-snapshot save --name "$NAME" 2>&1 | tee -a /tmp/snap.out
             rc=${PIPESTATUS[0]}
             set -e
             if [ "$rc" -eq 0 ]; then
               SNAP_OK=1
-              timeout 30 "${HOST[@]}" k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
+              "${HOST[@]}" timeout -k 5 30 k3s etcd-snapshot ls 2>&1 | head -15 | tee -a /tmp/snap.out || true
             else
               echo "WARN: default-path etcd-snapshot failed/timed out (rc=${rc}); falling back to etcdctl + rclone" \
                 | tee -a /tmp/snap.out
@@ -172,11 +172,11 @@ jobs:
 
           # Resolve a working etcdctl (k3s subcommand → bundled binary → download).
           resolve_etcdctl() {
-            if timeout 15 "${HOST[@]}" k3s etcdctl version >/dev/null 2>&1; then
+            if "${HOST[@]}" timeout -k 5 15 k3s etcdctl version >/dev/null 2>&1; then
               echo "k3s etcdctl"
               return 0
             fi
-            FOUND=$(timeout 30 "${HOST[@]}" bash -c "
+            FOUND=$("${HOST[@]}" timeout -k 5 30 bash -c "
               find '${DATA_DIR}/data' /usr/local/bin /usr/bin -maxdepth 4 -name etcdctl -type f 2>/dev/null | head -1
             " || true)
             if [ -n "${FOUND}" ]; then
@@ -198,7 +198,7 @@ jobs:
               return 0
             fi
             echo "→ downloading etcdctl ${ETCDCTL_VERSION} (${ETCD_ARCH})" | tee -a /tmp/snap.out
-            timeout 150 "${HOST[@]}" bash -c "
+            "${HOST[@]}" timeout -k 15 150 bash -c "
               set -euo pipefail
               TMP=\$(mktemp -d)
               curl -fsSL --max-time 90 \"https://github.com/etcd-io/etcd/releases/download/${ETCDCTL_VERSION}/etcd-${ETCDCTL_VERSION}-linux-${ETCD_ARCH}.tar.gz\" \\
@@ -227,7 +227,7 @@ jobs:
             LOCAL="/tmp/${NAME}.db"
             echo "→ ${ETCDCTL_BIN} snapshot save ${LOCAL}" | tee -a /tmp/snap.out
             set +e
-            timeout 90 "${HOST[@]}" env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
+            "${HOST[@]}" timeout -k 10 90 env ETCDCTL_API=3 "${ETCDCTL_CMD[@]}" \
               --endpoints=https://127.0.0.1:2379 \
               --cacert="$ETCD_CA" --cert="$ETCD_CRT" --key="$ETCD_KEY" \
               snapshot save "$LOCAL" 2>&1 | tee -a /tmp/snap.out
