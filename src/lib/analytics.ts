@@ -5,8 +5,9 @@
  * Generic product events land in `analytics_events` (migration 0009).
  */
 
-import type { AuthDatabase } from "@/lib/auth-d1";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { allowDiscretionaryD1Write, passSample } from "@/lib/d1-write-budget";
+import { secureId } from "@/lib/secure-id";
 
 export interface AnalyticsEvent {
   event: string;
@@ -29,40 +30,6 @@ export interface AnalyticsEvent {
   properties?: Record<string, unknown>;
 }
 
-interface WorkersGlobal {
-  __AUTH_DB__?: AuthDatabase;
-}
-
-interface ProcessWithAuthDb {
-  env?: { AUTH_DB?: AuthDatabase };
-}
-
-function workersGlobal(): WorkersGlobal {
-  return globalThis as unknown as WorkersGlobal;
-}
-
-function getProcessEnv(): ProcessWithAuthDb["env"] {
-  return (process as unknown as ProcessWithAuthDb).env;
-}
-
-function getD1Binding(): AuthDatabase | null {
-  const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
-  if (db && typeof db.prepare === "function") return db;
-  return null;
-}
-
-function newEventId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  if (typeof globalThis.crypto?.getRandomValues === "function") {
-    const bytes = new Uint8Array(8);
-    globalThis.crypto.getRandomValues(bytes);
-    return `evt_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
-  }
-  return `evt_${Date.now()}`;
-}
-
 /**
  * Persist a generic analytics event to D1.
  * Returns true when written, false when D1 unavailable or invalid.
@@ -74,7 +41,7 @@ export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean>
   if (!passSample("D1_ANALYTICS_SAMPLE", 0.05)) return false;
   if (!allowDiscretionaryD1Write(1)) return false;
 
-  const db = getD1Binding();
+  const db = getAuthDbFromEnv();
   if (!db) return false;
 
   const props = {
@@ -96,7 +63,7 @@ export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean>
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))`
       )
       .bind(
-        newEventId(),
+        secureId("evt_"),
         event,
         evt.session_id?.slice(0, 128) ?? null,
         evt.user_id?.slice(0, 128) ?? null,

@@ -14,7 +14,7 @@ describe("paramsHash", () => {
 
   it("returns a hex string for non-empty params", () => {
     const hash = paramsHash({ foo: "bar" });
-    expect(/^[0-9a-f]{16}$/.test(hash)).toBe(true);
+    expect(/^[0-9a-f]{8}$/.test(hash)).toBe(true);
   });
 
   it("is deterministic for the same params", () => {

@@ -1,3 +1,5 @@
+import { secureId } from "@/lib/secure-id";
+
 export interface ReportSection {
   id: string;
   title: string;
@@ -34,7 +36,7 @@ export async function getReport(id: string): Promise<Report | null> {
 
 export async function createReport(input: GenerateReportInput): Promise<Report> {
   const report: Report = {
-    id: `report_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    id: secureId("report_"),
     clientName: input.clientName,
     dateRange: { start: input.dateStart, end: input.dateEnd },
     sections: [],
@@ -48,8 +50,11 @@ export async function createReport(input: GenerateReportInput): Promise<Report> 
 export async function updateReport(id: string, updates: Partial<Report>): Promise<Report | null> {
   const idx = store.findIndex((r) => r.id === id);
   if (idx === -1) return null;
-  store[idx] = { ...store[idx], ...updates };
-  return store[idx];
+  const existing = store[idx];
+  if (!existing) return null;
+  const next = { ...existing, ...updates };
+  store[idx] = next;
+  return next;
 }
 
 export async function deleteReport(id: string): Promise<boolean> {
