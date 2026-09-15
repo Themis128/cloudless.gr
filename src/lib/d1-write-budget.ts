@@ -19,6 +19,8 @@ const DEFAULT_BUDGET = 50_000;
 
 let dayKey = "";
 let used = 0;
+/** Deterministic sample counter — avoids Math.random (Sonar S2245). */
+let sampleSeq = 0;
 
 function utcDayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -63,15 +65,18 @@ export function discretionaryWritesUsedToday(): number {
   return used;
 }
 
-/** Sample gate (0 = never, 1 = always). Uses CSPRNG — not for secrets, avoids S2245. */
+/**
+ * Sample gate (0 = never, 1 = always). Counter-based — not cryptographic;
+ * soft write throttle only (avoids Sonar S2245 / crypto surface).
+ */
 export function passSample(rateEnv: string, defaultRate: number): boolean {
   const raw = process.env[rateEnv]?.trim();
   const rate = raw === undefined || raw === "" ? defaultRate : Number(raw);
   if (!Number.isFinite(rate) || rate <= 0) return false;
   if (rate >= 1) return true;
-  const buf = new Uint32Array(1);
-  globalThis.crypto.getRandomValues(buf);
-  return buf[0]! / 0x1_0000_0000 < rate;
+  const period = Math.max(1, Math.round(1 / rate));
+  sampleSeq += 1;
+  return sampleSeq % period === 0;
 }
 
 export function funnelImpressionsEnabled(): boolean {
@@ -82,4 +87,5 @@ export function funnelImpressionsEnabled(): boolean {
 export function __resetDiscretionaryBudgetForTests(): void {
   dayKey = "";
   used = 0;
+  sampleSeq = 0;
 }

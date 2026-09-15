@@ -51,4 +51,13 @@ describe("d1-write-budget", () => {
     process.env.D1_FUNNEL_SAMPLE = "1";
     expect(passSample("D1_FUNNEL_SAMPLE", 0.1)).toBe(true);
   });
+
+  it("passSample uses a deterministic period for fractional rates", () => {
+    process.env.D1_FUNNEL_SAMPLE = "0.25";
+    const hits = Array.from({ length: 8 }, () => passSample("D1_FUNNEL_SAMPLE", 0.25));
+    // period = round(1/0.25) = 4 → every 4th call
+    expect(hits.filter(Boolean)).toHaveLength(2);
+    expect(hits[3]).toBe(true);
+    expect(hits[7]).toBe(true);
+  });
 });
