@@ -47,9 +47,16 @@ bash scripts/cf-token-smoketest.sh
 # List / ensure CI perms (needs API Tokens Write or Global API Key):
 bash scripts/cf-token-permissions.sh list
 bash scripts/cf-token-permissions.sh ensure-ci "<token-name>"
+
+# From CI (set repo secrets CF_EMAIL + CF_GLOBAL_API_KEY once):
+gh workflow run "Ensure Cloudflare CI token scopes" --ref main -f dry_run=true
+gh workflow run "Ensure Cloudflare CI token scopes" --ref main -f dry_run=false
 ```
 
-`ensure-ci` adds the full CI set including **Workers Scripts Write**.
+`ensure-ci` / the workflow add the full CI set including **Workers Scripts Write**.
+
+User API Tokens:Read and Tunnel:Read are **warnings** in the smoketest (non-fatal).
+Missing **Workers Scripts Write** is a hard fail when detectable.
 
 ## Symptom → fix
 
