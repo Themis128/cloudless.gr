@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 import JsonLd from "@/components/JsonLd";
@@ -36,6 +35,7 @@ import SocialLinks from "@/components/SocialLinks";
 import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
+import TrackedLink from "@/components/TrackedLink";
 
 export const revalidate = 3600;
 
@@ -308,20 +308,24 @@ export default async function Home({
               </p>
 
               <div className="animate-fade-in-up mt-8 flex flex-col gap-4 delay-300 sm:flex-row">
-                <Link
+                <TrackedLink
                   href="/contact"
+                  event="home_hero_audit_click"
+                  params={{ cta: "primary", position: "hero" }}
                   data-testid="hero-cta-primary"
                   className="btn-v2-primary rounded-lg px-8 py-3.5 text-center font-mono text-lg font-semibold"
                 >
                   {t("hero.ctaPrimary", "Get a Free Audit")}
-                </Link>
-                <Link
+                </TrackedLink>
+                <TrackedLink
                   href="/services"
+                  event="home_hero_services_click"
+                  params={{ cta: "secondary", position: "hero" }}
                   data-testid="hero-cta-secondary"
                   className="btn-v2-ghost rounded-lg px-8 py-3.5 text-center font-mono font-semibold"
                 >
                   {t("hero.ctaSecondary", "View Services")}
-                </Link>
+                </TrackedLink>
               </div>
 
               <div
@@ -665,8 +669,10 @@ export default async function Home({
 
           <ScrollReveal delay={400}>
             <div className="mt-12 text-center">
-              <Link
+              <TrackedLink
                 href="/services"
+                event="home_services_view_click"
+                params={{ position: "services_section" }}
                 className="group inline-flex items-center gap-2 font-mono text-sm font-semibold transition-colors"
                 style={{ color: "var(--accent)" }}
               >
@@ -681,7 +687,7 @@ export default async function Home({
                 >
                   <path d="M3 8h10M9 4l4 4-4 4" />
                 </svg>
-              </Link>
+              </TrackedLink>
             </div>
           </ScrollReveal>
 
@@ -705,8 +711,10 @@ export default async function Home({
                   "Get our free Cloud Migration Playbook — the exact framework we use with clients."
                 )}
               </p>
-              <Link
+              <TrackedLink
                 href="/contact?type=playbook"
+                event="home_playbook_download_click"
+                params={{ position: "lead_capture" }}
                 className="inline-flex items-center gap-2 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all duration-200"
                 style={{
                   background: "color-mix(in srgb, var(--secondary) 8%, transparent)",
@@ -718,7 +726,7 @@ export default async function Home({
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M7 1v10M3 8l4 4 4-4" />
                 </svg>
-              </Link>
+              </TrackedLink>
             </div>
           </ScrollReveal>
         </div>
@@ -756,8 +764,10 @@ export default async function Home({
                     )}
                   </p>
                 </div>
-                <Link
+                <TrackedLink
                   href="/blog"
+                  event="home_blog_view_all_click"
+                  params={{ position: "blog_highlights" }}
                   className="group inline-flex items-center gap-2 font-mono text-sm font-semibold transition-colors"
                   style={{ color: "var(--accent)" }}
                 >
@@ -772,7 +782,7 @@ export default async function Home({
                   >
                     <path d="M3 8h10M9 4l4 4-4 4" />
                   </svg>
-                </Link>
+                </TrackedLink>
               </div>
             </ScrollReveal>
 
@@ -1038,18 +1048,22 @@ export default async function Home({
               )}
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Link
+              <TrackedLink
                 href="/contact"
+                event="home_footer_audit_click"
+                params={{ cta: "primary", position: "closing_cta" }}
                 className="btn-v2-primary rounded-lg px-8 py-3.5 font-mono font-semibold shadow-md"
               >
                 {t("cta.ctaPrimary", "Book Your Free Audit")}
-              </Link>
-              <Link
+              </TrackedLink>
+              <TrackedLink
                 href="/services"
+                event="home_footer_pricing_click"
+                params={{ cta: "secondary", position: "closing_cta" }}
                 className="btn-v2-ghost rounded-lg px-8 py-3.5 font-mono font-medium"
               >
                 {t("cta.ctaSecondary", "View Pricing")}
-              </Link>
+              </TrackedLink>
             </div>
           </ScrollReveal>
         </div>

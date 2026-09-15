@@ -9,6 +9,7 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { sendContactEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
+import { trackEvent } from "@/lib/appflowy-analytics";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
       clientUserAgent: request.headers.get("user-agent") ?? undefined,
       eventSourceUrl: "https://cloudless.gr",
       customData: { content_name: "newsletter_signup" },
+    }).catch(() => {});
+
+    trackEvent({
+      event: "newsletter_signup",
+      path: "/",
+      referrer: request.headers.get("referer") ?? undefined,
+      userAgent: request.headers.get("user-agent") ?? undefined,
+      metadata: { source: "homepage_inline_form" },
     }).catch(() => {});
 
     return Response.json({ success: true, eventId });
