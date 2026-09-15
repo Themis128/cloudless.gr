@@ -1,7 +1,7 @@
 name: Apply etcd off-site snapshots → R2
 
 # Runs ON the omv Pi runner (no SSH hop). Installs etcd R2 off-site config
-# with CF_R2_* keys. Never commits keys. Restarts k3s.service briefly.
+# with CF_R2_* keys. Never commits keys. Restarts k3s-k3s-omv (or k3s).
 # Cloudflare Free only — do not upgrade to Workers Paid.
 
 on:
@@ -46,14 +46,23 @@ jobs:
           echo "::add-mask::${CF_R2_SECRET_ACCESS_KEY}"
           echo "OK R2 secrets present"
           hostname
-          # Exact unit only — never awk /^k3s/ (matches k3s-etcd-defrag, mirror, …)
-          if ! sudo systemctl cat k3s.service >/dev/null 2>&1; then
-            echo "::error::k3s.service not found on $(hostname)"
+          # OMV packages k3s as k3s-k3s-omv.service (see install-pi5-tuning.sh).
+          # Never awk /^k3s/ — that matches k3s-etcd-defrag / snapshot-mirror.
+          K3S_UNIT=""
+          for u in k3s-k3s-omv.service k3s.service; do
+            if sudo systemctl cat "$u" >/dev/null 2>&1; then
+              K3S_UNIT=$u
+              break
+            fi
+          done
+          if [ -z "$K3S_UNIT" ]; then
+            echo "::error::No k3s control-plane unit on $(hostname)"
             sudo systemctl list-unit-files 'k3s*' --no-legend || true
             exit 1
           fi
-          echo "OK k3s.service present"
-          sudo systemctl is-active k3s || true
+          echo "K3S_UNIT=${K3S_UNIT}" >> "$GITHUB_ENV"
+          echo "OK unit ${K3S_UNIT}"
+          sudo systemctl is-active "$K3S_UNIT" || true
           sudo ls -la /var/lib/rancher/k3s/server/token 2>&1 | head -3 || true
           command -v k3s
 
@@ -77,9 +86,9 @@ jobs:
           sudo grep -E 'etcd-s3-endpoint|etcd-s3-bucket|etcd-s3-folder|^etcd-s3:' /etc/rancher/k3s/config.yaml \
             | sed -E 's/(access-key|secret-key):.*/\1: ***/'
 
-          echo "→ restarting k3s.service (not k3s-* helpers)"
-          sudo systemctl reset-failed k3s 2>/dev/null || true
-          sudo systemctl restart k3s
+          echo "→ restarting ${K3S_UNIT}"
+          sudo systemctl reset-failed "$K3S_UNIT" 2>/dev/null || true
+          sudo systemctl restart "$K3S_UNIT"
 
           for i in $(seq 1 36); do
             if sudo k3s kubectl get --raw=/readyz >/dev/null 2>&1; then
@@ -89,8 +98,8 @@ jobs:
             sleep 10
             if [ "$i" -eq 36 ]; then
               echo "ERROR k3s API not ready after 6m"
-              sudo systemctl status k3s --no-pager | head -40 || true
-              sudo journalctl -u k3s -n 40 --no-pager || true
+              sudo systemctl status "$K3S_UNIT" --no-pager | head -40 || true
+              sudo journalctl -u "$K3S_UNIT" -n 40 --no-pager || true
               exit 1
             fi
           done
@@ -106,7 +115,7 @@ jobs:
           echo "→ etcd-snapshot save verify-r2-${TS}"
           sudo k3s etcd-snapshot save --name "verify-r2-${TS}" 2>&1 | tee /tmp/snap.out
           sudo k3s etcd-snapshot ls 2>&1 | head -15
-          echo "DONE etcd R2 off-site config applied on $(hostname)" | tee /tmp/etcd-r2-apply.log
+          echo "DONE etcd R2 off-site via ${K3S_UNIT} on $(hostname)" | tee /tmp/etcd-r2-apply.log
 
       - name: Comment tracking issue
         if: always()
