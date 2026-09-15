@@ -1,0 +1,84 @@
+name: Apply EspoCRM xbstream backup → R2
+
+# Applies the Cloudflare Free R2 xbstream CronJob (no AWS S3).
+# Requires cluster secret espocrm/pvc-backup-r2 (see store-r2-backup-credentials.yml).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-espocrm-xbstream-r2.yml
+      - infrastructure/espocrm/k8s/mariadb-xbstream-backup.yaml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-espocrm-xbstream-r2
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ISSUE: "382"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Ensure pvc-backup-r2 exists
+        run: |
+          set -euo pipefail
+          if ! kubectl -n espocrm get secret pvc-backup-r2 >/dev/null 2>&1; then
+            echo "::error::espocrm/pvc-backup-r2 missing. Run workflow Store R2 Backup Credentials with update_cluster=true."
+            exit 1
+          fi
+          echo "OK pvc-backup-r2 present"
+
+      - name: Apply xbstream CronJob
+        run: |
+          set -euo pipefail
+          kubectl apply -f infrastructure/espocrm/k8s/mariadb-xbstream-backup.yaml
+          kubectl -n espocrm get cronjob mariadb-xbstream-backup -o wide
+          kubectl -n espocrm get cronjob mariadb-xbstream-backup -o jsonpath='{.spec.jobTemplate.spec.template.spec.containers[0].env}' | tee /tmp/env.json
+          python3 - <<'PY'
+          import json
+          env=json.load(open("/tmp/env.json"))
+          names={e.get("name") for e in env}
+          assert "R2_ACCESS_KEY_ID" in names, names
+          assert "AWS_ACCESS_KEY_ID" not in names, "still on AWS keys"
+          print("OK CronJob uses R2 env (no AWS_ACCESS_KEY_ID)")
+          PY
+
+      - name: Comment tracking issue
+        if: always()
+        run: |
+          {
+            echo "# EspoCRM xbstream → R2 apply — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo "**Manifest:** \`infrastructure/espocrm/k8s/mariadb-xbstream-backup.yaml\`"
+            echo "**Storage:** Cloudflare R2 Free \`datalake-bucket\` (no AWS S3)"
+            echo ""
+            echo "Etcd off-site R2 still needs a one-time omv apply: \`infrastructure/etcd-backup/README.md\`."
+          } > c.md
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" --body-file c.md || true
