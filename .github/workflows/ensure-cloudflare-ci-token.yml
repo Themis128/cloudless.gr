@@ -20,6 +20,14 @@ on:
         description: If true, only list tokens / show plan (no PUT)
         type: boolean
         default: false
+      cf_email:
+        description: Optional one-shot CF login email (overrides CF_EMAIL secret; not stored)
+        required: false
+        default: ""
+      cf_global_api_key:
+        description: Optional one-shot Global API Key (overrides secret; not stored — prefer repo secrets)
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -39,19 +47,35 @@ jobs:
       CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
       TOKEN_NAME: ${{ github.event.inputs.token_name }}
       DRY_RUN: ${{ github.event.inputs.dry_run }}
+      INPUT_CF_EMAIL: ${{ github.event.inputs.cf_email }}
+      INPUT_CF_GLOBAL_API_KEY: ${{ github.event.inputs.cf_global_api_key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
       - name: Validate auth
         run: |
           set -euo pipefail
+          # One-shot dispatch inputs override repo secrets (never logged).
+          if [ -n "${INPUT_CF_EMAIL:-}" ]; then
+            export CF_EMAIL="$INPUT_CF_EMAIL"
+            echo "CF_EMAIL<<EOF" >> "$GITHUB_ENV"
+            echo "$INPUT_CF_EMAIL" >> "$GITHUB_ENV"
+            echo "EOF" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${INPUT_CF_GLOBAL_API_KEY:-}" ]; then
+            echo "::add-mask::${INPUT_CF_GLOBAL_API_KEY}"
+            export CF_GLOBAL_API_KEY="$INPUT_CF_GLOBAL_API_KEY"
+            echo "CF_GLOBAL_API_KEY<<EOF" >> "$GITHUB_ENV"
+            echo "$INPUT_CF_GLOBAL_API_KEY" >> "$GITHUB_ENV"
+            echo "EOF" >> "$GITHUB_ENV"
+          fi
           if [ -n "${CF_GLOBAL_API_KEY:-}" ] && [ -n "${CF_EMAIL:-}" ]; then
             echo "OK  using Global API Key bootstrap"
           elif [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
             echo "OK  using CLOUDFLARE_API_TOKEN (must already have User API Tokens Write)"
-            echo "::notice::If list fails with 403, set repo secrets CF_EMAIL + CF_GLOBAL_API_KEY (My Profile → API Tokens → Global API Key). Do not upgrade Workers to Paid."
+            echo "::notice::If list fails with 403, re-run with cf_email + cf_global_api_key inputs (or set CF_EMAIL + CF_GLOBAL_API_KEY secrets). Do not upgrade Workers to Paid."
           else
-            echo "::error::Set CF_EMAIL+CF_GLOBAL_API_KEY or a CLOUDFLARE_API_TOKEN with API Tokens Write"
+            echo "::error::Set CF_EMAIL+CF_GLOBAL_API_KEY (secrets or dispatch inputs) or a CLOUDFLARE_API_TOKEN with API Tokens Write"
             exit 1
           fi
 
