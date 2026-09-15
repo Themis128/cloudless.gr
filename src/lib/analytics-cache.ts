@@ -10,6 +10,8 @@
  * - TTL: Configurable per endpoint (default 1 hour)
  */
 
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
+
 // Cache TTL constants
 const DEFAULT_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 const PERFORMANCE_CACHE_TTL_SECONDS = 60 * 60 * 6; // 6 hours
@@ -69,6 +71,7 @@ export async function setCachedAnalytics(
   result: unknown,
   ttlSeconds = DEFAULT_CACHE_TTL_SECONDS
 ): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const sk = cacheKey(endpointKey, params);
   const now = Math.floor(Date.now() / 1000);
 
@@ -107,6 +110,7 @@ export async function withCache<T>(
 
 // Clean up expired cache entries
 export async function cleanupExpiredCache(db: AnalyticsDatabase): Promise<number> {
+  if (!allowDiscretionaryD1Write(1)) return 0;
   const now = Math.floor(Date.now() / 1000);
   const result = await db
     .prepare("DELETE FROM analytics_cache WHERE expires_at < ?")
@@ -145,6 +149,7 @@ export async function invalidateCache(
   endpointKey: string,
   params: Record<string, unknown>
 ): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   const sk = cacheKey(endpointKey, params);
   await db
     .prepare("DELETE FROM analytics_cache WHERE pk = ? AND sk = ?")
@@ -154,6 +159,7 @@ export async function invalidateCache(
 
 // Invalidate all analytics cache
 export async function invalidateAllAnalyticsCache(db: AnalyticsDatabase): Promise<void> {
+  if (!allowDiscretionaryD1Write(1)) return;
   await db.prepare("DELETE FROM analytics_cache WHERE pk = ?").bind("analytics").run();
 }
 

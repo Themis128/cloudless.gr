@@ -24,6 +24,12 @@ data:
   # In-cluster only — public https://ntfy.cloudless.gr is CF-challenged from pods.
   # cloudless-secrets may also set NTFY_BASE_URL (secretRef wins over this ConfigMap).
   NTFY_BASE_URL: http://ntfy.ntfy.svc.cluster.local
+  # Stay on Workers Free forever — do NOT upgrade to Paid for D1.
+  # Kill switch / tight caps for discretionary D1 rows_written (auth stays open).
+  D1_DISCRETIONARY_WRITES: "0"
+  D1_DISCRETIONARY_DAILY_BUDGET: "10000"
+  D1_FUNNEL_SAMPLE: "0.05"
+  D1_ANALYTICS_SAMPLE: "0.05"
   ADMIN_PUSH_VIA_NTFY: "1"
   GRAFANA_URL: https://grafana.cloudless.gr
   KUMA_URL: https://kuma.cloudless.gr

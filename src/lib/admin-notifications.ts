@@ -1,6 +1,7 @@
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { APP_TIMEZONE } from "@/lib/timezone";
+import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
 
 /**
  * Durable admin notifications store.
@@ -104,6 +105,7 @@ async function recordNotificationD1(
   db: AuthDatabase,
   notif: AdminNotification
 ): Promise<AdminNotification | null> {
+  if (!allowDiscretionaryD1Write(1)) return null;
   const sk = buildSk(notif.createdAt, notif.id);
   const createdAtUnix = Math.floor(new Date(notif.createdAt).getTime() / 1000);
   try {
@@ -188,11 +190,13 @@ async function listNotificationsD1(
 
 async function markNotificationsReadD1(db: AuthDatabase, ids: string[]): Promise<void> {
   for (const id of ids) {
+    if (!allowDiscretionaryD1Write(1)) return;
     await db.prepare(`UPDATE admin_notification SET read = 1 WHERE id = ?`).bind(id).run();
   }
 }
 
 async function purgeArchivedOlderThanD1(db: AuthDatabase, olderThan: string): Promise<number> {
+  if (!allowDiscretionaryD1Write(1)) return 0;
   const result = await db
     .prepare(
       `DELETE FROM admin_notification

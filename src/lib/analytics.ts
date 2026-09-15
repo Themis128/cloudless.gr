@@ -71,7 +71,7 @@ export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean>
   const event = typeof evt.event === "string" ? evt.event.trim().slice(0, 100) : "";
   if (!event) return false;
 
-  if (!passSample("D1_ANALYTICS_SAMPLE", 0.25)) return false;
+  if (!passSample("D1_ANALYTICS_SAMPLE", 0.05)) return false;
   if (!allowDiscretionaryD1Write(1)) return false;
 
   const db = getD1Binding();
