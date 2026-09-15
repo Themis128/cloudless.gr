@@ -1,16 +1,22 @@
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { allowDiscretionaryD1Write } from "@/lib/d1-write-budget";
-import { paramsHash } from "@/lib/d1-params-hash";
-import { rowToEntry, type CacheEntry } from "@/lib/d1-cache-entry";
+import {
+  getCachedFromTable,
+  setCachedToTable,
+  readThroughTable,
+  paramsHash,
+  type CacheEntry,
+} from "@/lib/d1-json-cache";
 
 export type { CacheEntry };
 export { paramsHash };
 
+const TABLE = "espocrm_cache" as const;
+const LOG = "espocrm-cache";
+
 /**
  * Read-through D1 cache for EspoCRM admin latency (not a second CRM).
- *
  * Table: AUTH_DB.espocrm_cache (migration 0017)
- * Soft-fails when AUTH_DB is unbound — callers always get a live (or empty) result.
  */
 
 export async function getCached<T = unknown>(
@@ -18,26 +24,7 @@ export async function getCached<T = unknown>(
   params: Record<string, unknown> = {},
   ttlSeconds = 900
 ): Promise<CacheEntry<T> | null> {
-  const db = getAuthDbFromEnv();
-  if (!db) return null;
-  const hash = paramsHash(params);
-  try {
-    const row = await db
-      .prepare(
-        "SELECT result_json, cached_at, expires_at FROM espocrm_cache WHERE pk = ? AND sk = ?"
-      )
-      .bind(route, hash)
-      .first<{
-        result_json: string | null;
-        cached_at: number | null;
-        expires_at: number | null;
-      }>();
-    if (!row) return null;
-    return rowToEntry<T>(row, ttlSeconds);
-  } catch (err) {
-    console.warn("[espocrm-cache] getCached failed:", err instanceof Error ? err.message : err);
-    return null;
-  }
+  return getCachedFromTable<T>(TABLE, LOG, route, params, ttlSeconds);
 }
 
 export async function setCached<T = unknown>(
@@ -46,22 +33,7 @@ export async function setCached<T = unknown>(
   payload: T,
   ttlSeconds = 900
 ): Promise<void> {
-  if (!allowDiscretionaryD1Write(1)) return;
-  const db = getAuthDbFromEnv();
-  if (!db) return;
-  const hash = paramsHash(params);
-  const now = Math.floor(Date.now() / 1000);
-  try {
-    await db
-      .prepare(
-        `INSERT OR REPLACE INTO espocrm_cache (pk, sk, result_json, cached_at, expires_at)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-      .bind(route, hash, JSON.stringify(payload), now, now + ttlSeconds)
-      .run();
-  } catch (err) {
-    console.warn("[espocrm-cache] setCached failed:", err instanceof Error ? err.message : err);
-  }
+  await setCachedToTable(TABLE, LOG, route, params, payload, ttlSeconds);
 }
 
 export async function readThrough<T>(
@@ -70,28 +42,10 @@ export async function readThrough<T>(
   fetcher: () => Promise<T>,
   opts: { ttlSeconds?: number; acceptStaleSeconds?: number } = {}
 ): Promise<{ value: T; source: "cache" | "live" | "stale"; ageSeconds: number }> {
-  const ttlSeconds = opts.ttlSeconds ?? ESPO_CACHE_TTL.list;
-  const acceptStaleSeconds = opts.acceptStaleSeconds ?? 1800;
-
-  const cached = await getCached<T>(route, params, ttlSeconds);
-  if (cached && !cached.stale) {
-    return { value: cached.payload, source: "cache", ageSeconds: cached.ageSeconds };
-  }
-
-  try {
-    const live = await fetcher();
-    setCached(route, params, live, ttlSeconds).catch(() => {});
-    return { value: live, source: "live", ageSeconds: 0 };
-  } catch (err) {
-    if (cached && cached.ageSeconds <= acceptStaleSeconds) {
-      console.warn(
-        `[espocrm-cache] live fetch failed for ${route}, serving stale (age=${cached.ageSeconds}s):`,
-        err instanceof Error ? err.message : err
-      );
-      return { value: cached.payload, source: "stale", ageSeconds: cached.ageSeconds };
-    }
-    throw err;
-  }
+  return readThroughTable(TABLE, LOG, route, params, fetcher, {
+    ttlSeconds: opts.ttlSeconds ?? ESPO_CACHE_TTL.list,
+    acceptStaleSeconds: opts.acceptStaleSeconds ?? 1800,
+  });
 }
 
 /** Best-effort delete of all keys whose pk equals or starts with prefix. */
