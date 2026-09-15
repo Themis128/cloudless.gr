@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 import JsonLd from "@/components/JsonLd";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { getBlogPostsWithSource } from "@/lib/blog-source";
+import { formatDate } from "@/lib/blog";
 
 // CloudCockpit is a ~10 KB-gzipped client widget rendered only inside
 // the hero's right column on lg screens. Splitting it into its own
@@ -31,6 +34,8 @@ import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
+import NewsletterForm from "@/components/NewsletterForm";
+import ContactFormSection from "@/components/ContactFormSection";
 
 export const revalidate = 3600;
 
@@ -83,6 +88,9 @@ export default async function Home({
   setRequestLocale(localeParam);
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
+
+  const { posts: blogPosts } = await getBlogPostsWithSource();
+  const latestPosts = blogPosts.slice(0, 3);
 
   const services = [
     {
@@ -292,7 +300,7 @@ export default async function Home({
               >
                 {t(
                   "hero.subtitle",
-                  "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20 person team."
+                  "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days."
                 )}{" "}
                 <span style={{ color: "var(--accent)", fontWeight: 500 }}>
                   {t("hero.subtitleHighlight", "Finally.")}
@@ -716,6 +724,160 @@ export default async function Home({
         </div>
       </section>
 
+      {/* ── Blog Highlights ── */}
+      {latestPosts.length > 0 && (
+        <section
+          className="border-b py-20 lg:py-24"
+          style={{ borderColor: "var(--border-subtle)", background: "var(--surface-canvas)" }}
+        >
+          <div className="mx-auto max-w-6xl px-6">
+            <ScrollReveal>
+              <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p
+                    className="mb-3 font-mono text-xs font-medium tracking-[0.3em] uppercase"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {t("blogHighlights.label", "[ FROM THE BLOG ]")}
+                  </p>
+                  <h2
+                    className="font-heading text-3xl font-bold md:text-4xl"
+                    style={{ color: "var(--ink-primary)" }}
+                  >
+                    {t("blogHighlights.title", "Latest")}{" "}
+                    <span style={{ color: "var(--accent)" }}>
+                      {t("blogHighlights.titleHighlight", "insights")}
+                    </span>
+                  </h2>
+                  <p className="mt-3 max-w-xl text-lg" style={{ color: "var(--ink-muted)" }}>
+                    {t(
+                      "blogHighlights.subtitle",
+                      "Cloud cost saves, serverless patterns, and AI marketing tactics."
+                    )}
+                  </p>
+                </div>
+                <Link
+                  href="/blog"
+                  className="group inline-flex items-center gap-2 font-mono text-sm font-semibold transition-colors"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {t("blogHighlights.viewAll", "View all articles")}
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="transition-transform group-hover:translate-x-1"
+                  >
+                    <path d="M3 8h10M9 4l4 4-4 4" />
+                  </svg>
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {latestPosts.map((post, i) => (
+                <ScrollReveal key={post.slug} delay={i * 100}>
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="group block h-full rounded-xl border p-6 transition-all duration-200 hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
+                    style={{
+                      background: "var(--surface-raised)",
+                      borderColor: "var(--border-subtle)",
+                    }}
+                  >
+                    <div
+                      className="mb-3 flex items-center gap-3 font-mono text-[10px]"
+                      style={{ color: "var(--ink-muted)" }}
+                    >
+                      <span
+                        className="rounded-full px-2 py-0.5 tracking-wider"
+                        style={{
+                          background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+                          color: "var(--accent)",
+                        }}
+                      >
+                        {post.category}
+                      </span>
+                      <span>{formatDate(post.date)}</span>
+                      <span>•</span>
+                      <span>{post.readTime}</span>
+                    </div>
+                    <h3
+                      className="font-heading mb-3 text-lg font-semibold transition-colors group-hover:text-[var(--accent)]"
+                      style={{ color: "var(--ink-primary)" }}
+                    >
+                      {post.title}
+                    </h3>
+                    <p
+                      className="mb-4 line-clamp-3 text-sm leading-relaxed"
+                      style={{ color: "var(--ink-body)" }}
+                    >
+                      {post.excerpt}
+                    </p>
+                    <span
+                      className="inline-flex items-center gap-1 font-mono text-xs font-semibold"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      {t("blogHighlights.readMore", "Read more")}
+                      <svg
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="transition-transform group-hover:translate-x-1"
+                      >
+                        <path d="M5 2l5 5-5 5" />
+                      </svg>
+                    </span>
+                  </Link>
+                </ScrollReveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Newsletter / Retention ── */}
+      <section
+        className="border-b py-20 lg:py-24"
+        style={{ borderColor: "var(--border-subtle)", background: "var(--surface-subtle)" }}
+      >
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <ScrollReveal>
+            <p
+              className="mb-3 font-mono text-xs font-medium tracking-[0.3em] uppercase"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("newsletterSection.label", "[ STAY UPDATED ]")}
+            </p>
+            <h2
+              className="font-heading mb-4 text-3xl font-bold md:text-4xl"
+              style={{ color: "var(--ink-primary)" }}
+            >
+              {t("newsletterSection.title", "Weekly")}{" "}
+              <span style={{ color: "var(--accent)" }}>
+                {t("newsletterSection.titleHighlight", "cloud insights")}
+              </span>
+            </h2>
+            <p className="mx-auto mb-8 max-w-xl text-lg" style={{ color: "var(--ink-body)" }}>
+              {t(
+                "newsletterSection.subtitle",
+                "One actionable idea every week: cost saves, serverless patterns, and growth tactics. No spam."
+              )}
+            </p>
+            <div
+              className="rounded-xl border p-8 text-left"
+              style={{ background: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+            >
+              <NewsletterForm />
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
       <section
         className="border-y py-20 lg:py-24"
@@ -854,6 +1016,50 @@ export default async function Home({
               </div>
             </div>
           </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ── Inline Contact / Book Audit ── */}
+      <section
+        id="contact"
+        data-testid="contact-section"
+        className="bg-void dot-matrix py-16 md:py-24"
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <ScrollReveal>
+            <div className="mb-10 text-center">
+              <p
+                className="text-neon-cyan/70 mb-3 font-mono text-xs font-medium tracking-[0.3em] uppercase"
+                aria-hidden="true"
+              >
+                {t("contactBanner.label", "[ READY TO TALK? ]")}
+              </p>
+              <h2 className="font-heading text-3xl font-bold text-white md:text-4xl">
+                {t("contactBanner.title", "Book your free")}{" "}
+                <span className="text-neon-cyan">
+                  {t("contactBanner.titleHighlight", "30-minute audit")}
+                </span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
+                {t(
+                  "contactBanner.subtitle",
+                  "Tell us where it hurts — infrastructure, marketing, or both. We'll reply with a concrete action plan within 24 hours."
+                )}
+              </p>
+            </div>
+          </ScrollReveal>
+          <Suspense
+            fallback={
+              <div
+                className="bg-void-light/50 rounded-xl border border-slate-800 p-10 text-center text-slate-400"
+                aria-hidden="true"
+              >
+                Loading form…
+              </div>
+            }
+          >
+            <ContactFormSection />
+          </Suspense>
         </div>
       </section>
 
