@@ -11,7 +11,7 @@
 # /en. The strict CSP also blocks the injected decode script. Turning the
 # feature off makes the edge HTML byte-identical to the SSR HTML again.
 #
-# Auth: CLOUDFLARE_API_TOKEN env, else SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
+# Auth: CLOUDFLARE_API_TOKEN env (set from GitHub repository secret).
 # The token needs Zone:Read + Zone Settings:Edit on zone cloudless.gr.
 #
 # Idempotent: if the setting is already "off" it reports success and changes
@@ -23,11 +23,7 @@ API="https://api.cloudflare.com/client/v4"
 
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 if [ -z "$CF_TOKEN" ]; then
-  CF_TOKEN="$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-    --with-decryption --query Parameter.Value --output text 2>/dev/null || true)"
-fi
-if [ -z "$CF_TOKEN" ]; then
-  echo "::error::no CLOUDFLARE_API_TOKEN — add a repo secret (or SSM /cloudless/production/CLOUDFLARE_API_TOKEN) with Zone:Read + Zone Settings:Edit on ${DOMAIN}."
+  echo "::error::no CLOUDFLARE_API_TOKEN — add a GitHub repository secret with Zone:Read + Zone Settings:Edit on ${DOMAIN}."
   exit 1
 fi
 

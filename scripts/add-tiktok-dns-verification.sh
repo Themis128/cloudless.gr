@@ -8,7 +8,7 @@
 # We use the TXT record because Cloudflare Bot Management may challenge TikTok's
 # HTTP crawler before it can read the meta tag.
 #
-# Auth: CLOUDFLARE_API_TOKEN env, else SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
+# Auth: CLOUDFLARE_API_TOKEN env (set from GitHub repository secret).
 # Token needs Zone:Read + Zone:DNS:Edit on cloudless.gr.
 # Idempotent: if a TikTok verification TXT record already exists with the exact
 # same value, skips. If a TikTok verification TXT record exists with a DIFFERENT
@@ -26,11 +26,7 @@ API="https://api.cloudflare.com/client/v4"
 
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 if [ -z "$CF_TOKEN" ]; then
-  CF_TOKEN="$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-    --with-decryption --query Parameter.Value --output text 2>/dev/null || true)"
-fi
-if [ -z "$CF_TOKEN" ]; then
-  echo "::error::no CLOUDFLARE_API_TOKEN — add a repo secret or SSM /cloudless/production/CLOUDFLARE_API_TOKEN with Zone:Read + Zone:DNS:Edit."
+  echo "::error::no CLOUDFLARE_API_TOKEN — add a GitHub repository secret with Zone:Read + Zone:DNS:Edit."
   exit 1
 fi
 
