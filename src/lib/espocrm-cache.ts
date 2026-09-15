@@ -111,7 +111,6 @@ export async function readThrough<T>(
   const ttlSeconds = opts.ttlSeconds ?? ESPO_CACHE_TTL.list;
   const acceptStaleSeconds = opts.acceptStaleSeconds ?? 1800;
 
-
   const cached = await getCached<T>(route, params, ttlSeconds);
   if (cached && !cached.stale) {
     return { value: cached.payload, source: "cache", ageSeconds: cached.ageSeconds };

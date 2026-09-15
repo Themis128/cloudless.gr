@@ -36,7 +36,10 @@ describe("search-funnel helpers", () => {
   it("normalizeFunnelEvent requires session_id + valid type", () => {
     expect(normalizeFunnelEvent({ event_type: "search_query" })).toBeNull();
     expect(
-      normalizeFunnelEvent({ event_type: "nope", session_id: "s1" } as { event_type: string; session_id: string })
+      normalizeFunnelEvent({ event_type: "nope", session_id: "s1" } as {
+        event_type: string;
+        session_id: string;
+      })
     ).toBeNull();
 
     const ok = normalizeFunnelEvent({

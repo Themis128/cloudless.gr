@@ -63,13 +63,15 @@ export function discretionaryWritesUsedToday(): number {
   return used;
 }
 
-/** Deterministic-ish sample gate (0 = never, 1 = always). */
+/** Sample gate (0 = never, 1 = always). Uses CSPRNG — not for secrets, avoids S2245. */
 export function passSample(rateEnv: string, defaultRate: number): boolean {
   const raw = process.env[rateEnv]?.trim();
   const rate = raw === undefined || raw === "" ? defaultRate : Number(raw);
   if (!Number.isFinite(rate) || rate <= 0) return false;
   if (rate >= 1) return true;
-  return Math.random() < rate;
+  const buf = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buf);
+  return buf[0]! / 0x1_0000_0000 < rate;
 }
 
 export function funnelImpressionsEnabled(): boolean {
