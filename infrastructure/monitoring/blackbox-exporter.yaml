@@ -341,6 +341,57 @@ spec:
       labels: {app: webmail, scope: tunnel}
 ---
 apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-cloudless
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-cloudless
+  interval: 60s
+  module: http_tunnel_edge
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static: [https://cloudless.gr/]
+      labels: {app: cloudless, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-social
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-social
+  interval: 60s
+  module: http_tunnel_edge
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static: [https://social.cloudless.gr/]
+      labels: {app: social, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-social-api
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-social-api
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static: [https://social.cloudless.gr/api/v1/health]
+      labels: {app: social-api, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: tunnel-edge-health
