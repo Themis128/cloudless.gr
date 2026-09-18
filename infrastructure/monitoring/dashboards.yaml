@@ -140,3 +140,97 @@ data:
         }
       ]
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-tunnel-sites-health
+  namespace: monitoring
+  labels: {grafana_dashboard: '1'}
+data:
+  tunnel-sites-health.json: |
+    {
+      "title": "Public Sites — Health",
+      "uid": "tunnel-sites-health",
+      "tags": ["tunnel", "cloudless", "edge"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Probe success (live)",
+          "id": 1,
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "probe_success{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+                { "type": "value", "options": { "1": { "text": "UP",   "color": "green" } } }
+              ],
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Probe duration (s)",
+          "id": 2,
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+          "targets": [{
+            "expr": "probe_duration_seconds{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP status code",
+          "id": 3,
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+          "targets": [{
+            "expr": "probe_http_status_code{scope=\"tunnel\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "stat",
+          "title": "TLS cert days remaining",
+          "id": 4,
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+          "targets": [{
+            "expr": "(probe_ssl_earliest_cert_expiry{scope=\"tunnel\"} - time()) / 86400",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "d",
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 14 },
+                { "color": "green", "value": 30 }
+              ]}
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name", "colorMode": "background" }
+        }
+      ]
+    }
