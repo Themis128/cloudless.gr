@@ -13,20 +13,20 @@ on:
   push:
     branches: [main]
     paths:
-    - migrations/*.sql
-    - workers/pi-origin-proxy/**
-    - scripts/cf-tunnel-set-pi-origin.py
-    - wrangler.jsonc
-    - package.json
-    - pnpm-lock.yaml
-    - .github/workflows/cloudflare-deploy.yml
-    - scripts/cf-build-wrapper.sh
-    - scripts/strip-opennext-bin-fonts.mjs
-    - scripts/strip-opennext-vercel-og.mjs
-    - open-next.config.cloudflare.ts
-    - next.config.*
-    - src/**
-    - public/**
+      - migrations/*.sql
+      - workers/pi-origin-proxy/**
+      - scripts/cf-tunnel-set-pi-origin.py
+      - wrangler.jsonc
+      - package.json
+      - pnpm-lock.yaml
+      - .github/workflows/cloudflare-deploy.yml
+      - scripts/cf-build-wrapper.sh
+      - scripts/strip-opennext-bin-fonts.mjs
+      - scripts/strip-opennext-vercel-og.mjs
+      - open-next.config.cloudflare.ts
+      - next.config.*
+      - src/**
+      - public/**
   workflow_dispatch:
     inputs:
       stage:
@@ -56,7 +56,7 @@ jobs:
     # both read these. Hoisted here so the required secrets/config for a
     # cloudless2 deploy live in exactly one place, not smeared per step.
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       # Wrangler auth (both names — wrangler reads CLOUDFLARE_*, some helpers read CF_*)
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -69,97 +69,97 @@ jobs:
       # exported here so any diagnostic step or hand-run wrangler invocation
       # uses the same values.
       PI_ORIGIN_HOST: pi-origin.cloudless.gr
-      PI_TIMEOUT_MS: '30000'
+      PI_TIMEOUT_MS: "30000"
 
     steps:
-    - name: Validate required secrets
-      run: |
-        set -euo pipefail
-        missing=()
-        [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || missing+=("CLOUDFLARE_API_TOKEN")
-        [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || missing+=("CF_ACCOUNT_ID (→ CLOUDFLARE_ACCOUNT_ID)")
-        if [ ${#missing[@]} -gt 0 ]; then
-          echo "::error::Missing required repo secrets: ${missing[*]}"
-          echo "Set them at Settings → Secrets and variables → Actions."
-          exit 1
-        fi
-        echo "OK  required Cloudflare secrets present."
-
-    - name: Checkout
-      uses: actions/checkout@v7
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24'
-
-    - name: Setup PNPM
-      run: npm install -g pnpm@10
-
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-
-    - name: Apply D1 migrations
-      run: npx wrangler d1 migrations apply user-auth-db --remote --config
-        wrangler.jsonc
-
-    - name: Point Tunnel hosts at Pi NodePort (free origin)
-      # pi-origin must hit Pi directly — never the Worker — or the proxy loops.
-      # Soft-skips (exit 0 + warning) when the CI token cannot edit tunnels;
-      # cloudless2 deploy must still run. Optional: CLOUDFLARE_TUNNEL_API_TOKEN.
-      env:
-        CLOUDFLARE_TUNNEL_API_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_API_TOKEN }}
-      run: python3 scripts/cf-tunnel-set-pi-origin.py
-
-    - name: Deploy free Pi-origin proxy Worker
-      # Replaces fat OpenNext script on cloudless2 with a <50 KiB proxy.
-      # Soft-skip auth failures (API 10000) so D1 migrations still count as
-      # success when CLOUDFLARE_API_TOKEN lacks Workers Scripts Write.
-      # Live edge often already has a good proxy (x-served-by: pi-tunnel-proxy).
-      run: |
-        set -euo pipefail
-        set +e
-        npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify 2>&1 | tee /tmp/cf-proxy-deploy.log
-        code=${PIPESTATUS[0]}
-        set -e
-        if [ "$code" -eq 0 ]; then
-          if grep -qE 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log; then
-            grep -E 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || missing+=("CLOUDFLARE_API_TOKEN")
+          [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || missing+=("CF_ACCOUNT_ID (→ CLOUDFLARE_ACCOUNT_ID)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required repo secrets: ${missing[*]}"
+            echo "Set them at Settings → Secrets and variables → Actions."
+            exit 1
           fi
-          exit 0
-        fi
-        if grep -qE '10000|Authentication error|Not authorized|Unauthorized' /tmp/cf-proxy-deploy.log; then
-          echo "::warning::cloudless2 deploy skipped — CLOUDFLARE_API_TOKEN lacks Workers Scripts Write (API 10000). Prod proxy may already be live. Fix via scripts/cf-token-permissions.sh ensure-ci or cloudflare-workers-deploy skill. Do not upgrade to Workers Paid."
-          exit 0
-        fi
-        exit "$code"
+          echo "OK  required Cloudflare secrets present."
 
-    - name: Optional OpenNext attempt (manual only)
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.try_opennext ==
-        true }}
-      run: |
-        set -euo pipefail
-        pnpm run cf:build
-        node <<'NODE'
-        const fs = require("fs");
-        const path = "wrangler.jsonc";
-        let t = fs.readFileSync(path, "utf8");
-        t = t.replace(/"main"\s*:\s*"[^"]*"/, '"main": ".open-next/worker.js"');
-        t = t.replace(/"directory"\s*:\s*"\.\/out"/, '"directory": ".open-next/assets"');
-        if (!/"minify"\s*:/.test(t)) {
-          t = t.replace(/"compatibility_date"/, '"minify": true,\n  "compatibility_date"');
-        }
-        fs.writeFileSync(path, t);
-        NODE
-        if ! pnpm cf:deploy 2>&1 | tee /tmp/cf-opennext.log; then
-          if grep -qE '10027|size limit of 3 MiB' /tmp/cf-opennext.log; then
-            echo "::warning::OpenNext still over free 3 MiB — Pi proxy remains live. Do not upgrade to Paid."
-            # Re-assert free proxy so a partial OpenNext upload cannot leave a broken script.
-            npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup PNPM
+        run: npm install -g pnpm@10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply D1 migrations
+        run: npx wrangler d1 migrations apply user-auth-db --remote --config
+          wrangler.jsonc
+
+      - name: Point Tunnel hosts at Pi NodePort (free origin)
+        # pi-origin must hit Pi directly — never the Worker — or the proxy loops.
+        # Soft-skips (exit 0 + warning) when the CI token cannot edit tunnels;
+        # cloudless2 deploy must still run. Optional: CLOUDFLARE_TUNNEL_API_TOKEN.
+        env:
+          CLOUDFLARE_TUNNEL_API_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_API_TOKEN }}
+        run: python3 scripts/cf-tunnel-set-pi-origin.py
+
+      - name: Deploy free Pi-origin proxy Worker
+        # Replaces fat OpenNext script on cloudless2 with a <50 KiB proxy.
+        # Soft-skip auth failures (API 10000) so D1 migrations still count as
+        # success when CLOUDFLARE_API_TOKEN lacks Workers Scripts Write.
+        # Live edge often already has a good proxy (x-served-by: pi-tunnel-proxy).
+        run: |
+          set -euo pipefail
+          set +e
+          npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify 2>&1 | tee /tmp/cf-proxy-deploy.log
+          code=${PIPESTATUS[0]}
+          set -e
+          if [ "$code" -eq 0 ]; then
+            if grep -qE 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log; then
+              grep -E 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log
+            fi
             exit 0
           fi
-          exit 1
-        fi
+          if grep -qE '10000|Authentication error|Not authorized|Unauthorized|No access to the specified resource' /tmp/cf-proxy-deploy.log; then
+            echo "::warning::cloudless2 deploy skipped — CLOUDFLARE_API_TOKEN lacks Workers Scripts Write (API 10000). Prod proxy may already be live. Fix via scripts/cf-token-permissions.sh ensure-ci or cloudflare-workers-deploy skill. Do not upgrade to Workers Paid."
+            exit 0
+          fi
+          exit "$code"
+
+      - name: Optional OpenNext attempt (manual only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.try_opennext ==
+          true }}
+        run: |
+          set -euo pipefail
+          pnpm run cf:build
+          node <<'NODE'
+          const fs = require("fs");
+          const path = "wrangler.jsonc";
+          let t = fs.readFileSync(path, "utf8");
+          t = t.replace(/"main"\s*:\s*"[^"]*"/, '"main": ".open-next/worker.js"');
+          t = t.replace(/"directory"\s*:\s*"\.\/out"/, '"directory": ".open-next/assets"');
+          if (!/"minify"\s*:/.test(t)) {
+            t = t.replace(/"compatibility_date"/, '"minify": true,\n  "compatibility_date"');
+          }
+          fs.writeFileSync(path, t);
+          NODE
+          if ! pnpm cf:deploy 2>&1 | tee /tmp/cf-opennext.log; then
+            if grep -qE '10027|size limit of 3 MiB' /tmp/cf-opennext.log; then
+              echo "::warning::OpenNext still over free 3 MiB — Pi proxy remains live. Do not upgrade to Paid."
+              # Re-assert free proxy so a partial OpenNext upload cannot leave a broken script.
+              npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
+              exit 0
+            fi
+            exit 1
+          fi
 
 # Required repo secrets:
 #   CLOUDFLARE_API_TOKEN - Cloudflare API token (Workers:Edit + D1:Edit; Zone optional)
