@@ -47,12 +47,6 @@ safe-outputs:
     engine:
       id: copilot
       model: gpt-5-mini
-    # Run detection on Copilot instead of the workflow's Gemini engine —
-    # Gemini free-tier 503s left detection with nothing to parse, which is
-    # what produced the "Threat Detection Engine Failure" noise issues.
-    engine:
-      id: copilot
-      model: gpt-5-mini
 ---
 
 # Activity Report
