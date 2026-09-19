@@ -1,0 +1,106 @@
+# Scrape SocialAuto app metrics (FastAPI /metrics on the office workstation).
+# The API binds loopback only; a metrics-only nginx sidecar (social-metrics,
+# docker-compose) proxies /metrics onto 192.168.1.23:9390 — all other paths 404.
+# Metrics: HTTP rate/latency/errors, users, teams, subscriptions, plan tiers,
+# social accounts, posts, publish queue, billing events, AI usage/cost.
+apiVersion: v1
+kind: Service
+metadata:
+  name: socialauto-metrics
+  namespace: monitoring
+  labels:
+    app: socialauto
+    component: metrics
+    release: kube-prom
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 9390
+    targetPort: 9390
+    protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: socialauto-metrics
+  namespace: monitoring
+  labels:
+    app: socialauto
+    component: metrics
+subsets:
+- addresses:
+  - ip: 192.168.1.23
+    hostname: office-1
+  ports:
+  - name: metrics
+    port: 9390
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: socialauto
+  namespace: monitoring
+  labels:
+    release: kube-prom
+    cluster-protection.io/health: 'true'
+    app: socialauto
+spec:
+  selector:
+    matchLabels:
+      app: socialauto
+      component: metrics
+  namespaceSelector:
+    matchNames: [monitoring]
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - targetLabel: job
+      replacement: socialauto
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: socialauto-health
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+  - name: socialauto.rules
+    rules:
+    - alert: SocialAutoMetricsAbsent
+      expr: absent(socialauto_users) == 1
+      for: 10m
+      labels: {severity: warning}
+      annotations:
+        summary: SocialAuto metrics not scraped
+        description: Check the social-metrics sidecar (docker compose ps) and the 192.168.1.23:9390 endpoint.
+    - alert: SocialAuto5xxRate
+      expr: |
+        sum(rate(socialauto_http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(socialauto_http_requests_total[5m])) > 0.05
+      for: 15m
+      labels: {severity: warning}
+      annotations:
+        summary: SocialAuto 5xx rate above 5%
+        description: "{{ $value | humanizePercentage }} of requests returning 5xx in the last 5m."
+    - alert: SocialAutoPublishQueueBacklog
+      expr: socialauto_publish_queue{status="pending"} > 25
+      for: 30m
+      labels: {severity: warning}
+      annotations:
+        summary: SocialAuto publish queue backlog
+        description: "{{ $value }} items pending >30m — check social-worker-publishing."
+    - alert: SocialAutoBillingErrors
+      expr: increase(socialauto_billing_events_errors[24h]) > 0
+      for: 5m
+      labels: {severity: warning}
+      annotations:
+        summary: Billing webhook errors in last 24h
+        description: Check billing_events rows with error IS NOT NULL.

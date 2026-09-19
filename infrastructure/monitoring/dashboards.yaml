@@ -234,3 +234,141 @@ data:
         }
       ]
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-socialauto-vitals
+  namespace: monitoring
+  labels: {grafana_dashboard: '1'}
+data:
+  socialauto-vitals.json: |
+    {
+      "title": "SocialAuto — Vitals",
+      "uid": "socialauto-vitals",
+      "tags": ["socialauto", "app"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-24h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat", "title": "Service", "id": 1,
+          "gridPos": { "h": 5, "w": 4, "x": 0, "y": 0 },
+          "targets": [{ "expr": "up{job=\"socialauto\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value" }
+        },
+        {
+          "type": "stat", "title": "Users / 2FA", "id": 2,
+          "gridPos": { "h": 5, "w": 4, "x": 4, "y": 0 },
+          "targets": [
+            { "expr": "socialauto_users{state=\"total\"}", "legendFormat": "total", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } },
+            { "expr": "socialauto_users{state=\"two_factor_enabled\"}", "legendFormat": "2FA on", "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" } }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name" }
+        },
+        {
+          "type": "stat", "title": "Active subscriptions", "id": 3,
+          "gridPos": { "h": 5, "w": 4, "x": 8, "y": 0 },
+          "targets": [{ "expr": "socialauto_subscriptions{status=\"active\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value" }
+        },
+        {
+          "type": "stat", "title": "Queue failed", "id": 4,
+          "gridPos": { "h": 5, "w": 4, "x": 12, "y": 0 },
+          "targets": [{ "expr": "socialauto_publish_queue{status=\"failed\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 10 }] } } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value" }
+        },
+        {
+          "type": "stat", "title": "Billing errors", "id": 5,
+          "gridPos": { "h": 5, "w": 4, "x": 16, "y": 0 },
+          "targets": [{ "expr": "socialauto_billing_events_errors", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value" }
+        },
+        {
+          "type": "stat", "title": "AI errors 24h", "id": 6,
+          "gridPos": { "h": 5, "w": 4, "x": 20, "y": 0 },
+          "targets": [{ "expr": "socialauto_ai_errors_24h", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 5 }, { "color": "red", "value": 25 }] } } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value" }
+        },
+        {
+          "type": "timeseries", "title": "Request rate by status", "id": 10,
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 5 },
+          "targets": [{ "expr": "sum by (status) (rate(socialauto_http_requests_total[5m]))", "legendFormat": "{{status}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "unit": "reqps" } }
+        },
+        {
+          "type": "timeseries", "title": "5xx rate", "id": 11,
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 5 },
+          "targets": [{ "expr": "sum(rate(socialauto_http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "5xx/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "unit": "reqps", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.1 }] } } }
+        },
+        {
+          "type": "timeseries", "title": "Latency p50 / p95 / p99", "id": 12,
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 5 },
+          "targets": [
+            { "expr": "histogram_quantile(0.5, sum(rate(socialauto_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } },
+            { "expr": "histogram_quantile(0.95, sum(rate(socialauto_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" } },
+            { "expr": "histogram_quantile(0.99, sum(rate(socialauto_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p99", "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        },
+        {
+          "type": "table", "title": "Top endpoints by volume (1h)", "id": 13,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+          "targets": [{ "expr": "topk(12, sum by (path, status) (increase(socialauto_http_requests_total[1h])))", "refId": "A", "format": "table", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }]
+        },
+        {
+          "type": "bargauge", "title": "Publish queue by status", "id": 14,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "targets": [{ "expr": "socialauto_publish_queue", "legendFormat": "{{status}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "displayMode": "gradient" }
+        },
+        {
+          "type": "piechart", "title": "Teams by plan tier", "id": 15,
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 21 },
+          "targets": [{ "expr": "socialauto_teams", "legendFormat": "{{plan_tier}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }]
+        },
+        {
+          "type": "piechart", "title": "Subscriptions by status", "id": 16,
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 21 },
+          "targets": [{ "expr": "socialauto_subscriptions", "legendFormat": "{{status}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }]
+        },
+        {
+          "type": "bargauge", "title": "Posts by status", "id": 17,
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 21 },
+          "targets": [{ "expr": "socialauto_posts", "legendFormat": "{{status}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "displayMode": "gradient" }
+        },
+        {
+          "type": "bargauge", "title": "Social accounts", "id": 18,
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 21 },
+          "targets": [{ "expr": "socialauto_social_accounts", "legendFormat": "{{platform}} / {{status}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "displayMode": "gradient" }
+        },
+        {
+          "type": "bargauge", "title": "Billing events by type", "id": 19,
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 29 },
+          "targets": [{ "expr": "socialauto_billing_events", "legendFormat": "{{type}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "displayMode": "gradient" }
+        },
+        {
+          "type": "bargauge", "title": "AI calls 24h by provider", "id": 20,
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 29 },
+          "targets": [{ "expr": "socialauto_ai_calls_24h", "legendFormat": "{{provider}}", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "options": { "displayMode": "gradient" }
+        },
+        {
+          "type": "timeseries", "title": "Estimated AI cost 24h (USD)", "id": 21,
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 29 },
+          "targets": [{ "expr": "socialauto_ai_estimated_cost_usd_24h", "legendFormat": "{{provider}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+        }
+      ]
+    }
