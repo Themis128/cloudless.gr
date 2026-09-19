@@ -1,0 +1,1 @@
+self.__BUILD_MANIFEST = (function(a,b){return {__rewrites:{afterFiles:[],beforeFiles:[{has:a,source:"\u002Fmanifest.webmanifest",destination:"\u002Fapi\u002Fpwa-manifest"},{has:a,source:b,destination:b}],fallback:[]},__routerFilterStatic:a,__routerFilterDynamic:a,sortedPages:["\u002F_app"]}}(void 0,"\u002Fapi\u002F:path*"));self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()
