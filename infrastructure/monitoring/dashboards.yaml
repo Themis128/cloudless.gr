@@ -320,9 +320,9 @@ data:
           "fieldConfig": { "defaults": { "unit": "s" } }
         },
         {
-          "type": "table", "title": "Top endpoints by volume (1h)", "id": 13,
+          "type": "table", "title": "All API endpoints — volume (5m)", "id": 13,
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
-          "targets": [{ "expr": "topk(12, sum by (path, status) (increase(socialauto_http_requests_total[1h])))", "refId": "A", "format": "table", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }]
+          "targets": [{ "expr": "sort_desc(sum by (method, path) (increase(socialauto_http_requests_total[5m])) or on(method, path) (sum by (method, path) (socialauto_http_route) * 0))", "refId": "A", "format": "table", "instant": true, "datasource": { "type": "prometheus", "uid": "prometheus" } }]
         },
         {
           "type": "bargauge", "title": "Publish queue by status", "id": 14,
