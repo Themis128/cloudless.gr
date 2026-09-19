@@ -1,8 +1,8 @@
 ---
-description: "Daily check of documentation files against recent code changes, and opens a pull request with updates when docs are out of sync."
+description: "Weekly check of documentation files against recent code changes, and opens a pull request with updates when docs are out of sync."
 on:
   schedule:
-    - cron: 'daily'
+    - cron: "weekly on sunday"
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +22,7 @@ tools:
   edit:
   bash: true
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 # Do not fail the workflow when Gemini quota is exhausted mid-run.
 # jobs.agent.continue-on-error is also pinned in the compiled lock.yml
 # (gh-aw currently omits it from built-in agent emission).
