@@ -28,12 +28,12 @@ kind: ClusterRole
 metadata:
   name: kuma-heartbeat-read
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["list"]
-- apiGroups: ["batch"]
-  resources: ["jobs"]
-  verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -44,9 +44,9 @@ roleRef:
   kind: ClusterRole
   name: kuma-heartbeat-read
 subjects:
-- kind: ServiceAccount
-  name: kuma-heartbeat
-  namespace: uptime-kuma
+  - kind: ServiceAccount
+    name: kuma-heartbeat
+    namespace: uptime-kuma
 ---
 # Script: performs real health checks and posts heartbeats to Kuma.
 apiVersion: v1
@@ -139,6 +139,9 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      # Hard cap: a wedged heartbeat pod would otherwise hold the Forbid lock
+      # and stall scheduling for days (TooManyMissedTimes incident 2026-09-19).
+      activeDeadlineSeconds: 180
       backoffLimit: 0
       template:
         spec:
@@ -148,40 +151,40 @@ spec:
             kubernetes.io/hostname: omv
           hostPID: true
           containers:
-          - name: heartbeats
-            image: alpine:3.20
-            imagePullPolicy: IfNotPresent
-            securityContext:
-              privileged: true
-            envFrom:
-            - secretRef:
-                name: cluster-alerts-kuma
-            volumeMounts:
-            - name: k3s-data
-              mountPath: /k3s-data
-              readOnly: true
-            - name: script
-              mountPath: /etc/heartbeat
-            command:
-            - /bin/sh
-            - -c
-            - |
-              set -e
-              apk add -q --no-cache curl jq >/dev/null 2>&1 || true
-              /etc/heartbeat/heartbeat.sh
-            resources:
-              requests: { cpu: 25m, memory: 48Mi }
-              limits:   { cpu: 300m, memory: 128Mi }
+            - name: heartbeats
+              image: alpine:3.20
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                privileged: true
+              envFrom:
+                - secretRef:
+                    name: cluster-alerts-kuma
+              volumeMounts:
+                - name: k3s-data
+                  mountPath: /k3s-data
+                  readOnly: true
+                - name: script
+                  mountPath: /etc/heartbeat
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  apk add -q --no-cache curl jq >/dev/null 2>&1 || true
+                  /etc/heartbeat/heartbeat.sh
+              resources:
+                requests: { cpu: 25m, memory: 48Mi }
+                limits: { cpu: 300m, memory: 128Mi }
           volumes:
-          - name: k3s-data
-            hostPath:
-              path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/omv-ai-cluster/data
-              type: Directory
-          - name: script
-            configMap:
-              name: kuma-heartbeat-script
-              defaultMode: 493
-              items:
-              - key: heartbeat.sh
-                path: heartbeat.sh
-                mode: 493
+            - name: k3s-data
+              hostPath:
+                path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/omv-ai-cluster/data
+                type: Directory
+            - name: script
+              configMap:
+                name: kuma-heartbeat-script
+                defaultMode: 493
+                items:
+                  - key: heartbeat.sh
+                    path: heartbeat.sh
+                    mode: 493
