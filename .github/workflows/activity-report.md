@@ -11,7 +11,7 @@ permissions:
   actions: read
 strict: false
 engine: copilot
-model: gpt-5-mini
+model: copilot/gpt-5-mini
 models:
   default-ai-credits-pricing:
     input: 0.10
