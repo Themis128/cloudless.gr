@@ -271,3 +271,4 @@ test-results.json/
 # Local MCP launcher secrets (never commit keys)
 scripts/cursor-mcp/*.env
 scripts/cursor-mcp/*-secret*
+.next.stale*

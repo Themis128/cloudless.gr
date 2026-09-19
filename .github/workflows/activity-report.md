@@ -2,7 +2,7 @@
 description: "Daily report on recent repository activity, delivered as an issue. Summarizes new issues, pull requests merged, and any open blockers."
 on:
   schedule:
-    - cron: 'daily'
+    - cron: "daily"
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,7 +24,7 @@ tools:
     toolsets: [default, actions]
   bash: true
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 # Do not fail the workflow when Gemini quota is exhausted mid-run.
 # jobs.agent.continue-on-error is also pinned in the compiled lock.yml
 # (gh-aw currently omits it from built-in agent emission).
@@ -41,6 +41,18 @@ safe-outputs:
     max: 1
   threat-detection:
     continue-on-error: true
+    # Run detection on Copilot instead of the workflow's Gemini engine —
+    # Gemini free-tier 503s left detection with nothing to parse, which is
+    # what produced the "Threat Detection Engine Failure" noise issues.
+    engine:
+      id: copilot
+      model: gpt-5-mini
+    # Run detection on Copilot instead of the workflow's Gemini engine —
+    # Gemini free-tier 503s left detection with nothing to parse, which is
+    # what produced the "Threat Detection Engine Failure" noise issues.
+    engine:
+      id: copilot
+      model: gpt-5-mini
 ---
 
 # Activity Report
