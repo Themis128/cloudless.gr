@@ -44,7 +44,7 @@ safe-outputs:
     # what produced the "Threat Detection Engine Failure" noise issues.
     engine:
       id: copilot
-      model: gpt-5-mini
+      model: gpt-4.1
 ---
 
 # Activity Report

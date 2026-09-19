@@ -8,9 +8,10 @@ permissions:
   contents: read
   pull-requests: read
   issues: read
+  copilot-requests: write
 strict: false
 engine: copilot
-model: gpt-5-mini
+model: gpt-4.1
 models:
   default-ai-credits-pricing:
     input: 0.10
@@ -44,7 +45,7 @@ safe-outputs:
     # what produced the "Threat Detection Engine Failure" noise issues.
     engine:
       id: copilot
-      model: gpt-5-mini
+      model: gpt-4.1
 ---
 
 # Documentation Updater
