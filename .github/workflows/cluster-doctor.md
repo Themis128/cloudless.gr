@@ -17,7 +17,9 @@ permissions:
   issues: read
   pull-requests: read
 strict: false
-engine: gemini
+engine:
+  id: gemini
+  version: "0.43.0"
 # flash-lite = separate free-tier quota from gemini-2.5-flash (avoids #1485 parse_error).
 model: gemini-2.5-flash-lite
 models:
