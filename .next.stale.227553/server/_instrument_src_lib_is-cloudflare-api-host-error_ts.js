@@ -1,0 +1,25 @@
+"use strict";
+/*
+ * ATTENTION: An "eval-source-map" devtool has been used.
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file with attached SourceMaps in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+exports.id = "_instrument_src_lib_is-cloudflare-api-host-error_ts";
+exports.ids = ["_instrument_src_lib_is-cloudflare-api-host-error_ts"];
+exports.modules = {
+
+/***/ "(instrument)/./src/lib/is-cloudflare-api-host-error.ts":
+/*!*************************************************!*\
+  !*** ./src/lib/is-cloudflare-api-host-error.ts ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   isCloudflareApiHostError: () => (/* binding */ isCloudflareApiHostError)\n/* harmony export */ });\n/**\n * Detect offline/DNS failures when OpenNext tries to reach Cloudflare's API.\n * Uses URL hostname equality (not substring includes) for CodeQL js/incomplete-url-substring-sanitization.\n */ function isCloudflareApiHostError(err) {\n    const msg = err instanceof Error ? err.message : String(err);\n    if (msg.includes(\"EAI_AGAIN\") || msg.includes(\"fetch failed\") || msg.includes(\"CLOUDFLARE_API_TOKEN\") || msg.includes(\"remote proxy session\")) {\n        return true;\n    }\n    for (const match of msg.matchAll(/https?:\\/\\/[^\\s)'\"<>]+/gi)){\n        try {\n            if (new URL(match[0]).hostname === \"api.cloudflare.com\") {\n                return true;\n            }\n        } catch  {\n        // ignore unparseable fragments\n        }\n    }\n    const cause = err instanceof Error ? err.cause : undefined;\n    if (cause != null && cause !== err) {\n        return isCloudflareApiHostError(cause);\n    }\n    return false;\n}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKGluc3RydW1lbnQpLy4vc3JjL2xpYi9pcy1jbG91ZGZsYXJlLWFwaS1ob3N0LWVycm9yLnRzIiwibWFwcGluZ3MiOiI7Ozs7QUFBQTs7O0NBR0MsR0FDTSxTQUFTQSx5QkFBeUJDLEdBQVk7SUFDbkQsTUFBTUMsTUFBTUQsZUFBZUUsUUFBUUYsSUFBSUcsT0FBTyxHQUFHQyxPQUFPSjtJQUN4RCxJQUNFQyxJQUFJSSxRQUFRLENBQUMsZ0JBQ2JKLElBQUlJLFFBQVEsQ0FBQyxtQkFDYkosSUFBSUksUUFBUSxDQUFDLDJCQUNiSixJQUFJSSxRQUFRLENBQUMseUJBQ2I7UUFDQSxPQUFPO0lBQ1Q7SUFDQSxLQUFLLE1BQU1DLFNBQVNMLElBQUlNLFFBQVEsQ0FBQyw0QkFBNkI7UUFDNUQsSUFBSTtZQUNGLElBQUksSUFBSUMsSUFBSUYsS0FBSyxDQUFDLEVBQUUsRUFBRUcsUUFBUSxLQUFLLHNCQUFzQjtnQkFDdkQsT0FBTztZQUNUO1FBQ0YsRUFBRSxPQUFNO1FBQ04sK0JBQStCO1FBQ2pDO0lBQ0Y7SUFDQSxNQUFNQyxRQUFRVixlQUFlRSxRQUFRRixJQUFJVSxLQUFLLEdBQUdDO0lBQ2pELElBQUlELFNBQVMsUUFBUUEsVUFBVVYsS0FBSztRQUNsQyxPQUFPRCx5QkFBeUJXO0lBQ2xDO0lBQ0EsT0FBTztBQUNUIiwic291cmNlcyI6WyIvd29ya3NwYWNlL3NyYy9saWIvaXMtY2xvdWRmbGFyZS1hcGktaG9zdC1lcnJvci50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIERldGVjdCBvZmZsaW5lL0ROUyBmYWlsdXJlcyB3aGVuIE9wZW5OZXh0IHRyaWVzIHRvIHJlYWNoIENsb3VkZmxhcmUncyBBUEkuXG4gKiBVc2VzIFVSTCBob3N0bmFtZSBlcXVhbGl0eSAobm90IHN1YnN0cmluZyBpbmNsdWRlcykgZm9yIENvZGVRTCBqcy9pbmNvbXBsZXRlLXVybC1zdWJzdHJpbmctc2FuaXRpemF0aW9uLlxuICovXG5leHBvcnQgZnVuY3Rpb24gaXNDbG91ZGZsYXJlQXBpSG9zdEVycm9yKGVycjogdW5rbm93bik6IGJvb2xlYW4ge1xuICBjb25zdCBtc2cgPSBlcnIgaW5zdGFuY2VvZiBFcnJvciA/IGVyci5tZXNzYWdlIDogU3RyaW5nKGVycik7XG4gIGlmIChcbiAgICBtc2cuaW5jbHVkZXMoXCJFQUlfQUdBSU5cIikgfHxcbiAgICBtc2cuaW5jbHVkZXMoXCJmZXRjaCBmYWlsZWRcIikgfHxcbiAgICBtc2cuaW5jbHVkZXMoXCJDTE9VREZMQVJFX0FQSV9UT0tFTlwiKSB8fFxuICAgIG1zZy5pbmNsdWRlcyhcInJlbW90ZSBwcm94eSBzZXNzaW9uXCIpXG4gICkge1xuICAgIHJldHVybiB0cnVlO1xuICB9XG4gIGZvciAoY29uc3QgbWF0Y2ggb2YgbXNnLm1hdGNoQWxsKC9odHRwcz86XFwvXFwvW15cXHMpJ1wiPD5dKy9naSkpIHtcbiAgICB0cnkge1xuICAgICAgaWYgKG5ldyBVUkwobWF0Y2hbMF0pLmhvc3RuYW1lID09PSBcImFwaS5jbG91ZGZsYXJlLmNvbVwiKSB7XG4gICAgICAgIHJldHVybiB0cnVlO1xuICAgICAgfVxuICAgIH0gY2F0Y2gge1xuICAgICAgLy8gaWdub3JlIHVucGFyc2VhYmxlIGZyYWdtZW50c1xuICAgIH1cbiAgfVxuICBjb25zdCBjYXVzZSA9IGVyciBpbnN0YW5jZW9mIEVycm9yID8gZXJyLmNhdXNlIDogdW5kZWZpbmVkO1xuICBpZiAoY2F1c2UgIT0gbnVsbCAmJiBjYXVzZSAhPT0gZXJyKSB7XG4gICAgcmV0dXJuIGlzQ2xvdWRmbGFyZUFwaUhvc3RFcnJvcihjYXVzZSk7XG4gIH1cbiAgcmV0dXJuIGZhbHNlO1xufVxuIl0sIm5hbWVzIjpbImlzQ2xvdWRmbGFyZUFwaUhvc3RFcnJvciIsImVyciIsIm1zZyIsIkVycm9yIiwibWVzc2FnZSIsIlN0cmluZyIsImluY2x1ZGVzIiwibWF0Y2giLCJtYXRjaEFsbCIsIlVSTCIsImhvc3RuYW1lIiwiY2F1c2UiLCJ1bmRlZmluZWQiXSwiaWdub3JlTGlzdCI6W10sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(instrument)/./src/lib/is-cloudflare-api-host-error.ts\n");
+
+/***/ })
+
+};
+;
