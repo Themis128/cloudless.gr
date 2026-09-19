@@ -1,0 +1,165 @@
+# Guardrails for app namespaces — LimitRange (defaults for pods that omit
+# resources) + ResourceQuota (namespace blast-radius cap) pairs.
+# Quotas are sized ~2x current usage so they bound a memory leak without
+# ever firing during normal ops or blocking CronJob pods.
+# Node memory pressure is the real risk (~70%); CPU is left uncapped since
+# throttling is preferable to rejection there.
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: cloudless
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 768Mi
+      cpu: 500m
+    defaultRequest:
+      memory: 256Mi
+      cpu: 100m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cloudless-quota
+  namespace: cloudless
+spec:
+  hard:
+    pods: "3"
+    requests.memory: 512Mi
+    limits.memory: 1536Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: postiz
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 512Mi
+      cpu: 500m
+    defaultRequest:
+      memory: 128Mi
+      cpu: 100m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: postiz-quota
+  namespace: postiz
+spec:
+  hard:
+    pods: "12"
+    requests.memory: 1536Mi
+    limits.memory: 4Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: appflowy
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 512Mi
+      cpu: 500m
+    defaultRequest:
+      memory: 128Mi
+      cpu: 100m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: appflowy-quota
+  namespace: appflowy
+spec:
+  hard:
+    pods: "30"
+    requests.memory: 1536Mi
+    limits.memory: 4Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: espocrm
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 512Mi
+      cpu: 500m
+    defaultRequest:
+      memory: 128Mi
+      cpu: 100m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: espocrm-quota
+  namespace: espocrm
+spec:
+  hard:
+    pods: "16"
+    requests.memory: 1Gi
+    limits.memory: 2560Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: uptime-kuma
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 256Mi
+      cpu: 300m
+    defaultRequest:
+      memory: 64Mi
+      cpu: 50m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: uptime-kuma-quota
+  namespace: uptime-kuma
+spec:
+  hard:
+    pods: "10"
+    requests.memory: 256Mi
+    limits.memory: 512Mi
+---
+# monitoring: LimitRange supplies defaults to kube-prometheus-stack sidecars
+# (config-reloader, node-exporter) that ship without resources — this makes
+# the quota safe instead of rejecting them at next restart.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: monitoring
+spec:
+  limits:
+  - type: Container
+    default:
+      memory: 256Mi
+      cpu: 300m
+    defaultRequest:
+      memory: 64Mi
+      cpu: 50m
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: monitoring-quota
+  namespace: monitoring
+spec:
+  hard:
+    pods: "25"
+    requests.memory: 2Gi
+    limits.memory: 6Gi
