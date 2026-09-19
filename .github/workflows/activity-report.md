@@ -10,7 +10,9 @@ permissions:
   pull-requests: read
   actions: read
 strict: false
-engine: gemini
+engine:
+  id: gemini
+  version: "0.43.0"
 # Free-tier gemini-2.5-flash is ~20 RPD (shared project). gemini-2.0-flash is
 # retired (ModelNotFound on run #46). Prefer flash-lite; soft-fail agent if
 # the API steers back onto an exhausted 2.5-flash bucket.
