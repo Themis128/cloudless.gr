@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-selfhosted-health
   namespace: monitoring
-  labels: {grafana_dashboard: '1'}
+  labels: { grafana_dashboard: "1" }
 data:
   selfhosted-health.json: |
     {
@@ -72,7 +72,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-selfhosted-slo
   namespace: monitoring
-  labels: {grafana_dashboard: '1'}
+  labels: { grafana_dashboard: "1" }
 data:
   selfhosted-slo.json: |
     {
@@ -146,7 +146,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-tunnel-sites-health
   namespace: monitoring
-  labels: {grafana_dashboard: '1'}
+  labels: { grafana_dashboard: "1" }
 data:
   tunnel-sites-health.json: |
     {
@@ -240,7 +240,7 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-socialauto-vitals
   namespace: monitoring
-  labels: {grafana_dashboard: '1'}
+  labels: { grafana_dashboard: "1" }
 data:
   socialauto-vitals.json: |
     {
@@ -306,7 +306,7 @@ data:
         {
           "type": "timeseries", "title": "5xx rate", "id": 11,
           "gridPos": { "h": 8, "w": 8, "x": 8, "y": 5 },
-          "targets": [{ "expr": "sum(rate(socialauto_http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "5xx/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "targets": [{ "expr": "sum(rate(socialauto_http_requests_total{status=~\"5..\"}[5m])) or vector(0)", "legendFormat": "5xx/s", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
           "fieldConfig": { "defaults": { "unit": "reqps", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.1 }] } } }
         },
         {
