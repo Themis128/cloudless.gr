@@ -9,6 +9,7 @@ permissions:
   issues: read
   pull-requests: read
   actions: read
+  copilot-requests: write
 strict: false
 engine: copilot
 model: copilot/gpt-5-mini
