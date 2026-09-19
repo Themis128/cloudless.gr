@@ -279,7 +279,7 @@ data:
         {
           "type": "stat", "title": "Queue failed", "id": 4,
           "gridPos": { "h": 5, "w": 4, "x": 12, "y": 0 },
-          "targets": [{ "expr": "socialauto_publish_queue{status=\"failed\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
+          "targets": [{ "expr": "socialauto_publish_queue{status=\"failed\"} or vector(0)", "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" } }],
           "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 10 }] } } },
           "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value" }
         },
