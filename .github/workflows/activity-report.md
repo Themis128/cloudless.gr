@@ -12,7 +12,7 @@ permissions:
   copilot-requests: write
 strict: false
 engine: copilot
-model: copilot/gpt-5-mini
+model: gpt-5-mini
 models:
   default-ai-credits-pricing:
     input: 0.10
