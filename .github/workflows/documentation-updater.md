@@ -9,14 +9,8 @@ permissions:
   pull-requests: read
   issues: read
 strict: false
-engine:
-  id: gemini
-  version: "0.43.0"
-# Free-tier gemini-2.5-flash is ~20 RPD (shared with other agentic workflows).
-# The 2026-08-14 run burned 481k tokens on flash, then threat detection hit
-# TerminalQuotaError and posted parse_error on #1485. flash-lite is a separate
-# quota bucket (same pattern as activity-report.md).
-model: gemini-2.5-flash-lite
+engine: copilot
+model: gpt-5-mini
 models:
   default-ai-credits-pricing:
     input: 0.10

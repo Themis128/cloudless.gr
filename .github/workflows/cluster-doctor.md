@@ -17,11 +17,9 @@ permissions:
   issues: read
   pull-requests: read
 strict: false
-engine:
-  id: gemini
-  version: "0.43.0"
+engine: copilot
 # flash-lite = separate free-tier quota from gemini-2.5-flash (avoids #1485 parse_error).
-model: gemini-2.5-flash-lite
+model: gpt-5-mini
 models:
   default-ai-credits-pricing:
     input: 0.10
