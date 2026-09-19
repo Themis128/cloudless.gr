@@ -163,21 +163,10 @@ spec:
             path: /home/tbaltzakis/cloudless-standalone
             type: DirectoryOrCreate
 ---
-# Block voluntary evictions (drain, node-upgrade, priority-preemption) from
-# ever taking the sole cloudless-app replica down without warning. On this
-# single-node cluster it's mostly documentation of intent, but if we ever
-# add a second node, PDB is the seatbelt that stops a rolling drain from
-# leaving the site unreachable.
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: cloudless-app
-  namespace: cloudless
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: cloudless-app
+# No PodDisruptionBudget: with 1 replica on a single-node cluster a PDB
+# cannot preserve availability (node maintenance takes the site down
+# regardless) — it only hangs kubectl drain on this pod. Restore a PDB
+# (minAvailable: 1) once replicas >= 2 across >= 2 nodes.
 ---
 apiVersion: v1
 kind: Service
