@@ -75,9 +75,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     pool: "forks",
-    poolOptions: {
-      forks: { minForks: 1, maxForks: 2 },
-    },
+    minWorkers: 1,
+    maxWorkers: 2,
     server: {
       deps: {
         // next-auth imports next/server as bare ESM specifier. Inlining lets
