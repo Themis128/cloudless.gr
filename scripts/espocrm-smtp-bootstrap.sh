@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# espocrm-smtp-bootstrap.sh
+# espocrm-smtp-bootstrap.sh  —  DEPRECATED 2026-09-20
 # ─────────────────────────
-# Configures EspoCRM outbound SMTP via the API (PHP config, not env vars).
-# Pulls SES_SMTP_* from SSM and POSTs to the EspoCRM Settings API.
+# DEPRECATED: EspoCRM mail now runs entirely on the omv-ha stack —
+# inbound IMAPS 993 + outbound postfix 587 via the InboundEmail entity's
+# smtp* fields (see infrastructure/espocrm/README.md "Inbound Email →
+# Cases" and docs/EMAIL-INFRASTRUCTURE.md). This script still pulls
+# SES_SMTP_* from AWS SSM — a path that no longer exists. Kept for
+# history only; do not run.
+#
+# Original purpose: configures EspoCRM outbound SMTP via the API (PHP
+# config, not env vars). Pulled SES_SMTP_* from SSM and POSTed to the
+# EspoCRM Settings API.
 #
 # Why not env vars: EspoCRM reads SMTP config from data/config.php (PHP
 # array), not from process.env. The Settings API is the right knob; it
