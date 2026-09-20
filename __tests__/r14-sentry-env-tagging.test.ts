@@ -10,15 +10,7 @@ describe("R14 Sentry environment tagging", () => {
   });
 
   it("uses NEXT_PUBLIC_SENTRY_ENVIRONMENT for browser/client events", () => {
-    expect(read("sentry.client.config.ts")).toContain(
-      "process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT",
-    );
-  });
-
-  it("sets prod Sentry tags in the AWS/Lambda deploy workflow", () => {
-    const deploy = read(".github/workflows/deploy.yml");
-    expect(deploy).toContain("SENTRY_ENVIRONMENT: prod");
-    expect(deploy).toContain("NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod");
+    expect(read("sentry.client.config.ts")).toContain("process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT");
   });
 
   it("sets pi-standby Sentry tags in the hostpath Pi manifest", () => {

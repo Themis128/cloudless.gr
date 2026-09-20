@@ -9,7 +9,7 @@ Account: `278585680617` · Region: `us-east-1`
 
 | Principal | Type | Used by | Trust / auth |
 |---|---|---|---|
-| `GitHubActionsOIDC` | Role | Deploy workflow ([deploy.yml](../../.github/workflows/deploy.yml)) | OIDC, trust restricted to `Themis128/cloudless.gr` |
+| `GitHubActionsOIDC` | Role | Deploy workflow (`deploy.yml`, removed) | OIDC, trust restricted to `Themis128/cloudless.gr` |
 | `cloudless-github-actions` | Role | Pi-image workflow (`deploy-pi.yml` / `build-pi-image` (see `docs/runners.md`)) | OIDC, same trust |
 | `cloudless-ops` | IAM user | Operator (you, locally) | Long-term access keys |
 | (root) | Account root | Bootstrap only | Avoid. See [Security note](#security-note) |
@@ -31,7 +31,7 @@ Assumed by the `Deploy to Production` workflow. Its trust policy restricts
   `iam:DeleteRolePolicy` on the role (cloudless-ops does not).
 
 **This role does NOT have `iam:SimulatePrincipalPolicy`.** The deploy preflight
-[detects that and degrades to a warning](../../.github/workflows/deploy.yml).
+detects that and degrades to a warning.
 
 ## `cloudless-github-actions` — the Pi-image role
 

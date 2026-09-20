@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -18,18 +14,14 @@
     "jsx": "preserve",
     "jsxImportSource": "react",
     "incremental": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -44,7 +36,6 @@
   ],
   "exclude": [
     "node_modules",
-    "sst.config.ts",
     "sst.config.*.ts",
     "playwright.config.mts",
     "playwright.production.config.mts",

@@ -19,10 +19,12 @@ descriptions = {
     "TS_AUTHKEY": "Tailscale auth key — cluster ops over VPN (tailscale.com/admin/settings/keys)",
     "KUBECONFIG_B64": "k3s kubeconfig system:admin — base64-encoded /etc/rancher/k3s/k3s.yaml",
     "OMV_SSH_KEY": "Pi SSH private key — enables k3s-ssh-restart + k3s-watchdog-deploy workflows",
-    "NOTION_API_KEY": "Notion integration token — cluster docs, blog, submissions",
-    "AWS_DEPLOY_ROLE_ARN": "OIDC deploy role — ECR push + SSM parameter access",
-    "SES_SMTP_USER": "SES SMTP username — email verification (AWS Console → SES → SMTP Settings)",
-    "SES_SMTP_PASSWORD": "SES SMTP password — email verification",
+    "APPFLOWY_JWT_SECRET": "AppFlowy admin JWT secret — CMS content sync",
+    "CLOUDFLARE_API_TOKEN": "Cloudflare API token — Workers deploy, R2, Workers AI",
+    "CF_ACCOUNT_ID": "Cloudflare account ID — R2/Workers endpoints",
+    "CF_R2_ACCESS_KEY_ID": "R2 S3-compatible access key — artifact/object uploads",
+    "CF_R2_SECRET_ACCESS_KEY": "R2 S3-compatible secret key",
+    "CRON_SECRET": "Bearer secret — /api/cron/* endpoint auth",
     "GH_PAT": "GitHub PAT repo scope — cloud session auto-push on stop hook",
 }
 

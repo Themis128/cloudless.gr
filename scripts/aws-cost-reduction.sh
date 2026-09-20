@@ -208,7 +208,7 @@ do_kms() {
 
 # --------------------------------------------------------------------------
 # 6. Route 53  (~$4.22/mo) — AUDIT ONLY (health-check features are immutable;
-#    changing them means recreate + edit sst.config.ts — do that in a PR)
+#    changing them means recreate + update the failover config — do that in a PR)
 # --------------------------------------------------------------------------
 do_r53() {
   c_hdr "Route 53 (~\$4.22/mo) — audit zone + HA health checks"
@@ -223,7 +223,7 @@ do_r53() {
     local count
     count="$(echo "$hc_json" | jq -r '.HealthChecks | length')"
     if [[ "$count" == "0" ]]; then
-      c_ok "  No health checks found in account (sst.config.ts HC IDs e239ad5c/30a69f1c are stale)."
+      c_ok "  No health checks found in account (the HA failover HC IDs e239ad5c/30a69f1c are stale)."
     else
       while IFS= read -r hc; do
         local hc_id cfg typ interval str_match
@@ -238,8 +238,8 @@ do_r53() {
   fi
   c_warn "Surcharges: HTTPS +\$1, string-match +\$1, fast(10s) interval +\$1 — each per check, per month."
   c_warn "Type & interval are IMMUTABLE on a health check. To drop fast-interval/string-match you must"
-  c_warn "recreate the check and update its healthCheckId in sst.config.ts. Open a PR for that — do not"
-  c_warn "delete a check here or the failover records (sst.config.ts) will reference a missing ID."
+  c_warn "recreate the check and update its healthCheckId in the failover config. Open a PR for that — do not"
+  c_warn "delete a check here or the failover records will reference a missing ID."
 }
 
 # --------------------------------------------------------------------------

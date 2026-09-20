@@ -5,10 +5,10 @@
 // Note: SST v4 does not have native Cloudflare provider support.
 // The D1 database and R2 buckets are already configured in wrangler.jsonc.
 // This config is kept for reference but deployment should use Wrangler directly.
-// 
-// For future Cloudflare infrastructure, use:
+//
+// For Cloudflare infrastructure, use:
 // - wrangler CLI for D1/R2 operations
-// - sst.config.ts for AWS resources (Next.js, Lambda, etc.)
+// - sst.config.cloudflare.ts for SST-managed resources
 
 const STAGE_PRODUCTION = "production";
 
@@ -26,11 +26,11 @@ export default $config({
   async run() {
     // This config is a placeholder - actual Cloudflare infra is managed via Wrangler
     // See wrangler.jsonc for R2 buckets and D1 database configuration
-    
+
     // For reference, the configured resources are:
     // D1: user-auth-db (production) / auth-db-{stage} (other stages)
     // R2: cloudless-assets, app-media-bucket, cloudless-analytics, datalake-bucket
-    
+
     return {
       // No resources to create - using existing Wrangler-managed infrastructure
       // The workflow will:

@@ -61,7 +61,6 @@
     "deploy:staging": "pnpm run cloudflare-build && pnpm exec sst deploy --config sst.config.cloudflare.ts --stage staging",
     "deploy:infra-only": "pnpm sst:infra:deploy",
     "deploy:app-only": "pnpm cf:build && pnpm cf:deploy",
-    "sst:dev": "sst dev --config sst.config.ts",
     "sst:dev:cf": "sst dev --config sst.config.cloudflare.ts",
     "sst:infra": "sst dev --config sst.config.cf-infra.ts",
     "sst:infra:deploy": "sst deploy --config sst.config.cloudflare.ts --stage production",
