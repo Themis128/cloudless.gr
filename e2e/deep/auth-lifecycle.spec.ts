@@ -73,27 +73,43 @@ test.describe("Auth lifecycle", () => {
       await reject.click().catch(async () => {
         await accept.click().catch(() => {});
       });
-      await expect(cookieBanner).toBeHidden({ timeout: 10_000 }).catch(() => {});
+      await expect(cookieBanner)
+        .toBeHidden({ timeout: 10_000 })
+        .catch(() => {});
     }
 
     const cart = page.getByRole("dialog", { name: /shopping cart|cart/i });
     if (await cart.isVisible().catch(() => false)) {
-      await page.getByRole("button", { name: /close cart/i }).click().catch(() => {});
-      await expect(cart).toBeHidden({ timeout: 10_000 }).catch(() => {});
+      await page
+        .getByRole("button", { name: /close cart/i })
+        .click()
+        .catch(() => {});
+      await expect(cart)
+        .toBeHidden({ timeout: 10_000 })
+        .catch(() => {});
     }
 
-    await page.locator("#signup-name").fill("E2E Mismatch");
-    await page.locator("#signup-email").fill("mismatch-e2e@example.invalid");
-    // Type (don't only fill) confirm last so password-managers can't sync both
-    // fields to the same value before submit.
-    await page.locator("#signup-password").fill("LongEnough1!");
-    await page.locator("#signup-confirm-password").click();
-    await page.locator("#signup-confirm-password").fill("");
-    await page.locator("#signup-confirm-password").pressSequentially("DifferentPass1!", {
-      delay: 15,
-    });
-    await expect(page.locator("#signup-password")).toHaveValue("LongEnough1!");
-    await expect(page.locator("#signup-confirm-password")).toHaveValue("DifferentPass1!");
+    // Fill+assert as one retried unit: if a fill lands before React hydration
+    // finishes, hydration resets the controlled inputs to "" — retrying the
+    // whole block waits out the attach instead of racing it.
+    await expect(async () => {
+      await page.locator("#signup-name").fill("E2E Mismatch");
+      await page.locator("#signup-email").fill("mismatch-e2e@example.invalid");
+      // Type (don't only fill) confirm last so password-managers can't sync both
+      // fields to the same value before submit.
+      await page.locator("#signup-password").fill("LongEnough1!");
+      await page.locator("#signup-confirm-password").click();
+      await page.locator("#signup-confirm-password").fill("");
+      await page.locator("#signup-confirm-password").pressSequentially("DifferentPass1!", {
+        delay: 15,
+      });
+      await expect(page.locator("#signup-password")).toHaveValue("LongEnough1!");
+      await expect(page.locator("#signup-confirm-password")).toHaveValue("DifferentPass1!");
+      // Value sticking for a beat proves hydration has attached and the
+      // controlled state owns the inputs now.
+      await page.waitForTimeout(300);
+      await expect(page.locator("#signup-confirm-password")).toHaveValue("DifferentPass1!");
+    }).toPass({ timeout: 30_000 });
     // Mismatch is surfaced on confirm onChange (and again on submit).
     await expect(page.getByTestId("auth-error")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("auth-error")).toContainText(
