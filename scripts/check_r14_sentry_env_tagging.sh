@@ -48,16 +48,6 @@ literal_contains sentry.client.config.ts 'process.env.NEXT_PUBLIC_SENTRY_ENVIRON
 
 echo
 
-literal_contains .github/workflows/deploy.yml 'SENTRY_ENVIRONMENT: prod' \
-  && pass 'AWS deploy sets SENTRY_ENVIRONMENT: prod' \
-  || missing 'AWS deploy missing SENTRY_ENVIRONMENT: prod'
-
-literal_contains .github/workflows/deploy.yml 'NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod' \
-  && pass 'AWS deploy sets NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod' \
-  || missing 'AWS deploy missing NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod'
-
-echo
-
 for f in .github/workflows/deploy-pi.yml .github/workflows/build-pi-image.yml; do
   if [[ -f "$f" ]]; then
     literal_contains "$f" 'SENTRY_ENVIRONMENT=pi-standby' \

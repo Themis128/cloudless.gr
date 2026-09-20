@@ -2,61 +2,60 @@ name: CI
 # runner: self-hosted via vars.RUNNER_GENERIC (toggle-runner.sh pi|hosted)
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
   pull_request:
     branches: [main]
     paths:
-    - src/**
-    - public/**
-    - e2e/**
-    - __tests__/**
-    - sst.config.ts
-    - sst.config.cloudflare.ts
-    - next.config.ts
-    - package.json
-    - pnpm-lock.yaml
-    - tsconfig.json
-    - mcp.json
-    - .mcp.json
-    - .github/workflows/**
-      # Root-level config that affects build/lint/quality gates.
-      # Without these, PRs editing only these files hang on the required
-      # "Build" check because CI never triggers.
-    - .codacy/**
-    - .sonarcloud.properties
-    - .eslintrc*
-    - eslint.config.*
-    - .prettierrc*
-    - prettier.config.*
-    - .markdownlint-cli2.*
-    - .markdownlint.*
-    - .yamllint.yml
-    - .yamllint.yaml
-      # Python tooling config + sources linted by the python-lint job
-      # (ruff/mypy). Without these, a Python-only change never fires CI.
-    - pyproject.toml
-    - .bandit
-    - scripts/**
-    - lambda/**
-      # Cluster manifests, docs, agent skills, repo-root ignore rules, and
-      # infrastructure firmware/k8s configs also gate the required "Build"
-      # check — without these, PRs that touch only those paths are BLOCKED
-      # forever because the required check never fires.
-    - k8s/**
-    - docs/**
-    - .claude/**
-      # Root-level project-memory docs (CLAUDE.md, AGENTS.md, README.md) also
-      # gate the required "Build" check — they live at the repo root, not under
-      # docs/, so without listing them a docs-only edit is BLOCKED forever.
-    - '*.md'
-    - .gitignore
-    - infrastructure/**
-      # Slack app manifest — slack-manifest-apply.yml deploys it, but the
-      # required "Build" check still has to fire for the PR to merge.
-      # Without this, a manifest-only edit stays BLOCKED forever.
-    - slack-app.manifest.json
+      - src/**
+      - public/**
+      - e2e/**
+      - __tests__/**
+      - sst.config.cloudflare.ts
+      - next.config.ts
+      - package.json
+      - pnpm-lock.yaml
+      - tsconfig.json
+      - mcp.json
+      - .mcp.json
+      - .github/workflows/**
+        # Root-level config that affects build/lint/quality gates.
+        # Without these, PRs editing only these files hang on the required
+        # "Build" check because CI never triggers.
+      - .codacy/**
+      - .sonarcloud.properties
+      - .eslintrc*
+      - eslint.config.*
+      - .prettierrc*
+      - prettier.config.*
+      - .markdownlint-cli2.*
+      - .markdownlint.*
+      - .yamllint.yml
+      - .yamllint.yaml
+        # Python tooling config + sources linted by the python-lint job
+        # (ruff/mypy). Without these, a Python-only change never fires CI.
+      - pyproject.toml
+      - .bandit
+      - scripts/**
+      - lambda/**
+        # Cluster manifests, docs, agent skills, repo-root ignore rules, and
+        # infrastructure firmware/k8s configs also gate the required "Build"
+        # check — without these, PRs that touch only those paths are BLOCKED
+        # forever because the required check never fires.
+      - k8s/**
+      - docs/**
+      - .claude/**
+        # Root-level project-memory docs (CLAUDE.md, AGENTS.md, README.md) also
+        # gate the required "Build" check — they live at the repo root, not under
+        # docs/, so without listing them a docs-only edit is BLOCKED forever.
+      - "*.md"
+      - .gitignore
+      - infrastructure/**
+        # Slack app manifest — slack-manifest-apply.yml deploys it, but the
+        # required "Build" check still has to fire for the PR to merge.
+        # Without this, a manifest-only edit stays BLOCKED forever.
+      - slack-app.manifest.json
 
 concurrency:
   group: ci-${{ github.head_ref }}
@@ -74,76 +73,76 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
-      with:
-        dest: ~/setup-pnpm-${{ runner.name }}
-    - name: pin pnpm store to persistent local path
-      run: |
-        mkdir -p "$HOME/.pnpm-store"
-        pnpm config set store-dir "$HOME/.pnpm-store"
-    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
-      with:
-        node-version: 22
-        cache: pnpm
-    - run: pnpm install --frozen-lockfile --prefer-offline
-    - run: pnpm lint
-    - run: pnpm format:check
-    - run: pnpm lint:md
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm lint:md
 
   yaml-lint:
     name: YAML Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405         # v6.2.0
-      with:
-        python-version: '3.12'
-    - name: Install yamllint + actionlint
-      run: |
-        pipx install yamllint==1.38.0
-        mkdir -p "$HOME/.local/bin"
-        bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
-        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-    - run: bash scripts/lint-yaml.sh
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Install yamllint + actionlint
+        run: |
+          pipx install yamllint==1.38.0
+          mkdir -p "$HOME/.local/bin"
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: bash scripts/lint-yaml.sh
 
   python-lint:
     name: Python Lint & Types
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405         # v6.2.0
-      with:
-        python-version: '3.12'
-    - name: Install Ruff + Mypy
-      run: pipx install ruff==0.15.15 && pipx install mypy==2.1.0
-    - run: ruff check .
-    - run: ruff format --check .
-    - run: mypy scripts infrastructure lambda
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Install Ruff + Mypy
+        run: pipx install ruff==0.15.15 && pipx install mypy==2.1.0
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy scripts infrastructure lambda
 
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
-      with:
-        dest: ~/setup-pnpm-${{ runner.name }}
-    - name: pin pnpm store to persistent local path
-      run: |
-        mkdir -p "$HOME/.pnpm-store"
-        pnpm config set store-dir "$HOME/.pnpm-store"
-    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
-      with:
-        node-version: 22
-        cache: pnpm
-    - run: pnpm install --frozen-lockfile --prefer-offline
-    - run: pnpm typecheck
-      env:
-        NODE_OPTIONS: --max-old-space-size=3072
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072
 
   build:
     name: Build
@@ -156,163 +155,163 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
       NEXT_PUBLIC_AUTH_PROVIDER: d1
       NEXT_PUBLIC_SITE_URL: https://cloudless.gr
-      SSM_DISABLED: '1'
+      SSM_DISABLED: "1"
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
-      with:
-        dest: ~/setup-pnpm-${{ runner.name }}
-    - name: pin pnpm store to persistent local path
-      run: |
-        mkdir -p "$HOME/.pnpm-store"
-        pnpm config set store-dir "$HOME/.pnpm-store"
-    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
-      with:
-        node-version: 22
-        cache: pnpm
-    - name: Restore Next.js build cache
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae         # v5.0.5
-      with:
-        path: .next/cache
-        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{
-          hashFiles('src/**') }}
-        restore-keys: |
-          nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-          nextjs-${{ runner.os }}-
-    - run: pnpm install --frozen-lockfile --prefer-offline
-    - run: pnpm build
-    - name: Install Syft for SBOM generation
-      continue-on-error: true
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.27.1
-    - name: Generate SBOM
-      continue-on-error: true
-      run: |
-        if ! command -v syft >/dev/null 2>&1; then
-          echo "syft not installed — skipping SBOM"
-          exit 0
-        fi
-        syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
-        test -s sbom.json
-    - name: Generate SLSA provenance
-      continue-on-error: true
-      run: |
-        # Create SLSA Level 1 provenance attestation
-        cat > provenance.json << EOF
-        {
-          "_type": "https://in-toto.io/Statement/v0.1",
-          "subject": [
-            {
-              "name": ".next",
-              "digest": {
-                "sha256": "$(find .next -type f -exec sha256sum {} + | sha256sum | cut -d' ' -f1)"
-              }
-            },
-            {
-              "name": "package.json",
-              "digest": {
-                "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
-              }
-            },
-            {
-              "name": "pnpm-lock.yaml",
-              "digest": {
-                "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
-              }
-            }
-          ],
-          "predicateType": "https://slsa.dev/provenance/v0.1",
-          "predicate": {
-            "builder": {
-              "id": "https://github.com/cloudless-gr/ci-workflow"
-            },
-            "buildType": "https://github.com/cloudless-gr/nextjs-build",
-            "invocation": {
-              "configSource": {
-                "uri": "https://github.com/cloudless-gr/cloudless.gr",
-                "digest": {
-                  "sha256": "$(git rev-parse HEAD)"
-                }
-              },
-              "entryPoint": "pnpm build",
-              "arguments": [
-                "--frozen-lockfile",
-                "--prefer-offline"
-              ]
-            },
-            "materials": [
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Restore Next.js build cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{
+            hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm build
+      - name: Install Syft for SBOM generation
+        continue-on-error: true
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.27.1
+      - name: Generate SBOM
+        continue-on-error: true
+        run: |
+          if ! command -v syft >/dev/null 2>&1; then
+            echo "syft not installed — skipping SBOM"
+            exit 0
+          fi
+          syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
+          test -s sbom.json
+      - name: Generate SLSA provenance
+        continue-on-error: true
+        run: |
+          # Create SLSA Level 1 provenance attestation
+          cat > provenance.json << EOF
+          {
+            "_type": "https://in-toto.io/Statement/v0.1",
+            "subject": [
               {
-                "uri": "git+https://github.com/cloudless-gr/cloudless.gr",
+                "name": ".next",
                 "digest": {
-                  "sha256": "$(git rev-parse HEAD)"
+                  "sha256": "$(find .next -type f -exec sha256sum {} + | sha256sum | cut -d' ' -f1)"
                 }
               },
               {
-                "uri": "file://package.json",
+                "name": "package.json",
                 "digest": {
                   "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
                 }
               },
               {
-                "uri": "file://pnpm-lock.yaml",
+                "name": "pnpm-lock.yaml",
                 "digest": {
                   "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
                 }
               }
-            ]
+            ],
+            "predicateType": "https://slsa.dev/provenance/v0.1",
+            "predicate": {
+              "builder": {
+                "id": "https://github.com/cloudless-gr/ci-workflow"
+              },
+              "buildType": "https://github.com/cloudless-gr/nextjs-build",
+              "invocation": {
+                "configSource": {
+                  "uri": "https://github.com/cloudless-gr/cloudless.gr",
+                  "digest": {
+                    "sha256": "$(git rev-parse HEAD)"
+                  }
+                },
+                "entryPoint": "pnpm build",
+                "arguments": [
+                  "--frozen-lockfile",
+                  "--prefer-offline"
+                ]
+              },
+              "materials": [
+                {
+                  "uri": "git+https://github.com/cloudless-gr/cloudless.gr",
+                  "digest": {
+                    "sha256": "$(git rev-parse HEAD)"
+                  }
+                },
+                {
+                  "uri": "file://package.json",
+                  "digest": {
+                    "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
+                  }
+                },
+                {
+                  "uri": "file://pnpm-lock.yaml",
+                  "digest": {
+                    "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
+                  }
+                }
+              ]
+            }
           }
-        }
-        EOF
-    - name: Upload provenance artifact
-      continue-on-error: true
-      uses: actions/upload-artifact@v7
-      with:
-        name: provenance
-        path: provenance.json
-        retention-days: 30
-    - name: Upload SBOM artifact
-      continue-on-error: true
-      uses: actions/upload-artifact@v7
-      with:
-        name: sbom
-        path: sbom.json
-        retention-days: 30
-    - name: Supply chain monitoring (Endpoint SCPM or similar)
-      # This step is a placeholder for integrating Endor SCPM or similar supply chain monitoring tools
-      # To enable: uncomment and configure the appropriate tool
-      # Example for Endor SCPM:
-      #   - uses: endorlabs/scp-action@v1
-      #     with:
-      #       api-key: ${{ secrets.ENDOR_API_KEY }}
-      run: |
-        echo "Supply chain monitoring step - to be implemented with Endor SCPM or similar"
-        echo "For now, this documents where supply chain monitoring would be integrated"
-    - name: Scan licenses with pnpm licenses
-      run: |
-        pnpm licenses ls --json > licenses.json
-    - name: Upload licenses artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: licenses
-        path: licenses.json
-        retention-days: 30
+          EOF
+      - name: Upload provenance artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: provenance
+          path: provenance.json
+          retention-days: 30
+      - name: Upload SBOM artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 30
+      - name: Supply chain monitoring (Endpoint SCPM or similar)
+        # This step is a placeholder for integrating Endor SCPM or similar supply chain monitoring tools
+        # To enable: uncomment and configure the appropriate tool
+        # Example for Endor SCPM:
+        #   - uses: endorlabs/scp-action@v1
+        #     with:
+        #       api-key: ${{ secrets.ENDOR_API_KEY }}
+        run: |
+          echo "Supply chain monitoring step - to be implemented with Endor SCPM or similar"
+          echo "For now, this documents where supply chain monitoring would be integrated"
+      - name: Scan licenses with pnpm licenses
+        run: |
+          pnpm licenses ls --json > licenses.json
+      - name: Upload licenses artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: licenses
+          path: licenses.json
+          retention-days: 30
 
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v6
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
-      with:
-        dest: ~/setup-pnpm-${{ runner.name }}
-    - name: pin pnpm store to persistent local path
-      run: |
-        mkdir -p "$HOME/.pnpm-store"
-        pnpm config set store-dir "$HOME/.pnpm-store"
-    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
-      with:
-        node-version: 22
-        cache: pnpm
-    - run: pnpm install --frozen-lockfile --prefer-offline
-    - run: pnpm test:ci
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm test:ci

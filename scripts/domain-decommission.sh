@@ -14,7 +14,7 @@
 #     matched by the DOMAIN's own zone. We never delete by a hardcoded id.
 #   - PROTECTED IDS. The cloudless.gr HA *secondary* health check
 #     30a69f1c-8d48-49bd-9067-cabec979478b (SECONDARY=Pi/APIGW failover, see
-#     sst.config.ts / docs/cluster-overload-runbook.md) is NEVER deletable here —
+#     docs/cluster-overload-runbook.md) is NEVER deletable here —
 #     it belongs to the ACTIVE cloudless.gr failover, not cloudless.online.
 #
 # Credentials (supplied by domain-decommission.yml in CI):

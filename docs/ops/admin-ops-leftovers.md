@@ -170,7 +170,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 - Status: `src/app/api/admin/integrations/status/route.ts` (`pingMeta`)
 - Client: `src/lib/campaigns/meta-ads.ts`, `src/lib/meta-capi.ts`
 - UI: `src/app/[locale]/admin/campaigns/meta/page.tsx`
-- Sync: `.github/workflows/sync-campaign-ads-from-ssm.yml`, `sync-campaign-ads-pi-secrets.yml`
+- Sync: `.github/workflows/sync-campaign-ads-pi-secrets.yml`
 - Docs: `docs/marketing/AGENCY-HUB.md`, `docs/marketing/MARKETING-HUB-SETUP.md`
 
 ### MCP / tools
@@ -212,7 +212,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 - `scripts/tiktok-oauth.ts`, `scripts/activate-integration.sh`
 - `src/lib/campaigns/tiktok.ts`, admin TikTok pages + `src/app/api/admin/oauth/tiktok/callback/route.ts`
-- Workflows: `sync-campaign-ads-from-ssm.yml`, `sync-campaign-ads-pi-secrets.yml`
+- Workflows: `sync-campaign-ads-pi-secrets.yml`
 - Docs: `docs/marketing/MARKETING-HUB-SETUP.md`, `docs/product/USE-CASES.md`
 
 ### MCP / tools

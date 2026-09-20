@@ -19,13 +19,33 @@ if (!PASS) {
 }
 
 const MONITORS = [
-  { name: "cloudless.gr /api/health", url: "https://cloudless.gr/api/health", accepted_statuscodes: ["200"] },
-  { name: "AppFlowy", url: "https://appflowy.cloudless.gr/api/health", accepted_statuscodes: ["200"] },
+  {
+    name: "cloudless.gr /api/health",
+    url: "https://cloudless.gr/api/health",
+    accepted_statuscodes: ["200"],
+  },
+  {
+    name: "AppFlowy",
+    url: "https://appflowy.cloudless.gr/api/health",
+    accepted_statuscodes: ["200"],
+  },
   { name: "EspoCRM", url: "https://espocrm.cloudless.gr/", accepted_statuscodes: ["200", "302"] },
-  { name: "Postiz", url: "https://postiz.cloudless.gr/", accepted_statuscodes: ["200", "307", "308"] },
+  {
+    name: "Postiz",
+    url: "https://postiz.cloudless.gr/",
+    accepted_statuscodes: ["200", "307", "308"],
+  },
   { name: "n8n", url: "https://n8n.cloudless.gr/healthz", accepted_statuscodes: ["200"] },
-  { name: "Grafana", url: "https://grafana.cloudless.gr/api/health", accepted_statuscodes: ["200"] },
-  { name: "ntfy", url: "https://ntfy.cloudless.gr/v1/health", accepted_statuscodes: ["200", "401"] },
+  {
+    name: "Grafana",
+    url: "https://grafana.cloudless.gr/api/health",
+    accepted_statuscodes: ["200"],
+  },
+  {
+    name: "ntfy",
+    url: "https://ntfy.cloudless.gr/v1/health",
+    accepted_statuscodes: ["200", "401"],
+  },
   {
     name: "Uptime Kuma",
     url: "http://uptime-kuma.uptime-kuma.svc.cluster.local:3001/",
@@ -45,10 +65,14 @@ const MONITORS = [
     url: "http://meilisearch.meilisearch.svc.cluster.local:7700/health",
     accepted_statuscodes: ["200"],
   },
-  { name: "Stripe API surface", url: "https://api.stripe.com/healthcheck", accepted_statuscodes: ["200"] },
   {
-    name: "AWS Cognito (global)",
-    url: "https://cognito-idp.us-east-1.amazonaws.com/",
+    name: "Stripe API surface",
+    url: "https://api.stripe.com/healthcheck",
+    accepted_statuscodes: ["200"],
+  },
+  {
+    name: "Cloudflare API (global)",
+    url: "https://api.cloudflare.com/client/v4/",
     accepted_statuscodes: ["200", "400", "403"],
   },
 ];
@@ -230,7 +254,11 @@ async function main() {
     {
       name: "Public",
       weight: 1,
-      monitorList: byName(["cloudless.gr /api/health", "Stripe API surface", "AWS Cognito (global)"]),
+      monitorList: byName([
+        "cloudless.gr /api/health",
+        "Stripe API surface",
+        "AWS Cognito (global)",
+      ]),
     },
     {
       name: "Self-hosted",
@@ -254,7 +282,10 @@ async function main() {
 
   const verify = await fetch(`${BASE}/api/status-page/${SLUG}`);
   const body = await verify.json();
-  const count = (body.publicGroupList || []).reduce((n, g) => n + ((g.monitorList && g.monitorList.length) || 0), 0);
+  const count = (body.publicGroupList || []).reduce(
+    (n, g) => n + ((g.monitorList && g.monitorList.length) || 0),
+    0
+  );
   console.log(`VERIFY slug=${SLUG} http=${verify.status} monitors=${count}`);
 
   socket.close();

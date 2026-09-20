@@ -5,9 +5,9 @@
 #
 # Secrets checked:
 #   Cluster ops:  TS_AUTHKEY, KUBECONFIG_B64, OMV_SSH_KEY
-#   Notifications: NOTION_API_KEY
-#   Email:        SES_SMTP_USER, SES_SMTP_PASSWORD (or SSM path)
-#   CI:           GH_PAT, AWS_DEPLOY_ROLE_ARN
+#   CMS:          APPFLOWY_API_URL, APPFLOWY_JWT_SECRET
+#   Cloudflare:   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, CF_R2_* keys
+#   CI:           GH_PAT, CRON_SECRET
 #
 # Each secret is tested for non-empty value only (never logged).
 
@@ -32,15 +32,18 @@ check "TS_AUTHKEY"        "${TS_AUTHKEY:-}"
 check "KUBECONFIG_B64"    "${KUBECONFIG_B64:-}"
 check "OMV_SSH_KEY"       "${OMV_SSH_KEY:-}"
 
-# Notion
-check "NOTION_API_KEY"    "${NOTION_API_KEY:-}"
+# CMS (AppFlowy)
+check "APPFLOWY_API_URL"     "${APPFLOWY_API_URL:-}"
+check "APPFLOWY_JWT_SECRET"  "${APPFLOWY_JWT_SECRET:-}"
 
-# AWS / Deploy
-check "AWS_DEPLOY_ROLE_ARN"  "${AWS_DEPLOY_ROLE_ARN:-}"
+# Cloudflare
+check "CLOUDFLARE_API_TOKEN"    "${CLOUDFLARE_API_TOKEN:-}"
+check "CF_ACCOUNT_ID"           "${CF_ACCOUNT_ID:-}"
+check "CF_R2_ACCESS_KEY_ID"     "${CF_R2_ACCESS_KEY_ID:-}"
+check "CF_R2_SECRET_ACCESS_KEY" "${CF_R2_SECRET_ACCESS_KEY:-}"
 
-# SES SMTP (either direct or via SSM)
-check "SES_SMTP_USER"     "${SES_SMTP_USER:-}"
-check "SES_SMTP_PASSWORD" "${SES_SMTP_PASSWORD:-}"
+# Cron auth
+check "CRON_SECRET"         "${CRON_SECRET:-}"
 
 # GitHub
 check "GH_PAT"            "${GH_PAT:-}"
