@@ -5,7 +5,7 @@ metadata:
   namespace: espocrm
 spec:
   accessModes: [ReadWriteOnce]
-  storageClassName: local-path        # → /srv/dev-disk-by-uuid-a9a5a108-…/k3s/storage = sda1 (120 Gi SSD)
+  storageClassName: local-path # → /srv/dev-disk-by-uuid-a9a5a108-…/k3s/storage = sda1 (120 Gi SSD)
   resources:
     requests:
       storage: 4Gi
@@ -32,7 +32,7 @@ metadata:
     component: mariadb
 spec:
   replicas: 1
-  strategy: {type: Recreate}
+  strategy: { type: Recreate }
   selector:
     matchLabels:
       app: espocrm
@@ -44,45 +44,53 @@ spec:
         component: mariadb
     spec:
       nodeSelector:
-        kubernetes.io/hostname: omv         # k3s node label is `omv` (not `omv-main`); both PVCs are local-path so pod must stay here
+        kubernetes.io/hostname: omv # k3s node label is `omv` (not `omv-main`); both PVCs are local-path so pod must stay here
       containers:
-      - name: mariadb
-        image: mariadb:11.4
-        args:
-        - --character-set-server=utf8mb4
-        - --collation-server=utf8mb4_unicode_ci
-        - --innodb-buffer-pool-size=128M
-        - --max-connections=50
-        env:
-        - name: MARIADB_ROOT_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-root-password}}
-        - name: MARIADB_DATABASE
-          value: espocrm
-        - name: MARIADB_USER
-          value: espocrm
-        - name: MARIADB_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-password}}
-        ports:
-        - {containerPort: 3306, name: mysql}
-        resources:
-          requests: {cpu: 100m, memory: 256Mi}
-          limits: {cpu: 500m, memory: 512Mi}
-        livenessProbe:
-          exec: {command: [healthcheck.sh, --connect, --innodb_initialized]}
-          initialDelaySeconds: 60
-          periodSeconds: 30
-          timeoutSeconds: 10
-        readinessProbe:
-          exec: {command: [healthcheck.sh, --connect, --innodb_initialized]}
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-        volumeMounts:
-        - {name: data, mountPath: /var/lib/mysql}
+        - name: mariadb
+          image: mariadb:11.4
+          args:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            - --innodb-buffer-pool-size=128M
+            - --max-connections=50
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                {
+                  secretKeyRef:
+                    { name: espocrm-secrets, key: mariadb-root-password },
+                }
+            - name: MARIADB_DATABASE
+              value: espocrm
+            - name: MARIADB_USER
+              value: espocrm
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                {
+                  secretKeyRef:
+                    { name: espocrm-secrets, key: mariadb-password },
+                }
+          ports:
+            - { containerPort: 3306, name: mysql }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          livenessProbe:
+            exec: { command: [healthcheck.sh, --connect, --innodb_initialized] }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            exec: { command: [healthcheck.sh, --connect, --innodb_initialized] }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/mysql }
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: espocrm-mariadb-data
+        - name: data
+          persistentVolumeClaim:
+            claimName: espocrm-mariadb-data
 ---
 apiVersion: v1
 kind: Service
@@ -95,7 +103,31 @@ spec:
     app: espocrm
     component: mariadb
   ports:
-  - {port: 3306, targetPort: 3306, name: mysql}
+    - { port: 3306, targetPort: 3306, name: mysql }
+---
+# Trust omv-ha's self-signed mail.cloudless.gr cert so PHP (Symfony Mailer
+# + IMAP client) verifies TLS peers instead of failing. openssl.cafile
+# REPLACES the CA bundle, so mail.crt must be the system bundle with the
+# omv-ha cert appended — otherwise external HTTPS (Resend, version checks)
+# fails verification.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: php-ini-omvha-mail
+  namespace: espocrm
+data:
+  99-omvha-mail.ini: |
+    [openssl]
+    openssl.cafile=/etc/ssl/omv-ha/mail.crt
+---
+# mail.crt = container's /etc/ssl/certs/ca-certificates.crt + omv-ha's
+# self-signed cert appended. Build once:
+#   kubectl -n espocrm exec deploy/espocrm -- cat \
+#     /etc/ssl/certs/ca-certificates.crt > /tmp/bundle.pem
+#   ssh omv-ha 'sudo cat /etc/ssl/cloudless-mail/mail.crt' >> /tmp/bundle.pem
+#   kubectl -n espocrm create secret generic omv-ha-mail-ca \
+#     --from-file=mail.crt=/tmp/bundle.pem
+# (Self-signed SAN cert covers mail.cloudless.gr + 192.168.1.130.)
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -107,7 +139,7 @@ metadata:
     component: web
 spec:
   replicas: 1
-  strategy: {type: Recreate}
+  strategy: { type: Recreate }
   selector:
     matchLabels:
       app: espocrm
@@ -121,48 +153,91 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
-      - name: espocrm
-        image: espocrm/espocrm:9
-        env:
-        - {name: ESPOCRM_DATABASE_PLATFORM, value: Mysql}
-        - {name: ESPOCRM_DATABASE_HOST, value: espocrm-mariadb}
-        - {name: ESPOCRM_DATABASE_PORT, value: '3306'}
-        - {name: ESPOCRM_DATABASE_NAME, value: espocrm}
-        - {name: ESPOCRM_DATABASE_USER, value: espocrm}
-        - name: ESPOCRM_DATABASE_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: mariadb-password}}
-        - name: ESPOCRM_ADMIN_USERNAME
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-username}}
-        - name: ESPOCRM_ADMIN_PASSWORD
-          valueFrom: {secretKeyRef: {name: espocrm-secrets, key: admin-password}}
-        - {name: ESPOCRM_SITE_URL, value: https://espocrm.cloudless.gr}
-        - {name: ESPOCRM_CONFIG_USE_WEBSOCKET, value: 'false'}
-        - {name: ESPOCRM_CONFIG_DEFAULT_TIMEZONE, value: Europe/Athens}
-        - {name: ESPOCRM_CONFIG_DEFAULT_LANGUAGE, value: en_US}
-        - {name: ESPOCRM_CRON_ENABLED, value: 'true'}
-        ports:
-        - {containerPort: 80, name: http}
-        resources:
-          requests: {cpu: 100m, memory: 256Mi}
-          limits: {cpu: 1000m, memory: 768Mi}
-        livenessProbe:
-          httpGet: {path: /, port: 80}
-          initialDelaySeconds: 180
-          periodSeconds: 30
-          timeoutSeconds: 10
-          failureThreshold: 5
-        readinessProbe:
-          httpGet: {path: /, port: 80}
-          initialDelaySeconds: 90
-          periodSeconds: 15
-          timeoutSeconds: 10
-          failureThreshold: 6
-        volumeMounts:
-        - {name: data, mountPath: /var/www/html}
+        - name: espocrm
+          image: espocrm/espocrm:9
+          env:
+            - { name: ESPOCRM_DATABASE_PLATFORM, value: Mysql }
+            - { name: ESPOCRM_DATABASE_HOST, value: espocrm-mariadb }
+            - { name: ESPOCRM_DATABASE_PORT, value: "3306" }
+            - { name: ESPOCRM_DATABASE_NAME, value: espocrm }
+            - { name: ESPOCRM_DATABASE_USER, value: espocrm }
+            - name: ESPOCRM_DATABASE_PASSWORD
+              valueFrom:
+                {
+                  secretKeyRef:
+                    { name: espocrm-secrets, key: mariadb-password },
+                }
+            - name: ESPOCRM_ADMIN_USERNAME
+              valueFrom:
+                { secretKeyRef: { name: espocrm-secrets, key: admin-username } }
+            - name: ESPOCRM_ADMIN_PASSWORD
+              valueFrom:
+                { secretKeyRef: { name: espocrm-secrets, key: admin-password } }
+            - { name: ESPOCRM_SITE_URL, value: https://espocrm.cloudless.gr }
+            - { name: ESPOCRM_CONFIG_USE_WEBSOCKET, value: "false" }
+            - { name: ESPOCRM_CONFIG_DEFAULT_TIMEZONE, value: Europe/Athens }
+            - { name: ESPOCRM_CONFIG_DEFAULT_LANGUAGE, value: en_US }
+            - { name: ESPOCRM_CRON_ENABLED, value: "true" }
+          ports:
+            - { containerPort: 80, name: http }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1000m, memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - { name: data, mountPath: /var/www/html }
+            - {
+                name: omv-ha-mail-ca,
+                mountPath: /etc/ssl/omv-ha,
+                readOnly: true,
+              }
+            - {
+                name: php-ini-omvha,
+                mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini,
+                subPath: 99-omvha-mail.ini,
+              }
+        # EspoCRM job daemon — runs scheduled jobs (IMAP fetch, cron workflows).
+        # Without it, inbound group email accounts are never polled.
+        - name: espocrm-daemon
+          image: espocrm/espocrm:9
+          command: [sh, -c, "exec su -s /bin/sh www-data -c 'php daemon.php'"]
+          workingDir: /var/www/html
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { cpu: 250m, memory: 256Mi }
+          volumeMounts:
+            - { name: data, mountPath: /var/www/html }
+            - {
+                name: omv-ha-mail-ca,
+                mountPath: /etc/ssl/omv-ha,
+                readOnly: true,
+              }
+            - {
+                name: php-ini-omvha,
+                mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini,
+                subPath: 99-omvha-mail.ini,
+              }
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: espocrm-app-data
+        - name: data
+          persistentVolumeClaim:
+            claimName: espocrm-app-data
+        - name: omv-ha-mail-ca
+          secret:
+            secretName: omv-ha-mail-ca # self-signed mail.cloudless.gr cert — trusted via openssl.cafile in php-ini-omvha
+        - name: php-ini-omvha
+          configMap:
+            name: php-ini-omvha-mail
 ---
 apiVersion: v1
 kind: Service
@@ -175,4 +250,4 @@ spec:
     app: espocrm
     component: web
   ports:
-  - {port: 80, targetPort: 80, nodePort: 30700, name: http}
+    - { port: 80, targetPort: 80, nodePort: 30700, name: http }

@@ -10,21 +10,27 @@ Canonical map of mailbox, transactional, and marketing email. Verified
 | ------------------- | --------------------------------- | --------------------------------------------- |
 | Self-hosted mailbox | Human IMAP + Roundcube compose    | omv-ha dovecot + postfix → Resend `:587`      |
 | App transactional   | API-driven mail from Next on Pi   | `@/lib/email` → CF Email REST → Resend        |
+| EspoCRM             | Cases + CRM mail                  | omv-ha IMAPS `:993` fetch + postfix `:587`    |
 | ActiveCampaign      | Marketing campaigns / automations | AC API; contact form `enrollLeadInAutomation` |
 
 Slack (`slack-notify.ts`) is a parallel ops channel, not a mail transport.
-EspoCRM has its own SMTP bootstrap still pointed at **AWS SES**
-(`scripts/espocrm-smtp-bootstrap.sh`) — separate from the Next app path.
 
 ## Self-hosted mail (omv-ha)
 
 - Host: **omv-ha** (Pi 4, out of k3s). Starlink CGNAT — no public IP; port 25 blocked.
 - Mailbox: `tbaltzakis@cloudless.gr` · Webmail: https://webmail.cloudless.gr
 - Tunnel: `e977a490-58c5-4fdb-9155-86832e3e636a` → `192.168.1.130:80`
-- **Inbound (LIVE 2026-08-26):** Cloudflare Email Routing → Worker `mail-ingest`
+- **Inbound (LIVE 2026-08-26, per-recipient routing 2026-09-20):**
+  Cloudflare Email Routing → Worker `mail-ingest`
   → `POST https://webmail.cloudless.gr/ingest` → dovecot-lda → Maildir.
-  `tbaltzakis@` + catch-all → Worker; all addresses land in
-  `tbaltzakis@cloudless.gr` Maildir. `FALLBACK_FORWARD` → Gmail only on ingest failure.
+  `X-Mail-To` recipient → matching mailbox when listed in
+  `/etc/cloudless/mail-ingest-mailboxes` (`tbaltzakis@`, `polar@`,
+  `espocrm@`); unknown recipients land in `tbaltzakis@cloudless.gr`.
+  `FALLBACK_FORWARD` → Gmail only on ingest failure.
+- **Access bypass (2026-09-20):** `webmail.cloudless.gr` sits behind Cloudflare
+  Access; a path-scoped Access app `webmail.cloudless.gr/ingest` (bypass
+  policy) lets the Worker POST through. `/ingest` still enforces its own
+  `X-Mail-Ingest-Secret` check — Access bypass does not weaken it.
 - Clients: IMAPS `:993` + submission `:587` on omv-ha (Tailscale / LAN);
   Roundcube at https://webmail.cloudless.gr.
 - Installer: `infrastructure/omv-ha/setup-mail-server.sh` +
@@ -48,11 +54,33 @@ Dispatch order:
 Before send: D1 `email_suppression` via `ses-suppression-d1.ts` (Pi resolves
 AUTH_DB through `getAuthDbFromEnv()`).
 
-From address: `noreply@cloudless.gr` (Resend may use `SES_FROM_EMAIL` env —
-legacy name only). `notifyTeam()` uses `SES_TO_EMAIL` (default
-`tbaltzakis@cloudless.gr`).
+From address: `noreply@cloudless.gr`. Config keys `EMAIL_FROM`/`EMAIL_TO` are
+canonical; `SES_FROM_EMAIL`/`SES_TO_EMAIL` remain as populated aliases for
+existing D1 rows/readers.
 
 API routes import **`@/lib/email`**, not `email-sender.ts` (Workers-only helper).
+
+## EspoCRM mail (2026-09-20)
+
+Inbound and outbound both run on the omv-ha stack — the old SES→Lambda case
+bridge and `scripts/espocrm-smtp-bootstrap.sh` (AWS SSM) are retired.
+
+- **Mailbox:** `espocrm@cloudless.gr` — dedicated dovecot account
+  (`/var/mail/vhosts/cloudless.gr/espocrm`), password in
+  `/etc/cloudless/espocrm-mailbox.pw` on omv-ha.
+- **Inbound → Case:** Group Email Account in EspoCRM (`InboundEmail` entity)
+  polls IMAPS `192.168.1.130:993` every 2 min via `CheckInboundEmails`;
+  `createCase` auto-creates Cases from fetched mail.
+- **Outbound:** same entity carries `smtp*` — postfix `192.168.1.130:587`
+  STARTTLS + SASL LOGIN → dovecot local delivery / Resend relay.
+- **TLS:** omv-ha's self-signed `mail.cloudless.gr` cert is trusted via
+  `secret/omv-ha-mail-ca` mounted at `/etc/ssl/omv-ha/mail.crt` +
+  `configmap/php-ini-omvha-mail` (`openssl.cafile`). Peer verification stays ON.
+- **Scheduler:** `espocrm-daemon` sidecar (`php daemon.php` as www-data) in
+  `infrastructure/espocrm/k8s/espocrm.yaml` — required, scheduled jobs
+  (IMAP fetch, workflows) never run without it.
+- **Passwords:** EspoCRM encrypts `password`/`smtpPassword` with its `crypt`
+  service — always write via ORM + `crypt->encrypt()`, never plaintext/API.
 
 Facade helpers: welcome, order confirmation, payment failure, activation,
 password reset, contact acknowledgment, booking confirmation, unsubscribe
@@ -83,15 +111,20 @@ See `docs/aws/EMAIL-SES.md`.
 `ses-suppression.test.ts`, `auth-resend-verification-api.test.ts`,
 `admin-email-api.test.ts`.
 
-## Verification (2026-08-14)
+## Verification (2026-09-20)
 
-| Check | Result |
-| --- | --- |
-| `pnpm exec vitest run __tests__/email.test.ts __tests__/ses-suppression.test.ts` | 20/20 pass (includes skip-when-suppressed) |
-| `admin-email-api` + `client-report-email` + `auth-resend-verification-api` | 26/26 pass |
-| Remote D1 `email_suppression` table on `user-auth-db` | Present (`SELECT` ok; 0 rows at probe time) |
-| `https://webmail.cloudless.gr/` | HTTPS reachable (Roundcube) |
-| Doc consistency | Inbound = Worker→dovecot (+ Gmail catch-all/fallback); App = CF REST → Resend |
+| Check                                           | Result                                                     |
+| ----------------------------------------------- | ---------------------------------------------------------- |
+| CF Email Routing → worker → `/ingest` → dovecot | HTTP 204, mail in per-recipient Maildir                    |
+| `espocrm@cloudless.gr` routing                  | Delivered to `espocrm` Maildir (allowlist)                 |
+| EspoCRM IMAP fetch `192.168.1.130:993`          | `connectedAt` set; 2 test mails → 2 auto Cases             |
+| EspoCRM SMTP `192.168.1.130:587`                | `SENT ok`; postfix `sasl_username=espocrm@`, `status=sent` |
+| TLS peer verification                           | `openssl.cafile` trust; verify ON                          |
+| App transactional (Resend API)                  | Live send ok (`id` returned)                               |
+
+Baseline (2026-08-14): `email.test.ts` 20/20, `admin-email-api` +
+`client-report-email` + `auth-resend-verification-api` 26/26, D1
+`email_suppression` present, `https://webmail.cloudless.gr/` reachable.
 
 Do **not** confuse omv-ha postfix relay (human compose) with `@/lib/email`
 (API transactional).

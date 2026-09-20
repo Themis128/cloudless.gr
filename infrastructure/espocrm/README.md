@@ -13,11 +13,11 @@ be deleted by the operator.
 
 Three blockers killed SuiteCRM on this stack:
 
-| Blocker | Detail |
-|---|---|
+| Blocker     | Detail                                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | arm64 image | Bitnami SuiteCRM image is amd64-only ([bitnami/charts#7305](https://github.com/bitnami/charts/issues/7305)); won't run on Pi 5. |
-| Licensing | Bitnami moved SuiteCRM into commercial Secure Images in 2024. |
-| Helm chart | Official `helm/charts` SuiteCRM chart is deprecated. |
+| Licensing   | Bitnami moved SuiteCRM into commercial Secure Images in 2024.                                                                   |
+| Helm chart  | Official `helm/charts` SuiteCRM chart is deprecated.                                                                            |
 
 EspoCRM publishes [official multi-arch `espocrm/espocrm`](https://hub.docker.com/r/espocrm/espocrm)
 (amd64 + arm64), idles at ~300 MiB, has a clean v8 JSON-API.
@@ -66,15 +66,15 @@ PVCs stay on the dedicated 120 GB SSD.
 
 ## Live deploy state (verified 2026-06-20)
 
-| Pod | Status | Image | RAM live |
-|---|---|---|---|
-| `espocrm-d9fb465d4-*` | 1/1 Running | `espocrm/espocrm:9` (sha256:213e6b62…) | ~200 MiB |
-| `espocrm-mariadb-ccf4d6f78-*` | 1/1 Running | `mariadb:11` | ~100 MiB |
+| Pod                           | Status      | Image                                  | RAM live |
+| ----------------------------- | ----------- | -------------------------------------- | -------- |
+| `espocrm-d9fb465d4-*`         | 1/1 Running | `espocrm/espocrm:9` (sha256:213e6b62…) | ~200 MiB |
+| `espocrm-mariadb-ccf4d6f78-*` | 1/1 Running | `mariadb:11`                           | ~100 MiB |
 
-| PVC | Capacity | Bound | Storage |
-|---|---|---|---|
-| `espocrm-app-data` | 4 Gi | pvc-8ae109a5-… | local-path → sda1 |
-| `espocrm-mariadb-data` | 4 Gi | pvc-59f6bacb-… | local-path → sda1 |
+| PVC                    | Capacity | Bound          | Storage           |
+| ---------------------- | -------- | -------------- | ----------------- |
+| `espocrm-app-data`     | 4 Gi     | pvc-8ae109a5-… | local-path → sda1 |
+| `espocrm-mariadb-data` | 4 Gi     | pvc-59f6bacb-… | local-path → sda1 |
 
 Memory cost on omv: net +304 MiB after the HA + Metabase eviction (see below).
 
@@ -85,11 +85,11 @@ required eviction. The deployments saved to
 `evicted-deployments/` were removed; their PVCs were preserved so they can be
 re-applied later (likely on a third Pi):
 
-| Deployment | RAM freed | PVC preserved |
-|---|---|---|
-| `home-assistant/home-assistant` | ~354 MiB | `ha-config-pvc` |
-| `analytics/metabase`            | ~808 MiB | `metabase-data`, `duckdb-data` |
-| **total** | **~1.16 GiB** | |
+| Deployment                      | RAM freed     | PVC preserved                  |
+| ------------------------------- | ------------- | ------------------------------ |
+| `home-assistant/home-assistant` | ~354 MiB      | `ha-config-pvc`                |
+| `analytics/metabase`            | ~808 MiB      | `metabase-data`, `duckdb-data` |
+| **total**                       | **~1.16 GiB** |                                |
 
 `evicted-deployments/*.yaml` re-applies each one verbatim once you have a
 node to put them on. `omv-ha` is a Pi 4 with 1 GB RAM — neither fits there.
@@ -160,29 +160,36 @@ node to put them on. `omv-ha` is a Pi 4 with 1 GB RAM — neither fits there.
 EspoCRM SSM key stays in place during cutover so anything still pointing
 at it keeps working.
 
-## Inbound Email → Cases (operator setup, ~10 min)
+## Inbound Email → Cases (LIVE 2026-09-20)
 
-EspoCRM can convert incoming emails on `support@cloudless.gr` into Case
-records automatically. Free, no extension needed — built into the core.
+Fully wired — no operator setup needed. Mail to `espocrm@cloudless.gr`
+becomes a Case automatically.
 
-1. **Get IMAP creds** for `support@cloudless.gr` (whatever provider hosts
-   the mailbox — Google Workspace, Zoho, mail.cloudless.gr, etc).
-2. EspoCRM UI → **Administration → Inbound Emails → Create**:
-   - Name: `Support inbox`
-   - From Name: `Cloudless Support`
-   - Status: `Active`
-   - Use IMAP: ✓ (host, port 993, SSL)
-   - Username / Password: as provided
-   - Monitored folders: `INBOX`
-   - **Create Case: ✓** (the magic flag — every new IMAP message becomes a Case)
-   - Case Distribution: Round-Robin (or pick an owner manually)
-3. Test by emailing `support@cloudless.gr` — within ~5 min the message
-   appears as a Case under Admin → Cases. The EspoCRM webhook for
-   `Case.create` is already registered, so a Slack notification fires to
-   `#notifications` automatically.
-4. (Optional) Set up the matching SMTP **Outbound Email** so replies sent
-   from the Case detail view land in the customer's inbox under the right
-   threading. Same Admin → Outbound Emails settings.
+```
+sender → espocrm@cloudless.gr
+  → Cloudflare Email Routing → Worker mail-ingest
+  → POST webmail.cloudless.gr/ingest (Access bypass + X-Mail-Ingest-Secret)
+  → dovecot Maildir /var/mail/vhosts/cloudless.gr/espocrm
+  → EspoCRM InboundEmail (IMAPS 192.168.1.130:993, CheckInboundEmails */2min)
+  → Email + Case (createCase)
+```
+
+- **Mailbox:** dedicated `espocrm@cloudless.gr` dovecot account; password at
+  `/etc/cloudless/espocrm-mailbox.pw` on omv-ha.
+- **Outbound:** same InboundEmail entity's `smtp*` → postfix
+  `192.168.1.130:587` STARTTLS + SASL LOGIN. `outboundEmailFromAddress`
+  matches `espocrm@cloudless.gr` so `SendingAccountProvider::getSystem()`
+  resolves it for all system mail.
+- **TLS:** omv-ha self-signed cert trusted via `secret/omv-ha-mail-ca`
+  (`/etc/ssl/omv-ha/mail.crt`) + `configmap/php-ini-omvha-mail`
+  (`openssl.cafile`). Verification stays ON — do not disable.
+- **Scheduler:** the `espocrm-daemon` sidecar (`php daemon.php`, www-data)
+  is **required** — `CheckInboundEmails` and all cron workflows live in it.
+- **Passwords:** must be written via ORM + `crypt->encrypt()` — direct API
+  writes and plaintext both fail (`OpenSSL decrypt failure` on fetch).
+
+Verified 2026-09-20: two test mails → two Cases; outbound send `SENT ok`
+with `status=sent` in postfix log.
 
 ## ETL: EspoCRM → R2 Data Lake
 

@@ -26,16 +26,30 @@ printf '%s\n' "$MAIL_INGEST_SECRET" > "$SECRET_FILE"
 chmod 640 "$SECRET_FILE"
 chown root:www-data "$SECRET_FILE" 2>/dev/null || chown root:nginx "$SECRET_FILE" 2>/dev/null || true
 
+# Per-address mailbox allowlist: one local part per line. www-data cannot
+# traverse /var/mail/vhosts (vmail:vmail 2770), so mailbox existence is
+# declared here instead of probed on the filesystem.
+MAILBOX_LIST=/etc/cloudless/mail-ingest-mailboxes
+if [[ ! -f "$MAILBOX_LIST" ]]; then
+  printf 'espocrm\n' > "$MAILBOX_LIST"
+fi
+chmod 644 "$MAILBOX_LIST"
+
 install -d -m 755 "$WEBROOT"
 cat > "$WEBROOT/ingest.php" <<'PHP'
 <?php
 declare(strict_types=1);
-
+/**
+ * Deliver @cloudless.gr inbound messages. Per-address mailbox when the
+ * local part is listed in /etc/cloudless/mail-ingest-mailboxes (one local
+ * part per line, e.g. espocrm for CRM cases); otherwise the default mailbox.
+ */
 $secretFile = '/etc/cloudless/mail-ingest.secret';
-$defaultTo = 'tbaltzakis@cloudless.gr';
+$mailbox = 'tbaltzakis@cloudless.gr';
+$mailboxList = '/etc/cloudless/mail-ingest-mailboxes';
 $lda = '/usr/lib/dovecot/dovecot-lda';
 header('Content-Type: text/plain; charset=utf-8');
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
     echo "method not allowed\n";
     exit;
@@ -47,12 +61,15 @@ if ($expected === '' || !hash_equals($expected, $got)) {
     echo "unauthorized\n";
     exit;
 }
-// Original envelope To (kept for logging); always deliver into the single client mailbox.
-$originalTo = strtolower(trim($_SERVER['HTTP_X_MAIL_TO'] ?? $defaultTo));
+$originalTo = strtolower(trim($_SERVER['HTTP_X_MAIL_TO'] ?? $mailbox));
 if (!preg_match('/^[a-z0-9._%+\-]+@cloudless\.gr$/', $originalTo)) {
-    $originalTo = $defaultTo;
+    $originalTo = $mailbox;
 }
-$to = $defaultTo;
+$localPart = substr($originalTo, 0, (int)strpos($originalTo, '@'));
+$allowed = is_readable($mailboxList)
+    ? array_filter(array_map('trim', explode("\n", (string)file_get_contents($mailboxList))))
+    : [];
+$deliverTo = in_array($localPart, $allowed, true) ? $originalTo : $mailbox;
 $raw = file_get_contents('php://input');
 if ($raw === false || $raw === '') {
     http_response_code(400);
@@ -64,20 +81,14 @@ if (!is_executable($lda)) {
     echo "dovecot-lda missing\n";
     exit;
 }
-$descriptors = [
-    0 => ['pipe', 'r'],
-    1 => ['pipe', 'w'],
-    2 => ['pipe', 'w'],
-];
-# www-data delivers as vmail via sudoers.d/mail-ingest — all @cloudless.gr → $defaultTo
-$cmd = ['sudo', '-n', '-u', 'vmail', $lda, '-d', $to];
+$descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+$cmd = ['sudo', '-n', '-u', 'vmail', $lda, '-d', $deliverTo];
 $proc = proc_open($cmd, $descriptors, $pipes, null, null);
 if (!is_resource($proc)) {
     http_response_code(500);
     echo "proc_open failed\n";
     exit;
 }
-
 fwrite($pipes[0], $raw);
 fclose($pipes[0]);
 $stdout = stream_get_contents($pipes[1]);
@@ -85,13 +96,11 @@ $stderr = stream_get_contents($pipes[2]);
 fclose($pipes[1]);
 fclose($pipes[2]);
 $code = proc_close($proc);
-
 if ($code !== 0) {
     http_response_code(502);
-    echo "lda exit $code\n$stderr\n$stdout\n";
+    echo "lda exit $code (orig=$originalTo)\n$stderr\n$stdout\n";
     exit;
 }
-
 http_response_code(204);
 PHP
 
