@@ -31,7 +31,7 @@ chown root:www-data "$SECRET_FILE" 2>/dev/null || chown root:nginx "$SECRET_FILE
 # declared here instead of probed on the filesystem.
 MAILBOX_LIST=/etc/cloudless/mail-ingest-mailboxes
 if [[ ! -f "$MAILBOX_LIST" ]]; then
-  printf 'espocrm\n' > "$MAILBOX_LIST"
+  printf 'tbaltzakis\npolar\nespocrm\n' > "$MAILBOX_LIST"
 fi
 chmod 644 "$MAILBOX_LIST"
 

@@ -197,16 +197,12 @@ spec:
             failureThreshold: 6
           volumeMounts:
             - { name: data, mountPath: /var/www/html }
-            - {
-                name: omv-ha-mail-ca,
-                mountPath: /etc/ssl/omv-ha,
-                readOnly: true,
-              }
-            - {
-                name: php-ini-omvha,
-                mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini,
-                subPath: 99-omvha-mail.ini,
-              }
+            - name: omv-ha-mail-ca
+              mountPath: /etc/ssl/omv-ha
+              readOnly: true
+            - name: php-ini-omvha
+              mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini
+              subPath: 99-omvha-mail.ini
         # EspoCRM job daemon — runs scheduled jobs (IMAP fetch, cron workflows).
         # Without it, inbound group email accounts are never polled.
         - name: espocrm-daemon
@@ -218,23 +214,19 @@ spec:
             limits: { cpu: 250m, memory: 256Mi }
           volumeMounts:
             - { name: data, mountPath: /var/www/html }
-            - {
-                name: omv-ha-mail-ca,
-                mountPath: /etc/ssl/omv-ha,
-                readOnly: true,
-              }
-            - {
-                name: php-ini-omvha,
-                mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini,
-                subPath: 99-omvha-mail.ini,
-              }
+            - name: omv-ha-mail-ca
+              mountPath: /etc/ssl/omv-ha
+              readOnly: true
+            - name: php-ini-omvha
+              mountPath: /usr/local/etc/php/conf.d/99-omvha-mail.ini
+              subPath: 99-omvha-mail.ini
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: espocrm-app-data
         - name: omv-ha-mail-ca
           secret:
-            secretName: omv-ha-mail-ca # self-signed mail.cloudless.gr cert — trusted via openssl.cafile in php-ini-omvha
+            secretName: omv-ha-mail-ca # CA bundle + self-signed mail cert — see comment above
         - name: php-ini-omvha
           configMap:
             name: php-ini-omvha-mail
