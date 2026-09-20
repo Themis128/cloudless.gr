@@ -51,6 +51,10 @@ Dispatch order:
 3. Resend SDK (`email-resend.ts`) when `RESEND_API_KEY` set
 4. Else throw
 
+**Effective transport (Pi/Node): Resend.** `CLOUDFLARE_EMAIL_API_TOKEN`
+(Email Sending Write scope — a paid CF feature) is not provisioned, so step 2
+is skipped and every send lands on Resend. Verified live 2026-09-20.
+
 Before send: D1 `email_suppression` via `ses-suppression-d1.ts` (Pi resolves
 AUTH_DB through `getAuthDbFromEnv()`).
 
