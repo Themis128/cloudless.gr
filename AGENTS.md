@@ -75,8 +75,17 @@ The project includes a suite of Python-based agents for research and documentati
 
 - **Research Agent:** `agents/run_cloudless_agent.py` — Uses Tavily search + Deep Agents for technical analysis.
 - **Docs Research:** `agents/run_langchain_docs_research.py` — Specialized for LangChain/LangGraph documentation.
+- **Cloudflare Worker Research:** `agents/run_cloudflare_worker_research.py` — Investigates Cloudflare Workers API, R2 pricing, D1 limits, Tunnel health.
+- **Cloudflare Cost Analysis:** `agents/run_cloudflare_cost_analysis.py` — Estimates monthly cost of moving AWS resources to Cloudflare (R2 storage, Workers KV, etc.).
 - **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
 - **Setup:** Run `./setup-agents.sh` to initialize the Python environment.
+
+> **How to run Cloudflare agents:**
+>
+> ```bash
+> ./setup-agents.sh          # installs python deps & sets up .env
+> python agents/run_cloudflare_worker_research.py --topic "R2 pricing"
+> ```
 
 ## MCP Configuration
 
