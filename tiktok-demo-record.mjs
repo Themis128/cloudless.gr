@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import fs from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const origin = "http://127.0.0.1:4010";
 const recordDir = "/tmp/tiktok-demo-video";
@@ -59,8 +59,26 @@ if (!fs.existsSync("/usr/bin/ffmpeg") && !fs.existsSync("/bin/ffmpeg") && fs.exi
   ffmpeg = bundled;
 }
 
-execSync(
-  `${ffmpeg} -y -i ${webmPath} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart ${outFile}`,
+execFileSync(
+  ffmpeg,
+  [
+    "-y",
+    "-i",
+    webmPath,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "fast",
+    "-crf",
+    "23",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-movflags",
+    "+faststart",
+    outFile,
+  ],
   { stdio: "inherit" }
 );
 

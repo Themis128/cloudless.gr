@@ -15,8 +15,14 @@ const EVENT_ATTRS_RE = /\s+(on\w+|xmlns)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi;
 const JS_DATA_URLS_RE = /\s+(href|src|action)\s*=\s*("|')(?:javascript:|data:)[^"']*\2/gi;
 
 export function sanitizeCmsHtml(html: string): string {
-  return html
-    .replace(DANGEROUS_TAGS_RE, "")
-    .replace(EVENT_ATTRS_RE, "")
-    .replace(JS_DATA_URLS_RE, (match) => match.replace(/(?:javascript:|data:)[^'"]*/i, ""));
+  let out = html;
+  let prev: string;
+  do {
+    prev = out;
+    out = out
+      .replace(DANGEROUS_TAGS_RE, "")
+      .replace(EVENT_ATTRS_RE, "")
+      .replace(JS_DATA_URLS_RE, (match) => match.replace(/(?:javascript:|data:)[^'"]*/i, ""));
+  } while (out !== prev);
+  return out;
 }
