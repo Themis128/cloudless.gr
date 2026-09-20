@@ -16,7 +16,7 @@
 
 ### **Core Framework**
 
-- **Next.js 15.2.0** (App Router, React 19.0.0)
+- **Next.js 15.5.24** (App Router, React 19.2.8)
 - **TypeScript 5.5.0** (strict mode)
 - **Tailwind CSS 4.0.0** (utility-first styling)
 - **next-intl 4.13.7** (i18n routing: en, el, fr, de)
@@ -34,7 +34,7 @@
 ### **Data & Storage**
 
 - **Cloudflare D1 `app_config`** (runtime secrets / config store — replaces AWS SSM)
-- **AWS SES v2** (transactional email)
+- **Self-hosted mail (omv-ha)**: postfix relay via Resend + dovecot IMAP + Roundcube (see `docs/MAIL-SERVER-SETUP.md`); Resend API as relay
 - **AppFlowy Cloud** (headless CMS)
 - **Stripe** (payments, subscriptions)
 - **DynamoDB** (transaction cache)
