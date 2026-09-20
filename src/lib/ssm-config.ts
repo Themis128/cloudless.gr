@@ -1,8 +1,12 @@
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface AppConfig {
+  /** @deprecated legacy SES key name — prefer EMAIL_FROM */
   SES_FROM_EMAIL: string;
+  /** @deprecated legacy SES key name — prefer EMAIL_TO */
   SES_TO_EMAIL: string;
+  EMAIL_FROM?: string;
+  EMAIL_TO?: string;
   /** Shared secret authenticating the weekly newsletter send endpoint. */
   NEWSLETTER_SEND_SECRET: string;
   STRIPE_SECRET_KEY: string;
@@ -156,8 +160,10 @@ export function resetSsmCache(): void {
  */
 function buildConfigFromEnv(): AppConfig {
   return {
-    SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
-    SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
+    SES_FROM_EMAIL: process.env.EMAIL_FROM || process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
+    SES_TO_EMAIL: process.env.EMAIL_TO || process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_TO: process.env.EMAIL_TO,
     NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
@@ -274,7 +280,14 @@ function mergeD1AndEnv(d1Config: Record<string, string>, envConfig: AppConfig): 
   const nonEmptyEnv = Object.fromEntries(
     Object.entries(envConfig).filter(([, value]) => Boolean(value))
   );
-  return { ...envConfig, ...d1Config, ...nonEmptyEnv } as AppConfig;
+  const merged = { ...envConfig, ...d1Config, ...nonEmptyEnv } as AppConfig;
+  // EMAIL_FROM/EMAIL_TO are the canonical names; SES_* fields stay populated
+  // as aliases so existing readers and D1 rows keep working.
+  merged.SES_FROM_EMAIL = merged.EMAIL_FROM || merged.SES_FROM_EMAIL;
+  merged.SES_TO_EMAIL = merged.EMAIL_TO || merged.SES_TO_EMAIL;
+  merged.EMAIL_FROM = merged.EMAIL_FROM || merged.SES_FROM_EMAIL;
+  merged.EMAIL_TO = merged.EMAIL_TO || merged.SES_TO_EMAIL;
+  return merged;
 }
 
 /**

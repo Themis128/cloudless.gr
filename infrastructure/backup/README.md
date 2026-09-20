@@ -7,14 +7,14 @@ Each stateful self-hosted app's canonical state lands in
 
 ## What's backed up
 
-| App | DB | Pod | Backup tool | Schedule (UTC) | R2 prefix |
-|-----|-----|-----|-------------|----------------|-----------|
-| AppFlowy | Postgres | `appflowy/postgres` | `pg_dump --format=custom` | 03:30 | `pvc-backups/appflowy/daily/` |
-| EspoCRM | MariaDB | `espocrm/espocrm-mariadb` | `mariadb-dump` + gzip | 03:45 | `pvc-backups/espocrm/daily/` |
-| Postiz | Postgres | `postiz/postiz-postgres` | `pg_dump --format=custom` | 04:00 | `pvc-backups/postiz/daily/` |
-| n8n | SQLite | `n8n/n8n` (PVC `n8n-data`) | `sqlite3 .backup` + gzip | 04:15 | `pvc-backups/n8n/daily/` |
-| AppFlowy MinIO | S3 blobs | `appflowy/minio` | `rclone sync` bucket `appflowy` | 04:30 | `pvc-backups/appflowy-minio/daily/` |
-| Uptime Kuma | SQLite | PVC `uptime-kuma-data` | `sqlite3 .backup` + gzip | 04:45 | `pvc-backups/uptime-kuma/daily/` |
+| App            | DB       | Pod                        | Backup tool                     | Schedule (UTC) | R2 prefix                           |
+| -------------- | -------- | -------------------------- | ------------------------------- | -------------- | ----------------------------------- |
+| AppFlowy       | Postgres | `appflowy/postgres`        | `pg_dump --format=custom`       | 03:30          | `pvc-backups/appflowy/daily/`       |
+| EspoCRM        | MariaDB  | `espocrm/espocrm-mariadb`  | `mariadb-dump` + gzip           | 03:45          | `pvc-backups/espocrm/daily/`        |
+| Postiz         | Postgres | `postiz/postiz-postgres`   | `pg_dump --format=custom`       | 04:00          | `pvc-backups/postiz/daily/`         |
+| n8n            | SQLite   | `n8n/n8n` (PVC `n8n-data`) | `sqlite3 .backup` + gzip        | 04:15          | `pvc-backups/n8n/daily/`            |
+| AppFlowy MinIO | S3 blobs | `appflowy/minio`           | `rclone sync` bucket `appflowy` | 04:30          | `pvc-backups/appflowy-minio/daily/` |
+| Uptime Kuma    | SQLite   | PVC `uptime-kuma-data`     | `sqlite3 .backup` + gzip        | 04:45          | `pvc-backups/uptime-kuma/daily/`    |
 
 Schedules staggered 15 min apart.
 
@@ -22,8 +22,8 @@ Schedules staggered 15 min apart.
 
 ## Credentials (Cloudflare R2)
 
-Account ID: `fb7dc7b69b662480cd5961a4d1913c78`  
-Endpoint: `https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`  
+Account ID: `fb7dc7b69b662480cd5961a4d1913c78`
+Endpoint: `https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`
 Bucket: `datalake-bucket`
 
 **Preferred (API):** dispatch `create-r2-credentials.yml` with `confirm=create`.
@@ -42,6 +42,8 @@ for ns in appflowy espocrm postiz n8n uptime-kuma; do
     --dry-run=client -o yaml | kubectl apply -f -
 done
 
+# AWS_* key names are required by the WAL-G S3 driver — the values are
+# Cloudflare R2 S3 keys, not AWS credentials.
 kubectl -n appflowy create secret generic appflowy-walg-r2 \
   --from-literal=AWS_ACCESS_KEY_ID='…' \
   --from-literal=AWS_SECRET_ACCESS_KEY='…' \
@@ -72,14 +74,14 @@ pnpm db:backup:test n8n        # -n n8n
 # equivalent: bash scripts/pvc-backup-test.sh <target>
 ```
 
-| Target | Namespace | CronJob |
-|--------|-----------|---------|
-| `appflowy` | `appflowy` | `pvc-backup-appflowy` |
-| `minio` | `appflowy` | `pvc-backup-appflowy-minio` |
-| `espocrm` | `espocrm` | `pvc-backup-espocrm` |
-| `postiz` | `postiz` | `pvc-backup-postiz` |
-| `n8n` | `n8n` | `pvc-backup-n8n` |
-| `kuma` | `uptime-kuma` | `pvc-backup-uptime-kuma` |
+| Target     | Namespace     | CronJob                     |
+| ---------- | ------------- | --------------------------- |
+| `appflowy` | `appflowy`    | `pvc-backup-appflowy`       |
+| `minio`    | `appflowy`    | `pvc-backup-appflowy-minio` |
+| `espocrm`  | `espocrm`     | `pvc-backup-espocrm`        |
+| `postiz`   | `postiz`      | `pvc-backup-postiz`         |
+| `n8n`      | `n8n`         | `pvc-backup-n8n`            |
+| `kuma`     | `uptime-kuma` | `pvc-backup-uptime-kuma`    |
 
 Expect a success line and exit 0. Empty MinIO is OK (writes `.backup-ok.txt` marker).
 
@@ -99,15 +101,15 @@ kubectl -n appflowy get pods -l job-name=test-minio-…
 
 ## DevOps conventions
 
-| Practice | How we apply it |
-|----------|-----------------|
-| Co-locate CronJob with workload | Same NS as target pods/PVC/Secrets (Service DNS stays in-cluster) |
-| Stable labels | `app.kubernetes.io/name=pvc-backup` + `backup.cloudless.gr/target=…` on CronJob, Job, Pod |
-| Job cleanup | `ttlSecondsAfterFinished: 86400` on CronJob Jobs; test helper patches 3600s |
-| Concurrency | `Forbid` + `startingDeadlineSeconds: 600` |
-| Image hygiene | MinIO job uses `rclone/rclone` (no `apk` each run); Kuma needs sqlite → alpine |
-| Secrets | `pvc-backup-r2` per NS; never in git; mint via `store-r2-backup-credentials.yml` |
-| Failure signal | Non-zero exit + size/object guards; Kuma already monitors the original four CronJobs |
+| Practice                        | How we apply it                                                                           |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| Co-locate CronJob with workload | Same NS as target pods/PVC/Secrets (Service DNS stays in-cluster)                         |
+| Stable labels                   | `app.kubernetes.io/name=pvc-backup` + `backup.cloudless.gr/target=…` on CronJob, Job, Pod |
+| Job cleanup                     | `ttlSecondsAfterFinished: 86400` on CronJob Jobs; test helper patches 3600s               |
+| Concurrency                     | `Forbid` + `startingDeadlineSeconds: 600`                                                 |
+| Image hygiene                   | MinIO job uses `rclone/rclone` (no `apk` each run); Kuma needs sqlite → alpine            |
+| Secrets                         | `pvc-backup-r2` per NS; never in git; mint via `store-r2-backup-credentials.yml`          |
+| Failure signal                  | Non-zero exit + size/object guards; Kuma already monitors the original four CronJobs      |
 
 ## Grafana persistence (related)
 
