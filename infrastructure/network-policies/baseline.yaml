@@ -1,8 +1,11 @@
 # Baseline NetworkPolicies — exported from live cluster 2026-09-20
 # Applied imperatively by PR #1861; this file is now the source of truth.
 # Ingress allows: same-namespace pods, kube-system, tailscale, monitoring
-# namespaces + LAN 192.168.1.0/24 (added for cloudflared connector on omv-ha
-# and other trusted LAN infrastructure reaching NodePort services).
+# namespaces + LAN 192.168.1.0/24 (cloudflared connector on omv-ha and other
+# trusted LAN infrastructure reaching NodePort services). The cloudless
+# namespace is additionally allowed into the namespaces the app consumes
+# (postiz, n8n, ntfy, appflowy, espocrm, meilisearch, uptime-kuma,
+# monitoring, alert-manager); cloudless egress allows those namespaces.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -40,6 +43,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -82,6 +89,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -106,6 +117,34 @@ spec:
         except:
         - 10.42.0.0/16
         - 10.43.0.0/16
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: postiz
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: n8n
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ntfy
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: appflowy
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: espocrm
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: meilisearch
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: uptime-kuma
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: alert-manager
   ingress:
   - from:
     - podSelector: {}
@@ -208,6 +247,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -292,6 +335,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -337,6 +384,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -382,6 +433,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -424,6 +479,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -508,48 +567,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
-  podSelector: {}
-  policyTypes:
-  - Ingress
-  - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: baseline
-  namespace: tailscale-operator
-spec:
-  egress:
-  - to:
-    - podSelector: {}
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-        except:
-        - 10.42.0.0/16
-        - 10.43.0.0/16
-  ingress:
-  - from:
-    - podSelector: {}
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: kube-system
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: tailscale
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
-  - from:
-    - ipBlock:
-        cidr: 192.168.1.0/24
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
@@ -577,6 +598,48 @@ spec:
   - to:
     - ipBlock:
         cidr: 10.42.0.0/16
+  ingress:
+  - from:
+    - podSelector: {}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: tailscale
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
+  - from:
+    - ipBlock:
+        cidr: 192.168.1.0/24
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: baseline
+  namespace: tailscale-operator
+spec:
+  egress:
+  - to:
+    - podSelector: {}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.42.0.0/16
+        - 10.43.0.0/16
   ingress:
   - from:
     - podSelector: {}
@@ -640,6 +703,10 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cloudless
   podSelector: {}
   policyTypes:
   - Ingress
