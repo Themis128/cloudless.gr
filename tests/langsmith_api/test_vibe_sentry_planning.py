@@ -9,7 +9,7 @@ def test_vibe_patch_infers_r14_sentry_files():
 
     assert "sentry.client.config.ts" in files
     assert "sentry.server.config.ts" in files
-    assert ".github/workflows/deploy.yml" in files
+    assert ".github/workflows/cloudflare-deploy.yml" in files
     assert ".github/workflows/deploy-pi.yml" in files
     assert "scripts/check_r14_sentry_env_tagging.sh" in files
 
@@ -42,7 +42,7 @@ def test_vibe_plan_includes_r14_sentry_steps(tmp_path, monkeypatch):
                 "",
                 "- `sentry.client.config.ts`",
                 "- `sentry.server.config.ts`",
-                "- `.github/workflows/deploy.yml`",
+                "- `.github/workflows/cloudflare-deploy.yml`",
                 "",
                 "## Proposed change",
                 "",

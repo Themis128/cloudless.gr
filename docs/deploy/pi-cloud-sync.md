@@ -30,7 +30,7 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 | ------------------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **Code (image)**                     | Both sides use `cloudless-pi-app` from ECR (us-east-1). Cloud builds via SST, Pi pulls via K3s.   | Until both pin to the same SHA, Pi can lag arbitrarily.                           |
 | **Public env**                       | `NEXT_PUBLIC_*` baked into the image at build time (see [Dockerfile](../../Dockerfile)).          | Identical because identical image.                                                |
-| **Runtime secrets**                  | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
+| **Runtime secrets**                  | Both read from SSM at `/cloudless/production/*` (see `sst.config.ts`, removed — legacy AWS config). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
 | **Notion content**                   | Both fetch live from Notion API; ISR per-process.                                                 | Pi cache lags by up to its ISR TTL after Notion edits.                            |
 | **Auth sessions**                    | Both verify JWTs against the same Cognito JWKS.                                                   | Pi must have the `COGNITO_*` vars in SSM.                                         |
 | **Webhooks (Stripe/Notion/EspoCRM)** | Hit `cloudless.gr` and route to whichever is live.                                                | Pi must hold the same webhook secrets in SSM.                                     |
@@ -41,7 +41,7 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 
 ### 1. Image SHA pin via SSM `/cloudless/production/cloud-sha`
 
-After every successful production deploy, [.github/workflows/deploy.yml](../../.github/workflows/deploy.yml) writes the just-deployed commit SHA to:
+After every successful production deploy, `.github/workflows/deploy.yml` (removed — legacy AWS deploy) writes the just-deployed commit SHA to:
 
 ```
 arn:aws:ssm:us-east-1:278585680617:parameter/cloudless/production/cloud-sha
