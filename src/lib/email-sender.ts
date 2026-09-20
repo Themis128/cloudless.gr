@@ -76,11 +76,11 @@ async function sendViaCloudflare(
 /**
  * Check if an email address is suppressed before sending.
  * In Workers: checks D1 email_suppression table.
- * In Lambda: skips (SES handles suppression natively - but we removed SES, so always false in Node).
+ * In Node: skips (no suppression store bound — safe for development).
  */
 async function checkSuppression(toEmail: string): Promise<boolean> {
-  // In Node (local dev or Lambda without SES), we don't have suppression checking
-  // since we removed SES. This is safe for development.
+  // In Node (local dev), we don't have suppression checking.
+  // This is safe for development.
   if (isNode() && !_emailBinding && !workersGlobal().__EMAIL_BINDING__) {
     return false;
   }
@@ -111,14 +111,11 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   }
 
   const { getConfig } = await import("@/lib/ssm-config");
-  const cfg = await getConfig().catch(() => ({
-    SES_FROM_EMAIL: "noreply@cloudless.gr",
-    SES_TO_EMAIL: "tbaltzakis@cloudless.gr",
-  }));
+  const cfg: Partial<import("@/lib/ssm-config").AppConfig> = await getConfig().catch(() => ({}));
 
   const fromAddress = getFromAddress(
     payload.fromLabel,
-    payload.from || cfg.SES_FROM_EMAIL || "noreply@cloudless.gr"
+    payload.from || cfg.EMAIL_FROM || cfg.SES_FROM_EMAIL || "noreply@cloudless.gr"
   );
 
   // 1. Workers binding — primary

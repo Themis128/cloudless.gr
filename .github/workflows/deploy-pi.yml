@@ -326,8 +326,8 @@ jobs:
         env:
           # S3-compatible R2 credentials (the CLOUDFLARE_API_TOKEN GitHub secret
           # lacks R2 object-write scope; the S3 access keys are the proven path).
-          AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           R2_BUCKET: ${{ env.R2_BUCKET }}
           OUT: ${{ steps.pack.outputs.artifact }}
@@ -336,15 +336,17 @@ jobs:
           KEY="releases/${{ github.sha }}.tar.zst"
           TAR="${RUNNER_TEMP}/standalone-${{ github.sha }}.tar.zst"
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends zstd
-          pip3 install --user awscli
-          export PATH="$HOME/.local/bin:$PATH"
+          sudo apt-get install -y --no-install-recommends zstd rclone
           tar -C "$OUT" -I 'zstd -T0 -3' -cf "$TAR" .
           echo "tarball $(du -sh "$TAR" | cut -f1) key=$KEY"
-          # S3-compatible upload to Cloudflare R2 (avoids wrangler API-token scope issues)
+          # S3-compatible upload to Cloudflare R2 via rclone (avoids wrangler
+          # API-token scope issues and the awscli dependency)
           ENDPOINT="https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          aws s3 cp "$TAR" "s3://${R2_BUCKET}/${KEY}" \
-            --endpoint-url "$ENDPOINT" --region auto
+          rclone copyto "$TAR" ":s3:${R2_BUCKET}/${KEY}" \
+            --s3-provider Cloudflare \
+            --s3-access-key-id "$R2_ACCESS_KEY_ID" \
+            --s3-secret-access-key "$R2_SECRET_ACCESS_KEY" \
+            --s3-endpoint "$ENDPOINT" --s3-region auto --s3-no-check-bucket
           echo "artifact_key=$KEY" >> "$GITHUB_OUTPUT"
           {
             echo "## R2 upload"

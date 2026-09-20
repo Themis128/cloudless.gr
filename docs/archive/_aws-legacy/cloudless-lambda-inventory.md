@@ -326,7 +326,7 @@ The SES-to-EspoCRM bridge currently created a Case for a DMARC/report style send
 
 `noreply-dmarc-support@google.com`
 
-If DMARC reports, bounce reports, and automated no-reply style messages should not create EspoCRM Cases, expand the auto-mail skip filter in `infrastructure/ses-to-espocrm/lambda/index.mjs`.
+If DMARC reports, bounce reports, and automated no-reply style messages should not create EspoCRM Cases, expand the auto-mail skip filter in `docs/archive/_aws-legacy/ses-to-espocrm/lambda/index.mjs`.
 
 Suggested filter direction:
 

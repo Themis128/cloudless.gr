@@ -126,16 +126,16 @@ if curl -fsS --max-time 600 \
   "${DEPLOY_ORCHESTRATOR_URL%/}/artifact?key=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe='/'))" "$ARTIFACT_KEY")"; then
   track event=download_via_orchestrator sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
 elif [[ -n "${CF_R2_ACCESS_KEY_ID:-}" && -n "${CF_R2_SECRET_ACCESS_KEY:-}" && -n "${CF_ACCOUNT_ID:-}" ]]; then
-  if ! command -v aws >/dev/null 2>&1; then
-    track event=error reason=aws_cli_missing sha12="$SHA12"
+  if ! command -v rclone >/dev/null 2>&1; then
+    track event=error reason=rclone_missing sha12="$SHA12"
     exit 1
   fi
-  export AWS_ACCESS_KEY_ID="$CF_R2_ACCESS_KEY_ID"
-  export AWS_SECRET_ACCESS_KEY="$CF_R2_SECRET_ACCESS_KEY"
-  export AWS_DEFAULT_REGION="auto"
-  nice -n 10 ionice -c2 -n7 aws s3 cp \
-    "s3://${BUCKET}/${ARTIFACT_KEY}" "$TAR" \
-    --endpoint-url "$ENDPOINT"
+  nice -n 10 ionice -c2 -n7 rclone copyto \
+    ":s3:${BUCKET}/${ARTIFACT_KEY}" "$TAR" \
+    --s3-provider Cloudflare \
+    --s3-access-key-id "$CF_R2_ACCESS_KEY_ID" \
+    --s3-secret-access-key "$CF_R2_SECRET_ACCESS_KEY" \
+    --s3-endpoint "$ENDPOINT" --s3-region auto --s3-no-check-bucket
   track event=download_via_r2_s3 sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
 else
   track event=error reason=download_failed sha12="$SHA12" artifactKey="$ARTIFACT_KEY"
