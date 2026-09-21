@@ -32,6 +32,7 @@ import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
+import SocialMediaSection from "@/components/SocialMediaSection";
 import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
@@ -973,6 +974,9 @@ export default async function Home({
           </ScrollReveal>
         </div>
       </section>
+
+      {/* ── Social Media ── */}
+      <SocialMediaSection locale={locale} />
 
       {/* ── Inline Contact / Book Audit ── */}
       <section

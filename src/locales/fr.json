@@ -141,6 +141,14 @@
     "role": "Architecte Cloud & Ingénieur Croissance",
     "bio": "Architecte cloud certifié avec une expérience pratique en Cloudflare Workers, architectures serverless, analyse de données et marketing propulsé par l'IA. J'aide les startups et PME à construire une infrastructure qui évolue sans les coûts enterprise."
   },
+  "social": {
+    "label": "[ SE CONNECTER ]",
+    "title": "Suivez Cloudless",
+    "titleHighlight": "partout",
+    "subtitle": "Astuces cloud, carrousels et coulisses du projet — choisissez votre plateforme.",
+    "follow": "Suivre",
+    "chat": "Discuter"
+  },
   "cta": {
     "title": "Prêt à passer en mode",
     "titleHighlight": "cloudless",

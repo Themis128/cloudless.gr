@@ -141,6 +141,14 @@
     "role": "Cloud Architect & Growth Engineer",
     "bio": "Certified cloud architect — Cloudflare Workers, serverless, data analytics, and AI-powered marketing."
   },
+  "social": {
+    "label": "[ CONNECT ]",
+    "title": "Follow Cloudless",
+    "titleHighlight": "everywhere",
+    "subtitle": "Cloud tips, carousels, and build-in-public updates — pick your platform.",
+    "follow": "Follow",
+    "chat": "Chat"
+  },
   "cta": {
     "title": "Ready to go",
     "titleHighlight": "cloudless",

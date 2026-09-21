@@ -146,6 +146,14 @@
     "role": "Cloud Architect & Growth Engineer",
     "bio": "Πιστοποιημένος cloud architect με πρακτική εμπειρία σε Cloudflare Workers, serverless αρχιτεκτονικές, ανάλυση δεδομένων, και AI-powered marketing. Βοηθάω startups και SMBs να χτίσουν υποδομή που κλιμακώνεται χωρίς το enterprise κόστος."
   },
+  "social": {
+    "label": "[ ΣΥΝΔΕΣΗ ]",
+    "title": "Ακολουθήστε το Cloudless",
+    "titleHighlight": "παντού",
+    "subtitle": "Cloud tips, carousels και ενημερώσεις build-in-public — διάλεξε πλατφόρμα.",
+    "follow": "Ακολούθησε",
+    "chat": "Συνομίλησε"
+  },
   "cta": {
     "title": "Έτοιμοι να γίνετε",
     "titleHighlight": "cloudless",
