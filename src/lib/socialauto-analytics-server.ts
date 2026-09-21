@@ -9,9 +9,8 @@ import "server-only";
 import { getConfig } from "@/lib/ssm-config";
 import type { SocialAutoAnalyticsEvent } from "@/lib/socialauto-analytics";
 
-const WEBHOOK_URL =
-  process.env.SOCIALAUTO_WEB_ANALYTICS_URL ||
-  "https://social.cloudless.gr/api/v1/webhooks/cloudless-analytics";
+const DEFAULT_WEBHOOK_URL =
+  "https://social.cloudless.gr/api/v1/analytics/web/webhooks/cloudless-analytics";
 
 /**
  * Send a SocialAuto analytics event from an API route / server handler.
@@ -24,6 +23,7 @@ export async function sendSocialAutoEventServer(
     const cfg = await getConfig();
     const secret = cfg.SOCIALAUTO_WEB_ANALYTICS_SECRET;
     if (!secret) return;
+    const url = cfg.SOCIALAUTO_WEB_ANALYTICS_URL || DEFAULT_WEBHOOK_URL;
 
     const payload = JSON.stringify({
       event: event.event,
@@ -40,7 +40,7 @@ export async function sendSocialAutoEventServer(
     const { createHmac } = await import("node:crypto");
     const signature = createHmac("sha256", secret).update(payload).digest("hex");
 
-    await fetch(WEBHOOK_URL, {
+    await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
