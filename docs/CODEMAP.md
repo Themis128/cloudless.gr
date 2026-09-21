@@ -339,6 +339,15 @@ Social content for cloudless.gr is generated and published by **SocialAuto** (`s
 - **Scheduled flows**: LinkedIn carousel every 2 days 19:00 EET; LinkedIn weekly cloud post Mon 09:00; Instagram marketing image daily; all other platform posts are webhook/on-demand.
 - **Source of truth**: `brand_voices.voice_signature` in SocialAuto (`creator_type.py`/`platforms` commands); full details in `cu130-slim/docs/CODEMAP.md`.
 
+### SocialAuto → datalake pipeline (added 2026-09)
+
+SocialAuto pushes its own first-party data into the datalake — no Postiz needed:
+
+- **Producer**: `datalake_export` Celery task (every 6h, cu130-slim) writes JSON tables to `datalake-bucket` under `lake/socialauto-*` — accounts, posts, post-metric history, follower snapshots, account-insight events, per-team insights-engine output, leads (sha256 email + domain only), 90-day web events (UTM only; IP/UA dropped).
+- **Materializer**: `scripts/etl/materialize-datalake-snapshots.mjs` reads them via `safeJson`/`r2List` into gold sections `socialauto_ops`, `social_engagement`, `social_outliers`, `social_recommendations`, `social_leads`, `social_attribution` — rendered on `/admin/analytics/datalake`.
+- **Real-time leads**: `POST /api/webhooks/socialauto-leads` (shared-secret) → EspoCRM `createLead`, which then appears in `espocrm_funnel` — the lake export is the analytical copy.
+- **`postiz_ops`** is kept for history but Postiz is retired; SocialAuto sections are the live social surface.
+
 ---
 
 ## 🔄 **SafeDeploy Rollback System**

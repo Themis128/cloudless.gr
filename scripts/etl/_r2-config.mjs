@@ -66,6 +66,25 @@ export async function r2Put(key, body, opts = {}) {
 }
 
 /**
+ * List object keys under a prefix (S3 ListObjectsV2).
+ * @param {string} prefix
+ * @param {{ bucket?: string }} [opts]
+ * @returns {Promise<string[]>}
+ */
+export async function r2List(prefix, opts = {}) {
+	const client = getR2Client();
+	const bucket = opts.bucket || BUCKET;
+	const url = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${bucket}?list-type=2&prefix=${encodeURIComponent(prefix)}`;
+	const res = await client.fetch(url, { method: "GET" });
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`R2 LIST ${bucket}/${prefix} → ${res.status}: ${text.slice(0, 300)}`);
+	}
+	const xml = await res.text();
+	return [...xml.matchAll(/<Key>([^<]+)<\/Key>/g)].map((m) => m[1]);
+}
+
+/**
  * @param {string} key
  * @param {{ bucket?: string }} [opts]
  * @returns {Promise<Buffer>}
