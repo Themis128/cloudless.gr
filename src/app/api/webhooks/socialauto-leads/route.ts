@@ -14,7 +14,7 @@ function safeEq(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-async function verifySecret(req: NextRequest): Promise<boolean | Response> {
+async function verifySecret(req: NextRequest): Promise<true | Response> {
   const cfg = await getConfig();
   const expected = cfg.SOCIALAUTO_LEADS_WEBHOOK_SECRET || "";
   if (!expected) {
