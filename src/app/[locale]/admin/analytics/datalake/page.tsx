@@ -178,11 +178,82 @@ const SECTION_META: Record<
     ],
   },
   postiz_ops: {
-    title: "Postiz operations",
-    subtitle: "Gold: R2 snapshot from postiz-to-r2 parquet.",
+    title: "Postiz operations (legacy)",
+    subtitle: "Gold: R2 snapshot from postiz-to-r2 parquet. Superseded by SocialAuto sections.",
     columns: [
       { key: "metric", label: "Metric" },
       { key: "value", label: "Value", format: "int" },
+    ],
+  },
+  socialauto_ops: {
+    title: "SocialAuto operations",
+    subtitle: "Gold: R2 JSON from SocialAuto datalake_export task (lake/socialauto-*).",
+    columns: [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Value", format: "int" },
+    ],
+  },
+  social_engagement: {
+    title: "Social engagement by platform",
+    subtitle: "Gold: SocialAuto insights engine — official API metrics + benchmarks.",
+    columns: [
+      { key: "platform", label: "Platform" },
+      { key: "focus_tier", label: "Tier" },
+      { key: "confidence", label: "Conf" },
+      { key: "posts", label: "Posts", format: "int" },
+      { key: "impressions", label: "Impressions", format: "int" },
+      { key: "engagement", label: "Engagement", format: "int" },
+      { key: "median_eng_per_post", label: "Med/post", format: "decimal" },
+      { key: "er_by_followers_pct", label: "ER/foll %", format: "decimal" },
+      { key: "benchmark_verdict", label: "Benchmark" },
+      { key: "momentum_7d_pct", label: "7d %", format: "decimal" },
+      { key: "followers", label: "Followers", format: "int" },
+      { key: "follower_net", label: "Net", format: "int" },
+      { key: "data_warnings", label: "Warnings" },
+    ],
+  },
+  social_outliers: {
+    title: "Social outliers",
+    subtitle: "Gold: IQR-fence outliers (viral / underperformer posts) + follower anomalies.",
+    columns: [
+      { key: "platform", label: "Platform" },
+      { key: "kind", label: "Kind" },
+      { key: "post_id", label: "Post" },
+      { key: "engagement", label: "Engagement", format: "int" },
+      { key: "engagement_rate", label: "ER %", format: "decimal" },
+      { key: "platform_median", label: "Median", format: "decimal" },
+    ],
+  },
+  social_recommendations: {
+    title: "Social recommendations",
+    subtitle: "Gold: deterministic recommendations from the SocialAuto insights engine.",
+    columns: [
+      { key: "priority", label: "Priority" },
+      { key: "type", label: "Type" },
+      { key: "platform", label: "Platform" },
+      { key: "text", label: "Recommendation" },
+    ],
+  },
+  social_leads: {
+    title: "Social leads",
+    subtitle:
+      "Gold: leads captured via social channels (PII-minimized). Real-time → EspoCRM webhook.",
+    columns: [
+      { key: "dimension", label: "Dimension" },
+      { key: "value", label: "Value" },
+      { key: "leads", label: "Leads", format: "int" },
+      { key: "espocrm_synced", label: "In CRM", format: "int" },
+    ],
+  },
+  social_attribution: {
+    title: "Social attribution (web events)",
+    subtitle: "Gold: UTM rollup from SocialAuto web_analytics_events (90-day window).",
+    columns: [
+      { key: "utm_source", label: "Source" },
+      { key: "utm_medium", label: "Medium" },
+      { key: "utm_campaign", label: "Campaign" },
+      { key: "events", label: "Events", format: "int" },
+      { key: "sessions", label: "Sessions", format: "int" },
     ],
   },
   appflowy_activity: {
