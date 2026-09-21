@@ -14,6 +14,7 @@ describe("SOCIAL_ACCOUNTS", () => {
       "x",
       "github",
       "telegram",
+      "whatsapp",
     ]);
   });
 
@@ -26,8 +27,9 @@ describe("SOCIAL_ACCOUNTS", () => {
 
   it("marks messaging channels as chat", () => {
     expect(SOCIAL_ACCOUNTS.find((a) => a.key === "telegram")?.kind).toBe("chat");
+    expect(SOCIAL_ACCOUNTS.find((a) => a.key === "whatsapp")?.kind).toBe("chat");
     expect(SOCIAL_ACCOUNTS.filter((a) => a.kind === "follow").length).toBe(
-      SOCIAL_ACCOUNTS.length - 1
+      SOCIAL_ACCOUNTS.length - 2
     );
   });
 });
