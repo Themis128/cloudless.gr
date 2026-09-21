@@ -236,7 +236,8 @@ const SECTION_META: Record<
   },
   social_leads: {
     title: "Social leads",
-    subtitle: "Gold: leads captured via social channels (PII-minimized). Real-time → EspoCRM webhook.",
+    subtitle:
+      "Gold: leads captured via social channels (PII-minimized). Real-time → EspoCRM webhook.",
     columns: [
       { key: "dimension", label: "Dimension" },
       { key: "value", label: "Value" },
