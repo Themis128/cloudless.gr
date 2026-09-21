@@ -34,7 +34,10 @@ export default function SocialMediaSection({ locale }: Readonly<{ locale: Locale
                 {t("social.titleHighlight", "everywhere")}
               </span>
             </h2>
-            <p className="mt-4 text-sm leading-relaxed md:text-base" style={{ color: "var(--ink-body)" }}>
+            <p
+              className="mt-4 text-sm leading-relaxed md:text-base"
+              style={{ color: "var(--ink-body)" }}
+            >
               {t(
                 "social.subtitle",
                 "Cloud tips, carousels, and build-in-public updates — pick your platform."
@@ -64,7 +67,10 @@ export default function SocialMediaSection({ locale }: Readonly<{ locale: Locale
                 >
                   {account.icon}
                 </span>
-                <span className="font-heading text-sm font-semibold" style={{ color: "var(--ink-primary)" }}>
+                <span
+                  className="font-heading text-sm font-semibold"
+                  style={{ color: "var(--ink-primary)" }}
+                >
                   {account.name}
                 </span>
                 <span className="mt-1 font-mono text-xs" style={{ color: "var(--ink-muted)" }}>
