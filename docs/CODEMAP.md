@@ -39,8 +39,12 @@ Last verified: 2026-09-21. Companion codemap for the social-automation platform:
 - **Self-hosted mail (omv-ha)**: postfix relay via Resend + dovecot IMAP + Roundcube (see `docs/MAIL-SERVER-SETUP.md`); Resend API as relay
 - **AppFlowy Cloud** (headless CMS)
 - **Stripe** (payments, subscriptions)
-- **DynamoDB** (transaction cache)
 - **DuckDB** (analytics data lake)
+
+> **AWS remnant**: `lambda/pi-proxy/` is a single AWS Lambda + SSM standby
+> failover proxy (deployed via `deploy-pi-proxy.yml`) — the last AWS
+> dependency. Everything else (auth, config, sessions) is Cloudflare
+> D1/KV or self-hosted; DynamoDB/Cognito are already gone (comments only).
 
 ### **Monitoring & Analytics**
 
@@ -108,7 +112,6 @@ cloudless.gr/
 │   │   ├── el.json             # Greek translations
 │   │   ├── fr.json             # French translations
 │   │   └── de.json             # German translations
-│   ├── lambda/                 # AWS Lambda handlers
 │   └── instrumentation.ts       # Sentry/observability
 ├── __tests__/                  # Vitest unit tests (99+ suites)
 │   └── stubs/                  # AWS SDK & Next.js stubs
@@ -124,7 +127,7 @@ cloudless.gr/
 ├── k8s/                        # Kubernetes manifests
 │   ├── cluster-protection/     # Resource limits, Prometheus rules
 │   └── grafana-dashboards/     # Grafana dashboards
-├── lambda/                     # AWS Lambda functions
+├── lambda/pi-proxy/            # AWS Lambda standby failover proxy (last AWS remnant)
 ├── scripts/                    # Automation scripts
 ├── workers/                    # Cloudflare Workers
 ├── tools/                      # MCP tools & utilities
