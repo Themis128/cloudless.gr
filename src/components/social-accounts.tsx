@@ -104,8 +104,8 @@ export const SOCIAL_ACCOUNTS: SocialAccount[] = [
   {
     key: "github",
     name: "GitHub",
-    handle: "cloudless-gr",
-    href: "https://github.com/cloudless-gr",
+    handle: "Themis128",
+    href: "https://github.com/Themis128",
     kind: "follow",
     icon: (
       <svg {...svgProps}>
