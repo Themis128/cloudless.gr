@@ -54,3 +54,63 @@ jobs:
         else
           echo "No drift — watchdog idle."
         fi
+
+    - name: Dispatch deploy-pi for bot-merged pushes
+      # PRs merged by github-actions[bot] (auto-merge) suppress the push
+      # event entirely — deploy-pi.yml never sees them. The peer SHA drift
+      # detector can't catch this either (both surfaces stay equally stale).
+      # This step compares main HEAD against the latest deploy-pi run and
+      # dispatches when deploy-relevant paths changed without a deploy.
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+        repo="${{ github.repository }}"
+
+        main_sha=$(gh api "repos/$repo/commits/main" --jq .sha)
+        echo "main HEAD: ${main_sha:0:8}"
+
+        last_deploy_sha=$(gh run list \
+          --repo "$repo" \
+          --workflow deploy-pi.yml \
+          --branch main \
+          --limit 1 \
+          --json headSha \
+          --jq '.[0].headSha // ""')
+
+        if [ -z "$last_deploy_sha" ]; then
+          echo "No deploy-pi run found — cannot compute lag window, skipping."
+          exit 0
+        fi
+        echo "last deploy-pi run: ${last_deploy_sha:0:8}"
+
+        if [ "$last_deploy_sha" = "$main_sha" ]; then
+          echo "deploy-pi already covers main HEAD — nothing to do."
+          exit 0
+        fi
+
+        # Already attempted for this SHA (queued/running/failed) — do not
+        # auto-retry; a failed deploy is a human problem, not a loop.
+        attempted=$(gh run list \
+          --repo "$repo" \
+          --workflow deploy-pi.yml \
+          --commit "$main_sha" \
+          --limit 1 \
+          --json databaseId \
+          --jq 'length')
+        if [ "$attempted" -gt 0 ]; then
+          echo "deploy-pi already ran (or is running) for $main_sha — skipping."
+          exit 0
+        fi
+
+        # Mirror deploy-pi.yml's push.paths filter so docs-only merges
+        # don't trigger builds.
+        changed=$(gh api "repos/$repo/compare/$last_deploy_sha...$main_sha" \
+          --paginate --jq '.files[].filename')
+        if echo "$changed" | grep -qE '^(src/|public/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.ts|patches/|scripts/pi-rollout-from-artifact\.sh|workers/pi-deploy-orchestrator/|infrastructure/omv/pi-release-pull|\.github/workflows/deploy-pi\.yml)'; then
+          echo "Deploy-relevant changes reached main without a deploy run."
+          echo "(Likely an auto-merged PR — push event was suppressed.)"
+          gh workflow run deploy-pi.yml --repo "$repo"
+        else
+          echo "No deploy-relevant changes since ${last_deploy_sha:0:8} — skipping."
+        fi
