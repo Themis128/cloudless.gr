@@ -235,7 +235,8 @@ patch alert-manager alert-api '{"spec":{"type":"NodePort","ports":[{"name":"http
 patch cloudless cloudless-app '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30300}]}}' || true
 echo "NodePort patches attempted"
 EOS
-}fix_nodeports
+}
+fix_nodeports
 
 # --- Build host-specific configs from canonical ---
 WORKDIR=$(mktemp -d)

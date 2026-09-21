@@ -28,9 +28,8 @@ jobs:
       if: |
         (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
          steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
-        !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
+        !contains(steps.meta.outputs.dependency-names, 'next') &&
+        !contains(steps.meta.outputs.dependency-names, 'react')
       run: gh pr merge --auto --squash "$PR_URL"
       env:
         PR_URL: ${{ github.event.pull_request.html_url }}
@@ -40,9 +39,8 @@ jobs:
       if: |
         (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
          steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-        (contains(fromJson(steps.meta.outputs.dependency-names), 'next') ||
-         contains(fromJson(steps.meta.outputs.dependency-names), 'react') ||
-         contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom'))
+        (contains(steps.meta.outputs.dependency-names, 'next') ||
+         contains(steps.meta.outputs.dependency-names, 'react'))
       run: |
         echo "::warning::Framework package update detected (next/react/react-dom)."
         echo "::warning::AGENTS.md reads from node_modules — human review required before merge."
