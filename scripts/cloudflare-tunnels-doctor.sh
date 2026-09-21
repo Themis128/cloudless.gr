@@ -238,6 +238,21 @@ EOS
 }
 fix_nodeports
 
+# --- Ensure Traefik IngressRoutes (single-ingress on :30850) ---
+# cloudflared sends every k8s hostname to Traefik :30850; if a Host() rule is
+# missing the edge answers 404 even though DNS + backend are fine.
+INGRESSROUTES="${REPO_ROOT}/infrastructure/traefik/ingressroutes.yaml"
+if [[ -f "$INGRESSROUTES" ]]; then
+  echo ""
+  echo "=== Apply Traefik IngressRoutes ==="
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "  [dry-run] would kubectl apply $INGRESSROUTES on omv"
+  else
+    scp "${SSH_OPTS[@]}" "$INGRESSROUTES" "${SSH_USER}@${OMV_EP}:/tmp/ingressroutes.doctor.yaml"
+    remote "$OMV_EP" 'sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml apply -f /tmp/ingressroutes.doctor.yaml'
+  fi
+fi
+
 # --- Build host-specific configs from canonical ---
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
