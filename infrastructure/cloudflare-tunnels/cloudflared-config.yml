@@ -1,6 +1,11 @@
 # Cloudflare Tunnel Configuration for omv (192.168.1.128)
 # Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
 #
+# IMPORTANT: this tunnel is REMOTELY MANAGED (config_src=cloudflare). The live
+# ingress lives in Cloudflare (Zero Trust → Networks → Tunnels, or
+# PUT /cfd_tunnel/{id}/configurations) — /etc/cloudflared/config.yml on the
+# connectors is ignored. This file documents intended routing only.
+#
 # Traffic path (k8s services):
 #   Cloudflare Edge → Tunnel → per-service NodePort on omv
 #
