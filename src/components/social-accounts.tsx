@@ -57,7 +57,7 @@ export const SOCIAL_ACCOUNTS: SocialAccount[] = [
     key: "facebook",
     name: "Facebook",
     handle: "Cloudless.gr",
-    href: "https://www.facebook.com/Cloudless.gr",
+    href: "https://www.facebook.com/1163886186808102",
     kind: "follow",
     icon: (
       <svg {...svgProps}>
