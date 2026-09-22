@@ -36,7 +36,10 @@ jobs:
         # The action's `tool` input maps to a single `--tool` flag — a
         # comma-separated list is rejected by the CLI ("not supported"),
         # which silently produced no SARIF and no code-scanning upload.
-        tool: [opengrep, trivy, lizard]
+        # trivy is excluded: standalone it fails with "no patterns configured"
+        # because pattern selection only comes from the Codacy remote project
+        # config, and this workflow has no CODACY_PROJECT_TOKEN.
+        tool: [opengrep, lizard]
     permissions:
       contents: read
       security-events: write
@@ -68,9 +71,47 @@ jobs:
             echo "SARIF file missing or invalid — skipping upload"
           fi
 
-      - name: Upload SARIF results
+      # Codacy emits multi-run SARIF (one run per sub-tool/language). GitHub
+      # rejects a single file whose runs share a category, so split into one
+      # document per run and upload each via the REST API with a distinct
+      # tool_name — keeps "X (reported by Codacy)" labeling per sub-tool.
+      - name: Split SARIF runs and upload
         if: steps.validate.outputs.valid == 'true'
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: results-${{ matrix.tool }}.sarif
-          category: codacy-${{ matrix.tool }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          python3 - <<'PY'
+          import base64, gzip, json, os, subprocess, sys
+
+          path = "results-${{ matrix.tool }}.sarif"
+          sarif = json.load(open(path))
+          runs = sarif.get("runs") or []
+          if not runs:
+              print("SARIF has no runs — nothing to upload")
+              sys.exit(0)
+
+          seen = {}
+          for i, run in enumerate(runs):
+              driver = (run.get("tool", {}).get("driver") or {}).get("name") or f"run{i}"
+              seen[driver] = seen.get(driver, 0) + 1
+              suffix = f"-{seen[driver]}" if seen[driver] > 1 else ""
+              doc = {k: v for k, v in sarif.items() if k != "runs"}
+              doc["runs"] = [run]
+              blob = base64.b64encode(gzip.compress(json.dumps(doc).encode())).decode()
+              body = {
+                  "commit_sha": os.environ["COMMIT_SHA"],
+                  "ref": os.environ["REF"],
+                  "sarif": blob,
+                  "tool_name": f"Codacy {driver}{suffix}",
+              }
+              r = subprocess.run(
+                  ["gh", "api", "repos/{owner}/{repo}/code-scanning/sarifs",
+                   "-X", "POST", "--input", "-"],
+                  input=json.dumps(body), text=True, capture_output=True,
+              )
+              print(f"run[{i}] {driver}: {r.stdout.strip() or r.stderr.strip()}")
+              if r.returncode:
+                  sys.exit(1)
+          PY
