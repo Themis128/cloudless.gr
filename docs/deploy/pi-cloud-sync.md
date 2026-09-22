@@ -58,7 +58,7 @@ runs every N minutes:
 SHA=$(aws ssm get-parameter \
   --name /cloudless/production/cloud-sha \
   --query 'Parameter.Value' --output text)
-kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:${SHA} \
+kubectl set image deployment/cloudless cloudless=ghcr.io/themis128/cloudless-pi-app:${SHA} \
   --record
 ```
 
@@ -175,7 +175,7 @@ doc for context. Listed in priority order:
 - **SECONDARY R53 health check**: `30a69f1c-8d48-49bd-9067-cabec979478b` (probes APIGW frontend)
 - **R53 hosted zone**: `Z079608614L53CC4EAZM3`
 - **SNS failover alerts topic**: `arn:aws:sns:us-east-1:278585680617:cloudless-failover-alerts` (edge-event only, fires on PRIMARY↔SECONDARY transitions)
-- **ECR repo**: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` (tag-immutable)
+- **GHCR package**: `ghcr.io/themis128/cloudless-pi-app` (prefer immutable sha tags)
 - **IAM users in the Pi orbit**: `cloudless-pi-standby`, `cloudless-pi-proxy`, `cloudless-failover-monitor`, `cloudless-ddns-updater`
 - **SSM SHA pointer**: `/cloudless/production/cloud-sha`
 

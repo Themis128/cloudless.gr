@@ -165,10 +165,10 @@ behavior:
 
 ```bash
 # Run on each Pi node
-docker pull 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest
+docker pull ghcr.io/themis128/cloudless-pi-app:latest
 
 # Or via k3s
-kubectl run prepull --image=278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest \
+kubectl run prepull --image=ghcr.io/themis128/cloudless-pi-app:latest \
   --command -- sleep 300 -n cloudless
 ```
 

@@ -21,7 +21,7 @@ git push main
               └─▶ wait for pi build completion (15 min timeout)
 
 build-pi-image.yml
-  └─▶ Docker build arm64 → ECR cloudless-pi-app:latest
+  └─▶ Docker build arm64 → GHCR cloudless-pi-app:latest
       └─▶ [on success] update SSM ECR_LATEST_DIGEST
 
 deploy-pi.yml

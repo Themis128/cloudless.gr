@@ -77,7 +77,7 @@ spec:
       containers:
       - name: app
         image:
-          278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest
+          ghcr.io/themis128/cloudless-pi-app:latest
         imagePullPolicy: Always
 
         # Port Configuration

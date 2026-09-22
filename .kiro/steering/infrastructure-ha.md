@@ -27,7 +27,7 @@ User → Cloudflare (proxied CNAME) → Cloudflare Worker (cloudless-failover)
 | Pi origin DNS | `pi-origin.cloudless.gr` → cfargotunnel |
 | Pi k3s namespace | `cloudless` |
 | Pi k3s deployment | `cloudless` |
-| Pi image registry | `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app` |
+| Pi image registry (GHCR) | `ghcr.io/themis128/cloudless-pi-app` |
 
 ## Pi k3s Requirements
 

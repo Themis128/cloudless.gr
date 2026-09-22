@@ -370,7 +370,7 @@ server.tool(
   "k3s_prepull_image",
   "Pre-pull a container image on the cluster nodes to speed up deployment.",
   {
-    image: z.string().describe("Full image URI e.g. 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:sha"),
+    image: z.string().describe("Full image URI e.g. ghcr.io/themis128/cloudless-pi-app:sha"),
     namespace: z.string().optional().describe("Namespace context (default: cloudless)"),
   },
   async ({ image, namespace }) => {
