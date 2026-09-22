@@ -121,8 +121,11 @@ async function saLogin(): Promise<string> {
     if (!res.ok) {
       throw new SocialAutoApiError(res.status, await res.text().catch(() => ""));
     }
-    const data = (await res.json()) as { access_token?: string };
-    if (!data.access_token) {
+    // CF Access serves its HTML interstitial for requests without a valid
+    // service token — res.json() would throw a raw SyntaxError. Treat any
+    // non-JSON body as an upstream failure, not a crash.
+    const data = (await res.json().catch(() => null)) as { access_token?: string } | null;
+    if (!data?.access_token) {
       throw new SocialAutoApiError(res.status, "login response missing access_token");
     }
     cachedToken = {
