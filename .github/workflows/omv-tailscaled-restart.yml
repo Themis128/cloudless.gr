@@ -80,6 +80,30 @@ jobs:
         echo "=== tailscaled recent denies ==="
         sudo journalctl -u tailscaled --since '-2h' --no-pager 2>/dev/null | grep -iE 'deny|drop|acl|filter' | tail -15 || true
 
+        KCTL="sudo k3s kubectl"
+        $KCTL version --short >/dev/null 2>&1 || KCTL="kubectl"
+
+        echo "=== espocrm baseline netpol spec ==="
+        $KCTL get netpol baseline -n espocrm -o yaml 2>/dev/null | sed -n '/spec:/,$p' || true
+
+        echo "=== espocrm pod + endpoint ==="
+        $KCTL get pods -n espocrm -o wide 2>/dev/null || true
+        $KCTL get endpoints -n espocrm 2>/dev/null || true
+
+        echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
+        POD_IP=$($KCTL get pods -n espocrm -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)
+        echo "podIP=$POD_IP"
+        sudo iptables -S 2>/dev/null | grep -E "$POD_IP" | head -10 || true
+
+        echo "=== ts-forward chain ==="
+        sudo iptables -S ts-forward 2>/dev/null || true
+        sudo iptables -S ts-input 2>/dev/null | head -15 || true
+
+        echo "=== k3s/uptime (what restarted ~13:26Z) ==="
+        systemctl show k3s -p ActiveEnterTimestamp 2>/dev/null || true
+        uptime -s || true
+        $KCTL get pods -n kube-system -o wide 2>/dev/null | grep -iE 'router|proxy|flannel|traefik' || true
+
     - name: Post result to tracking issue
       if: always()
       env:
