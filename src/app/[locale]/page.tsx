@@ -32,6 +32,7 @@ import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
+import SocialMediaSection from "@/components/SocialMediaSection";
 import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
@@ -555,7 +556,7 @@ export default async function Home({
                     ↗ {t("credibility.badgeAws", "AWS Certified")}
                   </a>
                   <a
-                    href="https://github.com/cloudless-gr"
+                    href="https://github.com/Themis128"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors duration-200"
@@ -973,6 +974,9 @@ export default async function Home({
           </ScrollReveal>
         </div>
       </section>
+
+      {/* ── Social Media ── */}
+      <SocialMediaSection locale={locale} />
 
       {/* ── Inline Contact / Book Audit ── */}
       <section

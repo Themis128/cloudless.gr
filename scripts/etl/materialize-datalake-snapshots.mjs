@@ -8,7 +8,7 @@ import { ParquetReader } from "@dsnp/parquetjs";
 import { mkdtempSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { BUCKET, r2Put, r2Get } from "./_r2-config.mjs";
+import { BUCKET, r2Put, r2Get, r2List } from "./_r2-config.mjs";
 
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
@@ -40,6 +40,17 @@ async function readParquet(key) {
 async function safeParquet(key) {
 	try {
 		return await readParquet(key);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn(`  skip ${key}: ${message.slice(0, 160)}`);
+		return null;
+	}
+}
+
+async function safeJson(key) {
+	try {
+		const buf = await r2Get(key);
+		return JSON.parse(buf.toString("utf8"));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.warn(`  skip ${key}: ${message.slice(0, 160)}`);
@@ -333,6 +344,146 @@ function postizOps(posts, integrations) {
 	];
 }
 
+// ── SocialAuto sections ───────────────────────────────────────────────────
+// Silver JSON written by SocialAuto's datalake_export Celery task into
+// lake/socialauto-*; insights come from its deterministic insights engine.
+
+function socialautoOps(accounts, posts) {
+	const a = accounts || [];
+	const p = posts || [];
+	const published = p.filter(
+		(x) => x.status === "published" ||
+			(x.targets || []).some((t) => t.status === "published")
+	);
+	const platforms = new Set(a.map((x) => x.platform));
+	return [
+		{ metric: "accounts_total", value: a.length },
+		{ metric: "accounts_active", value: a.filter((x) => x.status === "active").length },
+		{ metric: "accounts_error", value: a.filter((x) => x.status === "error" || x.status === "expired" || x.status === "revoked").length },
+		{ metric: "platforms_connected", value: platforms.size },
+		{ metric: "posts_total", value: p.length },
+		{ metric: "posts_published", value: published.length },
+	];
+}
+
+/** Pick the team insights file with the most populated platform data. */
+function richestInsights(candidates) {
+	const valid = (candidates || []).filter((j) => j && j.platforms && !j.error);
+	if (!valid.length) return null;
+	return valid.sort(
+		(a, b) => Object.keys(b.platforms).length - Object.keys(a.platforms).length
+	)[0];
+}
+
+function socialEngagement(insights) {
+	if (!insights?.platforms) return null;
+	return Object.entries(insights.platforms)
+		.map(([platform, p]) => ({
+			platform,
+			focus_tier: p.focus_tier ?? null,
+			confidence: p.confidence ?? null,
+			posts: p.posts ?? 0,
+			impressions: p.impressions ?? 0,
+			engagement: p.engagement ?? 0,
+			avg_er_pct: p.avg_engagement_rate ?? 0,
+			median_er_pct: p.median_engagement_rate ?? 0,
+			median_eng_per_post: p.median_engagement_per_post ?? 0,
+			er_by_followers_pct: p.er_by_followers_pct ?? null,
+			benchmark_verdict: p.benchmark?.verdict ?? null,
+			momentum_7d_pct: p.momentum_7d_engagement_pct ?? null,
+			engagement_7d: p.engagement_7d ?? 0,
+			followers: p.follower_growth?.current ?? null,
+			follower_net: p.follower_growth?.net ?? null,
+			data_warnings: (p.data_warnings || []).join("; ") || null,
+		}))
+		.sort((a, b) => (b.engagement || 0) - (a.engagement || 0));
+}
+
+function socialOutliers(insights) {
+	if (!insights?.platforms) return null;
+	const rows = [];
+	for (const [platform, p] of Object.entries(insights.platforms)) {
+		for (const o of p.outliers || []) {
+			rows.push({
+				platform,
+				post_id: o.post_id ?? null,
+				kind: o.kind,
+				engagement: o.engagement ?? 0,
+				engagement_rate: o.engagement_rate ?? 0,
+				platform_median: o.platform_median_engagement ?? null,
+			});
+		}
+		const a = p.follower_growth?.anomaly;
+		if (a) {
+			rows.push({
+				platform,
+				post_id: null,
+				kind: "follower_anomaly",
+				engagement: a.delta,
+				engagement_rate: null,
+				platform_median: null,
+			});
+		}
+	}
+	return rows.sort((a, b) => Math.abs(b.engagement) - Math.abs(a.engagement));
+}
+
+function socialRecommendations(insights) {
+	if (!insights?.recommendations) return null;
+	return insights.recommendations.map((r) => ({
+		type: r.type ?? null,
+		priority: r.priority ?? null,
+		platform: r.platform ?? null,
+		text: String(r.text ?? "").slice(0, 500),
+	}));
+}
+
+function socialLeads(leads) {
+	if (!leads) return null;
+	const bySource = new Map();
+	const byInterest = new Map();
+	const bySize = new Map();
+	for (const l of leads) {
+		const bump = (m, key) => {
+			const k = key || "(unknown)";
+			const cur = m.get(k) || { leads: 0, espocrm_synced: 0 };
+			cur.leads += 1;
+			if (l.espocrm_synced) cur.espocrm_synced += 1;
+			m.set(k, cur);
+		};
+		bump(bySource, l.platform ? `${l.source}·${l.platform}` : l.source);
+		bump(byInterest, l.interest);
+		bump(bySize, l.company_size);
+	}
+	const rows = [];
+	for (const [dim, m] of [["source", bySource], ["interest", byInterest], ["company_size", bySize]]) {
+		for (const [value, cur] of m) {
+			rows.push({ dimension: dim, value, leads: cur.leads, espocrm_synced: cur.espocrm_synced });
+		}
+	}
+	return rows.sort((a, b) => b.leads - a.leads);
+}
+
+function socialAttribution(events) {
+	if (!events) return null;
+	const byUtm = new Map();
+	for (const e of events) {
+		if (!e.utm_source && !e.utm_campaign) continue;
+		const key = `${e.utm_source || "(direct)"}|${e.utm_medium || "(none)"}|${e.utm_campaign || "(none)"}`;
+		const cur = byUtm.get(key) || { events: 0, sessions: new Set() };
+		cur.events += 1;
+		if (e.session_id) cur.sessions.add(e.session_id);
+		byUtm.set(key, cur);
+	}
+	return [...byUtm.entries()]
+		.map(([key, cur]) => {
+			const [utm_source, utm_medium, utm_campaign] = key.split("|");
+			return { utm_source, utm_medium, utm_campaign, events: cur.events, sessions: cur.sessions.size };
+		})
+		.sort((a, b) => b.events - a.events)
+		.slice(0, 25);
+}
+
 function appflowyActivity(workspaces, users) {
 	const w = workspaces || [];
 	const u = users || [];
@@ -507,6 +658,56 @@ async function main() {
 			: sectionErr("postiz_ops", "missing postiz parquet")
 	);
 
+	// ── SocialAuto lake tables (JSON written by datalake_export Celery task)
+	const saAccounts = await safeJson("lake/socialauto-accounts/accounts.json");
+	const saPosts = await safeJson("lake/socialauto-posts/posts.json");
+	const saLeads = await safeJson("lake/socialauto-leads/leads.json");
+	const saWebEvents = await safeJson("lake/socialauto-web-events/events.json");
+
+	let saInsights = null;
+	try {
+		const insightKeys = await r2List("lake/socialauto-insights/");
+		const candidates = [];
+		for (const key of insightKeys.filter((k) => k.endsWith(".json"))) {
+			const j = await safeJson(key);
+			if (j) candidates.push(j);
+		}
+		saInsights = richestInsights(candidates);
+	} catch (error) {
+		console.warn(`  skip socialauto-insights: ${String(error).slice(0, 160)}`);
+	}
+
+	sections.push(
+		saAccounts || saPosts
+			? sectionOk("socialauto_ops", socialautoOps(saAccounts, saPosts))
+			: sectionErr("socialauto_ops", "missing socialauto json")
+	);
+	sections.push(
+		saInsights
+			? sectionOk("social_engagement", socialEngagement(saInsights))
+			: sectionErr("social_engagement", "missing socialauto insights")
+	);
+	sections.push(
+		saInsights
+			? sectionOk("social_outliers", socialOutliers(saInsights))
+			: sectionErr("social_outliers", "missing socialauto insights")
+	);
+	sections.push(
+		saInsights
+			? sectionOk("social_recommendations", socialRecommendations(saInsights))
+			: sectionErr("social_recommendations", "missing socialauto insights")
+	);
+	sections.push(
+		saLeads
+			? sectionOk("social_leads", socialLeads(saLeads))
+			: sectionErr("social_leads", "missing socialauto leads json")
+	);
+	sections.push(
+		saWebEvents
+			? sectionOk("social_attribution", socialAttribution(saWebEvents))
+			: sectionErr("social_attribution", "missing socialauto web-events json")
+	);
+
 	const afWs = await safeParquet("lake/appflowy-workspaces/workspaces.parquet");
 	const afUsers = await safeParquet("lake/appflowy-users/users.parquet");
 	sections.push(
@@ -533,6 +734,13 @@ async function main() {
 		"lake/espocrm-contacts/contacts.parquet",
 		"lake/n8n-workflows/workflows.parquet",
 		"lake/postiz-posts/posts.parquet",
+		"lake/socialauto-accounts/accounts.json",
+		"lake/socialauto-posts/posts.json",
+		"lake/socialauto-post-metrics/metrics.json",
+		"lake/socialauto-followers/followers.json",
+		"lake/socialauto-account-events/events.json",
+		"lake/socialauto-leads/leads.json",
+		"lake/socialauto-web-events/events.json",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",
 		"ml-parquet/scores_churn.parquet",

@@ -3,6 +3,7 @@ import {
   parseAttribution,
   sanitizeAttribution,
   formatAttribution,
+  parseAttributionField,
   ATTRIBUTION_STORAGE_KEY,
 } from "@/lib/lead-attribution";
 
@@ -77,7 +78,10 @@ describe("sanitizeAttribution", () => {
   });
 
   it("strips unknown keys", () => {
-    const result = sanitizeAttribution({ utmSource: "x", malicious: "evil" }) as Record<string, unknown>;
+    const result = sanitizeAttribution({ utmSource: "x", malicious: "evil" }) as Record<
+      string,
+      unknown
+    >;
     expect(result.malicious).toBeUndefined();
   });
 
@@ -117,5 +121,54 @@ describe("formatAttribution", () => {
     const result = formatAttribution({ utmSource: "google" });
     expect(result).toBe("source=google");
     expect(result).not.toContain("medium");
+  });
+});
+
+describe("parseAttributionField (CLOUDLESS-GR-8)", () => {
+  it("returns undefined for null/undefined/empty", () => {
+    expect(parseAttributionField(null)).toEqual({ ok: true, data: undefined });
+    expect(parseAttributionField(undefined)).toEqual({ ok: true, data: undefined });
+    expect(parseAttributionField("")).toEqual({ ok: true, data: undefined });
+  });
+
+  it("uses a pre-parsed object as-is (never JSON.parse on object)", () => {
+    const result = parseAttributionField({ utmSource: "google", utmMedium: "cpc" });
+    expect(result).toEqual({
+      ok: true,
+      data: { utmSource: "google", utmMedium: "cpc" },
+    });
+  });
+
+  it("parses a valid JSON string then sanitizes", () => {
+    const result = parseAttributionField(
+      JSON.stringify({ utmSource: "newsletter", utmCampaign: "launch" })
+    );
+    expect(result).toEqual({
+      ok: true,
+      data: { utmSource: "newsletter", utmCampaign: "launch" },
+    });
+  });
+
+  it("returns ok:false for invalid JSON string (no throw)", () => {
+    expect(() => parseAttributionField("{not-json")).not.toThrow();
+    expect(parseAttributionField("{not-json")).toEqual({
+      ok: false,
+      error: "Invalid attribution JSON.",
+    });
+  });
+
+  it("returns ok:false for the classic [object Object] string without throwing", () => {
+    expect(() => parseAttributionField("[object Object]")).not.toThrow();
+    expect(parseAttributionField("[object Object]")).toEqual({
+      ok: false,
+      error: "Invalid attribution JSON.",
+    });
+  });
+
+  it("rejects non-string non-object values", () => {
+    expect(parseAttributionField(42)).toEqual({
+      ok: false,
+      error: "Invalid attribution value.",
+    });
   });
 });

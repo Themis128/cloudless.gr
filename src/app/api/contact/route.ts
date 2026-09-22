@@ -16,7 +16,11 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { mapIntegrationError } from "@/lib/api-errors";
-import { formatAttribution, type LeadAttribution } from "@/lib/lead-attribution";
+import {
+  formatAttribution,
+  parseAttributionField,
+  type LeadAttribution,
+} from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji, type LeadScore } from "@/lib/lead-scoring";
 import { analyzeLeadMessage } from "@/lib/nlp";
 import type { LeadNlpResult } from "@/lib/nlp/types";
@@ -256,19 +260,12 @@ export async function POST(request: Request) {
 
     const serviceSlug = service ? (SERVICE_SLUG[service] ?? undefined) : undefined;
     const nameParts = String(name).trim().split(" ");
-    let attributionData: LeadAttribution | undefined;
-    if (attribution) {
-      try {
-        // Accept both a JSON string and a pre-parsed object (some clients send
-        // attribution as an object instead of a stringified JSON value).
-        attributionData =
-          typeof attribution === "string"
-            ? (JSON.parse(attribution) as LeadAttribution)
-            : (attribution as LeadAttribution);
-      } catch {
-        attributionData = undefined;
-      }
+    // CLOUDLESS-GR-8: never JSON.parse a non-string (throws "[object Object]").
+    const attributionParsed = parseAttributionField(attribution);
+    if (!attributionParsed.ok) {
+      return jsonError(attributionParsed.error, 400);
     }
+    const attributionData = attributionParsed.data;
     const bodyLocale = typeof fields.locale === "string" ? fields.locale : undefined;
     const pageLocale =
       bodyLocale || localeFromReferer(request.headers.get("referer") ?? "") || "en";

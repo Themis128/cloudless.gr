@@ -1,5 +1,7 @@
 # Cloudless.gr Application Codemap
 
+Last verified: 2026-09-21. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
+
 ## 🏗️ **Architecture Overview**
 
 **cloudless.gr** is a full-stack cloud consulting platform built with modern web technologies, featuring:
@@ -19,7 +21,7 @@
 - **Next.js 15.5.24** (App Router, React 19.2.8)
 - **TypeScript 5.5.0** (strict mode)
 - **Tailwind CSS 4.0.0** (utility-first styling)
-- **next-intl 4.13.7** (i18n routing: en, el, fr, de)
+- **next-intl 4.14.5** (i18n routing: en, el, fr, de)
 - **next-auth 5.0.0-beta.32** (authentication)
 
 ### **Infrastructure & Deployment**
@@ -37,21 +39,26 @@
 - **Self-hosted mail (omv-ha)**: postfix relay via Resend + dovecot IMAP + Roundcube (see `docs/MAIL-SERVER-SETUP.md`); Resend API as relay
 - **AppFlowy Cloud** (headless CMS)
 - **Stripe** (payments, subscriptions)
-- **DynamoDB** (transaction cache)
 - **DuckDB** (analytics data lake)
+
+> **AWS remnant**: `lambda/pi-proxy/` is a single AWS Lambda + SSM standby
+> failover proxy (deployed via `deploy-pi-proxy.yml`) — the last AWS
+> dependency. Everything else (auth, config, sessions) is Cloudflare
+> D1/KV or self-hosted; DynamoDB/Cognito are already gone (comments only).
 
 ### **Monitoring & Analytics**
 
 - **Sentry** (error tracking)
 - **Prometheus + Grafana** (cluster monitoring)
 - **Google Search Console** (SEO analytics)
-- **Postiz** (social media scheduling)
-- **N8N** (workflow automation)
+- **SocialAuto** (`social.cloudless.gr` — live social publishing/analytics platform, repo `cu130-slim`)
+- **Postiz** (legacy social scheduler, Helm charts under `infrastructure/postiz/`)
+- **N8N** (workflow automation — drives SocialAuto posting pipelines)
 
 ### **Testing**
 
-- **Vitest 2.1.0** (unit tests, jsdom)
-- **Playwright 1.49.0** (E2E tests, 3 projects)
+- **Vitest 5.0.1** (unit tests, jsdom)
+- **Playwright 1.63.0** (E2E tests, 3 projects)
 - **React Testing Library 16.0.0** (component tests)
 - **@axe-core/playwright 4.13.0** (accessibility)
 
@@ -105,7 +112,6 @@ cloudless.gr/
 │   │   ├── el.json             # Greek translations
 │   │   ├── fr.json             # French translations
 │   │   └── de.json             # German translations
-│   ├── lambda/                 # AWS Lambda handlers
 │   └── instrumentation.ts       # Sentry/observability
 ├── __tests__/                  # Vitest unit tests (99+ suites)
 │   └── stubs/                  # AWS SDK & Next.js stubs
@@ -121,7 +127,7 @@ cloudless.gr/
 ├── k8s/                        # Kubernetes manifests
 │   ├── cluster-protection/     # Resource limits, Prometheus rules
 │   └── grafana-dashboards/     # Grafana dashboards
-├── lambda/                     # AWS Lambda functions
+├── lambda/pi-proxy/            # AWS Lambda standby failover proxy (last AWS remnant)
 ├── scripts/                    # Automation scripts
 ├── workers/                    # Cloudflare Workers
 ├── tools/                      # MCP tools & utilities
@@ -159,7 +165,7 @@ cloudless.gr/
 
 - **Multi-platform ads**: Google Ads, Meta (Facebook/Instagram), LinkedIn, TikTok, X (Twitter)
 - **Campaign landing pages** with conversion tracking
-- **Social media scheduling** via Postiz integration
+- **Social publishing** via SocialAuto (`social.cloudless.gr`) — n8n pipelines generate + publish posts; Postiz charts remain for legacy use
 - **Email campaigns** with ActiveCampaign integration
 
 ### **Analytics & Reporting**
@@ -316,10 +322,31 @@ cloudless.gr → Worker cloudless2 (pi-origin-proxy)
 - **Stripe**: Payment processing and subscriptions
 - **Google Search Console**: SEO analytics and reporting
 - **ActiveCampaign**: Email marketing and automation
-- **Postiz**: Social media scheduling
-- **N8N**: Workflow automation
+- **SocialAuto** (`social.cloudless.gr`): social publishing, DM inbox, analytics — see `cu130-slim/docs/CODEMAP.md`
+- **Postiz**: Legacy social media scheduling (superseded by SocialAuto)
+- **N8N**: Workflow automation (runs the SocialAuto posting pipelines)
 - **Slack**: Notifications and team communication
 - **Sentry**: Error tracking and monitoring
+
+---
+
+## 📣 **Social Content Strategy (Visibility Era — adopted 2026-09)**
+
+Social content for cloudless.gr is generated and published by **SocialAuto** (`social.cloudless.gr`, repo `cu130-slim`) via n8n workflows — the site itself has no posting code. Strategy adopted from Sofia Kakkava's "Visibility Era" challenge:
+
+- **Voice (DAY 1)**: Expert-led blend — teach one concrete thing → ground it in a real observation (never invented anecdotes) → close with energizing momentum + question. Practitioner tone, plain English/Greek, EUR pricing.
+- **Platforms (DAY 2, 8-week commitment)**: **MAIN = LinkedIn** (original content + carousels via the `cloudless.gr` Company Page) → **SECONDARY = Meta** (Instagram, Facebook Page, Threads — adapted versions) → **LAST = Twitter/X, TikTok** (opportunistic only).
+- **Scheduled flows**: LinkedIn carousel every 2 days 19:00 EET; LinkedIn weekly cloud post Mon 09:00; Instagram marketing image daily; all other platform posts are webhook/on-demand.
+- **Source of truth**: `brand_voices.voice_signature` in SocialAuto (`creator_type.py`/`platforms` commands); full details in `cu130-slim/docs/CODEMAP.md`.
+
+### SocialAuto → datalake pipeline (added 2026-09)
+
+SocialAuto pushes its own first-party data into the datalake — no Postiz needed:
+
+- **Producer**: `datalake_export` Celery task (every 6h, cu130-slim) writes JSON tables to `datalake-bucket` under `lake/socialauto-*` — accounts, posts, post-metric history, follower snapshots, account-insight events, per-team insights-engine output, leads (sha256 email + domain only), 90-day web events (UTM only; IP/UA dropped).
+- **Materializer**: `scripts/etl/materialize-datalake-snapshots.mjs` reads them via `safeJson`/`r2List` into gold sections `socialauto_ops`, `social_engagement`, `social_outliers`, `social_recommendations`, `social_leads`, `social_attribution` — rendered on `/admin/analytics/datalake`.
+- **Real-time leads**: `POST /api/webhooks/socialauto-leads` (shared-secret) → EspoCRM `createLead`, which then appears in `espocrm_funnel` — the lake export is the analytical copy.
+- **`postiz_ops`** is kept for history but Postiz is retired; SocialAuto sections are the live social surface.
 
 ---
 

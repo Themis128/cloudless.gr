@@ -162,4 +162,40 @@ describe("POST /api/contact", () => {
     expect(response.status).toBe(400);
     expect(mockSendEmailResend).not.toHaveBeenCalled();
   });
+  it("returns 200 when attribution is a pre-parsed object (CLOUDLESS-GR-8)", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Themis",
+        email: "themis@test.com",
+        message: "Hello with object attribution",
+        attribution: { utmSource: "google", utmMedium: "cpc" },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  it("returns 400 for invalid attribution JSON string (CLOUDLESS-GR-8)", async () => {
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Themis",
+        email: "themis@test.com",
+        message: "Hello with bad attribution",
+        attribution: "{not-valid-json",
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toBe("Invalid attribution JSON.");
+    expect(mockSendEmailResend).not.toHaveBeenCalled();
+  });
 });

@@ -21,3 +21,18 @@ playwright-report
 test-results
 *.skill
 SECURITY_*.md
+
+# Audit cleanup — secrets, MCP, backups, dumps
+.env*
+!.env.example
+!.dev.vars.example
+.mcp.json
+mcp.json
+.mcp.json.backup
+*.backup
+*.backup*
+test-output.txt
+coverage
+.coverage*
+.wrangler
+.local
