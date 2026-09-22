@@ -1,0 +1,59 @@
+name: omv tailscaled restart (self-hosted, no tailnet needed)
+
+# Restarts tailscaled on the omv host via the self-hosted runner.
+# Use when ephemeral CI nodes i/o-timeout reaching 100.74.191.58 while the
+# omv GitHub runner stays online — that pattern means the host is up but
+# tailscaled is wedged (stale netmap: it never learns about new ephemeral
+# peers, so it drops their traffic; tailscale/github-action#40/#130/#266).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restart:
+    name: Restart tailscaled on omv
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    steps:
+    - name: Restart tailscaled and verify
+      run: |
+        set -e
+        echo "=== before ==="
+        systemctl is-active tailscaled || true
+        tailscale status --self --peers=false 2>/dev/null || true
+
+        sudo systemctl restart tailscaled
+        sleep 8
+
+        echo "=== after ==="
+        systemctl is-active tailscaled
+        tailscale status --self --peers=false
+        tailscale netcheck | head -12 || true
+
+        # Confirm the node re-registered with control (Online state).
+        for i in $(seq 1 12); do
+          if tailscale status --self --peers=false --json 2>/dev/null \
+              | grep -q '"Online":true\|"BackendState":"Running"'; then
+            echo "tailscaled back Online after ${i} checks"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "::warning::tailscaled restarted but did not report Online yet"
+        tailscale status | head -15 || true
+
+    - name: Post result to tracking issue
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh issue comment 382 --repo Themis128/cloudless.gr --body "$(cat <<'BODY'
+        ### omv tailscaled restart — $(date -u +%F\ %T)Z
+        **Job:** ${{ job.status }}
+        Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        BODY
+        )" || true
