@@ -46,7 +46,23 @@ jobs:
         echo "::warning::tailscaled restarted but did not report Online yet"
         tailscale status | head -15 || true
 
-    - name: Post result to tracking issue
+    - name: Tailnet listener diagnostics
+      if: always()
+      run: |
+        echo "=== Listening sockets (NodePorts + SSH) ==="
+        ss -tln 2>/dev/null | grep -E ':(22|6443|30300|30700|30900|30850)\b' || true
+
+        echo "=== Self-connect via own tailscale IP ==="
+        for port in 22 6443 30300 30700 30850; do
+          code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://100.74.191.58:${port}/" 2>/dev/null || echo "FAIL")
+          echo "  100.74.191.58:${port} -> ${code}"
+        done
+
+        echo "=== INPUT policy / tailscale0 rules ==="
+        sudo iptables -L INPUT -n --line-numbers 2>/dev/null | head -25 || true
+
+        echo "=== kube-proxy DNAT for 30700 ==="
+        sudo iptables -t nat -S 2>/dev/null | grep -E '30700|KUBE-NODEPORT' | head -10 || true
       if: always()
       env:
         GH_TOKEN: ${{ github.token }}
