@@ -4,7 +4,7 @@
 
 Cloud computing, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs.
 
-Built with **Next.js 16**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
+Built with **Next.js 15**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
 
 ## Localization (i18n)
 
@@ -480,7 +480,7 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 
 ## Tech Stack
 
-- Next.js 16.3.0 (App Router, Turbopack)
+- Next.js 15.5.x (App Router, Turbopack)
 - React 19.2.8
 - TypeScript 5
 - Tailwind CSS 4
