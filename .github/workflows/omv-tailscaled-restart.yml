@@ -63,6 +63,8 @@ jobs:
 
         echo "=== kube-proxy DNAT for 30700 ==="
         sudo iptables -t nat -S 2>/dev/null | grep -E '30700|KUBE-NODEPORT' | head -10 || true
+
+    - name: Post result to tracking issue
       if: always()
       env:
         GH_TOKEN: ${{ github.token }}
