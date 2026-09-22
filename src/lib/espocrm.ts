@@ -34,6 +34,9 @@ const MAX_LIMIT = 100;
 const MAX_RETRIES = 3;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
+/** Strip CR/LF so user-controlled values can't forge extra log lines. */
+const safeLog = (v: unknown): string => String(v).replace(/[\r\n]+/g, " ");
+
 interface EspoContact {
   email: string;
   firstname?: string;
@@ -296,7 +299,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       }
       console.error(
         "[EspoCRM] upsertContact: 409 conflict but could not resolve contact for",
-        contact.email
+        safeLog(contact.email)
       );
       return null;
     }
@@ -345,7 +348,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           }
           console.error(
             "[EspoCRM] upsertContact: 409 after phone retry but could not resolve contact for",
-            contact.email
+            safeLog(contact.email)
           );
           return null;
         }
