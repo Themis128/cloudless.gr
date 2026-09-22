@@ -1,4 +1,5 @@
 import { getConfig } from "@/lib/ssm-config";
+import { parseJsonOrThrow, splitServiceToken } from "@/lib/upstream-client";
 import type { CalendarPlatform } from "@/lib/content-calendar";
 
 /**
@@ -42,13 +43,10 @@ const POSTIZ_ID_TIKTOK = "tiktok";
 //   - a single POSTIZ_SERVICE_TOKEN of the form "<client_id>:<client_secret>"
 // Returns null when neither is set — callers then skip the Access headers.
 function readCfAccessCreds(): { clientId: string; clientSecret: string } | null {
-  const raw = process.env.POSTIZ_SERVICE_TOKEN;
-  if (!raw) return null;
-  const explicitId = process.env.POSTIZ_CF_ACCESS_CLIENT_ID;
-  if (explicitId) return { clientId: explicitId, clientSecret: raw };
-  const colon = raw.indexOf(":");
-  if (colon > 0) return { clientId: raw.slice(0, colon), clientSecret: raw.slice(colon + 1) };
-  return null;
+  return splitServiceToken(
+    process.env.POSTIZ_SERVICE_TOKEN,
+    process.env.POSTIZ_CF_ACCESS_CLIENT_ID
+  );
 }
 
 async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
@@ -117,12 +115,9 @@ async function callThrowing<T>(
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) return undefined as T;
   const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    throw new PostizApiError(res.status, `invalid JSON (${reason}; len=${text.length}; ct=${ct})`);
-  }
+  return parseJsonOrThrow<T>(text, (detail) => {
+    return new PostizApiError(res.status, `${detail}; ct=${ct}`);
+  });
 }
 
 // --- Calendar-side surface (preserved) -----------------------------------

@@ -3,6 +3,7 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
+import { parseJsonOrThrow, splitServiceToken } from "@/lib/upstream-client";
 import type {
   CreatePostBody,
   PostizAnalyticsMetric,
@@ -78,13 +79,7 @@ async function getSaConfig(): Promise<SaConfig> {
  *  SOCIALAUTO_SERVICE_TOKEN, or a single "id:secret" token. */
 async function readCfAccessCreds(): Promise<{ clientId: string; clientSecret: string } | null> {
   const cfg = await getConfig();
-  const raw = cfg.SOCIALAUTO_SERVICE_TOKEN;
-  if (!raw) return null;
-  const explicitId = cfg.SOCIALAUTO_CF_ACCESS_CLIENT_ID;
-  if (explicitId) return { clientId: explicitId, clientSecret: raw };
-  const colon = raw.indexOf(":");
-  if (colon > 0) return { clientId: raw.slice(0, colon), clientSecret: raw.slice(colon + 1) };
-  return null;
+  return splitServiceToken(cfg.SOCIALAUTO_SERVICE_TOKEN, cfg.SOCIALAUTO_CF_ACCESS_CLIENT_ID);
 }
 
 // ── JWT cache ──────────────────────────────────────────────────────────────
@@ -126,8 +121,11 @@ async function saLogin(): Promise<string> {
     if (!res.ok) {
       throw new SocialAutoApiError(res.status, await res.text().catch(() => ""));
     }
-    const data = (await res.json()) as { access_token?: string };
-    if (!data.access_token) {
+    // CF Access serves its HTML interstitial for requests without a valid
+    // service token — res.json() would throw a raw SyntaxError. Treat any
+    // non-JSON body as an upstream failure, not a crash.
+    const data = (await res.json().catch(() => null)) as { access_token?: string } | null;
+    if (!data?.access_token) {
       throw new SocialAutoApiError(res.status, "login response missing access_token");
     }
     cachedToken = {
@@ -182,12 +180,7 @@ async function callThrowing<T>(
   if (!res.ok) throw new SocialAutoApiError(res.status, await res.text().catch(() => ""));
   if (res.status === 204) return undefined as T;
   const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    throw new SocialAutoApiError(res.status, `invalid JSON (${reason}; len=${text.length})`);
-  }
+  return parseJsonOrThrow<T>(text, (detail) => new SocialAutoApiError(res.status, detail));
 }
 
 // ── SocialAuto entity shapes (subset of the API models) ────────────────────

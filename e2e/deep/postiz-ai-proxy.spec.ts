@@ -170,8 +170,9 @@ test.describe("admin Postiz routes — still wired after env change", () => {
     });
     expect(res.status()).not.toBe(401);
     expect(res.status()).not.toBe(403);
-    // 200 with data or 503 if Postiz pod unreachable
-    expect([200, 503]).toContain(res.status());
+    // 200 with data; 503 unconfigured; 502 upstream error (e.g. SocialAuto
+    // behind CF Access without a service token in this env)
+    expect([200, 502, 503]).toContain(res.status());
   });
 
   test("GET /api/admin/postiz/posts responds (not 401/403)", async ({ request }) => {
@@ -180,7 +181,7 @@ test.describe("admin Postiz routes — still wired after env change", () => {
     });
     expect(res.status()).not.toBe(401);
     expect(res.status()).not.toBe(403);
-    expect([200, 503]).toContain(res.status());
+    expect([200, 502, 503]).toContain(res.status());
   });
 
   test("GET /api/admin/postiz (root) responds (not 401/403)", async ({ request }) => {
