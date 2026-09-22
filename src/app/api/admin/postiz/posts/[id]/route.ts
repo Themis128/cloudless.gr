@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
-import {
-  deletePostById,
-  invalidCreateBodyResponse,
-  readJsonBody,
-  saAdminRoute,
-  updatePostFromBody,
-} from "@/lib/socialauto";
-import type { CreatePostBody } from "@/lib/postiz";
+import { deletePostById, readCreateBody, saAdminRoute, updatePostFromBody } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const DELETE = saAdminRoute<Ctx>(async (_req, { params }) => {
+/** Path id or the 400 response to return. */
+async function postIdOr400(params: Promise<{ id: string }>): Promise<string | NextResponse> {
   const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "missing_id" }, { status: 400 });
-  }
+  return id || NextResponse.json({ error: "missing_id" }, { status: 400 });
+}
+
+export const DELETE = saAdminRoute<Ctx>(async (_req, { params }) => {
+  const id = await postIdOr400(params);
+  if (id instanceof NextResponse) return id;
 
   await deletePostById(id);
   return NextResponse.json({ deleted: true });
@@ -25,16 +22,11 @@ export const DELETE = saAdminRoute<Ctx>(async (_req, { params }) => {
 /** Edit a scheduled or draft post — SocialAuto PATCH /content/posts/:id. The
  *  body keeps the Postiz create-post shape; the client translates it. */
 export const PUT = saAdminRoute<Ctx>(async (req, { params }) => {
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "missing_id" }, { status: 400 });
-  }
+  const id = await postIdOr400(params);
+  if (id instanceof NextResponse) return id;
 
-  const body = await readJsonBody<CreatePostBody>(req);
+  const body = await readCreateBody(req);
   if (body instanceof NextResponse) return body;
-
-  const invalid = invalidCreateBodyResponse(body);
-  if (invalid) return invalid;
 
   const result = await updatePostFromBody(id, body);
   return NextResponse.json({ result });

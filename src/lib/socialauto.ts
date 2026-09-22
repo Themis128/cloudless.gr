@@ -103,16 +103,20 @@ function jwtExpiryMs(token: string): number {
   }
 }
 
+/** Adds the CF Access service-token headers (when configured) to `headers`. */
+async function applyCfAccessHeaders(headers: Headers): Promise<void> {
+  const cf = await readCfAccessCreds();
+  if (!cf) return;
+  headers.set("Cf-Access-Client-Id", cf.clientId);
+  headers.set("Cf-Access-Client-Secret", cf.clientSecret);
+}
+
 async function saLogin(): Promise<string> {
   if (loginInFlight) return loginInFlight;
   loginInFlight = (async () => {
     const { baseUrl, email, password } = await getSaConfig();
     const headers = new Headers({ "Content-Type": "application/x-www-form-urlencoded" });
-    const cf = await readCfAccessCreds();
-    if (cf) {
-      headers.set("Cf-Access-Client-Id", cf.clientId);
-      headers.set("Cf-Access-Client-Secret", cf.clientSecret);
-    }
+    await applyCfAccessHeaders(headers);
     const res = await fetch(`${baseUrl}${API_PREFIX}/auth/login`, {
       method: "POST",
       headers,
@@ -151,11 +155,7 @@ async function saFetch(
   const { timeoutMs, ...rest } = init;
   const headers = new Headers(rest.headers);
   headers.set("Authorization", `Bearer ${await saToken()}`);
-  const cf = await readCfAccessCreds();
-  if (cf) {
-    headers.set("Cf-Access-Client-Id", cf.clientId);
-    headers.set("Cf-Access-Client-Secret", cf.clientSecret);
-  }
+  await applyCfAccessHeaders(headers);
   if (rest.body && !headers.has("Content-Type") && typeof rest.body === "string") {
     headers.set("Content-Type", "application/json");
   }
@@ -482,18 +482,29 @@ export async function isSocialAutoConfigured(): Promise<boolean> {
   }
 }
 
+/** Why a Postiz-shaped create body is invalid, or null when it is valid.
+ *  Shared by the single/bulk create routes. */
+export function createBodyInvalidDetail(body: CreatePostBody | null | undefined): string | null {
+  return !body?.type || !Array.isArray(body.posts) || body.posts.length === 0
+    ? "type and posts[] are required"
+    : null;
+}
+
 /** Shared body validation for the create-post routes — returns a 400
  *  response when the Postiz-shaped body is malformed, null when valid. */
 export function invalidCreateBodyResponse(
   body: CreatePostBody | null | undefined
 ): NextResponse | null {
-  if (!body?.type || !Array.isArray(body.posts) || body.posts.length === 0) {
-    return NextResponse.json(
-      { error: "invalid_payload", detail: "type and posts[] are required" },
-      { status: 400 }
-    );
-  }
-  return null;
+  const detail = createBodyInvalidDetail(body);
+  return detail ? NextResponse.json({ error: "invalid_payload", detail }, { status: 400 }) : null;
+}
+
+/** Reads and validates a create-post body — returns the body, or the 400
+ *  response the handler should return as-is. */
+export async function readCreateBody(req: NextRequest): Promise<CreatePostBody | NextResponse> {
+  const body = await readJsonBody<CreatePostBody>(req);
+  if (body instanceof NextResponse) return body;
+  return invalidCreateBodyResponse(body) ?? body;
 }
 
 /** Shared error→response mapping for the /api/admin/postiz/* route handlers —

@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   createPostFromBody,
-  invalidCreateBodyResponse,
   listPostsInWindow,
-  readJsonBody,
+  readCreateBody,
   saAdminRoute,
 } from "@/lib/socialauto";
-import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +24,8 @@ export const GET = saAdminRoute(async (req) => {
 });
 
 export const POST = saAdminRoute(async (req) => {
-  const body = await readJsonBody<CreatePostBody>(req);
+  const body = await readCreateBody(req);
   if (body instanceof NextResponse) return body;
-
-  const invalid = invalidCreateBodyResponse(body);
-  if (invalid) return invalid;
 
   const result = await createPostFromBody(body);
   return NextResponse.json({ result }, { status: 201 });

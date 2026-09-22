@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  createBodyInvalidDetail,
   createPostFromBody,
   readJsonBody,
   saAdminRoute,
@@ -40,9 +41,10 @@ export const POST = saAdminRoute(async (req) => {
   }
 
   for (const [i, item] of items.entries()) {
-    if (!item?.type || !Array.isArray(item.posts) || item.posts.length === 0) {
+    const detail = createBodyInvalidDetail(item);
+    if (detail) {
       return NextResponse.json(
-        { error: "invalid_payload", detail: `items[${i}]: type and posts[] are required` },
+        { error: "invalid_payload", detail: `items[${i}]: ${detail}` },
         { status: 400 }
       );
     }
@@ -53,15 +55,18 @@ export const POST = saAdminRoute(async (req) => {
     try {
       results.push({ index, ok: true, result: await createPostFromBody(item) });
     } catch (err) {
+      let message: string;
+      if (err instanceof SocialAutoApiError) {
+        message = err.body.slice(0, 300) || err.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else {
+        message = String(err);
+      }
       results.push({
         index,
         ok: false,
-        error:
-          err instanceof SocialAutoApiError
-            ? err.body.slice(0, 300) || err.message
-            : err instanceof Error
-              ? err.message
-              : String(err),
+        error: message,
         status: err instanceof SocialAutoApiError ? err.status : undefined,
       });
     }
