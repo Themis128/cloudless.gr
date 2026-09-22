@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAuthDbFromEnv, markEmailVerified, type AuthDatabase } from "@/lib/auth-d1";
 import { verifyActivationOtp, verifyActivationToken } from "@/lib/auth-activation";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 
 /**
  * Fallback to HTTP D1 client if the bindings are not available.
@@ -121,7 +122,9 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
 
-  const origin = new URL(req.url).origin;
+  // Never trust req.url origin here — inside k3s the pod sees its own
+  // hostname, leaking `cloudless-app-xxx:3000` into the redirect.
+  const origin = canonicalOrigin(req);
 
   if (!email || !token || !verifyActivationToken(email, token))
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
