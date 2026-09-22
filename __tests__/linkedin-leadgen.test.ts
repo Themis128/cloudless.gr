@@ -31,10 +31,27 @@ describe("linkedin-leadgen helpers", () => {
 
   it("parses URNs", () => {
     expect(parseLeadGenFormResponseId("urn:li:leadGenFormResponse:abc-123")).toBe("abc-123");
-    expect(
-      parseLeadGenFormId("urn:li:versionedLeadGenForm:(urn:li:leadGenForm:3162,1)")
-    ).toBe("3162");
+    expect(parseLeadGenFormId("urn:li:versionedLeadGenForm:(urn:li:leadGenForm:3162,1)")).toBe(
+      "3162"
+    );
     expect(parseSponsoredCampaignId("urn:li:sponsoredCampaign:857622786")).toBe("857622786");
+  });
+
+  it("rejects malformed/path-traversal response IDs (SSRF guard)", () => {
+    expect(parseLeadGenFormResponseId("urn:li:leadGenFormResponse:abc-123")).toBe("abc-123");
+    for (const bad of [
+      "urn:li:leadGenFormResponse:../../admin",
+      "urn:li:leadGenFormResponse:123/../x",
+      "urn:li:leadGenFormResponse:id?owner=evil",
+      "urn:li:leadGenFormResponse:id&x=1",
+      "urn:li:leadGenFormResponse:",
+      "urn:li:leadGenFormResponse:abc def",
+      "not-a-urn",
+      "",
+      undefined,
+    ]) {
+      expect(parseLeadGenFormResponseId(bad as string | undefined)).toBeNull();
+    }
   });
 
   it("resolves shop-online from LinkedIn campaign id 857622786", () => {
@@ -145,9 +162,8 @@ describe("POST /api/webhooks/linkedin-leads", () => {
     }));
 
     vi.doMock("@/lib/linkedin-leadgen", async () => {
-      const actual = await vi.importActual<typeof import("@/lib/linkedin-leadgen")>(
-        "@/lib/linkedin-leadgen"
-      );
+      const actual =
+        await vi.importActual<typeof import("@/lib/linkedin-leadgen")>("@/lib/linkedin-leadgen");
       return {
         ...actual,
         fetchLeadFormResponse: vi.fn().mockResolvedValue({
@@ -164,9 +180,9 @@ describe("POST /api/webhooks/linkedin-leads", () => {
             ],
           },
         }),
-        fetchLeadFormQuestions: vi.fn().mockResolvedValue([
-          { questionId: 1, predefinedField: "EMAIL" },
-        ]),
+        fetchLeadFormQuestions: vi
+          .fn()
+          .mockResolvedValue([{ questionId: 1, predefinedField: "EMAIL" }]),
       };
     });
 

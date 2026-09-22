@@ -65,4 +65,22 @@ describe("sanitizeCmsHtml", () => {
   it("handles empty string", () => {
     expect(sanitizeCmsHtml("")).toBe("");
   });
+
+  it("neutralizes nested/split dangerous tags in a single pass", () => {
+    const result = sanitizeCmsHtml("<scr<script>ipt>alert(1)</script>");
+    expect(result).not.toContain("<script");
+    expect(result).not.toContain("alert(1)");
+  });
+
+  it("neutralizes uppercase dangerous tags and event attrs", () => {
+    const result = sanitizeCmsHtml('<SCRIPT>alert(1)</SCRIPT><a href="/p" ONCLICK="x()">y</a>');
+    expect(result).not.toContain("alert(1)");
+    expect(result).not.toContain("ONCLICK");
+    expect(result).toContain("y");
+  });
+
+  it("drops script payloads nested inside allowed elements", () => {
+    const result = sanitizeCmsHtml("<svg><script>alert(1)</script></svg>");
+    expect(result).not.toContain("alert(1)");
+  });
 });

@@ -83,10 +83,14 @@ export function verifyLiSignature(
   return safeEqHex(expected.toLowerCase(), signatureHeader.trim().toLowerCase());
 }
 
+/** LinkedIn object IDs are alphanumeric + -/_ — nothing else is ever valid. */
+const LINKEDIN_ID_RE = /^[A-Za-z0-9_-]+$/;
+const LEADGEN_RESPONSE_PREFIX = "urn:li:leadGenFormResponse:";
+
 export function parseLeadGenFormResponseId(urn: string | undefined): string | null {
-  if (!urn) return null;
-  const m = urn.match(/urn:li:leadGenFormResponse:(.+)$/);
-  return m?.[1] ?? null;
+  if (!urn || !urn.startsWith(LEADGEN_RESPONSE_PREFIX)) return null;
+  const id = urn.slice(LEADGEN_RESPONSE_PREFIX.length);
+  return LINKEDIN_ID_RE.test(id) ? id : null;
 }
 
 export function parseLeadGenFormId(urn: string | undefined): string | null {
@@ -247,6 +251,8 @@ export async function fetchLeadFormResponse(opts: {
   ownerSponsoredAccount?: string;
   leadType?: string;
 }): Promise<LeadFormResponse | null> {
+  // Webhook-controlled value — whitelist-validate before it reaches the URL.
+  if (!LINKEDIN_ID_RE.test(opts.responseId)) return null;
   const leadType = opts.leadType ?? "SPONSORED";
   // Prefer the finder that includes owner (required for many tokens).
   if (opts.ownerSponsoredAccount) {
@@ -275,6 +281,7 @@ export async function fetchLeadFormQuestions(opts: {
   ownerSponsoredAccount?: string;
   leadType?: string;
 }): Promise<FormQuestion[]> {
+  if (!LINKEDIN_ID_RE.test(opts.formId)) return [];
   const leadType = opts.leadType ?? "SPONSORED";
   let path = `/leadForms/${opts.formId}`;
   if (opts.ownerSponsoredAccount) {
