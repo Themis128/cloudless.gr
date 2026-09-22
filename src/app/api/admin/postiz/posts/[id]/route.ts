@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
-  deletePost,
-  PostizApiError,
-  PostizNotConfiguredError,
-  updatePost,
-  type CreatePostBody,
-} from "@/lib/postiz";
+  deletePostById,
+  SocialAutoApiError,
+  SocialAutoNotConfiguredError,
+  updatePostFromBody,
+} from "@/lib/socialauto";
+import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +20,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   try {
-    await deletePost(id);
+    await deletePostById(id);
     return NextResponse.json({ deleted: true });
   } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+    if (err instanceof SocialAutoNotConfiguredError) {
+      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
     }
-    if (err instanceof PostizApiError) {
+    if (err instanceof SocialAutoApiError) {
       return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
+        { error: "socialauto_upstream", status: err.status, body: err.body },
         { status: 502 }
       );
     }
@@ -36,8 +36,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 }
 
-/** Edit a scheduled or draft post — Postiz PUT /posts/:id. Identical body
- *  schema as POST /posts; the route just proxies. */
+/** Edit a scheduled or draft post — SocialAuto PATCH /content/posts/:id. The
+ *  body keeps the Postiz create-post shape; the client translates it. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
@@ -61,15 +61,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const result = await updatePost(id, body);
+    const result = await updatePostFromBody(id, body);
     return NextResponse.json({ result });
   } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+    if (err instanceof SocialAutoNotConfiguredError) {
+      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
     }
-    if (err instanceof PostizApiError) {
+    if (err instanceof SocialAutoApiError) {
       return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
+        { error: "socialauto_upstream", status: err.status, body: err.body },
         { status: err.status === 429 ? 429 : 502 }
       );
     }

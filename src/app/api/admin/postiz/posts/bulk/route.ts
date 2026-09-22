@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { createPostsBulk, PostizNotConfiguredError, type CreatePostBody } from "@/lib/postiz";
+import {
+  createPostFromBody,
+  SocialAutoApiError,
+  SocialAutoNotConfiguredError,
+} from "@/lib/socialauto";
+import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BULK = 30;
 
-/** POST /api/admin/postiz/posts/bulk — schedule many posts (one create-post
- *  call per item). Body: `{ items: CreatePostBody[] }` (max 30). */
+interface BulkResult {
+  index: number;
+  ok: boolean;
+  result?: Array<{ postId: string; integration: string }>;
+  error?: string;
+  status?: number;
+}
+
+/** POST /api/admin/postiz/posts/bulk — schedule many posts (one SocialAuto
+ *  create-post call per item). Body: `{ items: CreatePostBody[] }` (max 30). */
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
@@ -43,13 +56,30 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const results = await createPostsBulk(items);
+    const results: BulkResult[] = [];
+    for (const [index, item] of items.entries()) {
+      try {
+        results.push({ index, ok: true, result: await createPostFromBody(item) });
+      } catch (err) {
+        results.push({
+          index,
+          ok: false,
+          error:
+            err instanceof SocialAutoApiError
+              ? err.body.slice(0, 300) || err.message
+              : err instanceof Error
+                ? err.message
+                : String(err),
+          status: err instanceof SocialAutoApiError ? err.status : undefined,
+        });
+      }
+    }
     const succeeded = results.filter((r) => r.ok).length;
     const failed = results.length - succeeded;
     return NextResponse.json({ results, succeeded, failed }, { status: failed === 0 ? 201 : 207 });
   } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+    if (err instanceof SocialAutoNotConfiguredError) {
+      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
     }
     throw err;
   }

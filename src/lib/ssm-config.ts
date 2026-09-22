@@ -97,6 +97,15 @@ export interface AppConfig {
   SOCIALAUTO_WEB_ANALYTICS_SECRET: string;
   /** Override URL for the SocialAuto website-analytics webhook receiver. */
   SOCIALAUTO_WEB_ANALYTICS_URL: string;
+  /** SocialAuto API base URL (admin console backend — social.cloudless.gr). */
+  SOCIALAUTO_API_URL: string;
+  /** SocialAuto admin login for server-side API access. */
+  SOCIALAUTO_ADMIN_EMAIL: string;
+  SOCIALAUTO_ADMIN_PASSWORD: string;
+  /** CF Access service token for social.cloudless.gr — secret, or "client_id:client_secret". */
+  SOCIALAUTO_SERVICE_TOKEN: string;
+  /** Explicit CF Access client id (alternative to the combined token form). */
+  SOCIALAUTO_CF_ACCESS_CLIENT_ID: string;
   SNS_PORTAL_TOPIC_ARN: string;
   // Monitoring / observability
   GRAFANA_BASE_URL: string;
@@ -235,6 +244,11 @@ function buildConfigFromEnv(): AppConfig {
     SOCIALAUTO_LEADS_WEBHOOK_SECRET: process.env.SOCIALAUTO_LEADS_WEBHOOK_SECRET || "",
     SOCIALAUTO_WEB_ANALYTICS_SECRET: process.env.SOCIALAUTO_WEB_ANALYTICS_SECRET || "",
     SOCIALAUTO_WEB_ANALYTICS_URL: process.env.SOCIALAUTO_WEB_ANALYTICS_URL || "",
+    SOCIALAUTO_API_URL: process.env.SOCIALAUTO_API_URL || "",
+    SOCIALAUTO_ADMIN_EMAIL: process.env.SOCIALAUTO_ADMIN_EMAIL || "",
+    SOCIALAUTO_ADMIN_PASSWORD: process.env.SOCIALAUTO_ADMIN_PASSWORD || "",
+    SOCIALAUTO_SERVICE_TOKEN: process.env.SOCIALAUTO_SERVICE_TOKEN || "",
+    SOCIALAUTO_CF_ACCESS_CLIENT_ID: process.env.SOCIALAUTO_CF_ACCESS_CLIENT_ID || "",
     SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",

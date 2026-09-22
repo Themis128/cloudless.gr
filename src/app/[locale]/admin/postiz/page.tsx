@@ -21,13 +21,16 @@ const POSTIZ_FILE_ACCEPT =
   "image/jpeg,image/png,image/gif,image/webp,image/avif,image/bmp,image/tiff,video/mp4";
 
 /**
- * Postiz admin page — /[locale]/admin/postiz
+ * Social scheduler admin page — /[locale]/admin/postiz
  *
- * Read-and-write surface over the Postiz Public API. Talks ONLY to the local
- * /api/admin/postiz/* proxy routes — POSTIZ_API_KEY never leaves the server.
+ * Read-and-write surface over SocialAuto (social.cloudless.gr) — the real
+ * channels, schedule, queue, and analytics. Talks ONLY to the local
+ * /api/admin/postiz/* proxy routes — the SocialAuto admin credentials never
+ * leave the server. (The route paths keep the `postiz` name for
+ * compatibility; the upstream is SocialAuto.)
  *
  * Routes used:
- *   GET    /api/admin/postiz/integrations  → connected channels
+ *   GET    /api/admin/postiz/integrations  → connected channels (SocialAuto accounts)
  *   GET    /api/admin/postiz/posts         → scheduled + published window
  *   POST   /api/admin/postiz/posts         → create / schedule a post
  *   PUT    /api/admin/postiz/posts/:id     → edit a scheduled / draft post
@@ -36,7 +39,7 @@ const POSTIZ_FILE_ACCEPT =
  *   POST   /api/admin/postiz/upload-file   → multipart file upload
  *   GET    /api/admin/postiz/slot?id=...   → next free time slot
  *   POST   /api/admin/postiz/posts/bulk    → multi-day / multi-row schedule
- *   GET    /api/admin/postiz/analytics/... → channel + post metrics
+ *   GET    /api/admin/postiz/analytics/... → channel metrics
  *   POST   /api/admin/ai/generate          → AI-draft a post
  */
 
@@ -190,14 +193,14 @@ export default function PostizAdminPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Postiz</h1>
+        <h1 className="text-2xl font-semibold">Social Scheduler</h1>
         <a
-          href="https://postiz.cloudless.gr"
+          href="https://social.cloudless.gr"
           target="_blank"
           rel="noopener noreferrer"
           className={CLS_LINK_REFRESH}
         >
-          Open Postiz UI →
+          Open SocialAuto →
         </a>
       </header>
 
@@ -260,23 +263,20 @@ export default function PostizAdminPage() {
 function NotConfigured() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Postiz not configured</h1>
+      <h1 className="text-2xl font-semibold">SocialAuto not configured</h1>
       <p className="text-gray-700">
-        Set <code>POSTIZ_API_KEY</code> (and optionally <code>POSTIZ_BASE_URL</code>) in SSM under{" "}
-        <code>/cloudless/postiz/</code>. Get the key from{" "}
+        Set <code>SOCIALAUTO_ADMIN_EMAIL</code> and <code>SOCIALAUTO_ADMIN_PASSWORD</code> (and
+        optionally <code>SOCIALAUTO_API_URL</code>, <code>SOCIALAUTO_SERVICE_TOKEN</code>) in app
+        config. The site uses them to call{" "}
         <a
-          href="https://postiz.cloudless.gr"
+          href="https://social.cloudless.gr"
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 underline"
         >
-          postiz.cloudless.gr
+          social.cloudless.gr
         </a>{" "}
-        → Settings → Developers → Public API.
-      </p>
-      <p className="text-gray-700">
-        After setting the SSM parameter, the Lambda needs to refresh its config — either re-deploy
-        or wait out the SSM cache TTL.
+        server-side — channels, schedule, and analytics shown here come from SocialAuto.
       </p>
       <Link href="/admin" className="text-blue-600 underline">
         ← Back to admin
@@ -296,9 +296,11 @@ function ChannelsTab({
   if (integrations.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="text-gray-700">No channels connected yet. Connect them via the Postiz UI.</p>
+        <p className="text-gray-700">
+          No channels connected yet. Connect them in SocialAuto.
+        </p>
         <a
-          href="https://postiz.cloudless.gr/launches"
+          href="https://social.cloudless.gr/accounts"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white"

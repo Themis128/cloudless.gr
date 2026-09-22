@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
-  createPost,
-  listPosts,
-  PostizApiError,
-  PostizNotConfiguredError,
-  type CreatePostBody,
-} from "@/lib/postiz";
+  createPostFromBody,
+  listPostsInWindow,
+  SocialAutoApiError,
+  SocialAutoNotConfiguredError,
+} from "@/lib/socialauto";
+import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
+/** Scheduled + published posts in a window — backed by SocialAuto
+ *  `/content/posts`, exploded per target channel. */
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
@@ -23,15 +25,15 @@ export async function GET(req: NextRequest) {
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    const posts = await listPosts(startDate, endDate);
+    const posts = await listPostsInWindow(startDate, endDate);
     return NextResponse.json({ posts });
   } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+    if (err instanceof SocialAutoNotConfiguredError) {
+      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
     }
-    if (err instanceof PostizApiError) {
+    if (err instanceof SocialAutoApiError) {
       return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
+        { error: "socialauto_upstream", status: err.status, body: err.body },
         { status: 502 }
       );
     }
@@ -58,15 +60,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await createPost(body);
+    const result = await createPostFromBody(body);
     return NextResponse.json({ result }, { status: 201 });
   } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+    if (err instanceof SocialAutoNotConfiguredError) {
+      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
     }
-    if (err instanceof PostizApiError) {
+    if (err instanceof SocialAutoApiError) {
       return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
+        { error: "socialauto_upstream", status: err.status, body: err.body },
         { status: err.status === 429 ? 429 : 502 }
       );
     }
