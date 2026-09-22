@@ -162,7 +162,7 @@ describe("POST /api/contact", () => {
     expect(response.status).toBe(400);
     expect(mockSendEmailResend).not.toHaveBeenCalled();
   });
-   it("returns 200 when attribution is a pre-parsed object (CLOUDLESS-GR-8)", async () => {
+  it("returns 200 when attribution is a pre-parsed object (CLOUDLESS-GR-8)", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -198,5 +198,4 @@ describe("POST /api/contact", () => {
     expect(data.error).toBe("Invalid attribution JSON.");
     expect(mockSendEmailResend).not.toHaveBeenCalled();
   });
-
 });

@@ -95,8 +95,7 @@ export function parseAttribution(pageUrl: string, referrer?: string): LeadAttrib
  * - anything else -> ok:false
  */
 export type ParseAttributionFieldResult =
-  | { ok: true; data: LeadAttribution | undefined }
-  | { ok: false; error: string };
+  { ok: true; data: LeadAttribution | undefined } | { ok: false; error: string };
 
 export function parseAttributionField(input: unknown): ParseAttributionFieldResult {
   if (input == null || input === "") {

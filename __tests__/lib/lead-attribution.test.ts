@@ -78,7 +78,10 @@ describe("sanitizeAttribution", () => {
   });
 
   it("strips unknown keys", () => {
-    const result = sanitizeAttribution({ utmSource: "x", malicious: "evil" }) as Record<string, unknown>;
+    const result = sanitizeAttribution({ utmSource: "x", malicious: "evil" }) as Record<
+      string,
+      unknown
+    >;
     expect(result.malicious).toBeUndefined();
   });
 
