@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       if (!response) {
         console.error(
           "[linkedin-leads] failed to fetch leadFormResponse",
-          responseId.replace(/[\r\n]+/g, " ")
+          responseId.replace(/\n/g, "").replace(/\r/g, "")
         );
         return { ok: false, espocrm_lead_id: null };
       }
@@ -147,7 +147,10 @@ export async function POST(request: NextRequest) {
         notification: n,
       });
       if (!leadData?.emailAddress) {
-        console.error("[linkedin-leads] no email on lead", responseId.replace(/[\r\n]+/g, " "));
+        console.error(
+          "[linkedin-leads] no email on lead",
+          responseId.replace(/\n/g, "").replace(/\r/g, "")
+        );
         return { ok: false, espocrm_lead_id: null };
       }
 
