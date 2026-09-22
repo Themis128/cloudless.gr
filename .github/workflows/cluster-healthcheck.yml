@@ -35,6 +35,8 @@ jobs:
         echo "HEALTHCHECKS_CLUSTER_URL is not set — skipping ping."
         exit 0
 
+    - uses: actions/checkout@v7
+
     - name: Connect to tailnet
       if: ${{ env.HC_URL != '' }}
       uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888         # v4.1.3
@@ -42,6 +44,10 @@ jobs:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
         tags: tag:k8s
+        ping: 100.74.191.58
+    - name: Wait for tailnet path to omv
+      if: ${{ env.HC_URL != '' }}
+      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 6443
     - name: Ping /start
       if: ${{ env.HC_URL != '' }}
       run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null ||

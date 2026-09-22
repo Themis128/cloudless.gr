@@ -43,6 +43,8 @@ jobs:
         tags: tag:ci
         ping: 100.74.191.58
 
+    - name: Wait for tailnet path to omv
+      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
     - name: SSH tunnel to AppFlowy NodePort
       run: |
         set -euo pipefail
@@ -134,6 +136,8 @@ jobs:
         tags: tag:ci
         ping: 100.74.191.58
 
+    - name: Wait for tailnet path to omv
+      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
     - name: SSH tunnel to AppFlowy NodePort
       run: |
         set -euo pipefail

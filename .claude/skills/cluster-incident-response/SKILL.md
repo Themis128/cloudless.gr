@@ -125,6 +125,7 @@ offline during cluster incidents and the job queues forever).
 - **`PrometheusKubernetesListWatchFailures` self-resolves** once k3s API is back up (Prometheus reconnects automatically).
 - **ntfy at 96Mi is fragile** — any spike crashes it. `ntfy-restore.yml` raises to 128Mi by default.
 - **Metabase at 400Mi can OOMKill** on heavy dashboard queries. `analytics-restore.yml` patches to 600Mi safely.
+- **Ephemeral CI nodes take time to become reachable on the tailnet.** Peers reject traffic until the new node propagates, and first packets ride DERP while a direct path negotiates — so the first `kubectl`/`ssh` can i/o-timeout even though the connect step succeeded. Always set `ping: 100.74.191.58` on `tailscale/github-action` and run `scripts/ci/tailscale-wait.sh` after connect; it TCP-probes the needed port and re-syncs routes once via `tailscale down && tailscale up` (fixes tailscale/github-action#266 missing-routes case).
 
 ## Reading results
 

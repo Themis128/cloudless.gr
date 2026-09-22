@@ -42,7 +42,10 @@ jobs:
         oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
         oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         tags: tag:ci
+        ping: 100.74.191.58
 
+    - name: Wait for tailnet path to omv
+      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58
     - name: Run n8n-to-R2 sync
       working-directory: scripts/etl
       env:
