@@ -46,6 +46,64 @@ jobs:
         echo "::warning::tailscaled restarted but did not report Online yet"
         tailscale status | head -15 || true
 
+    - name: Tailnet listener diagnostics
+      if: always()
+      run: |
+        echo "=== Listening sockets (NodePorts + SSH) ==="
+        ss -tln 2>/dev/null | grep -E ':(22|6443|30300|30700|30900|30850)\b' || true
+
+        echo "=== Self-connect via own tailscale IP ==="
+        for port in 22 6443 30300 30700 30850; do
+          code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://100.74.191.58:${port}/" 2>/dev/null || echo "FAIL")
+          echo "  100.74.191.58:${port} -> ${code}"
+        done
+
+        echo "=== INPUT policy / tailscale0 rules ==="
+        sudo iptables -L INPUT -n --line-numbers 2>/dev/null | head -25 || true
+
+        echo "=== kube-proxy DNAT for 30700 ==="
+        sudo iptables -t nat -S 2>/dev/null | grep -E '30700|KUBE-NODEPORT' | head -10 || true
+
+        echo "=== FORWARD chain (NodePort traffic path) ==="
+        sudo iptables -L FORWARD -n --line-numbers 2>/dev/null | head -30 || true
+
+        echo "=== kube-router netpol FORWARD rules ==="
+        sudo iptables -S 2>/dev/null | grep -E 'KUBE-ROUTER|KUBE-POD-FW|REJECT|DROP' | head -30 || true
+
+        echo "=== tailscale0 iface / rp_filter ==="
+        ip link show tailscale0 2>/dev/null | head -3 || true
+        sysctl net.ipv4.conf.tailscale0.rp_filter net.ipv4.conf.all.rp_filter 2>/dev/null || true
+
+        echo "=== NetworkPolicies in cluster ==="
+        kubectl get networkpolicies -A 2>/dev/null || sudo k3s kubectl get networkpolicies -A 2>/dev/null || true
+
+        echo "=== tailscaled recent denies ==="
+        sudo journalctl -u tailscaled --since '-2h' --no-pager 2>/dev/null | grep -iE 'deny|drop|acl|filter' | tail -15 || true
+
+        KCTL="sudo k3s kubectl"
+        $KCTL version --short >/dev/null 2>&1 || KCTL="kubectl"
+
+        echo "=== espocrm baseline netpol spec ==="
+        $KCTL get netpol baseline -n espocrm -o yaml 2>/dev/null | sed -n '/spec:/,$p' || true
+
+        echo "=== espocrm pod + endpoint ==="
+        $KCTL get pods -n espocrm -o wide 2>/dev/null || true
+        $KCTL get endpoints -n espocrm 2>/dev/null || true
+
+        echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
+        POD_IP=$($KCTL get pods -n espocrm -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)
+        echo "podIP=$POD_IP"
+        sudo iptables -S 2>/dev/null | grep -E "$POD_IP" | head -10 || true
+
+        echo "=== ts-forward chain ==="
+        sudo iptables -S ts-forward 2>/dev/null || true
+        sudo iptables -S ts-input 2>/dev/null | head -15 || true
+
+        echo "=== k3s/uptime (what restarted ~13:26Z) ==="
+        systemctl show k3s -p ActiveEnterTimestamp 2>/dev/null || true
+        uptime -s || true
+        $KCTL get pods -n kube-system -o wide 2>/dev/null | grep -iE 'router|proxy|flannel|traefik' || true
+
     - name: Post result to tracking issue
       if: always()
       env:
