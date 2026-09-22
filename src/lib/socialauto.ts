@@ -1,5 +1,6 @@
 import "server-only";
 
+import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import type {
   CreatePostBody,
@@ -473,4 +474,33 @@ export async function isSocialAutoConfigured(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Shared body validation for the create-post routes — returns a 400
+ *  response when the Postiz-shaped body is malformed, null when valid. */
+export function invalidCreateBodyResponse(body: CreatePostBody | null | undefined): NextResponse | null {
+  if (!body?.type || !Array.isArray(body.posts) || body.posts.length === 0) {
+    return NextResponse.json(
+      { error: "invalid_payload", detail: "type and posts[] are required" },
+      { status: 400 }
+    );
+  }
+  return null;
+}
+
+/** Shared error→response mapping for the /api/admin/postiz/* route handlers —
+ *  keeps the SocialAuto upstream contract identical across every route
+ *  (503 unconfigured / 429 rate-limit / 502 upstream) without duplicating
+ *  the catch block per file. Re-throws anything unexpected. */
+export function saErrorToResponse(err: unknown): NextResponse {
+  if (err instanceof SocialAutoNotConfiguredError) {
+    return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
+  }
+  if (err instanceof SocialAutoApiError) {
+    return NextResponse.json(
+      { error: "socialauto_upstream", status: err.status, body: err.body },
+      { status: err.status === 429 ? 429 : 502 }
+    );
+  }
+  throw err;
 }

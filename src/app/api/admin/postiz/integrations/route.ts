@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  listAccountsAsIntegrations,
-  SocialAutoApiError,
-  SocialAutoNotConfiguredError,
-} from "@/lib/socialauto";
+import { listAccountsAsIntegrations, saErrorToResponse } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 
@@ -18,15 +14,6 @@ export async function GET(req: NextRequest) {
     const integrations = await listAccountsAsIntegrations();
     return NextResponse.json({ integrations });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }

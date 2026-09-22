@@ -3,8 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import {
   createPostFromBody,
   listPostsInWindow,
-  SocialAutoApiError,
-  SocialAutoNotConfiguredError,
+  saErrorToResponse,
 } from "@/lib/socialauto";
 import type { CreatePostBody } from "@/lib/postiz";
 
@@ -28,16 +27,7 @@ export async function GET(req: NextRequest) {
     const posts = await listPostsInWindow(startDate, endDate);
     return NextResponse.json({ posts });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }
 
@@ -63,15 +53,6 @@ export async function POST(req: NextRequest) {
     const result = await createPostFromBody(body);
     return NextResponse.json({ result }, { status: 201 });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: err.status === 429 ? 429 : 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }

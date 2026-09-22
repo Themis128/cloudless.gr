@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   deletePostById,
-  SocialAutoApiError,
-  SocialAutoNotConfiguredError,
+  invalidCreateBodyResponse,
+  saErrorToResponse,
   updatePostFromBody,
 } from "@/lib/socialauto";
 import type { CreatePostBody } from "@/lib/postiz";
@@ -23,16 +23,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await deletePostById(id);
     return NextResponse.json({ deleted: true });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }
 
@@ -53,26 +44,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  if (!body.type || !Array.isArray(body.posts) || body.posts.length === 0) {
-    return NextResponse.json(
-      { error: "invalid_payload", detail: "type and posts[] are required" },
-      { status: 400 }
-    );
-  }
+  const invalid = invalidCreateBodyResponse(body);
+  if (invalid) return invalid;
 
   try {
     const result = await updatePostFromBody(id, body);
     return NextResponse.json({ result });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: err.status === 429 ? 429 : 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }

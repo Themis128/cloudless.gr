@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   getChannelAnalytics,
-  SocialAutoApiError,
-  SocialAutoNotConfiguredError,
+  saErrorToResponse,
 } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
@@ -30,15 +29,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const metrics = await getChannelAnalytics(id, lookback);
     return NextResponse.json({ metrics, lookbackDays: lookback });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }

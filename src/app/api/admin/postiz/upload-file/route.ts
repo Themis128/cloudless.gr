@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
-  SocialAutoApiError,
-  SocialAutoNotConfiguredError,
+  saErrorToResponse,
   uploadFileToSocialAuto,
 } from "@/lib/socialauto";
 
@@ -91,15 +90,6 @@ export async function POST(req: NextRequest) {
     const uploaded = await uploadFileToSocialAuto(file, filename);
     return NextResponse.json(uploaded, { status: 201 });
   } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    if (err instanceof SocialAutoApiError) {
-      return NextResponse.json(
-        { error: "socialauto_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
+    return saErrorToResponse(err);
   }
 }
