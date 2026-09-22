@@ -66,6 +66,15 @@ fi
 ETAG=$(awk -F': ' 'BEGIN{IGNORECASE=1} /^etag:/{gsub(/\r/,"",$2); print $2; exit}' "$HDR_TMP")
 echo "    ETag: ${ETAG:-none}"
 
+echo "==> Live ACL summary (grants)"
+python3 - "$ACL_TMP" <<'PY'
+import json, sys
+cur = json.load(open(sys.argv[1]))
+for g in (cur.get("grants") or cur.get("acls") or []):
+    print("  grant src=%s dst=%s ip=%s" % (g.get("src"), g.get("dst"), g.get("ip") or g.get("ports") or g.get("proto")))
+print("  tagOwners:", json.dumps(cur.get("tagOwners") or {}, sort_keys=True))
+PY
+
 echo "==> Merge fabric ACL patch from $ACL_PATCH"
 MERGED=$(mktemp)
 python3 - "$ACL_TMP" "$ACL_PATCH" "$MERGED" <<'PY'
@@ -212,7 +221,7 @@ for d in devices:
             is_offline = age_hours > 24  # Offline if no seen in 24h
         except:
             pass
-    
+
     if keep.match(short):
         print(f"KEEP  {short}  tags={tags}")
         # Report if offline but kept
