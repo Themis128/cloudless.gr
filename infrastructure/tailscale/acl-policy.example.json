@@ -30,6 +30,11 @@
       "ip": ["tcp:22", "tcp:30300", "tcp:30700", "tcp:30900", "tcp:6443"]
     },
     {
+      "src": ["tag:k8s"],
+      "dst": ["tag:pi"],
+      "ip": ["tcp:22", "tcp:30300", "tcp:30700", "tcp:30900", "tcp:6443"]
+    },
+    {
       "src": ["autogroup:member"],
       "dst": ["tag:pi"],
       "ip": ["tcp:22"]
