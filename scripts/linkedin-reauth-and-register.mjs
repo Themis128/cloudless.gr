@@ -286,6 +286,10 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(String(err instanceof Error ? err.message : err).replace(/[\r\n]+/g, " "));
+  console.error(
+    String(err instanceof Error ? err.message : err)
+      .replace(/\n/g, "")
+      .replace(/\r/g, "")
+  );
   process.exit(1);
 });
