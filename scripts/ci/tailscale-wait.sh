@@ -50,7 +50,7 @@ if ! probe_ports "$@"; then
     # and the peer's whois record so tag mismatches are visible in the log.
     echo "--- self ---"
     tailscale status --self --peers=false || true
-    tailscale whois --json "$(tailscale ip -4 2>/dev/null)" 2>/dev/null | grep -E '"Tags"|"Name"|"PrimaryRoutes"' || true
+    tailscale whois --json "$(tailscale ip -4 2>/dev/null)" 2>/dev/null | python3 -c "import json,sys; n=json.load(sys.stdin).get('Node',{}); print('Name:',n.get('Name')); print('Tags:',n.get('Tags')); print('User:',n.get('User'))" || true
     echo "--- peer ---"
     tailscale whois "$PEER" 2>/dev/null | grep -iE "tags:|name:|machine" || true
     tailscale status || true
