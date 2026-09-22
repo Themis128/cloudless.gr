@@ -201,8 +201,8 @@
     "openai": "^7.20.0",
     "openevals": "^0.2.2",
     "pdf-lib": "^1.17.1",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-email": "^6.9.5",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
@@ -252,7 +252,7 @@
     "typescript-eslint": "^8.70.0",
     "vite-node": "^6.0.0",
     "vitest": "^5.0.1",
-    "wrangler": "^4.135.0"
+    "wrangler": "^4.134.0"
   },
   "pnpm": {
     "overrides": {
