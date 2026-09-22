@@ -1,6 +1,7 @@
 import "server-only";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 import type {
   CreatePostBody,
@@ -510,4 +511,31 @@ export function saErrorToResponse(err: unknown): NextResponse {
     );
   }
   throw err;
+}
+
+/** Entry-point wrapper for the /api/admin/postiz/* routes — admin auth plus
+ *  SocialAuto error mapping, so each exported handler holds only its unique
+ *  logic instead of repeating the requireAdmin/try-catch boilerplate. */
+export function saAdminRoute<C extends { params: Promise<unknown> } = { params: Promise<unknown> }>(
+  handler: (_req: NextRequest, _ctx: C) => Promise<NextResponse>
+): (_req: NextRequest, _ctx: C) => Promise<NextResponse> {
+  return async (req, ctx) => {
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.response;
+    try {
+      return await handler(req, ctx);
+    } catch (err) {
+      return saErrorToResponse(err);
+    }
+  };
+}
+
+/** Parses the request's JSON body — returns the parsed value, or the 400
+ *  `invalid_json` response the handler should return as-is. */
+export async function readJsonBody<T>(req: NextRequest): Promise<T | NextResponse> {
+  try {
+    return (await req.json()) as T;
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
 }

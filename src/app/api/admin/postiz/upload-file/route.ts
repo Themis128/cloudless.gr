@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { saErrorToResponse, uploadFileToSocialAuto } from "@/lib/socialauto";
+import { NextResponse } from "next/server";
+import { saAdminRoute, uploadFileToSocialAuto } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,10 +34,7 @@ const SA_ALLOWED_UPLOAD_MIME = new Set<string>([
   "audio/flac",
 ]);
 
-export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
-
+export const POST = saAdminRoute(async (req) => {
   let form: FormData;
   try {
     form = await req.formData();
@@ -83,10 +79,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const uploaded = await uploadFileToSocialAuto(file, filename);
-    return NextResponse.json(uploaded, { status: 201 });
-  } catch (err) {
-    return saErrorToResponse(err);
-  }
-}
+  const uploaded = await uploadFileToSocialAuto(file, filename);
+  return NextResponse.json(uploaded, { status: 201 });
+});

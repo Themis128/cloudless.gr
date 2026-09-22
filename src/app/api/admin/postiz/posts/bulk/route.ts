@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { NextResponse } from "next/server";
 import {
   createPostFromBody,
+  readJsonBody,
+  saAdminRoute,
   SocialAutoApiError,
-  SocialAutoNotConfiguredError,
 } from "@/lib/socialauto";
 import type { CreatePostBody } from "@/lib/postiz";
 
@@ -21,16 +21,9 @@ interface BulkResult {
 
 /** POST /api/admin/postiz/posts/bulk — schedule many posts (one SocialAuto
  *  create-post call per item). Body: `{ items: CreatePostBody[] }` (max 30). */
-export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
-
-  let body: { items?: CreatePostBody[] };
-  try {
-    body = (await req.json()) as { items?: CreatePostBody[] };
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+export const POST = saAdminRoute(async (req) => {
+  const body = await readJsonBody<{ items?: CreatePostBody[] }>(req);
+  if (body instanceof NextResponse) return body;
 
   const items = body.items;
   if (!Array.isArray(items) || items.length === 0) {
@@ -55,32 +48,25 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  try {
-    const results: BulkResult[] = [];
-    for (const [index, item] of items.entries()) {
-      try {
-        results.push({ index, ok: true, result: await createPostFromBody(item) });
-      } catch (err) {
-        results.push({
-          index,
-          ok: false,
-          error:
-            err instanceof SocialAutoApiError
-              ? err.body.slice(0, 300) || err.message
-              : err instanceof Error
-                ? err.message
-                : String(err),
-          status: err instanceof SocialAutoApiError ? err.status : undefined,
-        });
-      }
+  const results: BulkResult[] = [];
+  for (const [index, item] of items.entries()) {
+    try {
+      results.push({ index, ok: true, result: await createPostFromBody(item) });
+    } catch (err) {
+      results.push({
+        index,
+        ok: false,
+        error:
+          err instanceof SocialAutoApiError
+            ? err.body.slice(0, 300) || err.message
+            : err instanceof Error
+              ? err.message
+              : String(err),
+        status: err instanceof SocialAutoApiError ? err.status : undefined,
+      });
     }
-    const succeeded = results.filter((r) => r.ok).length;
-    const failed = results.length - succeeded;
-    return NextResponse.json({ results, succeeded, failed }, { status: failed === 0 ? 201 : 207 });
-  } catch (err) {
-    if (err instanceof SocialAutoNotConfiguredError) {
-      return NextResponse.json({ error: "socialauto_not_configured" }, { status: 503 });
-    }
-    throw err;
   }
-}
+  const succeeded = results.filter((r) => r.ok).length;
+  const failed = results.length - succeeded;
+  return NextResponse.json({ results, succeeded, failed }, { status: failed === 0 ? 201 : 207 });
+});

@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { saErrorToResponse, uploadFromUrlToSocialAuto } from "@/lib/socialauto";
+import { NextResponse } from "next/server";
+import { readJsonBody, saAdminRoute, uploadFromUrlToSocialAuto } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +37,11 @@ function isLikelyPrivateOrLocalUrl(rawUrl: string): boolean {
   return false;
 }
 
-export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+export const POST = saAdminRoute(async (req) => {
+  const body = await readJsonBody<{ url?: string }>(req);
+  if (body instanceof NextResponse) return body;
 
-  const body = (await req.json().catch(() => null)) as { url?: string } | null;
-  if (!body?.url) {
+  if (!body.url) {
     return NextResponse.json({ error: "missing_url" }, { status: 400 });
   }
 
@@ -54,10 +52,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const uploaded = await uploadFromUrlToSocialAuto(body.url);
-    return NextResponse.json(uploaded, { status: 201 });
-  } catch (err) {
-    return saErrorToResponse(err);
-  }
-}
+  const uploaded = await uploadFromUrlToSocialAuto(body.url);
+  return NextResponse.json(uploaded, { status: 201 });
+});
