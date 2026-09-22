@@ -69,7 +69,13 @@ function isPrivateOriginHost(host: string): boolean {
 function isProdLeakedOrigin(origin: string): boolean {
   try {
     const hostname = new URL(origin).hostname;
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") return false;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    )
+      return false;
     return isInternalHostname(hostname);
   } catch {
     return false;
@@ -82,11 +88,23 @@ function isProdLeakedOrigin(origin: string): boolean {
 function isInternalHostname(hostname: string): boolean {
   const h = hostname.replace(/^\[|\]$/g, "").toLowerCase();
   if (h === "0.0.0.0" || h === "::" || h === "") return true;
-  if (h.endsWith(".cloudfront.net") || h.endsWith(".internal") || h.endsWith(".local") || h.endsWith(".svc")) return true;
+  if (
+    h.endsWith(".cloudfront.net") ||
+    h.endsWith(".internal") ||
+    h.endsWith(".local") ||
+    h.endsWith(".svc")
+  )
+    return true;
   // Bare single-label host (k8s pod name, container hostname) — public
   // origins always contain at least one dot.
   if (!h.includes(".")) return true;
   // Private / link-local IPv4 literals
-  if (/^10\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+  if (
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+  )
+    return true;
   return false;
 }
