@@ -1,23 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { createPostsBulk, PostizNotConfiguredError, type CreatePostBody } from "@/lib/postiz";
+import { NextResponse } from "next/server";
+import {
+  createBodyInvalidDetail,
+  createPostFromBody,
+  readJsonBody,
+  saAdminRoute,
+  SocialAutoApiError,
+} from "@/lib/socialauto";
+import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BULK = 30;
 
-/** POST /api/admin/postiz/posts/bulk — schedule many posts (one create-post
- *  call per item). Body: `{ items: CreatePostBody[] }` (max 30). */
-export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+interface BulkResult {
+  index: number;
+  ok: boolean;
+  result?: Array<{ postId: string; integration: string }>;
+  error?: string;
+  status?: number;
+}
 
-  let body: { items?: CreatePostBody[] };
-  try {
-    body = (await req.json()) as { items?: CreatePostBody[] };
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+/** POST /api/admin/postiz/posts/bulk — schedule many posts (one SocialAuto
+ *  create-post call per item). Body: `{ items: CreatePostBody[] }` (max 30). */
+export const POST = saAdminRoute(async (req) => {
+  const body = await readJsonBody<{ items?: CreatePostBody[] }>(req);
+  if (body instanceof NextResponse) return body;
 
   const items = body.items;
   if (!Array.isArray(items) || items.length === 0) {
@@ -34,23 +41,37 @@ export async function POST(req: NextRequest) {
   }
 
   for (const [i, item] of items.entries()) {
-    if (!item?.type || !Array.isArray(item.posts) || item.posts.length === 0) {
+    const detail = createBodyInvalidDetail(item);
+    if (detail) {
       return NextResponse.json(
-        { error: "invalid_payload", detail: `items[${i}]: type and posts[] are required` },
+        { error: "invalid_payload", detail: `items[${i}]: ${detail}` },
         { status: 400 }
       );
     }
   }
 
-  try {
-    const results = await createPostsBulk(items);
-    const succeeded = results.filter((r) => r.ok).length;
-    const failed = results.length - succeeded;
-    return NextResponse.json({ results, succeeded, failed }, { status: failed === 0 ? 201 : 207 });
-  } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+  const results: BulkResult[] = [];
+  for (const [index, item] of items.entries()) {
+    try {
+      results.push({ index, ok: true, result: await createPostFromBody(item) });
+    } catch (err) {
+      let message: string;
+      if (err instanceof SocialAutoApiError) {
+        message = err.body.slice(0, 300) || err.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else {
+        message = String(err);
+      }
+      results.push({
+        index,
+        ok: false,
+        error: message,
+        status: err instanceof SocialAutoApiError ? err.status : undefined,
+      });
     }
-    throw err;
   }
-}
+  const succeeded = results.filter((r) => r.ok).length;
+  const failed = results.length - succeeded;
+  return NextResponse.json({ results, succeeded, failed }, { status: failed === 0 ? 201 : 207 });
+});

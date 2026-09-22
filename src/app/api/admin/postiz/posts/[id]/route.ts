@@ -1,78 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import {
-  deletePost,
-  PostizApiError,
-  PostizNotConfiguredError,
-  updatePost,
-  type CreatePostBody,
-} from "@/lib/postiz";
+import { NextResponse } from "next/server";
+import { deletePostById, readCreateBody, saAdminRoute, updatePostFromBody } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+type Ctx = { params: Promise<{ id: string }> };
 
+/** Path id or the 400 response to return. */
+async function postIdOr400(params: Promise<{ id: string }>): Promise<string | NextResponse> {
   const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "missing_id" }, { status: 400 });
-  }
-
-  try {
-    await deletePost(id);
-    return NextResponse.json({ deleted: true });
-  } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
-    }
-    if (err instanceof PostizApiError) {
-      return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
-  }
+  return id || NextResponse.json({ error: "missing_id" }, { status: 400 });
 }
 
-/** Edit a scheduled or draft post — Postiz PUT /posts/:id. Identical body
- *  schema as POST /posts; the route just proxies. */
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+export const DELETE = saAdminRoute<Ctx>(async (_req, { params }) => {
+  const id = await postIdOr400(params);
+  if (id instanceof NextResponse) return id;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "missing_id" }, { status: 400 });
-  }
+  await deletePostById(id);
+  return NextResponse.json({ deleted: true });
+});
 
-  let body: CreatePostBody;
-  try {
-    body = (await req.json()) as CreatePostBody;
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
-  if (!body.type || !Array.isArray(body.posts) || body.posts.length === 0) {
-    return NextResponse.json(
-      { error: "invalid_payload", detail: "type and posts[] are required" },
-      { status: 400 }
-    );
-  }
+/** Edit a scheduled or draft post — SocialAuto PATCH /content/posts/:id. The
+ *  body keeps the Postiz create-post shape; the client translates it. */
+export const PUT = saAdminRoute<Ctx>(async (req, { params }) => {
+  const id = await postIdOr400(params);
+  if (id instanceof NextResponse) return id;
 
-  try {
-    const result = await updatePost(id, body);
-    return NextResponse.json({ result });
-  } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
-    }
-    if (err instanceof PostizApiError) {
-      return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
-        { status: err.status === 429 ? 429 : 502 }
-      );
-    }
-    throw err;
-  }
-}
+  const body = await readCreateBody(req);
+  if (body instanceof NextResponse) return body;
+
+  const result = await updatePostFromBody(id, body);
+  return NextResponse.json({ result });
+});

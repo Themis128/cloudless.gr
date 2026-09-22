@@ -1,11 +1,58 @@
 # Postiz — Social Publishing Engine
 
+> **Status (2026-09):** Postiz is **retired for publishing** — SocialAuto
+> (`social.cloudless.gr`, repo `cu130-slim`) owns the channels, schedule,
+> queue, and analytics. The `/admin/postiz` console is backed by SocialAuto
+> via `src/lib/socialauto.ts` (see "Admin console backend" below). Postiz
+> itself remains deployed only for the content-calendar publish path and
+> its webhooks (`src/lib/postiz.ts` is unchanged).
+
 Postiz (open-source, self-hosted) is the publishing engine behind the content
 calendar: it owns the OAuth connections to Facebook, Instagram, LinkedIn, X,
 TikTok (28+ channels) and executes the posts. The app talks to it through
 `src/lib/postiz.ts` (Public API v1).
 
-## Architecture
+## Admin console backend — SocialAuto (2026-09)
+
+The `/admin/postiz` page keeps its route surface (`/api/admin/postiz/*`) and
+UI shapes, but every route the page uses is proxied to SocialAuto
+`/api/v1` instead of the Postiz Public API:
+
+```
+/admin/postiz (browser)
+      │  same shapes as before (PostizPost / PostizIntegration / metrics)
+      ▼
+/api/admin/postiz/*  (unchanged URL surface, requireAdmin)
+      ▼
+src/lib/socialauto.ts ── Bearer JWT (cached) + optional
+      │                  Cf-Access-* service-token headers
+      ▼
+https://social.cloudless.gr/api/v1   (behind Cloudflare Access)
+```
+
+| Route | SocialAuto upstream |
+|---|---|
+| `GET /integrations` | `GET /accounts` → one row per connected account |
+| `GET /posts?start&end` | `GET /content/posts?status=*` merged + windowed, exploded per target channel |
+| `POST /posts` | `POST /content/posts` (+`publish-now` when type=now) |
+| `PUT/DELETE /posts/:id` | `PATCH`/`DELETE /content/posts/:id` |
+| `POST /posts/bulk` | one `createPostFromBody` per item |
+| `POST /upload`, `/upload-file` | `POST /media/upload` (URL fetched by us behind the SSRF guard) |
+| `GET /slot?id=` | top of next hour (no upstream slot concept) |
+| `GET /analytics/integration/:id` | `GET /analytics/accounts/:id/metrics` |
+
+Auth chain: the server logs in as the SocialAuto admin
+(`POST /api/v1/auth/login`, OAuth2 password form) and caches the JWT until
+its `exp` (−60s margin, re-login on 401). Cloudflare Access on
+`social.cloudless.gr` additionally requires a **service token** — the
+`socialauto-app` policy accepts any valid service token on the account.
+
+Config keys (D1 `app_config` / env): `SOCIALAUTO_API_URL`,
+`SOCIALAUTO_ADMIN_EMAIL`, `SOCIALAUTO_ADMIN_PASSWORD`,
+`SOCIALAUTO_SERVICE_TOKEN` (`client_id:client_secret` or secret alone),
+`SOCIALAUTO_CF_ACCESS_CLIENT_ID`.
+
+## Legacy architecture (Postiz upstream — retained for the calendar path)
 
 ```
 /admin/calendar (social_post item, status=draft)

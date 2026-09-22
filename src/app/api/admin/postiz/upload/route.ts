@@ -1,15 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { uploadFromUrl, PostizApiError, PostizNotConfiguredError } from "@/lib/postiz";
+import { NextResponse } from "next/server";
+import { readJsonBody, saAdminRoute, uploadFromUrlToSocialAuto } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Per docs.postiz.com, the Postiz `/upload-from-url` endpoint performs an
- * SSRF-safe fetch and rejects private IP ranges, link-local addresses, and
- * `localhost` outright. We mirror that here so the user gets a clean 4xx
- * immediately instead of waiting on the 30s round-trip plus a 500 from
- * Postiz. Same allowlist Postiz applies — HTTPS + publicly resolvable host.
+ * SocialAuto has no upload-from-url endpoint — this route fetches the bytes
+ * itself, so the private/loopback guard below is load-bearing (it protects
+ * our own fetch, not just the upstream's). HTTPS + publicly resolvable
+ * host only.
  */
 function isLikelyPrivateOrLocalUrl(rawUrl: string): boolean {
   let parsed: URL;
@@ -39,35 +37,21 @@ function isLikelyPrivateOrLocalUrl(rawUrl: string): boolean {
   return false;
 }
 
-export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+export const POST = saAdminRoute(async (req) => {
+  const body = await readJsonBody<{ url?: string }>(req);
+  if (body instanceof NextResponse) return body;
 
-  const body = (await req.json().catch(() => null)) as { url?: string } | null;
-  if (!body?.url) {
+  if (!body.url) {
     return NextResponse.json({ error: "missing_url" }, { status: 400 });
   }
 
   if (isLikelyPrivateOrLocalUrl(body.url)) {
     return NextResponse.json(
-      { error: "url_blocked", reason: "Postiz refuses private/loopback hosts" },
+      { error: "url_blocked", reason: "private/loopback hosts are not allowed" },
       { status: 400 }
     );
   }
 
-  try {
-    const uploaded = await uploadFromUrl(body.url);
-    return NextResponse.json(uploaded, { status: 201 });
-  } catch (err) {
-    if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
-    }
-    if (err instanceof PostizApiError) {
-      return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
-        { status: 502 }
-      );
-    }
-    throw err;
-  }
-}
+  const uploaded = await uploadFromUrlToSocialAuto(body.url);
+  return NextResponse.json(uploaded, { status: 201 });
+});
