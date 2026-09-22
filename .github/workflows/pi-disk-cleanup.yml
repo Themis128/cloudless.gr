@@ -35,7 +35,7 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-
+        tags: tag:k8s
     - name: Run disk cleanup via SSH
       run: |
         SSH_KEY="/tmp/omv_key"

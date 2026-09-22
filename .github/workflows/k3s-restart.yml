@@ -31,7 +31,7 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-
+        tags: tag:k8s
     - name: Install SSH key
       run: |
         mkdir -p ~/.ssh
