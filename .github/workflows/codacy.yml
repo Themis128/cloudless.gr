@@ -80,7 +80,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          REF: ${{ github.ref }}
+          # On pull_request events github.ref is refs/pull/N/merge, but we
+          # upload the head SHA — pair it with the head branch ref instead.
+          REF: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.head_ref) || github.ref }}
         run: |
           python3 - <<'PY'
           import base64, gzip, json, os, subprocess, sys
