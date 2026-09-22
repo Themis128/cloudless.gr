@@ -19,6 +19,9 @@ concurrency:
 jobs:
   e2e:
     name: Playwright full coverage (live D1)
+    # Dependabot PRs cannot access repo secrets (CLOUDFLARE_* are empty) —
+    # the live-D1 suite would always fail the credential probe. Skip it.
+    if: github.actor != 'dependabot[bot]'
     # Default GH-hosted; RUNNER_X64=["self-hosted","legion","x64"] for Legion failover.
     runs-on: ${{ fromJSON(vars.RUNNER_X64 || '"ubuntu-latest"') }}
     timeout-minutes: 30

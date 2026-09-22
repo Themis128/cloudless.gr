@@ -15,6 +15,8 @@ export function GoogleTagManagerHead({ nonce }: { nonce?: string }) {
   const scriptNonce = nonce?.trim() ? nonce : undefined;
 
   return (
+    // Plain <script> (not next/script): CSP nonce must match SSR/hydrate.
+    // eslint-disable-next-line @next/next/next-script-for-ga -- intentional; see file header
     <script
       id="google-tag-manager"
       {...(scriptNonce ? { nonce: scriptNonce } : {})}

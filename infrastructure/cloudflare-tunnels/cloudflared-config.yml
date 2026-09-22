@@ -1,17 +1,24 @@
 # Cloudflare Tunnel Configuration for omv (192.168.1.128)
 # Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
 #
-# Traffic path (k8s services):
-#   Cloudflare Edge → Tunnel → Traefik NodePort 30850 → IngressRoute → ClusterIP
+# IMPORTANT: this tunnel is REMOTELY MANAGED (config_src=cloudflare). The live
+# ingress lives in Cloudflare (Zero Trust → Networks → Tunnels, or
+# PUT /cfd_tunnel/{id}/configurations) — /etc/cloudflared/config.yml on the
+# connectors is ignored. This file documents intended routing only.
 #
-# Exceptions (bypass Traefik):
-#   cloudless.gr / manage / pi-origin → NodePort 30300 (Workers proxy path)
+# Traffic path (k8s services):
+#   Cloudflare Edge → Tunnel → per-service NodePort on omv
+#
+# NOTE: the "single Traefik ingress on :30850" migration (commit 99d352a4) was
+# never completed on the cluster — :30850 is still kube-prom-grafana and every
+# app keeps its own NodePort (the tunnels doctor enforces them). The IngressRoute
+# manifests under infrastructure/traefik/ are applied by the doctor but inert
+# until Traefik actually fronts 30850.
+#
+# Exceptions:
 #   webmail.cloudless.gr → omv-ha:80 (mail server, not k8s)
 #   omv.cloudless.gr     → localhost:80 (OMV admin panel)
 #   ftp.cloudless.gr     → localhost:21 (FTP, not HTTP)
-#
-# n8n and EspoCRM NodePorts (30900, 30700) remain for ETL access via Tailscale
-# tag:ci ACL — they are NOT exposed through this tunnel directly anymore.
 
 tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
 credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
@@ -38,7 +45,7 @@ ingress:
       connectTimeout: 30s
       tcpKeepAlive: 60s
 
-  # ── Main app (bypasses Traefik — Workers proxy path must stay direct) ──────────
+  # ── Main app ──────────────────────────────────────────────────────────────────
   - hostname: cloudless.gr
     service: http://192.168.1.128:30300
     originRequest:
@@ -57,7 +64,7 @@ ingress:
       connectTimeout: 30s
       httpHostHeader: pi-origin.cloudless.gr
 
-  # ── All k8s app services → Traefik NodePort 30850 ─────────────────────────────
+  # ── k8s app services → per-service NodePorts ─────────────────────────────────
   - hostname: grafana.cloudless.gr
     service: http://192.168.1.128:30850
     originRequest:
@@ -65,60 +72,60 @@ ingress:
       tcpKeepAlive: 30s
 
   - hostname: n8n.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30900
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
       httpHostHeader: n8n.cloudless.gr
 
   - hostname: espocrm.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30700
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
       httpHostHeader: espocrm.cloudless.gr
 
   - hostname: ntfy.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30080
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
       httpHostHeader: ntfy.cloudless.gr
 
   - hostname: meili.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30902
     originRequest:
       connectTimeout: 10s
       tcpKeepAlive: 30s
 
   - hostname: docs.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30901
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
 
   - hostname: appflowy.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30810
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
       httpHostHeader: appflowy.cloudless.gr
 
   - hostname: kuma.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:32501
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
       httpHostHeader: kuma.cloudless.gr
 
   - hostname: postiz.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30500
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s
 
   - hostname: logs.cloudless.gr
-    service: http://192.168.1.128:30850
+    service: http://192.168.1.128:30820
     originRequest:
       connectTimeout: 10s
       tcpKeepAlive: 30s

@@ -272,3 +272,18 @@ test-results.json/
 scripts/cursor-mcp/*.env
 scripts/cursor-mcp/*-secret*
 .next.stale*
+
+# ---------------------------------------------------------------------------
+# Audit cleanup — local secrets, MCP configs, backups, test dumps
+# ---------------------------------------------------------------------------
+test-output.txt
+*.backup
+*.backup[0-9]
+*.backup*
+# Local MCP configs (keep *.example tracked)
+.mcp.json
+mcp.json
+.mcp.json.backup
+# Playwright / e2e env (also covered by .env.* ; keep explicit)
+.env.playwright
+.env.playwright.local
