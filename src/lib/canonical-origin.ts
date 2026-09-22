@@ -58,8 +58,9 @@ function trimTrailingSlash(url: string): string {
  *  should NOT echo back to the browser. */
 function isPrivateOriginHost(host: string): boolean {
   if (host.startsWith("localhost") || host.startsWith("127.0.0.1")) return false;
-  if (host.endsWith(".cloudfront.net")) return true;
-  if (host.endsWith(".internal")) return true;
+  // Strip port (and IPv6 brackets) before classification
+  const bare = host.startsWith("[") ? host.slice(1, host.indexOf("]")) : host.split(":")[0];
+  if (isInternalHostname(bare)) return true;
   return false;
 }
 
@@ -68,8 +69,42 @@ function isPrivateOriginHost(host: string): boolean {
 function isProdLeakedOrigin(origin: string): boolean {
   try {
     const hostname = new URL(origin).hostname;
-    return hostname.endsWith(".cloudfront.net") || hostname === "0.0.0.0" || hostname === "::";
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    )
+      return false;
+    return isInternalHostname(hostname);
   } catch {
     return false;
   }
+}
+
+/** True for hostnames that can never be a public origin: k8s pod names
+ *  (single-label, e.g. `cloudless-app-6dc5885cd6-hvlrg`), private/loopback
+ *  IPs, `.internal`/`.local` suffixes, CDN edge hosts, and wildcard binds. */
+function isInternalHostname(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (h === "0.0.0.0" || h === "::" || h === "") return true;
+  if (
+    h.endsWith(".cloudfront.net") ||
+    h.endsWith(".internal") ||
+    h.endsWith(".local") ||
+    h.endsWith(".svc")
+  )
+    return true;
+  // Bare single-label host (k8s pod name, container hostname) — public
+  // origins always contain at least one dot.
+  if (!h.includes(".")) return true;
+  // Private / link-local IPv4 literals
+  if (
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+  )
+    return true;
+  return false;
 }

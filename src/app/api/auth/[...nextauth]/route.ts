@@ -1,4 +1,5 @@
 import { handlers } from "@/lib/auth";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -14,7 +15,7 @@ export const { POST } = handlers;
 
 export function GET(request: NextRequest): Response | Promise<Response> {
   if (SIGNIN_PROVIDER.test(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL("/auth/login", request.nextUrl.origin), 302);
+    return NextResponse.redirect(new URL("/auth/login", canonicalOrigin(request)), 302);
   }
   return (handlers.GET as (req: Request) => Response | Promise<Response>)(request);
 }
