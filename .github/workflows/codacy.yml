@@ -63,6 +63,10 @@ jobs:
           gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
           tool: ${{ matrix.tool }}
+          # The CLI's internal per-tool deadline defaults to 15m — opengrep
+          # needs ~17min on this repo, so without this the scan is killed
+          # before finishing even though the job timeout allows it.
+          tool-timeout: 30minutes
 
       - name: Validate SARIF before upload
         id: validate
@@ -86,6 +90,10 @@ jobs:
           # On pull_request events github.ref is refs/pull/N/merge, but we
           # upload the head SHA — pair it with the head branch ref instead.
           REF: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.head_ref) || github.ref }}
+          # Auto-merge can merge+delete the head branch while the scan is
+          # still running, leaving the upload ref gone → 404. refs/pull/N/head
+          # survives branch deletion and always points at the head SHA.
+          FALLBACK_REF: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || '' }}
         run: |
           python3 - <<'PY'
           import base64, gzip, json, os, subprocess, sys
@@ -105,18 +113,25 @@ jobs:
               doc = {k: v for k, v in sarif.items() if k != "runs"}
               doc["runs"] = [run]
               blob = base64.b64encode(gzip.compress(json.dumps(doc).encode())).decode()
+              refs = [r_ for r_ in dict.fromkeys(
+                  [os.environ["REF"], os.environ.get("FALLBACK_REF", "")]) if r_]
               body = {
                   "commit_sha": os.environ["COMMIT_SHA"],
-                  "ref": os.environ["REF"],
                   "sarif": blob,
                   "tool_name": f"Codacy {driver}{suffix}",
               }
-              r = subprocess.run(
-                  ["gh", "api", "repos/{owner}/{repo}/code-scanning/sarifs",
-                   "-X", "POST", "--input", "-"],
-                  input=json.dumps(body), text=True, capture_output=True,
-              )
-              print(f"run[{i}] {driver}: {r.stdout.strip() or r.stderr.strip()}")
-              if r.returncode:
+              uploaded = False
+              for ref in refs:
+                  body["ref"] = ref
+                  r = subprocess.run(
+                      ["gh", "api", "repos/{owner}/{repo}/code-scanning/sarifs",
+                       "-X", "POST", "--input", "-"],
+                      input=json.dumps(body), text=True, capture_output=True,
+                  )
+                  print(f"run[{i}] {driver} ref={ref}: {r.stdout.strip() or r.stderr.strip()}")
+                  if r.returncode == 0:
+                      uploaded = True
+                      break
+              if not uploaded:
                   sys.exit(1)
           PY
