@@ -20,11 +20,15 @@ export interface SocialAutoAnalyticsEvent {
   payload?: Record<string, unknown>;
 }
 
+function randomIdPart(): string {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+}
+
 function getSessionId(): string | undefined {
   try {
     let id = sessionStorage.getItem("sa_session_id");
     if (!id) {
-      id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      id = `${Date.now()}-${randomIdPart()}`;
       sessionStorage.setItem("sa_session_id", id);
     }
     return id;
@@ -37,7 +41,7 @@ function getVisitorId(): string | undefined {
   try {
     let id = localStorage.getItem("sa_visitor_id");
     if (!id) {
-      id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      id = `${Date.now()}-${randomIdPart()}`;
       localStorage.setItem("sa_visitor_id", id);
     }
     return id;
