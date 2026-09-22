@@ -35,7 +35,7 @@ const MAX_RETRIES = 3;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 /** Strip CR/LF so user-controlled values can't forge extra log lines. */
-const safeLog = (v: unknown): string => String(v).replace(/[\r\n]+/g, " ");
+const safeLog = (v: unknown): string => String(v).replace(/\n/g, "").replace(/\r/g, "");
 
 interface EspoContact {
   email: string;
