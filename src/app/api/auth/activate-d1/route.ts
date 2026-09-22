@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 
 function getDb(_request: NextRequest): AuthDatabase | null {
   return getAuthDbFromEnv();
@@ -82,8 +83,8 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
 
-  const base = new URL(req.url);
-  const origin = base.origin;
+  // req.url origin leaks the pod hostname on the k3s deployment.
+  const origin = canonicalOrigin(req);
 
   if (!email || !token || !(await verifyToken(email, token))) {
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
