@@ -56,6 +56,9 @@ on:
         # required "Build" check still has to fire for the PR to merge.
         # Without this, a manifest-only edit stays BLOCKED forever.
       - slack-app.manifest.json
+        # LICENSE-only PRs also need required Build/Lint/Type/Unit checks
+        # to fire, otherwise branch protection blocks forever.
+      - LICENSE
 
 concurrency:
   group: ci-${{ github.head_ref }}
