@@ -12,12 +12,10 @@
  * a fixed inert name, and dangerous URL schemes are blanked to "#".
  */
 
-const DANGEROUS_TAGS =
-  "(?:script|style|iframe|object|embed|form|input|button|select|textarea|meta|link|base)";
-
 // The "<" or "</" that opens a dangerous tag. Replaced with "&lt;" — the
 // escaped output can never re-form a real tag, so a single pass is complete.
-const DANGEROUS_TAG_DELIM_RE = new RegExp(`<\\/?(?=${DANGEROUS_TAGS}\\b)`, "gi");
+const DANGEROUS_TAG_DELIM_RE =
+  /<\/?(?=(?:script|style|iframe|object|embed|form|input|button|select|textarea|meta|link|base)\b)/gi;
 
 // After escaping, script/style payloads are inert text — drop them so the raw
 // JS/CSS is not rendered to the reader.
