@@ -25,6 +25,17 @@ function stripLocale(pathname: string): string {
  * bind `[locale]=store` and 404 (especially with dynamicParams=false).
  * Leave /api and /portal on their dedicated App Router trees.
  */
+/** First path segments owned by Next.js metadata file conventions
+ *  (app/opengraph-image.tsx, app/twitter-image.tsx, app/icon.tsx,
+ *  app/apple-icon.tsx, app/icons/[name]) — served at root, never localized. */
+const METADATA_ROUTE_SEGMENTS = new Set([
+  "opengraph-image",
+  "twitter-image",
+  "icon",
+  "apple-icon",
+  "icons",
+]);
+
 function redirectUnprefixedToDefaultLocale(
   request: NextRequest,
   pathname: string
@@ -34,6 +45,14 @@ function redirectUnprefixedToDefaultLocale(
     pathname.startsWith("/portal") ||
     pathname.startsWith("/_next")
   ) {
+    return null;
+  }
+  // Next.js metadata file-convention routes live at the app root — they are
+  // NOT locale-prefixed, and most carry no file extension so the generic
+  // "has a dot" file check below misses them. Redirecting them into
+  // /{locale}/... turns every og:image crawler fetch into a 404.
+  const firstSegment = pathname.split("/")[1] ?? "";
+  if (METADATA_ROUTE_SEGMENTS.has(firstSegment)) {
     return null;
   }
   // localePrefix is "always" — bare / must become /{defaultLocale}
@@ -266,7 +285,7 @@ function readD1SessionCookie(request: NextRequest): string | null {
 }
 
 function readNextAuthJwt(request: NextRequest): string | null {
-  const token = request.cookies.get("authjs.session-token")?.value ?? 
+  const token = request.cookies.get("authjs.session-token")?.value ??
                 request.cookies.get("next-auth.session-token")?.value;
   return token ?? null;
 }
@@ -316,7 +335,7 @@ async function handleApiRoute(
   const ip = getSharedClientIp(request) || "unknown";
   const authToken = readAuthToken(request);
   const method = request.method.toUpperCase();
-  
+
   let limitConfig = RATE_LIMITS.ip;
   if (pathname.startsWith("/api/admin/")) {
     if (!authToken) {
@@ -335,7 +354,7 @@ async function handleApiRoute(
   }
 
   const identifier = authToken || ip;
-  if (isRateLimited(identifier, limitConfig.limit, limitConfig.window, 
+  if (isRateLimited(identifier, limitConfig.limit, limitConfig.window,
                    authToken ? authRequestMap : ipRequestMap)) {
     const response = new NextResponse("Too Many Requests", {
       status: 429,
