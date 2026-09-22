@@ -322,8 +322,8 @@ cloudless.gr → Worker cloudless2 (pi-origin-proxy)
 - **Stripe**: Payment processing and subscriptions
 - **Google Search Console**: SEO analytics and reporting
 - **ActiveCampaign**: Email marketing and automation
-- **SocialAuto** (`social.cloudless.gr`): social publishing, DM inbox, analytics — see `cu130-slim/docs/CODEMAP.md`
-- **Postiz**: Legacy social media scheduling (superseded by SocialAuto)
+- **SocialAuto** (`social.cloudless.gr`): social publishing, DM inbox, analytics — see `cu130-slim/docs/CODEMAP.md`. The site also calls it **server-to-server**: `src/lib/socialauto.ts` backs the `/admin/postiz` console (channels, schedule, compose, per-channel metrics) via admin-login JWT + CF Access service token; config keys `SOCIALAUTO_*` in app_config.
+- **Postiz**: Legacy social media scheduling (superseded by SocialAuto; kept only for the content-calendar publish path + webhooks)
 - **N8N**: Workflow automation (runs the SocialAuto posting pipelines)
 - **Slack**: Notifications and team communication
 - **Sentry**: Error tracking and monitoring
