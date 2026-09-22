@@ -8,12 +8,12 @@ allowed-tools: mcp__cloudless-infra__k3s_get_pods, mcp__cloudless-infra__cluster
 
 ## Overview
 
-The k3s `cloudless` deployment on `omv` runs the Pi standby image (`cloudless-pi-app:latest` from ECR).
+The k3s `cloudless` deployment on `omv` runs the Pi standby image (`cloudless-pi-app:latest` from GHCR).
 It uses `imagePullPolicy: Always`, so a rollout restart always pulls the latest ECR image.
 
 **Pod spec:**
 
-- Image: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest`
+- Image: `ghcr.io/themis128/cloudless-pi-app:latest`
 - AWS creds: `pi-standby-aws-creds` secret (= `omv-main-cli` key)
 - Readiness probe: `GET /api/health` — delay 60s, period 10s, failureThreshold 3
 - Liveness probe: `GET /api/health` — delay 60s, period 30s, failureThreshold 3

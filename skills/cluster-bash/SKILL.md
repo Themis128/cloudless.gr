@@ -100,7 +100,7 @@ cluster_read_file("omv", "/var/lib/rancher/k3s/server/token")
 mcp__cloudless-infra__k3s_get_pods({ namespace: "default" })  # then filter Status
 
 # Pre-pull the new app image on both nodes BEFORE bumping the deployment
-cluster_run_fanout("sudo -n /usr/local/bin/k3s crictl pull 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>")
+cluster_run_fanout("sudo -n /usr/local/bin/k3s crictl pull ghcr.io/themis128/cloudless-pi-app:<sha>")
 ```
 
 ## When NOT to use these tools

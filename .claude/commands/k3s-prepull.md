@@ -18,7 +18,7 @@ of waiting 4+ minutes for the in-rollout ECR pull.
    aws ssm get-parameter --name "/cloudless/production/pi-sha" --query "Parameter.Value" --output text
    ```
 
-   Construct the full image: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`
+   Construct the full image: `ghcr.io/themis128/cloudless-pi-app:<sha>`
 
 2. **Pre-pull via MCP tool** — call `mcp__cloudless-infra__k3s_prepull_image` with:
    - `image`: the full image URI from step 1
