@@ -164,4 +164,18 @@ describe("proxy protected routes access", () => {
     const robots = await proxy(makeRequest("/robots.txt"));
     expect(robots.headers.get("location")).toBeNull();
   });
+
+  it("does not locale-prefix Next.js metadata image routes (og:image 404 regression)", async () => {
+    // /opengraph-image 307→ /en/opengraph-image → 404 for every social crawler.
+    for (const path of [
+      "/opengraph-image",
+      "/twitter-image",
+      "/icon",
+      "/apple-icon",
+      "/icons/icon-192.png",
+    ]) {
+      const response = await proxy(makeRequest(path));
+      expect(response.headers.get("location"), path).toBeNull();
+    }
+  });
 });
