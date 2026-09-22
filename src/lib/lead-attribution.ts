@@ -82,6 +82,41 @@ export function parseAttribution(pageUrl: string, referrer?: string): LeadAttrib
 }
 
 /**
+ * Parse the attribution field from a contact (or similar) request body.
+ *
+ * Clients may send either a JSON string or a pre-parsed object. Calling
+ * JSON.parse on an object coerces it via ToString and throws
+ * SyntaxError: "[object Object]" is not valid JSON (Sentry CLOUDLESS-GR-8).
+ *
+ * Rules:
+ * - null / undefined / empty string -> ok, no attribution
+ * - string -> JSON.parse only; then sanitize. SyntaxError -> ok:false (caller returns 400)
+ * - plain object -> sanitize as-is (never JSON.parse)
+ * - anything else -> ok:false
+ */
+export type ParseAttributionFieldResult =
+  | { ok: true; data: LeadAttribution | undefined }
+  | { ok: false; error: string };
+
+export function parseAttributionField(input: unknown): ParseAttributionFieldResult {
+  if (input == null || input === "") {
+    return { ok: true, data: undefined };
+  }
+  if (typeof input === "string") {
+    try {
+      const parsed: unknown = JSON.parse(input);
+      return { ok: true, data: sanitizeAttribution(parsed) ?? undefined };
+    } catch {
+      return { ok: false, error: "Invalid attribution JSON." };
+    }
+  }
+  if (typeof input === "object") {
+    return { ok: true, data: sanitizeAttribution(input) ?? undefined };
+  }
+  return { ok: false, error: "Invalid attribution value." };
+}
+
+/**
  * Server-side sanitizer for attribution sent by the client.
  * Accepts unknown input, returns a bounded, string-only object (or null).
  */
