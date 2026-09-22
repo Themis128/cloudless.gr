@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  createPostFromBody,
-  listPostsInWindow,
-  saErrorToResponse,
-} from "@/lib/socialauto";
+import { createPostFromBody, listPostsInWindow, saErrorToResponse } from "@/lib/socialauto";
 import type { CreatePostBody } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";

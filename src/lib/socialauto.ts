@@ -284,7 +284,15 @@ function effectiveDate(p: SaPost): string {
 /** Fetch every post the admin window can contain: one request per status,
  *  page_size=100 (the admin window is ±30d — bounded). */
 async function listAllPosts(): Promise<SaPost[]> {
-  const statuses = ["scheduled", "published", "failed", "draft", "approved", "review", "publishing"];
+  const statuses = [
+    "scheduled",
+    "published",
+    "failed",
+    "draft",
+    "approved",
+    "review",
+    "publishing",
+  ];
   const lists = await Promise.all(
     statuses.map((s) =>
       callThrowing<SaPostList>(`/content/posts?status=${s}&page_size=100`).catch(() => ({
@@ -407,10 +415,7 @@ export async function deletePostById(id: string): Promise<void> {
 
 // ── Media upload → UploadedFile ─────────────────────────────────────────────
 
-export async function uploadFileToSocialAuto(
-  blob: Blob,
-  filename: string
-): Promise<UploadedFile> {
+export async function uploadFileToSocialAuto(blob: Blob, filename: string): Promise<UploadedFile> {
   const form = new FormData();
   form.append("file", blob, filename);
   const asset = await callThrowing<SaMediaAsset>("/media/upload", {
@@ -478,7 +483,9 @@ export async function isSocialAutoConfigured(): Promise<boolean> {
 
 /** Shared body validation for the create-post routes — returns a 400
  *  response when the Postiz-shaped body is malformed, null when valid. */
-export function invalidCreateBodyResponse(body: CreatePostBody | null | undefined): NextResponse | null {
+export function invalidCreateBodyResponse(
+  body: CreatePostBody | null | undefined
+): NextResponse | null {
   if (!body?.type || !Array.isArray(body.posts) || body.posts.length === 0) {
     return NextResponse.json(
       { error: "invalid_payload", detail: "type and posts[] are required" },

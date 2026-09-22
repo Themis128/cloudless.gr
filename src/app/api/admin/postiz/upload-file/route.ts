@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  saErrorToResponse,
-  uploadFileToSocialAuto,
-} from "@/lib/socialauto";
+import { saErrorToResponse, uploadFileToSocialAuto } from "@/lib/socialauto";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

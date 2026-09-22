@@ -296,9 +296,7 @@ function ChannelsTab({
   if (integrations.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="text-gray-700">
-          No channels connected yet. Connect them in SocialAuto.
-        </p>
+        <p className="text-gray-700">No channels connected yet. Connect them in SocialAuto.</p>
         <a
           href="https://social.cloudless.gr/accounts"
           target="_blank"
