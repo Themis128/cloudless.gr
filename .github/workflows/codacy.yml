@@ -29,7 +29,10 @@ jobs:
   codacy-security-scan:
     name: Codacy Security Scan (${{ matrix.tool }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # opengrep scans the whole repo and needs ~20min — 15 canceled it on
+    # every run (incl. main). continue-on-error covers CLI exit codes,
+    # but a job timeout kills the check outright.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
