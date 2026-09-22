@@ -41,7 +41,7 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-
+        tags: tag:k8s
     - name: Ping /start
       if: ${{ env.HC_URL != '' }}
       run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null ||

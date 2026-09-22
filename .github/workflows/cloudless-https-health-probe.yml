@@ -196,7 +196,7 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-
+        tags: tag:k8s
     - name: GET /api/health via private fabric (MagicDNS NodePort)
       if: steps.health.outputs.need_origin_fallback == 'true'
       run: |
@@ -421,7 +421,7 @@ jobs:
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-
+        tags: tag:k8s
     - name: GET /api/health via private fabric (MagicDNS NodePort)
       if: steps.health.outputs.need_origin_fallback == 'true'
       run: |
