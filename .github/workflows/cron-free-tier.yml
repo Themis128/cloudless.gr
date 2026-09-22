@@ -36,7 +36,7 @@ jobs:
     # appflowy.cloudless.gr is Access-gated; k8s API :6443 times out from GH
     # runners even on the tailnet. SSH local-forward to omv NodePort 30810.
     - name: Join Tailscale
-      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888         # v4.1.3
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
@@ -127,7 +127,7 @@ jobs:
     - run: pnpm install --frozen-lockfile --prefer-offline
 
     - name: Join Tailscale
-      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3         # v3.2.4
+      uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888         # v4.1.3
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
