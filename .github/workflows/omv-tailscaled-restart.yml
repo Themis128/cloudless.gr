@@ -64,6 +64,22 @@ jobs:
         echo "=== kube-proxy DNAT for 30700 ==="
         sudo iptables -t nat -S 2>/dev/null | grep -E '30700|KUBE-NODEPORT' | head -10 || true
 
+        echo "=== FORWARD chain (NodePort traffic path) ==="
+        sudo iptables -L FORWARD -n --line-numbers 2>/dev/null | head -30 || true
+
+        echo "=== kube-router netpol FORWARD rules ==="
+        sudo iptables -S 2>/dev/null | grep -E 'KUBE-ROUTER|KUBE-POD-FW|REJECT|DROP' | head -30 || true
+
+        echo "=== tailscale0 iface / rp_filter ==="
+        ip link show tailscale0 2>/dev/null | head -3 || true
+        sysctl net.ipv4.conf.tailscale0.rp_filter net.ipv4.conf.all.rp_filter 2>/dev/null || true
+
+        echo "=== NetworkPolicies in cluster ==="
+        kubectl get networkpolicies -A 2>/dev/null || sudo k3s kubectl get networkpolicies -A 2>/dev/null || true
+
+        echo "=== tailscaled recent denies ==="
+        sudo journalctl -u tailscaled --since '-2h' --no-pager 2>/dev/null | grep -iE 'deny|drop|acl|filter' | tail -15 || true
+
     - name: Post result to tracking issue
       if: always()
       env:
