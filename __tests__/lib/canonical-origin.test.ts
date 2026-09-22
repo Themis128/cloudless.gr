@@ -75,4 +75,24 @@ describe("canonicalOrigin", () => {
     const result = canonicalOrigin(req);
     expect(result).toBe("http://localhost:3000");
   });
+
+  it("falls back to the apex when Host is a bare k8s pod name", () => {
+    // Production bug: /api/auth/activate redirected browsers to
+    // https://cloudless-app-6dc5885cd6-hvlrg:3000/... — the pod hostname
+    // cloudflared forwards as Host.
+    const req = makeReq("http://cloudless-app-6dc5885cd6-hvlrg:3000/api/auth/activate?email=a%40b.c&token=x");
+    expect(canonicalOrigin(req)).toBe("https://cloudless.gr");
+  });
+
+  it("falls back to the apex when Host is a private IP", () => {
+    const req = makeReq("http://10.42.0.17:3000/api/test");
+    expect(canonicalOrigin(req)).toBe("https://cloudless.gr");
+  });
+
+  it("ignores x-forwarded-host when it is a pod name", () => {
+    const req = makeReq("http://cloudless-app-6dc5885cd6-hvlrg:3000/api/test", {
+      "x-forwarded-host": "cloudless-app-6dc5885cd6-hvlrg:3000",
+    });
+    expect(canonicalOrigin(req)).toBe("https://cloudless.gr");
+  });
 });
