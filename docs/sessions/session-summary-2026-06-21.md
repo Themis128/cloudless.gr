@@ -46,7 +46,7 @@ Organization-level SCP — operator action).
 |---|---|
 | `https://ntfy.cloudless.gr/v1/health` (external, no VPN) | HTTP 200 `{"healthy":true}` |
 | `POST https://ntfy.cloudless.gr/cloudless-ops` (Bearer auth) | HTTP 200, msg id `lPPmzCcpo9Ey` |
-| `mosquitto_pub` from inside pod with `tbaltzakis` / `TH!123789th!` | `CONNACK (0)` (success) |
+| `mosquitto_pub` from inside pod with `tbaltzakis` / `<admin-password>` | `CONNACK (0)` (success) |
 | `POST /api/webhooks/admin-alert` with severity=info | HTTP 200, `slack.ok:true, ntfy.ok:true` |
 | All 7 public tunnels (`*.cloudless.gr`) | reachable (302/200/307/404 as designed) |
 | CI on main after hotfix #1084 | 12 most-recent runs green |
@@ -112,7 +112,7 @@ next session inherits them without re-discovery.)
 - Self-hosted apps live only on Pi (omv) — no AWS-side replica. They're SPOFs.
 - Cloudflare tunnel is HA (both omv + omv-ha run cloudflared with the same config).
 - `cloudless-pi-standby` is the IAM user behind the cluster's `aws-creds` Secret. Has SSM/SES/DDB/Cognito/ECR/Bedrock + (now) AthenaRead.
-- All 8 self-hosted apps share one admin: `tbaltzakis@cloudless.gr` / `TH!123789th!`.
+- All 8 self-hosted apps share one admin: `tbaltzakis@cloudless.gr` / `<admin-password>`.
 - ntfy Bearer token: `tk_xngjn17224v72l62ryibbd3i87f6z`.
 - Cloudflare tunnel UUID: `e977a490-58c5-4fdb-9155-86832e3e636a`.
 - scripts/etl is **npm**, not pnpm. Workflows use `npm ci` with `working-directory: scripts/etl`.

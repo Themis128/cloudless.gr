@@ -5,17 +5,21 @@ import { createUser, createAdminUser } from "../src/lib/auth-d1";
 
 async function main() {
   console.log("Creating admin user...");
-  
+
   const db = getAuthDbFromEnv();
   if (!db) {
     console.error("Failed to get database connection");
     process.exit(1);
   }
-  
+
   const email = "tbaltzakis@cloudless.gr";
-  const password = "TH!123789th!";
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password) {
+    console.error("ADMIN_PASSWORD env var required");
+    process.exit(1);
+  }
   const name = "Themis Baltzakis";
-  
+
   // Check if user already exists
   const existing = await db.prepare("SELECT id FROM user WHERE email = ?").bind(email).first<{ id: string }>();
   if (existing) {
@@ -34,7 +38,7 @@ async function main() {
       console.error("Failed to create user:", createResult.error);
       process.exit(1);
     }
-    
+
     console.log("User created successfully, making them admin...");
     const adminResult = await createAdminUser(db, email);
     if (adminResult.success) {
@@ -44,7 +48,7 @@ async function main() {
       process.exit(1);
     }
   }
-  
+
   console.log("Admin user setup complete!");
 }
 

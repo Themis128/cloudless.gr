@@ -46,7 +46,7 @@ HOST=$(ssm_get SES_SMTP_HOST "email-smtp.${REGION}.amazonaws.com")
 # `ESPOCRM_API_KEY` SSM dependency (the API key was provisioned for the
 # cloudless-app SDK user with a non-admin role; Settings PATCH needs
 # admin privileges so we use the unified human admin instead).
-# Per project_unified_admin_creds: tbaltzakis / TH!123789th!
+# Per project_unified_admin_creds: tbaltzakis / <ESPOCRM_ADMIN_PASSWORD env>
 ADMIN_USER="${ESPOCRM_ADMIN_USER:-tbaltzakis}"
 ADMIN_PASS="${ESPOCRM_ADMIN_PASSWORD:-}"
 
