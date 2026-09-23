@@ -229,6 +229,8 @@ interface SaAccountMetrics {
   total_impressions: number;
   total_engagement: number;
   avg_engagement_rate: number;
+  impressions_change_pct?: number;
+  engagement_change_pct?: number;
 }
 
 interface SaMediaAsset {
@@ -455,8 +457,16 @@ export async function getChannelAnalytics(
   const point = (total: number) => [{ total: String(total), date: today }];
   return [
     { label: "Followers", data: point(m.followers), percentageChange: 0 },
-    { label: "Impressions", data: point(m.total_impressions), percentageChange: 0 },
-    { label: "Engagement", data: point(m.total_engagement), percentageChange: 0 },
+    {
+      label: "Impressions",
+      data: point(m.total_impressions),
+      percentageChange: m.impressions_change_pct ?? 0,
+    },
+    {
+      label: "Engagement",
+      data: point(m.total_engagement),
+      percentageChange: m.engagement_change_pct ?? 0,
+    },
     { label: "Published posts", data: point(m.posts_count), percentageChange: 0 },
     {
       label: "Engagement rate %",
