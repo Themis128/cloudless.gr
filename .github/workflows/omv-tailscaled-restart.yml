@@ -82,19 +82,22 @@ jobs:
         sudo journalctl -u tailscaled --since '-2h' --no-pager 2>/dev/null | grep -iE 'deny|drop|acl|filter' | tail -15 || true
 
         KCTL="sudo k3s kubectl"
-        $KCTL version --short >/dev/null 2>&1 || KCTL="kubectl"
+        $KCTL get --raw=/healthz >/dev/null 2>&1 || KCTL="kubectl"
+        echo "KCTL=$KCTL"
+        $KCTL get nodes -o wide || true
+        systemctl is-active k3s k3s-agent 2>/dev/null || true
 
         echo "=== espocrm baseline netpol spec ==="
         $KCTL get netpol baseline -n espocrm -o yaml 2>/dev/null | sed -n '/spec:/,$p' || true
 
         echo "=== espocrm pod + endpoint ==="
-        $KCTL get pods -n espocrm -o wide 2>/dev/null || true
-        $KCTL get endpoints -n espocrm 2>/dev/null || true
+        $KCTL get pods -n espocrm -o wide || true
+        $KCTL get endpoints -n espocrm || true
 
         echo "=== n8n pod + endpoints (NodePort 30900 ETL path) ==="
-        $KCTL get pods -n n8n -o wide 2>/dev/null || true
-        $KCTL get endpoints -n n8n 2>/dev/null || true
-        $KCTL get events -n n8n --sort-by=.lastTimestamp 2>/dev/null | tail -8 || true
+        $KCTL get pods -n n8n -o wide || true
+        $KCTL get endpoints -n n8n || true
+        $KCTL get events -n n8n --sort-by=.lastTimestamp | tail -8 || true
 
         echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
         POD_IP=$($KCTL get pods -n espocrm -o jsonpath='{.items[0].status.podIP}' 2>/dev/null) || POD_IP=""
