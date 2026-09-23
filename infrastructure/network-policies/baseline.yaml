@@ -248,6 +248,9 @@ spec:
     - ipBlock:
         cidr: 192.168.1.0/24
   - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
+  - from:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: cloudless
@@ -433,6 +436,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
