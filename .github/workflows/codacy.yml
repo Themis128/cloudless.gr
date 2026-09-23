@@ -63,10 +63,12 @@ jobs:
           gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
           tool: ${{ matrix.tool }}
-          # The CLI's internal per-tool deadline defaults to 15m — opengrep
-          # needs ~17min on this repo, so without this the scan is killed
-          # before finishing even though the job timeout allows it.
-          tool-timeout: 30minutes
+          # The CLI's internal per-tool deadline defaults to 15m — too tight
+          # for opengrep on this repo. Must stay BELOW timeout-minutes (30):
+          # if the tool deadline fires first the CLI still emits partial
+          # SARIF and the upload step runs; if the job cap fires first the
+          # step is hard-cancelled mid-scan and nothing uploads.
+          tool-timeout: 20minutes
 
       - name: Validate SARIF before upload
         id: validate
