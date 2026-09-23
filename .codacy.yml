@@ -29,6 +29,22 @@ exclude_paths:
 - '**/*.spec.ts'
 - '**/__tests__/**'
 - '**/node_modules/**'
+# Generated reports / stale build output — these are what stall opengrep
+- coverage/**
+- '**/coverage/**'
+- '**/lcov-report/**'
+- '**/*.min.js'
+- '.next*/**'
+- '.open-next/**'
+# Agent/dev tooling dirs — not product code, not security-relevant
+- .claude/**
+- .kiro/**
+- .agents/**
+- .github/**
+- skills/**
+- tools/**
+- agents/**
+- docs/**
 - .next/**
 - dist/**
 - build/**
