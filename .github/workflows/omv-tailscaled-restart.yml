@@ -104,6 +104,8 @@ jobs:
         echo "  100.74.191.58:30900 -> ${code}"
         code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://192.168.1.128:30900/healthz" 2>/dev/null || echo "FAIL")
         echo "  192.168.1.128:30900 -> ${code}"
+        echo "=== n8n netpol specs (ingress cidrs decide tailnet reachability) ==="
+        $KCTL get netpol -n n8n -o yaml | sed -n '/spec:/,$p' | grep -vE "status|resourceVersion|uid:|creationTimestamp" | head -60 || true
         $KCTL get events -n n8n --sort-by=.lastTimestamp | tail -8 || true
 
         echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
