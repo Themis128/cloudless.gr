@@ -97,6 +97,13 @@ jobs:
         echo "=== n8n pod + endpoints (NodePort 30900 ETL path) ==="
         $KCTL get pods -n n8n -o wide || true
         $KCTL get endpoints -n n8n || true
+        $KCTL get svc -n n8n -o wide || true
+        $KCTL get svc -n n8n n8n -o jsonpath='{.spec.type} {.spec.ports}' || true
+        echo
+        code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://100.74.191.58:30900/healthz" 2>/dev/null || echo "FAIL")
+        echo "  100.74.191.58:30900 -> ${code}"
+        code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://192.168.1.128:30900/healthz" 2>/dev/null || echo "FAIL")
+        echo "  192.168.1.128:30900 -> ${code}"
         $KCTL get events -n n8n --sort-by=.lastTimestamp | tail -8 || true
 
         echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
