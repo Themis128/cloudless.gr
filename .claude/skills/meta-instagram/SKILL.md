@@ -122,7 +122,7 @@ Run this in a browser or curl — replace `{SHORT_TOKEN}` with the token from St
 GET https://graph.facebook.com/v19.0/oauth/access_token
   ?grant_type=fb_exchange_token
   &client_id=1936126137016578
-  &client_secret=2d77630ff18b1cea3e4e00ba2f9a7b73
+  &client_secret={META_APP_SECRET}
   &fb_exchange_token={SHORT_TOKEN}
 ```
 
@@ -203,7 +203,7 @@ Long-lived tokens expire after 60 days. To refresh before expiry:
 GET https://graph.facebook.com/v19.0/oauth/access_token
   ?grant_type=fb_exchange_token
   &client_id=1936126137016578
-  &client_secret=2d77630ff18b1cea3e4e00ba2f9a7b73
+  &client_secret={META_APP_SECRET}
   &fb_exchange_token={CURRENT_LONG_LIVED_TOKEN}
 ```
 

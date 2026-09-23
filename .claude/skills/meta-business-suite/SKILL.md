@@ -43,7 +43,7 @@ This skill is the **central hub** for all Meta platform operations for cloudless
 GET https://graph.facebook.com/v25.0/oauth/access_token
   ?grant_type=fb_exchange_token
   &client_id=1936126137016578
-  &client_secret=2d77630ff18b1cea3e4e00ba2f9a7b73
+  &client_secret={META_APP_SECRET}
   &fb_exchange_token={SHORT_TOKEN}
 ```
 
