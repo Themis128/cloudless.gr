@@ -102,6 +102,8 @@ These let you classify quickly from the event metadata, without fetching logs.
 | Dependabot | Routine bump notification, same package as previous | 1 (silent skip) |
 | Claude code review | Recommends a small mechanical change | 2 |
 | Claude code review | Calls out architectural concern | 3 |
+| Copilot | "unable to review … quota limit" — review capacity exhausted | 2 — **Devin reviews the PR** (read the diff, post `gh pr comment` with verdict + findings; formal reviews aren't possible post-merge) |
+| Copilot | Same quota message on a PR Devin already reviewed | 1 (silent skip) |
 
 ### Auth-walled / unreachable signals
 
