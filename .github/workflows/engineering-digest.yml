@@ -243,14 +243,27 @@ jobs:
           label = os.environ["LABEL"]
           repo = os.environ["REPO"]
 
+          # Slack section blocks cap at 3000 chars — accumulate lines within
+          # a budget instead of blindly slicing item counts.
+          def budget_lines(lines, hidden_total, budget=2700):
+              out = []
+              used = 0
+              for line in lines:
+                  if used + len(line) + 1 > budget:
+                      break
+                  out.append(line)
+                  used += len(line) + 1
+              hidden = hidden_total - len(out)
+              if hidden > 0:
+                  out.append(f"_…and {hidden} more_")
+              return "\n".join(out)
+
           if items:
               pr_lines = [
                   f"• <{p['url']}|#{p['number']}> {p['title']} (_{p.get('user') or 'unknown'}_)"
                   for p in items[:25]
               ]
-              body_pr = "\n".join(pr_lines)
-              if merges.get("total", len(items)) > len(items):
-                  body_pr += f"\n_…and {merges['total'] - len(items)} more_"
+              body_pr = budget_lines(pr_lines, merges.get("total", len(items)))
               summary = f"{len(items)} merged PR(s)"
           else:
               body_pr = "_No pull requests merged in this window._"
@@ -261,9 +274,7 @@ jobs:
                   f"• `{c['sha']}` {c['msg']} — {c['author']}"
                   for c in commits[:20]
               ]
-              body_commits = "\n".join(commit_lines)
-              if len(commits) > 20:
-                  body_commits += f"\n_…and {len(commits) - 20} more_"
+              body_commits = budget_lines(commit_lines, len(commits))
               summary = f"{summary}, {len(commits)} commit(s) on default branch"
           else:
               body_commits = "_No commits on the default branch in this window._"
