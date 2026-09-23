@@ -99,7 +99,7 @@ client has creds, or the dependent client crashes silently (paho's
     broker: <omv-host-or-LAN-ip>
     port: 31883     # NodePort
     username: tbaltzakis
-    password: 'TH!123789th!'    # or !secret mqtt_password
+    password: '<mqtt-password>'   # or !secret mqtt_password
   ```
 
 - Reflash via OTA — see [[esphome-ota-flash]] for the no-USB path. The

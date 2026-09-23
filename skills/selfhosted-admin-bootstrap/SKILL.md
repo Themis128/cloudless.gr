@@ -1,7 +1,7 @@
 ---
 name: selfhosted-admin-bootstrap
 description: |
-  Add the unified admin account (tbaltzakis@cloudless.gr / TH!123789th!) to
+  Add the unified admin account (tbaltzakis@cloudless.gr / <admin-password>) to
   any self-hosted app on the cloudless.gr k3s cluster. Triggered by phrases
   like "add admin to <app>", "give me admin on <app>", "create my account
   on the new self-hosted app", "bootstrap admin on <app>", "rotate the
@@ -13,7 +13,7 @@ description: |
 
 cloudless.gr's self-hosted stack runs **one** admin identity across every
 app: **`tbaltzakis@cloudless.gr`** (or username `tbaltzakis` where email
-isn't supported) with password **`TH!123789th!`**. Rotating the password
+isn't supported) with password `<admin-password>`. Rotating the password
 on all apps is a single sweep.
 
 This skill captures the per-app bootstrap recipe so future-you doesn't have

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # probe-selfhosted-admin.sh
 # ─────────────────────────
-# Verifies the unified admin login (tbaltzakis@cloudless.gr / TH!123789th!)
+# Verifies the unified admin login (tbaltzakis@cloudless.gr / <redacted>)
 # still works on every self-hosted app. Hits each app's "log in" API
 # endpoint and checks for a 200/201 + an auth artefact (token / session
 # cookie / "isAuthenticated":true / user object — varies by app).
