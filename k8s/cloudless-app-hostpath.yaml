@@ -61,18 +61,21 @@ spec:
   selector:
     matchLabels:
       app: cloudless-app
-  # RollingUpdate w/ maxSurge:1 + maxUnavailable:0 = zero-downtime deploys.
-  # Safe with hostPath: Next.js standalone reads all code into RAM at boot,
-  # so 2 pods can coexist briefly — each holds its own version in memory.
-  # Combined with SafeDeploy's atomic-symlink flip, the new pod boots
-  # against the flipped release while the old pod keeps serving from RAM.
-  # Once the new pod is ready, the old one is terminated (preStop + 30s
-  # grace covers in-flight requests). No downtime, no torn-in-half serving.
+  # RollingUpdate w/ maxSurge:0 + maxUnavailable:1 — replace-in-place.
+  # The cloudless-quota ResourceQuota caps the namespace at exactly two
+  # pods' memory (limits.memory=1536Mi vs 768Mi/pod), so any surge pod is
+  # rejected by quota admission and the rollout deadlocks: the new pod can
+  # never start, so old pods are never terminated (observed 2026-09-23 —
+  # ReplicaSet FailedCreate "exceeded quota: cloudless-quota" loops).
+  # With maxSurge:0 one old pod terminates first, freeing its 768Mi, then
+  # the replacement is admitted. Cost: brief reduced capacity (1 of 2 pods
+  # serving) or ~30-60s downtime at replicas:1 — SafeDeploy watchdog covers
+  # failed rolls. Do NOT reintroduce surge without first raising the quota.
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: 0
+      maxUnavailable: 1
   template:
     metadata:
       labels:
