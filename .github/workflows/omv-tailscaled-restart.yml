@@ -48,6 +48,7 @@ jobs:
 
     - name: Tailnet listener diagnostics
       if: always()
+      continue-on-error: true
       run: |
         echo "=== Listening sockets (NodePorts + SSH) ==="
         ss -tln 2>/dev/null | grep -E ':(22|6443|30300|30700|30900|30850)\b' || true
@@ -91,7 +92,7 @@ jobs:
         $KCTL get endpoints -n espocrm 2>/dev/null || true
 
         echo "=== KUBE-POD-FW chain for espocrm pod IP ==="
-        POD_IP=$($KCTL get pods -n espocrm -o jsonpath='{.items[0].status.podIP}' 2>/dev/null)
+        POD_IP=$($KCTL get pods -n espocrm -o jsonpath='{.items[0].status.podIP}' 2>/dev/null) || POD_IP=""
         echo "podIP=$POD_IP"
         sudo iptables -S 2>/dev/null | grep -E "$POD_IP" | head -10 || true
 
