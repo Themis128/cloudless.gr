@@ -62,7 +62,7 @@ describe("runAdHocSnapshot", () => {
     // adapter was called with the configured account + campaign IDs
     const calledWith = (adapter.pullMetrics as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(calledWith.accountId).toBe("512642510");
-    expect(calledWith.campaignIds).toEqual(["907024926", "857622786"]);
+    expect(calledWith.campaignIds).toEqual(["907100946", "857622786"]);
     expect(calledWith.pivots).toContain("MEMBER_INDUSTRY");
   });
 
