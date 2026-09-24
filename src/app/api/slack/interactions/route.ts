@@ -19,6 +19,13 @@ import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
+import {
+  pauseLinkedInCampaign,
+  resumeLinkedInCampaign,
+  getLinkedInCampaignStatus,
+} from "@/lib/campaigns/linkedin";
+import { socialautoAdsControl } from "@/lib/socialauto";
+import { getLiveCampaigns } from "@/data/campaigns";
 
 /**
  * Action IDs registered in this route that map to a workflow_dispatch
@@ -124,6 +131,22 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
         // URL buttons — Slack handles the navigation client-side.
         // Acknowledge the action; no server-side work needed.
         break;
+
+      case "linkedin_ads_pause":
+      case "linkedin_ads_resume":
+      case "linkedin_ads_status": {
+        // Buttons on the SocialAuto daily ads report. action.value carries
+        // the campaign id; fall back to the first live LinkedIn campaign.
+        if (payload.response_url) {
+          linkedinAdsControlAsync(
+            action.action_id,
+            action.value ?? "",
+            payload.response_url,
+            payload.user.id
+          ).catch((err) => console.error(`[Slack Interactions] ${action.action_id} failed:`, err));
+        }
+        break;
+      }
 
       case "refresh_orders": {
         // Post updated order data to the response_url
@@ -389,6 +412,106 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
   } catch (err) {
     console.error("[Slack Interactions] refreshOrdersAsync error:", err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// LinkedIn ads control responder
+//
+// Triggered by the pause/resume/status buttons on the SocialAuto daily ads
+// report. Primary path is the LinkedIn Marketing API (rw_ads); when that
+// scope isn't granted on the token the call falls back to SocialAuto, which
+// toggles the ad set through the Campaign Manager browser sidecar.
+// ---------------------------------------------------------------------------
+
+function defaultLinkedInCampaignId(): string {
+  const campaign = getLiveCampaigns().find((c) =>
+    c.adPlatforms?.some((p) => p.platform === "linkedin")
+  );
+  return campaign?.adPlatforms?.find((p) => p.platform === "linkedin")?.campaignIds[0] ?? "";
+}
+
+async function linkedinAdsControlAsync(
+  actionId: string,
+  campaignId: string,
+  responseUrl: string,
+  userId: string
+): Promise<void> {
+  // Pin to Slack's response-URL host — same SSRF guard as refreshOrdersAsync.
+  if (!responseUrl.startsWith("https://hooks.slack.com/")) return;
+  const cid = campaignId || defaultLinkedInCampaignId();
+  if (!cid) {
+    await fetch(responseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        response_type: "ephemeral",
+        text: ":warning: No LinkedIn campaign configured.",
+      }),
+      signal: AbortSignal.timeout(5_000),
+    }).catch(() => {});
+    return;
+  }
+
+  let text: string;
+  if (actionId === "linkedin_ads_status") {
+    const r = await getLinkedInCampaignStatus(cid);
+    text = r.ok
+      ? `:bar_chart: Campaign *${r.name ?? cid}* — status *${r.status}*, daily budget ${r.dailyBudget}`
+      : `:warning: Status check failed: ${r.error}`;
+  } else {
+    // Pause/resume touches spend — gate on the ops allowlist when configured,
+    // same semantics as deploy confirmations and workflow re-runs.
+    const opsUsers = await getSlackOpsUsers();
+    if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
+      await fetch(responseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          response_type: "ephemeral",
+          text:
+            ":no_entry: You're not on the ops allowlist for ad control. " +
+            "Ask the admin to add your Slack user ID to `SLACK_OPS_USERS`.",
+        }),
+        signal: AbortSignal.timeout(5_000),
+      }).catch(() => {});
+      return;
+    }
+    const action = actionId === "linkedin_ads_pause" ? "pause" : "resume";
+    let r =
+      action === "pause" ? await pauseLinkedInCampaign(cid) : await resumeLinkedInCampaign(cid);
+    let via = "LinkedIn API";
+    if (!r.ok && /403|401|permission|ACCESS_DENIED/i.test(r.error ?? "")) {
+      // Token lacks rw_ads — fall back to the SocialAuto sidecar toggle.
+      const sa = await socialautoAdsControl(action).catch((err) => ({
+        ok: false,
+        error: (err as Error).message,
+      }));
+      if (sa.ok) {
+        r = { ok: true };
+        via = "Campaign Manager (queued)";
+      } else {
+        r = { ok: false, error: `${r.error} · sidecar fallback: ${sa.error}` };
+      }
+    }
+    text = r.ok
+      ? action === "pause"
+        ? `:double_vertical_bar: Campaign \`${cid}\` paused by <@${userId}> via ${via}.`
+        : `:arrow_forward: Campaign \`${cid}\` resumed by <@${userId}> via ${via}.`
+      : `:warning: Failed to ${action} campaign \`${cid}\`: ${r.error}`;
+  }
+
+  await fetch(responseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      response_type: "in_channel",
+      replace_original: false,
+      text,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  }).catch((err) =>
+    console.error(`[Slack Interactions] follow-up post failed for ${actionId}:`, err)
+  );
 }
 
 // ---------------------------------------------------------------------------

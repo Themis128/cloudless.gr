@@ -942,11 +942,14 @@ function handleAds(payload: SlashCommandPayload): Response {
   const argv = payload.text.trim().split(/\s+/).filter(Boolean);
   const sub = (argv[0] ?? "help").toLowerCase();
 
-  // Use the campaign ID from the wired campaign data
+  // Campaign ID: explicit numeric arg wins (e.g. `/cloudless-ads pause
+  // 907024926`), otherwise the first LinkedIn campaignId in campaigns.ts.
+  const explicitId = argv.find((a) => /^\d{6,}$/.test(a));
   const campaign = getLiveCampaigns().find((c) =>
     c.adPlatforms?.some((p) => p.platform === "linkedin")
   );
-  const campaignId = campaign?.adPlatforms?.find((p) => p.platform === "linkedin")?.campaignIds[0];
+  const campaignId =
+    explicitId ?? campaign?.adPlatforms?.find((p) => p.platform === "linkedin")?.campaignIds[0];
 
   if (!campaignId && sub !== "help") {
     return slackResponse({
@@ -1007,6 +1010,7 @@ function handleAds(payload: SlashCommandPayload): Response {
                 "• `/cloudless-ads pause` — pause the campaign (stops spending)",
                 "• `/cloudless-ads resume` — resume the campaign",
                 "• `/cloudless-ads budget 20` — set daily budget to €20",
+                "• `/cloudless-ads pause 907024926` — target a specific campaign ID",
                 "• `/cloudless-ads help` — this message",
               ].join("\n"),
             },
