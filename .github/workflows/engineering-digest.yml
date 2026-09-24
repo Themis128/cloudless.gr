@@ -243,24 +243,47 @@ jobs:
           label = os.environ["LABEL"]
           repo = os.environ["REPO"]
 
-          # Slack section blocks cap at 3000 chars — accumulate lines within
-          # a budget instead of blindly slicing item counts.
+          # Slack Block Kit limits (chat.postMessage):
+          # - section mrkdwn text: 3000 chars
+          # - header plain_text: 150 chars
+          # - message text fallback: 40000 chars
+          # Budget under the section cap, sanitize mrkdwn, and fall back to
+          # text-only if blocks are still rejected (invalid_blocks).
+
+          def sanitize(s: str) -> str:
+              # Drop NULs / control chars that break Block Kit; keep newlines.
+              out = []
+              for ch in (s or ""):
+                  o = ord(ch)
+                  if ch in ("\n", "\t") or o >= 32:
+                      out.append(ch)
+              return "".join(out).replace("\0", "")
+
+          def clip(s: str, n: int) -> str:
+              s = sanitize(s)
+              if len(s) <= n:
+                  return s
+              return s[: max(0, n - 1)] + "…"
+
           def budget_lines(lines, hidden_total, budget=2700):
               out = []
               used = 0
               for line in lines:
+                  line = sanitize(line)
                   if used + len(line) + 1 > budget:
                       break
                   out.append(line)
                   used += len(line) + 1
               hidden = hidden_total - len(out)
               if hidden > 0:
-                  out.append(f"_…and {hidden} more_")
+                  note = f"_…and {hidden} more_"
+                  if used + len(note) + 1 <= budget:
+                      out.append(note)
               return "\n".join(out)
 
           if items:
               pr_lines = [
-                  f"• <{p['url']}|#{p['number']}> {p['title']} (_{p.get('user') or 'unknown'}_)"
+                  f"• <{p['url']}|#{p['number']}> {clip(p['title'], 200)} (_{p.get('user') or 'unknown'}_)"
                   for p in items[:25]
               ]
               body_pr = budget_lines(pr_lines, merges.get("total", len(items)))
@@ -271,7 +294,7 @@ jobs:
 
           if commits:
               commit_lines = [
-                  f"• `{c['sha']}` {c['msg']} — {c['author']}"
+                  f"• `{c['sha']}` {clip(c['msg'], 180)} — {clip(c['author'], 60)}"
                   for c in commits[:20]
               ]
               body_commits = budget_lines(commit_lines, len(commits))
@@ -281,8 +304,11 @@ jobs:
               if not items:
                   summary = "no repo activity"
 
-          header = f"Daily engineering digest — {label}"
-          text = f"{header}: {summary} · {repo}"
+          header = clip(f"Daily engineering digest — {label}", 150)
+          fallback_text = clip(f"{header}: {summary} · {repo}", 3500)
+
+          section_pr = clip(f"*Merged PRs*\n{body_pr}", 3000)
+          section_commits = clip(f"*Commits*\n{body_commits}", 3000)
 
           blocks = [
               {
@@ -293,50 +319,81 @@ jobs:
                   "type": "section",
                   "text": {
                       "type": "mrkdwn",
-                      "text": (
+                      "text": clip(
                           f"*Repo:* `{repo}`\n"
                           f"*Window:* `{os.environ['SINCE']}` → `{os.environ['UNTIL']}` (UTC)\n"
-                          f"*Summary:* {summary}"
+                          f"*Summary:* {summary}",
+                          3000,
                       ),
                   },
               },
               {"type": "divider"},
               {
                   "type": "section",
-                  "text": {"type": "mrkdwn", "text": f"*Merged PRs*\n{body_pr}"},
+                  "text": {"type": "mrkdwn", "text": section_pr},
               },
               {
                   "type": "section",
-                  "text": {"type": "mrkdwn", "text": f"*Commits*\n{body_commits}"},
+                  "text": {"type": "mrkdwn", "text": section_commits},
               },
               {
                   "type": "context",
                   "elements": [
                       {
                           "type": "mrkdwn",
-                          "text": f"<{os.environ['RUN_URL']}|Workflow run> · GitHub Actions (not Cursor Automations)",
+                          "text": clip(
+                              f"<{os.environ['RUN_URL']}|Workflow run> · GitHub Actions (not Cursor Automations)",
+                              2000,
+                          ),
                       }
                   ],
               },
           ]
 
+          def post(payload):
+              req = urllib.request.Request(
+                  "https://slack.com/api/chat.postMessage",
+                  data=json.dumps(payload).encode(),
+                  headers={
+                      "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}",
+                      "Content-Type": "application/json; charset=utf-8",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  return json.load(resp)
+
           payload = {
               "channel": os.environ["CHANNEL_ID"],
-              "text": text,
+              "text": fallback_text,
               "blocks": blocks,
               "unfurl_links": False,
               "unfurl_media": False,
           }
-          req = urllib.request.Request(
-              "https://slack.com/api/chat.postMessage",
-              data=json.dumps(payload).encode(),
-              headers={
-                  "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}",
-                  "Content-Type": "application/json; charset=utf-8",
-              },
-          )
-          with urllib.request.urlopen(req, timeout=30) as resp:
-              result = json.load(resp)
+          result = post(payload)
+          if not result.get("ok") and result.get("error") == "invalid_blocks":
+              print("::warning::blocks rejected (invalid_blocks); retrying text-only")
+              # Chunk a plain-text digest under Slack's text limit.
+              plain_parts = [
+                  fallback_text,
+                  "",
+                  "Merged PRs:",
+                  sanitize(body_pr),
+                  "",
+                  "Commits:",
+                  sanitize(body_commits),
+                  "",
+                  f"Run: {os.environ['RUN_URL']}",
+              ]
+              plain = "\n".join(plain_parts)
+              # Prefer one message; if still huge, truncate hard.
+              result = post(
+                  {
+                      "channel": os.environ["CHANNEL_ID"],
+                      "text": clip(plain, 39000),
+                      "unfurl_links": False,
+                      "unfurl_media": False,
+                  }
+              )
           if not result.get("ok"):
               raise SystemExit(f"chat.postMessage failed: {result.get('error', 'unknown')}")
           print(f"Posted digest: {summary}")

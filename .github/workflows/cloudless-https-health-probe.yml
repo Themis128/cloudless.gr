@@ -287,6 +287,8 @@ jobs:
     env:
       PROBE_HOST: pi-origin.cloudless.gr
     steps:
+    - uses: actions/checkout@v7
+
     - name: TLS handshake + cert validity
       run: |
         set -euo pipefail
