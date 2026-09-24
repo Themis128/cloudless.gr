@@ -53,9 +53,17 @@ jobs:
         echo "=== Listening sockets (NodePorts + SSH) ==="
         ss -tln 2>/dev/null | grep -E ':(22|6443|30300|30700|30900|30850)\b' || true
 
-        echo "=== Self-connect via own tailscale IP ==="
+        echo "=== Self-connect via own tailscale IP (brief retries after restart) ==="
         for port in 22 6443 30300 30700 30850; do
-          code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://100.74.191.58:${port}/" 2>/dev/null || echo "FAIL")
+          code="FAIL"
+          for attempt in 1 2 3; do
+            code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' "http://100.74.191.58:${port}/" 2>/dev/null || echo "FAIL")
+            # Any HTTP code or TCP accept counts as listener up; FAIL = no connect
+            if [ "$code" != "FAIL" ]; then
+              break
+            fi
+            sleep 2
+          done
           echo "  100.74.191.58:${port} -> ${code}"
         done
 
