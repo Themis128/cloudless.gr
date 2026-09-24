@@ -943,7 +943,7 @@ function handleAds(payload: SlashCommandPayload): Response {
   const sub = (argv[0] ?? "help").toLowerCase();
 
   // Campaign ID: explicit numeric arg wins (e.g. `/cloudless-ads pause
-  // 907024926`), otherwise the first LinkedIn campaignId in campaigns.ts.
+  // 907100946`), otherwise the first LinkedIn campaignId in campaigns.ts.
   const explicitId = argv.find((a) => /^\d{6,}$/.test(a));
   const campaign = getLiveCampaigns().find((c) =>
     c.adPlatforms?.some((p) => p.platform === "linkedin")
@@ -1010,7 +1010,7 @@ function handleAds(payload: SlashCommandPayload): Response {
                 "• `/cloudless-ads pause` — pause the campaign (stops spending)",
                 "• `/cloudless-ads resume` — resume the campaign",
                 "• `/cloudless-ads budget 20` — set daily budget to €20",
-                "• `/cloudless-ads pause 907024926` — target a specific campaign ID",
+                "• `/cloudless-ads pause 907100946` — target a specific campaign ID",
                 "• `/cloudless-ads help` — this message",
               ].join("\n"),
             },

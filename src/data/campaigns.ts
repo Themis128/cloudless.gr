@@ -145,8 +145,9 @@ export const campaigns: Campaign[] = [
         // wraps it as `urn:li:sponsoredAccount:<id>` internally.
         accountId: "512642510",
         // First entry is the default for /cloudless-ads control + report
-        // buttons. 907024926 = "Cloudless boost - Sep 2026 - coupon".
-        campaignIds: ["907024926", "857622786"],
+        // buttons. 907100946 = "Cloudless boost - Sep 2026 - coupon — carousel"
+        // (document ad; replaced 907024926 via CM format transfer).
+        campaignIds: ["907100946", "857622786"],
         insightTagConversionId: 26846068,
         capiConversionId: 26846116,
       },
