@@ -144,7 +144,9 @@ export const campaigns: Campaign[] = [
         // API expects this same numeric ID, not the URN — `LinkedInAdapter`
         // wraps it as `urn:li:sponsoredAccount:<id>` internally.
         accountId: "512642510",
-        campaignIds: ["857622786"],
+        // First entry is the default for /cloudless-ads control + report
+        // buttons. 907024926 = "Cloudless boost - Sep 2026 - coupon".
+        campaignIds: ["907024926", "857622786"],
         insightTagConversionId: 26846068,
         capiConversionId: 26846116,
       },

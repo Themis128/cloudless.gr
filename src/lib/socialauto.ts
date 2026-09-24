@@ -476,6 +476,25 @@ export async function getChannelAnalytics(
   ];
 }
 
+/** LinkedIn ads control fallback — SocialAuto toggles the ad set through the
+ *  Campaign Manager browser sidecar. Used when the site's LinkedIn token
+ *  lacks rw_ads. Admin-JWT authed; returns a queued ack (the toggle itself
+ *  lands in Slack via the task's notification). */
+export async function socialautoAdsControl(
+  action: "pause" | "resume" | "status"
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await callThrowing("/linkedin/ads-control", {
+      method: "POST",
+      body: JSON.stringify({ action }),
+      timeoutMs: 20_000,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
 export async function isSocialAutoConfigured(): Promise<boolean> {
   try {
     await getSaConfig();
