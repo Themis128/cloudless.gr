@@ -106,13 +106,68 @@ sudo systemctl start safedeploy-watchdog.service
 # ...will fire the ⚠️ alert once. Revert the URL after testing.
 ```
 
-## What it doesn't cover
+## Extended coverage (added 2026-09-25)
 
-- **The watchdog itself dying** — if the omv host is fully down, no alerts
-  come. Complement with an external monitor (Uptime Kuma from a different
-  network, or a cloud service).
-- **The cluster + omv down together** — same as above; needs off-network monitoring.
+Beyond the main site, each 2-min tick also runs:
+
+### Satellite HTTP probes
+
+`WATCH_TARGETS` in the script — `name|url|expect|remediation`:
+
+| Target | URL | Expect |
+|---|---|---|
+| pi-origin | `pi-origin.cloudless.gr/api/health` | 200 |
+| social | `social.cloudless.gr/` | ok (2xx/3xx — Access 302 = up) |
+| postiz | `postiz.cloudless.gr/` | ok |
+| espocrm | `espocrm.cloudless.gr/` | ok |
+| grafana | `grafana.cloudless.gr/api/health` | 200 |
+| n8n | `n8n.cloudless.gr/healthz` | 200 |
+| webmail | `webmail.cloudless.gr/` | ok |
+| postiz-ai-proxy | `…workers.dev/v1/models` | 200 |
+
+Same incident semantics as the main check: silent for 1–2 failures, one
+alert at 3, recovery alert on heal. `remediation` supports `none`
+(alert-only, the shipped default) or `k3s:<ns>:<deploy>` — a
+`rollout restart` at the 8-failure threshold, same 60-min cooldown.
+Map deploy names with `k3s kubectl get deploy -A` before enabling.
+
+### Worker error watcher
+
+Every 5th tick (~10 min) queries Cloudflare GraphQL
+`workersInvocationsAdaptive` for invocation **exceptions** in the last
+30 min across all scripts. Any errors → one alert per incident listing
+`script=count`; clears when the window goes quiet. Needs `CF_API_TOKEN` +
+`CF_ACCOUNT_ID` in the env file (analytics-read scope is enough; pulled
+from `cloudless-secrets` `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` at
+install — silently skipped if absent). This catches exception drift that
+HTTP health checks can't — e.g. the postiz-ai-proxy 54-errors/7d drift
+found 2026-09-25.
+
+### Infra checks
+
+- **k3s node NotReady** — `kubectl get nodes`, urgent alert while any node
+  is not Ready
+- **Disk pressure** — k3s SSD (`/var/lib/rancher/k3s`, sda1) ≥85% and data
+  SSD (sdb1) ≥90%, with hysteresis (clears 5 points below threshold)
+
+### Deadman ping
+
+If `HEALTHCHECK_PING_URL` is set in the env file, every tick curls it —
+point it at a healthchecks.io check so a dead watchdog or dead omv host
+still produces an external alert.
+
+## Install / refresh via CI
+
+`.github/workflows/install-safedeploy-watchdog.yml` (workflow_dispatch)
+runs the installer on the omv self-hosted runner — no workstation ssh
+needed.
+
+## What it still doesn't cover
+
+- **omv host fully down AND deadman unconfigured** — set
+  `HEALTHCHECK_PING_URL` to close this.
 - **Slow/degraded but healthy responses** — /api/health only checks the app
   is running. For SLA-style latency alerts use Grafana + Alertmanager.
-- **Non-cloudless.gr apps** — grafana/postiz/espocrm/etc. aren't watched.
-  Extend the script or add per-app watchdogs if needed.
+- **Docker services on non-omv hosts** (e.g. the SocialAuto stack) — probes
+  alert but can't restart; remediation stays `none` unless the service is
+  k3s-hosted.

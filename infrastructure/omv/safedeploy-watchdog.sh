@@ -22,6 +22,17 @@
 #
 # State: /var/lib/safedeploy-watchdog/{fail_count,last_rollback_ts,last_notify_ts,notified,incident_start}
 #
+# Extended coverage (added 2026-09-25):
+#   • satellite HTTP probes   — social/webmail/postiz/espocrm/grafana/n8n/
+#                               pi-origin/postiz-ai-proxy (alert-only; optional
+#                               `k3s:<ns>:<deploy>` remediation via rollout restart)
+#   • worker-error watcher    — Cloudflare GraphQL workersInvocationsAdaptive
+#                               delta; catches exception drift a 200-health check
+#                               can't (e.g. the postiz-ai-proxy 54-errors/7d case)
+#   • infra checks            — k3s node NotReady, k3s SSD >85%, data SSD >90%
+#   • deadman ping            — optional healthchecks.io URL pinged each tick so
+#                               a dead watchdog/omv host still alerts externally
+#
 set -euo pipefail
 
 # --- config ------------------------------------------------------------------
@@ -38,12 +49,35 @@ ROLLBACK_THRESHOLD=8      # consecutive failures to auto-rollback
 ROLLBACK_COOLDOWN=3600    # min seconds between auto-rollbacks
 MIN_RELEASE_AGE=900       # skip rollback if symlink younger than this (seconds)
 
+# Satellite probes: "name|url|expect|remediation"
+#   expect      = "ok" (any 2xx/3xx — Cloudflare Access 302 counts as up)
+#                 or an exact status like "200"
+#   remediation = "none" (alert only) or "k3s:<ns>:<deploy>" → rollout restart
+#                 at ROLLBACK_THRESHOLD consecutive failures
+# To map k3s remediation targets:  k3s kubectl get deploy -A
+WATCH_TARGETS=(
+  "pi-origin|https://pi-origin.cloudless.gr/api/health|200|none"
+  "social|https://social.cloudless.gr/|ok|none"
+  "postiz|https://postiz.cloudless.gr/|ok|none"
+  "espocrm|https://espocrm.cloudless.gr/|ok|none"
+  "grafana|https://grafana.cloudless.gr/api/health|200|none"
+  "n8n|https://n8n.cloudless.gr/healthz|200|none"
+  "webmail|https://webmail.cloudless.gr/|ok|none"
+  "postiz-ai-proxy|https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models|200|none"
+)
+WORKER_ERROR_THRESHOLD=3    # errors in the window below → alert
+WORKER_ERROR_WINDOW_MIN=30  # GraphQL lookback window
+WORKER_CHECK_EVERY=5        # run the GraphQL check every Nth tick (~10 min)
+DISK_K3S_PCT=85             # alert when the k3s SSD (sda1) exceeds this
+DISK_DATA_PCT=90            # alert when the data SSD (sdb1) exceeds this
+
 # --- credentials (from env file, never printed) ------------------------------
 # shellcheck disable=SC1091
 [ -f /etc/safedeploy-watchdog.env ] && . /etc/safedeploy-watchdog.env
 : "${NTFY_BASE_URL:=}" "${NTFY_TOPIC:=}" "${NTFY_TOKEN:=}"
 : "${SLACK_BOT_TOKEN:=}" "${SLACK_CHANNEL:=#general}"
 : "${RESEND_API_KEY:=}" "${ALERT_EMAIL:=tbaltzakis@cloudless.gr}"
+: "${CF_API_TOKEN:=}" "${CF_ACCOUNT_ID:=}" "${HEALTHCHECK_PING_URL:=}"
 
 # --- state helpers -----------------------------------------------------------
 mkdir -p "$STATE_DIR"
@@ -130,11 +164,149 @@ do_rollback() {
   return 0
 }
 
+# --- satellite HTTP probes ---------------------------------------------------
+# One probe per WATCH_TARGETS entry. Per-target consecutive-fail state lives in
+# fail_count_<name> / notified_<name>. Remediation "k3s:<ns>:<deploy>" restarts
+# the deployment at ROLLBACK_THRESHOLD; "none" is alert-only.
+check_targets() {
+  local entry name url expect remed code fc prev now
+  now=$(_now)
+  for entry in "${WATCH_TARGETS[@]}"; do
+    IFS='|' read -r name url expect remed <<<"$entry"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 -L "$url" 2>/dev/null); code=${code:-000}
+    local ok=0
+    if [ "$expect" = "ok" ]; then
+      [[ "$code" =~ ^[23] ]] && ok=1
+    else
+      [ "$code" = "$expect" ] && ok=1
+    fi
+
+    fc=$(_get "fail_count_$name" 0)
+    if [ "$ok" = "1" ]; then
+      if [ "$fc" -gt 0 ] || [ "$(_get "notified_$name" 0)" = "1" ]; then
+        log "TARGET RECOVERED: $name (was fail_count=$fc)"
+        notify_all "✅ $name recovered" "$url healthy again after ~$((fc*2)) min." low
+      fi
+      _set "fail_count_$name" 0; _set "notified_$name" 0
+      continue
+    fi
+
+    fc=$((fc+1)); _set "fail_count_$name" "$fc"
+    log "TARGET UNHEALTHY: $name http=$code tick=$fc"
+    if [ "$fc" -ge "$NOTIFY_THRESHOLD" ] && [ "$(_get "notified_$name" 0)" = "0" ]; then
+      notify_all "⚠️ $name unhealthy" "$url failing ~$((fc*2)) min. Last HTTP=$code." high
+      _set "notified_$name" 1
+    fi
+    if [ "$fc" -ge "$ROLLBACK_THRESHOLD" ] && [[ "$remed" == k3s:* ]]; then
+      local ns dep; IFS=':' read -r _ ns dep <<<"$remed"
+      prev=$(_get "remed_ts_$name" 0)
+      if [ $((now - prev)) -ge "$ROLLBACK_COOLDOWN" ]; then
+        log "REMEDIATION: k3s rollout restart $ns/$dep for $name"
+        if k3s kubectl -n "$ns" rollout restart "deploy/$dep" >/dev/null 2>&1; then
+          _set "remed_ts_$name" "$now"
+          notify_all "🔁 $name restarted" "k3s rollout restart deploy/$dep in ns $ns after $fc consecutive failures." high
+        else
+          notify_all "🚨 $name remediation failed" "rollout restart deploy/$dep in ns $ns failed. Manual check needed." urgent
+        fi
+      fi
+    fi
+  done
+}
+
+# --- worker error watcher ----------------------------------------------------
+# Cloudflare GraphQL workersInvocationsAdaptive — count invocation exceptions
+# across all scripts in the last WORKER_ERROR_WINDOW_MIN. Fires once per
+# incident, clears when the window goes quiet. Needs CF_API_TOKEN+CF_ACCOUNT_ID
+# (analytics-read token suffices); silently skips when unconfigured.
+check_worker_errors() {
+  [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ] || return 0
+  local tick; tick=$(( $(_get tick_count 0) + 1 )); _set tick_count "$tick"
+  [ $((tick % WORKER_CHECK_EVERY)) -eq 0 ] || return 0
+
+  local since now_iso resp errs
+  since=$(date -u -d "-${WORKER_ERROR_WINDOW_MIN} min" +%Y-%m-%dT%H:%M:%SZ)
+  now_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  resp=$(curl -fsSm 15 -X POST https://api.cloudflare.com/client/v4/graphql \
+    -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
+    -d "{\"query\":\"query(\$a:String!,\$s:Time!,\$e:Time!){viewer{accounts(filter:{accountTag:\$a}){workersInvocationsAdaptive(limit:200,filter:{datetime_geq:\$s,datetime_leq:\$e}){sum{errors}dimensions{scriptName}}}}}\",\"variables\":{\"a\":\"$CF_ACCOUNT_ID\",\"s\":\"$since\",\"e\":\"$now_iso\"}}" 2>/dev/null) || return 0
+
+  errs=$(printf '%s' "$resp" | python3 -c "
+import json,sys
+try:
+  rows=json.load(sys.stdin)['data']['viewer']['accounts'][0]['workersInvocationsAdaptive']
+except Exception:
+  sys.exit(0)
+bad={r['dimensions']['scriptName']:r['sum']['errors'] for r in rows if r['sum']['errors']}
+if bad: print('; '.join(f'{k}={v}' for k,v in sorted(bad.items(), key=lambda x:-x[1])))" 2>/dev/null)
+
+  local prev; prev=$(_get worker_alert_active 0)
+  if [ -n "$errs" ]; then
+    if [ "$prev" = "0" ]; then
+      log "WORKER ERRORS: $errs"
+      notify_all "⚠️ worker exceptions" "Cloudflare worker errors in last ${WORKER_ERROR_WINDOW_MIN}min: $errs. Check wrangler tail / recent deploys." high
+      _set worker_alert_active 1
+    fi
+  elif [ "$prev" = "1" ]; then
+    log "WORKER ERRORS cleared"
+    notify_all "✅ worker errors cleared" "No worker exceptions in the last ${WORKER_ERROR_WINDOW_MIN}min." low
+    _set worker_alert_active 0
+  fi
+}
+
+# --- infra checks -------------------------------------------------------------
+# k3s node NotReady + the two SSD thresholds from CLAUDE.md's storage rules.
+check_infra() {
+  local notready
+  notready=$(k3s kubectl get nodes --no-headers 2>/dev/null | awk '$2!="Ready"{print $1}' | paste -sd, -)
+  if [ -n "$notready" ]; then
+    if [ "$(_get infra_node_alert 0)" = "0" ]; then
+      log "INFRA: node(s) NotReady: $notready"
+      notify_all "🚨 k3s node NotReady" "Node(s) not Ready: $notready" urgent
+      _set infra_node_alert 1
+    fi
+  elif [ "$(_get infra_node_alert 0)" = "1" ]; then
+    _set infra_node_alert 0
+    notify_all "✅ k3s nodes Ready" "All nodes back to Ready." low
+  fi
+
+  local dev thresh tag pct
+  for spec in "/var/lib/rancher/k3s:$DISK_K3S_PCT:k3s-ssd" "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7:$DISK_DATA_PCT:data-ssd"; do
+    IFS=':' read -r dev thresh tag <<<"$spec"
+    pct=$(df --output=pcent "$dev" 2>/dev/null | tail -1 | tr -dc '0-9')
+    [ -n "$pct" ] || continue
+    if [ "$pct" -ge "$thresh" ]; then
+      if [ "$(_get "infra_disk_$tag" 0)" = "0" ]; then
+        log "INFRA: $tag at ${pct}% (threshold ${thresh}%)"
+        notify_all "⚠️ disk pressure: $tag" "$dev at ${pct}% (alert at ${thresh}%). For k3s-ssd: crictl rmi --prune first." high
+        _set "infra_disk_$tag" 1
+      fi
+    elif [ "$(_get "infra_disk_$tag" 0)" = "1" ] && [ "$pct" -lt $((thresh-5)) ]; then
+      _set "infra_disk_$tag" 0
+      notify_all "✅ disk recovered: $tag" "$dev back to ${pct}%." low
+    fi
+  done
+}
+
+# --- deadman ping --------------------------------------------------------------
+# If HEALTHCHECK_PING_URL is set (healthchecks.io or compatible), ping it every
+# tick — the external service alerts when pings stop (watchdog/omv dead).
+deadman_ping() {
+  [ -n "$HEALTHCHECK_PING_URL" ] || return 0
+  curl -fsSm 8 "$HEALTHCHECK_PING_URL" >/dev/null 2>&1 || true
+}
+
 # --- main tick ---------------------------------------------------------------
 main() {
   local fail_count now
   fail_count=$(_get fail_count 0)
   now=$(_now)
+
+  # Extended checks run every tick regardless of main-site state (the main
+  # path below has early returns that must not starve them).
+  check_targets
+  check_worker_errors
+  check_infra
+  deadman_ping
 
   if probe_health; then
     # HEALTHY

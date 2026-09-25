@@ -1,0 +1,27 @@
+name: Install/refresh SafeDeploy watchdog on omv
+
+# Runs the idempotent installer on the omv self-hosted runner (passwordless
+# sudo, k3s access). Re-run after changing infrastructure/omv/safedeploy-*.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install watchdog on omv
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run installer
+        run: sudo bash infrastructure/omv/install-safedeploy-watchdog.sh
+
+      - name: Verify timer + last tick
+        run: |
+          systemctl list-timers safedeploy-watchdog.timer --no-pager
+          echo "--- last watchdog log lines ---"
+          sudo journalctl -t safedeploy-watchdog -n 10 --no-pager || true
