@@ -1,0 +1,115 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//cloudless.gr//Campaign Calendar//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:cloudless.gr marketing
+X-WR-TIMEZONE:Europe/Athens
+BEGIN:VTIMEZONE
+TZID:Europe/Athens
+BEGIN:STANDARD
+DTSTART:19701025T040000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+TZOFFSETFROM:+0300
+TZOFFSETTO:+0200
+TZNAME:EET
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700329T030000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0300
+TZNAME:EEST
+END:DAYLIGHT
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:li-campaign-907100946@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;VALUE=DATE:20260924
+DTEND;VALUE=DATE:20261024
+SUMMARY:LinkedIn Ads — cloudless.gr carousel campaign (ad set 907100946)
+DESCRIPTION:Document/carousel ad: "Data analytics & e-commerce services". Ad account 512642510 (Baltzakis Ad Account).\n\nBudget: €10/day · €70 lifetime cap — promo credit only (€136.75 available). No card charges possible.\n\nLaunched 2026-09-24\, in LinkedIn review (24–48h). Hard end 2026-10-23.\n\nHashtag: #sofiakakkava
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:li-daily-report-907100946@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T100000
+DTEND;TZID=Europe/Athens:20260925T101500
+RRULE:FREQ=DAILY;UNTIL=20261023T235959Z
+SUMMARY:LinkedIn ads daily report → Slack + email
+DESCRIPTION:Automated SocialAuto report for ad set 907100946: spend vs €70 cap\, clicks\, CTR\, CPC\, engagements\, pace projection.\n\nDelivered to Slack (with Pause/Resume buttons) and email (tbaltzakis@cloudless.gr). Stops automatically after 2026-10-23.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-52dce3ab@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T020000
+DTEND;TZID=Europe/Athens:20260925T021500
+SUMMARY:LI post — "Small teams shouldn't spend their week on server s…"
+DESCRIPTION:Scheduled via SocialAuto (existing workflow). LinkedIn company page.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-8153e7da@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T021500
+DTEND;TZID=Europe/Athens:20260925T023000
+SUMMARY:LI post — "Your shop's numbers shouldn't be a mystery" +image
+DESCRIPTION:Playbook slot 1 — LinkedIn 02:00 window (shifted +15min to avoid collision). Analytics dashboards angle. Media attached.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-a68d65de@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T100000
+DTEND;TZID=Europe/Athens:20260925T101500
+SUMMARY:LI post — "Sell online without the setup maze" +image
+DESCRIPTION:Playbook slot 6 — LinkedIn 10:00 window. E-commerce services angle. Media attached.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-50d57aac@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T100000
+DTEND;TZID=Europe/Athens:20260925T101500
+SUMMARY:FB post — "A slow website costs you customers" +image
+DESCRIPTION:Playbook slot 4 — Facebook 10:00 baseline window. Media attached.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-77a0ac06@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T100000
+DTEND;TZID=Europe/Athens:20260925T101500
+SUMMARY:X post — "Your shop's numbers shouldn't be a mystery" +image
+DESCRIPTION:Playbook slot 5 — Twitter/X 10:00 baseline window. Media attached.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-b34e7491@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T100000
+DTEND;TZID=Europe/Athens:20260925T101500
+SUMMARY:Threads post — repurposed LI top post +image
+DESCRIPTION:Playbook slot 2 — Threads morning window. Repurpose of "win customers\, not create work". Media attached.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-19ad41d0@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T120000
+DTEND;TZID=Europe/Athens:20260925T121500
+SUMMARY:IG post — "Save 12 hours a week on server setup" carousel
+DESCRIPTION:Existing scheduled workflow post (Instagram 12:00). Already in SocialAuto.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:post-ea4644b4@cloudless.gr
+DTSTAMP:20260924T200000Z
+DTSTART;TZID=Europe/Athens:20260925T170000
+DTEND;TZID=Europe/Athens:20260925T171500
+SUMMARY:IG carousel — "Simple stats every online store owner should watch" (5 slides)
+DESCRIPTION:Playbook slot 3 — Instagram 17:00 best engagement hour. Branded 5-slide carousel via CF pipeline. #sofiakakkava
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR

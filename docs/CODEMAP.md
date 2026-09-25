@@ -1,6 +1,6 @@
 # Cloudless.gr Application Codemap
 
-Last verified: 2026-09-21. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
+Last verified: 2026-09-25. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
 
 ## 🏗️ **Architecture Overview**
 
@@ -359,6 +359,13 @@ SocialAuto pushes its own first-party data into the datalake — no Postiz neede
 - **Watchdog**: Continuous prod monitor (systemd timer, every 2min)
 - **Auto-rollback**: Triggers at 16min unhealthy (alerts at 6min)
 - **Health checks**: Post-deploy validation with automatic failover
+- **Watchdog extended (2026-09-25)**: per-tick satellite probes for 11
+  services (postiz/espocrm/n8n/grafana/appflowy/ntfy/kuma/webmail/social/
+  pi-origin/postiz-ai-proxy) with optional k3s rollout-restart remediation,
+  Cloudflare worker-exception watcher (GraphQL `workersInvocationsAdaptive`),
+  k3s node NotReady + disk thresholds, optional deadman ping. Install:
+  `install-safedeploy-watchdog.yml` → omv self-hosted runner. See
+  `docs/SAFEDEPLOY-WATCHDOG.md`
 
 ### **Rollback Workflow**
 
