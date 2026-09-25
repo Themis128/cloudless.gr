@@ -114,22 +114,29 @@ Beyond the main site, each 2-min tick also runs:
 
 `WATCH_TARGETS` in the script — `name|url|expect|remediation`:
 
-| Target | URL | Expect |
-|---|---|---|
-| pi-origin | `pi-origin.cloudless.gr/api/health` | 200 |
-| social | `social.cloudless.gr/` | ok (2xx/3xx — Access 302 = up) |
-| postiz | `postiz.cloudless.gr/` | ok |
-| espocrm | `espocrm.cloudless.gr/` | ok |
-| grafana | `grafana.cloudless.gr/api/health` | 200 |
-| n8n | `n8n.cloudless.gr/healthz` | 200 |
-| webmail | `webmail.cloudless.gr/` | ok |
-| postiz-ai-proxy | `…workers.dev/v1/models` | 200 |
+| Target | URL | Expect | Remediation |
+|---|---|---|---|
+| pi-origin | `pi-origin.cloudless.gr/api/health` | 200 | none (same app as main check) |
+| social | `social.cloudless.gr/` | ok (2xx/3xx — Access 302 = up) | none (Docker on dev host — omv can't restart) |
+| postiz | `postiz.cloudless.gr/` | ok | `k3s:postiz:postiz` |
+| espocrm | `espocrm.cloudless.gr/` | ok | `k3s:espocrm:espocrm` |
+| n8n | `n8n.cloudless.gr/healthz` | 200 | `k3s:n8n:n8n` |
+| grafana | `grafana.cloudless.gr/api/health` | 200 | none (helm release name) |
+| appflowy | `appflowy.cloudless.gr/api/health` | 200 | none |
+| ntfy | `ntfy.cloudless.gr/` | ok | `k3s:ntfy:ntfy` |
+| uptime-kuma | `kuma.cloudless.gr/` | ok | `k3s:uptime-kuma:uptime-kuma` |
+| webmail | `webmail.cloudless.gr/` | ok | none (omv-ha, not k3s) |
+| postiz-ai-proxy | `…workers.dev/v1/models` | 200 | none (Cloudflare worker) |
 
 Same incident semantics as the main check: silent for 1–2 failures, one
-alert at 3, recovery alert on heal. `remediation` supports `none`
-(alert-only, the shipped default) or `k3s:<ns>:<deploy>` — a
-`rollout restart` at the 8-failure threshold, same 60-min cooldown.
-Map deploy names with `k3s kubectl get deploy -A` before enabling.
+alert at 3, recovery alert on heal. `k3s:<ns>:<deploy>` remediation runs a
+`rollout restart` at the 8-failure threshold with the same 60-min
+cooldown. Deploy names verified against `infrastructure/*/k8s` manifests.
+
+Relationship to `selfhosted-healthchecks.yml`: that workflow already pings
+healthchecks.io per app every 5 min **from CI runners** — it's external
+detection only. These probes add omv-host-side detection (works when
+CI/GitHub/runner network is down) plus in-place remediation.
 
 ### Worker error watcher
 

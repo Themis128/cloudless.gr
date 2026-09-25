@@ -54,14 +54,20 @@ MIN_RELEASE_AGE=900       # skip rollback if symlink younger than this (seconds)
 #                 or an exact status like "200"
 #   remediation = "none" (alert only) or "k3s:<ns>:<deploy>" → rollout restart
 #                 at ROLLBACK_THRESHOLD consecutive failures
-# To map k3s remediation targets:  k3s kubectl get deploy -A
+# k3s deploy names verified against infrastructure/*/k8s manifests.
+# External coverage note: selfhosted-healthchecks.yml already pings
+# healthchecks.io per app every 5min from CI runners — these probes add
+# omv-side detection (works when CI/GitHub is down) + remediation.
 WATCH_TARGETS=(
   "pi-origin|https://pi-origin.cloudless.gr/api/health|200|none"
   "social|https://social.cloudless.gr/|ok|none"
-  "postiz|https://postiz.cloudless.gr/|ok|none"
-  "espocrm|https://espocrm.cloudless.gr/|ok|none"
+  "postiz|https://postiz.cloudless.gr/|ok|k3s:postiz:postiz"
+  "espocrm|https://espocrm.cloudless.gr/|ok|k3s:espocrm:espocrm"
+  "n8n|https://n8n.cloudless.gr/healthz|200|k3s:n8n:n8n"
   "grafana|https://grafana.cloudless.gr/api/health|200|none"
-  "n8n|https://n8n.cloudless.gr/healthz|200|none"
+  "appflowy|https://appflowy.cloudless.gr/api/health|200|none"
+  "ntfy|https://ntfy.cloudless.gr/|ok|k3s:ntfy:ntfy"
+  "uptime-kuma|https://kuma.cloudless.gr/|ok|k3s:uptime-kuma:uptime-kuma"
   "webmail|https://webmail.cloudless.gr/|ok|none"
   "postiz-ai-proxy|https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models|200|none"
 )
