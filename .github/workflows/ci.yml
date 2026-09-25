@@ -62,6 +62,10 @@ on:
         # LICENSE-only PRs also need required Build/Lint/Type/Unit checks
         # to fire, otherwise branch protection blocks forever.
       - LICENSE
+        # Worker-only PRs (workers/postiz-ai-proxy, pi-origin-proxy, etc.)
+        # also gate the required "Build" check — without this, a
+        # workers-only edit stays BLOCKED forever.
+      - workers/**
 
 concurrency:
   group: ci-${{ github.head_ref }}
