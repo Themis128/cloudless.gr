@@ -198,14 +198,23 @@ export default {
       const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
         `?width=${width}&height=${height}&model=${model}&nologo=true&seed=${seed}`;
 
-      const imgResp = await fetch(imgUrl);
-      if (!imgResp.ok) {
+      let imgBytes: Uint8Array;
+      try {
+        const imgResp = await fetch(imgUrl);
+        if (!imgResp.ok) {
+          return json({
+            error: { message: `Image generation failed: ${imgResp.status}`, type: "server_error" },
+          }, 502);
+        }
+        imgBytes = new Uint8Array(await imgResp.arrayBuffer());
+      } catch (err) {
         return json({
-          error: { message: `Image generation failed: ${imgResp.status}`, type: "server_error" },
+          error: {
+            message: `Image upstream unreachable: ${err instanceof Error ? err.message : String(err)}`,
+            type: "server_error",
+          },
         }, 502);
       }
-
-      const imgBytes = new Uint8Array(await imgResp.arrayBuffer());
       let binary = "";
       for (let i = 0; i < imgBytes.length; i++) {
         binary += String.fromCharCode(imgBytes[i]);
@@ -237,14 +246,24 @@ export default {
         body.model = env.NVIDIA_POSTIZ_MODEL;
       }
 
-      const upstream = await fetch(`${env.NVIDIA_BASE_URL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.NVIDIA_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      let upstream: Response;
+      try {
+        upstream = await fetch(`${env.NVIDIA_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.NVIDIA_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        return json({
+          error: {
+            message: `Upstream unreachable: ${err instanceof Error ? err.message : String(err)}`,
+            type: "server_error",
+          },
+        }, 502);
+      }
 
       if (!upstream.ok) {
         const errorText = await upstream.text();
@@ -269,7 +288,14 @@ export default {
       }
 
       // Non-streaming: parse, strip reasoning_content, return
-      const responseBody = await upstream.json();
+      let responseBody: unknown;
+      try {
+        responseBody = await upstream.json();
+      } catch {
+        return json({
+          error: { message: "Upstream returned invalid JSON", type: "server_error" },
+        }, 502);
+      }
       const cleaned = stripReasoningContent(responseBody);
 
       return new Response(JSON.stringify(cleaned), {
