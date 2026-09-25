@@ -22,9 +22,14 @@ on:
         description: Cloudflare API token (Zone:Read, LB:Edit, DNS:Edit for
           cloudless.gr)
         required: true
+      secret_name:
+        description: GitHub secret name to write (default CLOUDFLARE_API_TOKEN;
+          use CLOUDFLARE_WORKERS_DEPLOY_TOKEN for worker deploys)
+        required: false
+        default: CLOUDFLARE_API_TOKEN
       apply:
         description: Also apply the HA load balancer after storing (true=apply,
-          false=store only)
+          false=store only; LB steps only run for CLOUDFLARE_API_TOKEN)
         type: boolean
         required: false
         default: true
@@ -53,6 +58,7 @@ jobs:
       id: store
       env:
         CF_TOKEN: ${{ github.event.inputs.cloudflare_token }}
+        SECRET_NAME: ${{ github.event.inputs.secret_name }}
           # GITHUB_TOKEN cannot write secrets — need GH_PAT with repo scope.
         GH_TOKEN: ${{ secrets.GH_PAT }}
         GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
@@ -64,20 +70,25 @@ jobs:
           exit 1
         fi
         if [ "$GH_PAT_SET" != "true" ]; then
-          echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write CLOUDFLARE_API_TOKEN."
+          echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write secrets."
           exit 1
         fi
-        if ! printf '%s' "$CF_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN --repo "${{ github.repository }}" --body -; then
-          echo "::error::Failed to store GitHub Actions secret CLOUDFLARE_API_TOKEN"
+        NAME="${SECRET_NAME:-CLOUDFLARE_API_TOKEN}"
+        case "$NAME" in
+          CLOUDFLARE_API_TOKEN|CLOUDFLARE_WORKERS_DEPLOY_TOKEN) ;;
+          *) echo "::error::secret_name must be CLOUDFLARE_API_TOKEN or CLOUDFLARE_WORKERS_DEPLOY_TOKEN"; exit 1 ;;
+        esac
+        if ! printf '%s' "$CF_TOKEN" | gh secret set "$NAME" --repo "${{ github.repository }}" --body -; then
+          echo "::error::Failed to store GitHub Actions secret $NAME"
           exit 1
         fi
-        echo "✓ Token stored as GitHub secret CLOUDFLARE_API_TOKEN"
+        echo "✓ Token stored as GitHub secret $NAME"
         echo "stored=true" >> "$GITHUB_OUTPUT"
 
     - name: Apply Cloudflare HA load balancer
       id: apply
-      if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored
-        == 'true' }}
+      if: ${{ github.event.inputs.apply == 'true' && github.event.inputs.secret_name
+        == 'CLOUDFLARE_API_TOKEN' && steps.store.outputs.stored == 'true' }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
         MODE: apply
@@ -89,8 +100,8 @@ jobs:
 
     - name: Report (store-only mode)
       id: report
-      if: ${{ github.event.inputs.apply != 'true' && steps.store.outputs.stored
-        == 'true' }}
+      if: ${{ github.event.inputs.apply != 'true' && github.event.inputs.secret_name
+        == 'CLOUDFLARE_API_TOKEN' && steps.store.outputs.stored == 'true' }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
         MODE: report
