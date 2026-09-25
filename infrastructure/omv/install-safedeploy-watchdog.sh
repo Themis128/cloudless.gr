@@ -42,6 +42,11 @@ NTFY_TOPIC=$(b64   NTFY_TOPIC)
 NTFY_TOKEN=$(b64   NTFY_TOKEN)
 SLACK_BOT_TOKEN=$(b64 SLACK_BOT_TOKEN)
 RESEND_API_KEY=$(b64  RESEND_API_KEY)
+# Optional: Cloudflare analytics token powers the worker-error watcher.
+# An analytics-read scoped token is enough (workersInvocationsAdaptive).
+CF_API_TOKEN=$(b64   CLOUDFLARE_API_TOKEN)
+CF_ACCOUNT_ID=$(b64  CLOUDFLARE_ACCOUNT_ID)
+HEALTHCHECK_PING_URL=$(b64 HEALTHCHECK_PING_URL)
 
 # Report presence (never values)
 _present() { [ -n "$2" ] && echo "  ✓ $1 (len ${#2})" || echo "  ✗ $1 MISSING"; }
@@ -50,6 +55,8 @@ _present NTFY_TOPIC      "$NTFY_TOPIC"
 _present NTFY_TOKEN      "$NTFY_TOKEN"
 _present SLACK_BOT_TOKEN "$SLACK_BOT_TOKEN"
 _present RESEND_API_KEY  "$RESEND_API_KEY"
+_present CF_API_TOKEN    "$CF_API_TOKEN"
+_present CF_ACCOUNT_ID   "$CF_ACCOUNT_ID"
 
 install -d -m 700 -o root -g root /var/lib/safedeploy-watchdog
 umask 077
@@ -62,6 +69,12 @@ SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN"
 SLACK_CHANNEL="#general"
 RESEND_API_KEY="$RESEND_API_KEY"
 ALERT_EMAIL="tbaltzakis@cloudless.gr"
+# Optional watchdog extensions (leave empty to disable):
+#   CF_API_TOKEN/CF_ACCOUNT_ID → worker-error GraphQL watcher
+#   HEALTHCHECK_PING_URL       → deadman ping (e.g. healthchecks.io)
+CF_API_TOKEN="$CF_API_TOKEN"
+CF_ACCOUNT_ID="$CF_ACCOUNT_ID"
+HEALTHCHECK_PING_URL="$HEALTHCHECK_PING_URL"
 ENV
 chmod 600 /etc/safedeploy-watchdog.env
 chown root:root /etc/safedeploy-watchdog.env
