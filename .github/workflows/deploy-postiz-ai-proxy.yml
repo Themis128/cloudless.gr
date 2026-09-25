@@ -10,6 +10,10 @@ on:
     paths:
       - .github/workflows/deploy-postiz-ai-proxy.yml
       - workers/postiz-ai-proxy/**
+  # Manual escape hatch — needed when the push trigger doesn't fire
+  # or when secrets.CLOUDFLARE_API_TOKEN needs a Workers Scripts:Edit
+  # scope bump first (see ensure-cloudflare-ci-token.yml).
+  workflow_dispatch:
 
 jobs:
   deploy:
