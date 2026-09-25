@@ -25,3 +25,11 @@ jobs:
           systemctl list-timers safedeploy-watchdog.timer --no-pager
           echo "--- last watchdog log lines ---"
           sudo journalctl -t safedeploy-watchdog -n 10 --no-pager || true
+
+      - name: k3s deploy inventory (for remediation mapping)
+        continue-on-error: true
+        run: |
+          echo "=== deployments (ns/name) ==="
+          sudo k3s kubectl get deploy -A --no-headers | awk '{print $1"/"$2}'
+          echo "=== nodes ==="
+          sudo k3s kubectl get nodes --no-headers
