@@ -73,13 +73,20 @@ jobs:
           echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write secrets."
           exit 1
         fi
+        # Preflight: GH_PAT may be expired or a fine-grained PAT without
+        # "Secrets" repo permission — gh secret set then fails with a bare
+        # HTTP 400. Surface the real problem before attempting the write.
+        if ! gh api user --jq .login > /dev/null 2>&1; then
+          echo "::error::GH_PAT is expired or invalid — gh api user failed. Regenerate the PAT (classic with repo scope, or fine-grained with Secrets:write on this repo) and update the GH_PAT secret."
+          exit 1
+        fi
         NAME="${SECRET_NAME:-CLOUDFLARE_API_TOKEN}"
         case "$NAME" in
           CLOUDFLARE_API_TOKEN|CLOUDFLARE_WORKERS_DEPLOY_TOKEN) ;;
           *) echo "::error::secret_name must be CLOUDFLARE_API_TOKEN or CLOUDFLARE_WORKERS_DEPLOY_TOKEN"; exit 1 ;;
         esac
         if ! printf '%s' "$CF_TOKEN" | gh secret set "$NAME" --repo "${{ github.repository }}" --body -; then
-          echo "::error::Failed to store GitHub Actions secret $NAME"
+          echo "::error::Failed to store GitHub Actions secret $NAME. HTTP 400 usually means GH_PAT is a fine-grained PAT without 'Secrets' repository write permission — use a classic PAT with repo scope or grant Secrets:write."
           exit 1
         fi
         echo "✓ Token stored as GitHub secret $NAME"

@@ -89,7 +89,20 @@ jobs:
           cat /tmp/cf-tokens.txt
           if [ "$list_code" -ne 0 ]; then
             cat /tmp/cf-tokens.err || true
-            echo "::error::Cannot list user API tokens (HTTP 403/401). CLOUDFLARE_API_TOKEN lacks User API Tokens Read/Write. Add GitHub secrets CF_EMAIL and CF_GLOBAL_API_KEY from dash.cloudflare.com → My Profile → API Tokens → Global API Key, then re-run this workflow. Do not upgrade to Workers Paid."
+            # Scoped deploy tokens normally lack User API Tokens Read — they
+            # cannot inspect/patch themselves. Fall back to the capability
+            # smoke-test: if every scope CI needs verifies live, there is
+            # nothing to ensure.
+            if [ -n "${CF_GLOBAL_API_KEY:-}" ]; then
+              echo "::error::Cannot list user API tokens even with Global API Key — check CF_EMAIL / CF_GLOBAL_API_KEY secrets."
+              exit 1
+            fi
+            echo "::notice::CLOUDFLARE_API_TOKEN cannot list user tokens (no User API Tokens Read). Verifying effective scopes via capability smoke-test instead — to patch token policies, re-run with cf_email + cf_global_api_key inputs."
+            if bash scripts/cf-token-smoketest.sh; then
+              echo "::notice::All required CI capabilities verified — token already has the scopes deploys need. Skipping ensure-ci."
+              exit 0
+            fi
+            echo "::error::Smoke-test found missing capabilities. Add CF_EMAIL + CF_GLOBAL_API_KEY secrets (dash.cloudflare.com → My Profile → API Tokens → Global API Key) and re-run to patch the token. Do not upgrade to Workers Paid."
             exit 1
           fi
           NAME="$TOKEN_NAME"

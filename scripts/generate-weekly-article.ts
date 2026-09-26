@@ -110,6 +110,60 @@ async function appflowyLogin(): Promise<{ token: string; workspaceId: string; ba
   return { token, workspaceId, base };
 }
 
+// AppFlowy-Cloud 0.17.x has no /search endpoint (it returned 404 every run
+// since mid-Aug). The app-side equivalent walks /workspace/{id}/folder?depth=10
+// and filters client-side — same approach here: documents under the "Blog"
+// folder are the blog posts.
+type FolderNode = {
+  view_id?: string;
+  name?: string;
+  layout?: number;
+  last_edited_time?: string;
+  has_children?: boolean;
+  children?: FolderNode[];
+  view?: FolderNode;
+};
+
+export interface FlatView {
+  view_id: string;
+  name: string;
+  isFolder: boolean;
+  lastEdited: string;
+  inBlogFolder: boolean;
+}
+
+export function flattenFolderViews(
+  node: unknown,
+  inBlog = false,
+  out: FlatView[] = []
+): FlatView[] {
+  if (!node) return out;
+  if (Array.isArray(node)) {
+    for (const child of node) flattenFolderViews(child, inBlog, out);
+    return out;
+  }
+  if (typeof node !== "object") return out;
+  const n = node as FolderNode;
+  const view = n.view ?? n;
+  const isFolder = Boolean(view.has_children) || view.layout === 1;
+  const childInBlog =
+    inBlog || (isFolder && view.name?.trim().toLowerCase() === "blog");
+  if (view.view_id && view.name) {
+    out.push({
+      view_id: view.view_id,
+      name: view.name,
+      isFolder,
+      lastEdited: view.last_edited_time ?? "",
+      inBlogFolder: inBlog,
+    });
+  }
+  if (Array.isArray(view.children))
+    flattenFolderViews(view.children, childInBlog, out);
+  if (n !== view && Array.isArray(n.children))
+    flattenFolderViews(n.children, childInBlog, out);
+  return out;
+}
+
 /**
  * Pull the 12 most-recent blog Document pages from AppFlowy for:
  *   1. computing LRU category
@@ -122,26 +176,30 @@ async function appflowyLogin(): Promise<{ token: string; workspaceId: string; ba
 async function fetchRecentPosts(): Promise<RecentPost[]> {
   const { token, workspaceId, base } = await appflowyLogin();
   const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/search?query=blog&limit=12`,
+    `${base}/api/workspace/${workspaceId}/folder?depth=10`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error(`AppFlowy search failed: ${res.status}`);
-  const data = (await res.json()) as {
-    data: Array<{ view_id: string; name: string; layout: string; created_at: string; last_edited_time: string }>;
-  };
-  return (data.data ?? [])
-    .filter((v) => v.layout === "Document")
-    .slice(0, 12)
-    .map((v) => {
-      const lower = v.name.toLowerCase();
-      const cat = CATEGORIES.find((c) => lower.includes(c.toLowerCase())) ?? "Cloud";
-      return {
-        title: v.name,
-        category: cat as Category,
-        date: v.last_edited_time ?? v.created_at ?? "",
-        slug: slugify(v.name),
-      };
-    });
+  // Fresh workspaces can 404 on /folder (AppFlowy-Cloud#1507) — treat as empty.
+  if (res.status === 404 || res.status === 400) return [];
+  if (!res.ok) throw new Error(`AppFlowy folder list failed: ${res.status}`);
+  const data = (await res.json()) as { data: unknown };
+  const views = flattenFolderViews(data.data);
+  const byId = new Map<string, FlatView>();
+  for (const v of views) byId.set(v.view_id, v);
+  const posts = Array.from(byId.values()).filter(
+    (v) => !v.isFolder && v.inBlogFolder
+  );
+  posts.sort((a, b) => b.lastEdited.localeCompare(a.lastEdited));
+  return posts.slice(0, 12).map((v) => {
+    const lower = v.name.toLowerCase();
+    const cat = CATEGORIES.find((c) => lower.includes(c.toLowerCase())) ?? "Cloud";
+    return {
+      title: v.name,
+      category: cat as Category,
+      date: v.lastEdited,
+      slug: slugify(v.name),
+    };
+  });
 }
 
 /**
