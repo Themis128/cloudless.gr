@@ -591,8 +591,14 @@ export const config = {
      * - offline.html (offline page)
      * - .well-known/ (well-known URLs)
      * - files with extensions: svg, png, jpg, jpeg, gif, webp, ico, css, js, mjs, map, woff, woff2, ttf, eot, otf, html
+     *
+     * `[^?]+\.` (not `[^/]+\.`): the extension check must see past path
+     * separators or subdirectory assets like /icons/icon-192.png still run
+     * the middleware. With a headerless internal request (the /_next/image
+     * optimizer's mock fetch) that means a 308 HTML body instead of the
+     * file — the entire image optimizer 400s "isn't a valid image".
      */
-    String.raw`/((?!api/health|_next/static|_next/image|manifest\.webmanifest|sw\.js|offline\.html|\.well-known|[^/]+\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)`,
+    String.raw`/((?!api/health|_next/static|_next/image|manifest\.webmanifest|sw\.js|offline\.html|\.well-known|[^?]+\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)`,
   ],
 };
 

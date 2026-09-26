@@ -23,6 +23,21 @@ describe("proxy config matcher", () => {
     expect(matcher).toContain("png");
     expect(matcher).toContain("html");
   });
+
+  it("excludes static assets in subdirectories (e.g. /icons/*.png)", () => {
+    // Regression: `[^/]+\.ext` could not see past the `/` separator, so
+    // /icons/icon-192.png ran the middleware. The /_next/image optimizer's
+    // headerless mock request then hit the prod 308 redirect, received an
+    // HTML body and every optimized image 400'd "isn't a valid image".
+    const matcher = config.matcher?.[0] ?? "";
+    const re = new RegExp(matcher);
+    expect(re.test("/icons/icon-192.png")).toBe(false);
+    expect(re.test("/icons/deep/dir/logo.svg")).toBe(false);
+    expect(re.test("/favicon.ico")).toBe(false);
+    expect(re.test("/en")).toBe(true);
+    expect(re.test("/en/pricing")).toBe(true);
+    expect(re.test("/api/users")).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
