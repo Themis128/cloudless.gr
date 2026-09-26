@@ -19,7 +19,7 @@ const DOMAINS = [
   { domain: "seo", sections: ["top_keywords", "freshness"] },
   { domain: "revenue", sections: ["stripe_revenue", "acquisition_funnel", "attribution"] },
   { domain: "crm_funnel", sections: ["espocrm_funnel"] },
-  { domain: "ads", sections: ["linkedin_ads"] },
+  { domain: "ads", sections: ["linkedin_ads", "linkedin_ads_audience", "ads_funnel"] },
   { domain: "ops_errors", sections: ["top_errors"] },
   {
     domain: "executive",
@@ -28,6 +28,7 @@ const DOMAINS = [
       "top_keywords",
       "espocrm_funnel",
       "linkedin_ads",
+      "ads_funnel",
       "top_errors",
       "acquisition_funnel",
       "attribution",
