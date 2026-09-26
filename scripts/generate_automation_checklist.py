@@ -135,12 +135,28 @@ def build(path: str) -> None:
         subject="Free no-code automation checklist for solo founders",
     )
 
-    title = ParagraphStyle("title", fontName="Helvetica-Bold", fontSize=22, textColor=WHITE, leading=27)
+    title = ParagraphStyle(
+        "title", fontName="Helvetica-Bold", fontSize=22, textColor=WHITE, leading=27
+    )
     sub = ParagraphStyle("sub", fontName="Helvetica", fontSize=11, textColor=SLATE_300, leading=15)
-    h = ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=13, textColor=CYAN, leading=17, spaceBefore=14, spaceAfter=6)
-    item_t = ParagraphStyle("item_t", fontName="Helvetica-Bold", fontSize=11, textColor=WHITE, leading=14)
-    item_b = ParagraphStyle("item_b", fontName="Helvetica", fontSize=9.5, textColor=SLATE_300, leading=13)
-    small = ParagraphStyle("small", fontName="Helvetica", fontSize=8.5, textColor=SLATE_500, leading=11)
+    h = ParagraphStyle(
+        "h",
+        fontName="Helvetica-Bold",
+        fontSize=13,
+        textColor=CYAN,
+        leading=17,
+        spaceBefore=14,
+        spaceAfter=6,
+    )
+    item_t = ParagraphStyle(
+        "item_t", fontName="Helvetica-Bold", fontSize=11, textColor=WHITE, leading=14
+    )
+    item_b = ParagraphStyle(
+        "item_b", fontName="Helvetica", fontSize=9.5, textColor=SLATE_300, leading=13
+    )
+    small = ParagraphStyle(
+        "small", fontName="Helvetica", fontSize=8.5, textColor=SLATE_500, leading=11
+    )
 
     def header(canvas, _doc):
         canvas.saveState()
@@ -150,7 +166,11 @@ def build(path: str) -> None:
         canvas.rect(0, A4[1] - 4 * mm, A4[0], 4 * mm, fill=1, stroke=0)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(SLATE_500)
-        canvas.drawCentredString(A4[0] / 2, 9 * mm, f"cloudless.gr/links — free tools, zero fluff. Page {canvas.getPageNumber()}")
+        canvas.drawCentredString(
+            A4[0] / 2,
+            9 * mm,
+            f"cloudless.gr/links — free tools, zero fluff. Page {canvas.getPageNumber()}",
+        )
         canvas.restoreState()
 
     story = [
@@ -168,7 +188,11 @@ def build(path: str) -> None:
 
     for i, (name, what, how, saved) in enumerate(CHECKLIST, 1):
         row = Table(
-            [[para(f"{i}. {name}", item_t)], [para(what, item_b)], [para(f"<b>Stack:</b> {how} &nbsp;·&nbsp; <b>Saves:</b> {saved}", small)]],
+            [
+                [para(f"{i}. {name}", item_t)],
+                [para(what, item_b)],
+                [para(f"<b>Stack:</b> {how} &nbsp;·&nbsp; <b>Saves:</b> {saved}", small)],
+            ],
             colWidths=[174 * mm],
         )
         row.setStyle(
@@ -201,7 +225,10 @@ def build(path: str) -> None:
             small,
         ),
         Spacer(1, 6 * mm),
-        para("Want the workflows built for you? <b>cloudless.gr</b> — managed cloud, automation, and AI marketing systems for startups and SMBs.", sub),
+        para(
+            "Want the workflows built for you? <b>cloudless.gr</b> — managed cloud, automation, and AI marketing systems for startups and SMBs.",
+            sub,
+        ),
     ]
 
     doc.build(story, onFirstPage=header, onLaterPages=header)
