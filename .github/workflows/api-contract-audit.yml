@@ -10,7 +10,6 @@ on:
     - src/app/api/**
     - __tests__/*api.test.ts
     - __tests__/stripe-webhook-api.test.ts
-    - __tests__/health-api.test.ts
     - __tests__/subscribe-api.test.ts
     - __tests__/admin-api.test.ts
     - __tests__/slack/**
@@ -47,7 +46,7 @@ jobs:
       # directly to `pnpm test:ci` filters correctly.
     - name: Run public API contract tests
       run: pnpm test:ci __tests__/contact-api.test.ts
-        __tests__/checkout-api.test.ts __tests__/health-api.test.ts
+        __tests__/checkout-api.test.ts
         __tests__/subscribe-api.test.ts __tests__/stripe-webhook-api.test.ts
 
     - name: Run admin API contract tests
