@@ -43,6 +43,7 @@ function redirectUnprefixedToDefaultLocale(
   if (
     pathname.startsWith("/api/") ||
     pathname.startsWith("/portal") ||
+    pathname.startsWith("/links") ||
     pathname.startsWith("/_next")
   ) {
     return null;
