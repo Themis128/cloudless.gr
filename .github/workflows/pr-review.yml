@@ -56,7 +56,7 @@ jobs:
       run: pnpm install --frozen-lockfile
 
     - name: Install Anthropic SDK (CI-only dep for review script)
-      run: pnpm add -D @anthropic-ai/sdk --no-lockfile
+      run: pnpm add -Dw @anthropic-ai/sdk --no-lockfile
 
     - name: Read Anthropic API key from repository secrets
       run: |

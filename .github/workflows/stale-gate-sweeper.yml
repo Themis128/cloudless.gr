@@ -41,7 +41,7 @@ jobs:
         cache: pnpm
 
     - name: Install Anthropic SDK
-      run: pnpm add -D @anthropic-ai/sdk --no-lockfile
+      run: pnpm add -Dw @anthropic-ai/sdk --no-lockfile
 
     - name: Read ANTHROPIC_API_KEY from repository secrets (no AWS)
       id: ssm
