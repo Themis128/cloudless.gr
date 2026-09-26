@@ -142,13 +142,35 @@ CI/GitHub/runner network is down) plus in-place remediation.
 
 Every 5th tick (~10 min) queries Cloudflare GraphQL
 `workersInvocationsAdaptive` for invocation **exceptions** in the last
-30 min across all scripts. Any errors → one alert per incident listing
-`script=count`; clears when the window goes quiet. Needs `CF_API_TOKEN` +
-`CF_ACCOUNT_ID` in the env file (analytics-read scope is enough; pulled
-from `cloudless-secrets` `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` at
-install — silently skipped if absent). This catches exception drift that
-HTTP health checks can't — e.g. the postiz-ai-proxy 54-errors/7d drift
-found 2026-09-25.
+30 min across all scripts. A script only counts toward an alert when its
+errors reach `WORKER_ERROR_THRESHOLD` (3) — single stream-abort blips
+(`scriptThrewException=1`, client disconnects mid-SSE) are noise and stay
+below the line. One alert per incident listing `script=count`; clears
+when the window goes quiet.
+
+On alert the watchdog **auto-fetches the exception text** via Workers
+Observability (`workers/observability/telemetry/query`) and embeds the top
+messages in the notification — no manual `wrangler tail` step. Requires
+Workers Logs enabled on the script (`observability.enabled = true` in
+wrangler config, set for postiz-ai-proxy); degrades to the plain count
+when logs aren't collected.
+
+**Auto-rollback** (deploy-correlated incidents only): scripts in
+`WORKER_ROLLBACK_SCRIPTS` (default `postiz-ai-proxy`) that keep exceeding
+the threshold for `WORKER_ROLLBACK_AFTER` (2) consecutive checks get
+rolled back to the previous deployment's version via the deployments API
+(`POST …/workers/scripts/{name}/deployments`, previous version pinned to
+100%). Safeguards mirror the app rollback: 60-min cooldown, skip deploys
+<15 min old (deploy-verify window) and >2 h old (errors not
+deploy-correlated — those stay alert-only), needs ≥2 deployments. Posts
+its own "rolled back"/"rollback failed" alert.
+
+Needs `CF_API_TOKEN` + `CF_ACCOUNT_ID` in the env file — pulled from
+`cloudless-secrets` at install; the cloudless build token carries
+Analytics Read + Workers Observability Read + Workers Scripts Write.
+Silently skipped if absent. This catches exception drift that HTTP health
+checks can't — e.g. the postiz-ai-proxy 54-errors/7d drift found
+2026-09-25.
 
 ### Infra checks
 

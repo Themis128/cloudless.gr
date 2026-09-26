@@ -27,8 +27,11 @@
 #                               pi-origin/postiz-ai-proxy (alert-only; optional
 #                               `k3s:<ns>:<deploy>` remediation via rollout restart)
 #   • worker-error watcher    — Cloudflare GraphQL workersInvocationsAdaptive
-#                               delta; catches exception drift a 200-health check
-#                               can't (e.g. the postiz-ai-proxy 54-errors/7d case)
+#                               per-script errors >= WORKER_ERROR_THRESHOLD;
+#                               alert embeds the exception text from Workers
+#                               Observability, and allowlisted scripts
+#                               auto-rollback to the previous deployment
+#                               when errors persist on a fresh deploy
 #   • infra checks            — k3s node NotReady, k3s SSD >85%, data SSD >90%
 #   • deadman ping            — optional healthchecks.io URL pinged each tick so
 #                               a dead watchdog/omv host still alerts externally
@@ -71,9 +74,18 @@ WATCH_TARGETS=(
   "webmail|https://webmail.cloudless.gr/|ok|none"
   "postiz-ai-proxy|https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models|200|none"
 )
-WORKER_ERROR_THRESHOLD=3    # errors in the window below → alert
+WORKER_ERROR_THRESHOLD=3    # per-script errors in the window below → alert
 WORKER_ERROR_WINDOW_MIN=30  # GraphQL lookback window
 WORKER_CHECK_EVERY=5        # run the GraphQL check every Nth tick (~10 min)
+# Worker auto-rollback (mirrors the app rollback safeguards):
+# only scripts in the allowlist, only while errors stay >= threshold for
+# WORKER_ROLLBACK_AFTER consecutive checks, and only when the current
+# deployment is fresh (deploy-age between MIN and MAX) — older deploys'
+# errors aren't deploy-correlated, so those stay alert-only.
+WORKER_ROLLBACK_SCRIPTS="postiz-ai-proxy"
+WORKER_ROLLBACK_AFTER=2     # consecutive error checks before rollback
+WORKER_ROLLBACK_MIN_AGE=900 # skip rollback for deploys <15min old (verify window)
+WORKER_ROLLBACK_MAX_AGE=7200 # skip rollback for deploys >2h old (not deploy-correlated)
 DISK_K3S_PCT=85             # alert when the k3s SSD (sda1) exceeds this
 DISK_DATA_PCT=90            # alert when the data SSD (sdb1) exceeds this
 
@@ -221,41 +233,184 @@ check_targets() {
 
 # --- worker error watcher ----------------------------------------------------
 # Cloudflare GraphQL workersInvocationsAdaptive — count invocation exceptions
-# across all scripts in the last WORKER_ERROR_WINDOW_MIN. Fires once per
-# incident, clears when the window goes quiet. Needs CF_API_TOKEN+CF_ACCOUNT_ID
-# (analytics-read token suffices); silently skips when unconfigured.
+# across all scripts in the last WORKER_ERROR_WINDOW_MIN. A script only counts
+# toward an alert when its errors reach WORKER_ERROR_THRESHOLD — single
+# stream-abort blips (clientDisconnected mid-SSE, upstream abort) show up as
+# scriptThrewException=1 and are noise, not incidents.
+#
+# When an alert fires the watchdog auto-fetches the exception text from
+# Workers Observability (workers/observability/telemetry/query) and embeds it
+# in the notification — no manual `wrangler tail` step. Requires Workers Logs
+# enabled on the script (wrangler `observability.enabled = true`); degrades
+# to the plain count when logs aren't collected yet.
+#
+# Auto-rollback: scripts in WORKER_ROLLBACK_SCRIPTS that keep exceeding the
+# threshold for WORKER_ROLLBACK_AFTER consecutive checks get rolled back to
+# the previous deployment's version — but only when the current deployment
+# is fresh (errors on a fresh deploy are deploy-correlated). Same cooldown
+# and "don't thrash a just-deployed version" safeguards as the app rollback.
 check_worker_errors() {
   [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ] || return 0
   local tick; tick=$(( $(_get tick_count 0) + 1 )); _set tick_count "$tick"
   [ $((tick % WORKER_CHECK_EVERY)) -eq 0 ] || return 0
 
-  local since now_iso resp errs
+  local since now_iso resp err_json
   since=$(date -u -d "-${WORKER_ERROR_WINDOW_MIN} min" +%Y-%m-%dT%H:%M:%SZ)
   now_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   resp=$(curl -fsSm 15 -X POST https://api.cloudflare.com/client/v4/graphql \
     -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
     -d "{\"query\":\"query(\$a:String!,\$s:Time!,\$e:Time!){viewer{accounts(filter:{accountTag:\$a}){workersInvocationsAdaptive(limit:200,filter:{datetime_geq:\$s,datetime_leq:\$e}){sum{errors}dimensions{scriptName}}}}}\",\"variables\":{\"a\":\"$CF_ACCOUNT_ID\",\"s\":\"$since\",\"e\":\"$now_iso\"}}" 2>/dev/null) || return 0
 
-  errs=$(printf '%s' "$resp" | python3 -c "
+  # Per-script error counts → "script=count" lines, split into over-threshold
+  # (actionable) and under-threshold (logged for context only).
+  err_json=$(printf '%s' "$resp" | python3 -c "
 import json,sys
 try:
   rows=json.load(sys.stdin)['data']['viewer']['accounts'][0]['workersInvocationsAdaptive']
 except Exception:
   sys.exit(0)
-bad={r['dimensions']['scriptName']:r['sum']['errors'] for r in rows if r['sum']['errors']}
-if bad: print('; '.join(f'{k}={v}' for k,v in sorted(bad.items(), key=lambda x:-x[1])))" 2>/dev/null)
+for r in rows:
+    s=r['dimensions']['scriptName']; e=r['sum']['errors']
+    if e: print(f'{s} {e}')" 2>/dev/null)
+
+  local over="" under="" name count
+  while read -r name count; do
+    [ -n "$name" ] || continue
+    if [ "$count" -ge "$WORKER_ERROR_THRESHOLD" ]; then over+="$name=$count "; else under+="$name=$count "; fi
+  done <<<"$err_json"
+
+  # Per-script sustained-error counters → drive auto-rollback eligibility.
+  # Counters only accumulate on CONSECUTIVE over-threshold windows: a script
+  # absent from err_json this window gets its counter reset too.
+  local sustained name count wl
+  for wl in $WORKER_ROLLBACK_SCRIPTS; do
+    case "$err_json" in *"$wl "*) ;; *) _set "werr_count_$wl" 0 ;; esac
+  done
+  while read -r name count; do
+    [ -n "$name" ] || continue
+    if [ "$count" -ge "$WORKER_ERROR_THRESHOLD" ]; then
+      sustained=$(( $(_get "werr_count_$name" 0) + 1 )); _set "werr_count_$name" "$sustained"
+      case " $WORKER_ROLLBACK_SCRIPTS " in
+        *" $name "*) [ "$sustained" -ge "$WORKER_ROLLBACK_AFTER" ] && worker_auto_rollback "$name" ;;
+      esac
+    else
+      _set "werr_count_$name" 0
+    fi
+  done <<<"$err_json"
 
   local prev; prev=$(_get worker_alert_active 0)
-  if [ -n "$errs" ]; then
+  if [ -n "$over" ]; then
     if [ "$prev" = "0" ]; then
-      log "WORKER ERRORS: $errs"
-      notify_all "⚠️ worker exceptions" "Cloudflare worker errors in last ${WORKER_ERROR_WINDOW_MIN}min: $errs. Check wrangler tail / recent deploys." high
+      log "WORKER ERRORS over threshold: $over (below: ${under:-none})"
+      local details; details=$(worker_error_details "$over")
+      local body="Cloudflare worker errors in last ${WORKER_ERROR_WINDOW_MIN}min (≥${WORKER_ERROR_THRESHOLD}): $over"
+      [ -n "$under" ] && body+=$'\n'"Below threshold: $under"
+      [ -n "$details" ] && body+=$'\n\n'"Latest exceptions:"$'\n'"$details"
+      [ -z "$details" ] && body+=$'\n'"Check wrangler tail / recent deploys."
+      notify_all "⚠️ worker exceptions" "$body" high
       _set worker_alert_active 1
     fi
   elif [ "$prev" = "1" ]; then
     log "WORKER ERRORS cleared"
-    notify_all "✅ worker errors cleared" "No worker exceptions in the last ${WORKER_ERROR_WINDOW_MIN}min." low
+    notify_all "✅ worker errors cleared" "No worker exceptions ≥${WORKER_ERROR_THRESHOLD} in the last ${WORKER_ERROR_WINDOW_MIN}min.${under:+ Under threshold: $under}" low
     _set worker_alert_active 0
+  fi
+}
+
+# Fetch the most recent exception texts for the errored scripts via Workers
+# Observability (workers/observability/telemetry/query, view=events).
+# Arg: space-separated "script=N" tokens. Queries per script with an `eq`
+# filter (the telemetry filter grammar doesn't document `in`), merges
+# results, prints up to 3 "script: message" lines; empty when Workers Logs
+# isn't enabled or no events match.
+worker_error_details() {
+  local since_ms now_ms; now_ms=$(( $(date +%s) * 1000 )); since_ms=$(( now_ms - WORKER_ERROR_WINDOW_MIN * 60000 ))
+  local tok script
+  for tok in $1; do
+    script="${tok%%=*}"
+    curl -fsSm 15 -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/observability/telemetry/query" \
+      -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
+      -d "{\"queryId\":\"adhoc\",\"timeframe\":{\"from\":$since_ms,\"to\":$now_ms},\"view\":\"events\",\"parameters\":{\"filters\":[{\"key\":\"\$metadata.service\",\"operation\":\"eq\",\"type\":\"string\",\"value\":\"$script\"}],\"limit\":20}}" 2>/dev/null
+    echo ""
+  done | python3 -c "
+import json,sys
+evs=[]
+for line in sys.stdin:
+    line=line.strip()
+    if not line: continue
+    try:
+        evs += (json.loads(line).get('result',{}).get('events',{}) or {}).get('events',[]) or []
+    except Exception:
+        continue
+out=[]
+for e in evs:
+    w=e.get('\$workers') or e.get('\$cloudflare',{}).get('\$workers') or {}
+    outcome=w.get('outcome','')
+    excs=e.get('exceptions') or w.get('exceptions') or []
+    if outcome=='success' and not excs:
+        continue
+    msg=''
+    if excs and isinstance(excs,list):
+        msg=str(excs[0].get('message') or excs[0].get('name') or '')
+    if not msg:
+        logs=e.get('logs') or []
+        for l in reversed(logs):
+            if l.get('level') in ('error','fatal'):
+                msg=str(l.get('message') or ''); break
+    if not msg: msg=str(w.get('eventMessage') or outcome or 'exception')
+    script=w.get('scriptName') or e.get('\$metadata',{}).get('service') or '?'
+    out.append(f'{script}: {msg[:160]}')
+    if len(out)>=3: break
+print('\n'.join(out))" 2>/dev/null
+}
+
+# Roll an allowlisted worker back to the previous deployment's version.
+# Guards mirror do_rollback: cooldown, no <15min deploys, no >2h deploys,
+# need >=2 deployments. Posts its own alert on success/failure.
+worker_auto_rollback() {
+  local script="$1" now; now=$(_now)
+  local last; last=$(_get "worker_rb_ts_$script" 0)
+  if [ "$last" != "0" ] && [ $((now - last)) -lt "$ROLLBACK_COOLDOWN" ]; then
+    log "SKIP worker rollback $script: cooldown ($(( (ROLLBACK_COOLDOWN - (now - last))/60 ))min left)"
+    return 0
+  fi
+
+  local api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$script"
+  local deploys
+  deploys=$(curl -fsSm 15 "$api/deployments" -H "Authorization: Bearer $CF_API_TOKEN" 2>/dev/null) || return 0
+
+  local prev_vid cur_age
+  read -r prev_vid cur_age <<<"$(printf '%s' "$deploys" | python3 -c "
+import json,sys,datetime
+ds=(json.load(sys.stdin).get('result') or {}).get('deployments') or []
+ds=[d for d in ds if d.get('versions') and d['versions'][0].get('percentage')==100]
+ds.sort(key=lambda d:d.get('created_on',''), reverse=True)
+if len(ds)<2: sys.exit(0)
+def age(d):
+    ts=d['created_on'].replace('Z','+00:00')
+    return int(datetime.datetime.now(datetime.timezone.utc).timestamp()-datetime.datetime.fromisoformat(ts).timestamp())
+print(ds[1]['versions'][0]['version_id'], age(ds[0]))" 2>/dev/null)"
+  [ -n "$prev_vid" ] || { log "SKIP worker rollback $script: <2 deployments"; return 0; }
+
+  if [ "${cur_age:-0}" -lt "$WORKER_ROLLBACK_MIN_AGE" ]; then
+    log "SKIP worker rollback $script: current deploy age=${cur_age}s < ${WORKER_ROLLBACK_MIN_AGE}s"
+    return 0
+  fi
+  if [ "${cur_age:-0}" -gt "$WORKER_ROLLBACK_MAX_AGE" ]; then
+    log "SKIP worker rollback $script: deploy age=${cur_age}s > ${WORKER_ROLLBACK_MAX_AGE}s — errors not deploy-correlated"
+    return 0
+  fi
+
+  log "WORKER ROLLBACK: $script → version $prev_vid (deploy age ${cur_age}s)"
+  local out
+  out=$(curl -fsSm 15 -X POST "$api/deployments" \
+    -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
+    -d "{\"strategy\":\"percentage\",\"versions\":[{\"version_id\":\"$prev_vid\",\"percentage\":100}],\"annotations\":{\"workers/message\":\"safedeploy-watchdog auto-rollback after sustained errors\"}}" 2>&1)
+  if [ $? -eq 0 ]; then
+    _set "worker_rb_ts_$script" "$now"; _set "werr_count_$script" 0
+    notify_all "🔁 $script auto-rolled-back" "Pinned previous version ${prev_vid:0:8} after ≥${WORKER_ROLLBACK_AFTER} checks ≥${WORKER_ERROR_THRESHOLD} errors/${WORKER_ERROR_WINDOW_MIN}min." high
+  else
+    notify_all "🚨 $script rollback FAILED" "Auto-rollback to ${prev_vid:0:8} failed: ${out:0:200}" urgent
   fi
 }
 
