@@ -85,17 +85,68 @@ interface ApprovedPost {
 // AppFlowy pages don't have typed "Status" properties.
 // Blog posts pending review are all Document pages under the "Blog" workspace folder.
 // The name prefix "[Review]" marks posts ready for newsletter publication.
+// AppFlowy-Cloud 0.17.x has no /search endpoint (it returned 404 every run
+// since mid-Aug). The app-side equivalent walks /workspace/{id}/folder?depth=10
+// and filters names client-side — same approach here.
+type FolderNode = {
+  view_id?: string;
+  name?: string;
+  layout?: number;
+  has_children?: boolean;
+  children?: FolderNode[];
+  view?: FolderNode;
+};
+
+interface FlatView {
+  view_id: string;
+  name: string;
+  isFolder: boolean;
+}
+
+function flattenFolderViews(node: unknown, out: FlatView[] = []): FlatView[] {
+  if (!node) return out;
+  if (Array.isArray(node)) {
+    for (const child of node) flattenFolderViews(child, out);
+    return out;
+  }
+  if (typeof node !== "object") return out;
+  const n = node as FolderNode;
+  const view = n.view ?? n;
+  if (view.view_id && view.name) {
+    out.push({
+      view_id: view.view_id,
+      name: view.name,
+      isFolder: Boolean(view.has_children) || view.layout === 1,
+    });
+  }
+  if (Array.isArray(view.children)) flattenFolderViews(view.children, out);
+  if (n !== view && Array.isArray(n.children)) flattenFolderViews(n.children, out);
+  return out;
+}
+
+async function listAllViews(
+  base: string,
+  token: string,
+  workspaceId: string
+): Promise<FlatView[]> {
+  const res = await fetch(`${base}/api/workspace/${workspaceId}/folder?depth=10`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  // Fresh workspaces can 404 on /folder (AppFlowy-Cloud#1507) — treat as empty.
+  if (res.status === 404 || res.status === 400) return [];
+  if (!res.ok) throw new Error(`AppFlowy folder list failed: ${res.status}`);
+  const data = (await res.json()) as { data: unknown };
+  const byId = new Map<string, FlatView>();
+  for (const v of flattenFolderViews(data.data)) byId.set(v.view_id, v);
+  return Array.from(byId.values());
+}
+
 async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
   const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
   const { token, workspaceId } = await appflowyLogin();
-  const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/search?query=Review&limit=50`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!res.ok) throw new Error(`AppFlowy search failed: ${res.status}`);
-  const data = (await res.json()) as { data: Array<{ view_id: string; name: string; layout: string }> };
-  return (data.data ?? [])
-    .filter((v) => v.layout === "Document" && v.name.startsWith("[Review]"))
+  const views = await listAllViews(base, token, workspaceId);
+  return views
+    .filter((v) => !v.isFolder && v.name.startsWith("[Review]"))
     .map((v) => {
       const title = v.name.replace(/^\[Review\]\s*/, "").trim();
       return {
@@ -119,14 +170,11 @@ async function fetchAllBlocks(_pageId: string): Promise<NotionBlock[]> {
 async function markPublished(pageId: string, _today: string): Promise<void> {
   const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
   const { token, workspaceId } = await appflowyLogin();
-  // Fetch current name to strip the [Review] prefix
-  const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/folder?depth=1`,
-    { headers: { Authorization: `Bearer ${token}` } }
+  // Fetch current name to strip the [Review] prefix — walk the full tree;
+  // blog pages sit nested under the Blog folder, deeper than depth=1 reaches.
+  const view = (await listAllViews(base, token, workspaceId)).find(
+    (v) => v.view_id === pageId
   );
-  if (!res.ok) return; // best-effort; don't block the send
-  const data = (await res.json()) as { data: { views?: Array<{ view_id: string; name: string }> } };
-  const view = (data.data?.views ?? []).find((v) => v.view_id === pageId);
   if (!view) return;
   const newName = view.name.replace(/^\[Review\]\s*/, "").trim();
   await fetch(`${base}/api/workspace/${workspaceId}/page-view`, {
