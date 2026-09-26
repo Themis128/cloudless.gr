@@ -71,6 +71,7 @@ export default function LinksPage() {
           height={72}
           className="rounded-2xl border border-slate-800"
           priority
+          unoptimized
         />
         <h1 className="mt-5 font-sans text-2xl font-semibold tracking-tight text-white">
           cloudless.gr

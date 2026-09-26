@@ -7,5 +7,18 @@
  *
  * When upgrading to Next.js 16, delete this file — `proxy.ts` is canonical
  * and Next.js 16 forbids both files coexisting.
+ *
+ * IMPORTANT: `config` must be defined HERE as a plain literal. Next's
+ * static matcher analysis cannot resolve a re-exported config
+ * (`export { config } from "@/proxy"`) nor a `String.raw` tagged template —
+ * it silently falls back to `/:path*`, running the middleware on every
+ * request including `/_next/image` and breaking the image optimizer.
+ * Keep this string identical to `config.matcher` in `src/proxy.ts`.
  */
-export { proxy as default, config } from "@/proxy";
+export { proxy as default } from "@/proxy";
+
+export const config = {
+  matcher: [
+    "/((?!api/health|_next/static|_next/image|manifest\\.webmanifest|sw\\.js|offline\\.html|\\.well-known|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)",
+  ],
+};
