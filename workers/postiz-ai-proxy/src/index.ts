@@ -139,8 +139,39 @@ function stripReasoningFromStream(readable: ReadableStream<Uint8Array>): Readabl
   });
 }
 
+/**
+ * Base64-encode bytes without the O(n²) string-concat loop — a multi-MB
+ * image encoded char-by-char exceeds the free CPU limit and throws an
+ * uncaught exception (shows up as scriptThrewException).
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    try {
+      return await handleRequest(request, env);
+    } catch (err) {
+      // Nothing may escape as an unhandled exception — the watchdog counts
+      // scriptThrewException, so always fail as a JSON 500 instead.
+      console.error("unhandled fetch error:", err);
+      return json({
+        error: {
+          message: `internal_error: ${err instanceof Error ? err.message : String(err)}`,
+          type: "server_error",
+        },
+      }, 500);
+    }
+  },
+};
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -215,11 +246,7 @@ export default {
           },
         }, 502);
       }
-      let binary = "";
-      for (let i = 0; i < imgBytes.length; i++) {
-        binary += String.fromCharCode(imgBytes[i]);
-      }
-      const b64 = btoa(binary);
+      const b64 = bytesToBase64(imgBytes);
 
       return json({
         created: Math.floor(Date.now() / 1000),
@@ -305,5 +332,4 @@ export default {
     }
 
     return json({ error: { message: "not_found", type: "invalid_request_error" } }, 404);
-  },
-};
+}
