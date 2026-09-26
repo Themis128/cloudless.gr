@@ -403,10 +403,9 @@ print(ds[1]['versions'][0]['version_id'], age(ds[0]))" 2>/dev/null)"
 
   log "WORKER ROLLBACK: $script → version $prev_vid (deploy age ${cur_age}s)"
   local out
-  out=$(curl -fsSm 15 -X POST "$api/deployments" \
-    -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
-    -d "{\"strategy\":\"percentage\",\"versions\":[{\"version_id\":\"$prev_vid\",\"percentage\":100}],\"annotations\":{\"workers/message\":\"safedeploy-watchdog auto-rollback after sustained errors\"}}" 2>&1)
-  if [ $? -eq 0 ]; then
+  if out=$(curl -fsSm 15 -X POST "$api/deployments" \
+      -H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json' \
+      -d "{\"strategy\":\"percentage\",\"versions\":[{\"version_id\":\"$prev_vid\",\"percentage\":100}],\"annotations\":{\"workers/message\":\"safedeploy-watchdog auto-rollback after sustained errors\"}}" 2>&1); then
     _set "worker_rb_ts_$script" "$now"; _set "werr_count_$script" 0
     notify_all "🔁 $script auto-rolled-back" "Pinned previous version ${prev_vid:0:8} after ≥${WORKER_ROLLBACK_AFTER} checks ≥${WORKER_ERROR_THRESHOLD} errors/${WORKER_ERROR_WINDOW_MIN}min." high
   else
