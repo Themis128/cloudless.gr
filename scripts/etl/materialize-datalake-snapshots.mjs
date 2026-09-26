@@ -256,6 +256,7 @@ function espocrmFunnel(contacts, opportunities) {
 	const opps = opportunities || [];
 	const bySource = new Map();
 	for (const c of contacts) {
+		if (String(c.contact_id ?? "") === "__placeholder__") continue;
 		const lead = String(c.lead_source ?? c.source ?? "(none)");
 		const cur = bySource.get(lead) || {
 			lifecycle_stage: "contact",
@@ -268,6 +269,7 @@ function espocrmFunnel(contacts, opportunities) {
 		bySource.set(lead, cur);
 	}
 	for (const o of opps) {
+		if (String(o.opportunity_id ?? "") === "__placeholder__") continue;
 		const stage = String(o.stage ?? o.status ?? "");
 		if (!/closed\s*won/i.test(stage) && stage !== "Closed Won") continue;
 		const lead = String(o.lead_source ?? "(none)");
@@ -292,7 +294,10 @@ async function putJson(key, payload) {
 }
 
 function stripeRevenue(rows) {
-	const paid = rows.filter((r) => String(r.status) === "paid");
+	const isTest = (r) =>
+		/^cs_test_|^in_test_|^sub_test_/i.test(String(r.stripe_id ?? r.transaction_id ?? "")) ||
+		/@example\.(com|invalid)$/i.test(String(r.email ?? ""));
+	const paid = rows.filter((r) => String(r.status) === "paid" && !isTest(r));
 	const totalCents = paid.reduce((acc, r) => acc + (Number(r.amount_cents) || 0), 0);
 	const byType = new Map();
 	for (const r of paid) {

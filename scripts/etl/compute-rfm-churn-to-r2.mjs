@@ -73,8 +73,9 @@ function aggregate(transactions) {
 	const byEmail = new Map();
 	for (const t of transactions) {
 		if (t.status !== "paid") continue;
+		if (/^cs_test_|^in_test_|^sub_test_/i.test(String(t.stripe_id ?? t.transaction_id ?? ""))) continue;
 		const email = (t.email || "").toString().toLowerCase().trim();
-		if (!email) continue;
+		if (!email || /@example\.(com|invalid)$/.test(email)) continue;
 		const paidAt = t.paid_at || t.created_at;
 		if (!paidAt) continue;
 		const ts = Date.parse(paidAt);

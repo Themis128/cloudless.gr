@@ -34,6 +34,7 @@ const schema = new ParquetSchema({
 async function fetchAllCheckoutSessions() {
 	const rows = [];
 	for await (const session of stripe.checkout.sessions.list({ limit: 100, expand: ["data.line_items"] })) {
+		if (!session.livemode) continue;
 		const li = session.line_items?.data?.[0];
 		rows.push({
 			transaction_id: session.id,
@@ -58,6 +59,7 @@ async function fetchAllCheckoutSessions() {
 async function fetchAllInvoices() {
 	const rows = [];
 	for await (const inv of stripe.invoices.list({ limit: 100 })) {
+		if (!inv.livemode) continue;
 		rows.push({
 			transaction_id: inv.id,
 			email: inv.customer_email || null,
@@ -81,6 +83,7 @@ async function fetchAllInvoices() {
 async function fetchAllSubscriptions() {
 	const rows = [];
 	for await (const sub of stripe.subscriptions.list({ limit: 100 })) {
+		if (!sub.livemode) continue;
 		const item = sub.items?.data?.[0];
 		rows.push({
 			transaction_id: sub.id,
