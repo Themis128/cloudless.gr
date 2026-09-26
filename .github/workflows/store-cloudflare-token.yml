@@ -85,8 +85,17 @@ jobs:
           CLOUDFLARE_API_TOKEN|CLOUDFLARE_WORKERS_DEPLOY_TOKEN) ;;
           *) echo "::error::secret_name must be CLOUDFLARE_API_TOKEN or CLOUDFLARE_WORKERS_DEPLOY_TOKEN"; exit 1 ;;
         esac
+        # Repo cap: GitHub allows max 100 Actions secrets. Updating an existing
+        # name is fine, but creating a NEW secret at the cap fails with a bare
+        # HTTP 400 — check headroom before blaming the PAT.
+        TOTAL=$(gh api "repos/${{ github.repository }}/actions/secrets" --jq '.total_count')
+        EXISTS=$(gh api "repos/${{ github.repository }}/actions/secrets?per_page=100" --jq --arg n "$NAME" '[.secrets[].name] | index($n) != null')
+        if [ "$TOTAL" -ge 100 ] && [ "$EXISTS" != "true" ]; then
+          echo "::error::Repo is at the 100-secret cap and $NAME does not exist yet. Delete an unused secret first (repo Settings → Secrets and variables → Actions), then re-run."
+          exit 1
+        fi
         if ! printf '%s' "$CF_TOKEN" | gh secret set "$NAME" --repo "${{ github.repository }}" --body -; then
-          echo "::error::Failed to store GitHub Actions secret $NAME. HTTP 400 usually means GH_PAT is a fine-grained PAT without 'Secrets' repository write permission — use a classic PAT with repo scope or grant Secrets:write."
+          echo "::error::Failed to store GitHub Actions secret $NAME. HTTP 400 with headroom below the cap usually means GH_PAT lacks Secrets write permission — use a classic PAT with repo scope."
           exit 1
         fi
         echo "✓ Token stored as GitHub secret $NAME"
