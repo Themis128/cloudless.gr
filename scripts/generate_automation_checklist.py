@@ -157,7 +157,7 @@ def build(path: str) -> None:
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(SLATE_500)
         canvas.drawCentredString(A4[0] / 2, 9 * mm,
-                                 "cloudless.gr/links — free tools, zero fluff. Page %d" % canvas.getPageNumber())
+                                 f"cloudless.gr/links — free tools, zero fluff. Page {canvas.getPageNumber()}")
         canvas.restoreState()
 
     story = [
