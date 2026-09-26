@@ -13,6 +13,7 @@ import {
   CATEGORIES,
   pickLruCategory,
   markdownToNotionBlocks,
+  flattenFolderViews,
   type RecentPost,
 } from "../scripts/generate-weekly-article";
 
@@ -141,5 +142,90 @@ describe("markdownToNotionBlocks", () => {
       "numbered_list_item",
       "paragraph",
     ]);
+  });
+});
+
+describe("flattenFolderViews", () => {
+  it("marks documents under the Blog folder as inBlogFolder", () => {
+    const tree = {
+      view: {
+        view_id: "root",
+        name: "Workspace",
+        has_children: true,
+        layout: 1,
+        children: [
+          {
+            view: {
+              view_id: "blog-folder",
+              name: "Blog",
+              has_children: true,
+              layout: 1,
+              children: [
+                {
+                  view: {
+                    view_id: "post-1",
+                    name: "First post",
+                    layout: 0,
+                    last_edited_time: "2026-09-20",
+                  },
+                },
+                {
+                  view: {
+                    view_id: "post-2",
+                    name: "Second post",
+                    layout: 0,
+                    last_edited_time: "2026-09-21",
+                  },
+                },
+              ],
+            },
+          },
+          {
+            view: {
+              view_id: "other-doc",
+              name: "Docs page",
+              layout: 0,
+              last_edited_time: "2026-09-22",
+            },
+          },
+        ],
+      },
+    };
+    const flat = flattenFolderViews(tree);
+    const post = flat.find((v) => v.view_id === "post-1");
+    const other = flat.find((v) => v.view_id === "other-doc");
+    expect(post?.inBlogFolder).toBe(true);
+    expect(post?.isFolder).toBe(false);
+    expect(post?.lastEdited).toBe("2026-09-20");
+    expect(other?.inBlogFolder).toBe(false);
+    expect(flat.find((v) => v.view_id === "blog-folder")?.isFolder).toBe(true);
+  });
+
+  it("handles nodes without a `view` wrapper and nested blog subfolders", () => {
+    const tree = [
+      {
+        view_id: "blog",
+        name: "blog",
+        layout: 1,
+        children: [
+          {
+            view_id: "sub",
+            name: "Archive",
+            layout: 1,
+            children: [
+              { view_id: "old-post", name: "Old post", layout: 0, last_edited_time: "2026-01-01" },
+            ],
+          },
+        ],
+      },
+    ];
+    const flat = flattenFolderViews(tree);
+    expect(flat.find((v) => v.view_id === "old-post")?.inBlogFolder).toBe(true);
+    expect(flat.find((v) => v.view_id === "sub")?.inBlogFolder).toBe(true);
+  });
+
+  it("returns an empty array for nullish input", () => {
+    expect(flattenFolderViews(null)).toEqual([]);
+    expect(flattenFolderViews(undefined)).toEqual([]);
   });
 });
