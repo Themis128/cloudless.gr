@@ -62,7 +62,7 @@ const LINKS: HubLink[] = [
 
 export default function LinksPage() {
   return (
-    <main className="min-h-screen bg-void text-slate-200">
+    <main className="bg-void min-h-screen text-slate-200">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center px-6 py-12">
         <Image
           src="/icons/icon-192.png"
@@ -76,8 +76,8 @@ export default function LinksPage() {
           cloudless.gr
         </h1>
         <p className="mt-2 text-center text-sm leading-relaxed text-slate-400">
-          AI automation hacks &amp; no-code workflows for founders
-          who would rather ship than babysit servers.
+          AI automation hacks &amp; no-code workflows for founders who would rather ship than
+          babysit servers.
         </p>
 
         <nav className="mt-8 flex w-full flex-col gap-3">
@@ -89,7 +89,7 @@ export default function LinksPage() {
               className={`group flex min-h-[56px] w-full flex-col justify-center rounded-xl border px-5 py-3 transition-colors ${
                 l.accent
                   ? "border-neon-cyan/60 bg-neon-cyan/10 hover:bg-neon-cyan/20"
-                  : "border-slate-800 bg-void-light/50 hover:border-neon-cyan/50"
+                  : "bg-void-light/50 hover:border-neon-cyan/50 border-slate-800"
               }`}
             >
               <span className="flex items-center justify-between text-[15px] font-medium text-white">
