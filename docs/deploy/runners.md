@@ -77,7 +77,7 @@ Actions → **Switch Runner Mode** → `hosted` | `pi` | `x64-hosted` | `x64-leg
   `i18n-audit.yml`, `monthly-security-audit.yml`, `notion-docs-sitemap.yml`,
   `notion-schema-check.yml`, `notion-schema-drift.yml`, `release.yml`,
   `slack-manifest-apply.yml`, `stale.yml`, `teardown-staging.yml`,
-  `weekly-article-draft.yml`, `weekly-gsc-sync.yml`, `weekly-newsletter.yml`,
+  `weekly-article-draft.yml`, `weekly-gsc-sync.yml`,
   `weekly-subscriber-report.yml`
 - `deploy-pi.yml` **publish** job only (`build` stays on `ubuntu-24.04-arm`)
 
@@ -94,6 +94,17 @@ Default remains GitHub-hosted. Set `RUNNER_X64` only when Legion WSL is online.
 - `deploy.yml` (SST) — stays GH-hosted; does not fit Pi cold-deploy
 - `k3s-e2e.yml` — GH-hosted Playwright against live cluster (do not add Pi load)
 - `core-web-vitals-audit.yml` — `[self-hosted, omv, pi]` (leave unless lab CWV moves off-box)
+- `weekly-newsletter.yml` — `[self-hosted, omv, pi]`; reaches AppFlowy via the
+  local `nginx-nodeport` (`localhost:30810`). The hosted path 302s into the
+  Cloudflare Access SSO on `appflowy.cloudless.gr` (broke Aug-17, six
+  consecutive Monday failures).
+- `omv-security-updates.yml` — `[self-hosted, omv, pi]`; runs
+  `scripts/omv-security-update.sh` directly with sudo. Hosted tailnet+SSH
+  path failed six consecutive Mondays (tailscale/github-action#266).
+- `deploy-postiz-ai-proxy.yml` — `[self-hosted, omv, pi]`; deploy token is a
+  narrow Workers-Scripts-Write-only token in the `cloudflare-deploy-token`
+  k8s secret (repo `CLOUDFLARE_API_TOKEN` lacks Workers:Edit and
+  Actions-secret writes are restricted).
 - Cluster remediations (`cluster-doctor.yml`, `k3s-restart.yml`, …) —
   path-triggered / `workflow_dispatch`; no app CronJob for deploys
 

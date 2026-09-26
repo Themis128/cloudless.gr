@@ -21,13 +21,18 @@ permissions:
 jobs:
   publish:
     name: Publish approved posts and send newsletter
-    runs-on: ubuntu-latest
+    # Runs on the omv self-hosted runner and reaches AppFlowy over the local
+    # NodePort. The hosted path broke when Cloudflare Access was enabled on
+    # appflowy.cloudless.gr (mid-Aug): /gotrue/token and /api/* got the SSO
+    # login HTML → JSON.parse FATAL on every Monday since Aug-17.
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 15
 
     env:
-      # AppFlowy (self-hosted Notion replacement) — scripts/publish-and-send-newsletter.ts
-      # reads APPFLOWY_API_URL + APPFLOWY_EMAIL + APPFLOWY_PASSWORD for blog DB access.
-      APPFLOWY_API_URL: ${{ secrets.APPFLOWY_API_URL }}
+      # AppFlowy via the local nginx NodePort — skips the CF Access gate that
+      # only browser SSO sessions can pass. APPFLOWY_API_URL secret remains
+      # for any future hosted-runner use.
+      APPFLOWY_API_URL: http://localhost:30810
       APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
       APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
       CONTENT_WEBHOOK_SECRET: ${{ secrets.CONTENT_WEBHOOK_SECRET }}

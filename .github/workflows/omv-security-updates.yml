@@ -1,8 +1,9 @@
 name: OMV Security Updates
 
 # Checks for and optionally applies Debian security updates on the omv host.
-# Connects via Tailscale + SSH using OMV_SSH_KEY. Following the established
-# repo pattern (see fix-health-check-log.yml, k3s-restart.yml).
+# Runs directly on the omv self-hosted runner — no Tailscale/SSH hop. The
+# hosted-runner tailnet path failed six consecutive Mondays (Aug-17 →
+# Sep-21, tailscale/github-action#266 missing-routes bug).
 #
 # Trigger: workflow_dispatch with dry-run default.
 # Scheduled: Weekly check on Monday 07:00 UTC.
@@ -33,70 +34,34 @@ permissions:
 jobs:
   security-updates:
     name: OMV Security Updates
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: 100.74.191.58
-      PI_USER: tbaltzakis
       ISSUE: '382'
       APPLY_UPDATES: ${{ github.event.inputs.apply == true }}
       PKG_FILTER: ${{ github.event.inputs.packages || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888         # v4.1.3
-        with:
-          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-          tags: tag:k8s
-
-          ping: 100.74.191.58
-      - name: Wait for tailnet path to omv
-        run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
-      - name: Wait for tailnet + install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-          # Wait until the Pi is reachable over the tailnet before attempting SSH
-          for i in $(seq 1 30); do
-            if nc -zv -w3 "$PI_HOST" 22 2>/dev/null; then
-              echo "tailnet ready after ${i}×2s"
-              break
-            fi
-            echo "waiting for tailnet... ($i/30)"
-            sleep 2
-          done
-
       - name: Security update check / apply
         id: updates
         run: |
           set -euo pipefail
 
-          # Upload the script to the remote host
-          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-            scripts/omv-security-update.sh \
-            "$PI_USER@$PI_HOST:/tmp/omv-security-update.sh"
-
-          # Build remote command
-          REMOTE_ARGS=""
+          # Build args
+          ARGS=""
           if [[ "$APPLY_UPDATES" == "true" ]]; then
-            REMOTE_ARGS="--apply"
+            ARGS="--apply"
             if [[ -n "$PKG_FILTER" ]]; then
-              REMOTE_ARGS="$REMOTE_ARGS --only=$PKG_FILTER"
+              ARGS="$ARGS --only=$PKG_FILTER"
             fi
           fi
 
-          echo "Running remote: bash /tmp/omv-security-update.sh $REMOTE_ARGS"
+          echo "Running local: sudo bash scripts/omv-security-update.sh $ARGS"
 
-          # Execute on the omv host
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            "$PI_USER@$PI_HOST" \
-            "chmod +x /tmp/omv-security-update.sh && sudo bash /tmp/omv-security-update.sh $REMOTE_ARGS" \
+          # Execute directly on this host (the runner IS omv)
+          sudo bash scripts/omv-security-update.sh $ARGS \
             2>&1 | tee /tmp/security-update-output.txt
 
           # Extract summary values
@@ -127,10 +92,7 @@ jobs:
           gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
             --body-file /tmp/security-update-report.md
 
-      - name: Cleanup remote temp files
+      - name: Cleanup temp files
         if: always()
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            "$PI_USER@$PI_HOST" \
-            "rm -f /tmp/omv-security-update.sh /tmp/apt-update.log /tmp/apt-upgrade.log /tmp/apt-simulate.log /tmp/security-update-summary.txt /tmp/needrestart.log 2>/dev/null || true" \
-            2>/dev/null || true
+          sudo rm -f /tmp/omv-security-update.sh /tmp/apt-update.log /tmp/apt-upgrade.log /tmp/apt-simulate.log /tmp/security-update-summary.txt /tmp/needrestart.log 2>/dev/null || true
