@@ -310,7 +310,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const isHttps = forwardedProto === "https" || request.nextUrl.protocol === "https:";
 
-  if (!isHttps && process.env.NODE_ENV === "production") {
+  // Internal mocked requests — e.g. the /_next/image optimizer's
+  // fetchInternalImage — carry literally zero headers. Redirecting them
+  // returns the 308 HTML body as the "image" upstream, so only redirect
+  // requests that present at least one header (every real client does).
+  const isInternalMock = request.headers.keys().next().done === true;
+
+  if (!isHttps && !isInternalMock && process.env.NODE_ENV === "production") {
     const httpsUrl = appUrl(`${request.nextUrl.pathname}${request.nextUrl.search}`, request);
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
