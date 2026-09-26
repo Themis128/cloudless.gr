@@ -5,6 +5,11 @@
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "compatibility_date": "2026-08-15",
   "minify": true,
+  // Workers Logs — the omv watchdog queries exceptions via the
+  // observability telemetry API to self-diagnose alerts.
+  "observability": {
+    "enabled": true,
+  },
   // Deployed as a Workers subdomain — no custom domain needed.
   // Postiz pod points OPENAI_BASE_URL at:
   //   https://postiz-ai-proxy.<account>.workers.dev/v1
