@@ -58,10 +58,20 @@ from those handlers.
 ### Gold aggregate sections
 
 `acquisition_funnel`, `attribution` (hot D1 overlay), `top_keywords`,
-`linkedin_ads`, `top_errors`, `espocrm_funnel`, `stripe_revenue`, `n8n_ops`,
+`linkedin_ads`, `linkedin_ads_audience`, `ads_funnel`, `top_errors`,
+`espocrm_funnel`, `stripe_revenue`, `n8n_ops`,
 `postiz_ops` (history), `appflowy_activity`, `freshness`, plus the SocialAuto
 pack: `socialauto_ops`, `social_engagement`, `social_outliers`,
 `social_recommendations`, `social_leads`, `social_attribution`.
+
+`linkedin_ads` reads `lake/socialauto-ads/daily.json` (Campaign Manager
+report ground truth imported into SocialAuto via
+`scripts/import_linkedin_reports.py`, exported every 6h) with
+`lake/linkedin-ads/insights.parquet` (Marketing API ETL) as fallback.
+`linkedin_ads_audience` comes from `lake/socialauto-ads/demographics.json`.
+`ads_funnel` joins ad-set spend/clicks with `socialauto-web-events`
+(UTM/referrer attribution) and `socialauto-leads` to compute
+cost-per-stage — the end-to-end paid→site→lead funnel.
 
 ### Insight domains
 

@@ -484,6 +484,149 @@ function socialAttribution(events) {
 		.slice(0, 25);
 }
 
+// ── LinkedIn Ads — report ground truth (lake/socialauto-ads/*.json) ────────
+// Daily + demographics rows are imported into SocialAuto Postgres from
+// Campaign Manager CSV exports (scripts/import_linkedin_reports.py) and
+// shipped here by the datalake_export celery task. The API-based
+// lake/linkedin-ads/insights.parquet is only a fallback (OAuth revoked).
+
+function linkedinAdsTruth(daily, snapshots) {
+	const sets = new Map();
+	for (const r of daily || []) {
+		if (r.report_type !== "campaign_performance") continue;
+		const key = r.ad_set_id || r.ad_set_name || "(unknown)";
+		const cur = sets.get(key) || {
+			ad_set_id: r.ad_set_id, ad_set_name: r.ad_set_name,
+			campaign_name: r.campaign_name, status: r.status,
+			days: 0, spend_eur: 0, impressions: 0, clicks: 0,
+			engagements: 0, leads: 0, conversions: 0,
+			clicks_to_landing_page: 0, clicks_to_linkedin_page: 0,
+			budget_eur: 0, first_day: r.day, last_day: r.day,
+		};
+		cur.days += 1;
+		cur.spend_eur += Number(r.spend_eur) || 0;
+		cur.impressions += Number(r.impressions) || 0;
+		cur.clicks += Number(r.clicks) || 0;
+		cur.engagements += Number(r.engagements) || 0;
+		cur.leads += Number(r.leads) || 0;
+		cur.conversions += Number(r.conversions) || 0;
+		cur.clicks_to_landing_page += Number(r.clicks_to_landing_page) || 0;
+		cur.clicks_to_linkedin_page += Number(r.clicks_to_linkedin_page) || 0;
+		cur.budget_eur = Math.max(cur.budget_eur, Number(r.budget_eur) || 0);
+		if (r.day && r.day < cur.first_day) cur.first_day = r.day;
+		if (r.day && r.day > cur.last_day) cur.last_day = r.day;
+		sets.set(key, cur);
+	}
+	const rows = [...sets.values()].map((s) => ({
+		...s,
+		spend_eur: Number(s.spend_eur.toFixed(2)),
+		ctr_pct: s.impressions ? Number(((s.clicks / s.impressions) * 100).toFixed(2)) : 0,
+		cpc_eur: s.clicks ? Number((s.spend_eur / s.clicks).toFixed(2)) : null,
+		cpm_eur: s.impressions ? Number(((s.spend_eur / s.impressions) * 1000).toFixed(2)) : null,
+		cost_per_engagement_eur: s.engagements
+			? Number((s.spend_eur / s.engagements).toFixed(2))
+			: null,
+		budget_used_pct: s.budget_eur
+			? Number(((s.spend_eur / s.budget_eur) * 100).toFixed(1))
+			: null,
+	}));
+	// Latest scraped snapshot adds live status/budget where the report lags.
+	const latestSnap = (snapshots || [])[0];
+	if (latestSnap) {
+		for (const s of rows) {
+			if (String(latestSnap.campaign_id) === String(s.ad_set_id)) {
+				s.live_status = latestSnap.status;
+				if (!s.budget_eur) s.budget_eur = Number(latestSnap.budget_eur) || 0;
+			}
+		}
+	}
+	return rows.sort((a, b) => b.spend_eur - a.spend_eur);
+}
+
+function linkedinAdsAudience(demographics) {
+	if (!demographics) return null;
+	const byType = new Map();
+	for (const r of demographics) {
+		const t = r.segment_type || "(unknown)";
+		if (!byType.has(t)) byType.set(t, []);
+		byType.get(t).push(r);
+	}
+	const rows = [];
+	for (const [type, segs] of byType) {
+		const ranked = segs
+			.slice()
+			.sort((a, b) => (b.clicks || 0) - (a.clicks || 0) || (b.impressions || 0) - (a.impressions || 0))
+			.slice(0, 8);
+		for (const s of ranked) {
+			rows.push({
+				segment_type: type,
+				segment_value: s.segment_value,
+				impressions: s.impressions,
+				clicks: s.clicks,
+				ctr_pct: s.ctr,
+				pct_of_clicks: s.pct_clicks,
+				conversions: s.conversions,
+			});
+		}
+	}
+	return rows;
+}
+
+/** Join paid ground truth with owned-site events → real funnel + cost. */
+function adsFunnel(daily, webEvents, leads) {
+	if (!daily) return null;
+	const spend = { spend_eur: 0, impressions: 0, clicks: 0, engagements: 0,
+		leads: 0, conversions: 0, clicks_to_landing_page: 0 };
+	for (const r of daily) {
+		if (r.report_type !== "campaign_performance") continue;
+		spend.spend_eur += Number(r.spend_eur) || 0;
+		spend.impressions += Number(r.impressions) || 0;
+		spend.clicks += Number(r.clicks) || 0;
+		spend.engagements += Number(r.engagements) || 0;
+		spend.leads += Number(r.leads) || 0;
+		spend.conversions += Number(r.conversions) || 0;
+		spend.clicks_to_landing_page += Number(r.clicks_to_landing_page) || 0;
+	}
+
+	// Site-side truth: events attributed to LinkedIn via UTM or referrer.
+	const liEvents = (webEvents || []).filter((e) =>
+		/linkedin/i.test(e.referrer || "") || /linkedin/i.test(e.utm_source || ""));
+	const liSessions = new Set(liEvents.map((e) => e.session_id).filter(Boolean));
+	const liConversions = liEvents.filter((e) =>
+		/contact|lead|signup|checkout|submit/i.test(e.event_name || "")).length;
+	const paidLeads = (leads || []).filter((l) =>
+		/linkedin|paid|ad/i.test(`${l.source} ${l.platform}`)).length;
+
+	return [
+		{ stage: "impressions", count: spend.impressions,
+			cost_eur: spend.impressions ? spend.spend_eur / (spend.impressions / 1000) : null,
+			note: "CPM basis" },
+		{ stage: "clicks", count: spend.clicks,
+			cost_eur: spend.clicks ? spend.spend_eur / spend.clicks : null, note: "CPC" },
+		{ stage: "clicks_to_landing_page", count: spend.clicks_to_landing_page,
+			cost_eur: spend.clicks_to_landing_page
+				? spend.spend_eur / spend.clicks_to_landing_page : null,
+			note: "LinkedIn-attributed site clicks" },
+		{ stage: "site_events_linkedin_attr", count: liEvents.length,
+			cost_eur: liEvents.length ? spend.spend_eur / liEvents.length : null,
+			note: "datalake web events w/ linkedin referrer or utm" },
+		{ stage: "site_sessions_linkedin_attr", count: liSessions.size,
+			cost_eur: liSessions.size ? spend.spend_eur / liSessions.size : null,
+			note: "unique sessions" },
+		{ stage: "conversions_site", count: liConversions,
+			cost_eur: liConversions ? spend.spend_eur / liConversions : null,
+			note: "contact/lead/signup events from LI traffic" },
+		{ stage: "leads", count: spend.leads + paidLeads,
+			cost_eur: (spend.leads + paidLeads) ? spend.spend_eur / (spend.leads + paidLeads) : null,
+			note: "LI lead forms + SocialAuto leads" },
+		{ stage: "spend_total_eur", count: Number(spend.spend_eur.toFixed(2)),
+			cost_eur: null, note: "all report types" },
+	].map((r) => ({
+		...r,
+		cost_eur: r.cost_eur === null ? null : Number(r.cost_eur.toFixed(2)),
+	}));
+}
+
 function appflowyActivity(workspaces, users) {
 	const w = workspaces || [];
 	const u = users || [];
@@ -624,11 +767,23 @@ async function main() {
 	sections.push(
 		sentry ? sectionOk("top_errors", topErrors(sentry)) : sectionErr("top_errors", "missing sentry parquet")
 	);
+	const saAdDaily = await safeJson("lake/socialauto-ads/daily.json");
+	const saAdSnaps = await safeJson("lake/socialauto-ads/snapshots.json");
+	const saAdDemo = await safeJson("lake/socialauto-ads/demographics.json");
 	const linkedin = await safeParquet("lake/linkedin-ads/insights.parquet");
+	// Prefer report ground truth (socialauto-ads JSON); API parquet is the
+	// fallback while LinkedIn Marketing API OAuth is revoked.
 	sections.push(
-		linkedin
-			? sectionOk("linkedin_ads", linkedinSummary(linkedin))
-			: sectionErr("linkedin_ads", "missing linkedin parquet")
+		saAdDaily?.length || saAdSnaps?.length
+			? sectionOk("linkedin_ads", linkedinAdsTruth(saAdDaily, saAdSnaps))
+			: linkedin
+				? sectionOk("linkedin_ads", linkedinSummary(linkedin))
+				: sectionErr("linkedin_ads", "missing linkedin ad data")
+	);
+	sections.push(
+		saAdDemo
+			? sectionOk("linkedin_ads_audience", linkedinAdsAudience(saAdDemo))
+			: sectionErr("linkedin_ads_audience", "missing ad demographics json")
 	);
 	const contacts = await safeParquet("lake/espocrm-contacts/contacts.parquet");
 	const opportunities = await safeParquet("lake/espocrm-opportunities/opportunities.parquet");
@@ -707,6 +862,11 @@ async function main() {
 			? sectionOk("social_attribution", socialAttribution(saWebEvents))
 			: sectionErr("social_attribution", "missing socialauto web-events json")
 	);
+	sections.push(
+		saAdDaily
+			? sectionOk("ads_funnel", adsFunnel(saAdDaily, saWebEvents, saLeads))
+			: sectionErr("ads_funnel", "missing socialauto ads json")
+	);
 
 	const afWs = await safeParquet("lake/appflowy-workspaces/workspaces.parquet");
 	const afUsers = await safeParquet("lake/appflowy-users/users.parquet");
@@ -741,6 +901,9 @@ async function main() {
 		"lake/socialauto-account-events/events.json",
 		"lake/socialauto-leads/leads.json",
 		"lake/socialauto-web-events/events.json",
+		"lake/socialauto-ads/snapshots.json",
+		"lake/socialauto-ads/daily.json",
+		"lake/socialauto-ads/demographics.json",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",
 		"ml-parquet/scores_churn.parquet",
