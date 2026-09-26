@@ -201,7 +201,7 @@ def build(path: str) -> None:
             small,
         ),
         Spacer(1, 6 * mm),
-        para("Want the workflows built for you? <b>cloudless.gr</b> — managed cloud, " "automation, and AI marketing systems for startups and SMBs.", sub),
+        para("Want the workflows built for you? <b>cloudless.gr</b> — managed cloud, automation, and AI marketing systems for startups and SMBs.", sub),
     ]
 
     doc.build(story, onFirstPage=header, onLaterPages=header)
