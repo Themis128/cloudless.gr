@@ -19,6 +19,6 @@ export { proxy as default } from "@/proxy";
 
 export const config = {
   matcher: [
-    "/((?!api/health|_next/static|_next/image|manifest\\.webmanifest|sw\\.js|offline\\.html|\\.well-known|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)",
+    "/((?!api/health|_next/static|_next/image|manifest\\.webmanifest|sw\\.js|offline\\.html|\\.well-known|[^?]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)",
   ],
 };
