@@ -213,7 +213,8 @@ elif [ -n "$ACCOUNT_ID" ]; then
     "$API/accounts/$ACCOUNT_ID/workers/scripts/cloudless2/versions" || echo "000")"
   PROBE_BODY="$(cat /tmp/cf-ws-write-probe.json 2>/dev/null || true)"
   PROBE_ERR="$(echo "$PROBE_BODY" | jq -r '.errors[0].code // empty' 2>/dev/null || true)"
-  if [ "$PROBE" = "400" ] || [ "$PROBE" = "422" ]; then
+  # 415 = endpoint expects multipart/form-data — reached validation, so auth OK.
+  if [ "$PROBE" = "400" ] || [ "$PROBE" = "422" ] || [ "$PROBE" = "415" ]; then
     check "Workers Scripts:Write (versions create rejected as validation — auth OK)" ok
   elif [ "$PROBE" = "401" ] || [ "$PROBE" = "403" ] || [ "$PROBE_ERR" = "10000" ] || [ "$PROBE_ERR" = "1001" ]; then
     check "Workers Scripts:Write" "HTTP $PROBE code=${PROBE_ERR:-?} — add Workers Scripts Write for cloudless2 deploy"
