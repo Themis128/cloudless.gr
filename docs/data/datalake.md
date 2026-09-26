@@ -14,9 +14,15 @@ Operator UI map:
 ```
 Sources (Stripe, GSC, Sentry, EspoCRM, Postiz, n8n, AppFlowy, …)
    │  GitHub Actions ETL  scripts/etl/*-to-r2.mjs   ← silver (parquet)
+   │
+   │  SocialAuto (cu130-slim) pushes its own tables directly:
+   │  datalake_export Celery task (every 6h) → lake/socialauto-*/ JSON.
+   │  Return leg: site web events → /api/analytics/event →
+   │  SOCIALAUTO_WEB_ANALYTICS_URL → re-exported to the lake (loop).
    ▼
 R2 datalake-bucket
    ├── lake/**/*.parquet
+   ├── lake/socialauto-*/ (JSON snapshots from SocialAuto)
    └── lake/snapshots/
          ├── admin-datalake.json      ← gold aggregates
          ├── gsc-weekly.json
@@ -53,7 +59,9 @@ from those handlers.
 
 `acquisition_funnel`, `attribution` (hot D1 overlay), `top_keywords`,
 `linkedin_ads`, `top_errors`, `espocrm_funnel`, `stripe_revenue`, `n8n_ops`,
-`postiz_ops`, `appflowy_activity`, `freshness`.
+`postiz_ops` (history), `appflowy_activity`, `freshness`, plus the SocialAuto
+pack: `socialauto_ops`, `social_engagement`, `social_outliers`,
+`social_recommendations`, `social_leads`, `social_attribution`.
 
 ### Insight domains
 

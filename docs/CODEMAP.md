@@ -1,6 +1,6 @@
 # Cloudless.gr Application Codemap
 
-Last verified: 2026-09-25. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
+Last verified: 2026-09-26. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
 
 ## 🏗️ **Architecture Overview**
 
@@ -88,7 +88,8 @@ cloudless.gr/
 │   │   │   ├── slack/          # Slack integration
 │   │   │   └── webhooks/       # Stripe webhooks
 │   │   ├── layout.tsx           # Root layout
-│   │   └── proxy.ts            # Middleware (auth + locale)
+│   │   ├── middleware.ts       # Next 15 entry — literal matcher + re-exports proxy
+│   │   └── proxy.ts            # Proxy logic (auth + locale + HTTPS redirect + rate limit)
 │   ├── components/             # React components
 │   │   ├── ui/                 # UI primitives (buttons, cards)
 │   │   ├── services/           # Service cards, pricing
@@ -146,6 +147,14 @@ cloudless.gr/
 - **Opaque session cookies** (30-day default)
 - **Role-based access control** (admin, user, customer)
 - **Admin promotion** via API (`POST /api/admin/users`)
+- **Edge middleware**: `src/middleware.ts` is the Next 15 entry point and
+  must re-export `src/proxy.ts` with a **literal `config.matcher`** —
+  re-exporting `config` breaks Next's static matcher analysis, silently
+  degrading to `/:path*` and running auth+redirect logic on every request
+  including `/_next/image` (this broke the image optimizer 2026-09-26 —
+  the optimizer's headerless internal fetches got 308'd to HTML). The
+  matcher must also exclude nested static assets (`[^?]+\.ext`, not
+  `[^/]+\.ext` — `[^/]+` can't cross `/`, so `/icons/*.png` still matched).
 
 ### **Content Management (AppFlowy)**
 
@@ -339,13 +348,26 @@ Social content for cloudless.gr is generated and published by **SocialAuto** (`s
 - **Scheduled flows**: LinkedIn carousel every 2 days 19:00 EET; LinkedIn weekly cloud post Mon 09:00; Instagram marketing image daily; all other platform posts are webhook/on-demand.
 - **Source of truth**: `brand_voices.voice_signature` in SocialAuto (`creator_type.py`/`platforms` commands); full details in `cu130-slim/docs/CODEMAP.md`.
 
-### SocialAuto → datalake pipeline (added 2026-09)
+### SocialAuto ⇄ datalake bidirectional pipeline (added 2026-09, verified 2026-09-26)
 
-SocialAuto pushes its own first-party data into the datalake — no Postiz needed:
+The two systems form a data loop rather than a symmetric API pair:
 
-- **Producer**: `datalake_export` Celery task (every 6h, cu130-slim) writes JSON tables to `datalake-bucket` under `lake/socialauto-*` — accounts, posts, post-metric history, follower snapshots, account-insight events, per-team insights-engine output, leads (sha256 email + domain only), 90-day web events (UTM only; IP/UA dropped).
-- **Materializer**: `scripts/etl/materialize-datalake-snapshots.mjs` reads them via `safeJson`/`r2List` into gold sections `socialauto_ops`, `social_engagement`, `social_outliers`, `social_recommendations`, `social_leads`, `social_attribution` — rendered on `/admin/analytics/datalake`.
-- **Real-time leads**: `POST /api/webhooks/socialauto-leads` (shared-secret) → EspoCRM `createLead`, which then appears in `espocrm_funnel` — the lake export is the analytical copy.
+```
+cloudless.gr web events ──API relay──▶ SocialAuto web_analytics_events
+                                            │
+                      datalake_export Celery (every 6h :10)
+                                            ▼
+                R2 datalake-bucket/lake/socialauto-*
+                                            │
+              materialize ETL (~5h) ────────▶ gold snapshots
+                                            ▼
+                          /admin/analytics/datalake
+```
+
+- **SocialAuto → lake**: `datalake_export` Celery task (cu130-slim) writes JSON tables to `datalake-bucket` under `lake/socialauto-*` — accounts, posts, post-metric history, follower snapshots, account-insight events, per-team insights-engine output, leads (sha256 email + domain only), 90-day web events (UTM only; IP/UA dropped).
+- **cloudless → SocialAuto (web events)**: browser `sendSocialAutoEvent` → `POST /api/analytics/event` → server relay (`SOCIALAUTO_WEB_ANALYTICS_URL` + shared secret, `src/lib/socialauto-analytics-server.ts`) → SocialAuto `web_analytics_events` — which are re-exported to the lake, closing the loop.
+- **SocialAuto → cloudless (leads webhook)**: `upsert_lead` → `POST /api/webhooks/socialauto-leads` (`x-socialauto-webhook-secret`) → EspoCRM `createLead` → `espocrm_funnel` — the real-time copy; the lake export is the analytical copy.
+- **Materializer**: `scripts/etl/materialize-datalake-snapshots.mjs` reads lake JSON via `safeJson`/`r2List` into gold sections `socialauto_ops`, `social_engagement`, `social_outliers`, `social_recommendations`, `social_leads`, `social_attribution` — rendered on `/admin/analytics/datalake`.
 - **`postiz_ops`** is kept for history but Postiz is retired; SocialAuto sections are the live social surface.
 
 ---
@@ -362,10 +384,17 @@ SocialAuto pushes its own first-party data into the datalake — no Postiz neede
 - **Watchdog extended (2026-09-25)**: per-tick satellite probes for 11
   services (postiz/espocrm/n8n/grafana/appflowy/ntfy/kuma/webmail/social/
   pi-origin/postiz-ai-proxy) with optional k3s rollout-restart remediation,
-  Cloudflare worker-exception watcher (GraphQL `workersInvocationsAdaptive`),
   k3s node NotReady + disk thresholds, optional deadman ping. Install:
   `install-safedeploy-watchdog.yml` → omv self-hosted runner. See
   `docs/SAFEDEPLOY-WATCHDOG.md`
+- **Watchdog worker automation (2026-09-26)**: worker-exception watcher
+  (GraphQL `workersInvocationsAdaptive`, per-script `≥3 errors/30min`
+  threshold — single stream-abort blips don't page), self-diagnosing
+  alerts that embed the exception text from Workers Observability
+  (`telemetry/query`), and auto-rollback of allowlisted workers
+  (`postiz-ai-proxy`) to the previous deployment version on sustained
+  errors + fresh deploy (15min–2h old, 60min cooldown). Requires
+  `observability.enabled = true` in the worker's wrangler config.
 
 ### **Rollback Workflow**
 
