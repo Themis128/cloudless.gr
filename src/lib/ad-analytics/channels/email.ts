@@ -27,10 +27,7 @@ function stripMrkdwn(text: string): string {
 }
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 interface Rendered {
@@ -101,8 +98,8 @@ export const emailChannel: NotificationChannel = {
   async isConfigured(): Promise<boolean> {
     // sendEmail falls back through Cloudflare Email API and Resend in Node,
     // and the EMAIL binding in Workers — mirror that probe cheaply.
-    const workersEmail = (globalThis as { __ENV__?: { EMAIL_BINDING?: unknown } })
-      .__ENV__?.EMAIL_BINDING;
+    const workersEmail = (globalThis as { __ENV__?: { EMAIL_BINDING?: unknown } }).__ENV__
+      ?.EMAIL_BINDING;
     return Boolean(workersEmail) || isCloudflareEmailConfigured() || isResendConfigured();
   },
 
