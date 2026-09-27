@@ -43,12 +43,18 @@ export async function POST(request: NextRequest) {
 
   const page = typeof body.page === "string" ? body.page.slice(0, 500) : undefined;
   const source = typeof body.source === "string" ? body.source.slice(0, 200) : undefined;
+  const sessionId = typeof body.session_id === "string" ? body.session_id.slice(0, 128) : undefined;
+  const str = (v: unknown, max: number) =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined;
   const referer = request.headers.get("referer") ?? undefined;
 
   trackAnalyticsEvent({
     event: body.type,
     page,
-    source: source ?? referer,
+    session_id: sessionId,
+    source: str(body.utm_source, 128) ?? source ?? referer,
+    medium: str(body.utm_medium, 128),
+    campaign: str(body.utm_campaign, 128),
     referrer: referer,
   }).catch(() => {
     // Swallow — tracking failures must never affect the user experience
