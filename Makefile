@@ -1,4 +1,4 @@
-.PHONY: help gh-aw gh-aw-list gh-aw-run gh-aw-init gh-aw-exec gh-aw-status gh-aw-validate gh-aw-version
+.PHONY: help gh-aw gh-aw-list gh-aw-run gh-aw-init gh-aw-exec gh-aw-status gh-aw-validate gh-aw-version gh-aw-compile
 
 # gh-aw - GitHub Advanced Workflows CLI extension
 # Run: gh aw --help for full documentation
@@ -66,6 +66,12 @@ gh-aw-validate:
 		exit 1; \
 	fi
 	gh aw validate $(FILE)
+
+# gh-aw drops frontmatter `jobs.agent.continue-on-error` from the built-in
+# agent job on compile — repin it after every compile (see scripts/gh-aw-repin.mjs).
+gh-aw-compile:
+	gh aw compile
+	node scripts/gh-aw-repin.mjs
 
 # Common workflow shortcuts for cloudless.gr (remaining after AWS cleanup)
 .PHONY: workflow-deploy-pi workflow-deploy-fly workflow-monitoring-fix workflow-k3s-restart workflow-k3s-app-recover \

@@ -5,6 +5,12 @@
 the naming taxonomy here + carry the comment/timeout/concurrency/alert
 conventions listed in that memory.
 
+**Agentic (gh-aw) workflows**: `*.md` sources compile to `*.lock.yml`.
+Never run bare `gh aw compile` — it silently drops the `continue-on-error`
+pin on the built-in `agent` job (gh-aw ignores `jobs.agent.*` frontmatter).
+Use `make gh-aw-compile` (compile + `scripts/gh-aw-repin.mjs`) so quota /
+partial_execution failures stay green per the .md sources' intent.
+
 Conventions in use today (consolidated retroactively):
 
 - **Top comment** at file head describing purpose + trigger + paging.
