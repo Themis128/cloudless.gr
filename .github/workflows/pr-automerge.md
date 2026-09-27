@@ -27,6 +27,6 @@ Add label `no-automerge` (or `do-not-merge` / `wip`) on the PR.
 
 `update-branch` merges performed as `github-actions[bot]` can put subsequent
 PR workflow runs into `action_required` (awaiting approval). The arm job
-**skips** update-branch when `github.actor == github-actions[bot]`. Prefer a
-repo secret `GITHUB_PAT` (classic PAT with `repo` scope) so refresh merges are
+**skips** update-branch when `github.actor == github-actions[bot]`. Prefer the
+repo secret `GH_PAT` (classic PAT with `repo` scope) so refresh merges are
 attributed to a user and CI runs without approval gates.

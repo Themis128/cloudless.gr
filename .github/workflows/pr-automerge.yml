@@ -67,7 +67,7 @@ jobs:
         # update-branch storms cancel CI and leave runs in action_required.
       if: github.actor != 'github-actions[bot]'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         GH_REPO: ${{ github.repository }}
         PR: ${{ github.event.pull_request.number }}
       run: |
@@ -96,7 +96,7 @@ jobs:
     - name: Label + comment on merge conflicts
       if: steps.update.outputs.conflict == 'true'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         GH_REPO: ${{ github.repository }}
         PR: ${{ github.event.pull_request.number }}
       run: |
@@ -128,7 +128,7 @@ jobs:
       if: steps.update.outcome != 'failure' && steps.update.outputs.conflict !=
         'true'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         GH_REPO: ${{ github.repository }}
         PR_URL: ${{ github.event.pull_request.html_url }}
         PR: ${{ github.event.pull_request.number }}
@@ -148,7 +148,7 @@ jobs:
     steps:
     - name: Update + re-arm open PRs to main
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         GH_REPO: ${{ github.repository }}
       run: |
         set -euo pipefail
@@ -199,7 +199,7 @@ jobs:
     steps:
     - name: Update + arm PR
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         GH_REPO: ${{ github.repository }}
         PR: ${{ inputs.pr_number }}
       run: |
