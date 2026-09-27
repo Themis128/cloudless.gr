@@ -141,6 +141,13 @@ export const linkedinAdapter: AdPlatformAdapter = {
         }
       }
 
+      // 3. Creative leaderboard (pivot=CREATIVE) — which variant pulls the
+      //    clicks. Same silent-degrade contract as the pivots.
+      const leaderboard = await fetchCreativeLeaderboard(cfg.token, campaignId, dateRangeParam);
+      if (leaderboard.length > 0) {
+        base.creativeLeaderboard = leaderboard;
+      }
+
       results.push(base);
     }
     return results;
@@ -389,4 +396,114 @@ async function fetchPivotBreakdown(
   } catch {
     return [];
   }
+}
+
+/**
+ * pivot=CREATIVE — per-creative impressions/clicks for the window, ranked
+ * by clicks. Names resolved via `GET /rest/creatives?ids=List(...)`. Both
+ * steps degrade silently: a failed name lookup still shows `Creative <id>`.
+ */
+async function fetchCreativeLeaderboard(
+  token: string,
+  campaignId: string,
+  dateRangeParam: string
+): Promise<NonNullable<AdMetrics["creativeLeaderboard"]>> {
+  try {
+    const path = buildAdAnalyticsPath({
+      pivot: "CREATIVE",
+      dateRangeParam,
+      campaignId,
+      timeGranularity: "ALL",
+      fields: "impressions,clicks,pivotValues",
+    });
+    const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+        [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
+      },
+    });
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn(
+        `[ad-analytics/linkedin] pivot CREATIVE ${res.status} campaign=${campaignId}: ${body}`
+      );
+      return [];
+    }
+    const data = (await res.json()) as {
+      elements?: Array<{
+        impressions?: number;
+        clicks?: number;
+        pivotValues?: string[];
+      }>;
+    };
+    const els = data.elements ?? [];
+    if (els.length === 0) return [];
+
+    const names = await fetchCreativeNames(
+      token,
+      els.flatMap((el) => el.pivotValues ?? [])
+    );
+
+    return els
+      .map((el) => {
+        const urn = el.pivotValues?.[0] ?? "";
+        const id = urn.includes(":") ? urn.slice(urn.lastIndexOf(":") + 1) : urn;
+        const impressions = el.impressions ?? 0;
+        const clicks = el.clicks ?? 0;
+        return {
+          creativeId: id,
+          label: names.get(urn) ?? `Creative ${id}`,
+          impressions,
+          clicks,
+          ctr: impressions > 0 ? clicks / impressions : undefined,
+        };
+      })
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 5);
+  } catch (err) {
+    console.warn(
+      `[ad-analytics/linkedin] creative leaderboard failed campaign=${campaignId}:`,
+      err instanceof Error ? err.message : err
+    );
+    return [];
+  }
+}
+
+/** Batch-resolve `urn:li:sponsoredCreative:<id>` → advertiser-set `name`. */
+async function fetchCreativeNames(token: string, urns: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (urns.length === 0) return names;
+  try {
+    const res = await fetch(
+      `${LINKEDIN_API_ROOT}/creatives?ids=List(${urns
+        .map((u) => encodeURIComponent(u))
+        .join(",")})`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+          [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
+        },
+      }
+    );
+    if (!res.ok) return names;
+    const data = (await res.json()) as {
+      results?: Record<string, { name?: string }>;
+      elements?: Array<{ id?: string; name?: string }>;
+    };
+    // BATCH_GET returns `results` keyed by URN; FINDER-style returns
+    // `elements` — support both shapes.
+    if (data.results) {
+      for (const [urn, creative] of Object.entries(data.results)) {
+        if (creative?.name) names.set(urn, creative.name);
+      }
+    }
+    for (const el of data.elements ?? []) {
+      if (el?.id && el?.name) names.set(el.id, el.name);
+    }
+  } catch {
+    // name resolution is cosmetic — fall back to `Creative <id>`
+  }
+  return names;
 }
