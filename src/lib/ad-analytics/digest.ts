@@ -257,18 +257,34 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   let tail = `· ads end ${p.adsEndAt}`;
   let warn = false;
   if (pacePerDay !== null && pacePerDay > 0) {
-    const daysToDeplete = remaining / pacePerDay;
-    const depletes = new Date(Date.now() + daysToDeplete * 86_400_000).toISOString().slice(0, 10);
-    tail =
-      `· burn ~€${pacePerDay.toFixed(2)}/day → credit lasts ~` +
-      `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
-      tail;
     // The card on file is charged only if spend that survives the
     // campaign's lifetime cap still exceeds the credit. If the campaign
     // hits its cap first, spend stops before the card is touched.
     const daysLeft = Math.max(0, (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000);
-    const projectedEnd = Math.min(spent + pacePerDay * daysLeft, p.lifetimeBudgetEur);
+    const projectedUncapped = spent + pacePerDay * daysLeft;
+    const cappedByBudget = projectedUncapped > p.lifetimeBudgetEur;
+    const projectedEnd = Math.min(projectedUncapped, p.lifetimeBudgetEur);
     warn = projectedEnd > p.creditEur;
+    if (warn) {
+      const daysToDeplete = remaining / pacePerDay;
+      const depletes = new Date(Date.now() + daysToDeplete * 86_400_000).toISOString().slice(0, 10);
+      tail =
+        `· burn ~€${pacePerDay.toFixed(2)}/day → credit gone ~` +
+        `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
+        tail;
+    } else if (cappedByBudget) {
+      tail =
+        `· burn ~€${pacePerDay.toFixed(2)}/day · campaign cap ` +
+        `€${p.lifetimeBudgetEur} hits first — card safe ` +
+        tail;
+    } else {
+      const daysToDeplete = remaining / pacePerDay;
+      const depletes = new Date(Date.now() + daysToDeplete * 86_400_000).toISOString().slice(0, 10);
+      tail =
+        `· burn ~€${pacePerDay.toFixed(2)}/day → credit lasts ~` +
+        `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
+        tail;
+    }
   }
 
   return (
