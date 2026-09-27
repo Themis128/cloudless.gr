@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { dispatchConversion, _setRegistries } from "@/lib/ad-analytics/runtime";
+import {
+  dispatchConversion,
+  _setRegistries,
+  aggregateCampaignMetrics,
+} from "@/lib/ad-analytics/runtime";
 import type { AdPlatformAdapter } from "@/lib/ad-analytics/adapters/ad-platform";
 import type { NotificationChannel } from "@/lib/ad-analytics/channels/notification";
 
@@ -196,5 +200,54 @@ describe("dispatchConversion", () => {
 
     innerRestore();
     vi.doUnmock("@/data/campaigns");
+  });
+});
+
+describe("aggregateCampaignMetrics", () => {
+  const row = (over: Partial<import("@/lib/ad-analytics/types").AdMetrics> = {}) => ({
+    platform: "linkedin" as const,
+    campaignId: "1",
+    windowStart: "2026-09-27T18:00:00Z",
+    windowEnd: "2026-09-27T19:00:00Z",
+    impressions: 100,
+    clicks: 10,
+    conversions: 1,
+    spendEur: 5,
+    ...over,
+  });
+
+  it("returns the single row unchanged", () => {
+    const r = row({ campaignId: "907100946" });
+    expect(aggregateCampaignMetrics([r])).toBe(r);
+  });
+
+  it("sums counts, derives rates, and keeps per-campaign breakdown", () => {
+    const out = aggregateCampaignMetrics([
+      row({ campaignId: "907100946", impressions: 661, clicks: 28, spendEur: 18.8 }),
+      row({ campaignId: "857622786", impressions: 0, clicks: 0, conversions: 0, spendEur: 0 }),
+    ]);
+    expect(out.impressions).toBe(661);
+    expect(out.clicks).toBe(28);
+    expect(out.spendEur).toBeCloseTo(18.8);
+    expect(out.ctr).toBeCloseTo(28 / 661);
+    expect(out.campaignBreakdown).toHaveLength(2);
+    expect(out.campaignBreakdown?.[0].campaignId).toBe("907100946");
+  });
+
+  it("merges demographics by label and concats creative leaderboards", () => {
+    const out = aggregateCampaignMetrics([
+      row({
+        demographics: { MEMBER_JOB_TITLE: [{ label: "Founder", clicks: 3 }] },
+        creativeLeaderboard: [{ creativeId: "a", label: "A", impressions: 10, clicks: 2 }],
+      }),
+      row({
+        campaignId: "2",
+        demographics: { MEMBER_JOB_TITLE: [{ label: "Founder", clicks: 1 }] },
+        creativeLeaderboard: [{ creativeId: "b", label: "B", impressions: 5, clicks: 9 }],
+      }),
+    ]);
+    expect(out.demographics?.MEMBER_JOB_TITLE).toEqual([{ label: "Founder", clicks: 4 }]);
+    // Sorted by clicks desc — B outranks A.
+    expect(out.creativeLeaderboard?.[0].creativeId).toBe("b");
   });
 });

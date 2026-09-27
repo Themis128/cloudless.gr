@@ -210,6 +210,19 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
         `${i + 1}. ${escapeMrkdwn(c.label)} — *${c.clicks}* clicks · ` +
         `${c.impressions} imp · ${formatRatio(c.ctr)} CTR`
     );
+  // Per-ad-set split when the platform config polls multiple campaigns —
+  // keeps attribution visible inside the single aggregated digest.
+  const campaignLines = (current.campaignBreakdown ?? [])
+    .filter((c) => c.impressions > 0 || c.spendEur > 0)
+    .map(
+      (c) =>
+        `• ${c.campaignId} — ${c.impressions} imp · ${c.clicks} clicks · ` +
+        `${formatEuros(c.spendEur)}`
+    );
+  if (campaignLines.length > 1) {
+    blocks.push({ type: "divider" });
+    blocks.push({ type: "section", text: `*By ad set:*\n${campaignLines.join("\n")}` });
+  }
   if (creativeLines.length > 0) {
     blocks.push({ type: "divider" });
     blocks.push({ type: "section", text: `*Top creatives:*\n${creativeLines.join("\n")}` });
@@ -223,10 +236,10 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
 }
 
 /**
- * Promo-credit pacing: lifetime spend vs credit, recent spend pace
- * (window delta extrapolated to per-day), projected depletion, and a
- * warning when the pace would exhaust the credit — i.e. start billing
- * the card on file — before the campaign's hard end date.
+ * Promo-credit pacing: lifetime spend vs credit, average daily burn
+ * (lifetime spend ÷ elapsed days), projected depletion, and a warning
+ * when the pace would exhaust the credit — i.e. start billing the card
+ * on file — before the campaign's hard end date.
  */
 function renderPacingLine(opts: RenderDigestOpts): string | null {
   const p = opts.pacing;
@@ -238,10 +251,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   // per-day figure. (Previously this divided the ~15-min inter-poll delta
   // by the full window length and extrapolated — a €18.80/hr burst read
   // as €451/day against a €25/day budget.)
-  const elapsedDays = Math.max(
-    1,
-    (Date.now() - new Date(p.adsStartAt).getTime()) / 86_400_000
-  );
+  const elapsedDays = Math.max(1, (Date.now() - new Date(p.adsStartAt).getTime()) / 86_400_000);
   const pacePerDay = spent > 0 ? spent / elapsedDays : null;
 
   let tail = `· ads end ${p.adsEndAt}`;
@@ -256,14 +266,8 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     // The card on file is charged only if spend that survives the
     // campaign's lifetime cap still exceeds the credit. If the campaign
     // hits its cap first, spend stops before the card is touched.
-    const daysLeft = Math.max(
-      0,
-      (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000
-    );
-    const projectedEnd = Math.min(
-      spent + pacePerDay * daysLeft,
-      p.lifetimeBudgetEur
-    );
+    const daysLeft = Math.max(0, (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000);
+    const projectedEnd = Math.min(spent + pacePerDay * daysLeft, p.lifetimeBudgetEur);
     warn = projectedEnd > p.creditEur;
   }
 

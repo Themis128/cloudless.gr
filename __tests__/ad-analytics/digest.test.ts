@@ -121,23 +121,40 @@ describe("renderDigest", () => {
     expect(text).toContain("€52.10 / €136.75");
     expect(text).toContain("€84.65"); // remaining
     expect(text).toContain("2026-10-23"); // ads end
-    // No pace without a previous bookmark → no projection, no warning.
-    expect(text).not.toContain("pace ~€");
+    // Burn rate derives from lifetime spend ÷ elapsed days — no previous
+    // bookmark needed.
+    expect(text).toContain("burn ~€");
+    // €52.10 over ~3.5 elapsed days ≈ €15/day — projected end spend is
+    // capped by the €100 lifetime budget, well under the €136.75 credit.
     expect(text).not.toContain("⚠️");
   });
 
-  it("warns when the pace would burn the credit before ads end", () => {
+  it("warns when projected spend would burn the credit before ads end", () => {
     const blocks = renderDigest({
       campaignSlug: "shop-online",
-      // €20 spent in the 1h window → ~€480/day → depletes €136.75 credit
-      // in <1 day, long before the Oct 23 end date.
-      current: baseMetrics({ spendEur: 35.57, lifetimeSpendEur: 130 }),
-      previous: baseMetrics({ spendEur: 15.57 }),
-      pacing,
+      // €130 already burned with ~26 days left — without a binding
+      // lifetime cap the pace would blow past the €136.75 credit.
+      current: baseMetrics({ lifetimeSpendEur: 130 }),
+      previous: null,
+      pacing: { ...pacing, lifetimeBudgetEur: 500 },
     });
     const text = JSON.stringify(blocks);
     expect(text).toContain("⚠️");
-    expect(text).toContain("pace ~€480.00/day");
+    expect(text).toContain("burn ~€");
+  });
+
+  it("does not warn when the campaign cap stops spend below the credit", () => {
+    const blocks = renderDigest({
+      campaignSlug: "shop-online",
+      // High burn, but the €100 lifetime cap halts the campaign before the
+      // €136.75 credit is exhausted — the card on file stays untouched.
+      current: baseMetrics({ lifetimeSpendEur: 74.2 }),
+      previous: null,
+      pacing,
+    });
+    const text = JSON.stringify(blocks);
+    expect(text).toContain("Credit:");
+    expect(text).not.toContain("⚠️");
   });
 
   it("omits the pacing line without lifetime spend", () => {
