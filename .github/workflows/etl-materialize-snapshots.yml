@@ -47,6 +47,15 @@ jobs:
         ANALYTICS_BUCKET: datalake-bucket
       run: node materialize-datalake-snapshots.mjs
 
+    - name: Validate lake schema contracts + write freshness manifest
+      working-directory: scripts/etl
+      env:
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+        CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+        ANALYTICS_BUCKET: datalake-bucket
+      run: node validate-lake-contracts.mjs
+
     - name: Notify Slack on failure
       if: failure()
       uses: actions/github-script@v9
