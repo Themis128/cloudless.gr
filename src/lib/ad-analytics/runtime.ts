@@ -314,7 +314,12 @@ export async function runScheduledPoll(opts?: {
       const posted: Array<{ channel: string; target: string; ok: boolean }> = [];
       const anomalyChannels = channelsForLevel(campaign.notifyChannels, "anomaly");
       const windowHours = Math.max(1, Math.round(windowMs / 3_600_000));
-      for (const current of metrics) {
+      // One digest per platform config — `metrics` holds one row per
+      // campaignId and posting each would emit duplicate-looking digests
+      // (all labelled with the same campaign slug). The aggregate also
+      // fixes deltas: rows previously shared one bookmark key, so a row's
+      // "previous" was actually a different campaign's snapshot.
+      for (const current of [aggregateCampaignMetrics(metrics)]) {
         const key = bookmarkKeyOf({
           campaignSlug: campaign.slug,
           platform: platformConfig.platform,
@@ -416,6 +421,71 @@ export async function runScheduledPoll(opts?: {
   }
 
   return { digests, noop: digests.length === 0 };
+}
+
+/**
+ * Combine per-campaign metric rows into one account-level row for the
+ * digest. Counts sum; rates derive from the summed counts; demographic
+ * pivots merge by label; creative leaderboards concat. `campaignBreakdown`
+ * preserves the per-ad-set split so the digest can still attribute spend.
+ */
+export function aggregateCampaignMetrics(rows: AdMetrics[]): AdMetrics {
+  if (rows.length === 1) return rows[0];
+  const first = rows[0];
+
+  const impressions = rows.reduce((a, r) => a + r.impressions, 0);
+  const clicks = rows.reduce((a, r) => a + r.clicks, 0);
+  const conversions = rows.reduce((a, r) => a + r.conversions, 0);
+  const spendEur = rows.reduce((a, r) => a + r.spendEur, 0);
+
+  const demographics: NonNullable<AdMetrics["demographics"]> = {};
+  let hasDemographics = false;
+  for (const row of rows) {
+    for (const [pivot, breakdown] of Object.entries(row.demographics ?? {})) {
+      const key = pivot as DemographicPivot;
+      const merged = new Map<string, number>(
+        (demographics[key] ?? []).map((d) => [d.label, d.clicks])
+      );
+      for (const d of breakdown ?? []) {
+        merged.set(d.label, (merged.get(d.label) ?? 0) + d.clicks);
+      }
+      demographics[key] = [...merged.entries()]
+        .map(([label, clicks]) => ({ label, clicks }))
+        .sort((a, b) => b.clicks - a.clicks);
+      hasDemographics = true;
+    }
+  }
+
+  const creativeLeaderboard = rows
+    .flatMap((r) => r.creativeLeaderboard ?? [])
+    .sort((a, b) => b.clicks - a.clicks);
+
+  return {
+    platform: first.platform,
+    campaignId: rows.map((r) => r.campaignId).join(","),
+    windowStart: rows.map((r) => r.windowStart).sort()[0],
+    windowEnd:
+      rows
+        .map((r) => r.windowEnd)
+        .sort()
+        .at(-1) ?? first.windowEnd,
+    impressions,
+    clicks,
+    conversions,
+    spendEur,
+    ctr: impressions > 0 ? clicks / impressions : undefined,
+    cpcEur: clicks > 0 ? spendEur / clicks : undefined,
+    cpaEur: conversions > 0 ? spendEur / conversions : undefined,
+    lifetimeSpendEur: rows.find((r) => r.lifetimeSpendEur !== undefined)?.lifetimeSpendEur,
+    demographics: hasDemographics ? demographics : undefined,
+    creativeLeaderboard: creativeLeaderboard.length ? creativeLeaderboard : undefined,
+    campaignBreakdown: rows.map((r) => ({
+      campaignId: r.campaignId,
+      impressions: r.impressions,
+      clicks: r.clicks,
+      spendEur: r.spendEur,
+    })),
+  };
 }
 
 /**
