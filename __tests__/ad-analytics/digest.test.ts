@@ -149,4 +149,20 @@ describe("renderDigest", () => {
     });
     expect(JSON.stringify(blocks)).not.toContain("Credit:");
   });
+
+  it("renders the creative leaderboard when present", () => {
+    const blocks = renderDigest({
+      campaignSlug: "shop-online",
+      current: baseMetrics({
+        creativeLeaderboard: [
+          { creativeId: "111", label: "Carousel A", impressions: 300, clicks: 20, ctr: 0.0667 },
+          { creativeId: "222", label: "Doc B", impressions: 86, clicks: 8, ctr: 0.093 },
+        ],
+      }),
+    });
+    const text = JSON.stringify(blocks);
+    expect(text).toContain("Top creatives:");
+    expect(text).toContain("Carousel A — *20* clicks");
+    expect(text).toContain("6.67% CTR");
+  });
 });

@@ -192,6 +192,17 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
     blocks.push({ type: "divider" });
     blocks.push({ type: "section", text: `*ICP signal:*\n${icpLines.join("\n")}` });
   }
+  const creativeLines = (current.creativeLeaderboard ?? [])
+    .slice(0, 3)
+    .map(
+      (c, i) =>
+        `${i + 1}. ${escapeMrkdwn(c.label)} — *${c.clicks}* clicks · ` +
+        `${c.impressions} imp · ${formatRatio(c.ctr)} CTR`
+    );
+  if (creativeLines.length > 0) {
+    blocks.push({ type: "divider" });
+    blocks.push({ type: "section", text: `*Top creatives:*\n${creativeLines.join("\n")}` });
+  }
   blocks.push({
     type: "context",
     text: `cloudless.gr ad-analytics · ${current.windowStart} → ${current.windowEnd}`,

@@ -164,6 +164,15 @@ export interface AdMetrics {
    *  config carries `pacing`. Account-level (all campaigns drain the same
    *  credit), so identical on each campaign's row. */
   lifetimeSpendEur?: number;
+  /** Per-creative leaderboard for the window (pivot=CREATIVE) — which ad
+   *  variant is pulling the clicks. Sorted by clicks desc. */
+  creativeLeaderboard?: Array<{
+    creativeId: string;
+    label: string;
+    impressions: number;
+    clicks: number;
+    ctr?: number;
+  }>;
 }
 
 /** The four pivots the digest surfaces today. The string values are the
