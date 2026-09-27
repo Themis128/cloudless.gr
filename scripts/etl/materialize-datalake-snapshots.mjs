@@ -62,6 +62,82 @@ function sectionOk(section, rows) {
 	return { section, rows, rowCount: rows.length, fromCache: false };
 }
 
+// ── D1 hot-overlay sections ────────────────────────────────────────────
+// acquisition_funnel + attribution are served live from D1 analytics_events
+// (see datalake-r2.ts HOT_D1_SECTIONS). Materialize the same queries into
+// gold so the batch insights pipeline and cold-cache fallback see them too.
+const AUTH_D1_DATABASE_ID =
+	process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() ||
+	process.env.AUTH_D1_DATABASE_ID?.trim() ||
+	"7ca74513-23c3-412a-b9ca-b0c55835973d";
+
+async function d1Query(sql, params = []) {
+	const account =
+		process.env.CLOUDFLARE_ACCOUNT_ID?.trim() || process.env.CF_ACCOUNT_ID?.trim();
+	const token = process.env.CLOUDFLARE_API_TOKEN?.trim();
+	if (!account || !token) return null;
+	const url = `https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${AUTH_D1_DATABASE_ID}/query`;
+	const res = await fetch(url, {
+		method: "POST",
+		headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+		body: JSON.stringify({ sql, params }),
+		signal: AbortSignal.timeout(15_000),
+	});
+	const body = await res.json().catch(() => null);
+	if (!res.ok || body?.success === false) {
+		const msg =
+			body?.errors?.map((e) => e.message).filter(Boolean).join("; ") ||
+			res.statusText;
+		throw new Error(`d1 query failed (${res.status}): ${msg}`);
+	}
+	return body?.result?.[0]?.results ?? [];
+}
+
+const daysAgoUnix = (days) => Math.floor(Date.now() / 1000) - days * 86400;
+
+// Mirrors acquisitionFromD1 in src/lib/datalake-r2.ts (30-day window).
+async function acquisitionFunnelD1() {
+	const rows = await d1Query(
+		`SELECT date(created_at, 'unixepoch') AS day,
+		        COUNT(DISTINCT CASE WHEN event = 'page_view' THEN session_id END) AS sessions,
+		        COUNT(DISTINCT CASE WHEN event = 'signup' THEN user_id END) AS signups,
+		        COUNT(DISTINCT CASE WHEN event = 'purchase' THEN user_id END) AS purchasers,
+		        SUM(CASE WHEN event = 'purchase'
+		                 THEN COALESCE(json_extract(properties_json, '$.amount'), 0)
+		                 ELSE 0 END) AS revenue
+		 FROM analytics_events
+		 WHERE created_at >= ?
+		 GROUP BY 1
+		 ORDER BY 1 DESC`,
+		[daysAgoUnix(30)]
+	);
+	return rows;
+}
+
+// Mirrors attributionFromD1 in src/lib/datalake-r2.ts (90-day window).
+async function attributionD1() {
+	const rows = await d1Query(
+		`SELECT COALESCE(source, '(direct)') AS utm_source,
+		        COALESCE(medium, '(none)') AS utm_medium,
+		        COALESCE(campaign, '(none)') AS utm_campaign,
+		        COUNT(DISTINCT CASE WHEN event = 'page_view' THEN session_id END) AS sessions,
+		        COUNT(DISTINCT CASE WHEN event = 'signup' THEN user_id END) AS signups,
+		        SUM(CASE WHEN event = 'purchase' THEN 1 ELSE 0 END) AS purchases,
+		        SUM(CASE WHEN event = 'purchase'
+		                 THEN COALESCE(json_extract(properties_json, '$.amount'), 0)
+		                 ELSE 0 END) AS revenue
+		 FROM analytics_events
+		 WHERE created_at >= ?
+		 GROUP BY 1, 2, 3
+		 HAVING COUNT(*) > 1
+		 ORDER BY revenue DESC, sessions DESC
+		 LIMIT 25`,
+		[daysAgoUnix(90)]
+	);
+	return rows;
+}
+
+
 function sectionErr(section, error) {
 	return { section, error: String(error).slice(0, 300) };
 }
@@ -832,6 +908,30 @@ async function main() {
 	sections.push(
 		tx ? sectionOk("stripe_revenue", stripeRevenue(tx)) : sectionErr("stripe_revenue", "missing stripe parquet")
 	);
+
+	// D1 hot-overlay sections — materialized so batch insights and the
+	// dashboard cold path see them; the live D1 overlay still wins at serve
+	// time when AUTH_DB is bound.
+	try {
+		const acq = await acquisitionFunnelD1();
+		sections.push(
+			acq === null
+				? sectionErr("acquisition_funnel", "missing CLOUDFLARE_API_TOKEN for D1 overlay")
+				: sectionOk("acquisition_funnel", acq)
+		);
+	} catch (error) {
+		sections.push(sectionErr("acquisition_funnel", String(error)));
+	}
+	try {
+		const attr = await attributionD1();
+		sections.push(
+			attr === null
+				? sectionErr("attribution", "missing CLOUDFLARE_API_TOKEN for D1 overlay")
+				: sectionOk("attribution", attr)
+		);
+	} catch (error) {
+		sections.push(sectionErr("attribution", String(error)));
+	}
 
 	const n8nWf = await safeParquet("lake/n8n-workflows/workflows.parquet");
 	const n8nEx = await safeParquet("lake/n8n-executions/executions.parquet");
