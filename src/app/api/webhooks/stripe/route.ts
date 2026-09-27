@@ -14,6 +14,7 @@ import {
   markStripeEventFailed,
 } from "@/lib/stripe-transactions";
 import { sendPurchaseEvent } from "@/lib/meta-capi";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 /**
  * Pull UTM fields out of the Stripe Checkout Session's `metadata` (the
@@ -138,6 +139,22 @@ async function handleCheckoutCompleted(
       ...Object.fromEntries(utmEntries),
     },
   });
+
+  // Funnel event — feeds attribution / acquisition_funnel gold sections.
+  // Critical: bypasses sampling (rare, decisive metric). UTMs already
+  // stamped on session.metadata by the checkout route.
+  trackAnalyticsEvent({
+    event: "purchase",
+    email: session.customer_email ?? undefined,
+    page: "/store",
+    amount: (session.amount_total ?? 0) / 100,
+    currency: (session.currency ?? "eur").toUpperCase(),
+    source: session.metadata?.utm_source,
+    medium: session.metadata?.utm_medium,
+    campaign: session.metadata?.utm_campaign,
+    properties: { order_id: session.id, mode: session.mode },
+    critical: true,
+  }).catch(() => {});
 
   if (session.customer_email) {
     syncEspoCRMDeal(session).catch(() => {});

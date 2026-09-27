@@ -10,6 +10,7 @@ import {
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendActivationEmail, notifyTeam } from "@/lib/email";
 import { slackRegistrationNotify } from "@/lib/slack-notify";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { isD1WriteLimitError } from "@/lib/d1-http";
 
@@ -213,6 +214,15 @@ export async function POST(req: NextRequest) {
       "New User Registration",
       email + (fullName ? ` (${fullName})` : "") + " just signed up."
     ).catch(() => {});
+
+    // Funnel event — feeds the acquisition_funnel / attribution gold
+    // sections. Critical: never sampled out (rare, decisive metric).
+    trackAnalyticsEvent({
+      event: "signup",
+      email,
+      page: "/api/auth/register",
+      critical: true,
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true, token });
   } catch (err) {

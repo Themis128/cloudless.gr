@@ -5,6 +5,7 @@ import { routing } from "@/i18n/routing";
 import type { Locale } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
+import PageViewBeacon from "@/components/analytics/PageViewBeacon";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
@@ -153,6 +154,7 @@ export default async function RootLayout({
         ) : null}
         {children}
         <WebMCPProvider />
+        <PageViewBeacon />
         <PlausibleAnalytics />
         <ClarityAnalytics />
       </body>

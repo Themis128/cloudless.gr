@@ -46,6 +46,38 @@ export function getFunnelSessionId(): string {
   }
 }
 
+/**
+ * Consent-gated page_view beacon → POST /api/track → D1 analytics_events.
+ * Captures utm_source/medium/campaign so the attribution + acquisition
+ * gold sections have real data. Fires once per SPA navigation.
+ */
+export function trackPageView(): void {
+  if (typeof globalThis.fetch !== "function") return;
+  if (!hasAnalyticsConsent()) return;
+
+  const params =
+    typeof globalThis.location !== "undefined"
+      ? new URLSearchParams(globalThis.location.search)
+      : null;
+  const body = {
+    type: "page_view",
+    session_id: getFunnelSessionId(),
+    page: globalThis.location?.pathname ?? "/",
+    utm_source: params?.get("utm_source") ?? undefined,
+    utm_medium: params?.get("utm_medium") ?? undefined,
+    utm_campaign: params?.get("utm_campaign") ?? undefined,
+  };
+
+  globalThis
+    .fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    })
+    .catch(() => {});
+}
+
 export function trackFunnelEvent(
   event: FunnelEventType,
   properties: Record<string, unknown> = {}
