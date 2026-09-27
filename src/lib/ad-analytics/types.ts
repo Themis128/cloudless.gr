@@ -42,6 +42,20 @@ export interface CampaignPlatformConfig {
   insightTagConversionId: number | null;
   /** Server-fired CAPI conversion. null = CAPI not wired yet. */
   capiConversionId: number | null;
+  /** Optional — promotional-credit pacing. When set, the digest shows
+   *  lifetime spend vs credit balance, a projected depletion date from
+   *  the current spend pace, and a warning when the pace would burn the
+   *  credit (and hit the payment method) before `adsEndAt`. */
+  pacing?: {
+    /** Promo credit balance on the ad account, EUR. */
+    creditEur: number;
+    /** Campaign lifetime budget cap, EUR (informational). */
+    lifetimeBudgetEur: number;
+    /** ISO date the ads started — lower bound of the lifetime query. */
+    adsStartAt: string;
+    /** ISO date the ads stop (hard end date set in Campaign Manager). */
+    adsEndAt: string;
+  };
 }
 
 /** One notification target on one campaign. */
@@ -145,6 +159,11 @@ export interface AdMetrics {
    *  per enabled pivot. Empty when the enrichment fetch returned no data
    *  (privacy threshold / suppressed / not requested). */
   demographics?: Partial<Record<DemographicPivot, DemographicBreakdown>>;
+  /** Lifetime spend across ALL campaigns on the ad account since
+   *  `pacing.adsStartAt` — filled by the runtime only when the platform
+   *  config carries `pacing`. Account-level (all campaigns drain the same
+   *  credit), so identical on each campaign's row. */
+  lifetimeSpendEur?: number;
 }
 
 /** The four pivots the digest surfaces today. The string values are the

@@ -150,6 +150,14 @@ export interface RenderDigestOpts {
   previous?: AdMetrics | null;
   /** Human-readable window label like "last 15 min" or "rolling 1 h". */
   windowLabel?: string;
+  /** Promo-credit pacing config from `CampaignPlatformConfig.pacing`. Only
+   *  renders when `current.lifetimeSpendEur` is also present. */
+  pacing?: {
+    creditEur: number;
+    lifetimeBudgetEur: number;
+    adsStartAt: string;
+    adsEndAt: string;
+  };
 }
 
 /**
@@ -172,6 +180,9 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
     `*Conversions:* ${formatNumberWithDelta(current.conversions, previous?.conversions)}  ·  *Cost / conv:* ${formatEuros(current.cpaEur)}`,
   ];
 
+  const pacingLine = renderPacingLine(opts);
+  if (pacingLine) lines.push(pacingLine);
+
   const icpLines = renderDemographicLines(current.demographics);
   const blocks: NotificationBlock[] = [
     { type: "header", text: `📊 ${campaignSlug} · ${windowLabel}` },
@@ -187,6 +198,48 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
   });
 
   return blocks;
+}
+
+/**
+ * Promo-credit pacing: lifetime spend vs credit, recent spend pace
+ * (window delta extrapolated to per-day), projected depletion, and a
+ * warning when the pace would exhaust the credit — i.e. start billing
+ * the card on file — before the campaign's hard end date.
+ */
+function renderPacingLine(opts: RenderDigestOpts): string | null {
+  const p = opts.pacing;
+  const spent = opts.current.lifetimeSpendEur;
+  if (!p || typeof spent !== "number") return null;
+
+  const remaining = p.creditEur - spent;
+  const windowHours = Math.max(
+    0.01,
+    (new Date(opts.current.windowEnd).getTime() - new Date(opts.current.windowStart).getTime()) /
+      3_600_000
+  );
+  const windowSpend =
+    typeof opts.previous?.spendEur === "number"
+      ? Math.max(0, opts.current.spendEur - opts.previous.spendEur)
+      : 0;
+  const pacePerDay = windowSpend > 0 ? (windowSpend / windowHours) * 24 : null;
+
+  let tail = `· ads end ${p.adsEndAt}`;
+  let warn = false;
+  if (pacePerDay !== null && pacePerDay > 0) {
+    const daysToDeplete = remaining / pacePerDay;
+    const depletes = new Date(Date.now() + daysToDeplete * 86_400_000).toISOString().slice(0, 10);
+    tail =
+      `· pace ~€${pacePerDay.toFixed(2)}/day → credit lasts ~` +
+      `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
+      tail;
+    // Credit exhausted while ads still run = the card on file gets charged.
+    warn = depletes < p.adsEndAt;
+  }
+
+  return (
+    `${warn ? "⚠️ " : ""}*Credit:* €${spent.toFixed(2)} / ` +
+    `€${p.creditEur.toFixed(2)} — *€${remaining.toFixed(2)}* left ${tail}`
+  );
 }
 
 function renderDemographicLines(

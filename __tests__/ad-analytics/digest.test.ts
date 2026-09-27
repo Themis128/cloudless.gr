@@ -101,4 +101,52 @@ describe("renderDigest", () => {
     const text = JSON.stringify(blocks);
     expect(text).toContain("—");
   });
+
+  const pacing = {
+    creditEur: 136.75,
+    lifetimeBudgetEur: 100,
+    adsStartAt: "2026-09-24",
+    adsEndAt: "2026-10-23",
+  };
+
+  it("renders the credit pacing line when pacing config + lifetime spend are present", () => {
+    const blocks = renderDigest({
+      campaignSlug: "shop-online",
+      current: baseMetrics({ lifetimeSpendEur: 52.1 }),
+      previous: null,
+      pacing,
+    });
+    const text = JSON.stringify(blocks);
+    expect(text).toContain("Credit:");
+    expect(text).toContain("€52.10 / €136.75");
+    expect(text).toContain("€84.65"); // remaining
+    expect(text).toContain("2026-10-23"); // ads end
+    // No pace without a previous bookmark → no projection, no warning.
+    expect(text).not.toContain("pace ~€");
+    expect(text).not.toContain("⚠️");
+  });
+
+  it("warns when the pace would burn the credit before ads end", () => {
+    const blocks = renderDigest({
+      campaignSlug: "shop-online",
+      // €20 spent in the 1h window → ~€480/day → depletes €136.75 credit
+      // in <1 day, long before the Oct 23 end date.
+      current: baseMetrics({ spendEur: 35.57, lifetimeSpendEur: 130 }),
+      previous: baseMetrics({ spendEur: 15.57 }),
+      pacing,
+    });
+    const text = JSON.stringify(blocks);
+    expect(text).toContain("⚠️");
+    expect(text).toContain("pace ~€480.00/day");
+  });
+
+  it("omits the pacing line without lifetime spend", () => {
+    const blocks = renderDigest({
+      campaignSlug: "shop-online",
+      current: baseMetrics(),
+      previous: null,
+      pacing,
+    });
+    expect(JSON.stringify(blocks)).not.toContain("Credit:");
+  });
 });
