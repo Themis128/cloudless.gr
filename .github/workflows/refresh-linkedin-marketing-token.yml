@@ -10,6 +10,11 @@
 name: Refresh LinkedIn marketing token
 
 on:
+  # Weekly — LinkedIn access tokens live ~60d; each successful refresh also
+  # returns a new refresh token, so a weekly tick keeps the chain alive well
+  # inside both lifetimes without manual re-consent.
+  schedule:
+    - cron: "15 6 * * 1"
   workflow_dispatch:
 
 permissions:
