@@ -22,11 +22,11 @@ async function sampleColumns(key) {
 	writeFileSync(tmp, buf);
 	try {
 		const reader = await ParquetReader.openFile(tmp);
-		const cursor = reader.getCursor();
-		const row = await cursor.next();
+		// Declared schema fields — a 0-row parquet is still contract-valid
+		// (empty ETL output ≠ missing columns).
+		const cols = Object.keys(reader.schema.fields || {});
 		await reader.close();
-		if (!row) return [];
-		return Object.keys(row);
+		return cols;
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
