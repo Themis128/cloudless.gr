@@ -12,6 +12,10 @@ permissions:
 strict: false
 engine: copilot
 model: gpt-4.1
+# Bound runaway turns — a 908k-token partial-execution loop on 2026-09-27
+# hit the Copilot API rate limit (429) and starved later scheduled agents.
+max-turns: 60
+max-ai-credits: 250
 models:
   default-ai-credits-pricing:
     input: 0.10

@@ -385,6 +385,9 @@ jobs:
   agent:
     needs: activation
     if: needs.activation.outputs.daily_ai_credits_exceeded != 'true'
+    # Keep the workflow green when the Copilot CLI agent itself fails
+    # (quota, partial_execution, infra) — the .md source documents this pin.
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
