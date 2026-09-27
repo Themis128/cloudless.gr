@@ -234,16 +234,15 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   if (!p || typeof spent !== "number") return null;
 
   const remaining = p.creditEur - spent;
-  const windowHours = Math.max(
-    0.01,
-    (new Date(opts.current.windowEnd).getTime() - new Date(opts.current.windowStart).getTime()) /
-      3_600_000
+  // Burn rate = lifetime account spend ÷ elapsed campaign days — a stable
+  // per-day figure. (Previously this divided the ~15-min inter-poll delta
+  // by the full window length and extrapolated — a €18.80/hr burst read
+  // as €451/day against a €25/day budget.)
+  const elapsedDays = Math.max(
+    1,
+    (Date.now() - new Date(p.adsStartAt).getTime()) / 86_400_000
   );
-  const windowSpend =
-    typeof opts.previous?.spendEur === "number"
-      ? Math.max(0, opts.current.spendEur - opts.previous.spendEur)
-      : 0;
-  const pacePerDay = windowSpend > 0 ? (windowSpend / windowHours) * 24 : null;
+  const pacePerDay = spent > 0 ? spent / elapsedDays : null;
 
   let tail = `· ads end ${p.adsEndAt}`;
   let warn = false;
@@ -251,11 +250,21 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     const daysToDeplete = remaining / pacePerDay;
     const depletes = new Date(Date.now() + daysToDeplete * 86_400_000).toISOString().slice(0, 10);
     tail =
-      `· pace ~€${pacePerDay.toFixed(2)}/day → credit lasts ~` +
+      `· burn ~€${pacePerDay.toFixed(2)}/day → credit lasts ~` +
       `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
       tail;
-    // Credit exhausted while ads still run = the card on file gets charged.
-    warn = depletes < p.adsEndAt;
+    // The card on file is charged only if spend that survives the
+    // campaign's lifetime cap still exceeds the credit. If the campaign
+    // hits its cap first, spend stops before the card is touched.
+    const daysLeft = Math.max(
+      0,
+      (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000
+    );
+    const projectedEnd = Math.min(
+      spent + pacePerDay * daysLeft,
+      p.lifetimeBudgetEur
+    );
+    warn = projectedEnd > p.creditEur;
   }
 
   return (

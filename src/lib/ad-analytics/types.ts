@@ -173,6 +173,15 @@ export interface AdMetrics {
     clicks: number;
     ctr?: number;
   }>;
+  /** Per-campaign contribution to an aggregated digest row — set by the
+   *  runtime when `campaignIds` yields more than one metrics row, so the
+   *  digest can still attribute spend to each ad set. */
+  campaignBreakdown?: Array<{
+    campaignId: string;
+    impressions: number;
+    clicks: number;
+    spendEur: number;
+  }>;
 }
 
 /** The four pivots the digest surfaces today. The string values are the
