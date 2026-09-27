@@ -912,25 +912,25 @@ async function main() {
 	// D1 hot-overlay sections — materialized so batch insights and the
 	// dashboard cold path see them; the live D1 overlay still wins at serve
 	// time when AUTH_DB is bound.
-	try {
-		const acq = await acquisitionFunnelD1();
-		sections.push(
-			acq === null
-				? sectionErr("acquisition_funnel", "missing CLOUDFLARE_API_TOKEN for D1 overlay")
-				: sectionOk("acquisition_funnel", acq)
-		);
-	} catch (error) {
-		sections.push(sectionErr("acquisition_funnel", String(error)));
-	}
-	try {
-		const attr = await attributionD1();
-		sections.push(
-			attr === null
-				? sectionErr("attribution", "missing CLOUDFLARE_API_TOKEN for D1 overlay")
-				: sectionOk("attribution", attr)
-		);
-	} catch (error) {
-		sections.push(sectionErr("attribution", String(error)));
+	for (const [name, fn] of [
+		["acquisition_funnel", acquisitionFunnelD1],
+		["attribution", attributionD1],
+	]) {
+		try {
+			const rows = await fn();
+			if (rows === null) {
+				sections.push(
+					sectionErr(name, "missing CLOUDFLARE_API_TOKEN for D1 overlay")
+				);
+				console.warn(`  ${name}: no D1 creds — section error`);
+			} else {
+				sections.push(sectionOk(name, rows));
+				console.log(`  ${name}: ${rows.length} rows from D1`);
+			}
+		} catch (error) {
+			sections.push(sectionErr(name, String(error)));
+			console.warn(`  ${name}: ${String(error).slice(0, 160)}`);
+		}
 	}
 
 	const n8nWf = await safeParquet("lake/n8n-workflows/workflows.parquet");
