@@ -156,6 +156,7 @@ export const LAKE_SCHEMA_CONTRACTS = {
   "lake/gsc-devices/devices.parquet": ["device", "clicks", "impressions", "ctr", "position"],
   "lake/sentry-issues/issues.parquet": ["issue_id", "title", "level", "status", "count_14d"],
   "lake/linkedin-ads/insights.parquet": ["campaign_id", "day", "impressions", "clicks", "spend"],
+  "lake/linkedin-ads/demographics.parquet": ["pivot", "pivot_value", "impressions", "clicks", "spend"],
   "lake/espocrm-contacts/contacts.parquet": ["contact_id", "email"],
   "lake/espocrm-opportunities/opportunities.parquet": ["opportunity_id", "stage", "amount"],
   "lake/clients/clients.parquet": ["user_id", "email"],

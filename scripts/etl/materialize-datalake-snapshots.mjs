@@ -493,7 +493,8 @@ function socialAttribution(events) {
 // Daily + demographics rows are imported into SocialAuto Postgres from
 // Campaign Manager CSV exports (scripts/import_linkedin_reports.py) and
 // shipped here by the datalake_export celery task. The API-based
-// lake/linkedin-ads/insights.parquet is only a fallback (OAuth revoked).
+// lake/linkedin-ads/insights.parquet is the fallback when the CSV import
+// is absent (OAuth restored 2026-09 — LinkedIn-Version 202605).
 
 function linkedinAdsTruth(daily, snapshots) {
 	const sets = new Map();
@@ -546,6 +547,32 @@ function linkedinAdsTruth(daily, snapshots) {
 		}
 	}
 	return rows.sort((a, b) => b.spend_eur - a.spend_eur);
+}
+
+// lake/linkedin-ads/demographics.parquet (Marketing API r_ads_reporting
+// MEMBER_* pivots) → the same shape the CM-CSV demographics.json rows carry.
+// Fallback source for linkedin_ads_audience when the CSV import is absent.
+function apiDemoToSegments(rows) {
+	if (!rows?.length) return null;
+	const totals = new Map();
+	for (const r of rows) {
+		const t = r.pivot || "(unknown)";
+		totals.set(t, (totals.get(t) || 0) + (Number(r.clicks) || 0));
+	}
+	return rows.map((r) => {
+		const clicks = Number(r.clicks) || 0;
+		const impressions = Number(r.impressions) || 0;
+		const totalClicks = totals.get(r.pivot) || 0;
+		return {
+			segment_type: String(r.pivot || "").replace(/^MEMBER_/, "").toLowerCase(),
+			segment_value: r.pivot_label || r.pivot_value,
+			impressions,
+			clicks,
+			ctr: impressions ? Number(((clicks / impressions) * 100).toFixed(2)) : 0,
+			pct_clicks: totalClicks ? Number(((clicks / totalClicks) * 100).toFixed(1)) : 0,
+			conversions: r.conversions || 0,
+		};
+	});
 }
 
 function linkedinAdsAudience(demographics) {
@@ -775,6 +802,7 @@ async function main() {
 	const saAdDaily = await safeJson("lake/socialauto-ads/daily.json");
 	const saAdSnaps = await safeJson("lake/socialauto-ads/snapshots.json");
 	const saAdDemo = await safeJson("lake/socialauto-ads/demographics.json");
+	const apiAdDemo = await safeParquet("lake/linkedin-ads/demographics.parquet");
 	const linkedin = await safeParquet("lake/linkedin-ads/insights.parquet");
 	// Prefer report ground truth (socialauto-ads JSON); API parquet is the
 	// fallback while LinkedIn Marketing API OAuth is revoked.
@@ -785,10 +813,13 @@ async function main() {
 				? sectionOk("linkedin_ads", linkedinSummary(linkedin))
 				: sectionErr("linkedin_ads", "missing linkedin ad data")
 	);
+	const apiDemoRows = saAdDemo ? null : apiDemoToSegments(apiAdDemo);
 	sections.push(
 		saAdDemo
 			? sectionOk("linkedin_ads_audience", linkedinAdsAudience(saAdDemo))
-			: sectionErr("linkedin_ads_audience", "missing ad demographics json")
+			: apiDemoRows
+				? sectionOk("linkedin_ads_audience", linkedinAdsAudience(apiDemoRows))
+				: sectionErr("linkedin_ads_audience", "missing ad demographics json")
 	);
 	const contacts = await safeParquet("lake/espocrm-contacts/contacts.parquet");
 	const opportunities = await safeParquet("lake/espocrm-opportunities/opportunities.parquet");
@@ -909,6 +940,7 @@ async function main() {
 		"lake/socialauto-ads/snapshots.json",
 		"lake/socialauto-ads/daily.json",
 		"lake/socialauto-ads/demographics.json",
+		"lake/linkedin-ads/demographics.parquet",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",
 		"ml-parquet/scores_churn.parquet",
