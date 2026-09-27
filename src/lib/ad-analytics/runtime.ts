@@ -319,7 +319,8 @@ export async function runScheduledPoll(opts?: {
       // (all labelled with the same campaign slug). The aggregate also
       // fixes deltas: rows previously shared one bookmark key, so a row's
       // "previous" was actually a different campaign's snapshot.
-      for (const current of [aggregateCampaignMetrics(metrics)]) {
+      const digestRows = metrics.length > 0 ? [aggregateCampaignMetrics(metrics)] : [];
+      for (const current of digestRows) {
         const key = bookmarkKeyOf({
           campaignSlug: campaign.slug,
           platform: platformConfig.platform,
