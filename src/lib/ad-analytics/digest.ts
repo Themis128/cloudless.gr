@@ -180,6 +180,17 @@ export function renderDigest(opts: RenderDigestOpts): NotificationBlock[] {
     `*Conversions:* ${formatNumberWithDelta(current.conversions, previous?.conversions)}  ·  *Cost / conv:* ${formatEuros(current.cpaEur)}`,
   ];
 
+  // Benchmark context (sponsored content, per widely-cited LinkedIn
+  // benchmarks: median CTR ~0.44%, CPC ~€2-3 equivalent).
+  if (
+    current.platform === "linkedin" &&
+    typeof current.ctr === "number" &&
+    current.impressions > 0
+  ) {
+    const vs = current.ctr >= 0.0044 ? "above" : "below";
+    lines.push(`_vs LinkedIn sponsored median CTR ~0.44% — you're ${vs} it_`);
+  }
+
   const pacingLine = renderPacingLine(opts);
   if (pacingLine) lines.push(pacingLine);
 
