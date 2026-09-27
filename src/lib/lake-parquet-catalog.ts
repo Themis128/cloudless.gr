@@ -28,7 +28,11 @@ export const LAKE_PARQUET_CATALOG = [
   },
   { id: "sentry", label: "Sentry issues", path: "lake/sentry-issues/issues.parquet" },
   { id: "linkedin", label: "LinkedIn ads", path: "lake/linkedin-ads/insights.parquet" },
-  { id: "linkedin-demo", label: "LinkedIn ad demographics", path: "lake/linkedin-ads/demographics.parquet" },
+  {
+    id: "linkedin-demo",
+    label: "LinkedIn ad demographics",
+    path: "lake/linkedin-ads/demographics.parquet",
+  },
   { id: "n8n-wf", label: "n8n workflows", path: "lake/n8n-workflows/workflows.parquet" },
   { id: "n8n-ex", label: "n8n executions", path: "lake/n8n-executions/executions.parquet" },
   { id: "postiz-posts", label: "Postiz posts", path: "lake/postiz-posts/posts.parquet" },
