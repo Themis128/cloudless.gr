@@ -33,7 +33,7 @@ const TOKEN = resolveToken();
 const LI_BASE = "https://api.linkedin.com/rest";
 const LI_HEADERS = {
 	Authorization: `Bearer ${TOKEN}`,
-	"LinkedIn-Version": "202509",
+	"LinkedIn-Version": "202605",
 	"X-Restli-Protocol-Version": "2.0.0",
 };
 
