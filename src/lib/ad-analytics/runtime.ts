@@ -291,6 +291,26 @@ export async function runScheduledPoll(opts?: {
         continue;
       }
 
+      // Credit pacing: when the platform config carries `pacing`, pull
+      // lifetime spend (adsStartAt → now) so the digest can show how much
+      // of the promo credit is left. All campaigns drain the same credit —
+      // the lifetime figure is identical on each campaign row.
+      if (platformConfig.pacing && metrics.length > 0) {
+        try {
+          const lifetime = await adapter.pullMetrics({
+            accountId: platformConfig.accountId,
+            campaignIds: platformConfig.campaignIds,
+            since: new Date(platformConfig.pacing.adsStartAt),
+            until: now,
+            pivots: [],
+          });
+          const totalSpend = lifetime.reduce((acc, m) => acc + m.spendEur, 0);
+          for (const m of metrics) m.lifetimeSpendEur = totalSpend;
+        } catch (err) {
+          console.error("[ad-analytics/runtime] lifetime spend fetch failed:", err);
+        }
+      }
+
       const posted: Array<{ channel: string; target: string; ok: boolean }> = [];
       const anomalyChannels = channelsForLevel(campaign.notifyChannels, "anomaly");
       const windowHours = Math.max(1, Math.round(windowMs / 3_600_000));
@@ -307,6 +327,7 @@ export async function runScheduledPoll(opts?: {
           current,
           previous: bookmark?.snapshot ?? null,
           windowLabel: `rolling ${Math.round(windowMs / 60000)} min`,
+          pacing: platformConfig.pacing,
         });
         for (const { config, channel } of digestChannels) {
           try {

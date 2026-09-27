@@ -150,6 +150,17 @@ export const campaigns: Campaign[] = [
         campaignIds: ["907100946", "857622786"],
         insightTagConversionId: 26846068,
         capiConversionId: 26846116,
+        // Promo-credit pacing — keeps the Visa on file untouched. €136.75
+        // credit on account 512642510 (verified in Campaign Manager
+        // 2026-09-27). Active ad set 907100946: €100 lifetime cap, hard end
+        // 2026-10-23. The digest warns if the pace would burn the credit
+        // before the end date — that's when the card gets charged.
+        pacing: {
+          creditEur: 136.75,
+          lifetimeBudgetEur: 100,
+          adsStartAt: "2026-09-24",
+          adsEndAt: "2026-10-23",
+        },
       },
     ],
     notifyChannels: [
