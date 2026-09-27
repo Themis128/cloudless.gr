@@ -68,7 +68,12 @@ pack: `socialauto_ops`, `social_engagement`, `social_outliers`,
 report ground truth imported into SocialAuto via
 `scripts/import_linkedin_reports.py`, exported every 6h) with
 `lake/linkedin-ads/insights.parquet` (Marketing API ETL) as fallback.
-`linkedin_ads_audience` comes from `lake/socialauto-ads/demographics.json`.
+`linkedin_ads_audience` comes from `lake/socialauto-ads/demographics.json`,
+falling back to `lake/linkedin-ads/demographics.parquet` — the Marketing
+API (`r_ads_reporting`) `MEMBER_*` demographic pivots written by
+`linkedin-ads-to-r2.mjs` (account level, `timeGranularity=ALL` per
+LinkedIn reporting docs; job titles and industries resolved to names,
+seniority/function/company-size values stay as URNs/literals).
 `ads_funnel` joins ad-set spend/clicks with `socialauto-web-events`
 (UTM/referrer attribution) and `socialauto-leads` to compute
 cost-per-stage — the end-to-end paid→site→lead funnel.
