@@ -156,6 +156,7 @@ export const campaigns: Campaign[] = [
       { channel: "slack", target: "#ads-realtime", level: "event" },
       { channel: "slack", target: "#ads-realtime", level: "digest" },
       { channel: "slack", target: "#ads-realtime", level: "anomaly" },
+      { channel: "email", target: "tbaltzakis@cloudless.gr", level: "digest" },
     ],
     tiers: [
       {

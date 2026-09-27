@@ -33,6 +33,7 @@ import type { AdPlatformAdapter } from "./adapters/ad-platform";
 import type { NotificationChannel } from "./channels/notification";
 import { linkedinAdapter } from "./adapters/linkedin";
 import { slackChannel } from "./channels/slack";
+import { emailChannel } from "./channels/email";
 import { renderConversionBlocks, renderDigest, renderAnomalyBlocks } from "./digest";
 import { bookmarkKeyOf, getBookmarkStore } from "./bookmarks";
 import { evaluateAnomalies, findingDedupKey, type AnomalyFinding } from "./anomaly";
@@ -48,6 +49,7 @@ const ADAPTERS: Partial<Record<AdPlatformAdapter["id"], AdPlatformAdapter>> = {
 
 const CHANNELS: Partial<Record<NotificationChannel["id"], NotificationChannel>> = {
   slack: slackChannel,
+  email: emailChannel,
 };
 
 /** Test hook — swap the registries. */
