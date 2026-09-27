@@ -87,6 +87,46 @@ describe("POST /api/track", () => {
     expect(resolved).toBe(false);
   });
 
+  it("forwards session_id and utm fields to trackAnalyticsEvent", async () => {
+    const { POST } = await import("@/app/api/track/route");
+    const res = await POST(
+      makeRequest({
+        type: "page_view",
+        page: "/en/store",
+        session_id: "fs_abc123",
+        utm_source: "linkedin",
+        utm_medium: "paid",
+        utm_campaign: "cloudless-boost",
+      })
+    );
+    expect(res.status).toBe(202);
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "page_view",
+        session_id: "fs_abc123",
+        source: "linkedin",
+        medium: "paid",
+        campaign: "cloudless-boost",
+        page: "/en/store",
+      })
+    );
+  });
+
+  it("truncates oversized session_id and utm values", async () => {
+    const { POST } = await import("@/app/api/track/route");
+    const res = await POST(
+      makeRequest({
+        type: "page_view",
+        session_id: "x".repeat(500),
+        utm_source: "s".repeat(300),
+      })
+    );
+    expect(res.status).toBe(202);
+    const arg = mockTrackEvent.mock.calls.at(-1)?.[0];
+    expect(arg.session_id).toHaveLength(128);
+    expect(arg.source).toHaveLength(128);
+  });
+
   it("returns 429 when rate limited", async () => {
     vi.doMock("@/lib/rate-limit", () => ({
       rateLimit: () => ({
