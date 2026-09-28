@@ -470,12 +470,16 @@ function socialEngagement(insights) {
 			median_er_pct: p.median_engagement_rate ?? 0,
 			median_eng_per_post: p.median_engagement_per_post ?? 0,
 			er_by_followers_pct: p.er_by_followers_pct ?? null,
-			benchmark_verdict: p.benchmark?.verdict ?? null,
+			benchmark_verdict:
+				p.benchmark?.verdict ??
+				(p.er_by_followers_pct == null
+					? "below_min_followers_50"
+					: "no_benchmark_for_platform"),
 			momentum_7d_pct: p.momentum_7d_engagement_pct ?? null,
 			engagement_7d: p.engagement_7d ?? 0,
 			followers: p.follower_growth?.current ?? null,
 			follower_net: p.follower_growth?.net ?? null,
-			data_warnings: (p.data_warnings || []).join("; ") || null,
+			data_warnings: (p.data_warnings || []).join("; ") || "none",
 		}))
 		.sort((a, b) => (b.engagement || 0) - (a.engagement || 0));
 }
