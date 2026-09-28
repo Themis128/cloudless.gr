@@ -20,13 +20,7 @@ export interface SocialAutoAnalyticsEvent {
   payload?: Record<string, unknown>;
 }
 
-const UTM_KEYS = [
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_term",
-  "utm_content",
-] as const;
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
 const UTM_STORAGE_KEY = "sa_utm_first_touch";
 
 /**
