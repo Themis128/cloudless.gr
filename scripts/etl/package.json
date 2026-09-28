@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@dsnp/parquetjs": "1.9.3",
+    "@dsnp/parquetjs": "1.8.9",
     "aws4fetch": "^1.0.20",
     "jose": "^6.2.10",
     "stripe": "^22.6.0"

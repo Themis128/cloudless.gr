@@ -24,6 +24,7 @@ updates:
       - sst
       - typescript
       - eslint
+      - '@dsnp/parquetjs'
     major:
       update-types:
       - major
@@ -40,6 +41,12 @@ updates:
       # support (or after migrating to @eslint-react/eslint-plugin).
   - dependency-name: eslint
     update-types: [version-update:semver-major]
+      # @dsnp/parquetjs ships an EMPTY tarball (no dist/) in every release
+      # after 1.8.9 — 1.9.3 installs 9 doc files and no code, breaking all
+      # ETL workflows with "Cannot find package .../dist/parquet.js".
+      # Pinned to 1.8.9 by scripts/etl/package.json — do not bump until a
+      # release actually ships dist/ again.
+  - dependency-name: '@dsnp/parquetjs'
 
 - package-ecosystem: github-actions
   directory: /
