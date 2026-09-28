@@ -55,7 +55,8 @@ Sentry.init({
   release: process.env.NEXT_PUBLIC_APP_VERSION,
   // Turbopack hashes require-in-the-middle at dev time, breaking OTel module patching.
   // Skip OTel setup in dev; production Webpack builds work fine with it enabled.
-  skipOpenTelemetrySetup: process.env.NODE_ENV === "development",
+  // v11: `skipOpenTelemetrySetup` was replaced by `enableOpenTelemetrySetup` (inverted).
+  enableOpenTelemetrySetup: process.env.NODE_ENV !== "development",
   initialScope: {
     tags: {
       "aws.region": process.env.AWS_REGION ?? "us-east-1",
