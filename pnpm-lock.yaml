@@ -50,10 +50,10 @@ importers:
         version: 11.1.0(@babel/core@7.29.7)(next@15.5.26(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.109.2(esbuild@0.28.2)(postcss@8.5.28))
       agents:
         specifier: ^0.24.0
-        version: 0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.119(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
+        version: 0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.120(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
       ai:
-        specifier: ^7.0.119
-        version: 7.0.119(zod@4.6.5)
+        specifier: ^7.0.120
+        version: 7.0.120(zod@4.6.5)
       aws4fetch:
         specifier: ^1.0.20
         version: 1.0.20
@@ -71,7 +71,7 @@ importers:
         version: 3.15.0
       hono-agents:
         specifier: ^3.0.12
-        version: 3.0.12(agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.119(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5))(hono@4.13.9)
+        version: 3.0.12(agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.120(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5))(hono@4.13.8)
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -140,7 +140,7 @@ importers:
         version: 8.11.2
       workers-ai-provider:
         specifier: ^4.0.0
-        version: 4.0.0(@ai-sdk/provider@4.0.19)(ai@7.0.119(zod@4.6.5))
+        version: 4.0.0(@ai-sdk/provider@4.0.19)(ai@7.0.120(zod@4.6.5))
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -308,8 +308,8 @@ importers:
 
 packages:
 
-  '@ai-sdk/gateway@4.0.97':
-    resolution: {integrity: sha512-YFS9McgEDHXPwXOWlu1JCylkFyDsgPNLwH9jXgMxdiaur3k6SaIUPKCRSciQQ5LbEZOSb4JAaPYYO7B5Cvq7ow==}
+  '@ai-sdk/gateway@4.0.98':
+    resolution: {integrity: sha512-p2q0rrlnCnSI86nZvF+kaAou97sUh0iI2ZcKM24u/JCfGuldyyinvBleJJLuuPuhJ3RLiBaO8R+CpKgn7jwluA==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3798,8 +3798,8 @@ packages:
       vite:
         optional: true
 
-  ai@7.0.119:
-    resolution: {integrity: sha512-KlHbkKMmdb2g0DXdkhBXzSvLSkdoAg0MdShhTTOyuoHKJetEUlgjn2juZ05lHY97EqCwBuSK8dgiEeB0ty5xZw==}
+  ai@7.0.120:
+    resolution: {integrity: sha512-HMNH1OZW4C7wSGQ802CC9tBQsxjgjR7ZaNg9XyYL3v5zM1gPolVS8PzdmyUdhceQzrsRz+2JXj+jqULZmLi/Aw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -8300,7 +8300,7 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/gateway@4.0.97(zod@4.6.5)':
+  '@ai-sdk/gateway@4.0.98(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.19
       '@ai-sdk/provider-utils': 5.0.50(zod@4.6.5)
@@ -11804,7 +11804,7 @@ snapshots:
     dependencies:
       humanize-ms: 1.2.1
 
-  agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.119(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
+  agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.120(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@7.29.7)
       '@cfworker/json-schema': 4.1.1
@@ -11822,7 +11822,7 @@ snapshots:
       yaml: 2.9.1
       zod: 4.6.5
     optionalDependencies:
-      ai: 7.0.119(zod@4.6.5)
+      ai: 7.0.120(zod@4.6.5)
       react: 19.3.0
       vite: 8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
@@ -11831,9 +11831,9 @@ snapshots:
       - '@babel/runtime'
       - rolldown
 
-  ai@7.0.119(zod@4.6.5):
+  ai@7.0.120(zod@4.6.5):
     dependencies:
-      '@ai-sdk/gateway': 4.0.97(zod@4.6.5)
+      '@ai-sdk/gateway': 4.0.98(zod@4.6.5)
       '@ai-sdk/provider': 4.0.19
       '@ai-sdk/provider-utils': 5.0.50(zod@4.6.5)
       zod: 4.6.5
@@ -13512,10 +13512,10 @@ snapshots:
 
   hls.js@1.7.0: {}
 
-  hono-agents@3.0.12(agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.119(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5))(hono@4.13.9):
+  hono-agents@3.0.12(agents@0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.120(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5))(hono@4.13.8):
     dependencies:
-      agents: 0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.119(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
-      hono: 4.13.9
+      agents: 0.24.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(ai@7.0.120(zod@4.6.5))(react@19.3.0)(rolldown@1.2.6)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
+      hono: 4.13.8
 
   hono@4.13.8: {}
 
@@ -16939,10 +16939,10 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260926.1
       '@cloudflare/workerd-windows-64': 1.20260926.1
 
-  workers-ai-provider@4.0.0(@ai-sdk/provider@4.0.19)(ai@7.0.119(zod@4.6.5)):
+  workers-ai-provider@4.0.0(@ai-sdk/provider@4.0.19)(ai@7.0.120(zod@4.6.5)):
     dependencies:
       '@ai-sdk/provider': 4.0.19
-      ai: 7.0.119(zod@4.6.5)
+      ai: 7.0.120(zod@4.6.5)
 
   wrangler@4.139.0(@cloudflare/workers-types@5.20260925.1)(@types/node@26.6.3):
     dependencies:
