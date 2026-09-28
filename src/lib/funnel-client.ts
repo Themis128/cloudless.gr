@@ -20,7 +20,7 @@ function newFunnelSessionId(): string {
   return `anon_${Date.now()}`;
 }
 
-function hasAnalyticsConsent(): boolean {
+export function hasAnalyticsConsent(): boolean {
   if (typeof document === "undefined") return false;
   try {
     const raw = document.cookie.match(/(?:^|; )cookieConsent=([^;]+)/)?.[1];

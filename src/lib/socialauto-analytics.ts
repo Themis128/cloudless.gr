@@ -20,6 +20,35 @@ export interface SocialAutoAnalyticsEvent {
   payload?: Record<string, unknown>;
 }
 
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
+const UTM_STORAGE_KEY = "sa_utm_first_touch";
+
+/**
+ * First-touch UTM attribution: ad/landing URLs carry utm_* only on entry;
+ * persist them for the session so every later event attributes correctly.
+ * Current-URL params win over stored ones (explicit new campaign).
+ */
+function getUtmParams(): Record<string, string> {
+  const out: Record<string, string> = {};
+  try {
+    const stored = sessionStorage.getItem(UTM_STORAGE_KEY);
+    if (stored) Object.assign(out, JSON.parse(stored));
+    const params = new URLSearchParams(globalThis.location?.search ?? "");
+    const fresh: Record<string, string> = {};
+    for (const k of UTM_KEYS) {
+      const v = params.get(k);
+      if (v) fresh[k] = v;
+    }
+    if (Object.keys(fresh).length) {
+      sessionStorage.setItem(UTM_STORAGE_KEY, JSON.stringify({ ...out, ...fresh }));
+      Object.assign(out, fresh);
+    }
+  } catch {
+    // storage/URL unavailable — skip attribution
+  }
+  return out;
+}
+
 function randomIdPart(): string {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 }
@@ -59,7 +88,11 @@ export async function sendSocialAutoEvent(event: SocialAutoAnalyticsEvent): Prom
       ...event,
       session_id: event.session_id ?? getSessionId(),
       visitor_id: event.visitor_id ?? getVisitorId(),
+      referrer:
+        event.referrer ??
+        (typeof document !== "undefined" ? document.referrer || undefined : undefined),
       timestamp: event.timestamp ?? Date.now(),
+      payload: { ...getUtmParams(), ...(event.payload ?? {}) },
     });
 
     await fetch("/api/analytics/event", {
