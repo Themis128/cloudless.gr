@@ -22,7 +22,8 @@ describe("blog-source", () => {
 
   it("returns static posts when AppFlowy is not configured", async () => {
     const { getBlogPosts } = await import("@/lib/blog-source");
-    await expect(getBlogPosts()).resolves.toEqual(staticPosts);
+    const posts = await getBlogPosts();
+    expect(posts.map((p) => p.slug).sort()).toEqual(staticPosts.map((p) => p.slug).sort());
   });
 
   it("maps AppFlowy listing posts into the frontend blog shape", async () => {
@@ -43,14 +44,16 @@ describe("blog-source", () => {
     const { getBlogPosts } = await import("@/lib/blog-source");
     const posts = await getBlogPosts();
 
-    expect(posts).toHaveLength(1);
-    expect(posts[0]).toMatchObject({
+    // Sources merge — AppFlowy posts join the static ones.
+    const hit = posts.find((p) => p.slug === "appflowy-post");
+    expect(hit).toMatchObject({
       slug: "appflowy-post",
       title: "AppFlowy Post",
       excerpt: "Fetched from AppFlowy",
       date: "2026-04-10",
       category: "Analytics",
     });
+    expect(posts.length).toBeGreaterThanOrEqual(staticPosts.length);
   });
 
   it("maps an AppFlowy post into plain text content", async () => {
@@ -79,7 +82,8 @@ describe("blog-source", () => {
     getAppFlowyPostsMock.mockResolvedValueOnce([]);
 
     const { getBlogPosts } = await import("@/lib/blog-source");
-    await expect(getBlogPosts()).resolves.toEqual(staticPosts);
+    const posts = await getBlogPosts();
+    expect(posts.map((p) => p.slug).sort()).toEqual(staticPosts.map((p) => p.slug).sort());
   });
 
   it("falls back to static content when AppFlowy lookup fails", async () => {

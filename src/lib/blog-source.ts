@@ -65,15 +65,21 @@ export async function getBlogPostsWithSource(): Promise<{
   posts: BlogPost[];
   source: CmsSource;
 }> {
+  // Merge all sources — a single R2/AppFlowy article must not shadow the
+  // static posts. Slug collisions resolve appflowy > r2 > static, matching
+  // getBlogPostBySlug's precedence.
+  const merged = new Map<string, BlogPost>();
+  let appFlowyCount = 0;
+  let r2Count = 0;
+
   if (await isAppFlowyConfigured()) {
     try {
       const appFlowyPosts = await withCmsTimeout(getAppFlowyPosts(), []);
       const published = appFlowyPosts.filter((post) => post.published);
-      if (published.length > 0) {
-        return {
-          posts: published.map(mapAppFlowyListingPost),
-          source: "appflowy",
-        };
+      appFlowyCount = published.length;
+      for (const post of published) {
+        const mapped = mapAppFlowyListingPost(post);
+        merged.set(mapped.slug, mapped);
       }
     } catch {
       // Fall through to R2 / static.
@@ -81,11 +87,21 @@ export async function getBlogPostsWithSource(): Promise<{
   }
 
   const r2Posts = await getR2BlogPosts();
-  if (r2Posts.length > 0) {
-    return { posts: r2Posts, source: "r2" };
+  r2Count = r2Posts.length;
+  for (const post of r2Posts) {
+    if (!merged.has(post.slug)) merged.set(post.slug, post);
   }
 
-  return { posts: staticPosts, source: "static" };
+  for (const post of staticPosts) {
+    if (!merged.has(post.slug)) merged.set(post.slug, post);
+  }
+
+  const posts = [...merged.values()].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const source: CmsSource = appFlowyCount > 0 ? "appflowy" : r2Count > 0 ? "r2" : "static";
+  return { posts, source };
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
