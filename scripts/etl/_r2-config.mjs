@@ -108,7 +108,8 @@ export async function r2Get(key, opts = {}) {
 export async function r2Head(key, opts = {}) {
   const client = getR2Client();
   const bucket = opts.bucket || BUCKET;
-  const res = await client.fetch(r2ObjectUrl(key, bucket), { method: "HEAD" });
+  const url = r2ObjectUrl(key, bucket);
+  const res = await client.fetch(url, { method: "HEAD" });
   if (res.status === 404) {
     return { exists: false, lastModified: null, size: null };
   }
@@ -117,10 +118,24 @@ export async function r2Head(key, opts = {}) {
   }
   const lastModified = res.headers.get("last-modified");
   const sizeRaw = res.headers.get("content-length");
+  let size = sizeRaw ? Number(sizeRaw) : null;
+  if (size == null) {
+    // Objects uploaded through the CF REST objects API arrive with
+    // content-encoding: gzip and HEAD omits content-length. A 1-byte
+    // range GET reports the encoded total via content-range.
+    const probe = await client.fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+    });
+    const range = probe.headers.get("content-range"); // "bytes 0-0/5538"
+    const total = range?.split("/")?.[1];
+    size = total && total !== "*" ? Number(total) : null;
+    await probe.arrayBuffer().catch(() => {});
+  }
   return {
     exists: true,
     lastModified: lastModified ? new Date(lastModified).toISOString() : null,
-    size: sizeRaw ? Number(sizeRaw) : null,
+    size,
   };
 }
 
