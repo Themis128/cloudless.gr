@@ -7,7 +7,6 @@ REST API (`POST /api/dashboards/db` with `overwrite: true`).
 
 | File | UID | Status | Notes |
 | ---- | --- | ------ | ----- |
-| `aws-cost.json` | `aws-cost` | **Deprecated** | Panels target Athena `cloudless_analytics.*`. Cost Explorer ETL and Athena path are retired. Use admin `/admin/cost` (D1/R2 frozen snapshot) instead. |
 | `lakehouse.json` | — | **Deprecated** | Athena datasource panels — do not reinstall `grafana-athena-datasource` for product analytics. |
 
 ## Operator note (2026-08)
