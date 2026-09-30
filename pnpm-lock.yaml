@@ -8,7 +8,7 @@ overrides:
   postcss@<8.5: ^8.5.26
   minimatch@<9.0.7: ^9.0.9
   ws@<8.21.0: ^8.21.3
-  undici@<7.29.0: ^7.29.0
+  undici@<7.29.1: ^7.30.0
   sharp@<0.35.4: 0.35.4
   glob@<10.5.0: ^10.5.0
   thrift: ^0.23.0
@@ -6499,7 +6499,7 @@ packages:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
       '@smithy/signature-v4': '>=5.4.0 <6'
-      undici: ^7.29.0
+      undici: ^7.30.0
       ws: ^8.21.0
       zod: ^3.25 || ^4.0
     peerDependenciesMeta:
@@ -7697,10 +7697,6 @@ packages:
 
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
-
-  undici@7.29.0:
-    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
-    engines: {node: '>=20.18.1'}
 
   undici@7.30.0:
     resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
@@ -14711,7 +14707,7 @@ snapshots:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.4(@types/node@26.6.3)
-      undici: 7.29.0
+      undici: 7.30.0
       workerd: 1.20260925.1
       ws: 8.21.0
       youch: 4.1.0-beta.10
@@ -16442,8 +16438,6 @@ snapshots:
   undici-types@7.24.6: {}
 
   undici-types@8.9.0: {}
-
-  undici@7.29.0: {}
 
   undici@7.30.0: {}
 
