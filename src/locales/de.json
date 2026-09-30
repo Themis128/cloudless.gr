@@ -489,5 +489,32 @@
       "title": "Blog",
       "description": "Einblicke in Cloud Computing, Serverless-Architektur, Datenanalyse und KI-gestütztes Marketing für wachsende Unternehmen."
     }
+  },
+  "playbook": {
+    "eyebrow": "[ KOSTENLOSES PLAYBOOK ]",
+    "title": "Das Cloud-Migrations-Playbook",
+    "subtitle": "Das Framework, mit dem wir Kunden sicher, im Budget und ohne Ausfallzeit in die Cloud bringen. Kostenlos, direkt in Ihr Postfach.",
+    "points": [
+      "Bewerten: Workloads, Abhängigkeiten und die echte Kostenbasis erfassen",
+      "Planen: die richtige Strategie pro Workload wählen (Rehost, Replatform, Refactor)",
+      "Migrieren: Umstellung in Wellen mit Rollback-Plänen und ohne Ausfallzeit",
+      "Optimieren: richtig dimensionieren, Budgets und Alerts setzen, Kosten im Griff behalten"
+    ],
+    "formTitle": "Wohin sollen wir es senden?",
+    "form": {
+      "ariaLabel": "Cloud-Migrations-Playbook anfordern",
+      "name": "Name (optional)",
+      "email": "Geschäftliche E-Mail",
+      "consent": "Ich stimme zu, das Cloud-Migrations-Playbook per E-Mail zu erhalten, und akzeptiere die",
+      "consentRequired": "Bitte bestätigen Sie, dass Sie das Playbook erhalten möchten.",
+      "cta": "Playbook per E-Mail senden",
+      "sending": "Wird gesendet…",
+      "success": "Fertig! Das Playbook ist unterwegs in Ihr Postfach.",
+      "alreadySent": "Diese Adresse hat das Playbook bereits erhalten — prüfen Sie Ihr Postfach (und den Spam-Ordner).",
+      "successDownload": "Danke! Laden Sie Ihr Exemplar unten herunter.",
+      "unavailable": "Wir konnten das Playbook gerade nicht per E-Mail senden — Sie können es direkt herunterladen.",
+      "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "downloadDirect": "PDF herunterladen"
+    }
   }
 }

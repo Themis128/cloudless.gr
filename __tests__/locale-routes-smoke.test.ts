@@ -25,6 +25,7 @@ const REQUIRED_ROUTE_FILES = [
   path.join("terms", "page.tsx"),
   path.join("cookies", "page.tsx"),
   path.join("refund", "page.tsx"),
+  path.join("playbook", "page.tsx"),
 ];
 
 describe("locale route smoke coverage", () => {

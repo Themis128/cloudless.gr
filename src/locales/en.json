@@ -484,5 +484,32 @@
       "title": "Blog",
       "description": "Insights on cloud computing, serverless architecture, data analytics, and AI-powered marketing for growing businesses."
     }
+  },
+  "playbook": {
+    "eyebrow": "[ FREE PLAYBOOK ]",
+    "title": "The Cloud Migration Playbook",
+    "subtitle": "The exact framework we use with clients to move to the cloud safely, on budget, and without downtime. Free, straight to your inbox.",
+    "points": [
+      "Assess: inventory workloads, dependencies, and the real cost baseline",
+      "Plan: pick the right migration strategy per workload (rehost, replatform, refactor)",
+      "Migrate: cut over in waves with rollback plans and zero-downtime patterns",
+      "Optimise: right-size, set budgets and alerts, and keep costs from creeping back"
+    ],
+    "formTitle": "Where should we send it?",
+    "form": {
+      "ariaLabel": "Get the Cloud Migration Playbook",
+      "name": "Name (optional)",
+      "email": "Work email",
+      "consent": "I agree to receive the Cloud Migration Playbook by email and accept the",
+      "consentRequired": "Please confirm you agree to receive the playbook.",
+      "cta": "Email me the playbook",
+      "sending": "Sending…",
+      "success": "Done! The playbook is on its way to your inbox.",
+      "alreadySent": "This address already received the playbook — check your inbox (and spam folder).",
+      "successDownload": "Thanks! Download your copy below.",
+      "unavailable": "We couldn't email the playbook right now — you can download it directly instead.",
+      "error": "Something went wrong. Please try again.",
+      "downloadDirect": "Download the PDF"
+    }
   }
 }

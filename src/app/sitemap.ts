@@ -22,6 +22,7 @@ const LAST_MODIFIED: Record<string, string> = {
   "/store": "2026-04-19",
   "/blog": "2026-06-17",
   "/contact": "2026-04-19",
+  "/playbook": "2026-09-30",
   // Store product catalogue — bump when the catalogue is updated
   "/store/products": "2026-04-19",
 };
@@ -77,6 +78,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
       alternates: localeAlternates("/blog"),
+    },
+    {
+      url: localeUrl("/playbook"),
+      lastModified: new Date(LAST_MODIFIED["/playbook"]),
+      changeFrequency: "monthly",
+      priority: 0.7,
+      alternates: localeAlternates("/playbook"),
     },
     {
       url: localeUrl("/contact"),
