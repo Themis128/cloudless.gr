@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
@@ -92,8 +93,47 @@ def need(key: str) -> str:
     return val
 
 
-def run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(list(args), capture_output=True, text=True, check=False)
+def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    """Run a command, aborting on failure like the original shell's `set -e`.
+
+    Pass check=False only where pi-release-pull.sh deliberately tolerated
+    failure (`|| true`); every other non-zero exit stops the promote before it
+    can reach the symlink flip / rollout with a half-unpacked tree.
+    """
+    r = subprocess.run(list(args), capture_output=True, text=True, check=False)
+    if check and r.returncode != 0:
+        err = (r.stderr or r.stdout or "").strip().splitlines()
+        track(
+            event="error",
+            reason="cmd_failed",
+            rc=str(r.returncode),
+            cmd=" ".join(args)[:200],
+            stderr=(err[-1] if err else "")[:300],
+        )
+        sys.exit(r.returncode or 1)
+    return r
+
+
+def http_download(url: str, dest: Path, timeout: int) -> str:
+    """Stream an authenticated GET to `dest` in chunks (curl -f -o equivalent).
+
+    Never holds the whole body in memory: release tarballs can be hundreds of
+    MB and the Pi has little RAM headroom. Returns the HTTP status (or "000");
+    on any failure the partial file is removed.
+    """
+    req = urllib.request.Request(
+        url, headers={"Authorization": f"Bearer {DEPLOY_ORCHESTRATOR_TOKEN}"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp, dest.open("wb") as f:
+            shutil.copyfileobj(resp, f, length=1024 * 1024)
+            return str(resp.status)
+    except urllib.error.HTTPError as e:
+        dest.unlink(missing_ok=True)
+        return str(e.code)
+    except Exception:
+        dest.unlink(missing_ok=True)
+        return "000"
 
 
 def http_get(url: str, timeout: int, auth: bool = False) -> tuple[str, bytes]:
@@ -116,7 +156,7 @@ need("DEPLOY_ORCHESTRATOR_TOKEN")
 load1 = float(Path("/proc/loadavg").read_text().split()[0])
 iowait_pct = 0
 if IOWAIT_MAX_PCT != 0 and shutil.which("mpstat"):
-    r = run("mpstat", "1", "1")
+    r = run("mpstat", "1", "1", check=False)
     for line in (r.stdout or "").splitlines():
         if "Average:" in line:
             cols = line.split()
@@ -182,9 +222,8 @@ TMP.mkdir(parents=True)
 
 # Prefer authenticated orchestrator download (no R2 keys on omv).
 key_q = urllib.parse.quote(ARTIFACT_KEY, safe="/")
-code, data = http_get(f"{DEPLOY_ORCHESTRATOR_URL.rstrip('/')}/artifact?key={key_q}", 600, auth=True)
-if code.startswith("2") and data:
-    TAR.write_bytes(data)
+code = http_download(f"{DEPLOY_ORCHESTRATOR_URL.rstrip('/')}/artifact?key={key_q}", TAR, 600)
+if code.startswith("2") and TAR.is_file() and TAR.stat().st_size > 0:
     track(event="download_via_orchestrator", sha12=SHA12, artifactKey=ARTIFACT_KEY)
 elif env("CF_R2_ACCESS_KEY_ID") and env("CF_R2_SECRET_ACCESS_KEY") and env("CF_ACCOUNT_ID"):
     if not shutil.which("rclone"):
@@ -212,6 +251,7 @@ elif env("CF_R2_ACCESS_KEY_ID") and env("CF_R2_SECRET_ACCESS_KEY") and env("CF_A
         "--s3-region",
         "auto",
         "--s3-no-check-bucket",
+        check=False,
     )
     if r.returncode != 0:
         track(event="error", reason="download_failed", sha12=SHA12, artifactKey=ARTIFACT_KEY)
@@ -356,5 +396,6 @@ if PREV:
         f"NEXT_PUBLIC_APP_VERSION={prev_sha}",
     )
     run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
-    run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s")
+    # The shell tolerated a slow rollback rollout (`|| true`); we exit 1 anyway.
+    run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s", check=False)
 sys.exit(1)
