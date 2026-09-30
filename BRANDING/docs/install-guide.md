@@ -22,8 +22,8 @@ mkdir -p ~/code/BRANDING
 
 ```bash
 cd ~/code/BRANDING
-chmod +x setup.sh scripts/*.sh
-bash setup.sh
+chmod +x setup.py scripts/*.sh
+python3 setup.py
 ```
 
 The script is idempotent — re-run any time to pull updates from the cloned repos and re-link.
@@ -54,7 +54,7 @@ Restart Claude Desktop.
 ## 5. Verify
 
 ```bash
-bash ~/code/BRANDING/scripts/verify.sh
+python3 ~/code/BRANDING/scripts/verify.py
 ```
 
 Should print every installed skill, slash-command, and which env vars are set.
@@ -70,8 +70,8 @@ And ask Claude: "What skills do you have for brand voice?" — you should see `v
 
 | Symptom | Fix |
 |---|---|
-| `setup.sh: line N: ln: command not found` | `apt-get install coreutils` |
+| `setup.py: line N: ln: command not found` | `apt-get install coreutils` |
 | Skills don't appear in Claude after restart | Check `~/.claude/skills/` — every entry should be a working symlink. Re-run setup. |
 | `/brand-design` doesn't work | Check `~/.claude/commands/brand-design.md` exists and is readable. |
 | MCP server `figma` shows "failed to start" in Claude Desktop logs | `FIGMA_API_KEY` not visible to Claude Desktop. Set it as a Windows user env var (System Properties → Environment Variables), then restart. |
-| Cloned repo conflict | `cd repos/<name> && git reset --hard origin/main && cd ../.. && bash setup.sh` |
+| Cloned repo conflict | `cd repos/<name> && git reset --hard origin/main && cd ../.. && python3 setup.py` |

@@ -355,7 +355,7 @@ OAuth alone is not sufficient — see "Connector Persistence" above.
   Postgres, Snowflake, etc.) with when-to-use guidance.
 - `references/onboarding.md` — OAuth flow, lite-mode Page caveats, Business Portfolio
   prerequisites for Meta-family connectors.
-- `scripts/windsor-api.sh` — REST API helper for `accounts`, `fields`, `options`, `query`.
+- `scripts/windsor-api.py` — REST API helper for `accounts`, `fields`, `options`, `query`.
 
 ## Important Notes
 

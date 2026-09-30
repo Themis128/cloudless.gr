@@ -32,7 +32,7 @@ commit the key.
 
 ```bash
 # Source the helper (sets URL to Tailscale NodePort — bypasses CF Access)
-source scripts/postiz-cli-env.sh
+source scripts/postiz-cli-env.py
 
 # Or manually:
 export POSTIZ_API_KEY='…'
@@ -61,7 +61,7 @@ server (see upstream `server/SERVER.md`).
 ## Core workflow
 
 ```bash
-source scripts/postiz-cli-env.sh
+source scripts/postiz-cli-env.py
 postiz integrations:list
 postiz integrations:settings <id>
 

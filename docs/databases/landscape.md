@@ -31,7 +31,7 @@ Decision record: [ADR-001 — Mediated database access](ADR-001-mediated-db-acce
 
 **DevOps rule:** CronJob namespace equals workload namespace. Use
 `pnpm db:backup:test list|minio|kuma` so kubectl never queries the wrong NS
-(`scripts/pvc-backup-test.sh`).
+(`scripts/pvc-backup-test.py`).
 
 ---
 

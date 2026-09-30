@@ -87,7 +87,7 @@ client has creds, or the dependent client crashes silently (paho's
   with `optional: true` so the spec applies cleanly even when the secret
   doesn't yet exist.
 - Image rebuild needed for code change to take effect — operator runs the
-  existing alert-api build on omv (`infrastructure/pi-alert-api/deploy.sh`
+  existing alert-api build on omv (`infrastructure/pi-alert-api/deploy.py`
   or whatever the live process is).
 
 **Display ESP32** (`homelab_alert_led.ino`):

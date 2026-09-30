@@ -207,7 +207,7 @@ For **public distribution** (Marketplace):
 |---|---|
 | Write the Next.js endpoints (commands/events/interactions) | `slack-app-routes-nextjs` |
 | Hit a confusing Slack error | `slack-app-debugging` |
-| Bootstrap the bot token + signing secret into your env | `scripts/slack-app-doctor.sh` (live health check) |
+| Bootstrap the bot token + signing secret into your env | `scripts/slack-app-doctor.py` (live health check) |
 | Rotate the **app-config token** for manifest API access | `cloudless-token-rotation` skill family |
 
 ## Common-mistakes cheat sheet

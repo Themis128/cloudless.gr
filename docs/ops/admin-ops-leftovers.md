@@ -41,7 +41,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 | [meta](#3-meta--ad-account-disabled) | Medium | Human-only | `meta-business-help` | Business Support Home → Account Quality → appeal |
 | [tiktok](#4-tiktok--oauth--advertiser) | Medium | Human OAuth + script | `integration-activation` | `pnpm tsx scripts/tiktok-oauth.ts` |
 | [x-ads](#5-x-ads--oauth) | Medium | Human (Ads API gate) | `x-ads-api` | Apply Ads API access → `scripts/x-ads-setup.ts` |
-| [activecampaign](#6-activecampaign--unset) | Low | Semi | `activecampaign` | Mint token → `activate-integration.sh set …` |
+| [activecampaign](#6-activecampaign--unset) | Low | Semi | `activecampaign` | Mint token → `activate-integration.py set …` |
 | [turnstile](#7-turnstile--unset) | Low | Human + env | (docs / CF dashboard) | Create widget → set site/secret keys |
 | [ai-gateway](#8-ai-gateway--unset) | Low | Semi | `workers-ai` | Set `CLOUDFLARE_AI_GATEWAY_ID=default` (or create gateway) |
 | [espo-queue](#9-espo-queue--unset) | Low | Semi | `espocrm-operator` + fanout README | Deploy `workers/espocrm-fanout` + Pi env |
@@ -58,8 +58,8 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 1. Watch agent: `journalctl -t pi-release-pull -f` on omv.
 2. Confirm health: `curl -sS https://pi-origin.cloudless.gr/api/health` (want `status: ok`, `dbConnected: true`, `version` starts with `8240be2c`).
-3. If D1 still down: `scripts/restore-auth.sh` (project memory: login-500 / D1 token pin) + `skills/cloudless-app-doctor`.
-4. Rollback if needed: `scripts/rollback.sh previous` / `scripts/rollback.sh --check`.
+3. If D1 still down: `scripts/restore-auth.py` (project memory: login-500 / D1 token pin) + `skills/cloudless-app-doctor`.
+4. Rollback if needed: `scripts/rollback.py previous` / `scripts/rollback.py --check`.
 
 ### Local skills
 
@@ -72,11 +72,11 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 ### Scripts / docs / workflows
 
-- Agent: `infrastructure/omv/pi-release-pull.sh`, `install-pi-release-pull.sh`, `pi-release-pull.{service,timer}`
-- Watchdog: `infrastructure/omv/safedeploy-watchdog.sh` + `docs/SAFEDEPLOY-WATCHDOG.md`
+- Agent: `infrastructure/omv/pi-release-pull.py`, `install-pi-release-pull.py`, `pi-release-pull.{service,timer}`
+- Watchdog: `infrastructure/omv/safedeploy-watchdog.py` + `docs/SAFEDEPLOY-WATCHDOG.md`
 - Docs: `docs/SAFEDEPLOY.md`, `docs/deploy/runners.md`, `workers/pi-deploy-orchestrator/README.md`
 - Workflow: `.github/workflows/deploy-pi.yml` (latest tip run **success** for `8240be2c`)
-- Scripts: `scripts/rollback.sh`, `scripts/restore-auth.sh`
+- Scripts: `scripts/rollback.py`, `scripts/restore-auth.py`
 
 ### MCP / tools
 
@@ -198,7 +198,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 1. `pnpm tsx scripts/tiktok-oauth.ts` (or prod callback `/api/admin/oauth/tiktok/callback`).
 2. Persist `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID` (SSM / `cloudless-secrets`).
-3. `./scripts/activate-integration.sh verify tiktok` then sync workflows if needed.
+3. `./scripts/activate-integration.py verify tiktok` then sync workflows if needed.
 
 ### Local skills
 
@@ -210,7 +210,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 ### Scripts / docs / workflows
 
-- `scripts/tiktok-oauth.ts`, `scripts/activate-integration.sh`
+- `scripts/tiktok-oauth.ts`, `scripts/activate-integration.py`
 - `src/lib/campaigns/tiktok.ts`, admin TikTok pages + `src/app/api/admin/oauth/tiktok/callback/route.ts`
 - Workflows: `sync-campaign-ads-pi-secrets.yml`
 - Docs: `docs/marketing/MARKETING-HUB-SETUP.md`, `docs/product/USE-CASES.md`
@@ -218,7 +218,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 ### MCP / tools
 
 - TikTok for Business / developer portal (browser)
-- `activate-integration.sh` via `cluster_run_command` when infra MCP is up
+- `activate-integration.py` via `cluster_run_command` when infra MCP is up
 
 ### Secrets / env
 
@@ -239,7 +239,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 1. Apply / confirm Ads API access at [developer.x.com](https://developer.x.com/).
 2. `pnpm tsx scripts/x-ads-setup.ts` → copy `X_AD_ACCOUNT_ID`.
-3. Set all five X keys; `./scripts/activate-integration.sh verify x`; sync to Pi.
+3. Set all five X keys; `./scripts/activate-integration.py verify x`; sync to Pi.
 
 ### Local skills
 
@@ -251,7 +251,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 ### Scripts / docs / workflows
 
-- `scripts/x-ads-setup.ts`, `scripts/activate-integration.sh`
+- `scripts/x-ads-setup.ts`, `scripts/activate-integration.py`
 - `src/lib/campaigns/x-ads.ts`, admin `/admin/campaigns/x`
 - Workflows: `sync-campaign-ads-*.yml`
 - Docs: `docs/marketing/AGENCY-HUB.md`, `MARKETING-HUB-SETUP.md`
@@ -277,7 +277,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 ### Steps
 
 1. AC → Settings → Developer → API URL + token (+ optional automation ID).
-2. `./scripts/activate-integration.sh set ACTIVECAMPAIGN_API_URL '…'` (and token / lead automation).
+2. `./scripts/activate-integration.py set ACTIVECAMPAIGN_API_URL '…'` (and token / lead automation).
 3. Confirm `/admin/email` / integrations status (routes soft-200 when unbound).
 
 ### Local skills
@@ -289,7 +289,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 ### Scripts / docs / workflows
 
-- `scripts/activate-integration.sh`, `scripts/save-secrets-to-cloudflare.sh`, `scripts/lib/cf-secrets.sh`
+- `scripts/activate-integration.py`, `scripts/save-secrets-to-cloudflare.py`, `scripts/lib/cf-secrets.sh`
 - Lib: `src/lib/activecampaign.ts`; routes under `src/app/api/admin/email/*`
 - Docs: `docs/integrations/ACTIVECAMPAIGN.md`, `docs/marketing/AGENCY-HUB.md`
 - No dedicated AC GitHub workflow
@@ -369,7 +369,7 @@ This file maps each leftover to **local skills**, **repo scripts/docs**, **GitHu
 
 - Lib: `src/lib/workers-ai-client.ts`, `src/lib/admin-ai-usage.ts`
 - Docs: `docs/cloudflare/WORKERS_AI_SETUP.md`, `docs/cloudflare/cloudflare-mcp-integration.md` (remote MCP URL `https://ai-gateway.mcp.cloudflare.com/mcp`)
-- Scripts: `scripts/workers-ai-doctor.sh`
+- Scripts: `scripts/workers-ai-doctor.py`
 - Workflow: `.github/workflows/workers-ai-verify.yml`
 
 ### MCP / tools

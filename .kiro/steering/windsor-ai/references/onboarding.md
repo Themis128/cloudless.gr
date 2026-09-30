@@ -61,7 +61,7 @@ You MUST click **Next** (or "Continue") to advance. On this page, Windsor actual
 After onboarding, verify through one of these methods (in increasing detail):
 
 1. **MCP:** `get_connectors()` — returns a list of all active connectors + account IDs
-2. **REST:** `./scripts/windsor-api.sh accounts <connector_id>` — same info via curl
+2. **REST:** `./scripts/windsor-api.py accounts <connector_id>` — same info via curl
 3. **Dashboard:** <https://onboard.windsor.ai/app/data-preview> — UI showing all connectors and status
 4. **Smoke-test query:** `get_data(connector="<id>", accounts=["<id>"], fields=["date"], date_preset="last_7d")` — if rows come back, the pipeline is live
 
@@ -176,7 +176,7 @@ To kick off a new connection from the CLI:
 
 ```bash
 # Get the OAuth URL
-./scripts/windsor-api.sh connectors | jq '.[] | select(.id == "instagram")'
+./scripts/windsor-api.py connectors | jq '.[] | select(.id == "instagram")'
 
 # Or via MCP
 # get_connector_authorization_url(connector="instagram")

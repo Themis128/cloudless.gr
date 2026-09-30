@@ -62,4 +62,4 @@ Real engineering: needs auth, request size limits, audit log, command allow-list
 - The Notion KB page for this issue: <https://www.notion.so/3687d82c410a8114931bed213e486474>
 - The session log that documents all four follow-ups: <https://www.notion.so/3687d82c410a8172866ce06bf3ee1e0f>
 - Patch-script template: `scripts/patch-script-template.ps1` in this skill
-- Pre-flight check: `scripts/cowork-preflight.sh` in this skill
+- Pre-flight check: `scripts/cowork-preflight.py` in this skill

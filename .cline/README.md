@@ -4,10 +4,7 @@ Ready-to-use configuration for Cline AI coding assistant.
 
 ## Quick Setup
 
-```bash
-# Register the model with Cline
-./scripts/register-cline-model.sh
-```
+Register the model in Cline settings → MCP Servers → "Add Server" pointing at this `config.json`.
 
 ## Model Configuration
 

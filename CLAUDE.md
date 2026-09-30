@@ -33,15 +33,15 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Item                             | Status              | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `OMV_SSH_KEY`                    | **SET** ✅          | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active.                                                                                                                                                                                                                                                                                                                                                                          |
-| ESP32 page content               | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore.                                                                                                                                                                                                                                                                                                               |
+| ESP32 page content               | **HISTORICAL (Notion retired)** | The ESP32 hub lived in Notion, which was decommissioned in favour of self-hosted AppFlowy on omv k3s. The June-2026 page-history restore is no longer actionable — AppFlowy `esp32` docs (`src/lib/appflowy-esp32.ts`) are the live source.                                                                                                                                                                                                                                                                                                               |
 | Admin password                   | **N/A**             | Auth is Cloudflare D1 (not Cognito). Promote admins via `POST /api/admin/users` `{action:"promote",username}` or the admin Users UI against `user-auth-db`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Cloudflare HA LB                 | **MOOT (single-node)** | Cluster is single-node as of 2026-08-08 (omv-ha out, see topology note). There is no HA to load-balance across — `setup-cloudflare-lb.yml` is historical. Delete/skip. |
 | Cloudflare Email Obfuscation     | **✅ ALREADY OFF**  | Zone setting was disabled 2026-06-10; re-verified via API 2026-08-08 (using the `.env.local` `CLOUDFLARE_API_TOKEN` which has `Zone Settings:Edit`). The `cloudflare-disable-email-obfuscation.yml` workflow is no longer needed unless it flips back on. |
 | Self-hosted mail server          | **✅ LIVE (2026-08-08)** | webmail.cloudless.gr (Roundcube) + dovecot IMAP + postfix relay via Resend. See `docs/MAIL-SERVER-SETUP.md`. Admin dashboard has a "Webmail" tab (Infrastructure group). Inbound via Cloudflare Email Routing → Gmail forward (not into dovecot — intentional). Secrets in `.env.local`: `RESEND_API_KEY`, `MAIL_TBALTZAKIS_PASSWORD`, `CLOUDFLARE_TUNNEL_TOKEN`, `CLOUDFLARE_ACCESS_TOKEN`. |
-| SafeDeploy rollback              | **✅ LIVE** | Pi Next.js app rollback + auto-rollback. `scripts/rollback.sh previous` (~15s, no rebuild). See `docs/SAFEDEPLOY.md`. Every deploy writes to a per-SHA `releases/` dir + flips a symlink; if the new release fails health checks, deploy-pi.yml auto-flips back. |
-| SafeDeploy Watchdog              | **✅ LIVE (expanded 2026-09-25)** | Continuous prod monitor on omv (systemd timer, every 2min). Main site: alerts at ~6min unhealthy, auto-rollback at ~16min. Also: 11 satellite HTTP probes (postiz/espocrm/n8n/grafana/appflowy/ntfy/kuma/webmail/social/pi-origin/postiz-ai-proxy) with optional k3s rollout-restart remediation, Cloudflare worker-exception watcher via GraphQL (~10min), k3s node NotReady + disk thresholds, optional deadman ping. See `docs/SAFEDEPLOY-WATCHDOG.md`; re-install via `install-safedeploy-watchdog.yml` workflow (omv runner) or `sudo bash infrastructure/omv/install-safedeploy-watchdog.sh`. |
+| SafeDeploy rollback              | **✅ LIVE** | Pi Next.js app rollback + auto-rollback. `scripts/rollback.py previous` (~15s, no rebuild). See `docs/SAFEDEPLOY.md`. Every deploy writes to a per-SHA `releases/` dir + flips a symlink; if the new release fails health checks, deploy-pi.yml auto-flips back. |
+| SafeDeploy Watchdog              | **✅ LIVE (expanded 2026-09-25)** | Continuous prod monitor on omv (systemd timer, every 2min). Main site: alerts at ~6min unhealthy, auto-rollback at ~16min. Also: 11 satellite HTTP probes (postiz/espocrm/n8n/grafana/appflowy/ntfy/kuma/webmail/social/pi-origin/postiz-ai-proxy) with optional k3s rollout-restart remediation, Cloudflare worker-exception watcher via GraphQL (~10min), k3s node NotReady + disk thresholds, optional deadman ping. See `docs/SAFEDEPLOY-WATCHDOG.md`; re-install via `install-safedeploy-watchdog.yml` workflow (omv runner) or `sudo python3 infrastructure/omv/install-safedeploy-watchdog.py`. |
 | CI `CLOUDFLARE_API_TOKEN` scope    | **⚠️ ACTION NEEDED**    | The `CLOUDFLARE_API_TOKEN` GitHub secret lacks `Workers Scripts:Edit` — `deploy-postiz-ai-proxy` fails "No access to the specified resource" (found 2026-09-25). Code path is ready: the workflow prefers a new `CLOUDFLARE_WORKERS_DEPLOY_TOKEN` secret (falls back to the shared token). **To finish:** in GitHub → repo Settings → Secrets → New secret `CLOUDFLARE_WORKERS_DEPLOY_TOKEN` = the token in `cu130-slim/.env` `CLOUDFLARE_API_TOKEN` (already has Workers Scripts:Edit — deploys verified). Then `gh workflow run deploy-postiz-ai-proxy.yml` goes green. Note: every API path for writing secrets is currently dead — the `gho_` OAuth token gets 400 on secret PUT, `GH_PAT` repo secret is expired, and the local `GITHUB_PERSONAL_ACCESS_TOKEN` 401s. A fresh PAT or the web UI is required. Local `wrangler deploy` works meanwhile. |
-| Auth recovery                    | **✅ SCRIPTED**     | If `/api/auth/login` starts returning 500, run `scripts/restore-auth.sh` from the repo root — it validates the `.env.local` token against D1, then pins account+token as explicit deployment env (a Secret patch is silently overridden by explicit env). See project memory `login-500-pi-d1-token`. |
+| Auth recovery                    | **✅ SCRIPTED**     | If `/api/auth/login` starts returning 500, run `scripts/restore-auth.py` from the repo root — it validates the `.env.local` token against D1, then pins account+token as explicit deployment env (a Secret patch is silently overridden by explicit env). See project memory `login-500-pi-d1-token`. |
 
 ## omv-main Storage Layout (post-2026-06-13 migration)
 
@@ -124,13 +124,13 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 ## E2E (Playwright) Conventions — learned 2026-06-11
 
 - **`playwright.config.mts` must keep** the `setup` project (runs `auth.setup.ts`, which writes `e2e/.auth/{user,admin}.json` — empty without `E2E_USER_*`/`E2E_ADMIN_*` creds) with `chromium`/`mobile-chrome` declaring `dependencies: ["setup"]`, plus `testIgnore: ["**/k3s/**"]`. Without setup, every storageState-based deep spec fails ENOENT on a fresh checkout (206 tests, PR #790); k3s specs target the live cluster via `playwright.k3s.config.mts` and must never run against localhost. PR #754 once clobbered both — watch for stale-branch merges overwriting this config.
-- **503 means "integration not configured"** — API routes deliberately return 503 when their backing service (Notion docs, Anthropic chat, Google Calendar, …) has no credentials. E2E status expectations must accept 503 alongside 2xx/4xx for those routes; do not "fix" the route to hide it.
-- **Run full suites with `--workers=2`** (repo convention, see `scripts/e2e-smart-run.sh`) — higher worker counts overload the dev server and produce flaky 500s / Suspense-fallback stalls. Content checks should wait on `page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 })`, not short `isVisible()` samples (PRs #788/#790).
+- **503 means "integration not configured"** — API routes deliberately return 503 when their backing service (AppFlowy CMS, Anthropic chat, Google Calendar, …) has no credentials. E2E status expectations must accept 503 alongside 2xx/4xx for those routes; do not "fix" the route to hide it.
+- **Run full suites with `--workers=2`** (repo convention, see `scripts/e2e-smart-run.py`) — higher worker counts overload the dev server and produce flaky 500s / Suspense-fallback stalls. Content checks should wait on `page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 })`, not short `isVisible()` samples (PRs #788/#790).
 - **Port 4000 must be free of foreign dev servers before a run.** `reuseExistingServer: true` silently reuses whatever listens on 4000 — including a `pnpm dev` inside WSL — which lacks the webServer env (`NEXT_PUBLIC_E2E=1`, `E2E_ADMIN_TOKEN`) and causes mass false 401s in `admin-api-sweep`. Check with `Get-NetTCPConnection -LocalPort 4000` / `lsof -ti:4000` first.
 - **Mobile-viewport specs**: navbar controls (contact link, theme/locale switcher) live inside the hamburger drawer (`button[aria-label*="menu" i]`) and the desktop instances stay hidden in the DOM — open the drawer first and select with `.filter({ visible: true })`, never bare `.first()`.
 - A broken `node_modules` (missing `@auth/core`, stale nested `@aws-sdk/*` requiring removed `@smithy/property-provider`) makes API routes 500 en masse while the lockfile is fine — fix with a clean `pnpm install --frozen-lockfile` after deleting `node_modules`, never by touching code.
 - **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
-- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/integrations/notion-integration-reshare.md`](docs/integrations/notion-integration-reshare.md). AppFlowy was evaluated as a self-host alternative on 2026-06-21 and rejected: 7-pod arm64 stack + new client lib is multi-day work, the runbook fixes drift in 3 minutes per occurrence.
+- **CMS is AppFlowy Cloud on omv k3s** (Notion retired). All content reads go through `src/lib/appflowy-*.ts` (GoTrue user-JWT via `APPFLOWY_EMAIL`/`APPFLOWY_PASSWORD`, or admin via `APPFLOWY_JWT_SECRET`); admin routes live under `src/app/api/admin/appflowy/`. The AppFlowy worker pod is pinned to omv-ha — its jemalloc build needs 4 KiB pages and Pi 5 runs a 16 KiB-page kernel. Operator manual: `skills/appflowy-operator/SKILL.md`. Do NOT reintroduce Notion routes/handlers — see `.cursor/rules/appflowy-cms.mdc`.
 
 ## Git Workflow
 
@@ -347,22 +347,22 @@ production for password verify. See `docs/runbooks/test-accounts.md`.
 
 - **Job 1 `build-and-push`** (`[self-hosted, omv, pi, build]`): builds `linux/arm64` Docker image **natively on a Pi runner** (no real QEMU work — the host is already arm64; the `setup-qemu-action` step is left in for portability but is a no-op here). Legacy note: the old ECR image path is retired. First-party Pi app image refs use `ghcr.io/themis128/cloudless-pi-app:<tag>` when a container image is referenced. **Live deploy path:** `.github/workflows/deploy-pi.yml` (R2 artifact + Cloudflare Workflow) — do not resurrect ECR builds.
   - **Immutable-tag race (FIXED, PR #799, 2026-06-11):** `deploy-pi.yml` and `build-pi-image.yml` both build+push the _same_ SHA tag on every push to `main`. They race; whichever pushes second hits `tag invalid: ... already exists ... immutable`. The `Push to ECR` step now treats that specific error as success (the image IS in ECR) and sets `image_exists=true` so the rollout still runs — mirroring the pattern `build-pi-image.yml` already used. Any _other_ push error still fails. So a "tag already exists" line in this job's log is expected, not a failure.
-- **Job 2 `rollout`** (`${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}` — GH-hosted by default, joins tailnet via `KUBECONFIG_B64`; failover to `[self-hosted, omv, build]` via `toggle-runner.sh pi`): runs `kubectl set image` + `kubectl rollout status` against the k3s API over Tailscale (`100.74.191.58:6443`). Gated by `if: ... build-and-push.result == 'success' || build-and-push.outputs.image_exists == 'true'`.
+- **Job 2 `rollout`** (`${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}` — GH-hosted by default, joins tailnet via `KUBECONFIG_B64`; failover to `[self-hosted, omv, build]` via `toggle-runner.py pi`): runs `kubectl set image` + `kubectl rollout status` against the k3s API over Tailscale (`100.74.191.58:6443`). Gated by `if: ... build-and-push.result == 'success' || build-and-push.outputs.image_exists == 'true'`.
 - **Runner labels:** Both jobs require `[self-hosted, omv, pi]` (PR #167, merged 2026-05-17). The `pi` label gates them to the 3 Pi runners (`omv`, `omv-2`, `omv-3`) so an added non-Pi `omv` runner (e.g. `legion` in WSL2) can't accidentally take a cluster-bound job it can't perform. Cross-compile via QEMU on `ubuntu-latest` was tried and abandoned — `pnpm install` alone exceeded 60 min under emulation.
-- **Auth:** OIDC via `AWS_DEPLOY_ROLE_ARN` secret — no static AWS keys.
+- **Auth:** k3s rollout uses `KUBECONFIG_B64` over Tailscale; image registry is GHCR (`GITHUB_TOKEN`). The AWS `AWS_DEPLOY_ROLE_ARN` OIDC path was retired with the AWS → Cloudflare migration — do not re-add it.
 - **`NEXT_PUBLIC_*` vars** are baked into the Next.js client bundle at Docker build time as `--build-arg`. They are NOT available as runtime env vars — changes require a full image rebuild.
-- **SSM config** (API keys, Notion DB IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` using the `pi-standby-aws-creds` k8s Secret.
+- **Config** (API keys, integration IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` (`src/lib/integrations.ts`) — it merges D1 `app_config` values into `process.env`. AWS SSM and `pi-standby-aws-creds` were decommissioned with the AWS → Cloudflare migration.
 
-**GitHub Secrets needed:** `AWS_DEPLOY_ROLE_ARN`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (plus Wrangler/D1 bind for `AUTH_DB` on the Pi/Workers path — Cognito `NEXT_PUBLIC_COGNITO_*` build-args are retired)
+**GitHub Secrets needed:** `KUBECONFIG_B64`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (plus Wrangler/D1 bind for `AUTH_DB` on the Pi/Workers path — Cognito `NEXT_PUBLIC_COGNITO_*` build-args are retired)
 
 ## CI Runner Failover
 
 When GH-hosted runner billing/capacity breaks, flip the `RUNNER_GENERIC` repo variable to re-route most workflows onto the self-hosted Pi `build` cluster:
 
 ```bash
-.github/scripts/toggle-runner.sh status   # show mode + runner inventory
-.github/scripts/toggle-runner.sh pi       # → ["self-hosted","omv","build"]
-.github/scripts/toggle-runner.sh hosted   # → unset (ubuntu-latest)
+.github/scripts/toggle-runner.py status   # show mode + runner inventory
+.github/scripts/toggle-runner.py pi       # → ["self-hosted","omv","build"]
+.github/scripts/toggle-runner.py hosted   # → unset (ubuntu-latest)
 ```
 
 Instrumented workflows use `runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}`. See [`docs/deploy/runners.md`](docs/deploy/runners.md) for the full design, the list of opted-in workflows, the ones that stay GH-hosted (Lighthouse, k3s-e2e, CodeQL — they need x86_64/Chrome), and the registration steps for the `omv,build` runner profile on each Pi host.
@@ -455,7 +455,7 @@ fine.
 ### Failure handling pattern
 
 When a Playwright spec fails in CI without backing creds (Google,
-Notion, etc.), the right fix is either (a) widen the assertion to
+AppFlowy, etc.), the right fix is either (a) widen the assertion to
 "route is wired" (accept any 2xx-5xx), or (b) `test.skip()` gracefully
 when preconditions aren't met. Both are honest reflections of the
 missing data; the test still proves the surface exists. Real bugs would
@@ -480,7 +480,7 @@ cancelled or OOM-killed jobs.
 
 **Files (identical paths on both nodes):**
 
-- `/usr/local/sbin/cloudless-cleanup.sh` — the script (slightly different content per node)
+- `/usr/local/sbin/cloudless-cleanup.py` — the script (slightly different content per node)
 - `/etc/systemd/system/cloudless-cleanup.service`
 - `/etc/systemd/system/cloudless-cleanup.timer`
 - `/var/log/cloudless-cleanup.log` — output log
@@ -532,8 +532,7 @@ health, disarms any NOSPACE alarm.
 2-node = quorum 2 = 0 failures tolerated = worse than 1-node. K3s
 docs require 3 server nodes for HA. With only 2 Pis the right path is
 warm-standby (hourly snapshot pull to omv-ha + dormant promotion
-script). When a 3rd Pi is added, follow the runbook on Notion:
-[🏗️ k3s Cluster Architecture, Tuning & Third-Pi Promotion Runbook](https://www.notion.so/3817d82c410a8143ab76e80e4bfdd013).
+script). When a 3rd Pi is added, follow the cluster runbooks under `docs/deploy/` and `skills/` (the old Notion runbook was retired with Notion).
 
 ## Prometheus tuning (2026-08-09)
 
@@ -554,7 +553,7 @@ reverts these unless mirrored in the Helm values):
   need 30s granularity)
 - Deleted 3 heavy PrometheusRule objects (`kube-apiserver-{burnrate,
   availability,slos}.rules`) — the same set `pnpm prometheus:tune` targets;
-  see `scripts/prometheus-tune.sh` header for why (multi-day rate() queries
+  see `scripts/prometheus-tune.py` header for why (multi-day rate() queries
   over apiserver_request_total exceed rule-eval timeout on a Pi).
 
 Prometheus already had:
@@ -603,7 +602,7 @@ which automates Stages 0-3 from the Pi.
 - **URL:** https://cloudless.gr
 - **Stack:** Next.js (App Router), deployed on Pi5 k3s cluster + Vercel
 - **Auth:** Cloudflare D1 (`user-auth-db`)
-- **CMS:** Notion databases
+- **CMS:** AppFlowy Cloud (self-hosted on omv k3s, `src/lib/appflowy-*.ts`)
 
 ### Available Skill Categories
 

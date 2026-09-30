@@ -1,6 +1,6 @@
 ---
 name: pi-runner-failover
-description: "Playbook for keeping CI moving when one or both self-hosted Pi runners (`omv`, `omv-build`) go offline. Covers detection, immediate triage (flip RUNNER_GENERIC to hosted, cancel stuck queued jobs), the per-workflow GH-hosted-with-tailnet fallback pattern, and the operator side (bring Pi runners back). Pairs with `scripts/pi-runner-doctor.sh`."
+description: "Playbook for keeping CI moving when one or both self-hosted Pi runners (`omv`, `omv-build`) go offline. Covers detection, immediate triage (flip RUNNER_GENERIC to hosted, cancel stuck queued jobs), the per-workflow GH-hosted-with-tailnet fallback pattern, and the operator side (bring Pi runners back). Pairs with `scripts/pi-runner-doctor.py`."
 metadata:
   type: skill
 ---
@@ -20,7 +20,7 @@ hard-pinned to Pi still stuck).
 ## 1. Detect
 
 ```bash
-bash scripts/pi-runner-doctor.sh
+python3 scripts/pi-runner-doctor.py
 ```
 
 What it shows:
@@ -49,7 +49,7 @@ gh variable get RUNNER_GENERIC || echo "(unset → ubuntu-latest)"
 ### Step 2a — flip `RUNNER_GENERIC` to hosted
 
 ```bash
-.github/scripts/toggle-runner.sh hosted
+.github/scripts/toggle-runner.py hosted
 ```
 
 This clears the repo variable. Workflows using the pattern
@@ -183,7 +183,7 @@ Flip `RUNNER_GENERIC` back to Pi only if you want to push load there
 again:
 
 ```bash
-.github/scripts/toggle-runner.sh pi
+.github/scripts/toggle-runner.py pi
 ```
 
 ## 5. When NOT to use the GH-hosted fallback
@@ -223,7 +223,7 @@ operation. Not always possible, but covers more cases than you'd think.
 ## Apply this skill
 
 - When you see workflows stuck queued and the Pi runners are offline,
-  run `scripts/pi-runner-doctor.sh` first, then follow Step 2.
+  run `scripts/pi-runner-doctor.py` first, then follow Step 2.
 - When you're adding a new workflow that needs cluster access, default
   to the GH-hosted-with-tailnet pattern (Step 3). Only pin to Pi if it
   hits one of the Step 5 conditions.
@@ -232,8 +232,8 @@ operation. Not always possible, but covers more cases than you'd think.
 
 ## See also
 
-- `scripts/pi-runner-doctor.sh` — single-command diagnostic + remediation
-- `.github/scripts/toggle-runner.sh` — flip `RUNNER_GENERIC` between
+- `scripts/pi-runner-doctor.py` — single-command diagnostic + remediation
+- `.github/scripts/toggle-runner.py` — flip `RUNNER_GENERIC` between
   Pi and hosted modes
 - `docs/deploy/runners.md` — broader design doc on the runner failover model
 - CLAUDE.md "Cluster Incident Response" — the broader pattern (when

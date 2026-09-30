@@ -88,7 +88,7 @@ graph TB
         Slack["Slack Notifications"]
         EspoCRM["EspoCRM CRM"]
         GCal["Google Calendar"]
-        Notion["Notion Blog CMS"]
+        AppFlowy["AppFlowy CMS (self-hosted, omv k3s)"]
     end
 
     UI --> Routes
@@ -106,7 +106,7 @@ graph TB
     CalAvail --> GCal
     CalBook --> GCal
     CalBook --> Slack
-    Blog --> Notion
+    Blog --> AppFlowy
     SlackEvt --> Slack
     SlackCmd --> Slack
 ```
@@ -251,7 +251,9 @@ This project uses **no `.env` files** in production. All secrets are stored in *
 | `SLACK_WEBHOOK_URL` | Secret | Slack incoming webhook URL |
 | `GOOGLE_CLIENT_EMAIL` | Public | Google service account email (in D1) |
 | `GOOGLE_PRIVATE_KEY` | Secret | Google service account key |
-| `NOTION_API_KEY` | Secret | Notion integration token |
+| `APPFLOWY_API_URL` | Public | AppFlowy base URL (`https://appflowy.cloudless.gr`) |
+| `APPFLOWY_EMAIL` / `APPFLOWY_PASSWORD` | Secret | AppFlowy GoTrue user-JWT reads |
+| `APPFLOWY_JWT_SECRET` | Secret | AppFlowy admin JWT (cluster `GOTRUE_JWT_SECRET`) |
 | `ANTHROPIC_API_KEY` | Secret | Claude AI API key |
 
 ### D1 app_config keys (non-sensitive)
@@ -261,8 +263,7 @@ This project uses **no `.env` files** in production. All secrets are stored in *
 | `ESPOCRM_BASE_URL` | EspoCRM instance URL |
 | `LINKEDIN_AD_ACCOUNT_ID` | LinkedIn Ads account ID |
 | `POSTIZ_API_URL` | Postiz instance URL |
-| `NOTION_CALENDAR_DB_ID` | Notion calendar database |
-| `NOTION_REPORTS_DB_ID` | Notion reports database |
+| `SOCIALAUTO_SERVICE_TOKEN` | CF Access service token for `social.cloudless.gr` lead forwarding (`client_id:secret`) |
 
 Set secrets via: `echo "value" \| npx wrangler secret put SECRET_NAME --config wrangler.jsonc`
 
@@ -317,32 +318,24 @@ All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe(
 
 Requires JWT auth. Looks up the Stripe customer by email, then returns checkout sessions and subscriptions. Falls back to a session scan filtered by email if no Stripe customer record exists yet.
 
-## Notion (Blog CMS, Docs, Forms, Projects, Analytics)
+## AppFlowy (CMS — Blog, Docs, FAQs, Projects, Calendar, Forms)
 
-All Notion operations use `src/lib/notion.ts` — a thin fetch wrapper that calls `getIntegrationsAsync()` for the API key on every request (no module-level secret capture).
+Notion was retired; content lives in **AppFlowy Cloud** self-hosted on the omv
+k3s cluster (`https://appflowy.cloudless.gr`). All reads go through
+`src/lib/appflowy-*.ts` — a per-domain helper set (blog, docs, faqs, projects,
+calendar, case-studies, testimonials, services, reports, forms, search,
+comments, esp32, analytics) that authenticates via GoTrue user-JWT
+(`APPFLOWY_EMAIL`/`APPFLOWY_PASSWORD`) or the admin JWT (`APPFLOWY_JWT_SECRET`,
+same value as the cluster `GOTRUE_JWT_SECRET`).
 
-### Webhook (`POST /api/webhooks/notion`)
+Admin routes live under `src/app/api/admin/appflowy/` (analytics, blog,
+case-studies, comments, docs, faqs, projects, search). The legacy
+`/admin/notion/*` pages redirect to their `/admin/appflowy/*` equivalents.
+Operator runbook: `skills/appflowy-operator/SKILL.md`.
 
-- Shared secret verified via `x-webhook-secret` header using `crypto.timingSafeEqual` (timing-safe) before any payload is parsed. Secret loaded from Wrangler secrets via `getIntegrationsAsync()`.
-- Missing or incorrect secret returns 401; invalid JSON returns 400.
-- Supported event types and their effects:
+Do NOT reintroduce Notion admin routes, webhook handlers, or tests that import
+deleted Notion modules — see `.cursor/rules/appflowy-cms.mdc`.
 
-| Event type | Effect |
-|---|---|
-| `page.updated` | Invalidates blog/docs cache, revalidates ISR paths + sitemap |
-| `page.created` | Same revalidation + optional Slack notify for new docs |
-| `submission.status` | Sends "inquiry reviewed" email to submitter when `status === "Done"` |
-| `project.updated` | Slack alert on `Completed` or `Blocked` |
-| `task.updated` | Slack alert on `Blocked` |
-| `analytics.event` | Slack alert when error count >= 10 |
-
-### Calendar persistence (`src/lib/notion-calendar.ts`)
-
-Persists content calendar items to `NOTION_CALENDAR_DB_ID`. Reads config from `getConfigAsync()` (Wrangler secrets + D1 `app_config`). Respects explicit `NOTION_CALENDAR_DB_ID = ""` env-var clears (disables integration).
-
-### Reports persistence (`src/lib/notion-reports.ts`)
-
-Same pattern as calendar, uses `NOTION_REPORTS_DB_ID`.
 
 ## Getting Started
 
@@ -440,7 +433,7 @@ Unit test files live in `__tests__/` (99 suites, 1164 tests) — key modules:
 | `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
 | `__tests__/contact-api.test.ts` | `POST /api/contact` |
 | `__tests__/subscribe-api.test.ts` | `POST /api/subscribe` — SES + Slack + validation |
-| `__tests__/notion-*.test.ts` | All Notion lib modules |
+| `__tests__/appflowy-*.test.ts` | AppFlowy lib modules |
 | `__tests__/store-components.test.tsx` | Cart, store grid, add-to-cart |
 | `__tests__/locales-parity.test.ts` | All four locale files have matching keys |
 | `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
@@ -499,7 +492,6 @@ The workspace MCP config lives in `mcp.json`. Three servers are configured:
 |--------|---------|---------|
 | `project` | `project-mcp` | Project context for Claude Code |
 | `mcp-tool-shop` | `mcp-tool-shop` | Additional Claude Code tools |
-| `notion` | `@notionhq/notion-mcp-server` | Direct Notion API access (uses `NOTION_API_KEY`) |
 
 All servers use `autoStart: true` and are launched via `npx -y` — no global installs required.
 
@@ -507,13 +499,7 @@ All servers use `autoStart: true` and are launched via `npx -y` — no global in
 {
   "mcpServers": {
     "project": { "command": "npx", "args": ["-y", "project-mcp"], "autoStart": true },
-    "mcp-tool-shop": { "command": "npx", "args": ["-y", "mcp-tool-shop"], "autoStart": true },
-    "notion": {
-      "command": "npx",
-      "args": ["-y", "@notionhq/notion-mcp-server"],
-      "env": { "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}" },
-      "autoStart": true
-    }
+    "mcp-tool-shop": { "command": "npx", "args": ["-y", "mcp-tool-shop"], "autoStart": true }
   }
 }
 ```

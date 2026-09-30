@@ -17,14 +17,14 @@ Private admin mesh for Pi k3s. **Public** `*.cloudless.gr` stays on Cloudflare
 export TS_CLIENT_ID=…          # OAuth client, tag:k8s-operator
 export TS_CLIENT_SECRET=…
 export KUBECONFIG=~/.kube/config-cloudless-ts
-bash infrastructure/tailscale/deploy.sh
+python3 infrastructure/tailscale/deploy.py
 ```
 
 Then:
 
 1. Merge `acl-policy.example.json` into Access controls (prefer CI below).
-2. Enable HTTPS Certificates (`scripts/tailscale-enable-https.sh`).
-3. Approve Service hosts (`scripts/tailscale-approve-service-hosts.sh`).
+2. Enable HTTPS Certificates (`scripts/tailscale-enable-https.py`).
+3. Approve Service hosts (`scripts/tailscale-approve-service-hosts.py`).
 4. Delete stale per-Service Machines from earlier ProxyGroup mistakes.
 
 ### Apply ACL from CI (preferred)
@@ -43,7 +43,7 @@ Full cleanup can delete mis-matched Machines (e.g. Connector replicas).
 
 ```mermaid
 flowchart LR
-  deploy[deploy.sh] --> helm[Helm operator]
+  deploy[deploy.py] --> helm[Helm operator]
   helm --> C[connector.yaml]
   helm --> P[proxygroup.yaml]
   helm --> I[ingresses.yaml]
@@ -60,7 +60,7 @@ flowchart LR
 | `ingresses.yaml` | Grafana / Meili with `tailscale.com/proxy-group: ingress` |
 | `ingress-class.yaml` | `IngressClass` `tailscale` |
 | `acl-policy.example.json` | tagOwners + autoApprovers + grants + ssh + **Apps** (`nodeAttrs`) |
-| `deploy.sh` | Helm install (OAuth env only — no AWS SSM) |
+| `deploy.py` | Helm install (OAuth env only — no AWS SSM) |
 | `subnet-router.yaml` / `proxygroup-monitoring.yaml` | Deprecated stubs — do not apply |
 | `OFFLINE-DEVICE-TROUBLESHOOTING.md` | Stale Machines cleanup |
 
@@ -90,7 +90,7 @@ not the system resolver (avoids fights with CoreDNS / LAN DNS). Clients
 ## Access controls (grants + SSH)
 
 Source of truth: [`acl-policy.example.json`](acl-policy.example.json).  
-Live merge: `scripts/tailscale-admin-api.sh` (grants upsert by src/dst; **ssh
+Live merge: `scripts/tailscale-admin-api.py` (grants upsert by src/dst; **ssh
 section is replaced** from the example file).
 
 | Who | Destination | Ports / action |
@@ -135,7 +135,7 @@ Approve / prune orphans:
 
 ```bash
 gh workflow run tailscale-approve-service-hosts.yml
-# or: bash scripts/tailscale-approve-service-hosts.sh
+# or: python3 scripts/tailscale-approve-service-hosts.py
 ```
 
 Do **not** keep legacy per-stack names like

@@ -29,7 +29,7 @@ runs-on: ubuntu-latest
 runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
 ```
 
-When `RUNNER_GENERIC` is unset, behaviour is identical to before (hosted). When flipped to Pi via `.github/scripts/toggle-runner.sh pi`, the workflow uses Pi runners.
+When `RUNNER_GENERIC` is unset, behaviour is identical to before (hosted). When flipped to Pi via `.github/scripts/toggle-runner.py pi`, the workflow uses Pi runners.
 
 **Always** also update `docs/deploy/runners.md` — move the entry from the "stay GitHub-hosted" section to the "opted in" list. Past failed-failover attempts (like `preview.yml` run 26321031309) belong in a parenthetical note, not a deletion.
 
@@ -117,7 +117,7 @@ Workflow failing on PR?
 
 ## Toggling the runner pool itself
 
-This skill does NOT toggle the `RUNNER_GENERIC` repo variable. That's the job of `.github/scripts/toggle-runner.sh` (documented in `runner-ops` skill). This skill assumes you've already decided which runner pool to target.
+This skill does NOT toggle the `RUNNER_GENERIC` repo variable. That's the job of `.github/scripts/toggle-runner.py` (documented in `runner-ops` skill). This skill assumes you've already decided which runner pool to target.
 
 ## Anti-patterns observed in the wild
 

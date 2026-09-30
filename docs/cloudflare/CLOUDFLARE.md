@@ -97,8 +97,8 @@ The infrastructure uses **two Workers** with different purposes:
 | Browser Integrity Check | On                                                       | Block obvious forged browsers                               |
 | Email Obfuscation       | Off                                                      | Avoid React #418 hydration from CF email rewrite            |
 | Bot Fight Mode          | Off                                                      | Free: not API-toggleable; leave off — crons use `pi-origin` |
-| Apply / verify (TLS)    | `scripts/cf-zone-tls-harden.sh`                          | Idempotent zone TLS posture                                 |
-| Apply / verify (WAF)    | `scripts/cf-zone-waf-harden.sh`                          | Idempotent Free-plan WAF posture                            |
+| Apply / verify (TLS)    | `scripts/cf-zone-tls-harden.py`                          | Idempotent zone TLS posture                                 |
+| Apply / verify (WAF)    | `scripts/cf-zone-waf-harden.py`                          | Idempotent Free-plan WAF posture                            |
 
 ---
 
@@ -491,7 +491,7 @@ Until the token is rotated, manage rules in the dashboard
 | HTTP to HTTPS     | Redirect                                       | Force secure connections  |
 | Minimum TLS       | 1.2                                            | No legacy clients         |
 | HSTS (zone + app) | `max-age=63072000; includeSubDomains; preload` | Prevent downgrade attacks |
-| Apply             | `scripts/cf-zone-tls-harden.sh`                | Idempotent                |
+| Apply             | `scripts/cf-zone-tls-harden.py`                | Idempotent                |
 
 ---
 
@@ -553,7 +553,7 @@ curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
 When rotating (e.g., quarterly):
 
 - [ ] Create new token in Cloudflare Dashboard
-- [ ] Test new token with `scripts/cf-token-smoketest.sh`
+- [ ] Test new token with `scripts/cf-token-smoketest.py`
 - [ ] Update `CLOUDFLARE_API_TOKEN` GitHub Secret
 - [ ] Update cloud session secret (for MCP tools)
 - [ ] Test terraform/CLI tools still work

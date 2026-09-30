@@ -206,10 +206,10 @@ The following AWS resources can now be safely decommissioned:
 
 Run cleanup scripts on machine with AWS CLI:
 
-- `scripts/cleanup-migrated-aws-resources.sh` (interactive, preserves pi-proxy and SES-to-EspoCRM Lambdas)
-- `scripts/cleanup-monitoring.sh` (monitoring-specific cleanup)
-- `scripts/cleanup-aws-post-email.sh` (post-email validation cleanup)
-- Verify with: `./scripts/verify-aws-migration.sh`
+- `scripts/cleanup-migrated-aws-resources.py` (interactive, preserves pi-proxy and SES-to-EspoCRM Lambdas)
+- `scripts/cleanup-monitoring.py` (monitoring-specific cleanup)
+- `scripts/cleanup-aws-post-email.py` (post-email validation cleanup)
+- Verify with: `./scripts/verify-aws-migration.py`
 
 ## Verification Results (2026-08-07)
 

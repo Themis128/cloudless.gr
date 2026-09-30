@@ -12,9 +12,9 @@ for the full RCA.
 | `limit-ranges.yaml`         | Namespace `LimitRange` + `ResourceQuota` for `monitoring` and `cloudless`                                                                      | `kubectl apply -f limit-ranges.yaml`         |
 | `analytics-guardrails.yaml` | `LimitRange` + `ResourceQuota` for the `analytics` namespace (DuckDB, ML training)                                                             | `kubectl apply -f analytics-guardrails.yaml` |
 | `generic-guardrails.yaml`   | Quotas for utility namespaces (`oncall`, `n8n`, `home-assistant`)                                                                  | `kubectl apply -f generic-guardrails.yaml`   |
-| `monitoring-resources.yaml` | Explicit `resources.{requests,limits}` for Prometheus / Loki / Grafana / Alertmanager / operator + Prometheus retention trim (7d/4GB → 3d/2GB) | `bash apply-all-guardrails.sh`               |
-| `duckdb-api-resources.yaml` | Patch for DuckDB API resource limits                                                                                                           | `bash apply-all-guardrails.sh`               |
-| `apply-all-guardrails.sh`   | Wrapper that applies all manifests and rolls out the workloads                                                                                 | `bash apply-all-guardrails.sh`               |
+| `monitoring-resources.yaml` | Explicit `resources.{requests,limits}` for Prometheus / Loki / Grafana / Alertmanager / operator + Prometheus retention trim (7d/4GB → 3d/2GB) | `python3 apply-all-guardrails.py`               |
+| `duckdb-api-resources.yaml` | Patch for DuckDB API resource limits                                                                                                           | `python3 apply-all-guardrails.py`               |
+| `apply-all-guardrails.py`   | Wrapper that applies all manifests and rolls out the workloads                                                                                 | `python3 apply-all-guardrails.py`               |
 | `k3s-config-overlay.md`     | Patch instructions for `/etc/rancher/k3s/config.yaml` (kubelet eviction + system-reserved)                                                     | manual, see file                             |
 
 ## Apply order
@@ -22,7 +22,7 @@ for the full RCA.
 1. `k3s-config-overlay.md` first. Without the kubelet eviction tuning, the
    quotas in step 2 still let the host die if a workload squeaks through
    under the limits.
-2. `apply-all-guardrails.sh` second. This applies all resource caps and
+2. `apply-all-guardrails.py` second. This applies all resource caps and
    quotas, making the cluster resilient to workload spikes.
 3. After applying, scale monitoring back up if it's still at 0:
 

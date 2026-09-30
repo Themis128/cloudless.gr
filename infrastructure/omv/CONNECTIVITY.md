@@ -10,7 +10,7 @@ heals ghost-busy GHA runners.
 **Manual — from your laptop (LAN or partial Tailscale still works):**
 
 ```bash
-bash scripts/restore-pi-connectivity.sh
+python3 scripts/restore-pi-connectivity.py
 ```
 
 **Manual — from anywhere (GitHub Actions, no Pi runners needed):**
@@ -60,7 +60,7 @@ sudo tailscale set --ssh=false
 Install/refresh:
 
 ```bash
-sudo bash infrastructure/omv/configure-pi-firewall.sh
+sudo python3 infrastructure/omv/configure-pi-firewall.py
 ```
 
 ### Tailscale ACL (`infrastructure/tailscale/acl-policy.example.json`)
@@ -82,13 +82,13 @@ Copy [`ssh-config.pi.example`](./ssh-config.pi.example) into `~/.ssh/config`
 (or `Include` it). Fallback helper:
 
 ```bash
-scripts/ssh-pi.sh omv hostname
-scripts/ssh-pi.sh omv-ha uptime
+scripts/ssh-pi.py omv hostname
+scripts/ssh-pi.py omv-ha uptime
 ```
 
 ## Connectivity heal (on each Pi)
 
-Installed by `install-pi-connectivity-heal.sh`:
+Installed by `install-pi-connectivity-heal.py`:
 
 + Boot oneshot + every **2 minutes**
 + Ensures `tailscaled` Running, forces `--ssh=false`
@@ -101,13 +101,13 @@ Installed by `install-pi-connectivity-heal.sh`:
 for host in 192.168.1.128 192.168.1.130; do
   scp infrastructure/omv/pi-connectivity-heal* \
       infrastructure/omv/sshd-*.conf \
-      infrastructure/omv/install-pi-connectivity-heal.sh \
+      infrastructure/omv/install-pi-connectivity-heal.py \
       tbaltzakis@$host:/tmp/pi-conn/
-  ssh tbaltzakis@$host 'sudo bash /tmp/pi-conn/install-pi-connectivity-heal.sh'
+  ssh tbaltzakis@$host 'sudo python3 /tmp/pi-conn/install-pi-connectivity-heal.py'
 done
 ```
 
-Manual tick: `sudo /usr/local/sbin/pi-connectivity-heal.sh --check`  
+Manual tick: `sudo /usr/local/sbin/pi-connectivity-heal.py --check`  
 Logs: `journalctl -t pi-connectivity-heal -n 50`
 
 ## When SSH times out under load

@@ -84,7 +84,7 @@ gh api /repos/Themis128/cloudless.gr/actions/runners \
 
 To override one-off runs to GH-hosted: flip the repo variable
 `RUNNER_GENERIC` to `"ubuntu-latest"` via
-`.github/scripts/toggle-runner.sh hosted` per the CLAUDE.md "CI Runner
+`.github/scripts/toggle-runner.py hosted` per the CLAUDE.md "CI Runner
 Failover" section.
 
 ## 4. PowerShell wraps `wsl.exe -- bash -lc 'single quoted'` and chokes on `${{ }}`, `(`, `)`

@@ -198,5 +198,5 @@ kubectl get pods --all-namespaces --field-selector spec.nodeName=omv-ha \
 - `docs/cluster/hw-list.md` — Hardware list
 - `docs/cluster/cluster-capacity-audit-2026-06-21.md` — Capacity audit
 - `skills/cluster-health.skill` — Quick health snapshot
-- `tools/cluster-health-audit.sh` — One-shot audit tool
-- `tools/pod-restart-investigator.sh` — Pod restart investigation
+- `tools/cluster-health-audit.py` — One-shot audit tool
+- `tools/pod-restart-investigator.py` — Pod restart investigation

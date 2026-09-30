@@ -230,23 +230,23 @@ Postiz tracks social media engagement that feeds into the analytics pipeline:
 
 ## Verification Scripts
 
-### verify-analytics.sh
+### verify-analytics.py
 
 Checks all analytics-related services and their status:
 
 ```bash
-./scripts/verify-analytics.sh          # One-time check
-./scripts/verify-analytics.sh --watch  # Continuous monitoring
+./scripts/verify-analytics.py          # One-time check
+./scripts/verify-analytics.py --watch  # Continuous monitoring
 ```
 
-### refresh-metabase.sh
+### refresh-metabase.py
 
 Triggers ETL sync and Metabase refresh:
 
 ```bash
-./scripts/refresh-metabase.sh --sync-only    # Run ETL scripts only
-./scripts/refresh-metabase.sh --dashboards   # Trigger Metabase refresh
-./scripts/refresh-metabase.sh                  # Full pipeline
+./scripts/refresh-metabase.py --sync-only    # Run ETL scripts only
+./scripts/refresh-metabase.py --dashboards   # Trigger Metabase refresh
+./scripts/refresh-metabase.py                  # Full pipeline
 ```
 
 ## Resource Checkpoints

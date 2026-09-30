@@ -40,8 +40,8 @@ Internet → Cloudflare Tunnel → OMV-HA Nginx (HTTPS) → Snappymail Container
 
 ```bash
 cd /path/to/cloudless.gr/infrastructure/snappymail
-chmod +x install_snappymail.sh
-sudo ./install_snappymail.sh
+chmod +x install_snappymail.py
+sudo ./install_snappymail.py
 ```
 
 The script will:

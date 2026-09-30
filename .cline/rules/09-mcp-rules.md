@@ -43,4 +43,4 @@ The project uses the following MCP servers:
 2. **Check limits:** Respect per-question call limits (e.g., Context7 max 3 calls)
 3. **Error handling:** If an MCP server fails, check the server logs and configuration
 4. **Security:** MCP servers run locally with filesystem access — keep configurations secure
-5. **Debugging:** Use `test-mcp-servers.sh` script to verify server connectivity
+5. **Debugging:** Use the server's own health/list-tools call to verify connectivity

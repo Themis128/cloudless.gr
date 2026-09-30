@@ -13,7 +13,7 @@
 ### 1. OMV Remediation
 
 - ✅ **Monit Cleanup**: Purged stale event files in `/var/lib/monit/events/` on `omv-main`. This resolved the 470+ "Aborting queued event" errors in the system journal.
-- ✅ **Disk Cleanup**: Executed `scripts/pi-disk-cleanup.sh`. Root disk usage reduced from **87% → 75%** (15G free).
+- ✅ **Disk Cleanup**: Executed `scripts/pi-disk-cleanup.py`. Root disk usage reduced from **87% → 75%** (15G free).
 - ✅ **Promtail Tuning**: Bumped `promtail` memory limit from **128Mi → 256Mi** in both Helm values (`infrastructure/monitoring/promtail-values.yaml`) and the live cluster to prevent repeated cgroup OOM kills.
 - ✅ **Meilisearch Activation**: Deployed Meilisearch service to NodePort 30902 on **omv-main** (120GB SSD) and added to Cloudflare Tunnel (`meili.cloudless.gr`).
 - ✅ **System Stability**: Verified system load average stabilized at **<1.0** (was 24.64 during the crisis).

@@ -47,36 +47,36 @@
   - [x] Verify dependencies
 
 - [x] appflowy/gotrue-7bd8dfbbd4-qs9j7
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Analyze logs
   - [x] Check authentication service status
 
 - [x] appflowy/nginx-6746b948b5-hmmlw
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Check ingress controller status
   - [x] Verify configuration
 
 ### System Pods
 
 - [x] kube-system/svclb-traefik-1ff64adb-qz8g9
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Check Traefik status
   - [x] Verify load balancer configuration
 
 - [x] kube-system/traefik-6cd8c7cd89-2ss5t
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Check Traefik status
   - [x] Verify ingress routes
 
 - [x] monitoring/kube-prom-prometheus-node-exporter-lw66t
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Check Prometheus status
   - [x] Verify node exporter configuration
   - [x] Found: High restart count (30 restarts, last: Error exit 143 - SIGTERM)
   - [x] Found: Connection reset by peer errors in logs
 
 - [x] tailscale/kube-0
-  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Investigate using pod-restart-investigator.py
   - [x] Check Tailscale status
   - [x] Verify network connectivity
 

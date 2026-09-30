@@ -23,13 +23,13 @@ Fully automates AWS credential validation, Cognito Client ID retrieval, and `.en
 
 ```bash
 # Fully automated setup
-bash scripts/cognito-setup.sh
+python3 scripts/cognito-setup.py
 
 # Preview what would happen (no changes)
-bash scripts/cognito-setup.sh --dry-run
+python3 scripts/cognito-setup.py --dry-run
 
 # Skip dev server test (faster)
-bash scripts/cognito-setup.sh --skip-verify
+python3 scripts/cognito-setup.py --skip-verify
 ```
 
 ## Prerequisites

@@ -277,7 +277,7 @@ pnpm test:k3s               # k3s cluster tests
 ```bash
 pnpm deploy                 # Cloudflare Workers deploy to production
 pnpm deploy:staging         # Cloudflare Workers deploy to staging
-scripts/rollback.sh previous # SafeDeploy rollback (~15s, no rebuild)
+scripts/rollback.py previous # SafeDeploy rollback (~15s, no rebuild)
 ```
 
 ### **Code Quality**
@@ -332,6 +332,7 @@ cloudless.gr → Worker cloudless2 (pi-origin-proxy)
 - **Google Search Console**: SEO analytics and reporting
 - **ActiveCampaign**: Email marketing and automation
 - **SocialAuto** (`social.cloudless.gr`): social publishing, DM inbox, analytics — see `cu130-slim/docs/CODEMAP.md`. The site also calls it **server-to-server**: `src/lib/socialauto.ts` backs the `/admin/postiz` console (channels, schedule, compose, per-channel metrics) via admin-login JWT + CF Access service token; config keys `SOCIALAUTO_*` in app_config.
+  - **Playbook lead funnel** (added 2026-09-30): `/[locale]/playbook` form → `POST /api/playbook-lead` (Turnstile + rate-limit + honeypot + consent) → `src/lib/socialauto-public-leads.ts` → SocialAuto `POST /api/v1/leads/public` through CF Access with the `cloudless-site-bridge` service token (`CF-Access-Client-Id`/`Secret` headers). Config keys: `SOCIALAUTO_API_URL` / `SOCIALAUTO_LEADS_URL` / `SOCIALAUTO_SERVICE_TOKEN` / `SOCIALAUTO_CF_ACCESS_CLIENT_ID` in D1 `app_config`. The public PDF is mirrored at `public/playbooks/cloud-migration-playbook.pdf` (source: `cu130-slim/docs/playbooks/cloud-migration-playbook.md`, builder `scripts/build_playbook_pdf.py`).
 - **Postiz**: Legacy social media scheduling (superseded by SocialAuto; kept only for the content-calendar publish path + webhooks)
 - **N8N**: Workflow automation (runs the SocialAuto posting pipelines)
 - **Slack**: Notifications and team communication
@@ -377,7 +378,7 @@ cloudless.gr web events ──API relay──▶ SocialAuto web_analytics_events
 ### **Deployment Architecture**
 
 - **SafeDeploy**: Automatic rollback system for Pi deployments
-- **Rollback**: `scripts/rollback.sh previous` (~15s, no rebuild)
+- **Rollback**: `scripts/rollback.py previous` (~15s, no rebuild)
 - **Watchdog**: Continuous prod monitor (systemd timer, every 2min)
 - **Auto-rollback**: Triggers at 16min unhealthy (alerts at 6min)
 - **Health checks**: Post-deploy validation with automatic failover
@@ -402,7 +403,7 @@ cloudless.gr web events ──API relay──▶ SocialAuto web_analytics_events
 2. Symlink flip for atomic deployment
 3. Health checks validate new release
 4. Auto-rollback on failure (watchdog monitoring)
-5. Manual rollback via `scripts/rollback.sh previous`
+5. Manual rollback via `scripts/rollback.py previous`
 
 ---
 
