@@ -42,9 +42,20 @@ print("[install] fetching alert credentials from k8s secret cloudless-secrets/cl
 
 def b64(key: str) -> str:
     r = subprocess.run(
-        ["k3s", "kubectl", "get", "secret", "cloudless-secrets", "-n", "cloudless",
-         "-o", f"jsonpath={{.data.{key}}}"],
-        capture_output=True, text=True, check=False,
+        [
+            "k3s",
+            "kubectl",
+            "get",
+            "secret",
+            "cloudless-secrets",
+            "-n",
+            "cloudless",
+            "-o",
+            f"jsonpath={{.data.{key}}}",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     try:
         return base64.b64decode(r.stdout.strip()).decode()
@@ -83,8 +94,10 @@ present("RESEND_API_KEY", RESEND_API_KEY)
 present("CF_API_TOKEN", CF_API_TOKEN)
 present("CF_ACCOUNT_ID", CF_ACCOUNT_ID)
 
-subprocess.run(["install", "-d", "-m", "700", "-o", "root", "-g", "root",
-                "/var/lib/safedeploy-watchdog"], check=True)
+subprocess.run(
+    ["install", "-d", "-m", "700", "-o", "root", "-g", "root", "/var/lib/safedeploy-watchdog"],
+    check=True,
+)
 env_content = f"""\
 # populated by install-safedeploy-watchdog.py — DO NOT edit by hand
 NTFY_BASE_URL="{NTFY_BASE_URL}"
@@ -140,11 +153,21 @@ print("[install] firing one immediate tick to verify wiring…")
 systemctl("start", "safedeploy-watchdog.service")
 time.sleep(3)
 print("[install] --- recent journal ---")
-r = subprocess.run(["journalctl", "-t", "safedeploy-watchdog", "-n", "8", "--no-pager"],
-                   capture_output=True, text=True, check=False)
-print(r.stdout or subprocess.run(
-    ["journalctl", "-u", "safedeploy-watchdog.service", "-n", "8", "--no-pager"],
-    capture_output=True, text=True, check=False).stdout)
+r = subprocess.run(
+    ["journalctl", "-t", "safedeploy-watchdog", "-n", "8", "--no-pager"],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+print(
+    r.stdout
+    or subprocess.run(
+        ["journalctl", "-u", "safedeploy-watchdog.service", "-n", "8", "--no-pager"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout
+)
 print("[install] --- next scheduled run ---")
 systemctl("list-timers", "safedeploy-watchdog.timer", "--no-pager")
 print("[install] done.")

@@ -53,12 +53,44 @@ if shutil.which("ufw"):
                 break
         if not num:
             break
-        r = subprocess.run(["ufw", "delete", num], input="y\n", capture_output=True, text=True, check=False)
+        r = subprocess.run(
+            ["ufw", "delete", num], input="y\n", capture_output=True, text=True, check=False
+        )
         if r.returncode != 0:
             break
 
-    run("ufw", "insert", "1", "allow", "from", TS_CGNAT, "to", "any", "port", "22", "proto", "tcp", "comment", "cloudless-ssh-ts")
-    run("ufw", "insert", "2", "allow", "from", LAN_CIDR, "to", "any", "port", "22", "proto", "tcp", "comment", "cloudless-ssh-lan")
+    run(
+        "ufw",
+        "insert",
+        "1",
+        "allow",
+        "from",
+        TS_CGNAT,
+        "to",
+        "any",
+        "port",
+        "22",
+        "proto",
+        "tcp",
+        "comment",
+        "cloudless-ssh-ts",
+    )
+    run(
+        "ufw",
+        "insert",
+        "2",
+        "allow",
+        "from",
+        LAN_CIDR,
+        "to",
+        "any",
+        "port",
+        "22",
+        "proto",
+        "tcp",
+        "comment",
+        "cloudless-ssh-lan",
+    )
     run("ufw", "limit", "22/tcp", "comment", "cloudless-ssh-public-limit")
 
     # Broad Tailscale allow (non-SSH) if missing
@@ -92,7 +124,9 @@ table inet cloudless_fw {{
   }}
 }}
 """
-    r = subprocess.run(["nft", "-f", "-"], input=nft_rules, capture_output=True, text=True, check=False)
+    r = subprocess.run(
+        ["nft", "-f", "-"], input=nft_rules, capture_output=True, text=True, check=False
+    )
     if r.returncode != 0:
         print(r.stderr, file=sys.stderr)
         sys.exit(1)

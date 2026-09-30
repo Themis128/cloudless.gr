@@ -51,7 +51,9 @@ def scp(*srcs: str, dest: str) -> None:
 # they used to live only on the Pi. Always overwrite from the repo (with a
 # .bak.<ts> safety copy on the Pi before replacing).
 if not args.routes_only:
-    print("==> Backing up + copying main.py, slack_notify.py, mqtt_publish.py, tls_check.py to Pi...")
+    print(
+        "==> Backing up + copying main.py, slack_notify.py, mqtt_publish.py, tls_check.py to Pi..."
+    )
     ssh("""\
 set -euo pipefail
 ts=$(date +%s)
@@ -71,8 +73,10 @@ done
 
 if not args.mqtt_only:
     print("==> Copying esp32_command_routes.py to Pi...")
-    scp("infrastructure/pi-alert-api/esp32_command_routes.py",
-        dest=f"{ALERT_API_DIR}/esp32_command_routes.py")
+    scp(
+        "infrastructure/pi-alert-api/esp32_command_routes.py",
+        dest=f"{ALERT_API_DIR}/esp32_command_routes.py",
+    )
 
 # ── 3. Check paho-mqtt is in requirements.txt ─────────────────────────────────
 print("==> Checking paho-mqtt in requirements.txt...")
@@ -144,7 +148,7 @@ def mqtt_retained(host: str, port: int, topic: str) -> str:
         tl = struct.unpack(">H", data[2:4])[0]
         ms = 4 + tl + (2 if data[0] in (0x32, 0x33) else 0)
         s.close()
-        return data[ms:1 + data[1] + 1].decode(errors="replace")
+        return data[ms : 1 + data[1] + 1].decode(errors="replace")
     except Exception:
         return "no retained message"
 

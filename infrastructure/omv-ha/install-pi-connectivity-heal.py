@@ -76,8 +76,15 @@ def systemctl(*args: str) -> None:
 
 systemctl("daemon-reload")
 # Reload sshd config if possible
-if subprocess.run(["systemctl", "try-reload-or-restart", "ssh.service"], capture_output=True, check=False).returncode != 0:
-    subprocess.run(["systemctl", "try-reload-or-restart", "sshd.service"], capture_output=True, check=False)
+if (
+    subprocess.run(
+        ["systemctl", "try-reload-or-restart", "ssh.service"], capture_output=True, check=False
+    ).returncode
+    != 0
+):
+    subprocess.run(
+        ["systemctl", "try-reload-or-restart", "sshd.service"], capture_output=True, check=False
+    )
 
 systemctl("enable", "pi-connectivity-heal.service")
 systemctl("enable", "--now", "pi-connectivity-heal.timer")

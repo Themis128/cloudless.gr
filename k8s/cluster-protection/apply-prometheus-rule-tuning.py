@@ -151,9 +151,7 @@ def ssh_kubectl(*args: str, stdin: bytes | None = None) -> subprocess.CompletedP
 print("==> Pre-flight: confirming apiserver is responsive")
 responsive = False
 for _ in range(12):
-    r = ssh(
-        "curl -sk --max-time 3 -o /dev/null -w '%{http_code}' https://127.0.0.1:6443/livez"
-    )
+    r = ssh("curl -sk --max-time 3 -o /dev/null -w '%{http_code}' https://127.0.0.1:6443/livez")
     code = r.stdout.decode().strip()
     if code in ("200", "401"):
         responsive = True
@@ -209,9 +207,7 @@ for rule_name, drop in ALERTS_TO_STRIP.items():
 
 # ── 4. AlertManager allowlist routing ────────────────────────────────────────
 print("==> Patching AlertManager config: enforce severity=critical allowlist for Slack")
-r = ssh(
-    "sudo kubectl get secret alertmanager-monitoring-alertmanager -n monitoring -o json"
-)
+r = ssh("sudo kubectl get secret alertmanager-monitoring-alertmanager -n monitoring -o json")
 if r.returncode != 0:
     print(r.stderr.decode(), file=sys.stderr)
     sys.exit(1)
@@ -234,5 +230,7 @@ else:
 
 print()
 print("==> Done. Verify:")
-print(f'    ssh {REMOTE} \'sudo kubectl get prometheusrule -n monitoring | grep -E "apiserver|prometheus$|alertmanager.rules"\'')
+print(
+    f"    ssh {REMOTE} 'sudo kubectl get prometheusrule -n monitoring | grep -E \"apiserver|prometheus$|alertmanager.rules\"'"
+)
 print(f"    ssh {REMOTE} 'curl -s http://10.43.154.40:9090/api/v1/alerts'")

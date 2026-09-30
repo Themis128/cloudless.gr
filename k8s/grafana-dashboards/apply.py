@@ -34,7 +34,9 @@ if not GRAFANA_API_TOKEN:
     print("❌ GRAFANA_API_TOKEN not set.")
     print(f"   Create one at {GRAFANA_URL}/org/apikeys (role: Editor or Admin)")
     print("   then export GRAFANA_API_TOKEN=<token>")
-    print("   Or pull from k3s: kubectl -n monitoring get secret kube-prom-grafana -o jsonpath='{.data.admin-password}' | base64 -d")
+    print(
+        "   Or pull from k3s: kubectl -n monitoring get secret kube-prom-grafana -o jsonpath='{.data.admin-password}' | base64 -d"
+    )
     sys.exit(1)
 
 HEADERS = {
@@ -44,9 +46,7 @@ HEADERS = {
 
 
 def api(method: str, path: str, body: bytes | None = None) -> str:
-    req = urllib.request.Request(
-        f"{GRAFANA_URL}{path}", data=body, headers=HEADERS, method=method
-    )
+    req = urllib.request.Request(f"{GRAFANA_URL}{path}", data=body, headers=HEADERS, method=method)
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8", "replace")
 

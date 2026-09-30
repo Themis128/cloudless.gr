@@ -51,20 +51,31 @@ run("helm", "repo", "update", "tailscale")
 
 print(f"==> Install/upgrade operator (ns={NS})")
 run(
-    "helm", "upgrade", "--install", "tailscale-operator", "tailscale/tailscale-operator",
-    "--namespace", NS,
+    "helm",
+    "upgrade",
+    "--install",
+    "tailscale-operator",
+    "tailscale/tailscale-operator",
+    "--namespace",
+    NS,
     "--create-namespace",
-    "--set-string", f"oauth.clientId={CLIENT_ID}",
-    "--set-string", f"oauth.clientSecret={CLIENT_SECRET}",
-    "--set", "operatorConfig.defaultTags={tag:k8s-operator}",
-    "--set-string", "proxyConfig.defaultTags=tag:k8s",
-    "--set-string", "apiServerProxyConfig.allowImpersonation=true",
+    "--set-string",
+    f"oauth.clientId={CLIENT_ID}",
+    "--set-string",
+    f"oauth.clientSecret={CLIENT_SECRET}",
+    "--set",
+    "operatorConfig.defaultTags={tag:k8s-operator}",
+    "--set-string",
+    "proxyConfig.defaultTags=tag:k8s",
+    "--set-string",
+    "apiServerProxyConfig.allowImpersonation=true",
     "--wait",
 )
 
 print("==> IngressClass (skip if Helm already created it)")
-r = subprocess.run(["kubectl", "get", "ingressclass", "tailscale"],
-                   capture_output=True, check=False)
+r = subprocess.run(
+    ["kubectl", "get", "ingressclass", "tailscale"], capture_output=True, check=False
+)
 if r.returncode != 0:
     run("kubectl", "apply", "-f", str(ROOT / "infrastructure/tailscale/ingress-class.yaml"))
 else:

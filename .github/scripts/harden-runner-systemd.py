@@ -57,9 +57,7 @@ FallbackDNS=9.9.9.9
 
 
 def systemctl(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["systemctl", *args], capture_output=True, text=True, check=False
-    )
+    return subprocess.run(["systemctl", *args], capture_output=True, text=True, check=False)
 
 
 print(f"=== Hardening runner: {RUNNER} ({SVC}) ===")
@@ -116,5 +114,7 @@ else:
 if status == "active":
     print(f"\n✅ Runner {RUNNER} is hardened and active.")
 else:
-    print(f"\n❌ Runner {RUNNER} is not active (status: {status}). Check: journalctl -u {SVC} -n 30")
+    print(
+        f"\n❌ Runner {RUNNER} is not active (status: {status}). Check: journalctl -u {SVC} -n 30"
+    )
     sys.exit(1)

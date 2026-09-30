@@ -109,8 +109,12 @@ def ensure_tailscale() -> int:
             if key:
                 log("tailscale up with /etc/cloudless/tailscale-authkey")
                 r = run(
-                    "tailscale", "up", f"--auth-key={key}",
-                    "--ssh=false", "--accept-routes", "--reset=false",
+                    "tailscale",
+                    "up",
+                    f"--auth-key={key}",
+                    "--ssh=false",
+                    "--accept-routes",
+                    "--reset=false",
                 )
                 if r.returncode != 0:
                     log("WARN: tailscale up failed")
@@ -125,6 +129,7 @@ def ensure_tailscale() -> int:
 
 def ping_peers() -> int:
     import os
+
     peers = os.environ.get("PI_CONNECTIVITY_PEERS", PEER_TS_IPS_DEFAULT).split()
     self_ip = run("tailscale", "ip", "-4").stdout.strip()
     for peer in peers:

@@ -18,7 +18,14 @@ OMV = os.environ.get("OMV_HOST", "192.168.1.128")
 HA = os.environ.get("HA_HOST", "192.168.1.130")
 LOCAL_ONLY = os.environ.get("LOCAL_ONLY", "0") == "1"
 SCRIPT_DIR = Path(__file__).resolve().parent
-SSH_OPTS = ["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10"]
+SSH_OPTS = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "ConnectTimeout=10",
+]
 
 REMOTE_STEPS = """\
 set -euo pipefail
@@ -42,18 +49,26 @@ def install_on(host: str) -> None:
     print(f"==> Installing fabric metrics on {host}")
     target = f"{SSH_USER}@{host}"
     subprocess.run(
-        ["ssh", *SSH_OPTS, target,
-         "sudo mkdir -p /usr/local/lib/cloudless /etc/systemd/system/cloudflared.service.d"],
+        [
+            "ssh",
+            *SSH_OPTS,
+            target,
+            "sudo mkdir -p /usr/local/lib/cloudless /etc/systemd/system/cloudflared.service.d",
+        ],
         check=True,
     )
-    for f in ("tailscale-metrics-exporter.py",
-              "tailscale-metrics-exporter.service",
-              "cloudflared-metrics.conf"):
+    for f in (
+        "tailscale-metrics-exporter.py",
+        "tailscale-metrics-exporter.service",
+        "cloudflared-metrics.conf",
+    ):
         subprocess.run(
             ["scp", *SSH_OPTS, str(SCRIPT_DIR / f), f"{target}:/tmp/{f}"],
             check=True,
         )
-    subprocess.run(["ssh", *SSH_OPTS, target, "bash", "-s"], input=REMOTE_STEPS.encode(), check=True)
+    subprocess.run(
+        ["ssh", *SSH_OPTS, target, "bash", "-s"], input=REMOTE_STEPS.encode(), check=True
+    )
 
 
 def run(*args: str) -> None:
@@ -63,13 +78,37 @@ def run(*args: str) -> None:
 if LOCAL_ONLY:
     host = socket.gethostname().split(".")[0]
     print(f"LOCAL_ONLY=1 — installing on this host ({host})")
-    run("sudo", "mkdir", "-p", "/usr/local/lib/cloudless", "/etc/systemd/system/cloudflared.service.d")
-    run("sudo", "install", "-m", "0755", str(SCRIPT_DIR / "tailscale-metrics-exporter.py"),
-        "/usr/local/lib/cloudless/tailscale-metrics-exporter.py")
-    run("sudo", "install", "-m", "0644", str(SCRIPT_DIR / "tailscale-metrics-exporter.service"),
-        "/etc/systemd/system/tailscale-metrics-exporter.service")
-    run("sudo", "install", "-m", "0644", str(SCRIPT_DIR / "cloudflared-metrics.conf"),
-        "/etc/systemd/system/cloudflared.service.d/metrics.conf")
+    run(
+        "sudo",
+        "mkdir",
+        "-p",
+        "/usr/local/lib/cloudless",
+        "/etc/systemd/system/cloudflared.service.d",
+    )
+    run(
+        "sudo",
+        "install",
+        "-m",
+        "0755",
+        str(SCRIPT_DIR / "tailscale-metrics-exporter.py"),
+        "/usr/local/lib/cloudless/tailscale-metrics-exporter.py",
+    )
+    run(
+        "sudo",
+        "install",
+        "-m",
+        "0644",
+        str(SCRIPT_DIR / "tailscale-metrics-exporter.service"),
+        "/etc/systemd/system/tailscale-metrics-exporter.service",
+    )
+    run(
+        "sudo",
+        "install",
+        "-m",
+        "0644",
+        str(SCRIPT_DIR / "cloudflared-metrics.conf"),
+        "/etc/systemd/system/cloudflared.service.d/metrics.conf",
+    )
     run("sudo", "systemctl", "daemon-reload")
     run("sudo", "systemctl", "enable", "--now", "tailscale-metrics-exporter.service")
     run("sudo", "systemctl", "restart", "cloudflared.service")

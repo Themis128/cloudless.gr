@@ -18,7 +18,9 @@ SRC = BRANDING_DIR / "cloudless-brand" / "social"
 OUT = BRANDING_DIR / "cloudless-brand" / "social-cards"
 OUT.mkdir(parents=True, exist_ok=True)
 
-chrome = shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+chrome = (
+    shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+)
 if not chrome:
     print("Install chromium first: apt-get install -y chromium", file=sys.stderr)
     sys.exit(1)

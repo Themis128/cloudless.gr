@@ -53,7 +53,9 @@ EXPECTED_SIZE = SWAP_SIZE_GB * 1024 * 1024 * 1024
 if SWAPFILE.is_file():
     current_size = SWAPFILE.stat().st_size
     if current_size >= EXPECTED_SIZE:
-        print(f"→ swapfile already exists at correct size ({current_size} bytes) — skipping creation")
+        print(
+            f"→ swapfile already exists at correct size ({current_size} bytes) — skipping creation"
+        )
     else:
         print("→ swapfile exists but wrong size — recreating")
         run("swapoff", str(SWAPFILE))

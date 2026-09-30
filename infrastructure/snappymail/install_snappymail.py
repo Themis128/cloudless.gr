@@ -68,10 +68,10 @@ def run(*args: str, check: bool = False) -> subprocess.CompletedProcess[str]:
 
 # ===== USER CONFIGURATION SECTION =====
 # SET THESE VALUES BEFORE RUNNING THE SCRIPT
-TZ = "Europe/Athens"                      # <-- CHANGE THIS TO YOUR TIMEZONE
-WEBMAIL_DOMAIN = "webmail.cloudless.gr"   # <-- CHANGE IF USING DIFFERENT DOMAIN
+TZ = "Europe/Athens"  # <-- CHANGE THIS TO YOUR TIMEZONE
+WEBMAIL_DOMAIN = "webmail.cloudless.gr"  # <-- CHANGE IF USING DIFFERENT DOMAIN
 SHARED_FOLDER_NAME = "snappymail-data"
-OMV_SHARED_ROOT = ""                      # Leave empty to auto-detect
+OMV_SHARED_ROOT = ""  # Leave empty to auto-detect
 # ===== END USER CONFIGURATION =====
 
 INSTALLATION_LOG.write_text(f"=== Snappymail Installation Log ===\nStarted at: {datetime.now()}\n")
@@ -146,13 +146,27 @@ else:
     SHARED_FOLDER_PATH = f"{OMV_SHARED_ROOT}/{SHARED_FOLDER_NAME}"
 
     create_manually = False
-    if run("sudo", "omv-confdbadm", "create", "--sharedfolder",
-           "--condition", f"name='{SHARED_FOLDER_NAME}'",
-           "--prop", f"reldirpath={SHARED_FOLDER_NAME}",
-           "--prop", "privatelinks=0",
-           "--prop", "mntentopts=rw,users",
-           "--prop", "privilege=0",
-           "--prop", "comment=Shared folder for Snappymail data").returncode == 0:
+    if (
+        run(
+            "sudo",
+            "omv-confdbadm",
+            "create",
+            "--sharedfolder",
+            "--condition",
+            f"name='{SHARED_FOLDER_NAME}'",
+            "--prop",
+            f"reldirpath={SHARED_FOLDER_NAME}",
+            "--prop",
+            "privatelinks=0",
+            "--prop",
+            "mntentopts=rw,users",
+            "--prop",
+            "privilege=0",
+            "--prop",
+            "comment=Shared folder for Snappymail data",
+        ).returncode
+        == 0
+    ):
         if run("sudo", "omv-confdbadm", "commit").returncode == 0:
             r2 = run("sudo", "sharedfolder-list", "--name", SHARED_FOLDER_NAME, "--option", "mp")
             SHARED_FOLDER_PATH = r2.stdout.strip() or SHARED_FOLDER_PATH
@@ -209,8 +223,11 @@ if "snappymail" in (run("docker", "ps", "-a").stdout or ""):
 
 log_info("Pulling Snappymail image...")
 SNAPPYMAIL_IMAGE = ""
-for IMAGE_NAME in ("snappymail/snappymail:latest", "djmaze/snappymail:latest",
-                   "snappymail/snappymail:stable"):
+for IMAGE_NAME in (
+    "snappymail/snappymail:latest",
+    "djmaze/snappymail:latest",
+    "snappymail/snappymail:stable",
+):
     log_info(f"Trying image: {IMAGE_NAME}")
     if run("docker", "pull", IMAGE_NAME).returncode == 0:
         SNAPPYMAIL_IMAGE = IMAGE_NAME
@@ -266,8 +283,16 @@ WAIT_COUNT = 0
 MAX_WAIT = 60
 started = False
 while WAIT_COUNT < MAX_WAIT:
-    r = run("docker", "ps", "--filter", "name=snappymail", "--filter", "status=running",
-            "--format", "{{.Names}}")
+    r = run(
+        "docker",
+        "ps",
+        "--filter",
+        "name=snappymail",
+        "--filter",
+        "status=running",
+        "--format",
+        "{{.Names}}",
+    )
     if "snappymail" in (r.stdout or ""):
         log_success("Snappymail container is running")
         started = True
@@ -284,13 +309,23 @@ if not started:
     _tee(run("docker", "logs", "snappymail").stdout or "")
     sys.exit(1)
 
-_tee(run("docker", "ps", "--filter", "name=snappymail", "--format",
-         "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}").stdout or "")
+_tee(
+    run(
+        "docker",
+        "ps",
+        "--filter",
+        "name=snappymail",
+        "--format",
+        "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}",
+    ).stdout
+    or ""
+)
 _tee()
 
 log_info("Checking container health...")
-HEALTH = (run("docker", "inspect", "--format={{.State.Health.Status}}", "snappymail")
-          .stdout or "none").strip()
+HEALTH = (
+    run("docker", "inspect", "--format={{.State.Health.Status}}", "snappymail").stdout or "none"
+).strip()
 if HEALTH in ("healthy", "none"):
     log_success("Container health check passed")
 else:
@@ -374,8 +409,9 @@ server {{
     return 301 https://$server_name$request_uri;
 }}
 """
-p = subprocess.run(["sudo", "tee", str(SITE_CONF)], input=site_text,
-                   text=True, capture_output=True, check=False)
+p = subprocess.run(
+    ["sudo", "tee", str(SITE_CONF)], input=site_text, text=True, capture_output=True, check=False
+)
 if p.returncode != 0:
     die("Failed to write nginx site config")
 
@@ -404,8 +440,11 @@ else:
     _tee("Disabling site...")
     enabled_link.unlink(missing_ok=True)
     _tee("Rolling back Nginx configuration...")
-    backups = sorted(NGINX_CONF.parent.glob(f"{NGINX_CONF.name}.bak.*"),
-                     key=lambda p: p.stat().st_mtime, reverse=True)
+    backups = sorted(
+        NGINX_CONF.parent.glob(f"{NGINX_CONF.name}.bak.*"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if backups:
         run("sudo", "cp", str(backups[0]), str(NGINX_CONF))
         run("sudo", "systemctl", "reload", "nginx")
@@ -416,8 +455,19 @@ _tee()
 # 7. Verify installation
 _tee("=== Step 7: Installation Verification ===")
 
-if "snappymail" in (run("docker", "ps", "--filter", "name=snappymail",
-                        "--filter", "status=running", "--format", "{{.Names}}").stdout or ""):
+if "snappymail" in (
+    run(
+        "docker",
+        "ps",
+        "--filter",
+        "name=snappymail",
+        "--filter",
+        "status=running",
+        "--format",
+        "{{.Names}}",
+    ).stdout
+    or ""
+):
     log_success("✓ Snappymail container is running")
 else:
     die("✗ Snappymail container is not running")

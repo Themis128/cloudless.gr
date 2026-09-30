@@ -55,10 +55,16 @@ if not responsive:
     sys.exit(1)
 
 print("==> Applying LimitRanges + ResourceQuotas")
-ssh("kubectl --request-timeout=60s apply -f -", stdin=(MANIFEST_DIR / "limit-ranges.yaml").read_bytes())
+ssh(
+    "kubectl --request-timeout=60s apply -f -",
+    stdin=(MANIFEST_DIR / "limit-ranges.yaml").read_bytes(),
+)
 
 print("==> Applying monitoring resource limits")
-ssh("kubectl --request-timeout=60s apply -f -", stdin=(MANIFEST_DIR / "monitoring-resources.yaml").read_bytes())
+ssh(
+    "kubectl --request-timeout=60s apply -f -",
+    stdin=(MANIFEST_DIR / "monitoring-resources.yaml").read_bytes(),
+)
 
 print("==> Rolling out monitoring workloads to pick up new limits")
 ssh(

@@ -41,32 +41,38 @@ if not REPO_DIR.is_dir():
 print(f"[pi5-tuning] installing from {REPO_DIR}")
 
 install_d(755, "/etc/systemd/system.conf.d")
-install(REPO_DIR / "zzz-cloudless-watchdog.conf", 644,
-        "/etc/systemd/system.conf.d/zzz-cloudless-watchdog.conf")
+install(
+    REPO_DIR / "zzz-cloudless-watchdog.conf",
+    644,
+    "/etc/systemd/system.conf.d/zzz-cloudless-watchdog.conf",
+)
 # Remove one-off emergency drop-in if present (superseded).
 Path("/etc/systemd/system.conf.d/zzz-cloudless-watchdog-relax.conf").unlink(missing_ok=True)
 
 install_d(755, "/etc/sysctl.d")
-install(REPO_DIR / "zzz-cloudless-pi5-vm.conf", 644,
-        "/etc/sysctl.d/zzz-cloudless-pi5-vm.conf")
+install(REPO_DIR / "zzz-cloudless-pi5-vm.conf", 644, "/etc/sysctl.d/zzz-cloudless-pi5-vm.conf")
 
 install_d(755, "/etc/systemd/journald.conf.d")
-install(REPO_DIR / "journald-pi5.conf", 644,
-        "/etc/systemd/journald.conf.d/cloudless-pi5.conf")
+install(REPO_DIR / "journald-pi5.conf", 644, "/etc/systemd/journald.conf.d/cloudless-pi5.conf")
 
 install_d(755, "/etc/systemd/system/docker.service.d")
-install(REPO_DIR / "docker-after-k3s.conf", 644,
-        "/etc/systemd/system/docker.service.d/10-after-k3s.conf")
+install(
+    REPO_DIR / "docker-after-k3s.conf",
+    644,
+    "/etc/systemd/system/docker.service.d/10-after-k3s.conf",
+)
 
-install(REPO_DIR / "cloudless-boot-stagger.py", 755,
-        "/usr/local/sbin/cloudless-boot-stagger.py")
+install(REPO_DIR / "cloudless-boot-stagger.py", 755, "/usr/local/sbin/cloudless-boot-stagger.py")
 # Compat wrapper for callers that still invoke the .sh path
 Path("/usr/local/sbin/cloudless-boot-stagger.sh").write_text(
     '#!/bin/sh\nexec python3 /usr/local/sbin/cloudless-boot-stagger.py "$@"\n'
 )
 os.chmod("/usr/local/sbin/cloudless-boot-stagger.sh", 0o755)
-install(REPO_DIR / "cloudless-boot-stagger.service", 644,
-        "/etc/systemd/system/cloudless-boot-stagger.service")
+install(
+    REPO_DIR / "cloudless-boot-stagger.service",
+    644,
+    "/etc/systemd/system/cloudless-boot-stagger.service",
+)
 
 # GHA runner delay drop-ins (unit names discovered dynamically).
 install_d(755, "/etc/systemd/system")
@@ -87,7 +93,9 @@ K3S_CFG.touch(exist_ok=True)
 if "cloudless-pi5-kubelet-reserved" not in K3S_CFG.read_text():
     fragment = (REPO_DIR / "k3s-kubelet-reserved.yaml.fragment").read_text()
     with K3S_CFG.open("a") as fh:
-        fh.write(f"\n# BEGIN cloudless-pi5-kubelet-reserved\n{fragment}# END cloudless-pi5-kubelet-reserved\n")
+        fh.write(
+            f"\n# BEGIN cloudless-pi5-kubelet-reserved\n{fragment}# END cloudless-pi5-kubelet-reserved\n"
+        )
     print(f"[pi5-tuning] appended kubelet reserved to {K3S_CFG}")
 else:
     print(f"[pi5-tuning] kubelet reserved already present in {K3S_CFG}")

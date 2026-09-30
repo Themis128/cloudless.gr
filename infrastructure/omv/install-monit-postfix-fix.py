@@ -61,7 +61,12 @@ def doit(*args: str) -> None:
 
 # ---------------------------------------------------------------- 1. boot enable
 step("1/2  postfix.service enabled at boot")
-if subprocess.run(["systemctl", "is-enabled", "postfix"], capture_output=True, check=False).returncode == 0:
+if (
+    subprocess.run(
+        ["systemctl", "is-enabled", "postfix"], capture_output=True, check=False
+    ).returncode
+    == 0
+):
     print("  postfix already enabled at boot")
 else:
     doit("systemctl", "enable", "postfix")
@@ -69,7 +74,10 @@ else:
 # ------------------------------------------------------- 2. hardened monit check
 step("2/2  hardened postfix supervision in /etc/monit/conf.d")
 if not POSTFIX_CONF.is_file():
-    print(f"  source {POSTFIX_CONF} not found — skipping monit check (postfix still enabled at boot)", file=sys.stderr)
+    print(
+        f"  source {POSTFIX_CONF} not found — skipping monit check (postfix still enabled at boot)",
+        file=sys.stderr,
+    )
     sys.exit(0)
 
 if POSTFIX_LOADED.is_file():
@@ -79,18 +87,23 @@ else:
     if APPLY:
         shutil.copy2(POSTFIX_CONF, POSTFIX_LOADED)
         text = POSTFIX_LOADED.read_text()
-        text = text.replace(
-            'start program = "service postfix start"',
-            'start program = "/usr/sbin/service postfix start"',
-        ).replace(
-            'stop  program = "service postfix stop"',
-            'stop  program = "/usr/sbin/service postfix stop"',
-        ).replace(
-            "if failed host localhost port 25 with protocol smtp for 2 times within 3 cycles then restart",
-            "if failed host 127.0.0.1 port 25 with protocol smtp for 2 times within 3 cycles then restart",
-        ).replace(
-            "if 5 restarts with 5 cycles then timeout",
-            "if 5 restarts with 15 cycles then timeout",
+        text = (
+            text.replace(
+                'start program = "service postfix start"',
+                'start program = "/usr/sbin/service postfix start"',
+            )
+            .replace(
+                'stop  program = "service postfix stop"',
+                'stop  program = "/usr/sbin/service postfix stop"',
+            )
+            .replace(
+                "if failed host localhost port 25 with protocol smtp for 2 times within 3 cycles then restart",
+                "if failed host 127.0.0.1 port 25 with protocol smtp for 2 times within 3 cycles then restart",
+            )
+            .replace(
+                "if 5 restarts with 5 cycles then timeout",
+                "if 5 restarts with 15 cycles then timeout",
+            )
         )
         POSTFIX_LOADED.write_text(text)
     else:
@@ -146,7 +159,9 @@ if MAIL_RELAY:
                 cred = parts[1]
                 break
     if not cred:
-        print(f"  WARN: no sasl_passwd line for {authkey} — using relay without auth", file=sys.stderr)
+        print(
+            f"  WARN: no sasl_passwd line for {authkey} — using relay without auth", file=sys.stderr
+        )
         username = password = ""
     else:
         username, _, password = cred.partition(":")
@@ -168,12 +183,20 @@ if MAIL_RELAY:
             new_text = "\n".join(new_lines) + "\n"
             new_path = Path(f"{MONITRC}.new")
             new_path.write_text(new_text)
-            if subprocess.run(["monit", "-t", "-c", str(new_path)], capture_output=True, check=False).returncode == 0:
+            if (
+                subprocess.run(
+                    ["monit", "-t", "-c", str(new_path)], capture_output=True, check=False
+                ).returncode
+                == 0
+            ):
                 new_path.replace(MONITRC)
                 subprocess.run(["monit", "reload"], check=False)
                 print(f"  monitrc updated + reloaded (backup: {MONITRC}.bak-{BACKUP_TS})")
             else:
-                print("  monit -t FAILED on new config — rolling back, no change made", file=sys.stderr)
+                print(
+                    "  monit -t FAILED on new config — rolling back, no change made",
+                    file=sys.stderr,
+                )
                 new_path.unlink(missing_ok=True)
                 sys.exit(1)
         else:
@@ -183,6 +206,12 @@ if MAIL_RELAY:
 
 print()
 print("review / apply:")
-print(f"  sudo python3 {Path(sys.argv[0]).name} --apply              # applies (1) boot-enable + (2) monit watchdog")
-print(f"  sudo python3 {Path(sys.argv[0]).name} --apply --mail-relay # also (3) point monit alerts at external relay")
-print("  tail -40 /var/log/nas-daily-health.log          # confirm 'postfix is NOT running' is gone")
+print(
+    f"  sudo python3 {Path(sys.argv[0]).name} --apply              # applies (1) boot-enable + (2) monit watchdog"
+)
+print(
+    f"  sudo python3 {Path(sys.argv[0]).name} --apply --mail-relay # also (3) point monit alerts at external relay"
+)
+print(
+    "  tail -40 /var/log/nas-daily-health.log          # confirm 'postfix is NOT running' is gone"
+)

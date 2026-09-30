@@ -17,7 +17,10 @@ import urllib.request
 from pathlib import Path
 
 if len(sys.argv) < 6:
-    print("Usage: generate-post-card.py <slug> <category> <title> <author> <read-time>", file=sys.stderr)
+    print(
+        "Usage: generate-post-card.py <slug> <category> <title> <author> <read-time>",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 BRANDING_DIR = Path(__file__).resolve().parent.parent
@@ -59,7 +62,9 @@ page = HTML_TEMPLATE.format(
     rt=html_mod.escape(rt),
 )
 
-chrome = shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+chrome = (
+    shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+)
 if not chrome:
     print("Install chromium first", file=sys.stderr)
     sys.exit(1)
@@ -98,10 +103,14 @@ if postiz_key:
     boundary = "----pyuploadboundary"
     data = png.read_bytes()
     body = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="file"; filename="{png.name}"\r\n'
-        "Content-Type: image/png\r\n\r\n"
-    ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{png.name}"\r\n'
+            "Content-Type: image/png\r\n\r\n"
+        ).encode()
+        + data
+        + f"\r\n--{boundary}--\r\n".encode()
+    )
     req = urllib.request.Request(
         f"{postiz_url}/api/public/v1/upload",
         data=body,

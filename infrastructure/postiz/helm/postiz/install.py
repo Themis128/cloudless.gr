@@ -67,9 +67,16 @@ if kubectl("-n", NAMESPACE, "get", "secret", "postiz-secrets", check=False).retu
 else:
     jwt = secrets.token_hex(32)
     pgpw = secrets.token_hex(24)
-    kubectl("-n", NAMESPACE, "create", "secret", "generic", "postiz-secrets",
-            f"--from-literal=JWT_SECRET={jwt}",
-            f"--from-literal=POSTGRES_PASSWORD={pgpw}")
+    kubectl(
+        "-n",
+        NAMESPACE,
+        "create",
+        "secret",
+        "generic",
+        "postiz-secrets",
+        f"--from-literal=JWT_SECRET={jwt}",
+        f"--from-literal=POSTGRES_PASSWORD={pgpw}",
+    )
     print("    created (32-byte JWT + 24-byte Postgres password)")
 
 bold("==> 3. postiz-providers (from environment)")
@@ -103,18 +110,45 @@ else:
     warn("    no provider keys in environment — skipping")
 
 bold("==> 4. helm upgrade --install")
-run("helm", "upgrade", "--install", RELEASE, str(CHART_DIR),
-    "-n", NAMESPACE, "-f", str(VALUES_FILE), "--wait", "--timeout", "5m")
+run(
+    "helm",
+    "upgrade",
+    "--install",
+    RELEASE,
+    str(CHART_DIR),
+    "-n",
+    NAMESPACE,
+    "-f",
+    str(VALUES_FILE),
+    "--wait",
+    "--timeout",
+    "5m",
+)
 
 bold("==> 5. smoke")
 kubectl("-n", NAMESPACE, "rollout", "status", "deploy/postiz", "--timeout=120s")
-r = kubectl("-n", NAMESPACE, "get", "pod", "-l", "app=postiz",
-            "-o", "jsonpath={.items[0].metadata.name}")
+r = kubectl(
+    "-n", NAMESPACE, "get", "pod", "-l", "app=postiz", "-o", "jsonpath={.items[0].metadata.name}"
+)
 pod = (r.stdout or "").strip()
 print(f"    pod: {pod}")
 if pod:
-    if kubectl("-n", NAMESPACE, "exec", pod, "--", "wget", "-q", "-O", "-",
-               "http://localhost:5000", check=False).returncode != 0:
+    if (
+        kubectl(
+            "-n",
+            NAMESPACE,
+            "exec",
+            pod,
+            "--",
+            "wget",
+            "-q",
+            "-O",
+            "-",
+            "http://localhost:5000",
+            check=False,
+        ).returncode
+        != 0
+    ):
         warn("    in-cluster GET / failed — check pod logs")
 
 bold("==> done")

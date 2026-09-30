@@ -47,9 +47,7 @@ RESTARTS = [
 
 
 def kubectl(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    r = subprocess.run(
-        ["kubectl", *args], capture_output=True, text=True, check=False
-    )
+    r = subprocess.run(["kubectl", *args], capture_output=True, text=True, check=False)
     if check and r.returncode != 0:
         print(r.stderr or r.stdout, file=sys.stderr)
         sys.exit(1)
@@ -142,7 +140,12 @@ r = kubectl(
 )
 try:
     targets = json.loads(r.stdout)
-    jobs = sorted({t.get("labels", {}).get("job", "") for t in targets.get("data", {}).get("activeTargets", [])})
+    jobs = sorted(
+        {
+            t.get("labels", {}).get("job", "")
+            for t in targets.get("data", {}).get("activeTargets", [])
+        }
+    )
     for job in jobs:
         print(f'"job":"{job}"')
 except (json.JSONDecodeError, AttributeError):

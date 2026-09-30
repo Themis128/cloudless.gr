@@ -123,11 +123,7 @@ pod_names = [
     for p in app_pods.get("items", [])
     if p.get("metadata", {}).get("name")
 ]
-cloudless_logs = (
-    kubectl("logs", "-n", "cloudless", pod_names[0], "--tail=200")
-    if pod_names
-    else ""
-)
+cloudless_logs = kubectl("logs", "-n", "cloudless", pod_names[0], "--tail=200") if pod_names else ""
 log_lines = cloudless_logs.splitlines()
 
 dns_errors = grep(log_lines, r"EAI_AGAIN|getaddrinfo|ENOTFOUND")[:5]

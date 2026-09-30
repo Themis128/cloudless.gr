@@ -21,9 +21,7 @@ NC = "\033[0m"
 
 
 def kubectl(*args: str) -> str:
-    r = subprocess.run(
-        ["kubectl", *args], capture_output=True, text=True, timeout=60, check=False
-    )
+    r = subprocess.run(["kubectl", *args], capture_output=True, text=True, timeout=60, check=False)
     return (r.stdout or "") + (r.stderr or "")
 
 
@@ -51,20 +49,30 @@ if len(sys.argv) == 1:
             reason = term.get("reason") or "none"
             exitcode = term.get("exitCode", 0)
             if reason == "OOMKilled":
-                print(f"{RED}✗{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})")
+                print(
+                    f"{RED}✗{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})"
+                )
             elif reason == "Error":
-                print(f"{YELLOW}⚠{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})")
+                print(
+                    f"{YELLOW}⚠{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})"
+                )
             elif reason == "Completed":
-                print(f"{GREEN}○{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode}) [normal job behavior]")
+                print(
+                    f"{GREEN}○{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode}) [normal job behavior]"
+                )
             else:
-                print(f"{YELLOW}?{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})")
+                print(
+                    f"{YELLOW}?{NC} {ns}/{name} — {restarts} restarts, last: {reason} (exit {exitcode})"
+                )
 
     print(f"\n{CYAN}── Exit Code Reference ──{NC}")
     print("  0   = Completed (normal)")
     print("  143 = SIGTERM (pod was terminated by kubelet/controller)")
     print("  137 = SIGKILL (OOMKilled or force-killed)")
     print("  1   = Application error\n")
-    print(f"To deep-dive a specific pod: {CYAN}python3 tools/pod-restart-investigator.py <namespace> <pod_name>{NC}")
+    print(
+        f"To deep-dive a specific pod: {CYAN}python3 tools/pod-restart-investigator.py <namespace> <pod_name>{NC}"
+    )
     sys.exit(0)
 
 # ─── Mode 2: Deep dive on a specific pod ───
@@ -90,13 +98,18 @@ except json.JSONDecodeError:
 # 2. Container status with restart info
 print(f"\n{CYAN}2. Container Status (restart details){NC}")
 cs0 = (pod.get("status", {}).get("containerStatuses") or [{}])[0]
-print(json.dumps({
-    "restartCount": cs0.get("restartCount"),
-    "lastState": cs0.get("lastState"),
-    "state": cs0.get("state"),
-    "ready": cs0.get("ready"),
-    "started": cs0.get("started"),
-}, indent=2))
+print(
+    json.dumps(
+        {
+            "restartCount": cs0.get("restartCount"),
+            "lastState": cs0.get("lastState"),
+            "state": cs0.get("state"),
+            "ready": cs0.get("ready"),
+            "started": cs0.get("started"),
+        },
+        indent=2,
+    )
+)
 
 # 3. Resource limits/requests
 print(f"\n{CYAN}3. Resource Limits & Requests{NC}")

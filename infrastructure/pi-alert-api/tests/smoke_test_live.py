@@ -33,10 +33,13 @@ ALERT_API_URL = os.environ.get("ALERT_API_URL", "http://192.168.1.128:30800")
 SMOKE_CODE = f"SMOKETEST_{int(time.time())}"
 
 
-def http(url: str, method: str = "GET", payload: dict | None = None, timeout: int = 10) -> tuple[int, str]:
+def http(
+    url: str, method: str = "GET", payload: dict | None = None, timeout: int = 10
+) -> tuple[int, str]:
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(url, data=data, method=method,
-                                 headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data=data, method=method, headers={"Content-Type": "application/json"}
+    )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode()
@@ -49,27 +52,29 @@ def http(url: str, method: str = "GET", payload: dict | None = None, timeout: in
 print(f"==> Sending synthetic alert: code={SMOKE_CODE} url={ALERT_API_URL}")
 
 payload = {
-    "alerts": [{
-        "status": "firing",
-        "labels": {
-            "alertname": SMOKE_CODE,
-            "severity": "warning",
-            "target": "cloudless.gr",
-            "probe": "esp32-https",
-            "instance": "smoke-test-cli",
-        },
-        "annotations": {
-            "summary": f"{SMOKE_CODE} — e2e verification of alert-api v3.3 verbose rendering",
-            "description": (
-                "This is a synthetic alert from infrastructure/pi-alert-api/tests/smoke_test_live.py\n\n"
-                "If you see this in #alerts as a multi-line message with Value, Instance, "
-                "Target/Probe, Runbook, and Source fields, the alert-api → Slack pipeline is healthy.\n\n"
-                "Will be auto-resolved by the smoke test within ~10 seconds."
-            ),
-            "runbook_url": "https://github.com/Themis128/cloudless.gr/blob/main/infrastructure/pi-alert-api/tests/smoke_test_live.py",
-        },
-        "generatorURL": "http://prometheus.monitoring.svc.cluster.local:9090/graph",
-    }]
+    "alerts": [
+        {
+            "status": "firing",
+            "labels": {
+                "alertname": SMOKE_CODE,
+                "severity": "warning",
+                "target": "cloudless.gr",
+                "probe": "esp32-https",
+                "instance": "smoke-test-cli",
+            },
+            "annotations": {
+                "summary": f"{SMOKE_CODE} — e2e verification of alert-api v3.3 verbose rendering",
+                "description": (
+                    "This is a synthetic alert from infrastructure/pi-alert-api/tests/smoke_test_live.py\n\n"
+                    "If you see this in #alerts as a multi-line message with Value, Instance, "
+                    "Target/Probe, Runbook, and Source fields, the alert-api → Slack pipeline is healthy.\n\n"
+                    "Will be auto-resolved by the smoke test within ~10 seconds."
+                ),
+                "runbook_url": "https://github.com/Themis128/cloudless.gr/blob/main/infrastructure/pi-alert-api/tests/smoke_test_live.py",
+            },
+            "generatorURL": "http://prometheus.monitoring.svc.cluster.local:9090/graph",
+        }
+    ]
 }
 
 code, body = http(f"{ALERT_API_URL}/api/alertmanager/webhook", "POST", payload)

@@ -55,7 +55,11 @@ def systemctl(*args: str) -> None:
 systemctl("daemon-reload")
 systemctl("enable", "--now", "pi-release-pull.timer")
 systemctl("start", "pi-release-pull.service")
-r = subprocess.run(["systemctl", "status", "pi-release-pull.timer", "--no-pager"],
-                   capture_output=True, text=True, check=False)
+r = subprocess.run(
+    ["systemctl", "status", "pi-release-pull.timer", "--no-pager"],
+    capture_output=True,
+    text=True,
+    check=False,
+)
 print("\n".join((r.stdout or "").splitlines()[:15]))
 print("installed. logs: journalctl -t pi-release-pull -f")

@@ -71,7 +71,9 @@ if not CF_RECORD_ID and not CF_RECORD_NAME:
 def http(url: str, method: str = "GET", payload: dict | None = None, timeout: int = 30) -> dict:
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(
-        url, data=data, method=method,
+        url,
+        data=data,
+        method=method,
         headers={
             "Authorization": f"Bearer {CF_API_TOKEN}",
             "Content-Type": "application/json",

@@ -157,15 +157,22 @@ if CURRENT == SHA12:
 
 if load_high or io_high:
     track(
-        event="skip_load_high", sha12=SHA12, load1=str(load1),
-        iowait_pct=str(iowait_pct), want=SHA12,
-        current=CURRENT or "none", workflowInstanceId=WF_ID,
+        event="skip_load_high",
+        sha12=SHA12,
+        load1=str(load1),
+        iowait_pct=str(iowait_pct),
+        want=SHA12,
+        current=CURRENT or "none",
+        workflowInstanceId=WF_ID,
     )
     sys.exit(0)
 
 track(
-    event="pull_start", sha12=SHA12, artifactKey=ARTIFACT_KEY,
-    workflowInstanceId=WF_ID, githubRunId=str(desired.get("githubRunId") or ""),
+    event="pull_start",
+    sha12=SHA12,
+    artifactKey=ARTIFACT_KEY,
+    workflowInstanceId=WF_ID,
+    githubRunId=str(desired.get("githubRunId") or ""),
 )
 
 TMP = Path(f"/tmp/cloudless-pull-{SHA12}")
@@ -175,9 +182,7 @@ TMP.mkdir(parents=True)
 
 # Prefer authenticated orchestrator download (no R2 keys on omv).
 key_q = urllib.parse.quote(ARTIFACT_KEY, safe="/")
-code, data = http_get(
-    f"{DEPLOY_ORCHESTRATOR_URL.rstrip('/')}/artifact?key={key_q}", 600, auth=True
-)
+code, data = http_get(f"{DEPLOY_ORCHESTRATOR_URL.rstrip('/')}/artifact?key={key_q}", 600, auth=True)
 if code.startswith("2") and data:
     TAR.write_bytes(data)
     track(event="download_via_orchestrator", sha12=SHA12, artifactKey=ARTIFACT_KEY)
@@ -186,12 +191,27 @@ elif env("CF_R2_ACCESS_KEY_ID") and env("CF_R2_SECRET_ACCESS_KEY") and env("CF_A
         track(event="error", reason="rclone_missing", sha12=SHA12)
         sys.exit(1)
     r = run(
-        "nice", "-n", "10", "ionice", "-c2", "-n7", "rclone", "copyto",
-        f":s3:{BUCKET}/{ARTIFACT_KEY}", str(TAR),
-        "--s3-provider", "Cloudflare",
-        "--s3-access-key-id", env("CF_R2_ACCESS_KEY_ID", ""),
-        "--s3-secret-access-key", env("CF_R2_SECRET_ACCESS_KEY", ""),
-        "--s3-endpoint", ENDPOINT, "--s3-region", "auto", "--s3-no-check-bucket",
+        "nice",
+        "-n",
+        "10",
+        "ionice",
+        "-c2",
+        "-n7",
+        "rclone",
+        "copyto",
+        f":s3:{BUCKET}/{ARTIFACT_KEY}",
+        str(TAR),
+        "--s3-provider",
+        "Cloudflare",
+        "--s3-access-key-id",
+        env("CF_R2_ACCESS_KEY_ID", ""),
+        "--s3-secret-access-key",
+        env("CF_R2_SECRET_ACCESS_KEY", ""),
+        "--s3-endpoint",
+        ENDPOINT,
+        "--s3-region",
+        "auto",
+        "--s3-no-check-bucket",
     )
     if r.returncode != 0:
         track(event="error", reason="download_failed", sha12=SHA12, artifactKey=ARTIFACT_KEY)
@@ -209,13 +229,28 @@ shutil.rmtree(NEW_REL, ignore_errors=True)
 run("sudo", "rm", "-rf", str(NEW_REL))
 run("sudo", "mkdir", "-p", str(NEW_REL))
 # Unpack with low priority onto SSD-backed home
-run("nice", "-n", "10", "ionice", "-c2", "-n7", "sudo", "tar", "--zstd", "-xf", str(TAR), "-C", str(NEW_REL))
+run(
+    "nice",
+    "-n",
+    "10",
+    "ionice",
+    "-c2",
+    "-n7",
+    "sudo",
+    "tar",
+    "--zstd",
+    "-xf",
+    str(TAR),
+    "-C",
+    str(NEW_REL),
+)
 
 # Tarball layout: top-level standalone/ static/ public/ BUILD_ID (from pack OUT).
 # Never rsync standalone/ into its parent (NEW_REL) — that is a classic infinite
 # recursion footgun (dest contains source). Merge via a sibling temp dir instead.
 if (NEW_REL / "standalone").is_dir():
     import tempfile
+
     merge = Path(tempfile.mkdtemp(prefix=f".merge-{SHA12}.", dir=RELEASES))
     run("sudo", "rsync", "-a", f"{NEW_REL}/standalone/", f"{merge}/")
     run("sudo", "rsync", "-a", "--exclude", "standalone", f"{NEW_REL}/", f"{merge}/")
@@ -232,13 +267,21 @@ if build_id.is_file() and not next_build_id.is_file():
     run("sudo", "mkdir", "-p", str(NEW_REL / ".next"))
     run("sudo", "cp", "-a", str(build_id), str(next_build_id))
 
-if not next_build_id.is_file() or next_build_id.stat().st_size == 0 or not (NEW_REL / "server.js").is_file():
+if (
+    not next_build_id.is_file()
+    or next_build_id.stat().st_size == 0
+    or not (NEW_REL / "server.js").is_file()
+):
     track(event="error", reason="missing_build_id_or_server", sha12=SHA12)
     run("sudo", "rm", "-rf", str(NEW_REL))
     shutil.rmtree(TMP, ignore_errors=True)
     sys.exit(1)
 
-next_files = sum(1 for _ in (NEW_REL / ".next").rglob("*") if _.is_file()) if (NEW_REL / ".next").is_dir() else 0
+next_files = (
+    sum(1 for _ in (NEW_REL / ".next").rglob("*") if _.is_file())
+    if (NEW_REL / ".next").is_dir()
+    else 0
+)
 if next_files < 10:
     track(event="error", reason="empty_next", sha12=SHA12, next_files=str(next_files))
     run("sudo", "rm", "-rf", str(NEW_REL))
@@ -250,9 +293,18 @@ run("sudo", "ln", "-sfn", f"cloudless-releases/{SHA12}", STANDALONE)
 run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
 
 KUBECTL = ["sudo", "k3s", "kubectl"]
-run(*KUBECTL, "set", "env", f"deployment/{DEP}", "-n", NS,
-    f"APP_VERSION={SHA}", f"NEXT_PUBLIC_APP_VERSION={SHA}",
-    "NEXT_PUBLIC_AUTH_PROVIDER=d1", "SSM_DISABLED=1")
+run(
+    *KUBECTL,
+    "set",
+    "env",
+    f"deployment/{DEP}",
+    "-n",
+    NS,
+    f"APP_VERSION={SHA}",
+    f"NEXT_PUBLIC_APP_VERSION={SHA}",
+    "NEXT_PUBLIC_AUTH_PROVIDER=d1",
+    "SSM_DISABLED=1",
+)
 run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
 run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=300s")
 
@@ -280,7 +332,9 @@ if health_ok:
         reverse=True,
     )
     for old in releases[5:]:
-        if f"cloudless-releases/{old.name}" == (os.readlink(STANDALONE) if standalone_path.is_symlink() else ""):
+        if f"cloudless-releases/{old.name}" == (
+            os.readlink(STANDALONE) if standalone_path.is_symlink() else ""
+        ):
             continue
         run("sudo", "rm", "-rf", str(old))
     sys.exit(0)
@@ -291,8 +345,16 @@ if PREV:
     run("sudo", "ln", "-sfn", PREV, STANDALONE)
     run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
     prev_sha = Path(PREV).name
-    run(*KUBECTL, "set", "env", f"deployment/{DEP}", "-n", NS,
-        f"APP_VERSION={prev_sha}", f"NEXT_PUBLIC_APP_VERSION={prev_sha}")
+    run(
+        *KUBECTL,
+        "set",
+        "env",
+        f"deployment/{DEP}",
+        "-n",
+        NS,
+        f"APP_VERSION={prev_sha}",
+        f"NEXT_PUBLIC_APP_VERSION={prev_sha}",
+    )
     run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
     run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s")
 sys.exit(1)

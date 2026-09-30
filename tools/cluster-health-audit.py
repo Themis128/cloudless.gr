@@ -87,9 +87,7 @@ def ok(text: str) -> None:
 
 
 def kubectl(*args: str) -> str:
-    r = subprocess.run(
-        ["kubectl", *args], capture_output=True, text=True, timeout=60, check=False
-    )
+    r = subprocess.run(["kubectl", *args], capture_output=True, text=True, timeout=60, check=False)
     return r.stdout or r.stderr
 
 
@@ -207,9 +205,7 @@ else:
 
 # ─── 5. Recent Events ───
 out(f"\n{CYAN}── 5. Recent Warning Events ──{NC}")
-warn_events = kubectl(
-    "get", "events", "--all-namespaces", "--field-selector", "type=Warning"
-)
+warn_events = kubectl("get", "events", "--all-namespaces", "--field-selector", "type=Warning")
 warn_tail = "\n".join(warn_events.splitlines()[-10:])
 if not warn_tail.strip() or "No resources found" in warn_tail:
     ok("No warning events")
@@ -285,10 +281,7 @@ def to_mib(qty: str) -> float:
     return val * factor
 
 
-node_names = [
-    item.get("metadata", {}).get("name", "")
-    for item in nodes.get("items", [])
-]
+node_names = [item.get("metadata", {}).get("name", "") for item in nodes.get("items", [])]
 for node in node_names:
     desc = kubectl("describe", "node", node)
     allocatable = ""

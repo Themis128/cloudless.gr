@@ -31,7 +31,9 @@ for f in (SCRIPT, BOOT_SVC, CHECK_SVC, TIMER):
 
 
 def install(src: Path, mode: int, dest: str) -> None:
-    subprocess.run(["install", "-m", str(mode), "-o", "root", "-g", "root", str(src), dest], check=True)
+    subprocess.run(
+        ["install", "-m", str(mode), "-o", "root", "-g", "root", str(src), dest], check=True
+    )
 
 
 install(SCRIPT, 755, "/usr/local/sbin/gha-runner-heal.py")

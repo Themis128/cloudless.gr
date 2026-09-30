@@ -55,7 +55,7 @@ MAILBOX_LIST.chmod(0o644)
 
 WEBROOT.mkdir(parents=True, exist_ok=True)
 # PHP payload — runs under php-fpm, not Python.
-(WEBROOT / "ingest.php").write_text('''<?php
+(WEBROOT / "ingest.php").write_text("""<?php
 declare(strict_types=1);
 /**
  * Deliver @cloudless.gr inbound messages. Per-address mailbox when the
@@ -120,7 +120,7 @@ if ($code !== 0) {
     exit;
 }
 http_response_code(204);
-''')
+""")
 
 for grp in ("www-data", "nginx"):
     if run("chown", "-R", f"{grp}:{grp}", str(WEBROOT), check=False).returncode == 0:
@@ -173,5 +173,7 @@ print(f"  default:  {MAILBOX}")
 print()
 print("Add tunnel ingress (remotely managed):")
 print(f"  hostname {DOMAIN_HOST} → http://192.168.1.130:80")
-print(f"  DNS CNAME {DOMAIN_HOST} → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com (proxied)")
+print(
+    f"  DNS CNAME {DOMAIN_HOST} → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com (proxied)"
+)
 print("Put the SAME secret in Worker: wrangler secret put MAIL_INGEST_SECRET")

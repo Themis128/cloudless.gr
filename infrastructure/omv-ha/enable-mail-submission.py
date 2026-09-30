@@ -29,7 +29,9 @@ def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(args), capture_output=True, text=True, check=check)
 
 
-run("postconf", "-e",
+run(
+    "postconf",
+    "-e",
     "inet_interfaces = all",
     f"mynetworks = {MYNETWORKS}",
     "smtpd_sasl_type = dovecot",
@@ -38,7 +40,8 @@ run("postconf", "-e",
     "smtpd_tls_security_level = may",
     "smtp_tls_security_level = encrypt",
     "smtpd_relay_restrictions = permit_mynetworks, permit_sasl_authenticated, defer_unauth_destination",
-    "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination")
+    "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination",
+)
 
 master_cf = Path("/etc/postfix/master.cf")
 if master_cf.is_file() and not re.search(r"^submission\s", master_cf.read_text(), re.MULTILINE):
@@ -60,11 +63,25 @@ submission inet n       -       y       -       -       smtpd
 if not (CERT_DIR / "mail.crt").is_file():
     CERT_DIR.mkdir(parents=True, exist_ok=True)
     CERT_DIR.chmod(0o755)
-    run("openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048", "-days", "825",
-        "-keyout", str(CERT_DIR / "mail.key"), "-out", str(CERT_DIR / "mail.crt"),
-        "-subj", f"/CN=mail.{DOMAIN}/O=cloudless.gr",
-        "-addext", f"subjectAltName=DNS:mail.{DOMAIN},DNS:omv-ha,"
-                   f"DNS:omv-ha.tail4ecae1.ts.net,IP:100.95.117.84,IP:192.168.1.130")
+    run(
+        "openssl",
+        "req",
+        "-x509",
+        "-nodes",
+        "-newkey",
+        "rsa:2048",
+        "-days",
+        "825",
+        "-keyout",
+        str(CERT_DIR / "mail.key"),
+        "-out",
+        str(CERT_DIR / "mail.crt"),
+        "-subj",
+        f"/CN=mail.{DOMAIN}/O=cloudless.gr",
+        "-addext",
+        f"subjectAltName=DNS:mail.{DOMAIN},DNS:omv-ha,"
+        f"DNS:omv-ha.tail4ecae1.ts.net,IP:100.95.117.84,IP:192.168.1.130",
+    )
     (CERT_DIR / "mail.key").chmod(0o640)
     run("chown", "root:dovecot", str(CERT_DIR / "mail.key"), check=False)
 
@@ -83,9 +100,12 @@ ssl_cert = <{CERT_DIR}/mail.crt
 ssl_key = <{CERT_DIR}/mail.key
 """)
 
-run("postconf", "-e",
+run(
+    "postconf",
+    "-e",
     f"smtpd_tls_cert_file = {CERT_DIR}/mail.crt",
-    f"smtpd_tls_key_file = {CERT_DIR}/mail.key")
+    f"smtpd_tls_key_file = {CERT_DIR}/mail.key",
+)
 
 run("systemctl", "restart", "dovecot")
 run("systemctl", "restart", "postfix")
@@ -97,8 +117,21 @@ if shutil.which("ufw"):
         ("192.168.1.0/24", "993", "IMAPS lan"),
         ("192.168.1.0/24", "587", "SMTP submission lan"),
     ):
-        run("ufw", "allow", "from", rule[0], "to", "any", "port", rule[1],
-            "proto", "tcp", "comment", rule[2], check=False)
+        run(
+            "ufw",
+            "allow",
+            "from",
+            rule[0],
+            "to",
+            "any",
+            "port",
+            rule[1],
+            "proto",
+            "tcp",
+            "comment",
+            rule[2],
+            check=False,
+        )
 
 print("[mail-submission] enabled")
 print("  IMAPS:  omv-ha / 100.95.117.84 :993  (SSL/TLS, accept self-signed)")

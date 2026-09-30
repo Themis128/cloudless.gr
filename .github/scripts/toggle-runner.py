@@ -39,9 +39,7 @@ LEGION_VALUE = '["self-hosted","legion","x64"]'
 
 
 def gh(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["gh", *args], capture_output=True, text=True, check=False
-    )
+    return subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
 
 
 def show_runners() -> None:

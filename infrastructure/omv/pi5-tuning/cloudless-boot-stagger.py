@@ -40,8 +40,7 @@ if not shutil.which("docker"):
     sys.exit(0)
 
 log(f"stopping mailcow for {DELAY_SEC}s so k3s can settle")
-subprocess.run(["docker", "compose", "-f", COMPOSE, "stop"],
-               capture_output=True, check=False)
+subprocess.run(["docker", "compose", "-f", COMPOSE, "stop"], capture_output=True, check=False)
 
 # Wait for load to drop or timeout
 deadline = time.monotonic() + DELAY_SEC
@@ -58,8 +57,9 @@ while time.monotonic() < deadline:
     elapsed += 10
 
 log("starting mailcow")
-r = subprocess.run(["docker", "compose", "-f", COMPOSE, "up", "-d"],
-                   capture_output=True, check=False)
+r = subprocess.run(
+    ["docker", "compose", "-f", COMPOSE, "up", "-d"], capture_output=True, check=False
+)
 if r.returncode != 0:
     log("WARN: mailcow up -d failed")
 log("done")

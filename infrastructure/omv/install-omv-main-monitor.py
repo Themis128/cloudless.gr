@@ -33,7 +33,11 @@ if os.geteuid() != 0:
 # The cleanup script is the repo's cloudless-cleanup.py — embedded so the
 # installer stays self-contained when piped via ssh stdin.
 REPO_DIR = Path(__file__).resolve().parent
-EMBEDDED_CLEANUP = (REPO_DIR / "cloudless-cleanup.py").read_text() if (REPO_DIR / "cloudless-cleanup.py").is_file() else ""
+EMBEDDED_CLEANUP = (
+    (REPO_DIR / "cloudless-cleanup.py").read_text()
+    if (REPO_DIR / "cloudless-cleanup.py").is_file()
+    else ""
+)
 
 ALERT_SCRIPT = r'''#!/usr/bin/env python3
 """omv-main-alert — send a disk/system alert via ntfy + Slack + Resend email.
@@ -285,7 +289,9 @@ if env_path.is_file():
         print("  ⚠ RESEND_API_KEY missing — run install-safedeploy-watchdog.py first")
 else:
     print("  ✗ /etc/safedeploy-watchdog.env MISSING — alerts will be silent")
-    print("    Run: ssh tbaltzakis@omv 'sudo python3 -' < infrastructure/omv/install-safedeploy-watchdog.py")
+    print(
+        "    Run: ssh tbaltzakis@omv 'sudo python3 -' < infrastructure/omv/install-safedeploy-watchdog.py"
+    )
 
 # ── 6. Immediate check ───────────────────────────────────────────────────────
 print("\n[install] firing immediate disk check...")
@@ -293,10 +299,16 @@ Path("/run/omv-monitor").mkdir(parents=True, exist_ok=True)
 subprocess.run(["python3", "/usr/local/bin/omv-main-monitor.py"], check=False)
 
 print("\n[install] disk usage summary:")
-subprocess.run([
-    "df", "-h", "/", "/var/lib/rancher/k3s",
-    "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7",
-], check=False)
+subprocess.run(
+    [
+        "df",
+        "-h",
+        "/",
+        "/var/lib/rancher/k3s",
+        "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7",
+    ],
+    check=False,
+)
 
 print("\n[install] done.")
 print("  Cleanup log: tail -f /var/log/cloudless-cleanup.log")

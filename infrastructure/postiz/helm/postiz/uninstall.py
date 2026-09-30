@@ -12,10 +12,16 @@ import os
 import subprocess
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--delete-pvcs", action="store_true",
-                    help="Delete all 3 PVCs (postgres, redis, uploads). DESTROYS DATA.")
-parser.add_argument("--delete-ns", action="store_true",
-                    help="Delete the postiz namespace entirely (includes secrets).")
+parser.add_argument(
+    "--delete-pvcs",
+    action="store_true",
+    help="Delete all 3 PVCs (postgres, redis, uploads). DESTROYS DATA.",
+)
+parser.add_argument(
+    "--delete-ns",
+    action="store_true",
+    help="Delete the postiz namespace entirely (includes secrets).",
+)
 args = parser.parse_args()
 
 NAMESPACE = os.environ.get("NAMESPACE", "postiz")
@@ -31,9 +37,17 @@ run("helm", "uninstall", RELEASE, "-n", NAMESPACE)
 
 if args.delete_pvcs:
     print("==> deleting PVCs")
-    run("kubectl", "-n", NAMESPACE, "delete", "pvc",
-        "postiz-postgres-data", "postiz-redis-data", "postiz-uploads",
-        "--ignore-not-found")
+    run(
+        "kubectl",
+        "-n",
+        NAMESPACE,
+        "delete",
+        "pvc",
+        "postiz-postgres-data",
+        "postiz-redis-data",
+        "postiz-uploads",
+        "--ignore-not-found",
+    )
 
 if args.delete_ns:
     print("==> deleting namespace")

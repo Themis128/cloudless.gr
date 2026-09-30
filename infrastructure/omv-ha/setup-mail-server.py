@@ -40,7 +40,9 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
-def run(*args: str, check: bool = True, env: dict | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    *args: str, check: bool = True, env: dict | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(args), capture_output=True, text=True, check=check, env=env)
 
 
@@ -49,27 +51,55 @@ if os.geteuid() != 0:
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 if not RESEND_API_KEY:
     die("RESEND_API_KEY not set in the environment")
-MAILPW = os.environ.get("MAIL_TBALTZAKIS_PASSWORD") or secrets.token_urlsafe(15)[:18].replace("/", "")
+MAILPW = os.environ.get("MAIL_TBALTZAKIS_PASSWORD") or secrets.token_urlsafe(15)[:18].replace(
+    "/", ""
+)
 
 log("Installing packages (postfix + lmdb + dovecot)…")
 env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
-subprocess.run(["debconf-set-selections"], input=f"""\
+subprocess.run(
+    ["debconf-set-selections"],
+    input=f"""\
 postfix postfix/main_mailer_type string Internet Site
 postfix postfix/mailname string {DOMAIN}
-""", text=True, check=True)
+""",
+    text=True,
+    check=True,
+)
 run("apt-get", "update", "-qq", env=env)
-run("apt-get", "install", "-y", "-qq",
-    "postfix", "postfix-pcre", "postfix-lmdb",
-    "dovecot-core", "dovecot-imapd", "dovecot-lmtpd",
-    "libsasl2-modules", "ca-certificates",
-    env=env)
+run(
+    "apt-get",
+    "install",
+    "-y",
+    "-qq",
+    "postfix",
+    "postfix-pcre",
+    "postfix-lmdb",
+    "dovecot-core",
+    "dovecot-imapd",
+    "dovecot-lmtpd",
+    "libsasl2-modules",
+    "ca-certificates",
+    env=env,
+)
 
 log("Creating vmail user + Maildir root…")
 if run("getent", "group", "vmail", check=False).returncode != 0:
     run("groupadd", "-g", "5000", "vmail")
 if run("getent", "passwd", "vmail", check=False).returncode != 0:
-    run("useradd", "-r", "-u", "5000", "-g", "vmail", "-d", "/var/mail/vhosts",
-        "-s", "/usr/sbin/nologin", "vmail")
+    run(
+        "useradd",
+        "-r",
+        "-u",
+        "5000",
+        "-g",
+        "vmail",
+        "-d",
+        "/var/mail/vhosts",
+        "-s",
+        "/usr/sbin/nologin",
+        "vmail",
+    )
 Path(f"/var/mail/vhosts/{DOMAIN}").mkdir(parents=True, exist_ok=True)
 run("chown", "-R", "vmail:vmail", "/var/mail/vhosts")
 
@@ -135,7 +165,9 @@ sasl = Path("/etc/postfix/sasl_passwd")
 sasl.write_text(f"{RELAY} resend:{RESEND_API_KEY}\n")
 sasl.chmod(0o600)
 run("postmap", "lmdb:/etc/postfix/sasl_passwd")
-run("postconf", "-e",
+run(
+    "postconf",
+    "-e",
     f"myhostname = mail.{DOMAIN}",
     f"myorigin = {DOMAIN}",
     "mydestination = localhost",
@@ -148,7 +180,8 @@ run("postconf", "-e",
     "smtp_sasl_mechanism_filter = plain, login",
     "smtp_tls_security_level = encrypt",
     f"virtual_mailbox_domains = {DOMAIN}",
-    "virtual_transport = lmtp:unix:private/dovecot-lmtp")
+    "virtual_transport = lmtp:unix:private/dovecot-lmtp",
+)
 run("systemctl", "enable", "--now", "postfix", check=False)
 run("systemctl", "restart", "postfix")
 
@@ -163,4 +196,6 @@ log(f"Done. Mailbox: {MAILBOX}")
 if "MAIL_TBALTZAKIS_PASSWORD" not in os.environ:
     log(f"  GENERATED PASSWORD (save it): {MAILPW}")
 log(f"Next: Roundcube webmail + Cloudflare Tunnel (webmail.{DOMAIN}) + inbound Email Routing.")
-log(f"Send test: printf 'Subject: t\\nFrom: {MAILBOX}\\nTo: you@x.com\\n\\nhi' | sendmail -f {MAILBOX} you@x.com")
+log(
+    f"Send test: printf 'Subject: t\\nFrom: {MAILBOX}\\nTo: you@x.com\\n\\nhi' | sendmail -f {MAILBOX} you@x.com"
+)

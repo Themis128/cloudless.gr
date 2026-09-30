@@ -43,10 +43,10 @@ DEPLOY = "cloudless-app"
 HEALTH_URL_LOCAL = os.environ.get("HEALTH_URL_LOCAL", "http://127.0.0.1:30300/api/health")
 HEALTH_URL_LAN = os.environ.get("HEALTH_URL_LAN", "http://192.168.1.128:30300/api/health")
 HEALTH_URL_PUBLIC = os.environ.get("HEALTH_URL_PUBLIC", "https://cloudless.gr/api/health")
-NOTIFY_THRESHOLD = 3        # consecutive failures to send first alert
-ROLLBACK_THRESHOLD = 8      # consecutive failures to auto-rollback
-ROLLBACK_COOLDOWN = 3600    # min seconds between auto-rollbacks
-MIN_RELEASE_AGE = 900       # skip rollback if symlink younger than this (seconds)
+NOTIFY_THRESHOLD = 3  # consecutive failures to send first alert
+ROLLBACK_THRESHOLD = 8  # consecutive failures to auto-rollback
+ROLLBACK_COOLDOWN = 3600  # min seconds between auto-rollbacks
+MIN_RELEASE_AGE = 900  # skip rollback if symlink younger than this (seconds)
 
 # Satellite probes: (name, url, expect, remediation)
 #   expect      = "ok" (any 2xx/3xx — Cloudflare Access 302 counts as up)
@@ -59,22 +59,32 @@ WATCH_TARGETS = [
     ("postiz", "https://postiz.cloudless.gr/", "ok", ("postiz", "postiz")),
     ("espocrm", "https://espocrm.cloudless.gr/", "ok", ("espocrm", "espocrm")),
     ("n8n", "https://n8n.cloudless.gr/healthz", "200", ("n8n", "n8n")),
-    ("grafana", "https://grafana.cloudless.gr/api/health", "200", ("monitoring", "kube-prom-grafana")),
+    (
+        "grafana",
+        "https://grafana.cloudless.gr/api/health",
+        "200",
+        ("monitoring", "kube-prom-grafana"),
+    ),
     ("appflowy", "https://appflowy.cloudless.gr/api/health", "200", ("appflowy", "appflowy-cloud")),
     ("ntfy", "https://ntfy.cloudless.gr/", "ok", ("ntfy", "ntfy")),
     ("uptime-kuma", "https://kuma.cloudless.gr/", "ok", ("uptime-kuma", "uptime-kuma")),
     ("webmail", "https://webmail.cloudless.gr/", "ok", None),
-    ("postiz-ai-proxy", "https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models", "200", None),
+    (
+        "postiz-ai-proxy",
+        "https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models",
+        "200",
+        None,
+    ),
 ]
-WORKER_ERROR_THRESHOLD = 3    # per-script errors in the window below → alert
+WORKER_ERROR_THRESHOLD = 3  # per-script errors in the window below → alert
 WORKER_ERROR_WINDOW_MIN = 30  # GraphQL lookback window
-WORKER_CHECK_EVERY = 5        # run the GraphQL check every Nth tick (~10 min)
+WORKER_CHECK_EVERY = 5  # run the GraphQL check every Nth tick (~10 min)
 WORKER_ROLLBACK_SCRIPTS = ["postiz-ai-proxy"]
-WORKER_ROLLBACK_AFTER = 2     # consecutive error checks before rollback
+WORKER_ROLLBACK_AFTER = 2  # consecutive error checks before rollback
 WORKER_ROLLBACK_MIN_AGE = 900  # skip rollback for deploys <15min old (verify window)
 WORKER_ROLLBACK_MAX_AGE = 7200  # skip rollback for deploys >2h old (not deploy-correlated)
-DISK_K3S_PCT = 85             # alert when the k3s SSD (sda1) exceeds this
-DISK_DATA_PCT = 90            # alert when the data SSD (sdb1) exceeds this
+DISK_K3S_PCT = 85  # alert when the k3s SSD (sda1) exceeds this
+DISK_DATA_PCT = 90  # alert when the data SSD (sdb1) exceeds this
 
 
 def load_env(path: Path) -> None:
@@ -130,12 +140,19 @@ def run(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(args), capture_output=True, text=True, check=False)
 
 
-def http_req(method: str, url: str, timeout: int = 10,
-             headers: dict | None = None, body: bytes | None = None,
-             follow: bool = False) -> tuple[str, bytes]:
+def http_req(
+    method: str,
+    url: str,
+    timeout: int = 10,
+    headers: dict | None = None,
+    body: bytes | None = None,
+    follow: bool = False,
+) -> tuple[str, bytes]:
     req = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
     try:
-        opener = urllib.request.build_opener() if follow else urllib.request.build_opener(NoRedirect())
+        opener = (
+            urllib.request.build_opener() if follow else urllib.request.build_opener(NoRedirect())
+        )
         with opener.open(req, timeout=timeout) as resp:
             return str(resp.status), resp.read()
     except urllib.error.HTTPError as e:
@@ -163,23 +180,36 @@ def notify_slack(title: str, msg: str) -> None:
     if not SLACK_BOT_TOKEN:
         return
     payload = json.dumps({"channel": SLACK_CHANNEL, "text": f"{title}\n{msg}"}).encode()
-    http_req("POST", "https://slack.com/api/chat.postMessage", 10,
-             {"Authorization": f"Bearer {SLACK_BOT_TOKEN}",
-              "Content-Type": "application/json; charset=utf-8"}, payload)
+    http_req(
+        "POST",
+        "https://slack.com/api/chat.postMessage",
+        10,
+        {
+            "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        payload,
+    )
 
 
 def notify_email(subject: str, body: str) -> None:
     if not RESEND_API_KEY:
         return
-    payload = json.dumps({
-        "from": "safedeploy-watchdog@cloudless.gr",
-        "to": ALERT_EMAIL,
-        "subject": subject,
-        "text": body,
-    }).encode()
-    http_req("POST", "https://api.resend.com/emails", 10,
-             {"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-             payload)
+    payload = json.dumps(
+        {
+            "from": "safedeploy-watchdog@cloudless.gr",
+            "to": ALERT_EMAIL,
+            "subject": subject,
+            "text": body,
+        }
+    ).encode()
+    http_req(
+        "POST",
+        "https://api.resend.com/emails",
+        10,
+        {"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        payload,
+    )
 
 
 def notify_all(title: str, body: str, prio: str = "high") -> None:
@@ -244,7 +274,9 @@ def check_targets() -> None:
         if ok:
             if fc > 0 or _get(f"notified_{name}", "0") == "1":
                 log(f"TARGET RECOVERED: {name} (was fail_count={fc})")
-                notify_all(f"✅ {name} recovered", f"{url} healthy again after ~{fc * 2} min.", "low")
+                notify_all(
+                    f"✅ {name} recovered", f"{url} healthy again after ~{fc * 2} min.", "low"
+                )
             _set(f"fail_count_{name}", "0")
             _set(f"notified_{name}", "0")
             continue
@@ -253,20 +285,33 @@ def check_targets() -> None:
         _set(f"fail_count_{name}", str(fc))
         log(f"TARGET UNHEALTHY: {name} http={code} tick={fc}")
         if fc >= NOTIFY_THRESHOLD and _get(f"notified_{name}", "0") == "0":
-            notify_all(f"⚠️ {name} unhealthy", f"{url} failing ~{fc * 2} min. Last HTTP={code}.", "high")
+            notify_all(
+                f"⚠️ {name} unhealthy", f"{url} failing ~{fc * 2} min. Last HTTP={code}.", "high"
+            )
             _set(f"notified_{name}", "1")
         if fc >= ROLLBACK_THRESHOLD and remed:
             ns, dep = remed
             prev = int(_get(f"remed_ts_{name}", "0"))
             if now - prev >= ROLLBACK_COOLDOWN:
                 log(f"REMEDIATION: k3s rollout restart {ns}/{dep} for {name}")
-                if run("k3s", "kubectl", "-n", ns, "rollout", "restart", f"deploy/{dep}").returncode == 0:
+                if (
+                    run(
+                        "k3s", "kubectl", "-n", ns, "rollout", "restart", f"deploy/{dep}"
+                    ).returncode
+                    == 0
+                ):
                     _set(f"remed_ts_{name}", str(now))
-                    notify_all(f"🔁 {name} restarted",
-                               f"k3s rollout restart deploy/{dep} in ns {ns} after {fc} consecutive failures.", "high")
+                    notify_all(
+                        f"🔁 {name} restarted",
+                        f"k3s rollout restart deploy/{dep} in ns {ns} after {fc} consecutive failures.",
+                        "high",
+                    )
                 else:
-                    notify_all(f"🚨 {name} remediation failed",
-                               f"rollout restart deploy/{dep} in ns {ns} failed. Manual check needed.", "urgent")
+                    notify_all(
+                        f"🚨 {name} remediation failed",
+                        f"rollout restart deploy/{dep} in ns {ns} failed. Manual check needed.",
+                        "urgent",
+                    )
 
 
 # --- worker error watcher ----------------------------------------------------
@@ -278,20 +323,28 @@ def check_worker_errors() -> None:
     if tick % WORKER_CHECK_EVERY != 0:
         return
 
-    since = (datetime.now(UTC) - timedelta(minutes=WORKER_ERROR_WINDOW_MIN)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    since = (datetime.now(UTC) - timedelta(minutes=WORKER_ERROR_WINDOW_MIN)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     query = (
         "query($a:String!,$s:Time!,$e:Time!){viewer{accounts(filter:{accountTag:$a})"
         "{workersInvocationsAdaptive(limit:200,filter:{datetime_geq:$s,datetime_leq:$e})"
         "{sum{errors}dimensions{scriptName}}}}}"
     )
-    payload = json.dumps({
-        "query": query,
-        "variables": {"a": CF_ACCOUNT_ID, "s": since, "e": now_iso},
-    }).encode()
-    code, body = http_req("POST", "https://api.cloudflare.com/client/v4/graphql", 15,
-                          {"Authorization": f"Bearer {CF_API_TOKEN}",
-                           "Content-Type": "application/json"}, payload)
+    payload = json.dumps(
+        {
+            "query": query,
+            "variables": {"a": CF_ACCOUNT_ID, "s": since, "e": now_iso},
+        }
+    ).encode()
+    code, body = http_req(
+        "POST",
+        "https://api.cloudflare.com/client/v4/graphql",
+        15,
+        {"Authorization": f"Bearer {CF_API_TOKEN}", "Content-Type": "application/json"},
+        payload,
+    )
     if not code.startswith("2"):
         return
 
@@ -333,14 +386,21 @@ def check_worker_errors() -> None:
             body_text = f"Cloudflare worker errors in last {WORKER_ERROR_WINDOW_MIN}min (≥{WORKER_ERROR_THRESHOLD}): {over_s}"
             if under_s:
                 body_text += f"\nBelow threshold: {under_s}"
-            body_text += f"\n\nLatest exceptions:\n{details}" if details else "\nCheck wrangler tail / recent deploys."
+            body_text += (
+                f"\n\nLatest exceptions:\n{details}"
+                if details
+                else "\nCheck wrangler tail / recent deploys."
+            )
             notify_all("⚠️ worker exceptions", body_text, "high")
             _set("worker_alert_active", "1")
     elif prev == "1":
         log("WORKER ERRORS cleared")
         suffix = f" Under threshold: {under_s}" if under_s else ""
-        notify_all("✅ worker errors cleared",
-                   f"No worker exceptions ≥{WORKER_ERROR_THRESHOLD} in the last {WORKER_ERROR_WINDOW_MIN}min.{suffix}", "low")
+        notify_all(
+            "✅ worker errors cleared",
+            f"No worker exceptions ≥{WORKER_ERROR_THRESHOLD} in the last {WORKER_ERROR_WINDOW_MIN}min.{suffix}",
+            "low",
+        )
         _set("worker_alert_active", "0")
 
 
@@ -350,20 +410,24 @@ def worker_error_details(scripts: list[str]) -> str:
     since_ms = now_ms - WORKER_ERROR_WINDOW_MIN * 60000
     out: list[str] = []
     for script in scripts:
-        payload = json.dumps({
-            "queryId": "adhoc",
-            "timeframe": {"from": since_ms, "to": now_ms},
-            "view": "events",
-            "parameters": {
-                "filters": [{
-                    "key": "$metadata.service",
-                    "operation": "eq",
-                    "type": "string",
-                    "value": script,
-                }],
-                "limit": 20,
-            },
-        }).encode()
+        payload = json.dumps(
+            {
+                "queryId": "adhoc",
+                "timeframe": {"from": since_ms, "to": now_ms},
+                "view": "events",
+                "parameters": {
+                    "filters": [
+                        {
+                            "key": "$metadata.service",
+                            "operation": "eq",
+                            "type": "string",
+                            "value": script,
+                        }
+                    ],
+                    "limit": 20,
+                },
+            }
+        ).encode()
         code, body = http_req(
             "POST",
             f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/workers/observability/telemetry/query",
@@ -374,7 +438,9 @@ def worker_error_details(scripts: list[str]) -> str:
         if not code.startswith("2"):
             continue
         try:
-            events = (json.loads(body).get("result", {}).get("events", {}) or {}).get("events", []) or []
+            events = (json.loads(body).get("result", {}).get("events", {}) or {}).get(
+                "events", []
+            ) or []
         except json.JSONDecodeError:
             continue
         for e in events:
@@ -404,12 +470,15 @@ def worker_auto_rollback(script: str) -> None:
     now = _now()
     last = int(_get(f"worker_rb_ts_{script}", "0"))
     if last and now - last < ROLLBACK_COOLDOWN:
-        log(f"SKIP worker rollback {script}: cooldown ({(ROLLBACK_COOLDOWN - (now - last)) // 60}min left)")
+        log(
+            f"SKIP worker rollback {script}: cooldown ({(ROLLBACK_COOLDOWN - (now - last)) // 60}min left)"
+        )
         return
 
     api = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/workers/scripts/{script}"
-    code, body = http_req("GET", f"{api}/deployments", 15,
-                          {"Authorization": f"Bearer {CF_API_TOKEN}"})
+    code, body = http_req(
+        "GET", f"{api}/deployments", 15, {"Authorization": f"Bearer {CF_API_TOKEN}"}
+    )
     if not code.startswith("2"):
         return
     try:
@@ -417,8 +486,7 @@ def worker_auto_rollback(script: str) -> None:
     except json.JSONDecodeError:
         return
     deploys = [
-        d for d in deploys
-        if d.get("versions") and d["versions"][0].get("percentage") == 100
+        d for d in deploys if d.get("versions") and d["versions"][0].get("percentage") == 100
     ]
     deploys.sort(key=lambda d: d.get("created_on", ""), reverse=True)
     if len(deploys) < 2:
@@ -429,30 +497,48 @@ def worker_auto_rollback(script: str) -> None:
     cur_age = int(datetime.now(UTC).timestamp() - datetime.fromisoformat(created).timestamp())
 
     if cur_age < WORKER_ROLLBACK_MIN_AGE:
-        log(f"SKIP worker rollback {script}: current deploy age={cur_age}s < {WORKER_ROLLBACK_MIN_AGE}s")
+        log(
+            f"SKIP worker rollback {script}: current deploy age={cur_age}s < {WORKER_ROLLBACK_MIN_AGE}s"
+        )
         return
     if cur_age > WORKER_ROLLBACK_MAX_AGE:
-        log(f"SKIP worker rollback {script}: deploy age={cur_age}s > {WORKER_ROLLBACK_MAX_AGE}s — errors not deploy-correlated")
+        log(
+            f"SKIP worker rollback {script}: deploy age={cur_age}s > {WORKER_ROLLBACK_MAX_AGE}s — errors not deploy-correlated"
+        )
         return
 
     log(f"WORKER ROLLBACK: {script} → version {prev_vid} (deploy age {cur_age}s)")
-    payload = json.dumps({
-        "strategy": "percentage",
-        "versions": [{"version_id": prev_vid, "percentage": 100}],
-        "annotations": {"workers/message": "safedeploy-watchdog auto-rollback after sustained errors"},
-    }).encode()
-    code, resp_body = http_req("POST", f"{api}/deployments", 15,
-                               {"Authorization": f"Bearer {CF_API_TOKEN}",
-                                "Content-Type": "application/json"}, payload)
+    payload = json.dumps(
+        {
+            "strategy": "percentage",
+            "versions": [{"version_id": prev_vid, "percentage": 100}],
+            "annotations": {
+                "workers/message": "safedeploy-watchdog auto-rollback after sustained errors"
+            },
+        }
+    ).encode()
+    code, resp_body = http_req(
+        "POST",
+        f"{api}/deployments",
+        15,
+        {"Authorization": f"Bearer {CF_API_TOKEN}", "Content-Type": "application/json"},
+        payload,
+    )
     if code.startswith("2"):
         _set(f"worker_rb_ts_{script}", str(now))
         _set(f"werr_count_{script}", "0")
-        notify_all(f"🔁 {script} auto-rolled-back",
-                   f"Pinned previous version {prev_vid[:8]} after ≥{WORKER_ROLLBACK_AFTER} checks "
-                   f"≥{WORKER_ERROR_THRESHOLD} errors/{WORKER_ERROR_WINDOW_MIN}min.", "high")
+        notify_all(
+            f"🔁 {script} auto-rolled-back",
+            f"Pinned previous version {prev_vid[:8]} after ≥{WORKER_ROLLBACK_AFTER} checks "
+            f"≥{WORKER_ERROR_THRESHOLD} errors/{WORKER_ERROR_WINDOW_MIN}min.",
+            "high",
+        )
     else:
-        notify_all(f"🚨 {script} rollback FAILED",
-                   f"Auto-rollback to {prev_vid[:8]} failed: {resp_body[:200].decode('utf-8', 'replace')}", "urgent")
+        notify_all(
+            f"🚨 {script} rollback FAILED",
+            f"Auto-rollback to {prev_vid[:8]} failed: {resp_body[:200].decode('utf-8', 'replace')}",
+            "urgent",
+        )
 
 
 # --- infra checks ------------------------------------------------------------
@@ -485,8 +571,11 @@ def check_infra() -> None:
         if pct >= thresh:
             if _get(f"infra_disk_{tag}", "0") == "0":
                 log(f"INFRA: {tag} at {pct}% (threshold {thresh}%)")
-                notify_all(f"⚠️ disk pressure: {tag}",
-                           f"{dev} at {pct}% (alert at {thresh}%). For k3s-ssd: crictl rmi --prune first.", "high")
+                notify_all(
+                    f"⚠️ disk pressure: {tag}",
+                    f"{dev} at {pct}% (alert at {thresh}%). For k3s-ssd: crictl rmi --prune first.",
+                    "high",
+                )
                 _set(f"infra_disk_{tag}", "1")
         elif _get(f"infra_disk_{tag}", "0") == "1" and pct < thresh - 5:
             _set(f"infra_disk_{tag}", "0")
@@ -523,8 +612,13 @@ def main() -> None:
                 body += f"\nAuto-rollback fired: {rf} → {rt}"
             log(f"RECOVERED after {duration_min}min (was fail_count={fail_count})")
             notify_all("✅ cloudless.gr recovered", body, "low")
-        for k, v in (("fail_count", "0"), ("notified", "0"),
-                     ("rollback_from", ""), ("rollback_to", ""), ("incident_start", "")):
+        for k, v in (
+            ("fail_count", "0"),
+            ("notified", "0"),
+            ("rollback_from", ""),
+            ("rollback_to", ""),
+            ("incident_start", ""),
+        ):
             _set(k, v)
         return
 
@@ -554,7 +648,9 @@ def main() -> None:
         # Safeguard 1: cooldown since last auto-rollback
         last_rb = int(_get("last_rollback_ts", "0"))
         if last_rb and now - last_rb < ROLLBACK_COOLDOWN:
-            log(f"SKIP rollback: cooldown ({(ROLLBACK_COOLDOWN - (now - last_rb)) // 60} min remaining)")
+            log(
+                f"SKIP rollback: cooldown ({(ROLLBACK_COOLDOWN - (now - last_rb)) // 60} min remaining)"
+            )
             return
         # Safeguard 2: don't rollback a release younger than MIN_RELEASE_AGE
         try:
@@ -562,16 +658,24 @@ def main() -> None:
         except OSError:
             link_age = now
         if link_age < MIN_RELEASE_AGE:
-            log(f"SKIP rollback: current release age={link_age}s < {MIN_RELEASE_AGE}s (deploy-time rollback likely already fired)")
+            log(
+                f"SKIP rollback: current release age={link_age}s < {MIN_RELEASE_AGE}s (deploy-time rollback likely already fired)"
+            )
             return
         if do_rollback():
             rf = _get("rollback_from", "?")
             rt = _get("rollback_to", "?")
-            notify_all("🔁 cloudless.gr auto-rolled-back",
-                       f"Auto-flipped {rf} → {rt} after {fail_count} consecutive failures. Verifying…", "high")
+            notify_all(
+                "🔁 cloudless.gr auto-rolled-back",
+                f"Auto-flipped {rf} → {rt} after {fail_count} consecutive failures. Verifying…",
+                "high",
+            )
         else:
-            notify_all("🚨 cloudless.gr rollback FAILED",
-                       "Wanted to auto-rollback but couldn't (no previous release?). Manual intervention needed.", "urgent")
+            notify_all(
+                "🚨 cloudless.gr rollback FAILED",
+                "Wanted to auto-rollback but couldn't (no previous release?). Manual intervention needed.",
+                "urgent",
+            )
 
 
 if __name__ == "__main__":

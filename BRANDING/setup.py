@@ -14,9 +14,7 @@ from pathlib import Path
 BRANDING_DIR = Path(__file__).resolve().parent
 SKILLS_DIR = Path.home() / ".claude" / "skills"
 COMMANDS_DIR = Path.home() / ".claude" / "commands"
-SUGGESTED_MCP = (
-    Path.home() / ".config" / "Claude" / "claude_desktop_config.suggested.json"
-)
+SUGGESTED_MCP = Path.home() / ".config" / "Claude" / "claude_desktop_config.suggested.json"
 
 # <local-dir>|<git-url>|<install-strategy>
 #   skills-dir — symlink every directory under repos/<name>/skills/ into SKILLS_DIR
@@ -26,7 +24,11 @@ REPOS = [
     ("social-media-skills", "https://github.com/charlie947/social-media-skills.git", "skills-dir"),
     ("social-ai-team", "https://github.com/stevenflanagan1/social-ai-team.git", "skills-dir"),
     ("brand-design-skill", "https://github.com/VicUgochukwu/brand-design-skill.git", "commands"),
-    ("awesome-claude-skills", "https://github.com/ComposioHQ/awesome-claude-skills.git", "reference"),
+    (
+        "awesome-claude-skills",
+        "https://github.com/ComposioHQ/awesome-claude-skills.git",
+        "reference",
+    ),
     ("awesome-agent-skills", "https://github.com/VoltAgent/awesome-agent-skills.git", "reference"),
     ("awesome-mcp-servers", "https://github.com/punkpeye/awesome-mcp-servers.git", "reference"),
 ]
@@ -54,7 +56,9 @@ if not shutil.which("git"):
     sys.exit(1)
 for d in (SKILLS_DIR, COMMANDS_DIR, BRANDING_DIR / "repos", SUGGESTED_MCP.parent):
     d.mkdir(parents=True, exist_ok=True)
-git_version = subprocess.run(["git", "--version"], capture_output=True, text=True, check=False).stdout.split()[-1]
+git_version = subprocess.run(
+    ["git", "--version"], capture_output=True, text=True, check=False
+).stdout.split()[-1]
 ok(f"git: {git_version}")
 ok(f"skills dir: {SKILLS_DIR}")
 ok(f"commands dir: {COMMANDS_DIR}")
@@ -69,7 +73,9 @@ for name, url, _strategy in REPOS:
             warn(f"pull failed for {name} (continuing)")
         ok(f"{name} (updated)")
     else:
-        subprocess.run(["git", "clone", "--depth", "1", "--quiet", url, name], cwd=repos_dir, check=True)
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "--quiet", url, name], cwd=repos_dir, check=True
+        )
         ok(f"{name} (cloned)")
 
 step("Wire Cloudless brand pack into ~/.claude/skills/")

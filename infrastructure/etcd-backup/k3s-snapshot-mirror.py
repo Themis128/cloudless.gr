@@ -35,6 +35,7 @@ LOG = Path("/var/log/k3s-snapshot-mirror.log")
 STAMP = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 with LOG.open("a") as log:
+
     def w(msg: str) -> None:
         log.write(msg + "\n")
 
@@ -44,9 +45,15 @@ with LOG.open("a") as log:
         sys.exit(0)
     if not DST.is_dir():
         w(f"[{STAMP}] creating destination {DST}")
-        subprocess.run(["install", "-d", "-m", "0700", "-o", "root", "-g", "root", str(DST)], check=True)
-    r = subprocess.run(["rsync", "-a", "--delete", "--stats", str(SRC) + "/", str(DST) + "/"],
-                       capture_output=True, text=True, check=False)
+        subprocess.run(
+            ["install", "-d", "-m", "0700", "-o", "root", "-g", "root", str(DST)], check=True
+        )
+    r = subprocess.run(
+        ["rsync", "-a", "--delete", "--stats", str(SRC) + "/", str(DST) + "/"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     w(r.stdout or "")
     if r.stderr:
         w(r.stderr)

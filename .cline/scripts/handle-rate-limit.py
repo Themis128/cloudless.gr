@@ -30,7 +30,9 @@ def handle_429(attempt: int) -> bool:
     delay = BASE_DELAY * (2 ** (attempt - 1))  # Exponential backoff
     jitter = random.randint(0, 999) / 1000  # Prevent thundering herd
     total_delay = delay + jitter
-    log(f"Rate limit hit (429). Attempt {attempt}/{MAX_RETRIES}. Waiting {total_delay:.3f} seconds...")
+    log(
+        f"Rate limit hit (429). Attempt {attempt}/{MAX_RETRIES}. Waiting {total_delay:.3f} seconds..."
+    )
     time.sleep(total_delay)
     if attempt < MAX_RETRIES:
         return True

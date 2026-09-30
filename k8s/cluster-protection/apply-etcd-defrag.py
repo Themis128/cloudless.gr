@@ -36,5 +36,7 @@ print("\n==> Verify:")
 ssh("sudo kubectl -n monitoring get cronjob etcd-defrag")
 
 print("\n==> Run a one-off now to validate:")
-print(f"    ssh {REMOTE} 'sudo kubectl -n monitoring create job --from=cronjob/etcd-defrag etcd-defrag-manual-$(date +%s)'")
+print(
+    f"    ssh {REMOTE} 'sudo kubectl -n monitoring create job --from=cronjob/etcd-defrag etcd-defrag-manual-$(date +%s)'"
+)
 print(f"    ssh {REMOTE} 'sudo kubectl -n monitoring logs -l app=etcd-defrag --tail=40 -f'")

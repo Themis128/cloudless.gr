@@ -76,8 +76,7 @@ now = time.time()
 DAY = 86400
 
 
-def prune_dirs(root: Path, min_depth_from_root: int, age_days: int,
-               pred=None) -> None:
+def prune_dirs(root: Path, min_depth_from_root: int, age_days: int, pred=None) -> None:
     """Remove dirs under `root` older than age_days (by atime approx via mtime)."""
     if not root.is_dir():
         return
