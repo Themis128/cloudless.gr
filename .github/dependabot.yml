@@ -5,7 +5,7 @@ updates:
   schedule:
     interval: weekly
     day: monday
-    time: 06:00
+    time: "06:00"
     timezone: Europe/Athens
   open-pull-requests-limit: 5
   reviewers:
@@ -53,7 +53,7 @@ updates:
   schedule:
     interval: weekly
     day: monday
-    time: 06:00
+    time: "06:00"
     timezone: Europe/Athens
   open-pull-requests-limit: 3
   labels:
