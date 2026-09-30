@@ -58,3 +58,8 @@ updates:
   open-pull-requests-limit: 3
   labels:
   - ci
+  ignore:
+      # Dependabot's github-actions updater fails the whole job with a blank
+      # unknown_error when resolving github/gh-aw-actions/setup-cli (2 weeks
+      # running). gh-aw action pins are managed by `gh aw compile` anyway.
+  - dependency-name: github/gh-aw-actions/setup-cli
