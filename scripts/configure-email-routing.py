@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Configure Cloudflare Email Routing & deliverability for the zone:
+MX records, SPF, DKIM, destination address, and a noreply routing
+rule.
+
+Usage:
+  python3 scripts/configure-email-routing.py [destination-email]
+  DOMAIN=cloudless.gr (env)"""
+
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+
+DOMAIN = os.environ.get("DOMAIN", "cloudless.gr")
+DEST_EMAIL = sys.argv[1] if len(sys.argv) > 1 else f"tbaltzakis@{DOMAIN}"
+API = "https://api.cloudflare.com/client/v4"
+
+token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+if not token:
+    r = subprocess.run(
+        ["gh", "secret", "view", "CLOUDFLARE_API_TOKEN"], capture_output=True, text=True
+    )
+    if r.returncode == 0:
+        token = r.stdout.strip()
+if not token:
+    sys.exit("ERROR: CLOUDFLARE_API_TOKEN required (set in env or gh secret)")
+
+
+def cf(method: str, path: str, body: dict | None = None) -> dict:
+    req = urllib.request.Request(
+        f"{API}{path}",
+        data=json.dumps(body).encode() if body is not None else None,
+        method=method,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
+    try:
+        return json.loads(urllib.request.urlopen(req, timeout=15).read())
+    except urllib.error.HTTPError as e:
+        try:
+            return json.loads(e.read())
+        except Exception:
+            return {"success": False, "errors": [{"message": str(e)}]}
+    except Exception as e:
+        return {"success": False, "errors": [{"message": str(e)}]}
+
+
+print(f"🔧 Configuring Cloudflare Email for {DOMAIN}...")
+print(f"   Destination: {DEST_EMAIL}")
+print(f"   Address to verify: noreply@{DOMAIN}\n")
+
+zones = cf("GET", f"/zones?name={DOMAIN}").get("result") or []
+if not zones:
+    sys.exit(f"ERROR: Zone not found for {DOMAIN}")
+zone_id = zones[0]["id"]
+print(f"✓ Zone ID: {zone_id}")
+
+accounts = cf("GET", "/accounts").get("result") or []
+account_id = accounts[0]["id"] if accounts else ""
+print(f"✓ Account ID: {account_id}")
+
+
+def create_txt_record(name: str, content: str) -> None:
+    exists = cf("GET", f"/zones/{zone_id}/dns_records?type=TXT&name={name}&content={content}").get(
+        "result"
+    )
+    if not exists:
+        cf(
+            "POST",
+            f"/zones/{zone_id}/dns_records",
+            {"type": "TXT", "name": name, "content": content, "ttl": 3600, "proxied": False},
+        )
+        print(f"✓ Added TXT record: {name}")
+    else:
+        print(f"✓ TXT record exists: {name}")
+
+
+def create_mx_record(name: str, content: str, priority: int) -> None:
+    exists = cf("GET", f"/zones/{zone_id}/dns_records?type=MX&name={name}").get("result")
+    if not exists:
+        cf(
+            "POST",
+            f"/zones/{zone_id}/dns_records",
+            {
+                "type": "MX",
+                "name": name,
+                "content": content,
+                "priority": priority,
+                "ttl": 3600,
+                "proxied": False,
+            },
+        )
+        print(f"✓ Added MX record: {content} (priority {priority})")
+    else:
+        print(f"✓ MX records already configured for {name}")
+
+
+print("\n[1/6] Enabling Email Routing...")
+r = cf("POST", f"/zones/{zone_id}/email/routing/setup", {})
+if r.get("errors"):
+    print(f"   Note: Email Routing may already be configured ({r.get('errors')})")
+else:
+    print("✓ Email Routing enabled")
+
+print("\n[2/6] Setting up destination address...")
+r = cf(
+    "POST", f"/accounts/{account_id}/email/routing/addresses", {"email": DEST_EMAIL, "verify": True}
+)
+if r.get("result"):
+    print(f"✓ Destination address added: {DEST_EMAIL}")
+else:
+    print("   Note: Destination may already exist or requires verification")
+
+print("\n[3/6] Configuring MX records...")
+create_mx_record(DOMAIN, "mx1.mail.protonmail.ch", 10)
+create_mx_record(DOMAIN, "mx2.mail.protonmail.ch", 20)
+
+print("\n[4/6] Configuring SPF record...")
+create_txt_record(DOMAIN, "v=spf1 include:cloudflare.net ~all")
+
+print("\n[5/6] Checking DKIM records (auto-generated)...")
+dkim = cf("GET", f"/zones/{zone_id}/email/routing/dns_records")
+if dkim.get("result"):
+    print("DKIM records available:")
+    for rec in dkim["result"]:
+        print(f"  - {rec['type']} {rec['name']}: {rec['content']}")
+    print("\nCreating DKIM records...")
+    for rec in dkim["result"]:
+        r = cf(
+            "POST",
+            f"/zones/{zone_id}/dns_records",
+            {
+                "type": rec["type"],
+                "name": rec["name"],
+                "content": rec["content"],
+                "ttl": 3600,
+                "proxied": False,
+            },
+        )
+        if r.get("result"):
+            print(f"✓ Added {rec['type']} record: {rec['name']}")
+        else:
+            print(f"   {rec['type']} record may already exist: {rec['name']}")
+else:
+    print("   DKIM records will be generated by Email Routing after verification")
+
+print("\n[6/6] Creating email routing rule...")
+r = cf(
+    "POST",
+    f"/accounts/{account_id}/email/routing/rules",
+    {
+        "name": "noreply",
+        "enabled": True,
+        "pattern": f"noreply@{DOMAIN}",
+        "actions": [{"type": "forward", "value": DEST_EMAIL}],
+    },
+)
+if r.get("result"):
+    print(f"✓ Created routing rule: noreply@{DOMAIN} → {DEST_EMAIL}")
+else:
+    print("   Note: Routing rule may already exist")
+
+print(f"""
+==========================================
+✅ Email Routing Configuration Complete!
+==========================================
+
+DNS Records configured:
+  - MX: mx1.mail.protonmail.ch (priority 10)
+  - MX: mx2.mail.protonmail.ch (priority 20)
+  - SPF: v=spf1 include:cloudflare.net ~all
+  - DKIM: Auto-generated records
+
+Important: Check your destination email ({DEST_EMAIL}) for verification
+link.
+
+After verification, deploy the worker:
+  pnpm cf:deploy:free""")
