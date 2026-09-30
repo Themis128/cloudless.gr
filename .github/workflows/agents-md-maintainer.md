@@ -2,7 +2,9 @@
 description: "Weekly maintenance of AGENTS.md: review merged pull requests and updated source files since the last run, then open a pull request that keeps AGENTS.md accurate and current."
 on:
   schedule:
-    - cron: 'weekly on monday'
+    # Explicit off-peak slot (Tue 03:41 UTC) — kept apart from the other
+    # Copilot agents and Monday's heavy CI/cron batch to avoid 429s.
+    - cron: '41 3 * * 2'
   workflow_dispatch:
 permissions:
   contents: read
