@@ -86,11 +86,13 @@ else:
     print("== 1. Cloudflare token — SKIPPED (CLOUDFLARE_API_TOKEN not set)")
 
 # 2. Lambda env wiring
-aws = shutil.which("aws") or "aws"
-aws_ok = (
-    aws and subprocess.run([aws, "sts", "get-caller-identity"], capture_output=True).returncode == 0
-)
-if aws_ok:
+aws = shutil.which("aws")
+aws_ok = False
+if aws:
+    aws_ok = (
+        subprocess.run([aws, "sts", "get-caller-identity"], capture_output=True).returncode == 0
+    )
+if aws and aws_ok:
     print("== 2. Lambda env")
     r = subprocess.run(
         [
