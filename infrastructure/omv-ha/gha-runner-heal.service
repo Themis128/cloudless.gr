@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/gha-runner-heal.sh --boot
+ExecStart=/usr/bin/python3 /usr/local/sbin/gha-runner-heal.py --boot
 
 [Install]
 WantedBy=multi-user.target

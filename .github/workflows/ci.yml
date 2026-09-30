@@ -116,7 +116,7 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - run: bash scripts/lint-yaml.sh
+      - run: python3 scripts/lint-yaml.py
 
   python-lint:
     name: Python Lint & Types

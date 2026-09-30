@@ -13,10 +13,10 @@ GHA runners) caused a ~4 minute reboot loop. `cloudless-app` showed
 ```bash
 # from laptop (LAN)
 scp -r infrastructure/omv/pi5-tuning omv-lan:/tmp/
-ssh omv-lan 'sudo bash /tmp/pi5-tuning/install-pi5-tuning.sh'
+ssh omv-lan 'sudo python3 /tmp/pi5-tuning/install-pi5-tuning.py'
 
 # skip k3s restart if you only want sysctl/watchdog:
-ssh omv-lan 'sudo K3S_RESTART=0 bash /tmp/pi5-tuning/install-pi5-tuning.sh'
+ssh omv-lan 'sudo K3S_RESTART=0 python3 /tmp/pi5-tuning/install-pi5-tuning.py'
 ```
 
 Note: the k3s unit on this host is **`k3s-k3s-omv.service`** (not `k3s.service`).

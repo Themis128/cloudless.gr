@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
     - src/index-cloudflare-free.js
-    - scripts/extract-static-assets.sh
+    - scripts/extract-static-assets.py
     - .github/workflows/deploy-cloudflare.yml
 
 jobs:

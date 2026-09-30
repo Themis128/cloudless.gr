@@ -57,7 +57,7 @@ jobs:
         ZONE_NAME: ${{ github.event.inputs.zone_name }}
       run: |
         set -o pipefail
-        bash scripts/cf-token-smoketest.sh 2>&1 | tee smoke.log
+        python3 scripts/cf-token-smoketest.py 2>&1 | tee smoke.log
         # Preserve the exit code from the script (set -o pipefail above).
         status=${PIPESTATUS[0]:-${pipestatus[1]:-0}}
         echo "exit_status=$status" >> "$GITHUB_OUTPUT"

@@ -51,7 +51,7 @@ jobs:
       run: |
         set -e
         mkdir -p audit-report
-        bash scripts/audit/cluster-status.sh \
+        python3 scripts/audit/cluster-status.py \
           --json audit-report/cluster.json \
           --md   audit-report/cluster.md
         cat audit-report/cluster.md >> "$GITHUB_STEP_SUMMARY"

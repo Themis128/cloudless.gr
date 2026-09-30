@@ -74,7 +74,7 @@ jobs:
 
     - name: Inventory fleet
       id: health
-      run: bash scripts/tailscale-fleet-health.sh
+      run: python3 scripts/tailscale-fleet-health.py
 
     - name: Summarize
       id: summary
@@ -123,7 +123,7 @@ jobs:
     - name: Remediating / upgrading managed hosts
       run: |
         echo "Inventory said offline=[${{ needs.inventory.outputs.managed_offline }}] outdated=[${{ needs.inventory.outputs.managed_outdated }}] latest=${{ needs.inventory.outputs.latest }}"
-        bash scripts/tailscale-fleet-upgrade.sh
+        python3 scripts/tailscale-fleet-upgrade.py
 
     - name: Post-upgrade local status
       if: always()
@@ -161,7 +161,7 @@ jobs:
 
         Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-        Manual: \`FIX=1 UPGRADE=1 bash scripts/tailscale-fleet-upgrade.sh\` on omv.
+        Manual: \`FIX=1 UPGRADE=1 python3 scripts/tailscale-fleet-upgrade.py\` on omv.
         EOF
         )
         gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body "$BODY" || true

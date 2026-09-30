@@ -112,7 +112,7 @@ jobs:
       run: |
         echo "::add-mask::$CLOUDFLARE_API_TOKEN"
         set -o pipefail
-        bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
+        python3 scripts/setup-cloudflare-lb.py 2>&1 | tee cloudflare-lb.log
 
     - name: Report (store-only mode)
       id: report
@@ -125,7 +125,7 @@ jobs:
       run: |
         echo "::add-mask::$CLOUDFLARE_API_TOKEN"
         set -o pipefail
-        bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
+        python3 scripts/setup-cloudflare-lb.py 2>&1 | tee cloudflare-lb.log
 
     - name: Post result to tracking issue
       if: always()

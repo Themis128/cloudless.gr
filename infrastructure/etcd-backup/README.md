@@ -8,7 +8,7 @@ etcd snapshot under
 | File | Installed at | Purpose |
 | ---- | ------------ | ------- |
 | `config.yaml` | `/etc/rancher/k3s/config.yaml` (mode 0600, root:root) | Hourly local snapshots + R2 off-site mirror. |
-| `k3s-snapshot-mirror.sh` | `/usr/local/sbin/k3s-snapshot-mirror.sh` (mode 0755) | rsyncs snapshots to the NAS backup mount. |
+| `k3s-snapshot-mirror.py` | `/usr/local/sbin/k3s-snapshot-mirror.py` (mode 0755; keep a `.sh` wrapper for older callers) | rsyncs snapshots to the NAS backup mount. |
 | `k3s-snapshot-mirror.service` | `/etc/systemd/system/k3s-snapshot-mirror.service` | systemd one-shot for the mirror script. |
 | `k3s-snapshot-mirror.timer` | `/etc/systemd/system/k3s-snapshot-mirror.timer` | every 30 min + 5 min after boot. |
 

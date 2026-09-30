@@ -2,7 +2,7 @@ name: ntfy-restore — recover ntfy from CrashLoopBackOff or Error
 
 # Recovers ntfy (push notification server) from Error / CrashLoopBackOff state.
 #
-# Trigger by touching this file or scripts/ntfy-restore.sh, or via dispatch.
+# Trigger by touching this file or scripts/ntfy-restore.py, or via dispatch.
 #
 # When to use:
 #   - cluster-doctor shows ntfy in Error or CrashLoopBackOff
@@ -14,7 +14,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/ntfy-restore.yml
-    - scripts/ntfy-restore.sh
+    - scripts/ntfy-restore.py
   workflow_dispatch:
     inputs:
       ntfy_mem_limit:
@@ -44,7 +44,7 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 6443
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 6443
     - name: Configure kubectl
       run: |
         mkdir -p ~/.kube
@@ -55,7 +55,7 @@ jobs:
       id: restore
       run: |
         set -o pipefail
-        bash scripts/ntfy-restore.sh 2>&1 | tee restore.log
+        python3 scripts/ntfy-restore.py 2>&1 | tee restore.log
 
     - name: Post result to tracking issue
       if: always()

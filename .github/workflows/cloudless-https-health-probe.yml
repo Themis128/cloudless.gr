@@ -202,7 +202,7 @@ jobs:
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
       if: steps.health.outputs.need_origin_fallback == 'true'
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 30300
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 30300
     - name: GET /api/health via private fabric (MagicDNS NodePort)
       if: steps.health.outputs.need_origin_fallback == 'true'
       run: |
@@ -433,7 +433,7 @@ jobs:
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
       if: steps.health.outputs.need_origin_fallback == 'true'
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 30300
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 30300
     - name: GET /api/health via private fabric (MagicDNS NodePort)
       if: steps.health.outputs.need_origin_fallback == 'true'
       run: |

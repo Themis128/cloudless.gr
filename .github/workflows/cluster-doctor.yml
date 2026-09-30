@@ -27,7 +27,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/cluster-doctor.yml
-      - scripts/cluster-doctor.sh
+      - scripts/cluster-doctor.py
 
 permissions:
   contents: read
@@ -51,7 +51,7 @@ jobs:
           ping: 100.74.191.58
 
       - name: Wait for tailnet path to omv
-        run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 6443
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 6443
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
@@ -59,7 +59,7 @@ jobs:
           chmod 600 ~/.kube/config
 
       - name: Run diagnostics
-        run: bash scripts/cluster-doctor.sh | tee snapshot.md
+        run: python3 scripts/cluster-doctor.py | tee snapshot.md
 
       - name: Post snapshot to tracking issue
         if: always()

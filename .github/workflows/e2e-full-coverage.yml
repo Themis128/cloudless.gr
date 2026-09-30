@@ -112,7 +112,7 @@ jobs:
           E2E_ADMIN_TOKEN: e2e-admin-token-do-not-use-in-prod
         run: |
           echo "Starting next-dev against live D1..."
-          # scripts/dev-server.sh reads DEV_PORT / DEV_HOST. Do not pass
+          # scripts/dev-server.py reads DEV_PORT / DEV_HOST. Do not pass
           # `next dev -p` flags — unknown args used to exit 2 before listen.
           export DEV_PORT=4000
           export DEV_HOST=127.0.0.1

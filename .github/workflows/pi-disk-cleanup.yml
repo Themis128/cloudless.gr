@@ -16,7 +16,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/pi-disk-cleanup.yml
-    - scripts/pi-disk-cleanup.sh
+    - scripts/pi-disk-cleanup.py
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
     - name: Run disk cleanup via SSH
       run: |
         SSH_KEY="/tmp/omv_key"
@@ -49,12 +49,12 @@ jobs:
         chmod 600 "$SSH_KEY"
 
         scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-          scripts/pi-disk-cleanup.sh \
-          "$PI_USER@$PI_HOST:/tmp/pi-disk-cleanup.sh"
+          scripts/pi-disk-cleanup.py \
+          "$PI_USER@$PI_HOST:/tmp/pi-disk-cleanup.py"
 
         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
           "$PI_USER@$PI_HOST" \
-          "sudo bash /tmp/pi-disk-cleanup.sh" 2>&1 | tee cleanup-output.md
+          "sudo python3 /tmp/pi-disk-cleanup.py" 2>&1 | tee cleanup-output.md
 
         rm -f "$SSH_KEY"
 

@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/cloudless/pi-release-pull.env
-ExecStart=/usr/local/sbin/pi-release-pull.sh
+ExecStart=/usr/bin/python3 /usr/local/sbin/pi-release-pull.py
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7

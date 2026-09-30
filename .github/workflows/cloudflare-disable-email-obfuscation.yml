@@ -20,7 +20,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/cloudflare-disable-email-obfuscation.yml
-    - scripts/disable-cloudflare-email-obfuscation.sh
+    - scripts/disable-cloudflare-email-obfuscation.py
   workflow_dispatch:
 
 permissions:
@@ -47,7 +47,7 @@ jobs:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
         set -o pipefail
-        bash scripts/disable-cloudflare-email-obfuscation.sh 2>&1 | tee cf-email.log
+        python3 scripts/disable-cloudflare-email-obfuscation.py 2>&1 | tee cf-email.log
 
       # Verify the edge no longer injects the __cf_email__ rewrite. Cloudflare
       # applies setting changes within seconds; retry briefly to avoid a race.

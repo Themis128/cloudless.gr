@@ -9,7 +9,7 @@ Type=oneshot
 # Credentials populated at install time from the cloudless-secrets k8s Secret.
 # Values are never printed by the watchdog script.
 EnvironmentFile=-/etc/safedeploy-watchdog.env
-ExecStart=/usr/local/sbin/safedeploy-watchdog.sh
+ExecStart=/usr/bin/python3 /usr/local/sbin/safedeploy-watchdog.py
 # Bounded runtime — a stuck tick must not accumulate
 TimeoutStartSec=90
 # Hardening (script only reads state + posts alerts + flips one symlink)

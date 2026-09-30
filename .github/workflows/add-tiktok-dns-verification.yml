@@ -12,7 +12,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/add-tiktok-dns-verification.yml
-      - scripts/add-tiktok-dns-verification.sh
+      - scripts/add-tiktok-dns-verification.py
   workflow_dispatch:
     inputs:
       verification_token:
@@ -47,7 +47,7 @@ jobs:
         id: add
         run: |
           set -o pipefail
-          bash scripts/add-tiktok-dns-verification.sh 2>&1 | tee tiktok-dns.log
+          python3 scripts/add-tiktok-dns-verification.py 2>&1 | tee tiktok-dns.log
 
       - name: Post result to tracking issue
         if: always()

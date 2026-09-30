@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""One-shot helper used once to draft the PR #149 comment.
+
+Port of post-comment.sh. Kept for archival reference; PR_NUMBER and REPO are
+documentation, not runtime values.
+"""
+
+PR_NUMBER = 149
+REPO = "Themis128/cloudless.gr"
+
+COMMENT_BODY = """\
+## ✅ Security Vulnerability Confirmed & Remediated
+
+@tg12 — Thank you for this excellent security analysis. Your vulnerability report is **100% valid** and has been addressed.
+
+### Actions Taken
+
+**1. Verified the Attack Chain** ✓
+- ✅ `AGENTS.md` reads from `node_modules/next/dist/docs/` (third-party controlled)
+- ✅ `dependabot-automerge.yml` auto-merges patch/minor `next` updates without review
+- ✅ `pr-review.yml` explicitly skips Dependabot PRs (Claude code reviewer bypassed)
+- ✅ `mcp-security-scan.yml` is non-blocking (`continue-on-error: true`)
+
+**Result:** A malicious `next` patch could land in `main` unreviewed and inject attacker instructions into every AI agent session.
+
+---
+
+### Fixes Implemented
+
+Branch: **`security/fix-dependabot-bypass`** → [View Commit](https://github.com/Themis128/cloudless.gr/commit/4488537847f03c950970839c89317085414b6438)
+
+✅ **1. Excluded `next` from auto-merge**
+
+Framework updates now require **human review** via a `!contains(...)` guard on the dependency name.
+
+✅ **2. Removed risky `node_modules` path from AGENTS.md**
+
+AGENTS.md now points to the official Next.js docs URL instead of reading from `node_modules/next/dist/docs/`.
+
+✅ **3. Made MCP security scan blocking**
+
+`continue-on-error` set to `false` in `mcp-security-scan.yml` — security findings now **prevent merges**.
+
+✅ **4. Enabling branch protection** (via settings)
+- Require ≥1 approving review before merge
+- Dismiss stale reviews on new commits
+
+---
+
+### Result
+
+The supply-chain attack vector is now **closed**. A malicious `next` patch would:
+1. ❌ NOT auto-merge (human review required)
+2. ❌ NOT bypass security scan (now blocking)
+3. ❌ NOT inject code into agent instructions (safe source)
+
+---
+
+### Your PR
+
+This PR documents the historical vulnerability for future reference. **Merging now.** 🚀
+
+Thank you for the thorough security research and for helping us harden the repository.
+
+---
+
+**References:**
+- 🔗 [OWASP LLM Top 10 — LLM01: Prompt Injection](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+- 🔗 [Dependabot Security Best Practices](https://docs.github.com/en/code-security/dependabot/working-with-dependabot)
+"""
+
+print(COMMENT_BODY, end="")

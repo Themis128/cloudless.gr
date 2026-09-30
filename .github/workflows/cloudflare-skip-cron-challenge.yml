@@ -14,7 +14,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/cloudflare-skip-cron-challenge.yml
-    - scripts/cf-skip-cron-challenge.sh
+    - scripts/cf-skip-cron-challenge.py
   workflow_dispatch:
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-      run: bash scripts/cf-skip-cron-challenge.sh
+      run: python3 scripts/cf-skip-cron-challenge.py
 
     - name: Verify cron path is not challenged
       id: verify

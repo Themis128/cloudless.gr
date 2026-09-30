@@ -6,7 +6,7 @@ Wants=k3s.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/k3s-snapshot-mirror.sh
+ExecStart=python3 /usr/local/sbin/k3s-snapshot-mirror.py
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
