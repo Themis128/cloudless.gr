@@ -87,10 +87,12 @@ else:
 
 # 2. Lambda env wiring
 aws = shutil.which("aws")
-aws_ok = (
-    aws and subprocess.run([aws, "sts", "get-caller-identity"], capture_output=True).returncode == 0
-)
-if aws_ok:
+aws_ok = False
+if aws:
+    aws_ok = (
+        subprocess.run([aws, "sts", "get-caller-identity"], capture_output=True).returncode == 0
+    )
+if aws and aws_ok:
     print("== 2. Lambda env")
     r = subprocess.run(
         [
