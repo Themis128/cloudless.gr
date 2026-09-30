@@ -11,14 +11,17 @@ EspoCRM → Pi /api/webhooks/espocrm → POST this Worker /enqueue → Queue
 
 ## Deploy
 
+Always pass `--config wrangler.jsonc` (wrangler find-up prefers parent
+`workers/wrangler.json` / cloudless-analytics over this directory's config).
+
 ```bash
 cd workers/espocrm-fanout
-npx wrangler secret put ESPOCRM_QUEUE_PRODUCER_SECRET
-npx wrangler secret put ESPOCRM_FANOUT_CALLBACK_URL   # https://cloudless.gr/api/webhooks/espocrm/fanout
-npx wrangler deploy
+npx wrangler secret put ESPOCRM_QUEUE_PRODUCER_SECRET --config wrangler.jsonc
+npx wrangler secret put ESPOCRM_FANOUT_CALLBACK_URL --config wrangler.jsonc   # https://cloudless.gr/api/webhooks/espocrm/fanout
+npx wrangler deploy --config wrangler.jsonc
 ```
 
-Create queues once:
+Create queues once (requires Queues Edit on the API token):
 
 ```bash
 npx wrangler queues create espocrm-events
