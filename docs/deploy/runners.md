@@ -255,7 +255,7 @@ park work on omv: `nice`, cgroup CPU limits, lower `max-parallel`.
 
 | Surface | Config | Command / trigger |
 | ------- | ------ | ----------------- |
-| **Lab (local)** | [`lighthouserc.local.cjs`](../../lighthouserc.local.cjs) | `pnpm lighthouse:audit` → [`scripts/lighthouse-local.sh`](../../scripts/lighthouse-local.sh) |
+| **Lab (local)** | [`lighthouserc.local.cjs`](../../lighthouserc.local.cjs) | `pnpm lighthouse:audit` → [`scripts/lighthouse-local.py`](../../scripts/lighthouse-local.py) |
 | **CI (post-deploy)** | [`.github/lighthouserc.cjs`](../../.github/lighthouserc.cjs) + budget | `lighthouse.yml` after successful Deploy to Pi (+ daily cron / `workflow_dispatch`) |
 
 Lab audits hit whatever URL you pass (often production or local). CI uses the

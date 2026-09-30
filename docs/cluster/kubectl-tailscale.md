@@ -68,7 +68,7 @@ kubectl get pods -n monitoring
 
 ## Off-LAN: kube-apiserver ProxyGroup
 
-After [`infrastructure/tailscale/deploy.sh`](../../infrastructure/tailscale/deploy.sh)
+After [`infrastructure/tailscale/deploy.py`](../../infrastructure/tailscale/deploy.py)
 (see fabric doc §8):
 
 ```bash
