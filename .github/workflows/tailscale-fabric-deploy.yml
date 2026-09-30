@@ -68,7 +68,7 @@ jobs:
       run: |
         set -euo pipefail
         run_deploy() {
-          bash infrastructure/tailscale/deploy.sh
+          python3 infrastructure/tailscale/deploy.py
         }
         if [ "${USE_SUDO_K3S:-0}" = "1" ]; then
           sudo -E env \
@@ -78,7 +78,7 @@ jobs:
             "TS_CLIENT_SECRET=$TS_CLIENT_SECRET" \
             "TS_OPERATOR_NS=$TS_OPERATOR_NS" \
             "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
-            bash infrastructure/tailscale/deploy.sh
+            python3 infrastructure/tailscale/deploy.py
         else
           run_deploy
         fi

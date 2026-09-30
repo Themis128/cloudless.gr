@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Run installer
-        run: sudo bash infrastructure/omv/install-safedeploy-watchdog.sh
+        run: sudo python3 infrastructure/omv/install-safedeploy-watchdog.py
 
       - name: Verify timer + last tick
         run: |
