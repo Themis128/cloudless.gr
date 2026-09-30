@@ -63,10 +63,22 @@ export async function resolveLeadsTarget(): Promise<LeadsTarget | null> {
 
 const DELIVERIES = new Set<PlaybookDelivery>(["email", "already_sent", "download", "none"]);
 
-/** The lead endpoint never redirects; any 3xx means Access bounced us to its
- *  login page (service token missing, wrong, or not allowed by a policy). */
+/** The lead endpoint never redirects; an Access bounce lands on
+ *  *.cloudflareaccess.com or /cdn-cgi/access/* (service token missing/wrong). */
 function isAccessRedirect(res: Response): boolean {
-  return res.status >= 300 && res.status < 400;
+  if (res.status < 300 || res.status >= 400) return false;
+  const location = res.headers.get("location") ?? "";
+  if (!location) return false;
+  try {
+    const url = new URL(location, "https://social.cloudless.gr");
+    const host = url.hostname.toLowerCase();
+    if (host === "cloudflareaccess.com" || host.endsWith(".cloudflareaccess.com")) {
+      return true;
+    }
+    return url.pathname.includes("/cdn-cgi/access/");
+  } catch {
+    return false;
+  }
 }
 
 export async function forwardPlaybookLead(input: PlaybookLeadInput): Promise<ForwardResult> {

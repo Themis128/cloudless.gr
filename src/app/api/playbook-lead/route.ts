@@ -25,6 +25,12 @@ interface PlaybookLeadBody {
   turnstileToken?: unknown;
 }
 
+interface ValidatedLead {
+  email: string;
+  name?: string;
+  locale?: string;
+}
+
 function jsonError(error: string, code: string, status: number): Response {
   return Response.json({ error, code, playbookUrl: PUBLIC_PLAYBOOK_URL }, { status });
 }
@@ -36,6 +42,27 @@ function pagePathFromReferer(referer: string | null): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Validate email/consent/name/locale after honeypot + Turnstile. */
+function validateLeadFields(body: PlaybookLeadBody): ValidatedLead | Response {
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!isValidEmail(email)) {
+    return jsonError("Invalid email address.", "invalid_email", 400);
+  }
+  if (body.consent !== true) {
+    return jsonError("Please confirm you agree to receive the playbook by email.", "consent", 400);
+  }
+  if (body.name !== undefined && body.name !== null && typeof body.name !== "string") {
+    return jsonError("Name must be a string.", "invalid_name", 400);
+  }
+  const name = typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : "";
+  if (name.length > MAX_NAME_CHARS) {
+    return jsonError(`Name must be at most ${MAX_NAME_CHARS} characters.`, "invalid_name", 400);
+  }
+  const locale =
+    typeof body.locale === "string" && isSupportedLocale(body.locale) ? body.locale : undefined;
+  return { email, name: name || undefined, locale };
 }
 
 export async function GET() {
@@ -71,40 +98,27 @@ export async function POST(request: Request) {
     return jsonError(turnstile.error, "turnstile", 403);
   }
 
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  if (!isValidEmail(email)) {
-    return jsonError("Invalid email address.", "invalid_email", 400);
-  }
-  if (body.consent !== true) {
-    return jsonError("Please confirm you agree to receive the playbook by email.", "consent", 400);
-  }
-  if (body.name !== undefined && body.name !== null && typeof body.name !== "string") {
-    return jsonError("Name must be a string.", "invalid_name", 400);
-  }
-  const name = typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : "";
-  if (name.length > MAX_NAME_CHARS) {
-    return jsonError(`Name must be at most ${MAX_NAME_CHARS} characters.`, "invalid_name", 400);
-  }
-  const locale =
-    typeof body.locale === "string" && isSupportedLocale(body.locale) ? body.locale : undefined;
+  const validated = validateLeadFields(body);
+  if (validated instanceof Response) return validated;
+  const { email, name, locale } = validated;
 
   const result = await forwardPlaybookLead({
     email,
-    name: name || undefined,
+    name,
     locale,
     pagePath: pagePathFromReferer(request.headers.get("referer")),
     consentAt: new Date().toISOString(),
   });
 
   if (result.ok) {
-    recordNotification({
+    void Promise.resolve(recordNotification({
       category: "subscribe",
       type: "success",
       title: "Playbook lead captured",
       message: email,
       actor: email,
       route: "/api/playbook-lead",
-    });
+    })).catch(() => {});
     return Response.json({
       success: true,
       delivery: result.delivery,
@@ -116,17 +130,16 @@ export async function POST(request: Request) {
     return jsonError("Invalid email address.", "invalid_email", 400);
   }
 
-  console.error(
-    `[playbook-lead] forward failed: ${result.reason}${result.status ? ` (${result.status})` : ""}`
-  );
-  recordNotification({
+  const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";
+  console.error(`[playbook-lead] forward failed: ${result.reason}${statusSuffix}`);
+  void Promise.resolve(recordNotification({
     category: "error",
     type: result.reason === "not_configured" ? "warning" : "error",
     title: "Playbook lead not forwarded to SocialAuto",
-    message: `${result.reason}${result.status ? ` (HTTP ${result.status})` : ""} — ${email}`,
+    message: `${result.reason}${statusSuffix} — ${email}`,
     actor: email,
     route: "/api/playbook-lead",
-  });
+  })).catch(() => {});
 
   if (result.reason === "not_configured") {
     return jsonError(
