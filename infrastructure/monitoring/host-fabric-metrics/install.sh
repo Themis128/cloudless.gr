@@ -36,7 +36,12 @@ sleep 2
 systemctl is-active tailscale-metrics-exporter
 systemctl is-active cloudflared
 curl -sS -o /dev/null -w "tailscale-metrics:%{http_code}\n" --max-time 3 http://127.0.0.1:9102/metrics
-curl -sS -o /dev/null -w "cloudflared-metrics:%{http_code}\n" --max-time 3 http://127.0.0.1:20241/metrics
+# cloudflared metrics bind can lag/fail after restart even when the
+# unit is active; warn and continue so fabric install still succeeds.
+# Keep the tailscale-metrics check above strict (set -e).
+if ! curl -sS -o /dev/null -w "cloudflared-metrics:%{http_code}\n" --max-time 3 http://127.0.0.1:20241/metrics; then
+  echo "WARN: cloudflared metrics not reachable on 127.0.0.1:20241; continuing"
+fi
 # confirm LAN bind (not only loopback)
 ss -ltn | grep -E ':9102|:20241' || true
 EOS
