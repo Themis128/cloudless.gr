@@ -14,15 +14,16 @@ import sys
 import urllib.request
 from datetime import UTC, datetime
 
-kbin = shutil.which("kubectl") or "kubectl"
+kbin = shutil.which("kubectl")
 if not kbin:
     print("# Cluster snapshot\n")
     print("_kubectl is not on PATH — doctor cannot run._")
     sys.exit(0)
+kubectl: str = kbin
 
 
 def k(*args: str, timeout: int = 30) -> str:
-    r = subprocess.run([kbin, *args], capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run([kubectl, *args], capture_output=True, text=True, timeout=timeout)
     return r.stdout + r.stderr
 
 

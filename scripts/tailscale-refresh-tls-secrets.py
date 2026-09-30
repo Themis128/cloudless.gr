@@ -31,7 +31,7 @@ for h in HOSTS:
         capture_output=True,
         text=True,
     )
-    length = len(r.stdout)
+    length = len(kget.stdout)
     if length < 20:
         print(f"  EMPTY {name} (tls.crt b64 len={length})")
         empty.append(name)
