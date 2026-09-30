@@ -1,6 +1,6 @@
 name: Switch Runner Mode
 
-# UI-accessible alternative to .github/scripts/toggle-runner.sh for
+# UI-accessible alternative to .github/scripts/toggle-runner.py for
 # sessions where gh CLI is not available (e.g. Claude Code on the web).
 # Runs on ubuntu-latest (hardcoded) so it always uses a GH-hosted runner
 # regardless of RUNNER_GENERIC / RUNNER_X64.

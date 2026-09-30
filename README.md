@@ -336,7 +336,6 @@ Operator runbook: `skills/appflowy-operator/SKILL.md`.
 Do NOT reintroduce Notion admin routes, webhook handlers, or tests that import
 deleted Notion modules — see `.cursor/rules/appflowy-cms.mdc`.
 
-
 ## Getting Started
 
 ```bash

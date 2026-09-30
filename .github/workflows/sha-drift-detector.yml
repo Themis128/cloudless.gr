@@ -36,7 +36,7 @@ jobs:
   detect:
     name: detect-sha-drift
     # Failover-capable: defaults to ubuntu-latest. Flip via
-    #   .github/scripts/toggle-runner.sh pi
+    #   .github/scripts/toggle-runner.py pi
     # to route onto the self-hosted build runners when billing is broken.
     runs-on: ubuntu-latest
     timeout-minutes: 5
