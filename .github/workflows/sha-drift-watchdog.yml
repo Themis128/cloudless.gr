@@ -106,7 +106,11 @@ jobs:
         # Mirror deploy-pi.yml's push.paths filter so docs-only merges
         # don't trigger builds.
         changed=$(gh api "repos/$repo/compare/$last_deploy_sha...$main_sha" \
-          --paginate --jq '.files[].filename')
+          --paginate --jq '(.files // [])[].filename' || true)
+        if [ -z "$(printf '%s' "$changed" | tr -d '[:space:]')" ]; then
+          echo "Compare returned no file list (or empty) — skipping deploy dispatch."
+          exit 0
+        fi
         if echo "$changed" | grep -qE '^(src/|public/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.ts|patches/|scripts/pi-rollout-from-artifact\.sh|workers/pi-deploy-orchestrator/|infrastructure/omv/pi-release-pull|\.github/workflows/deploy-pi\.yml)'; then
           echo "Deploy-relevant changes reached main without a deploy run."
           echo "(Likely an auto-merged PR — push event was suppressed.)"
