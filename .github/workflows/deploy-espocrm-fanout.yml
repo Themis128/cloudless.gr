@@ -24,18 +24,25 @@ jobs:
       with:
         node-version: "22"
 
-    # Queues must exist before deploy. `wrangler queues create` is idempotent —
-    # it returns exit 0 when the queue already exists.
+    # Queues must exist before deploy. Soft-fail if token lacks Queues Edit
+    # (run ensure-cloudflare-ci-token / add Queues Edit on CLOUDFLARE_API_TOKEN).
     - name: Ensure Cloudflare Queues exist
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
       run: |
-        npx wrangler@latest queues create espocrm-events     || true
-        npx wrangler@latest queues create espocrm-events-dlq || true
+        npx wrangler@4.141.0 queues create espocrm-events     || true
+        npx wrangler@4.141.0 queues create espocrm-events-dlq || true
 
+    # Always pass --config wrangler.jsonc: wrangler find-up prefers a parent
+    # workers/wrangler.json (cloudless-analytics) over this dir's wrangler.jsonc.
+    # See workers/pi-deploy-orchestrator/README.md for the same pitfall.
     - name: Deploy worker
       uses: cloudflare/wrangler-action@v4
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CF_ACCOUNT_ID }}
         workingDirectory: workers/espocrm-fanout
-        wranglerVersion: latest
+        packageManager: npm
+        wranglerVersion: "4.141.0"
+        command: deploy --config wrangler.jsonc
