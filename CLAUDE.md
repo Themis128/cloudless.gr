@@ -570,18 +570,20 @@ When a Terraform CI workflow fails, **invoke the `terraform-doctor` skill first*
 (`skills/terraform-doctor/SKILL.md`). The cloudless-infra MCP exposes `tf_doctor`
 which automates Stages 0-3 from the Pi.
 
-**Lessons from PRs #778-#781 (2026-06-10):**
+The only live Terraform root is `infrastructure/cloudflare-access/`
+(Cloudflare Access applications). The AWS-era `infrastructure/terraform/`
+root and `deploy-infrastructure.yml` workflow are retired — AWS-era deploy
+docs live in `docs/archive/_aws-legacy/`.
+
+**Historical lessons from PRs #778-#781 (2026-06-10, AWS era — kept for the
+CLI/GPG lessons which are provider-agnostic):**
 
 - `openpgp: key expired` from `terraform init` is almost always the **CLI's**
   embedded root key, not the provider's. Bump `TF_VERSION` (1.6.0 → 1.15.6).
-  Bumping just the AWS provider does NOT fix it.
+  Bumping just the provider does NOT fix it.
 - New CLI versions enforce stricter `fmt -check` and `validate`. Expect cascading
   failures after a CLI bump. Fix them in order — never try to fix multiple
   stages at once.
-- AWS provider 5.x has notable schema breaks (CloudFront `header_behavior =
-"all"` is no longer valid for cache policies; `aws_db_proxy` requires `auth`
-  block + `vpc_subnet_ids`; pool config moved to `aws_db_proxy_default_target_group`).
-  See `scripts/tf-validate-fix.py` for the idempotent migration script.
 - `terraform plan` failures on a data source (e.g. `Function not found`) are
   environment preconditions — gate the dependent block behind a feature flag
   variable so the rest of the stack still plans.
@@ -589,8 +591,7 @@ which automates Stages 0-3 from the Pi.
 **Known-good versions (mid-2026):**
 
 - Terraform CLI: `1.15.6`
-- `hashicorp/aws`: `~> 5.80.0`
-- `aws-actions/configure-aws-credentials`: `v4.x`
+- `cloudflare/cloudflare` provider (see `infrastructure/cloudflare-access/`)
 - `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
 
 ## OpenClaudia Marketing Skills

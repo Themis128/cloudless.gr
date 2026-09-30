@@ -117,9 +117,10 @@ same `count` expression on dependent resources.
 
 ## Idempotent fix script
 
-`scripts/tf-validate-fix.py` applies the AWS provider 5.x schema fixes
-documented above. Safe to re-run; checks for the old pattern before
-substituting. Add new fixes as new `old/new` pairs guarded by `if old in s`.
+The AWS-era `scripts/tf-validate-fix.py` (applied the provider 5.x schema
+fixes above to `infrastructure/terraform/lambda-optimization.tf`) was retired
+with the AWS stack — the table remains as reference if a historical branch
+needs it. Apply equivalent old/new pattern patches manually if they recur.
 
 ## Companion tool
 
@@ -127,8 +128,13 @@ The cloudless-infra MCP server exposes a `tf_doctor` tool that runs the
 diagnose-and-fix loop end-to-end from the Pi:
 
 ```
-tf_doctor(workflow="deploy-infrastructure.yml", tf_dir="infrastructure/terraform")
+tf_doctor(workflow="<failing-workflow>.yml", tf_dir="infrastructure/cloudflare-access")
 ```
+
+The only live Terraform root today is `infrastructure/cloudflare-access/`
+(Cloudflare Access apps). The AWS-era `infrastructure/terraform/` root and
+its `deploy-infrastructure.yml` workflow were retired — treat any remaining
+references to them as historical.
 
 It pulls the most recent failure log, classifies the error, downloads
 terraform 1.15.6 to /tmp if needed, runs init+fmt+validate, and returns a
