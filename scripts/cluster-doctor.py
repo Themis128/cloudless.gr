@@ -14,7 +14,7 @@ import sys
 import urllib.request
 from datetime import UTC, datetime
 
-kbin = shutil.which("kubectl") or "kubectl"
+kbin = shutil.which("kubectl")
 if not kbin:
     print("# Cluster snapshot\n")
     print("_kubectl is not on PATH — doctor cannot run._")

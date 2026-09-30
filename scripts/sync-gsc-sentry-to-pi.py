@@ -84,7 +84,9 @@ ssh_r = subprocess.run(
     capture_output=True,
     text=True,
 )
-keys = set(json.loads(r.stdout).get("data", {}))
+if ssh_r.returncode != 0 or not (ssh_r.stdout or "").strip():
+    sys.exit("verify secret failed: " + ((ssh_r.stderr or "").strip() or "empty stdout"))
+keys = set(json.loads(ssh_r.stdout).get("data", {}))
 print("present:", ", ".join(k for k in NEED if k in keys))
 missing = [k for k in NEED if k not in keys]
 if missing:
