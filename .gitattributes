@@ -13,5 +13,6 @@
 *.eot binary
 *.webp binary
 *.avif binary
+*.pdf binary
 
 .github/workflows/*.lock.yml linguist-generated=true
