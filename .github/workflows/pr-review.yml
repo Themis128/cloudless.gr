@@ -24,7 +24,7 @@ jobs:
   review:
     name: Claude code review
     # Failover-capable: defaults to ubuntu-latest. Flip via
-    #   .github/scripts/toggle-runner.sh pi
+    #   .github/scripts/toggle-runner.py pi
     # when GH-hosted billing is broken.
     runs-on: ubuntu-latest
     # Skip bots, dependabot, and revert branches
