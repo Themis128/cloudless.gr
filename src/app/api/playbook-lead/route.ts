@@ -111,14 +111,16 @@ export async function POST(request: Request) {
   });
 
   if (result.ok) {
-    void Promise.resolve(recordNotification({
-      category: "subscribe",
-      type: "success",
-      title: "Playbook lead captured",
-      message: email,
-      actor: email,
-      route: "/api/playbook-lead",
-    })).catch(() => {});
+    void Promise.resolve(
+      recordNotification({
+        category: "subscribe",
+        type: "success",
+        title: "Playbook lead captured",
+        message: email,
+        actor: email,
+        route: "/api/playbook-lead",
+      })
+    ).catch(() => {});
     return Response.json({
       success: true,
       delivery: result.delivery,
@@ -132,14 +134,16 @@ export async function POST(request: Request) {
 
   const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";
   console.error(`[playbook-lead] forward failed: ${result.reason}${statusSuffix}`);
-  void Promise.resolve(recordNotification({
-    category: "error",
-    type: result.reason === "not_configured" ? "warning" : "error",
-    title: "Playbook lead not forwarded to SocialAuto",
-    message: `${result.reason}${statusSuffix} — ${email}`,
-    actor: email,
-    route: "/api/playbook-lead",
-  })).catch(() => {});
+  void Promise.resolve(
+    recordNotification({
+      category: "error",
+      type: result.reason === "not_configured" ? "warning" : "error",
+      title: "Playbook lead not forwarded to SocialAuto",
+      message: `${result.reason}${statusSuffix} — ${email}`,
+      actor: email,
+      route: "/api/playbook-lead",
+    })
+  ).catch(() => {});
 
   if (result.reason === "not_configured") {
     return jsonError(
