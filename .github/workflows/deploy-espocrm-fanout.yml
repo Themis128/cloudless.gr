@@ -34,7 +34,7 @@ jobs:
         npx wrangler@latest queues create espocrm-events-dlq || true
 
     - name: Deploy worker
-      uses: cloudflare/wrangler-action@v3
+      uses: cloudflare/wrangler-action@v4
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         workingDirectory: workers/espocrm-fanout
