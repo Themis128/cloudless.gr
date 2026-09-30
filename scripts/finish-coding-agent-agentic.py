@@ -26,15 +26,13 @@ ts = time.strftime("%Y%m%d-%H%M%S")
 print("==> Backing up files...")
 coding = Path("src/agents/coding.ts")
 if coding.is_file():
-    shutil.copy(
-        coding, f"{coding}.bak-agentic-finish-{ts}")
-for f in ("scripts/coding-agent-review-repo.py",
-          "scripts/coding-agent-propose-patch.py"):
+    shutil.copy(coding, f"{coding}.bak-agentic-finish-{ts}")
+for f in ("scripts/coding-agent-review-repo.py", "scripts/coding-agent-propose-patch.py"):
     if Path(f).is_file():
         shutil.copy(f, f"{f}.bak-agentic-finish-{ts}")
 
 print("==> Writing improved src/agents/coding.ts...")
-coding.write_text('''import { Agent, callable } from "agents";
+coding.write_text("""import { Agent, callable } from "agents";
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";
@@ -375,14 +373,12 @@ export class CodingAgent extends Agent<Env, CodingState> {
     });
   }
 }
-''')
+""")
 
 print("==> Verifying repo-context review helpers...")
-for f in ("scripts/coding-agent-review-repo.py",
-          "scripts/coding-agent-propose-patch.py"):
+for f in ("scripts/coding-agent-review-repo.py", "scripts/coding-agent-propose-patch.py"):
     if not Path(f).is_file():
-        sys.exit(f"Missing {f} — the Python review helpers "
-                 "should already be in the repo.")
+        sys.exit(f"Missing {f} — the Python review helpers should already be in the repo.")
 
 print("==> Running checks...")
 subprocess.call(["pnpm", "run", "cf:types"])

@@ -28,9 +28,14 @@ FIX = os.environ.get("FIX", "0").lower() in ("1", "true", "yes")
 UPGRADE = os.environ.get("UPGRADE", "0").lower() in ("1", "true", "yes")
 FORCE_APT = os.environ.get("FORCE_APT", "0").lower() in ("1", "true")
 SSH_USER = os.environ.get("SSH_USER", "tbaltzakis")
-SSH_OPTS = ["-o", "BatchMode=yes",
-            "-o", "StrictHostKeyChecking=accept-new",
-            "-o", "ConnectTimeout=10"]
+SSH_OPTS = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "ConnectTimeout=10",
+]
 
 # name|lan_ip|tailnet_ip
 HOSTS = [
@@ -43,8 +48,9 @@ for tool in ("ssh",):
         print(f"missing {tool}", file=sys.stderr)
         sys.exit(1)
 
-pkgs = json.loads(urllib.request.urlopen(
-    "https://pkgs.tailscale.com/stable/?mode=json", timeout=30).read())
+pkgs = json.loads(
+    urllib.request.urlopen("https://pkgs.tailscale.com/stable/?mode=json", timeout=30).read()
+)
 LATEST = pkgs.get("TarballsVersion", "")
 if not LATEST:
     print("Could not resolve latest Tailscale version", file=sys.stderr)
@@ -56,14 +62,21 @@ print(f"==> DRY_RUN={int(DRY_RUN)} FIX={int(FIX)} UPGRADE={int(UPGRADE)}")
 def ssh_try(host: str, script: str) -> tuple[int, str]:
     r = subprocess.run(
         ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "bash", "-s"],
-        input=script, capture_output=True, text=True, timeout=120)
+        input=script,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
     return r.returncode, r.stdout + r.stderr
 
 
 def reachable(host: str) -> bool:
-    return subprocess.run(
-        ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "true"],
-        capture_output=True, timeout=15).returncode == 0
+    return (
+        subprocess.run(
+            ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "true"], capture_output=True, timeout=15
+        ).returncode
+        == 0
+    )
 
 
 def pick_endpoint(lan: str, ts: str) -> str | None:
@@ -160,12 +173,10 @@ for name, lan, ts in HOSTS:
         elif FORCE_APT:
             needs_upgrade = True
         else:
-            print(f"  already on {LATEST} — skip apt (set FORCE_APT=1 "
-                  "to refresh anyway)")
+            print(f"  already on {LATEST} — skip apt (set FORCE_APT=1 to refresh anyway)")
 
     if needs_upgrade:
-        print(f"  → upgrading Tailscale (have {ver_base or 'unknown'}, "
-              f"want {LATEST})")
+        print(f"  → upgrading Tailscale (have {ver_base or 'unknown'}, want {LATEST})")
         if DRY_RUN:
             print(f"  [dry-run] would apt upgrade tailscale on {ep}")
         else:
@@ -174,20 +185,17 @@ for name, lan, ts in HOSTS:
             if rc:
                 FAIL = 1
         rc, status2 = ssh_try(ep, REMOTE_STATUS)
-        status2 = status2.strip().splitlines()[-1] \
-            if status2.strip() else ""
+        status2 = status2.strip().splitlines()[-1] if status2.strip() else ""
         print(f"  post: {status2}")
         ver2_base = field(status2, "version").split("-")[0]
         if ver2_base and ver2_base != LATEST and not DRY_RUN:
-            print(f"  ::warning::{name} still on {ver2_base} after "
-                  f"upgrade (latest {LATEST})")
+            print(f"  ::warning::{name} still on {ver2_base} after upgrade (latest {LATEST})")
             FAIL = 1
     else:
         print("  ok (no upgrade requested)")
 
 print()
 if FAIL:
-    print("::error::One or more managed hosts failed Tailscale "
-          "remediate/upgrade")
+    print("::error::One or more managed hosts failed Tailscale remediate/upgrade")
     sys.exit(1)
 print("==> Fleet remediate/upgrade complete")

@@ -8,8 +8,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 FILES = [
-    "CLAUDE.md", "docs/HUBSPOT.md", "docs/NEWSLETTER.md",
-    "docs/runners.md", "docs/AGENCY-HUB.md",
+    "CLAUDE.md",
+    "docs/HUBSPOT.md",
+    "docs/NEWSLETTER.md",
+    "docs/runners.md",
+    "docs/AGENCY-HUB.md",
     "docs/ROADMAP-ONE-STOP-SHOP.md",
     "infrastructure/espocrm/README.md",
     "skills/espocrm-operator/SKILL.md",

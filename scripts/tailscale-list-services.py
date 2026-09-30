@@ -16,12 +16,15 @@ T = ts_api.TAILNET
 
 print("== ACL autoApprovers.services ==")
 acl = ts_api.get(f"tailnet/{T}/acl")
-print(json.dumps((acl.get("autoApprovers") or {}).get("services"),
-                 indent=2))
+print(json.dumps((acl.get("autoApprovers") or {}).get("services"), indent=2))
 
 print("== probe service endpoints ==")
-for path in (f"tailnet/{T}/services", f"tailnet/{T}/vip-services",
-             "tailnet/-/services", "tailnet/-/vip-services"):
+for path in (
+    f"tailnet/{T}/services",
+    f"tailnet/{T}/vip-services",
+    "tailnet/-/services",
+    "tailnet/-/vip-services",
+):
     code, resp, _ = ts_api.call("GET", path)
     preview = json.dumps(resp)[:300].replace("\n", " ")
     print(f"GET {path} -> {code} {preview}\n")
@@ -35,13 +38,24 @@ for d in devices:
     print(f"-- {host} {did}")
     code, detail, _ = ts_api.call("GET", f"device/{did}")
     print(json.dumps(list(detail.keys()), indent=2))
-    print(json.dumps({k: detail.get(k) for k in (
-        "hostname", "tags", "addresses", "clientConnectivity",
-        "advertisedRoutes", "enabledRoutes",
-        "blocksIncomingConnections")}, indent=2))
-    for sub in ("routes", "services", "vip-services",
-                "approved-routes"):
+    print(
+        json.dumps(
+            {
+                k: detail.get(k)
+                for k in (
+                    "hostname",
+                    "tags",
+                    "addresses",
+                    "clientConnectivity",
+                    "advertisedRoutes",
+                    "enabledRoutes",
+                    "blocksIncomingConnections",
+                )
+            },
+            indent=2,
+        )
+    )
+    for sub in ("routes", "services", "vip-services", "approved-routes"):
         code, resp, _ = ts_api.call("GET", f"device/{did}/{sub}")
-        print(f"  GET device/{did}/{sub} -> {code} "
-              f"{json.dumps(resp)[:200]}")
+        print(f"  GET device/{did}/{sub} -> {code} {json.dumps(resp)[:200]}")
         print()

@@ -3,17 +3,20 @@
 scaffold + brand pack from the Claude outputs folder into
 ~/code/BRANDING and runs its setup.sh. Idempotent."""
 
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-SRC = Path("/mnt/c/Users/baltz/AppData/Roaming/Claude/"
-           "local-agent-mode-sessions/"
-           "3ec19da2-d890-4823-9585-6e9fa61beb06/"
-           "1e461703-cf05-4bce-a729-e291194832f8/"
-           "local_77938c64-a944-4850-9658-270a60eee238/"
-           "outputs")
+SRC = Path(
+    "/mnt/c/Users/baltz/AppData/Roaming/Claude/"
+    "local-agent-mode-sessions/"
+    "3ec19da2-d890-4823-9585-6e9fa61beb06/"
+    "1e461703-cf05-4bce-a729-e291194832f8/"
+    "local_77938c64-a944-4850-9658-270a60eee238/"
+    "outputs"
+)
 DST = Path.home() / "code/BRANDING"
 LOG = Path.home() / "cloudless-branding-install.log"
 
@@ -40,32 +43,29 @@ if not (SRC / "brand").is_dir():
     sys.exit(1)
 for tool in ("git", "rsync"):
     if not shutil.which(tool):
-        err(f"{tool} not installed "
-            f"(sudo apt install -y {tool})")
+        err(f"{tool} not installed (sudo apt install -y {tool})")
         sys.exit(1)
 ok(f"source: {SRC}")
 ok(f"target: {DST}")
 
 step(f"Stage BRANDING scaffold + brand pack into {DST}")
-(DST / "cloudless-brand").mkdir(parents=True,
-                               exist_ok=True)
-subprocess.run(["rsync", "-a", f"{SRC}/BRANDING/", f"{DST}/"],
-               check=True)
-subprocess.run(["rsync", "-a", "--ignore-existing",
-                f"{SRC}/brand/", f"{DST}/cloudless-brand/"],
-               check=True)
+(DST / "cloudless-brand").mkdir(parents=True, exist_ok=True)
+subprocess.run(["rsync", "-a", f"{SRC}/BRANDING/", f"{DST}/"], check=True)
+subprocess.run(
+    ["rsync", "-a", "--ignore-existing", f"{SRC}/brand/", f"{DST}/cloudless-brand/"], check=True
+)
 ok("files staged")
 
 step(f"Run setup.sh (tee'd to {LOG})")
-import os
+
 os.chdir(DST)
 for f in Path("scripts").glob("*.sh"):
     f.chmod(f.stat().st_mode | 0o111)
 Path("setup.sh").chmod(0o755)
 with LOG.open("w") as logf:
-    p = subprocess.Popen(["bash", "setup.sh"],
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, text=True)
+    p = subprocess.Popen(
+        ["bash", "setup.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
     for line in p.stdout:
         print(line, end="")
         logf.write(line)

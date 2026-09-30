@@ -13,12 +13,18 @@ R2_ASSETS = "cloudless-assets"
 R2_DATALAKE = "datalake-bucket"
 
 CONTENT_TYPES = {
-    "css": "text/css", "js": "application/javascript",
-    "json": "application/json", "html": "text/html",
-    "svg": "image/svg+xml", "png": "image/png",
-    "jpg": "image/jpeg", "jpeg": "image/jpeg",
-    "gif": "image/gif", "webp": "image/webp",
-    "woff2": "font/woff2", "woff": "font/woff",
+    "css": "text/css",
+    "js": "application/javascript",
+    "json": "application/json",
+    "html": "text/html",
+    "svg": "image/svg+xml",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "woff2": "font/woff2",
+    "woff": "font/woff",
 }
 
 temp_dir = tempfile.mkdtemp()
@@ -29,12 +35,21 @@ def sync(s3_bucket: str, r2_bucket: str, prefix: str) -> None:
     print(f"📥 Downloading from s3://{s3_bucket}/{prefix}...")
     dest = Path(temp_dir) / r2_bucket
     subprocess.run(
-        ["aws", "s3", "sync", f"s3://{s3_bucket}/{prefix}",
-         str(dest), "--exclude", "*", "--include", "*"],
-        capture_output=True)
+        [
+            "aws",
+            "s3",
+            "sync",
+            f"s3://{s3_bucket}/{prefix}",
+            str(dest),
+            "--exclude",
+            "*",
+            "--include",
+            "*",
+        ],
+        capture_output=True,
+    )
 
-    files = [f for f in dest.rglob("*") if f.is_file()] \
-        if dest.is_dir() else []
+    files = [f for f in dest.rglob("*") if f.is_file()] if dest.is_dir() else []
     if not files:
         print(f"⚠️ No files found in s3://{s3_bucket}/{prefix}")
         return
@@ -42,15 +57,26 @@ def sync(s3_bucket: str, r2_bucket: str, prefix: str) -> None:
     print(f"📤 Uploading to R2 bucket {r2_bucket}...")
     for f in files:
         key = str(f.relative_to(dest))
-        ct = CONTENT_TYPES.get(key.rsplit(".", 1)[-1].lower(),
-                               "application/octet-stream")
+        ct = CONTENT_TYPES.get(key.rsplit(".", 1)[-1].lower(), "application/octet-stream")
         print(f"   Uploading: {key}")
         subprocess.run(
-            ["npx", "wrangler", "r2", "object", "put",
-             f"{r2_bucket}/{key}", "--file", str(f),
-             "--content-type", ct, "--cache-control",
-             "public, max-age=31536000, immutable", "--remote"],
-            capture_output=True)
+            [
+                "npx",
+                "wrangler",
+                "r2",
+                "object",
+                "put",
+                f"{r2_bucket}/{key}",
+                "--file",
+                str(f),
+                "--content-type",
+                ct,
+                "--cache-control",
+                "public, max-age=31536000, immutable",
+                "--remote",
+            ],
+            capture_output=True,
+        )
     print(f"✅ Synced {r2_bucket}")
 
 

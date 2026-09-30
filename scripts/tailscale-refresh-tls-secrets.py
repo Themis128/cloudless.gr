@@ -22,15 +22,15 @@ print(f"== Checking TLS Secrets in {NS} ==")
 empty = []
 for h in HOSTS:
     name = f"{h}.{TAILNET}"
-    r = subprocess.run(["kubectl", "get", "secret", name, "-n", NS],
-                       capture_output=True)
+    r = subprocess.run(["kubectl", "get", "secret", name, "-n", NS], capture_output=True)
     if r.returncode != 0:
         print(f"  skip missing {name}")
         continue
     r = subprocess.run(
-        ["kubectl", "get", "secret", name, "-n", NS, "-o",
-         r"jsonpath={.data.tls\.crt}"],
-        capture_output=True, text=True)
+        ["kubectl", "get", "secret", name, "-n", NS, "-o", r"jsonpath={.data.tls\.crt}"],
+        capture_output=True,
+        text=True,
+    )
     length = len(r.stdout)
     if length < 20:
         print(f"  EMPTY {name} (tls.crt b64 len={length})")
@@ -44,5 +44,4 @@ if not empty:
 
 print(f"== Deleting empty Secrets: {' '.join(empty)} ==")
 subprocess.run(["kubectl", "delete", "secret", "-n", NS, *empty])
-print(f"Done. Watch: kubectl get proxygroup,ingress -A; "
-      f"kubectl get secret -n {NS}")
+print(f"Done. Watch: kubectl get proxygroup,ingress -A; kubectl get secret -n {NS}")

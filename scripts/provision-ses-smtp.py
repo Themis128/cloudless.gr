@@ -24,8 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from cf_secrets import (cf_config_get, cf_config_set, cf_secret_set,  # noqa: E402
-                        cf_verify_auth)
+from cf_secrets import cf_config_get, cf_config_set, cf_secret_set, cf_verify_auth  # noqa: E402
 
 FROM_DEFAULT = os.environ.get("EMAIL_FROM_DEFAULT", "noreply@cloudless.gr")
 
@@ -33,10 +32,10 @@ FROM_DEFAULT = os.environ.get("EMAIL_FROM_DEFAULT", "noreply@cloudless.gr")
 existing_resend = cf_config_get("RESEND_API_KEY")
 existing_from = cf_config_get("EMAIL_FROM")
 
-if (existing_resend and existing_resend != "null"
-        and existing_from and existing_from != "null"):
-    print(f"✓ Email credentials already present in Cloudflare "
-          f"(from={existing_from}). Nothing to do.")
+if existing_resend and existing_resend != "null" and existing_from and existing_from != "null":
+    print(
+        f"✓ Email credentials already present in Cloudflare (from={existing_from}). Nothing to do."
+    )
     sys.exit(0)
 
 manual_resend = os.environ.get("RESEND_API_KEY_INPUT", "")
@@ -47,14 +46,12 @@ manual_from = os.environ.get("EMAIL_FROM_INPUT", "")
 def write(name: str, value: str) -> None:
     print(f"::add-mask::{value}") if value else None
     print(f"Writing {name}... ", end="", flush=True)
-    print("Wrangler ok " if cf_secret_set(name, value) == 0
-          else "Wrangler failed ", end="")
+    print("Wrangler ok " if cf_secret_set(name, value) == 0 else "Wrangler failed ", end="")
     print("D1 ok" if cf_config_set(name, value) else "D1 failed")
 
 
 if manual_resend or manual_cf_email:
-    print("→ Using manually provided email credentials "
-          "(skipping auto-provisioning)")
+    print("→ Using manually provided email credentials (skipping auto-provisioning)")
     if cf_verify_auth():
         sys.exit(1)
     if manual_resend:
@@ -69,13 +66,9 @@ if manual_resend or manual_cf_email:
 # Auto-provisioning path: fetch from GitHub secrets if in CI
 if os.environ.get("GITHUB_TOKEN") and os.environ.get("GITHUB_REPOSITORY"):
     print("→ Attempting to fetch RESEND_API_KEY from GitHub secrets...")
-    print("  Note: GitHub secret fetch not implemented — use manual "
-          "input or CI environment")
+    print("  Note: GitHub secret fetch not implemented — use manual input or CI environment")
 
-print("⚠ No manual credentials provided and no CI secret fetch "
-      "implemented.")
-print("Run with RESEND_API_KEY_INPUT and EMAIL_FROM_INPUT environment "
-      "variables,")
-print("or add RESEND_API_KEY and EMAIL_FROM to GitHub secrets and "
-      "configure CI to inject them.")
+print("⚠ No manual credentials provided and no CI secret fetch implemented.")
+print("Run with RESEND_API_KEY_INPUT and EMAIL_FROM_INPUT environment variables,")
+print("or add RESEND_API_KEY and EMAIL_FROM to GitHub secrets and configure CI to inject them.")
 sys.exit(1)

@@ -26,18 +26,16 @@ passed = failed = 0
 failed_apps = []
 
 
-def probe(app: str, url: str, method: str, data: str, auth: str,
-          pattern: str) -> None:
+def probe(app: str, url: str, method: str, data: str, auth: str, pattern: str) -> None:
     global passed, failed
     headers = {"Content-Type": "application/json"}
     req = urllib.request.Request(
-        url, data=data.encode() if data else None,
-        headers=headers, method=method)
+        url, data=data.encode() if data else None, headers=headers, method=method
+    )
     if auth:
         import base64
-        req.add_header("Authorization",
-                       "Basic " + base64.b64encode(
-                           auth.encode()).decode())
+
+        req.add_header("Authorization", "Basic " + base64.b64encode(auth.encode()).decode())
     try:
         r = urllib.request.urlopen(req, timeout=15)
         code, body = r.status, r.read().decode(errors="replace")
@@ -49,8 +47,7 @@ def probe(app: str, url: str, method: str, data: str, auth: str,
         print(f"✓ {app} login OK  (HTTP {code})")
         passed += 1
     else:
-        print(f"✗ {app} login FAIL (HTTP {code}, "
-              f"body matched=/{pattern}/=no)")
+        print(f"✗ {app} login FAIL (HTTP {code}, body matched=/{pattern}/=no)")
         print(f"    body: {body[:200]}")
         failed += 1
         failed_apps.append(app)
@@ -59,25 +56,41 @@ def probe(app: str, url: str, method: str, data: str, auth: str,
 print("=== self-hosted admin login probe ===")
 print(f"    user: {ADMIN_EMAIL}\n")
 
-probe("AppFlowy",
-      "https://appflowy.cloudless.gr/gotrue/token?grant_type=password",
-      "POST",
-      json.dumps({"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}),
-      "", '"access_token"')
+probe(
+    "AppFlowy",
+    "https://appflowy.cloudless.gr/gotrue/token?grant_type=password",
+    "POST",
+    json.dumps({"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}),
+    "",
+    '"access_token"',
+)
 
-probe("EspoCRM", "https://espocrm.cloudless.gr/api/v1/App/user",
-      "GET", "", f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}", '"userName"')
+probe(
+    "EspoCRM",
+    "https://espocrm.cloudless.gr/api/v1/App/user",
+    "GET",
+    "",
+    f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
+    '"userName"',
+)
 
-probe("Postiz", "https://postiz.cloudless.gr/api/auth/login",
-      "POST",
-      json.dumps({"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD,
-                  "provider": "LOCAL"}),
-      "", ".*")
+probe(
+    "Postiz",
+    "https://postiz.cloudless.gr/api/auth/login",
+    "POST",
+    json.dumps({"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD, "provider": "LOCAL"}),
+    "",
+    ".*",
+)
 
-probe("n8n", "https://n8n.cloudless.gr/rest/login", "POST",
-      json.dumps({"emailOrLdapLoginId": ADMIN_EMAIL,
-                  "password": ADMIN_PASSWORD}),
-      "", '"id"')
+probe(
+    "n8n",
+    "https://n8n.cloudless.gr/rest/login",
+    "POST",
+    json.dumps({"emailOrLdapLoginId": ADMIN_EMAIL, "password": ADMIN_PASSWORD}),
+    "",
+    '"id"',
+)
 
 print("\n=== summary ===")
 print(f"  passed: {passed}")

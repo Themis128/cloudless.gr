@@ -16,18 +16,19 @@ T = ts_api.TAILNET
 
 print("== GET settings (before) ==")
 s = ts_api.get(f"tailnet/{T}/settings")
-print(json.dumps({k: s.get(k) for k in (
-    "httpsEnabled", "devicesApprovalOn", "devicesAutoUpdatesOn")},
-    indent=2))
+print(
+    json.dumps(
+        {k: s.get(k) for k in ("httpsEnabled", "devicesApprovalOn", "devicesAutoUpdatesOn")},
+        indent=2,
+    )
+)
 
 print("== POST MagicDNS ==")
-_, resp, _ = ts_api.call("POST", f"tailnet/{T}/dns/preferences",
-                         {"magicDNS": True})
+_, resp, _ = ts_api.call("POST", f"tailnet/{T}/dns/preferences", {"magicDNS": True})
 print(json.dumps(resp, indent=2))
 
 print("== PATCH httpsEnabled=true ==")
-code, resp, _ = ts_api.call("PATCH", f"tailnet/{T}/settings",
-                            {"httpsEnabled": True})
+code, resp, _ = ts_api.call("PATCH", f"tailnet/{T}/settings", {"httpsEnabled": True})
 print(f"HTTP {code}")
 print(json.dumps(resp, indent=2) if resp else "(empty body)")
 if code not in (200, 204):

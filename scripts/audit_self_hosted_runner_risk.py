@@ -21,11 +21,13 @@ LINES_OF_INTEREST = re.compile(
     r"  issue_comment|  workflow_run|  repository_dispatch|"
     r"  workflow_dispatch|  schedule|  push|permissions:|"
     r"    permissions:|    runs-on:|      - self-hosted|"
-    r"      uses: actions/checkout|        ref:)")
+    r"      uses: actions/checkout|        ref:)"
+)
 
 RISKY_TRIGGER = re.compile(
     r"pull_request|pull_request_target|issue_comment|"
-    r"workflow_run|repository_dispatch")
+    r"workflow_run|repository_dispatch"
+)
 
 print("=== Self-hosted runner risk audit ===\n")
 
@@ -41,14 +43,10 @@ for f in WORKFLOWS:
         if LINES_OF_INTEREST.match(line):
             print(f"{i}:{line}")
 
-    self_hosted = "runs-on:.*self-hosted" in text or bool(
-        re.search(r"runs-on:.*self-hosted", text))
+    self_hosted = "runs-on:.*self-hosted" in text or bool(re.search(r"runs-on:.*self-hosted", text))
     if self_hosted and RISKY_TRIGGER.search(text):
-        print("RISK: self-hosted workflow has potentially "
-              "risky trigger.")
+        print("RISK: self-hosted workflow has potentially risky trigger.")
     elif self_hosted:
-        print("OK: self-hosted runner used only by trusted "
-              "operational trigger(s).")
+        print("OK: self-hosted runner used only by trusted operational trigger(s).")
     else:
-        print("OK: no self-hosted runner detected in this "
-              "workflow.")
+        print("OK: no self-hosted runner detected in this workflow.")

@@ -8,16 +8,11 @@ IAM role/OIDC."""
 import subprocess
 
 LOG_PATTERNS = [
-    "/aws/lambda/cloudless-production-"
-    "CronAnalyticsRollupHandlerFunction-",
-    "/aws/lambda/cloudless-production-"
-    "CronGscCacheRefreshHandlerFunction-",
-    "/aws/lambda/cloudless-production-"
-    "CronCalendarDigestHandlerFunction-",
-    "/aws/lambda/cloudless-production-"
-    "CronVoiceBriefHandlerFunction-",
-    "/aws/lambda/cloudless-production-"
-    "CronReportCleanupHandlerFunction-",
+    "/aws/lambda/cloudless-production-CronAnalyticsRollupHandlerFunction-",
+    "/aws/lambda/cloudless-production-CronGscCacheRefreshHandlerFunction-",
+    "/aws/lambda/cloudless-production-CronCalendarDigestHandlerFunction-",
+    "/aws/lambda/cloudless-production-CronVoiceBriefHandlerFunction-",
+    "/aws/lambda/cloudless-production-CronReportCleanupHandlerFunction-",
     "/aws/monitoring/cloudless-",
 ]
 
@@ -36,43 +31,56 @@ MONITORING_PARAMS = [
 
 
 def aws(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["aws", *args], capture_output=True,
-                          text=True)
+    return subprocess.run(["aws", *args], capture_output=True, text=True)
 
 
 # 1. CloudWatch log groups
 print("=== Deleting CloudWatch Log Groups (Monitoring) ===")
-r = aws("logs", "describe-log-groups", "--query",
-        "logGroups[].logGroupName", "--output", "text")
+r = aws("logs", "describe-log-groups", "--query", "logGroups[].logGroupName", "--output", "text")
 if r.returncode == 0:
     for lg in r.stdout.split():
         if any(lg.startswith(p) for p in LOG_PATTERNS):
             print(f"Deleting log group: {lg}")
-            aws("logs", "delete-log-group",
-                "--log-group-name", lg)
+            aws("logs", "delete-log-group", "--log-group-name", lg)
 
 # 2. CloudWatch alarms
 print("\n=== Deleting CloudWatch Alarms (Monitoring) ===")
-r = aws("cloudwatch", "describe-alarms",
-        "--alarm-name-prefix", "cloudless", "--query",
-        "MetricAlarms[].AlarmName", "--output", "text")
+r = aws(
+    "cloudwatch",
+    "describe-alarms",
+    "--alarm-name-prefix",
+    "cloudless",
+    "--query",
+    "MetricAlarms[].AlarmName",
+    "--output",
+    "text",
+)
 if r.returncode == 0:
     for alarm in r.stdout.split():
         print(f"Deleting alarm: {alarm}")
-        aws("cloudwatch", "delete-alarms",
-            "--alarm-names", alarm)
+        aws("cloudwatch", "delete-alarms", "--alarm-names", alarm)
 
 # 3. Provisioned concurrency
-print("\n=== Removing Provisioned Concurrency "
-      "(Monitoring Optimization) ===")
-r = aws("lambda", "list-functions", "--query",
-        "Functions[?starts_with(FunctionName, 'cloudless')]"
-        ".FunctionName", "--output", "text")
+print("\n=== Removing Provisioned Concurrency (Monitoring Optimization) ===")
+r = aws(
+    "lambda",
+    "list-functions",
+    "--query",
+    "Functions[?starts_with(FunctionName, 'cloudless')].FunctionName",
+    "--output",
+    "text",
+)
 if r.returncode == 0:
     for func in r.stdout.split():
         print(f"Removing provisioned concurrency for: {func}")
-        aws("lambda", "delete-provisioned-concurrency-config",
-            "--function-name", func, "--qualifier", "1")
+        aws(
+            "lambda",
+            "delete-provisioned-concurrency-config",
+            "--function-name",
+            func,
+            "--qualifier",
+            "1",
+        )
 
 # 4. Monitoring SSM parameters
 print("\n=== Deleting Monitoring SSM Parameters ===")
@@ -83,18 +91,25 @@ for p in MONITORING_PARAMS:
 # Verification
 print("\n=== Verification - Remaining Services ===")
 print("CloudFront distributions:")
-r = aws("cloudfront", "list-distributions", "--query",
-        "DistributionList.Items[?contains(Aliases.Items,"
-        " 'cloudless')].{Id:Id,Status:Status}",
-        "--output", "table")
-print(r.stdout if r.returncode == 0 and r.stdout.strip()
-      else "None found")
+r = aws(
+    "cloudfront",
+    "list-distributions",
+    "--query",
+    "DistributionList.Items[?contains(Aliases.Items, 'cloudless')].{Id:Id,Status:Status}",
+    "--output",
+    "table",
+)
+print(r.stdout if r.returncode == 0 and r.stdout.strip() else "None found")
 
 print("\nRemaining Lambda functions:")
-r = aws("lambda", "list-functions", "--query",
-        "Functions[?starts_with(FunctionName, 'cloudless')]"
-        ".FunctionName", "--output", "table")
-print(r.stdout if r.returncode == 0 and r.stdout.strip()
-      else "None found")
+r = aws(
+    "lambda",
+    "list-functions",
+    "--query",
+    "Functions[?starts_with(FunctionName, 'cloudless')].FunctionName",
+    "--output",
+    "table",
+)
+print(r.stdout if r.returncode == 0 and r.stdout.strip() else "None found")
 
 print("\nDone. Check the migration-completion.md for next steps.")

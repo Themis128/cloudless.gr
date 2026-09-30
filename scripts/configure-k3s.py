@@ -21,15 +21,13 @@ for var in ("ETCD_S3_ACCESS_KEY", "ETCD_S3_SECRET_KEY"):
     if not os.environ.get(var):
         sys.exit(f"{var} must be set")
 
-BUCKET = os.environ.get("ETCD_S3_BUCKET",
-                        "cloudless-etcd-snapshots")
+BUCKET = os.environ.get("ETCD_S3_BUCKET", "cloudless-etcd-snapshots")
 REGION = os.environ.get("ETCD_S3_REGION", "us-east-1")
 FOLDER = os.environ.get("ETCD_S3_FOLDER", "etcd")
 VIP = os.environ.get("TLS_SAN_VIP", "192.168.1.200")
 LAN = os.environ.get("TLS_SAN_LAN", "192.168.1.128")
 TS = os.environ.get("TLS_SAN_TS", "100.74.191.58")
-MAGIC = os.environ.get("TLS_SAN_MAGICDNS",
-                       "github-omv.tail4ecae1.ts.net")
+MAGIC = os.environ.get("TLS_SAN_MAGICDNS", "github-omv.tail4ecae1.ts.net")
 
 if os.geteuid() != 0:
     sys.exit("run as root (sudo)")
@@ -38,8 +36,7 @@ CONFIG = Path("/etc/rancher/k3s/config.yaml")
 CONFIG.parent.mkdir(parents=True, exist_ok=True)
 
 if CONFIG.is_file():
-    bak = CONFIG.with_suffix(
-        f".yaml.bak.{time.strftime('%Y%m%dT%H%M%S')}")
+    bak = CONFIG.with_suffix(f".yaml.bak.{time.strftime('%Y%m%dT%H%M%S')}")
     bak.write_bytes(CONFIG.read_bytes())
     print("[configure-k3s] backed up existing config")
 
@@ -67,8 +64,8 @@ etcd-s3: true
 etcd-s3-bucket: {BUCKET}
 etcd-s3-region: {REGION}
 etcd-s3-folder: {FOLDER}
-etcd-s3-access-key: {os.environ['ETCD_S3_ACCESS_KEY']}
-etcd-s3-secret-key: {os.environ['ETCD_S3_SECRET_KEY']}
+etcd-s3-access-key: {os.environ["ETCD_S3_ACCESS_KEY"]}
+etcd-s3-secret-key: {os.environ["ETCD_S3_SECRET_KEY"]}
 etcd-s3-insecure: false
 
 etcd-arg:
@@ -91,5 +88,4 @@ kubelet-arg:
 """)
 CONFIG.chmod(0o600)
 print(f"[configure-k3s] wrote {CONFIG} (mode 600)")
-print("[configure-k3s] restart k3s to apply: sudo systemctl "
-      "restart k3s")
+print("[configure-k3s] restart k3s to apply: sudo systemctl restart k3s")

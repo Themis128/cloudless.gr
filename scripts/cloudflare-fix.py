@@ -36,13 +36,12 @@ Your API token needs these permissions:
   - Zone → Zone → Read""")
     sys.exit(1)
 
-ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID",
-                            "fb7dc7b69b662480cd5961a4d1913c78")
+ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "fb7dc7b69b662480cd5961a4d1913c78")
 
 if not os.environ.get("SKIP_MCP_CHECK"):
-    mcp_bin = Path(os.environ.get(
-        "MCP_BIN_PATH",
-        "/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js"))
+    mcp_bin = Path(
+        os.environ.get("MCP_BIN_PATH", "/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js")
+    )
     if mcp_bin.is_file():
         print(f"✅ MCP server binary exists at {mcp_bin}")
     else:
@@ -52,11 +51,10 @@ if not os.environ.get("SKIP_MCP_CHECK"):
 
 def api(path: str) -> dict:
     req = urllib.request.Request(
-        f"https://api.cloudflare.com/client/v4/{path}",
-        headers={"Authorization": f"Bearer {token}"})
+        f"https://api.cloudflare.com/client/v4/{path}", headers={"Authorization": f"Bearer {token}"}
+    )
     try:
-        return json.loads(
-            urllib.request.urlopen(req, timeout=10).read())
+        return json.loads(urllib.request.urlopen(req, timeout=10).read())
     except urllib.error.HTTPError as e:
         try:
             return json.loads(e.read())
@@ -71,17 +69,14 @@ verify = api("user/tokens/verify")
 if '"status":"active"' in json.dumps(verify):
     print("✅ Cloudflare API token is valid")
 else:
-    print(f"❌ Cloudflare API token is invalid: "
-          f"{json.dumps(verify)}")
+    print(f"❌ Cloudflare API token is invalid: {json.dumps(verify)}")
     sys.exit(1)
 
 print("\n📋 Checking Cloudflare Pages projects...")
 pages = api(f"accounts/{ACCOUNT_ID}/pages/projects")
 if pages.get("errors"):
-    print(f"⚠️  Cannot access Pages API "
-          f"({pages['errors'][0].get('message', 'unknown error')})")
-    print("   (Add 'Account → Cloudflare Pages → Edit' permission to "
-          "token if needed)")
+    print(f"⚠️  Cannot access Pages API ({pages['errors'][0].get('message', 'unknown error')})")
+    print("   (Add 'Account → Cloudflare Pages → Edit' permission to token if needed)")
 elif isinstance(pages.get("result"), list):
     if pages["result"]:
         print(f"Pages projects found ({len(pages['result'])}):")

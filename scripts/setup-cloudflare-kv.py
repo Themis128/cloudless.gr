@@ -8,8 +8,7 @@ import subprocess
 
 
 def create_ns(name: str, preview: bool) -> str:
-    args = ["npx", "wrangler", "kv", "namespace", "create", name,
-            "--config", "wrangler.jsonc"]
+    args = ["npx", "wrangler", "kv", "namespace", "create", name, "--config", "wrangler.jsonc"]
     if preview:
         args.append("--preview")
     else:
@@ -46,11 +45,11 @@ Update wrangler.jsonc with these IDs:
   "kv_namespaces": [
     {{
       "binding": "TAG_CACHE",
-      "id": "{tag or 'TAG_CACHE_ID_HERE'}"
+      "id": "{tag or "TAG_CACHE_ID_HERE"}"
     }},
     {{
       "binding": "REVALIDATION_QUEUE",
-      "id": "{reval or 'REVALIDATION_QUEUE_ID_HERE'}"
+      "id": "{reval or "REVALIDATION_QUEUE_ID_HERE"}"
     }}
   ],
   "env": {{
@@ -58,11 +57,11 @@ Update wrangler.jsonc with these IDs:
       "kv_namespaces": [
         {{
           "binding": "TAG_CACHE",
-          "id": "{tag_prev or 'TAG_CACHE_PREVIEW_ID_HERE'}"
+          "id": "{tag_prev or "TAG_CACHE_PREVIEW_ID_HERE"}"
         }},
         {{
           "binding": "REVALIDATION_QUEUE",
-          "id": "{reval_prev or 'REVALIDATION_QUEUE_PREVIEW_ID_HERE'}"
+          "id": "{reval_prev or "REVALIDATION_QUEUE_PREVIEW_ID_HERE"}"
         }}
       ]
     }}

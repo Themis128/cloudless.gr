@@ -28,9 +28,18 @@ from pathlib import Path
 
 SSH_TARGET = os.environ.get("SSH_TARGET", "tbaltzakis@100.74.191.58")
 KEY = os.environ.get("SSH_KEY", str(Path.home() / ".ssh/id_rsa"))
-SSH = ["ssh", "-o", "StrictHostKeyChecking=no",
-       "-o", "UserKnownHostsFile=/dev/null", "-o", "ConnectTimeout=10",
-       "-i", KEY, SSH_TARGET]
+SSH = [
+    "ssh",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "-o",
+    "UserKnownHostsFile=/dev/null",
+    "-o",
+    "ConnectTimeout=10",
+    "-i",
+    KEY,
+    SSH_TARGET,
+]
 BASE = "/home/tbaltzakis"
 RELEASES = f"{BASE}/cloudless-releases"
 CURRENT = f"{BASE}/cloudless-standalone"
@@ -39,7 +48,8 @@ DEPLOY = "cloudless-app"
 SITE = os.environ.get("SITE", "https://cloudless.gr")
 
 
-def log(m): print(f"\033[1m[rollback]\033[0m {m}")
+def log(m):
+    print(f"\033[1m[rollback]\033[0m {m}")
 
 
 def die(m):
@@ -55,9 +65,7 @@ def remote(cmd: str, check: bool = False) -> str:
 
 
 def current_sha() -> str:
-    return remote(
-        f"readlink '{CURRENT}' 2>/dev/null | "
-        "sed 's|^cloudless-releases/||'")
+    return remote(f"readlink '{CURRENT}' 2>/dev/null | sed 's|^cloudless-releases/||'")
 
 
 def list_releases() -> list[str]:
@@ -66,8 +74,9 @@ def list_releases() -> list[str]:
 
 def live_version() -> str:
     try:
-        return json.loads(urllib.request.urlopen(
-            f"{SITE}/api/health", timeout=15).read()).get("version", "")
+        return json.loads(urllib.request.urlopen(f"{SITE}/api/health", timeout=15).read()).get(
+            "version", ""
+        )
     except Exception:
         return ""
 
@@ -94,24 +103,26 @@ def do_list() -> None:
 def flip_to(target: str) -> None:
     if not target:
         die("no target release given")
-    r = subprocess.run([*SSH, f"test -d '{RELEASES}/{target}'"],
-                       capture_output=True)
+    r = subprocess.run([*SSH, f"test -d '{RELEASES}/{target}'"], capture_output=True)
     if r.returncode:
-        die(f"release '{target}' does not exist on omv (list with "
-            "'scripts/rollback.py list')")
+        die(f"release '{target}' does not exist on omv (list with 'scripts/rollback.py list')")
     cur = current_sha()
     if cur == target:
         log(f"already on {target} — nothing to do")
         return
     log(f"flipping symlink: {cur} → {target}")
-    remote(f"sudo ln -sfn 'cloudless-releases/{target}' '{CURRENT}' "
-           "&& sudo chown -h tbaltzakis:users "
-           f"'{CURRENT}'", check=True)
+    remote(
+        f"sudo ln -sfn 'cloudless-releases/{target}' '{CURRENT}' "
+        "&& sudo chown -h tbaltzakis:users "
+        f"'{CURRENT}'",
+        check=True,
+    )
     log(f"restarting deploy/{DEPLOY} in ns {NS}…")
     out = remote(
         f"sudo k3s kubectl -n '{NS}' rollout restart deploy/{DEPLOY} "
         ">/dev/null && sudo k3s kubectl -n "
-        f"'{NS}' rollout status deploy/{DEPLOY} --timeout=180s")
+        f"'{NS}' rollout status deploy/{DEPLOY} --timeout=180s"
+    )
     if out:
         print(out.splitlines()[-1])
 
@@ -121,8 +132,10 @@ def flip_to(target: str) -> None:
             log(f"✅ live version now: {got}")
             return
         time.sleep(4)
-    die(f"rollout completed but /api/health didn't report the "
-        f"expected version ({target}). Investigate.")
+    die(
+        f"rollout completed but /api/health didn't report the "
+        f"expected version ({target}). Investigate."
+    )
 
 
 arg = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -139,9 +152,7 @@ elif arg == "previous":
         die(f"no previous release available (only '{cur}' exists)")
     flip_to(prev)
 else:
-    target = next((r for r in list_releases() if r.startswith(arg)),
-                  "")
+    target = next((r for r in list_releases() if r.startswith(arg)), "")
     if not target:
-        die(f"no release matching prefix '{arg}' (list with "
-            "'scripts/rollback.py list')")
+        die(f"no release matching prefix '{arg}' (list with 'scripts/rollback.py list')")
     flip_to(target)

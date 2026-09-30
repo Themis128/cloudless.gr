@@ -27,15 +27,13 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from cf_secrets import (cf_config_set, cf_secret_set,  # noqa: E402
-                        cf_verify_auth)
+from cf_secrets import cf_config_set, cf_secret_set, cf_verify_auth  # noqa: E402
 
 if cf_verify_auth():
     sys.exit(1)
 
 if not sys.stdin.isatty():
-    print("ERROR: stdin is not a tty — this script expects interactive "
-          "paste.", file=sys.stderr)
+    print("ERROR: stdin is not a tty — this script expects interactive paste.", file=sys.stderr)
     sys.exit(1)
 
 access = getpass.getpass("Paste Slack ACCESS token (xoxe.xoxp-...): ")
@@ -45,17 +43,17 @@ if not access or not refresh:
     print("ERROR: both tokens are required.", file=sys.stderr)
     sys.exit(1)
 if not access.startswith("xoxe.xoxp-"):
-    print("WARN: access token prefix is not xoxe.xoxp- — continuing "
-          "anyway.", file=sys.stderr)
+    print("WARN: access token prefix is not xoxe.xoxp- — continuing anyway.", file=sys.stderr)
 if not refresh.startswith("xoxe-"):
-    print("WARN: refresh token prefix is not xoxe- — continuing anyway.",
-          file=sys.stderr)
+    print("WARN: refresh token prefix is not xoxe- — continuing anyway.", file=sys.stderr)
 
-print("Verifying access token against Slack auth.test ... ", end="",
-      flush=True)
+print("Verifying access token against Slack auth.test ... ", end="", flush=True)
 req = urllib.request.Request(
-    "https://slack.com/api/auth.test", data=b"",
-    headers={"Authorization": f"Bearer {access}"}, method="POST")
+    "https://slack.com/api/auth.test",
+    data=b"",
+    headers={"Authorization": f"Bearer {access}"},
+    method="POST",
+)
 try:
     with urllib.request.urlopen(req, timeout=15) as r:
         probe = json.loads(r.read())
@@ -67,11 +65,12 @@ if not probe.get("ok"):
     sys.exit(1)
 print(f"ok (team: {probe.get('team', '')})")
 
-for name, value in (("SLACK_APP_CONFIG_REFRESH_TOKEN", refresh),
-                    ("SLACK_APP_CONFIG_TOKEN", access)):
+for name, value in (
+    ("SLACK_APP_CONFIG_REFRESH_TOKEN", refresh),
+    ("SLACK_APP_CONFIG_TOKEN", access),
+):
     print(f"Writing {name}... ", end="", flush=True)
-    print("Wrangler ok " if cf_secret_set(name, value) == 0
-          else "Wrangler failed ", end="")
+    print("Wrangler ok " if cf_secret_set(name, value) == 0 else "Wrangler failed ", end="")
     print("D1 ok" if cf_config_set(name, value) else "D1 failed")
 
 print("""

@@ -10,23 +10,32 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 AGENTS = ROOT / "agents"
 TOOLS = AGENTS / "tools"
 MEMORY_DIR = ROOT / ".agent-memory/memories"
 ENV = ROOT / ".env.local"
 GITIGNORE = ROOT / ".gitignore"
 
-MODEL = os.environ.get(
-    "LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ")
+MODEL = os.environ.get("LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ")
 BASE_URL_DEFAULT = "http://127.0.0.1:8001/v1"
 
 
-def info(m): print(f"ℹ️  {m}")
-def ok(m): print(f"✅ {m}")
-def warn(m): print(f"⚠️  {m}")
-def fail(m): print(f"❌ {m}"); sys.exit(1)
+def info(m):
+    print(f"ℹ️  {m}")
+
+
+def ok(m):
+    print(f"✅ {m}")
+
+
+def warn(m):
+    print(f"⚠️  {m}")
+
+
+def fail(m):
+    print(f"❌ {m}")
+    sys.exit(1)
 
 
 def backup(p: Path):
@@ -45,17 +54,26 @@ os.chdir(ROOT)
 venv = ROOT / ".venv"
 if not venv.is_dir():
     info("Creating .venv...")
-    subprocess.run([sys.executable, "-m", "venv", ".venv"],
-                   check=True)
+    subprocess.run([sys.executable, "-m", "venv", ".venv"], check=True)
 py = str(venv / "bin/python")
 info("Installing/verifying Python dependencies...")
-subprocess.run([py, "-m", "pip", "install", "--upgrade",
-                "pip", "setuptools", "wheel"],
-               capture_output=True)
-subprocess.run([py, "-m", "pip", "install", "--upgrade",
-                "deepagents", "tavily-python",
-                "langchain-openai", "python-dotenv"],
-               capture_output=True)
+subprocess.run(
+    [py, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"], capture_output=True
+)
+subprocess.run(
+    [
+        py,
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "deepagents",
+        "tavily-python",
+        "langchain-openai",
+        "python-dotenv",
+    ],
+    capture_output=True,
+)
 ok("Python dependencies installed/verified.")
 
 # 2. folders
@@ -97,8 +115,7 @@ else:
 # 4. gitignore rules
 GITIGNORE.touch(exist_ok=True)
 gi = GITIGNORE.read_text(errors="replace").splitlines()
-for rule in (".agent-memory/", ".env.local",
-             ".env.local.bak-*"):
+for rule in (".agent-memory/", ".env.local", ".env.local.bak-*"):
     if rule not in gi:
         gi.append(rule)
 GITIGNORE.write_text("\n".join(gi) + "\n")
@@ -224,7 +241,7 @@ ok(f"Wrote agent: {agent_f}")
 # 7. deterministic runner
 runner = AGENTS / "run_cloudless_agent.py"
 backup(runner)
-runner.write_text('''import sys
+runner.write_text("""import sys
 
 from dotenv import load_dotenv
 
@@ -287,13 +304,13 @@ else:
         url = item.get("url") or "No URL"
         print(f"{i}. {title}")
         print(f"   {url}")
-''')
+""")
 ok(f"Wrote runner: {runner}")
 
 # 8. memory test
 test = AGENTS / "test_memory.py"
 backup(test)
-test.write_text('''from dotenv import load_dotenv
+test.write_text("""from dotenv import load_dotenv
 
 from agents.cloudless_research_agent import agent
 
@@ -331,7 +348,7 @@ result2 = agent.invoke(
 )
 
 print(result2["messages"][-1].content)
-''')
+""")
 ok(f"Wrote memory test: {test}")
 
 # 9. env defaults
@@ -344,10 +361,8 @@ if "OPENAI_BASE_URL=" not in env_text:
 if "LOCAL_MODEL_NAME=" not in env_text:
     env_text += f"LOCAL_MODEL_NAME={MODEL}\n"
 if "TAVILY_API_KEY=" not in env_text:
-    env_text += ("# Add your rotated Tavily key below. "
-                 "Do not commit this file.\nTAVILY_API_KEY=\n")
-    warn("TAVILY_API_KEY placeholder added to .env.local. "
-         "Fill it with your rotated key.")
+    env_text += "# Add your rotated Tavily key below. Do not commit this file.\nTAVILY_API_KEY=\n"
+    warn("TAVILY_API_KEY placeholder added to .env.local. Fill it with your rotated key.")
 else:
     ok("TAVILY_API_KEY entry already exists in .env.local.")
 ENV.write_text(env_text)
@@ -357,8 +372,7 @@ print()
 ok("Deep Agents memory setup complete.\n")
 print("Next steps:")
 print("1. Make sure vLLM is running in another terminal:")
-print("   cd ~/code/hugging-face && "
-      "./start_qwen_clean_server.sh\n")
+print("   cd ~/code/hugging-face && ./start_qwen_clean_server.sh\n")
 print("2. Verify local model server:")
 print("   curl http://127.0.0.1:8001/v1/models\n")
 print("3. Add/rotate Tavily key in:")
@@ -366,14 +380,17 @@ print(f"   {ENV}\n")
 print("4. Run the research agent:")
 print(f"   cd {ROOT}")
 print("   source .venv/bin/activate")
-print('   PYTHONPATH=. python agents/run_cloudless_agent.py '
-      '"What is LangGraph?"\n')
+print('   PYTHONPATH=. python agents/run_cloudless_agent.py "What is LangGraph?"\n')
 print("5. Test memory:")
 print("   PYTHONPATH=. python agents/test_memory.py\n")
 
 env = dict(os.environ, PYTHONPATH=".")
 subprocess.run(
-    [py, "-c",
-     "from agents.cloudless_research_agent import agent;"
-     "print('Agent import check: OK', bool(agent))"],
-    env=env)
+    [
+        py,
+        "-c",
+        "from agents.cloudless_research_agent import agent;"
+        "print('Agent import check: OK', bool(agent))",
+    ],
+    env=env,
+)

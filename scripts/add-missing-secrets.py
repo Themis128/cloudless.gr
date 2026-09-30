@@ -6,18 +6,16 @@ manual steps for CLOUDFLARE_API_TOKEN / CF_ACCOUNT_ID."""
 import subprocess
 import sys
 
-CRON_SECRET = ("3a0761c6c112e74b0e9a9692f864eb071d3fe6638f"
-               "b3e042a348d0d5ccd429c4")
+CRON_SECRET = "3a0761c6c112e74b0e9a9692f864eb071d3fe6638fb3e042a348d0d5ccd429c4"
 
-print("🔐 Adding missing GitHub secrets for SST Cloudflare "
-      "Infrastructure deployment")
+print("🔐 Adding missing GitHub secrets for SST Cloudflare Infrastructure deployment")
 print("=" * 72)
 
-if subprocess.call(["gh", "auth", "status"],
-                   stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL) != 0:
-    sys.exit("❌ GitHub CLI not authenticated. Please run: "
-             "gh auth login")
+if (
+    subprocess.call(["gh", "auth", "status"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    != 0
+):
+    sys.exit("❌ GitHub CLI not authenticated. Please run: gh auth login")
 
 print("""
 📋 Required Secrets to Add:
@@ -29,9 +27,20 @@ print("""
 
 print("🔍 Checking which secrets are missing...")
 r = subprocess.run(
-    ["gh", "secret", "list", "--repo",
-     "Themis128/cloudless.gr", "--json", "name",
-     "-t", ".[].name"], capture_output=True, text=True)
+    [
+        "gh",
+        "secret",
+        "list",
+        "--repo",
+        "Themis128/cloudless.gr",
+        "--json",
+        "name",
+        "-t",
+        ".[].name",
+    ],
+    capture_output=True,
+    text=True,
+)
 existing = set(r.stdout.split())
 
 
@@ -41,12 +50,12 @@ def check_and_add(name: str, value: str) -> None:
     elif value:
         print(f"🔐 Adding {name}...")
         subprocess.run(
-            ["gh", "secret", "set", name, "--repo",
-             "Themis128/cloudless.gr"],
-            input=value, text=True)
+            ["gh", "secret", "set", name, "--repo", "Themis128/cloudless.gr"],
+            input=value,
+            text=True,
+        )
     else:
-        print(f"⚠️  {name} needs to be added manually "
-              "(no value provided)")
+        print(f"⚠️  {name} needs to be added manually (no value provided)")
 
 
 check_and_add("CRON_SECRET", CRON_SECRET)

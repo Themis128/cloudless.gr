@@ -37,8 +37,7 @@ def log(*args) -> None:
     print(f"[decommission:{DOMAIN}]", *args)
 
 
-log(f"mode={MODE} confirm={CONFIRM} (apply deletes only when "
-    "MODE=apply + CONFIRM=1)")
+log(f"mode={MODE} confirm={CONFIRM} (apply deletes only when MODE=apply + CONFIRM=1)")
 
 have_aws = shutil.which("aws") is not None
 if not have_aws:
@@ -47,42 +46,39 @@ if not have_aws:
 # --- 1) Route 53 health checks scoped to this domain ---
 r53_found = r53_deleted = 0
 if have_aws:
-    r = subprocess.run(["aws", "route53", "list-health-checks",
-                        "--output", "json"],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        ["aws", "route53", "list-health-checks", "--output", "json"], capture_output=True, text=True
+    )
     if not r.stdout.strip():
-        log(f"Route 53: list-health-checks returned nothing — "
-            f"{r.stderr.strip()}")
+        log(f"Route 53: list-health-checks returned nothing — {r.stderr.strip()}")
     else:
         checks = json.loads(r.stdout).get("HealthChecks", [])
         matched = []
         for hc in checks:
-            fqdn = (hc.get("HealthCheckConfig", {})
-                    .get("FullyQualifiedDomainName", "").lower())
+            fqdn = hc.get("HealthCheckConfig", {}).get("FullyQualifiedDomainName", "").lower()
             if fqdn == DOMAIN or fqdn.endswith("." + DOMAIN):
-                matched.append((hc["Id"], fqdn,
-                                hc["HealthCheckConfig"].get("Type")))
-        for hid, fqdn, htype in matched:
+                matched.append((hc["Id"], fqdn, hc["HealthCheckConfig"].get("Type")))
+        for hid, fqdn, _htype in matched:
             r53_found += 1
             if hid in PROTECTED_HEALTH_CHECKS:
-                log(f"Route 53: PROTECTED health check {hid} "
-                    f"({fqdn}) — skipping (cloudless.gr failover)")
+                log(
+                    f"Route 53: PROTECTED health check {hid} "
+                    f"({fqdn}) — skipping (cloudless.gr failover)"
+                )
                 continue
             if is_apply():
                 r = subprocess.run(
-                    ["aws", "route53", "delete-health-check",
-                     "--health-check-id", hid],
-                    capture_output=True, text=True)
+                    ["aws", "route53", "delete-health-check", "--health-check-id", hid],
+                    capture_output=True,
+                    text=True,
+                )
                 if r.returncode == 0:
-                    log(f"Route 53: DELETED health check {hid} "
-                        f"({fqdn})")
+                    log(f"Route 53: DELETED health check {hid} ({fqdn})")
                     r53_deleted += 1
                 else:
-                    log(f"Route 53: delete {hid} FAILED — "
-                        f"{r.stderr.strip()}")
+                    log(f"Route 53: delete {hid} FAILED — {r.stderr.strip()}")
             else:
-                log(f"Route 53: would delete health check {hid} "
-                    f"({fqdn}) [report-only]")
+                log(f"Route 53: would delete health check {hid} ({fqdn}) [report-only]")
         if not r53_found:
             log(f"Route 53: no health checks scoped to {DOMAIN}")
 
@@ -91,39 +87,50 @@ cf_found = cf_deleted = 0
 cf_token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 if not cf_token and have_aws:
     r = subprocess.run(
-        ["aws", "ssm", "get-parameter", "--name",
-         "/cloudless/production/CLOUDFLARE_API_TOKEN",
-         "--with-decryption", "--query", "Parameter.Value",
-         "--output", "text"], capture_output=True, text=True)
+        [
+            "aws",
+            "ssm",
+            "get-parameter",
+            "--name",
+            "/cloudless/production/CLOUDFLARE_API_TOKEN",
+            "--with-decryption",
+            "--query",
+            "Parameter.Value",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     if r.returncode == 0:
         cf_token = r.stdout.strip()
 
 if not cf_token:
-    log("Cloudflare: no CLOUDFLARE_API_TOKEN (env or SSM) — skipping "
-        "DNS-record cleanup.")
-    log("Cloudflare: set /cloudless/production/CLOUDFLARE_API_TOKEN "
-        "(Zone:DNS:Edit, Zone:Read) to enable.")
+    log("Cloudflare: no CLOUDFLARE_API_TOKEN (env or SSM) — skipping DNS-record cleanup.")
+    log(
+        "Cloudflare: set /cloudless/production/CLOUDFLARE_API_TOKEN "
+        "(Zone:DNS:Edit, Zone:Read) to enable."
+    )
 else:
+
     def cf(method: str, path: str) -> dict:
         req = urllib.request.Request(
             f"https://api.cloudflare.com/client/v4{path}",
             method=method,
-            headers={"Authorization": f"Bearer {cf_token}"})
+            headers={"Authorization": f"Bearer {cf_token}"},
+        )
         try:
-            return json.loads(urllib.request.urlopen(
-                req, timeout=15).read())
+            return json.loads(urllib.request.urlopen(req, timeout=15).read())
         except Exception:
             return {"success": False}
 
     zones = cf("GET", f"/zones?name={DOMAIN}").get("result") or []
     if not zones:
-        log(f"Cloudflare: no zone found for {DOMAIN} (already "
-            "removed, or token lacks Zone:Read).")
+        log(f"Cloudflare: no zone found for {DOMAIN} (already removed, or token lacks Zone:Read).")
     else:
         zone_id = zones[0]["id"]
         log(f"Cloudflare: zone {DOMAIN} = {zone_id}")
-        recs = cf("GET", f"/zones/{zone_id}/dns_records"
-                         "?per_page=100").get("result") or []
+        recs = cf("GET", f"/zones/{zone_id}/dns_records?per_page=100").get("result") or []
         for rec in recs:
             cf_found += 1
             rid, rtype, rname = rec["id"], rec["type"], rec["name"]
@@ -135,8 +142,7 @@ else:
                 else:
                     log(f"Cloudflare: delete {rtype} {rname} FAILED")
             else:
-                log(f"Cloudflare: would delete {rtype} {rname} "
-                    f"({rid}) [report-only]")
+                log(f"Cloudflare: would delete {rtype} {rname} ({rid}) [report-only]")
         if not cf_found:
             log(f"Cloudflare: zone {DOMAIN} has no DNS records")
 
@@ -145,9 +151,12 @@ log(f"──────── summary for {DOMAIN} ────────")
 log(f"Route 53 health checks: found={r53_found} deleted={r53_deleted}")
 log(f"Cloudflare DNS records: found={cf_found} deleted={cf_deleted}")
 if not is_apply():
-    log("REPORT-ONLY. Re-run with MODE=apply CONFIRM=1 (or the "
-        "workflow's apply=true input) to delete.")
-log(f"NOTE: in-cluster monitors that probe {DOMAIN} (omv-ha "
-    "k8s/health-monitor.yaml, OMV")
-log("      uptime-kuma) live in other repos — clean them there; this "
-    "tool only handles R53 + Cloudflare.")
+    log(
+        "REPORT-ONLY. Re-run with MODE=apply CONFIRM=1 (or the "
+        "workflow's apply=true input) to delete."
+    )
+log(f"NOTE: in-cluster monitors that probe {DOMAIN} (omv-ha k8s/health-monitor.yaml, OMV")
+log(
+    "      uptime-kuma) live in other repos — clean them there; this "
+    "tool only handles R53 + Cloudflare."
+)

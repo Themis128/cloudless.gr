@@ -25,43 +25,45 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from cf_secrets import (cf_config_set, cf_secret_set,  # noqa: E402
-                        cf_verify_auth)
+from cf_secrets import cf_config_set, cf_secret_set, cf_verify_auth  # noqa: E402
 
 if not shutil.which("gh"):
     print("ERROR: gh CLI not found.", file=sys.stderr)
     sys.exit(1)
 if subprocess.run(["gh", "auth", "status"], capture_output=True).returncode:
-    print("ERROR: gh CLI not authenticated. Run 'gh auth login' first.",
-          file=sys.stderr)
+    print("ERROR: gh CLI not authenticated. Run 'gh auth login' first.", file=sys.stderr)
     sys.exit(1)
 
 if not sys.stdin.isatty():
-    print("ERROR: stdin is not a tty — this script expects interactive "
-          "paste.", file=sys.stderr)
+    print("ERROR: stdin is not a tty — this script expects interactive paste.", file=sys.stderr)
     sys.exit(1)
-url = getpass.getpass("Paste the new Webhook URL "
-                      "(https://hooks.slack.com/services/...): ").strip()
+url = getpass.getpass("Paste the new Webhook URL (https://hooks.slack.com/services/...): ").strip()
 
 if url.startswith("https://hooks.slack.com/services/T09AF5VTK4G/"):
     pass
 elif url.startswith("https://hooks.slack.com/services/"):
-    print("WARN: webhook is on a different workspace (expected "
-          "T09AF5VTK4G prefix). Continuing anyway.", file=sys.stderr)
+    print(
+        "WARN: webhook is on a different workspace (expected "
+        "T09AF5VTK4G prefix). Continuing anyway.",
+        file=sys.stderr,
+    )
 else:
-    print("ERROR: doesn't look like a Slack webhook URL.",
-          file=sys.stderr)
+    print("ERROR: doesn't look like a Slack webhook URL.", file=sys.stderr)
     sys.exit(1)
 
 # Test it BEFORE storing
-print("Posting test message to verify webhook is live ... ", end="",
-      flush=True)
+print("Posting test message to verify webhook is live ... ", end="", flush=True)
 req = urllib.request.Request(
     url,
-    data=json.dumps({
-        "text": ":hammer_and_wrench: cloudless newsletter pipeline — "
-                "webhook restore probe (delete me if you like)"}).encode(),
-    headers={"Content-Type": "application/json"}, method="POST")
+    data=json.dumps(
+        {
+            "text": ":hammer_and_wrench: cloudless newsletter pipeline — "
+            "webhook restore probe (delete me if you like)"
+        }
+    ).encode(),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
 try:
     body = urllib.request.urlopen(req, timeout=15).read().decode()
     ok = "ok" in body
@@ -83,13 +85,10 @@ print("Writing SLACK_WEBHOOK_URL to D1... ", end="", flush=True)
 print("D1 ok" if cf_config_set("SLACK_WEBHOOK_URL", url) else "D1 failed")
 
 print("Writing SLACK_WEBHOOK_URL to Wrangler... ", end="", flush=True)
-print("Wrangler ok" if cf_secret_set("SLACK_WEBHOOK_URL", url) == 0
-      else "Wrangler failed")
+print("Wrangler ok" if cf_secret_set("SLACK_WEBHOOK_URL", url) == 0 else "Wrangler failed")
 
-print("Setting GH Actions repo secret SLACK_WEBHOOK_URL ... ",
-      end="", flush=True)
-r = subprocess.run(["gh", "secret", "set", "SLACK_WEBHOOK_URL",
-                    "--body", url], capture_output=True)
+print("Setting GH Actions repo secret SLACK_WEBHOOK_URL ... ", end="", flush=True)
+r = subprocess.run(["gh", "secret", "set", "SLACK_WEBHOOK_URL", "--body", url], capture_output=True)
 print("ok" if r.returncode == 0 else "FAILED")
 
 print("""

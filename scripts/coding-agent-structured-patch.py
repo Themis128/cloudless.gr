@@ -17,9 +17,7 @@ from pathlib import Path
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
 os.chdir(PROJECT_DIR)
 
-BASE_URL = (sys.argv[1] if len(sys.argv) > 1
-            else "https://cloudless-gr."
-                 "baltzakis-themis.workers.dev")
+BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://cloudless-gr.baltzakis-themis.workers.dev"
 MAX_FILE_CHARS = int(os.environ.get("MAX_FILE_CHARS", "12000"))
 
 token = ""
@@ -50,8 +48,7 @@ for rel in FILES:
     text = path.read_text(errors="replace")
     if len(text) > MAX_FILE_CHARS:
         text = text[:MAX_FILE_CHARS] + "\n\n[TRUNCATED]\n"
-    sections.append(f"## FILE: {rel}\n--- BEGIN FILE ---\n"
-                    f"{text}\n--- END FILE ---\n")
+    sections.append(f"## FILE: {rel}\n--- BEGIN FILE ---\n{text}\n--- END FILE ---\n")
 
 prompt = f"""
 Repository context:
@@ -84,14 +81,13 @@ Hard rules:
 body = json.dumps({"prompt": prompt, "model": "deep"}).encode()
 print(f"==> Payload size:\n{len(body)} bytes")
 
-print("\n==> Sending structured patch request to "
-      "CodingAgent...")
+print("\n==> Sending structured patch request to CodingAgent...")
 req = urllib.request.Request(
-    f"{BASE_URL}/api/agents/coding-agent/default/"
-    "structured-patch",
-    data=body, method="POST",
-    headers={"Authorization": f"Bearer {token}",
-             "Content-Type": "application/json"})
+    f"{BASE_URL}/api/agents/coding-agent/default/structured-patch",
+    data=body,
+    method="POST",
+    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+)
 try:
     r = urllib.request.urlopen(req, timeout=120)
     print(f"HTTP {r.status}")

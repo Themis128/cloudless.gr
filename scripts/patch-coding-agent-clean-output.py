@@ -13,14 +13,11 @@ from pathlib import Path
 os.chdir("/home/tbaltzakis/cloudless.gr")
 
 p = Path("src/agents/coding.ts")
-shutil.copy(
-    p,
-    f"{p}.bak-clean-output-"
-    f"{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(p, f"{p}.bak-clean-output-{time.strftime('%Y%m%d-%H%M%S')}")
 
 text = p.read_text()
 
-old = '''function extractText(result: unknown): string {
+old = """function extractText(result: unknown): string {
   if (typeof result === "string") {
     return result;
   }
@@ -42,9 +39,9 @@ old = '''function extractText(result: unknown): string {
   }
 
   return JSON.stringify(result, null, 2);
-}'''
+}"""
 
-new = '''function cleanModelText(text: string): string {
+new = """function cleanModelText(text: string): string {
   const thinkEnd = text.lastIndexOf("</think>");
 
   if (thinkEnd >= 0) {
@@ -76,20 +73,20 @@ function extractText(result: unknown): string {
   }
 
   return cleanModelText(text);
-}'''
+}"""
 
 if old not in text:
-    sys.exit("Could not find extractText block. Inspect "
-             "src/agents/coding.ts manually.")
+    sys.exit("Could not find extractText block. Inspect src/agents/coding.ts manually.")
 
 text = text.replace(old, new)
 
-old_line = ('      "Return concise structured output with '
-            'these sections:",')
-new_line = ('      "Do not include <think>, hidden reasoning, '
-            'chain-of-thought, or internal analysis.",\n'
-            '      "Return concise structured output with '
-            'these sections:",')
+old_line = '      "Return concise structured output with these sections:",'
+new_line = (
+    '      "Do not include <think>, hidden reasoning, '
+    'chain-of-thought, or internal analysis.",\n'
+    '      "Return concise structured output with '
+    'these sections:",'
+)
 if old_line in text and new_line.splitlines()[0] not in text:
     text = text.replace(old_line, new_line)
 

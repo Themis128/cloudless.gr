@@ -19,7 +19,6 @@ exhausted; 2 = preconditions failed.
 
 Requires: gh, aws."""
 
-import json
 import os
 import re
 import shutil
@@ -39,8 +38,7 @@ slug, locale = "shop-online", "el"
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
-    if arg in ("--run-id", "--target-sha", "--interval",
-               "--max-tries", "--slug", "--locale"):
+    if arg in ("--run-id", "--target-sha", "--interval", "--max-tries", "--slug", "--locale"):
         val = sys.argv[i + 1]
         if arg == "--run-id":
             run_id = val
@@ -69,59 +67,90 @@ for tool in ("gh", "aws"):
 
 if not run_id:
     r = subprocess.run(
-        ["gh", "run", "list", "--repo", REPO, "--workflow",
-         "deploy-pi.yml", "--limit", "1", "--json", "databaseId",
-         "--jq", ".[0].databaseId"], capture_output=True, text=True)
+        [
+            "gh",
+            "run",
+            "list",
+            "--repo",
+            REPO,
+            "--workflow",
+            "deploy-pi.yml",
+            "--limit",
+            "1",
+            "--json",
+            "databaseId",
+            "--jq",
+            ".[0].databaseId",
+        ],
+        capture_output=True,
+        text=True,
+    )
     run_id = r.stdout.strip()
     if not run_id or run_id == "null":
-        print("could not resolve latest deploy-pi.yml run; pass "
-              "--run-id explicitly", file=sys.stderr)
+        print(
+            "could not resolve latest deploy-pi.yml run; pass --run-id explicitly", file=sys.stderr
+        )
         sys.exit(2)
 
 if not target_sha:
-    r = subprocess.run(["git", "rev-parse", "HEAD"],
-                       capture_output=True, text=True)
+    r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
     target_sha = r.stdout.strip()[:12]
     if not target_sha:
-        print("could not resolve HEAD SHA; pass --target-sha "
-              "explicitly", file=sys.stderr)
+        print("could not resolve HEAD SHA; pass --target-sha explicitly", file=sys.stderr)
         sys.exit(2)
 
-print(f"watching run={run_id}, target-sha={target_sha}, slug={slug}, "
-      f"locale={locale}")
-print(f"interval={interval}s, max-tries={max_tries} "
-      f"(~{interval * max_tries // 60} min ceiling)\n")
+print(f"watching run={run_id}, target-sha={target_sha}, slug={slug}, locale={locale}")
+print(f"interval={interval}s, max-tries={max_tries} (~{interval * max_tries // 60} min ceiling)\n")
 
 for i in range(1, max_tries + 1):
-    print(f"=== try {i} @ "
-          f"{time.strftime('%H:%M:%SZ', time.gmtime())} ===")
+    print(f"=== try {i} @ {time.strftime('%H:%M:%SZ', time.gmtime())} ===")
 
     r = subprocess.run(
-        ["gh", "run", "view", run_id, "--repo", REPO, "--json",
-         "status,conclusion", "--jq",
-         '.status + " " + .conclusion'],
-        capture_output=True, text=True)
+        [
+            "gh",
+            "run",
+            "view",
+            run_id,
+            "--repo",
+            REPO,
+            "--json",
+            "status,conclusion",
+            "--jq",
+            '.status + " " + .conclusion',
+        ],
+        capture_output=True,
+        text=True,
+    )
     parts = r.stdout.split()
     status = parts[0] if parts else "?"
     concl = parts[1] if len(parts) > 1 else "?"
     print(f"workflow: status={status} conclusion={concl}")
 
     r = subprocess.run(
-        ["aws", "ssm", "get-parameter",
-         "--name", "/cloudless/production/pi-sha",
-         "--region", "us-east-1", "--query", "Parameter.Value",
-         "--output", "text"], capture_output=True, text=True)
+        [
+            "aws",
+            "ssm",
+            "get-parameter",
+            "--name",
+            "/cloudless/production/pi-sha",
+            "--region",
+            "us-east-1",
+            "--query",
+            "Parameter.Value",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     pi_sha = r.stdout.strip() or "?"
     print(f"pi-sha SSM: {pi_sha}")
 
     script = ROOT / "scripts" / "linkedin-insight-doctor.py"
     if not script.exists():
         script = ROOT / "scripts" / "linkedin-insight-doctor.sh"
-    cmd = ([sys.executable, str(script)]
-           if script.suffix == ".py"
-           else ["bash", str(script)])
-    r = subprocess.run([*cmd, "--slug", slug, "--locale", locale],
-                       capture_output=True, text=True)
+    cmd = [sys.executable, str(script)] if script.suffix == ".py" else ["bash", str(script)]
+    r = subprocess.run([*cmd, "--slug", slug, "--locale", locale], capture_output=True, text=True)
     out = r.stdout + r.stderr
     for ln in out.splitlines():
         if re.search(r"Partner ID literal|HEALTHY|NOT HEALTHY", ln):
@@ -131,21 +160,18 @@ for i in range(1, max_tries + 1):
         print(out[:200])
 
     if "Partner ID literal found in bundle" in out:
-        print("=== ✓ Partner ID is in the live bundle. Deploy is "
-              "effective. ===")
+        print("=== ✓ Partner ID is in the live bundle. Deploy is effective. ===")
         sys.exit(0)
 
-    if (pi_sha == target_sha and status == "completed"
-            and "Partner ID literal found" not in out):
-        print("=== ! Deploy finished but live bundle still missing "
-              "Partner ID. ===")
-        print("    Likely cause: Docker build cache reused stale "
-              "chunks despite secret")
-        print("    being set. Bust /opt/docker-cache on the build "
-              "runner and re-deploy.")
+    if pi_sha == target_sha and status == "completed" and "Partner ID literal found" not in out:
+        print("=== ! Deploy finished but live bundle still missing Partner ID. ===")
+        print("    Likely cause: Docker build cache reused stale chunks despite secret")
+        print("    being set. Bust /opt/docker-cache on the build runner and re-deploy.")
 
     time.sleep(interval)
 
-print(f"=== exhausted polls (~{interval * max_tries // 60} min). "
-      "Deploy is taking longer than expected. ===")
+print(
+    f"=== exhausted polls (~{interval * max_tries // 60} min). "
+    "Deploy is taking longer than expected. ==="
+)
 sys.exit(1)

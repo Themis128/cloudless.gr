@@ -27,8 +27,7 @@ import ts_api  # noqa: E402
 
 T = ts_api.TAILNET
 DRY_RUN = os.environ.get("DRY_RUN", "0").lower() in ("1", "true", "yes")
-LIST_ONLY = os.environ.get("LIST_ONLY", "0").lower() in (
-    "1", "true", "yes")
+LIST_ONLY = os.environ.get("LIST_ONLY", "0").lower() in ("1", "true", "yes")
 
 print(f"==> Devices on {T}")
 devices = ts_api.get(f"tailnet/{T}/devices").get("devices") or []
@@ -43,8 +42,7 @@ def desired_tags(short: str):
     s = short.lower()
 
     # User / operator workstations — must stay untagged
-    if s in {"office", "office-1", "office-2", "office-3"} or \
-            s.startswith("office-"):
+    if s in {"office", "office-1", "office-2", "office-3"} or s.startswith("office-"):
         return []
 
     # Physical Pis
@@ -56,22 +54,23 @@ def desired_tags(short: str):
         return ["tag:pi"]
 
     # Tailscale Kubernetes operator
-    if s.startswith("tailscale-operator") or \
-            s == "cloudless-k3s-operator":
+    if s.startswith("tailscale-operator") or s == "cloudless-k3s-operator":
         return ["tag:k8s-operator"]
 
     # Fabric: ingress / kube-apiserver ProxyGroups + Connector subnet
     # routers
-    if (s.startswith("ingress-") or s.startswith("kube-")
-            or s.startswith("k3s-subnet-router")
-            or s.startswith("k3s-cidrs-")
-            or s.startswith("ts-k3s-cidrs")
-            or s.startswith("monitoring-prox")):
+    if (
+        s.startswith("ingress-")
+        or s.startswith("kube-")
+        or s.startswith("k3s-subnet-router")
+        or s.startswith("k3s-cidrs-")
+        or s.startswith("ts-k3s-cidrs")
+        or s.startswith("monitoring-prox")
+    ):
         return ["tag:k8s"]
 
     # Fly / dedicated Apps connector VMs
-    if s.startswith("cloudless-fly-proxy") or \
-            s.startswith("app-connector"):
+    if s.startswith("cloudless-fly-proxy") or s.startswith("app-connector"):
         return ["tag:app-connector"]
 
     # Unknown — report, do not change
@@ -101,8 +100,7 @@ for d in sorted(devices, key=lambda x: short_name(x).lower()):
     changes += 1
     if LIST_ONLY or DRY_RUN:
         continue
-    code, resp, _ = ts_api.call("POST", f"device/{d['id']}/tags",
-                                {"tags": want})
+    code, resp, _ = ts_api.call("POST", f"device/{d['id']}/tags", {"tags": want})
     if code in (200, 204):
         print(f"  → HTTP {code}")
     else:
@@ -111,8 +109,7 @@ for d in sorted(devices, key=lambda x: short_name(x).lower()):
             sys.exit(1)
 
 print()
-print(f"pending_changes={changes} unknown={len(unknown)} "
-      f"dry_run={DRY_RUN} list_only={LIST_ONLY}")
+print(f"pending_changes={changes} unknown={len(unknown)} dry_run={DRY_RUN} list_only={LIST_ONLY}")
 if unknown:
     print("UNKNOWN (left unchanged):", ", ".join(unknown))
 print("==> Done")

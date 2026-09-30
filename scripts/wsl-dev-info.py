@@ -6,19 +6,18 @@ import re
 import subprocess
 from pathlib import Path
 
-r = subprocess.run(["ip", "-4", "addr", "show", "eth0"],
-                   capture_output=True, text=True)
+r = subprocess.run(["ip", "-4", "addr", "show", "eth0"], capture_output=True, text=True)
 m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", r.stdout)
 wsl_ip = m.group(1) if m else ""
 
 try:
-    r = subprocess.run(
-        ["/mnt/c/Windows/System32/wsl.exe", "-l", "--running"],
-        capture_output=True)
-    out = r.stdout.decode("utf-16-le", errors="replace") + \
-        r.stdout.decode("utf-8", errors="replace")
-    distro = next((ln.split()[0] for ln in out.splitlines()
-                   if "ubuntu" in ln.lower()), "Ubuntu-24.04")
+    r = subprocess.run(["/mnt/c/Windows/System32/wsl.exe", "-l", "--running"], capture_output=True)
+    out = r.stdout.decode("utf-16-le", errors="replace") + r.stdout.decode(
+        "utf-8", errors="replace"
+    )
+    distro = next(
+        (ln.split()[0] for ln in out.splitlines() if "ubuntu" in ln.lower()), "Ubuntu-24.04"
+    )
 except Exception:
     distro = "Ubuntu-24.04"
 
@@ -37,16 +36,12 @@ if config_path.is_file():
     if "networkingMode=mirrored" in config_path.read_text():
         print("✓ .wslconfig has mirrored mode enabled.")
         if wsl_ip.startswith("172."):
-            print("✗ But you're still on 172.x — WSL hasn't been "
-                  "restarted yet.\n")
-            print("To activate mirrored mode, run this in Windows "
-                  "PowerShell (as Admin):")
+            print("✗ But you're still on 172.x — WSL hasn't been restarted yet.\n")
+            print("To activate mirrored mode, run this in Windows PowerShell (as Admin):")
             print("  wsl --shutdown")
-            print("Then reopen your WSL terminal and run 'pnpm "
-                  "dev' again.")
+            print("Then reopen your WSL terminal and run 'pnpm dev' again.")
         else:
-            print("✓ Mirrored mode is active — localhost:4000 "
-                  "should just work.")
+            print("✓ Mirrored mode is active — localhost:4000 should just work.")
     else:
         print("ℹ .wslconfig does not have mirrored mode.")
         print(f"  http://{wsl_ip}:4000 is the way to go.")

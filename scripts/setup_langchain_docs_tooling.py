@@ -11,8 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 AGENTS = ROOT / "agents"
 TOOLS = AGENTS / "tools"
 MEM = ROOT / ".agent-memory"
@@ -22,10 +21,21 @@ GITIGNORE = ROOT / ".gitignore"
 INDEX = DOCS / "langchain_llms.txt"
 
 
-def info(m): print(f"ℹ️  {m}")
-def ok(m): print(f"✅ {m}")
-def warn(m): print(f"⚠️  {m}")
-def fail(m): print(f"❌ {m}"); sys.exit(1)
+def info(m):
+    print(f"ℹ️  {m}")
+
+
+def ok(m):
+    print(f"✅ {m}")
+
+
+def warn(m):
+    print(f"⚠️  {m}")
+
+
+def fail(m):
+    print(f"❌ {m}")
+    sys.exit(1)
 
 
 def backup(p: Path):
@@ -41,8 +51,7 @@ if not ROOT.is_dir():
 os.chdir(ROOT)
 
 # 1. dirs + venv
-for d in (TOOLS, ROOT / "scripts", DOCS,
-          MEM / "memories"):
+for d in (TOOLS, ROOT / "scripts", DOCS, MEM / "memories"):
     d.mkdir(parents=True, exist_ok=True)
 (AGENTS / "__init__.py").touch()
 (TOOLS / "__init__.py").touch()
@@ -50,16 +59,15 @@ for d in (TOOLS, ROOT / "scripts", DOCS,
 venv = ROOT / ".venv"
 if not venv.is_dir():
     info("Creating .venv...")
-    subprocess.run([sys.executable, "-m", "venv", ".venv"],
-                   check=True)
+    subprocess.run([sys.executable, "-m", "venv", ".venv"], check=True)
 py = str(venv / "bin/python")
 info("Installing/verifying Python dependencies...")
-subprocess.run([py, "-m", "pip", "install", "--upgrade",
-                "pip", "setuptools", "wheel"],
-               capture_output=True)
-subprocess.run([py, "-m", "pip", "install", "--upgrade",
-                "requests", "python-dotenv"],
-               capture_output=True)
+subprocess.run(
+    [py, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"], capture_output=True
+)
+subprocess.run(
+    [py, "-m", "pip", "install", "--upgrade", "requests", "python-dotenv"], capture_output=True
+)
 ok("Dependencies installed/verified.")
 
 # 2. gitignore
@@ -90,17 +98,18 @@ if not MEM_F.is_file():
 """)
     ok(f"Created memory file: {MEM_F}")
 
-NOTE = ("For LangChain, LangGraph, or Deep Agents questions, "
-        "first use the cached docs.langchain.com/llms.txt "
-        "index to discover official docs pages, then fetch "
-        "relevant pages before answering.")
+NOTE = (
+    "For LangChain, LangGraph, or Deep Agents questions, "
+    "first use the cached docs.langchain.com/llms.txt "
+    "index to discover official docs pages, then fetch "
+    "relevant pages before answering."
+)
 if NOTE not in MEM_F.read_text():
     with MEM_F.open("a") as f:
         f.write(f"\n## Documentation workflow\n- {NOTE}\n")
     ok("Added LangChain docs workflow preference to memory.")
 else:
-    ok("LangChain docs workflow preference already exists "
-       "in memory.")
+    ok("LangChain docs workflow preference already exists in memory.")
 
 # 4. docs tool
 tool = TOOLS / "langchain_docs.py"
@@ -239,7 +248,7 @@ ok(f"Wrote LangChain docs tool: {tool}")
 # 5. runner
 runner = AGENTS / "run_langchain_docs_research.py"
 backup(runner)
-runner.write_text('''import sys
+runner.write_text("""import sys
 
 from dotenv import load_dotenv
 
@@ -303,15 +312,17 @@ else:
     for i, match in enumerate(matches, start=1):
         print(f"{i}. {match['title']}")
         print(f"   {match['url']}")
-''')
+""")
 ok(f"Wrote docs runner: {runner}")
 
 # 6. cache the index
-info("Fetching/caching LangChain docs index from "
-     "https://docs.langchain.com/llms.txt...")
+info("Fetching/caching LangChain docs index from https://docs.langchain.com/llms.txt...")
 env = dict(os.environ, PYTHONPATH=".")
 r = subprocess.run(
-    [py, "-c", """\
+    [
+        py,
+        "-c",
+        """\
 from agents.tools.langchain_docs import (
     refresh_langchain_docs_index,
     search_langchain_docs_index,
@@ -323,7 +334,10 @@ for item in search_langchain_docs_index(
         "Deep Agents memory FilesystemBackend",
         max_results=5):
     print(f"- {item['title']} -> {item['url']}")
-"""], env=env)
+""",
+    ],
+    env=env,
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 ok(f"LangChain docs index cached at: {INDEX}")
@@ -333,10 +347,14 @@ ok("LangChain docs tooling setup complete.\n")
 print("Run examples:")
 print(f"  cd {ROOT}")
 print("  source .venv/bin/activate\n")
-print('  PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"How do I configure Deep Agents filesystem-backed memory?"\n')
-print('  PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"Deep Agents memory FilesystemBackend CompositeBackend '
-      'AGENTS.md"\n')
+print(
+    "  PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"How do I configure Deep Agents filesystem-backed memory?"\n'
+)
+print(
+    "  PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"Deep Agents memory FilesystemBackend CompositeBackend '
+    'AGENTS.md"\n'
+)
 print("Cache location:")
 print(f"  {INDEX}")

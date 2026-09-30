@@ -18,13 +18,10 @@ import shutil
 import subprocess
 import sys
 import urllib.request
-from pathlib import Path
 
-CF_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID",
-                               os.environ.get("CF_ACCOUNT_ID", ""))
+CF_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", os.environ.get("CF_ACCOUNT_ID", ""))
 CF_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
-CF_CONFIG_URL = os.environ.get("CONFIG_URL",
-                               "http://localhost:8787/api/config")
+CF_CONFIG_URL = os.environ.get("CONFIG_URL", "http://localhost:8787/api/config")
 
 # Wrangler secret names used in the Worker (matches wrangler.jsonc bindings)
 WRANGLER_SECRETS = [
@@ -100,12 +97,14 @@ def cf_secret_get(key: str) -> str:
     """Get a secret via Wrangler (only works for deployed workers)."""
     if cf_has_wrangler() and CF_ACCOUNT_ID:
         r = subprocess.run(
-            ["wrangler", "secret", "list", "--env", "production"],
-            capture_output=True, text=True)
+            ["wrangler", "secret", "list", "--env", "production"], capture_output=True, text=True
+        )
         if any(line.strip() == key for line in r.stdout.splitlines()):
             r = subprocess.run(
                 ["wrangler", "secret", "get", key, "--env", "production"],
-                capture_output=True, text=True)
+                capture_output=True,
+                text=True,
+            )
             return r.stdout.strip()
     return ""
 
@@ -115,9 +114,10 @@ def cf_secret_set(key: str, value: str) -> int:
     if cf_has_wrangler() and CF_ACCOUNT_ID and CF_API_TOKEN:
         return subprocess.run(
             ["wrangler", "secret", "put", key, "--env", "production"],
-            input=value.encode(), capture_output=True).returncode
-    print("ERROR: wrangler not available or CF credentials missing",
-          file=sys.stderr)
+            input=value.encode(),
+            capture_output=True,
+        ).returncode
+    print("ERROR: wrangler not available or CF credentials missing", file=sys.stderr)
     return 1
 
 
@@ -128,9 +128,7 @@ def _config_key(key: str) -> str:
 def cf_config_get(key: str) -> str:
     """Get config from D1 app_config via /api/config endpoint."""
     try:
-        with urllib.request.urlopen(
-                f"{CF_CONFIG_URL}?key={_config_key(key)}",
-                timeout=15) as r:
+        with urllib.request.urlopen(f"{CF_CONFIG_URL}?key={_config_key(key)}", timeout=15) as r:
             return json.loads(r.read()).get("value") or ""
     except Exception:
         return ""
@@ -141,7 +139,9 @@ def cf_config_set(key: str, value: str) -> bool:
     req = urllib.request.Request(
         CF_CONFIG_URL,
         data=json.dumps({"key": _config_key(key), "value": value}).encode(),
-        headers={"Content-Type": "application/json"}, method="PUT")
+        headers={"Content-Type": "application/json"},
+        method="PUT",
+    )
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             return bool(json.loads(r.read()).get("success"))
@@ -162,8 +162,9 @@ def cf_status() -> None:
 
 def cf_verify_auth() -> int:
     if not cf_has_wrangler():
-        print("ERROR: wrangler CLI not found. "
-              "Install with: npm install -g wrangler", file=sys.stderr)
+        print(
+            "ERROR: wrangler CLI not found. Install with: npm install -g wrangler", file=sys.stderr
+        )
         return 1
     if not CF_ACCOUNT_ID:
         print("ERROR: CLOUDFLARE_ACCOUNT_ID not set", file=sys.stderr)

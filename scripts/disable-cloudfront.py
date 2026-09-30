@@ -15,8 +15,7 @@ DIST_ID = os.environ.get("CF_DISTRIBUTION_ID", "ELGQBR8109MTM")
 
 
 def aws(*args: str) -> dict:
-    r = subprocess.run(["aws", *args, "--output", "json"],
-                       capture_output=True, text=True)
+    r = subprocess.run(["aws", *args, "--output", "json"], capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit(f"aws {' '.join(args)} failed: {r.stderr.strip()}")
     return json.loads(r.stdout)
@@ -39,18 +38,27 @@ if not config["Enabled"]:
 config["Enabled"] = False
 print("Disabling distribution...")
 r = subprocess.run(
-    ["aws", "cloudfront", "update-distribution", "--id", DIST_ID,
-     "--if-match", etag, "--distribution-config",
-     json.dumps(config), "--output", "json"],
-    capture_output=True, text=True)
+    [
+        "aws",
+        "cloudfront",
+        "update-distribution",
+        "--id",
+        DIST_ID,
+        "--if-match",
+        etag,
+        "--distribution-config",
+        json.dumps(config),
+        "--output",
+        "json",
+    ],
+    capture_output=True,
+    text=True,
+)
 if r.returncode != 0:
     sys.exit(r.stderr.strip())
 status = json.loads(r.stdout)["Distribution"]["Status"]
-print(f"Distribution status: {status} (deletion takes effect after "
-      "status = Deployed)")
+print(f"Distribution status: {status} (deletion takes effect after status = Deployed)")
 
 print("=== CloudFront distribution disable initiated ===")
-print("NOTE: After status reaches 'Deployed', you can delete the "
-      "distribution with:")
-print(f"aws cloudfront delete-distribution --id {DIST_ID} "
-      "--if-match <final-etag>")
+print("NOTE: After status reaches 'Deployed', you can delete the distribution with:")
+print(f"aws cloudfront delete-distribution --id {DIST_ID} --if-match <final-etag>")

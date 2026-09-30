@@ -15,19 +15,19 @@ import urllib.error
 import urllib.request
 
 DOMAIN = os.environ.get("DOMAIN", "cloudless.gr")
-DEST_EMAIL = sys.argv[1] if len(sys.argv) > 1 \
-    else f"tbaltzakis@{DOMAIN}"
+DEST_EMAIL = sys.argv[1] if len(sys.argv) > 1 else f"tbaltzakis@{DOMAIN}"
 
 token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 if not token:
-    r = subprocess.run(["gh", "secret", "view",
-                        "CLOUDFLARE_API_TOKEN"],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        ["gh", "secret", "view", "CLOUDFLARE_API_TOKEN"], capture_output=True, text=True
+    )
     if r.returncode == 0:
         token = r.stdout.strip()
 if not token:
-    sys.exit("ERROR: CLOUDFLARE_API_TOKEN not found\n"
-             "Set it with: export CLOUDFLARE_API_TOKEN=your_token")
+    sys.exit(
+        "ERROR: CLOUDFLARE_API_TOKEN not found\nSet it with: export CLOUDFLARE_API_TOKEN=your_token"
+    )
 
 API = "https://api.cloudflare.com/client/v4"
 
@@ -37,15 +37,12 @@ def cf(method: str, path: str, body: dict | None = None) -> dict:
         f"{API}{path}",
         data=json.dumps(body).encode() if body else None,
         method=method,
-        headers={"Authorization": f"Bearer {token}",
-                 "Content-Type": "application/json"})
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
     try:
-        return json.loads(urllib.request.urlopen(req,
-                                                 timeout=15).read())
+        return json.loads(urllib.request.urlopen(req, timeout=15).read())
     except urllib.error.HTTPError as e:
-        return {"success": False,
-                "errors": [{"message": e.read()[:300].decode(
-                    errors="replace")}]}
+        return {"success": False, "errors": [{"message": e.read()[:300].decode(errors="replace")}]}
     except Exception as e:
         return {"success": False, "errors": [{"message": str(e)}]}
 
@@ -62,26 +59,22 @@ print(f"✓ Account ID: {account_id}")
 
 
 def record_exists(rtype: str, name: str) -> bool:
-    r = cf("GET",
-           f"/zones/{zone_id}/dns_records?type={rtype}&name={name}")
+    r = cf("GET", f"/zones/{zone_id}/dns_records?type={rtype}&name={name}")
     return bool(r.get("result"))
 
 
-def add_record(rtype: str, name: str, content: str,
-               priority: int | None = None) -> None:
+def add_record(rtype: str, name: str, content: str, priority: int | None = None) -> None:
     if record_exists(rtype, name):
         print(f"✓ {rtype} already exists: {name}")
         return
-    data = {"type": rtype, "name": name, "content": content,
-            "ttl": 3600, "proxied": False}
+    data = {"type": rtype, "name": name, "content": content, "ttl": 3600, "proxied": False}
     if priority is not None:
         data["priority"] = priority
     r = cf("POST", f"/zones/{zone_id}/dns_records", data)
     if r.get("success"):
         print(f"✓ Added {rtype} record: {name}")
     else:
-        print(f"   Note: {rtype} record may have issues: {name} — "
-              f"{r.get('errors')}")
+        print(f"   Note: {rtype} record may have issues: {name} — {r.get('errors')}")
 
 
 print("\n[1/4] Setting MX records...")
@@ -92,19 +85,20 @@ print("\n[2/4] Setting SPF record...")
 add_record("TXT", DOMAIN, "v=spf1 include:cloudflare.net ~all")
 
 print("\n[3/4] Setting DMARC...")
-add_record("TXT", f"_dmarc.{DOMAIN}",
-           f"v=DMARC1; p=none; rua=mailto:postmaster@{DOMAIN}")
+add_record("TXT", f"_dmarc.{DOMAIN}", f"v=DMARC1; p=none; rua=mailto:postmaster@{DOMAIN}")
 
 print("\n[4/4] Setting up routing destination...")
-r = cf("POST", f"/accounts/{account_id}/email/routing/addresses",
-       {"email": DEST_EMAIL})
-print(f"✓ Destination added: {DEST_EMAIL}" if r.get("success")
-      else f"   Destination may already exist: {DEST_EMAIL}")
+r = cf("POST", f"/accounts/{account_id}/email/routing/addresses", {"email": DEST_EMAIL})
+print(
+    f"✓ Destination added: {DEST_EMAIL}"
+    if r.get("success")
+    else f"   Destination may already exist: {DEST_EMAIL}"
+)
 
 print("""
 ==========================================
 ✅ Setup complete!
 ==========================================
 
-Check your email (%s) for verification link.
-Then deploy: pnpm cf:deploy:free""" % DEST_EMAIL)
+Check your email ({DEST_EMAIL}) for verification link.
+Then deploy: pnpm cf:deploy:free""")

@@ -17,23 +17,30 @@ When this host cannot reach the Pis at all, use GitHub Actions instead:
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 USER_NAME = os.environ.get("PI_SSH_USER", "tbaltzakis")
-IDENTITY = os.environ.get("PI_SSH_IDENTITY",
-                          str(Path.home() / ".ssh/id_rsa"))
+IDENTITY = os.environ.get("PI_SSH_IDENTITY", str(Path.home() / ".ssh/id_rsa"))
 CONNECT_TIMEOUT = os.environ.get("PI_SSH_TIMEOUT", "12")
 
 TS_IP = {"omv": "100.74.191.58", "omv-ha": "100.95.117.84"}
 LAN_IP = {"omv": "192.168.1.128", "omv-ha": "192.168.1.130"}
 
-SSH_OPTS = ["-o", "BatchMode=yes",
-            "-o", "StrictHostKeyChecking=accept-new",
-            "-o", "IdentitiesOnly=yes",
-            "-o", f"ConnectTimeout={CONNECT_TIMEOUT}",
-            "-o", "ServerAliveInterval=10",
-            "-o", "ServerAliveCountMax=2"]
+SSH_OPTS = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    f"ConnectTimeout={CONNECT_TIMEOUT}",
+    "-o",
+    "ServerAliveInterval=10",
+    "-o",
+    "ServerAliveCountMax=2",
+]
 if Path(IDENTITY).is_file():
     SSH_OPTS += ["-i", IDENTITY]
 
@@ -44,14 +51,17 @@ def log(msg: str) -> None:
 
 def ssh_to(host: str, *args: str, stdin: str = "") -> int:
     return subprocess.call(
-        ["ssh", *SSH_OPTS, f"{USER_NAME}@{host}", *args],
-        input=stdin if stdin else None, text=True)
+        ["ssh", *SSH_OPTS, f"{USER_NAME}@{host}", *args], input=stdin if stdin else None, text=True
+    )
 
 
 def reachable(host: str) -> bool:
-    return subprocess.run(
-        ["ssh", *SSH_OPTS, f"{USER_NAME}@{host}", "true"],
-        capture_output=True).returncode == 0
+    return (
+        subprocess.run(
+            ["ssh", *SSH_OPTS, f"{USER_NAME}@{host}", "true"], capture_output=True
+        ).returncode
+        == 0
+    )
 
 
 def pick_addr(node: str) -> str | None:
@@ -115,13 +125,12 @@ EOS
 def restore_node(node: str) -> bool:
     addr = pick_addr(node)
     if not addr:
-        log(f"FAIL {node} — unreachable on Tailscale "
-            f"({TS_IP[node]}) and LAN ({LAN_IP[node]})")
+        log(f"FAIL {node} — unreachable on Tailscale ({TS_IP[node]}) and LAN ({LAN_IP[node]})")
         return False
     log(f"OK path {node} → {addr} — running restore")
     subprocess.call(
-        ["ssh", *SSH_OPTS, f"{USER_NAME}@{addr}", "bash", "-s"],
-        input=REMOTE_RESTORE, text=True)
+        ["ssh", *SSH_OPTS, f"{USER_NAME}@{addr}", "bash", "-s"], input=REMOTE_RESTORE, text=True
+    )
     return True
 
 
@@ -129,16 +138,14 @@ def restore_omv_via_ha() -> bool:
     ha_addr = pick_addr("omv-ha")
     if not ha_addr:
         return False
-    log(f"Trying omv restore via omv-ha jump ({ha_addr} → "
-        "192.168.1.128)")
+    log(f"Trying omv restore via omv-ha jump ({ha_addr} → 192.168.1.128)")
     subprocess.call(
-        ["ssh", *SSH_OPTS, f"{USER_NAME}@{ha_addr}", "bash", "-s"],
-        input=JUMP, text=True)
+        ["ssh", *SSH_OPTS, f"{USER_NAME}@{ha_addr}", "bash", "-s"], input=JUMP, text=True
+    )
     return True
 
 
-log(f"Starting Pi connectivity restore "
-    f"({datetime.now(timezone.utc):%Y-%m-%dT%H:%MZ})")
+log(f"Starting Pi connectivity restore ({datetime.now(UTC):%Y-%m-%dT%H:%MZ})")
 rc = 0
 if not restore_node("omv-ha"):
     rc = 1

@@ -15,10 +15,9 @@ os.chdir(PROJECT_DIR)
 print("==> Patching CodingAgent with AI Gateway model routing")
 
 p = Path("src/agents/coding.ts")
-shutil.copy(p, f"{p}.bak-model-routing-"
-               f"{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(p, f"{p}.bak-model-routing-{time.strftime('%Y%m%d-%H%M%S')}")
 
-p.write_text('''import { Agent, callable } from "agents";
+p.write_text("""import { Agent, callable } from "agents";
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";
@@ -477,7 +476,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     });
   }
 }
-''')
+""")
 
 print("==> Running checks...")
 subprocess.call(["pnpm", "run", "cf:types"])

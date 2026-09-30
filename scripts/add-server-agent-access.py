@@ -15,14 +15,11 @@ print(f"==> Project: {PROJECT_DIR}")
 
 ts = time.strftime("%Y%m%d-%H%M%S")
 print("==> Backing up files...")
-shutil.copy("src/index.ts",
-            f"src/index.ts.bak-server-agent-access-{ts}")
-shutil.copy("src/agents/counter.ts",
-            f"src/agents/counter.ts.bak-server-agent-access-{ts}")
+shutil.copy("src/index.ts", f"src/index.ts.bak-server-agent-access-{ts}")
+shutil.copy("src/agents/counter.ts", f"src/agents/counter.ts.bak-server-agent-access-{ts}")
 
-print("==> Updating CounterAgent with getCount() for "
-      "server-side access...")
-Path("src/agents/counter.ts").write_text('''import { Agent, callable } from "agents";
+print("==> Updating CounterAgent with getCount() for server-side access...")
+Path("src/agents/counter.ts").write_text("""import { Agent, callable } from "agents";
 
 export type CounterState = {
   count: number;
@@ -112,11 +109,10 @@ export class CounterAgent extends Agent<Env, CounterState> {
     });
   }
 }
-''')
+""")
 
-print("==> Updating src/index.ts with server-side Agent "
-      "access routes...")
-Path("src/index.ts").write_text('''import { getAgentByName, routeAgentRequest } from "agents";
+print("==> Updating src/index.ts with server-side Agent access routes...")
+Path("src/index.ts").write_text("""import { getAgentByName, routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
 
 export { CounterAgent };
@@ -274,7 +270,7 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-''')
+""")
 
 print("==> Regenerating types and checking TypeScript...")
 subprocess.call(["pnpm", "run", "cf:types"])

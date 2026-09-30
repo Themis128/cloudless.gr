@@ -12,14 +12,12 @@ from pathlib import Path
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
 os.chdir(PROJECT_DIR)
 
-print("==> Patching CodingAgent with task lifecycle "
-      "status/result tracking")
+print("==> Patching CodingAgent with task lifecycle status/result tracking")
 
 p = Path("src/agents/coding.ts")
-shutil.copy(p, f"{p}.bak-long-running-"
-               f"{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(p, f"{p}.bak-long-running-{time.strftime('%Y%m%d-%H%M%S')}")
 
-p.write_text('''import { Agent, callable } from "agents";
+p.write_text("""import { Agent, callable } from "agents";
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 
@@ -279,7 +277,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     });
   }
 }
-''')
+""")
 
 print("==> Running TypeScript checks...")
 subprocess.call(["pnpm", "run", "cf:types"])

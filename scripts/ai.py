@@ -50,15 +50,13 @@ SIMPLE = {
     "skills-check": ["scripts/check_deepagent_skills.py"],
     "ingest-docs": ["scripts/ingest_langchain_docs_focused.py"],
     "ingest-repo": ["scripts/ingest_repo_docs.py"],
-    "ingest-all": ["scripts/ingest_langchain_docs_focused.py",
-                   "scripts/ingest_repo_docs.py"],
+    "ingest-all": ["scripts/ingest_langchain_docs_focused.py", "scripts/ingest_repo_docs.py"],
     "docs": ["agents/langchain_docs_fast_rag.py"],
     "repo": ["agents/cloudless_repo_fast_rag.py"],
     "unified": ["agents/cloudless_unified_assistant.py"],
     "deep-smoke": ["agents/cloudless_deep_agent_smoke.py"],
     "deep": ["agents/cloudless_deep_agent.py"],
-    "langsmith-check":
-        ["scripts/check_langsmith_api_clients.py"],
+    "langsmith-check": ["scripts/check_langsmith_api_clients.py"],
 }
 
 # commands that forward extra args
@@ -73,8 +71,7 @@ WITH_ARGS = {
     "langsmith-call": "scripts/langsmith_api_call.py",
     "langsmith-page": "scripts/langsmith_api_page.py",
     "langsmith-stream": "scripts/langsmith_api_stream.py",
-    "langsmith-endpoint":
-        "scripts/langsmith_endpoint_call.py",
+    "langsmith-endpoint": "scripts/langsmith_endpoint_call.py",
 }
 
 cmd = sys.argv[1] if len(sys.argv) > 1 else "help"
@@ -88,8 +85,7 @@ if cmd in SIMPLE:
         if r != 0:
             sys.exit(r)
 elif cmd in WITH_ARGS:
-    sys.exit(subprocess.call(
-        [PYTHON, WITH_ARGS[cmd], *rest]))
+    sys.exit(subprocess.call([PYTHON, WITH_ARGS[cmd], *rest]))
 else:
     print(USAGE)
     if cmd != "help":

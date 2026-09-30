@@ -12,8 +12,8 @@ print("=== Cloudflare Routes Cleanup ===")
 
 print("Deleting old worker 'cloudless-gr' to free up routes...")
 r = subprocess.run(
-    ["npx", "wrangler", "delete", "cloudless-gr", "--force",
-     "--config", "wrangler.jsonc"])
+    ["npx", "wrangler", "delete", "cloudless-gr", "--force", "--config", "wrangler.jsonc"]
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 

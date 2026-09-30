@@ -16,14 +16,12 @@ import urllib.error
 import urllib.request
 
 DOMAIN = os.environ.get("DOMAIN", "cloudless.gr")
-ZONE_ID = os.environ.get("CLOUDFLARE_ZONE_ID") or \
-    os.environ.get("CF_ZONE_ID", "")
+ZONE_ID = os.environ.get("CLOUDFLARE_ZONE_ID") or os.environ.get("CF_ZONE_ID", "")
 TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 API = "https://api.cloudflare.com/client/v4"
 
 if not TOKEN:
-    print("::error::CLOUDFLARE_API_TOKEN is required (Zone:Read + "
-          "Zone Settings:Edit)")
+    print("::error::CLOUDFLARE_API_TOKEN is required (Zone:Read + Zone Settings:Edit)")
     sys.exit(1)
 
 
@@ -31,8 +29,9 @@ def cf(method: str, url: str, body=None) -> dict:
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": f"Bearer {TOKEN}",
-                 "Content-Type": "application/json"}, method=method)
+        headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"},
+        method=method,
+    )
     try:
         return json.loads(urllib.request.urlopen(req, timeout=30).read())
     except urllib.error.HTTPError as e:
@@ -59,8 +58,7 @@ SETTING_URL = f"{API}/zones/{ZONE_ID}/settings/bot_fight_mode"
 
 print("==> GET bot_fight_mode")
 cur = cf("GET", SETTING_URL)
-print(f"    success: {cur.get('success')} "
-      f"value: {(cur.get('result') or {}).get('value')}")
+print(f"    success: {cur.get('success')} value: {(cur.get('result') or {}).get('value')}")
 if cur.get("errors"):
     print(f"    errors: {cur['errors']}")
 
@@ -71,10 +69,12 @@ if resp.get("success"):
     print(f"✓ bot_fight_mode={val}")
     sys.exit(0 if val == "off" else 1)
 
-print("Cloudflare API error:",
-      json.dumps(resp.get("errors"), indent=2), file=sys.stderr)
-print("::warning::API cannot toggle bot_fight_mode (often dashboard-only "
-      "on Free). Disable manually: Dashboard → cloudless.gr → Security → "
-      "Bots → Bot Fight Mode OFF", file=sys.stderr)
+print("Cloudflare API error:", json.dumps(resp.get("errors"), indent=2), file=sys.stderr)
+print(
+    "::warning::API cannot toggle bot_fight_mode (often dashboard-only "
+    "on Free). Disable manually: Dashboard → cloudless.gr → Security → "
+    "Bots → Bot Fight Mode OFF",
+    file=sys.stderr,
+)
 
 print("==> done — re-check cron path for Just a moment…")

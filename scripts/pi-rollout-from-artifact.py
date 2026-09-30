@@ -19,13 +19,10 @@ import sys
 import time
 from pathlib import Path
 
-ARTIFACT_DIR = (sys.argv[1] if len(sys.argv) > 1
-                else os.environ.get("ARTIFACT_DIR", ""))
+ARTIFACT_DIR = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("ARTIFACT_DIR", "")
 OMV_SSH_HOST = os.environ.get("OMV_SSH_HOST", "192.168.1.128")
 OMV_SSH_USER = os.environ.get("OMV_SSH_USER", "tbaltzakis")
-STANDALONE_HOSTPATH = os.environ.get(
-    "STANDALONE_HOSTPATH",
-    "/home/tbaltzakis/cloudless-standalone")
+STANDALONE_HOSTPATH = os.environ.get("STANDALONE_HOSTPATH", "/home/tbaltzakis/cloudless-standalone")
 K3S_NAMESPACE = os.environ.get("K3S_NAMESPACE", "cloudless")
 K3S_DEPLOYMENT = os.environ.get("K3S_DEPLOYMENT", "cloudless-app")
 APP_VERSION = os.environ.get("APP_VERSION", "")
@@ -34,20 +31,27 @@ if not APP_VERSION:
 RELEASE_SHA12 = os.environ.get("RELEASE_SHA12", APP_VERSION[:12])
 
 if not ARTIFACT_DIR or not Path(ARTIFACT_DIR).is_dir():
-    print(f"::error::ARTIFACT_DIR missing or not a directory: "
-          f"{ARTIFACT_DIR or '<empty>'}", file=sys.stderr)
+    print(
+        f"::error::ARTIFACT_DIR missing or not a directory: {ARTIFACT_DIR or '<empty>'}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 SRC = Path(ARTIFACT_DIR) / "standalone"
 if not (SRC / "server.js").is_file():
-    print(f"::error::Standalone build not found at {SRC}/server.js",
-          file=sys.stderr)
+    print(f"::error::Standalone build not found at {SRC}/server.js", file=sys.stderr)
     sys.exit(1)
 
-SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
-            "-o", "StrictHostKeyChecking=accept-new"]
-identity = os.environ.get("OMV_SSH_IDENTITY") or \
-    (str(Path.home() / ".ssh/omv_ha")
-     if (Path.home() / ".ssh/omv_ha").exists() else "")
+SSH_OPTS = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+]
+identity = os.environ.get("OMV_SSH_IDENTITY") or (
+    str(Path.home() / ".ssh/omv_ha") if (Path.home() / ".ssh/omv_ha").exists() else ""
+)
 if identity:
     SSH_OPTS += ["-i", identity]
 
@@ -55,8 +59,7 @@ TARGET = f"{OMV_SSH_USER}@{OMV_SSH_HOST}"
 
 
 def remote(cmd: str, check: bool = True) -> str:
-    r = subprocess.run(["ssh", *SSH_OPTS, TARGET, cmd],
-                       capture_output=True, text=True)
+    r = subprocess.run(["ssh", *SSH_OPTS, TARGET, cmd], capture_output=True, text=True)
     if check and r.returncode:
         print(r.stdout + r.stderr)
         sys.exit(r.returncode)
@@ -64,24 +67,25 @@ def remote(cmd: str, check: bool = True) -> str:
 
 
 def remote_bash(script: str) -> int:
-    r = subprocess.run(["ssh", *SSH_OPTS, TARGET, "bash", "-s"],
-                       input=script, text=True)
+    r = subprocess.run(["ssh", *SSH_OPTS, TARGET, "bash", "-s"], input=script, text=True)
     return r.returncode
 
 
 def rsync_to(src: str, dest: str) -> None:
     rc = subprocess.call(
-        ["rsync", "-a", "--delete", "-e", " ".join(["ssh", *SSH_OPTS]),
-         src, f"{TARGET}:{dest}"])
+        ["rsync", "-a", "--delete", "-e", " ".join(["ssh", *SSH_OPTS]), src, f"{TARGET}:{dest}"]
+    )
     if rc:
         sys.exit(rc)
 
 
 print(f"==> Deploy proxy → {TARGET}")
 print(f"    release={RELEASE_SHA12} app_version={APP_VERSION}")
-remote(f"hostname; test -d "
-       f"{shlex.quote(str(Path(STANDALONE_HOSTPATH).parent))} "
-       "&& echo HOSTPATH_PARENT_OK")
+remote(
+    f"hostname; test -d "
+    f"{shlex.quote(str(Path(STANDALONE_HOSTPATH).parent))} "
+    "&& echo HOSTPATH_PARENT_OK"
+)
 
 CURRENT = STANDALONE_HOSTPATH
 RELEASES = f"{Path(CURRENT).parent}/cloudless-releases"
@@ -89,8 +93,7 @@ NEW_REL = f"{RELEASES}/{RELEASE_SHA12}"
 USER_STAGE = f"/tmp/cloudless-stage-{RELEASE_SHA12}"
 
 print(f"==> Rsync artifact → omv {USER_STAGE}")
-remote(f"rm -rf {shlex.quote(USER_STAGE)} && "
-       f"mkdir -p {shlex.quote(USER_STAGE)}")
+remote(f"rm -rf {shlex.quote(USER_STAGE)} && mkdir -p {shlex.quote(USER_STAGE)}")
 rsync_to(f"{SRC}/", f"{USER_STAGE}/")
 if (Path(ARTIFACT_DIR) / "static").is_dir():
     remote(f"mkdir -p {shlex.quote(USER_STAGE + '/.next/static')}")
@@ -135,8 +138,7 @@ if remote_bash(STAGE_CHECK):
     sys.exit(1)
 
 print(f"==> Promote → releases/{RELEASE_SHA12} + flip symlink")
-PREV = remote(f"readlink {shlex.quote(CURRENT)} 2>/dev/null || true",
-              check=False).replace("\r", "")
+PREV = remote(f"readlink {shlex.quote(CURRENT)} 2>/dev/null || true", check=False).replace("\r", "")
 
 PROMOTE = f"""\
 set -euo pipefail
@@ -223,9 +225,10 @@ print("==> Verify health (auto-rollback on failure)")
 HEALTH_OK = False
 for attempt in range(1, 7):
     rc = remote_bash(
-        'BODY=$(curl -sS --max-time 10 '
-        'http://127.0.0.1:30300/api/health 2>/dev/null || true); '
-        'echo "$BODY" | jq -e .version >/dev/null 2>&1 && echo "$BODY"')
+        "BODY=$(curl -sS --max-time 10 "
+        "http://127.0.0.1:30300/api/health 2>/dev/null || true); "
+        'echo "$BODY" | jq -e .version >/dev/null 2>&1 && echo "$BODY"'
+    )
     if rc == 0:
         HEALTH_OK = True
         print(f"✅ health OK (attempt {attempt})")
@@ -237,15 +240,15 @@ if HEALTH_OK:
     print("Rollout verification successful.")
     sys.exit(0)
 
-print("::warning::New release failed health checks — auto-rolling back "
-      "to previous.")
+print("::warning::New release failed health checks — auto-rolling back to previous.")
 if not PREV:
-    print("::error::No previous release recorded. Cannot "
-          "auto-rollback.", file=sys.stderr)
-    remote(f"sudo kubectl logs -n {K3S_NAMESPACE} -l app=cloudless-app "
-           "--tail=80 2>/dev/null || sudo k3s kubectl logs -n "
-           f"{K3S_NAMESPACE} -l app=cloudless-app --tail=80",
-           check=False)
+    print("::error::No previous release recorded. Cannot auto-rollback.", file=sys.stderr)
+    remote(
+        f"sudo kubectl logs -n {K3S_NAMESPACE} -l app=cloudless-app "
+        "--tail=80 2>/dev/null || sudo k3s kubectl logs -n "
+        f"{K3S_NAMESPACE} -l app=cloudless-app --tail=80",
+        check=False,
+    )
     sys.exit(1)
 
 ROLLBACK = f"""\

@@ -12,26 +12,29 @@ import os
 import sys
 
 EXPECTED = [
-    ("CLOUDFLARE_API_TOKEN",
-     "cloudless-infra (Cloudflare tools)",
-     "cloudflare_list_tokens / zone_settings / zone_analytics "
-     "/ etc. all 401"),
-    ("GITHUB_PAT",
-     "git push / gh CLI (from the agent's bash)",
-     "push to feature branch, PR ops, workflow dispatch all "
-     "fail with 401"),
-    ("TAILSCALE_AUTH_KEY",
-     "cloudless-infra (Pi/k3s tools)",
-     "cluster_run_command / k3s_get_pods / gh_runner_health "
-     "unreachable"),
-    ("OMV_SSH_KEY_CONTENTS",
-     "cloudless-infra (SSH to omv-main)",
-     "same Pi/k3s tools — they SSH to 100.113.41.119 with "
-     "this key"),
+    (
+        "CLOUDFLARE_API_TOKEN",
+        "cloudless-infra (Cloudflare tools)",
+        "cloudflare_list_tokens / zone_settings / zone_analytics / etc. all 401",
+    ),
+    (
+        "GITHUB_PAT",
+        "git push / gh CLI (from the agent's bash)",
+        "push to feature branch, PR ops, workflow dispatch all fail with 401",
+    ),
+    (
+        "TAILSCALE_AUTH_KEY",
+        "cloudless-infra (Pi/k3s tools)",
+        "cluster_run_command / k3s_get_pods / gh_runner_health unreachable",
+    ),
+    (
+        "OMV_SSH_KEY_CONTENTS",
+        "cloudless-infra (SSH to omv-main)",
+        "same Pi/k3s tools — they SSH to 100.113.41.119 with this key",
+    ),
 ]
 
-c_ok, c_err, c_dim, c_off = ("\033[32m", "\033[31m",
-                           "\033[2m", "\033[0m")
+c_ok, c_err, c_dim, c_off = ("\033[32m", "\033[31m", "\033[2m", "\033[0m")
 filt = sys.argv[1] if len(sys.argv) > 1 else ""
 
 print("Cowork session secrets — health check")
@@ -46,8 +49,7 @@ for name, consumer, impact in EXPECTED:
         continue
     val = os.environ.get(name, "")
     if val:
-        print(f"  {c_ok}✓{c_off}  {name:<30} "
-              f"({val[:4]}…, {len(val)} chars)")
+        print(f"  {c_ok}✓{c_off}  {name:<30} ({val[:4]}…, {len(val)} chars)")
         print(f"       {c_dim}consumer: {consumer}{c_off}")
         passed += 1
     else:
@@ -78,5 +80,4 @@ If you can't find the settings UI, fall back to:
 """)
     sys.exit(1)
 
-print("\nTip: keep CLAUDE.md → Cloud Session Secrets table in "
-      "sync after rotations.")
+print("\nTip: keep CLAUDE.md → Cloud Session Secrets table in sync after rotations.")

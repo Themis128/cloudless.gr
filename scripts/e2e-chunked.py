@@ -16,15 +16,14 @@ from pathlib import Path
 os.chdir(Path(__file__).resolve().parent.parent)
 
 CHUNKS = {
-    "api": ["e2e/deep/public-api-contracts.spec.ts",
-            "e2e/deep/health-routing.spec.ts",
-            "e2e/deep/security.spec.ts"],
-    "pages": ["e2e/deep/i18n-nav.spec.ts",
-              "e2e/deep/cms-campaigns.spec.ts"],
-    "auth": ["e2e/deep/auth-lifecycle.spec.ts",
-             "e2e/deep/protected-routes.spec.ts"],
-    "journey": ["e2e/deep/store-cart-checkout.spec.ts",
-                "e2e/deep/contact-subscribe.spec.ts"],
+    "api": [
+        "e2e/deep/public-api-contracts.spec.ts",
+        "e2e/deep/health-routing.spec.ts",
+        "e2e/deep/security.spec.ts",
+    ],
+    "pages": ["e2e/deep/i18n-nav.spec.ts", "e2e/deep/cms-campaigns.spec.ts"],
+    "auth": ["e2e/deep/auth-lifecycle.spec.ts", "e2e/deep/protected-routes.spec.ts"],
+    "journey": ["e2e/deep/store-cart-checkout.spec.ts", "e2e/deep/contact-subscribe.spec.ts"],
     "admin": ["e2e/deep/admin-surface.spec.ts"],
     "ui": ["e2e/deep/a11y.spec.ts"],
 }
@@ -43,12 +42,20 @@ def run_chunk(name: str) -> None:
         print(f"✗ Unknown chunk: {name}")
         list_chunks()
         sys.exit(1)
-    print(f"==> Running chunk [{name}] — {len(files)} files "
-          "(workers=2)")
+    print(f"==> Running chunk [{name}] — {len(files)} files (workers=2)")
     shutil.rmtree("test-results", ignore_errors=True)
     r = subprocess.call(
-        ["pnpm", "exec", "playwright", "test", *files,
-         "--project=chromium", "--workers=2", "--reporter=line"])
+        [
+            "pnpm",
+            "exec",
+            "playwright",
+            "test",
+            *files,
+            "--project=chromium",
+            "--workers=2",
+            "--reporter=line",
+        ]
+    )
     if r != 0:
         sys.exit(r)
     print(f"✅ Chunk [{name}] passed")

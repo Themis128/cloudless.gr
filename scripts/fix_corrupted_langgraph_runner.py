@@ -11,16 +11,14 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 RUNNER = ROOT / "agents/run_langchain_docs_research.py"
 os.chdir(ROOT)
 
 if not RUNNER.is_file():
     sys.exit(f"❌ Missing runner: {RUNNER}")
 
-shutil.copy(RUNNER, f"{RUNNER}.bak-"
-                    f"{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(RUNNER, f"{RUNNER}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
 
 RUNNER.write_text('''import sys
 
@@ -235,6 +233,8 @@ else:
 py_compile.compile(str(RUNNER), doraise=True)
 print(f"✅ Rewrote and validated: {RUNNER}\n")
 print("Test with:")
-print('PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"How should I use LangGraph local development with uv run '
-      'langgraph dev?"')
+print(
+    "PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"How should I use LangGraph local development with uv run '
+    'langgraph dev?"'
+)

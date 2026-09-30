@@ -58,22 +58,32 @@ def need_kubectl() -> None:
     # bypass it.
     no_proxy = os.environ.get("NO_PROXY", "") + (
         ",127.0.0.1,::1,localhost,192.168.1.128,192.168.1.130,"
-        "10.43.0.0/16,10.42.0.0/16,.svc,.cluster.local")
+        "10.43.0.0/16,10.42.0.0/16,.svc,.cluster.local"
+    )
     os.environ["NO_PROXY"] = os.environ["no_proxy"] = no_proxy
-    for var in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy",
-                "https_proxy", "ALL_PROXY", "all_proxy",
-                "SOCKS_PROXY", "SOCKS5_PROXY", "socks_proxy",
-                "socks5_proxy"):
+    for var in (
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+        "SOCKS_PROXY",
+        "SOCKS5_PROXY",
+        "socks_proxy",
+        "socks5_proxy",
+    ):
         os.environ.pop(var, None)
     if not shutil.which("kubectl"):
         sys.exit("kubectl not found. See docs/kubectl-tailscale.md")
-    if subprocess.call(["kubectl", "get", "ns"],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL) != 0:
-        r = subprocess.run(["kubectl", "config", "current-context"],
-                           capture_output=True, text=True)
-        sys.exit("kubectl cannot reach the cluster (context: "
-                 f"{r.stdout.strip() or 'unknown'})")
+    if (
+        subprocess.call(
+            ["kubectl", "get", "ns"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        != 0
+    ):
+        r = subprocess.run(["kubectl", "config", "current-context"], capture_output=True, text=True)
+        sys.exit(f"kubectl cannot reach the cluster (context: {r.stdout.strip() or 'unknown'})")
 
 
 MAP_TEXT = """\
@@ -110,40 +120,36 @@ def stop_all() -> None:
                 continue
             try:
                 os.kill(int(parts[0]), signal.SIGTERM)
-                print(f"stopped {parts[1] if len(parts) > 1 else ''} "
-                      f"(pid {parts[0]})")
+                print(f"stopped {parts[1] if len(parts) > 1 else ''} (pid {parts[0]})")
             except (OSError, ValueError):
                 pass
         PID_FILE.unlink(missing_ok=True)
     # orphan cleanup by port
     if shutil.which("fuser"):
         for _, _, _, port, _ in FORWARDS:
-            subprocess.run(["fuser", "-k", f"{port}/tcp"],
-                           capture_output=True)
+            subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True)
     print("all port-forwards stopped")
 
 
 def status_all() -> None:
-    r = subprocess.run(["kubectl", "config", "current-context"],
-                       capture_output=True, text=True)
+    r = subprocess.run(["kubectl", "config", "current-context"], capture_output=True, text=True)
     print(f"cluster context: {r.stdout.strip() or 'unknown'}")
     print(f"{'NAME':<24} {'PORT':<8} STATE")
     for name, _, _, port, _ in FORWARDS:
-        print(f"{name:<24} {port:<8} "
-              f"{'listening' if is_listening(port) else 'down'}")
+        print(f"{name:<24} {port:<8} {'listening' if is_listening(port) else 'down'}")
 
 
-def start_one(name: str, ns: str, res: str, local_port: int,
-              remote_port: int) -> bool:
+def start_one(name: str, ns: str, res: str, local_port: int, remote_port: int) -> bool:
     if is_listening(local_port):
         print(f"skip {name} — :{local_port} already listening")
         return True
     logf = open(LOG_FILE, "a")
     proc = subprocess.Popen(
-        ["kubectl", "-n", ns, "port-forward", res,
-         f"{local_port}:{remote_port}"],
-        stdout=logf, stderr=subprocess.STDOUT,
-        start_new_session=True)
+        ["kubectl", "-n", ns, "port-forward", res, f"{local_port}:{remote_port}"],
+        stdout=logf,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
     with open(PID_FILE, "a") as f:
         f.write(f"{proc.pid} {name}\n")
     for _ in range(30):
@@ -151,12 +157,10 @@ def start_one(name: str, ns: str, res: str, local_port: int,
             print(f"ok   {name} → 127.0.0.1:{local_port}")
             return True
         if proc.poll() is not None:
-            print(f"FAIL {name} — port-forward exited (see "
-                  f"{LOG_FILE})", file=sys.stderr)
+            print(f"FAIL {name} — port-forward exited (see {LOG_FILE})", file=sys.stderr)
             return False
         time.sleep(0.167)
-    print(f"warn {name} — pid {proc.pid} started but :{local_port} "
-          "not yet listening")
+    print(f"warn {name} — pid {proc.pid} started but :{local_port} not yet listening")
     return True
 
 
@@ -171,18 +175,19 @@ def start_all() -> int:
     print()
     print(MAP_TEXT)
     if failed:
-        print(f"\nSome forwards failed — check {LOG_FILE}",
-              file=sys.stderr)
+        print(f"\nSome forwards failed — check {LOG_FILE}", file=sys.stderr)
         return 1
     return 0
 
 
 def secret(ns: str, name: str, key: str) -> str:
     import base64
+
     r = subprocess.run(
-        ["kubectl", "-n", ns, "get", "secret", name, "-o",
-         f"jsonpath={{.data.{key}}}"],
-        capture_output=True, text=True)
+        ["kubectl", "-n", ns, "get", "secret", name, "-o", f"jsonpath={{.data.{key}}}"],
+        capture_output=True,
+        text=True,
+    )
     if r.returncode != 0 or not r.stdout:
         return ""
     try:
@@ -196,30 +201,25 @@ def print_passwords() -> None:
     print("# Secrets from live cluster (do not commit)\n")
     print("## EspoCRM MariaDB (127.0.0.1:13306)")
     print("user: espocrm")
-    print("password:", secret("espocrm", "espocrm-secrets",
-                               "mariadb-password"))
-    print("root password:", secret("espocrm", "espocrm-secrets",
-                                    "mariadb-root-password"))
+    print("password:", secret("espocrm", "espocrm-secrets", "mariadb-password"))
+    print("root password:", secret("espocrm", "espocrm-secrets", "mariadb-root-password"))
     print("\n## AppFlowy Postgres (127.0.0.1:15432)")
     print("user: postgres")
-    print("password:", secret("appflowy", "appflowy-secrets",
-                               "POSTGRES_PASSWORD"))
+    print("password:", secret("appflowy", "appflowy-secrets", "POSTGRES_PASSWORD"))
     print("\n## Postiz Postgres (127.0.0.1:15433)")
     print("user: postiz")
-    print("password:", secret("postiz", "postiz-secrets",
-                               "POSTGRES_PASSWORD"))
+    print("password:", secret("postiz", "postiz-secrets", "POSTGRES_PASSWORD"))
     print("\n## Meilisearch (127.0.0.1:17700)")
-    mk = (secret("meilisearch", "meilisearch-secret",
-                 "MEILI_MASTER_KEY")
-          or secret("meilisearch", "meilisearch-secret",
-                    "master-key"))
-    print("MEILI_MASTER_KEY:", mk or "(check secret keys: kubectl -n "
-          "meilisearch get secret meilisearch-secret -o json)")
+    mk = secret("meilisearch", "meilisearch-secret", "MEILI_MASTER_KEY") or secret(
+        "meilisearch", "meilisearch-secret", "master-key"
+    )
+    print(
+        "MEILI_MASTER_KEY:",
+        mk or "(check secret keys: kubectl -n meilisearch get secret meilisearch-secret -o json)",
+    )
     print("\n## AppFlowy MinIO")
-    print("access key:", secret("appflowy", "appflowy-secrets",
-                                 "APPFLOWY_S3_ACCESS_KEY"))
-    print("secret key:", secret("appflowy", "appflowy-secrets",
-                                 "APPFLOWY_S3_SECRET_KEY"))
+    print("access key:", secret("appflowy", "appflowy-secrets", "APPFLOWY_S3_ACCESS_KEY"))
+    print("secret key:", secret("appflowy", "appflowy-secrets", "APPFLOWY_S3_SECRET_KEY"))
 
 
 cmd = sys.argv[1] if len(sys.argv) > 1 else "start"
@@ -234,5 +234,4 @@ elif cmd == "passwords":
 elif cmd == "map":
     print(MAP_TEXT)
 else:
-    sys.exit(f"Usage: {sys.argv[0]} "
-             "{start|stop|status|passwords|map}")
+    sys.exit(f"Usage: {sys.argv[0]} {{start|stop|status|passwords|map}}")

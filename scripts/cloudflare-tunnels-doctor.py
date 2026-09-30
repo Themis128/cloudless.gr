@@ -38,28 +38,32 @@ OMV_LAN = os.environ.get("OMV_LAN", "192.168.1.128")
 HA_LAN = os.environ.get("HA_LAN", "192.168.1.130")
 OMV_TS = os.environ.get("OMV_TS", "100.74.191.58")
 HA_TS = os.environ.get("HA_TS", "100.95.117.84")
-SSH_OPTS = ["-o", "BatchMode=yes",
-            "-o", "StrictHostKeyChecking=accept-new",
-            "-o", "ConnectTimeout=10"]
+SSH_OPTS = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "ConnectTimeout=10",
+]
 
-REPO_ROOT = Path(os.environ.get(
-    "REPO_ROOT", Path(__file__).resolve().parent.parent))
-CANONICAL = (REPO_ROOT / "infrastructure/cloudflare-tunnels/"
-             "cloudflared-config.yml")
+REPO_ROOT = Path(os.environ.get("REPO_ROOT", Path(__file__).resolve().parent.parent))
+CANONICAL = REPO_ROOT / "infrastructure/cloudflare-tunnels/cloudflared-config.yml"
 
-print(f"==> Cloudflare tunnels doctor  DRY_RUN={int(DRY_RUN)} "
-      f"FIX={int(FIX)}")
+print(f"==> Cloudflare tunnels doctor  DRY_RUN={int(DRY_RUN)} FIX={int(FIX)}")
 print(f"    canonical={CANONICAL}")
 if not CANONICAL.is_file():
-    print(f"::error::Missing canonical config: {CANONICAL}",
-          file=sys.stderr)
+    print(f"::error::Missing canonical config: {CANONICAL}", file=sys.stderr)
     sys.exit(1)
 
 
 def ssh_ok(host: str) -> bool:
-    return subprocess.run(
-        ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "true"],
-        capture_output=True).returncode == 0
+    return (
+        subprocess.run(
+            ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "true"], capture_output=True
+        ).returncode
+        == 0
+    )
 
 
 def pick_host(lan: str, ts: str) -> str | None:
@@ -72,10 +76,9 @@ def pick_host(lan: str, ts: str) -> str | None:
 def remote(host: str, cmd: str = "", script: str = "") -> int:
     if script:
         return subprocess.call(
-            ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "bash", "-s"],
-            input=script, text=True)
-    return subprocess.call(
-        ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", cmd])
+            ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "bash", "-s"], input=script, text=True
+        )
+    return subprocess.call(["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", cmd])
 
 
 PUBLIC_URLS = [
@@ -135,8 +138,7 @@ def probe_public(phase: str) -> bool:
         if isinstance(code, int) and code in OK_CODES:
             print(f"  OK  [{name}] {code} (optional)")
         else:
-            print(f"  WARN [{name}] {code} (optional — backend may be "
-                  "undeployed)")
+            print(f"  WARN [{name}] {code} (optional — backend may be undeployed)")
     return not fail
 
 
@@ -160,8 +162,7 @@ if not OMV_EP:
     sys.exit(1)
 HA_EP = pick_host(HA_LAN, HA_TS)
 if not HA_EP:
-    print(f"::warning::Cannot SSH to omv-ha ({HA_LAN} / {HA_TS}) — "
-          "will only fix omv")
+    print(f"::warning::Cannot SSH to omv-ha ({HA_LAN} / {HA_TS}) — will only fix omv")
 print(f"    omv={OMV_EP}  omv-ha={HA_EP or 'UNREACHABLE'}")
 
 pre_fail = False
@@ -171,9 +172,12 @@ if not probe_lan(OMV_LAN):
     pre_fail = True
 
 print("\n=== cloudflared status ===")
-remote(OMV_EP, "systemctl is-active cloudflared; cloudflared tunnel "
-       "info e977a490-58c5-4fdb-9155-86832e3e636a 2>/dev/null | "
-       "head -15 || true")
+remote(
+    OMV_EP,
+    "systemctl is-active cloudflared; cloudflared tunnel "
+    "info e977a490-58c5-4fdb-9155-86832e3e636a 2>/dev/null | "
+    "head -15 || true",
+)
 if HA_EP:
     remote(HA_EP, "systemctl is-active cloudflared || echo inactive")
 
@@ -194,10 +198,11 @@ if not pre_fail and not DRY_RUN:
 
 print("\n=== Ensure NodePorts ===")
 if DRY_RUN:
-    print("  [dry-run] would patch NodePorts (n8n 30900, ntfy 30080, "
-          "grafana 30850, …)")
+    print("  [dry-run] would patch NodePorts (n8n 30900, ntfy 30080, grafana 30850, …)")
 else:
-    remote(OMV_EP, script="""\
+    remote(
+        OMV_EP,
+        script="""\
 set -euo pipefail
 KUBE="sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
 patch() {
@@ -217,22 +222,30 @@ patch meilisearch meilisearch '{"spec":{"type":"NodePort","ports":[{"name":"http
 patch alert-manager alert-api '{"spec":{"type":"NodePort","ports":[{"name":"http","port":8080,"targetPort":8080,"nodePort":30820}]}}' || true
 patch cloudless cloudless-app '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30300}]}}' || true
 echo "NodePort patches attempted"
-""")
+""",
+    )
 
 # --- Traefik IngressRoutes ---
-ingressroutes = (REPO_ROOT / "infrastructure/traefik/"
-                 "ingressroutes.yaml")
+ingressroutes = REPO_ROOT / "infrastructure/traefik/ingressroutes.yaml"
 if ingressroutes.is_file():
     print("\n=== Apply Traefik IngressRoutes ===")
     if DRY_RUN:
         print(f"  [dry-run] would kubectl apply {ingressroutes} on omv")
     else:
         subprocess.run(
-            ["scp", *SSH_OPTS, str(ingressroutes),
-             f"{SSH_USER}@{OMV_EP}:/tmp/ingressroutes.doctor.yaml"])
-        remote(OMV_EP, "sudo kubectl --kubeconfig "
-               "/etc/rancher/k3s/k3s.yaml apply -f "
-               "/tmp/ingressroutes.doctor.yaml")
+            [
+                "scp",
+                *SSH_OPTS,
+                str(ingressroutes),
+                f"{SSH_USER}@{OMV_EP}:/tmp/ingressroutes.doctor.yaml",
+            ]
+        )
+        remote(
+            OMV_EP,
+            "sudo kubectl --kubeconfig "
+            "/etc/rancher/k3s/k3s.yaml apply -f "
+            "/tmp/ingressroutes.doctor.yaml",
+        )
 
 # --- Build host-specific configs ---
 workdir = tempfile.mkdtemp()
@@ -241,14 +254,21 @@ ha_yml = Path(workdir) / "ha.yml"
 omv_yml.write_text(CANONICAL.read_text())
 
 text = CANONICAL.read_text()
-text = text.replace("service: http://192.168.1.130:80",
-                    "service: http://localhost:80", 1)
-text = re.sub(r"(- hostname: omv\.cloudless\.gr\n  service: )"
-              r"http://localhost:80",
-              r"\1http://192.168.1.128:80", text, count=1)
-text = re.sub(r"(- hostname: ftp\.cloudless\.gr\n  service: )"
-              r"http://localhost:21",
-              r"\1http://192.168.1.128:21", text, count=1)
+text = text.replace("service: http://192.168.1.130:80", "service: http://localhost:80", 1)
+text = re.sub(
+    r"(- hostname: omv\.cloudless\.gr\n  service: )"
+    r"http://localhost:80",
+    r"\1http://192.168.1.128:80",
+    text,
+    count=1,
+)
+text = re.sub(
+    r"(- hostname: ftp\.cloudless\.gr\n  service: )"
+    r"http://localhost:21",
+    r"\1http://192.168.1.128:21",
+    text,
+    count=1,
+)
 ha_yml.write_text(text)
 print(f"wrote omv-ha variant {ha_yml}")
 
@@ -257,26 +277,28 @@ def apply_config(ep: str, local_file: Path, label: str) -> None:
     print(f"\n=== Sync cloudflared config → {label} ({ep}) ===")
     if DRY_RUN:
         n = len(local_file.read_text().splitlines())
-        print(f"  [dry-run] would install {n} lines and restart "
-              "cloudflared")
+        print(f"  [dry-run] would install {n} lines and restart cloudflared")
         r = subprocess.run(
-            ["ssh", *SSH_OPTS, f"{SSH_USER}@{ep}",
-             "sudo cat /etc/cloudflared/config.yml"],
-            capture_output=True, text=True)
+            ["ssh", *SSH_OPTS, f"{SSH_USER}@{ep}", "sudo cat /etc/cloudflared/config.yml"],
+            capture_output=True,
+            text=True,
+        )
         live = r.stdout
         if live:
             import difflib
+
             diff = difflib.unified_diff(
-                live.splitlines(),
-                local_file.read_text().splitlines(),
-                lineterm="")
+                live.splitlines(), local_file.read_text().splitlines(), lineterm=""
+            )
             print("\n".join(list(diff)[:80]))
         return
     subprocess.run(
-        ["scp", *SSH_OPTS, str(local_file),
-         f"{SSH_USER}@{ep}:/tmp/cloudflared-config.doctor.yml"],
-        check=True)
-    remote(ep, script="""\
+        ["scp", *SSH_OPTS, str(local_file), f"{SSH_USER}@{ep}:/tmp/cloudflared-config.doctor.yml"],
+        check=True,
+    )
+    remote(
+        ep,
+        script="""\
 set -euo pipefail
 CFG=/etc/cloudflared/config.yml
 sudo cp "$CFG" "$CFG.bak.doctor.$(date +%Y%m%d%H%M%S)"
@@ -286,7 +308,8 @@ sudo systemctl restart cloudflared
 sleep 3
 systemctl is-active cloudflared
 grep -E 'hostname: (grafana|n8n|ntfy|espocrm|postiz|appflowy|logs|webmail|agent|vibe)' "$CFG" || true
-""")
+""",
+    )
 
 
 apply_config(OMV_EP, omv_yml, "omv")

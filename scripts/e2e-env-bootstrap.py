@@ -14,7 +14,6 @@ Usage:
 
 import getpass
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -25,13 +24,19 @@ ENV_FILE = REPO_ROOT / ".env.e2e"
 EXAMPLE_FILE = REPO_ROOT / ".env.e2e.example"
 
 SSM_PREFIX = os.environ.get("SSM_PREFIX", "/cloudless/production")
-REGION = os.environ.get("AWS_REGION") or \
-    os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+REGION = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 
 
-def log(*a): print("\033[1;36m[e2e-env]\033[0m", *a)
-def warn(*a): print("\033[1;33m[e2e-env]\033[0m", *a)
-def err(*a): print("\033[1;31m[e2e-env]\033[0m", *a, file=sys.stderr)
+def log(*a):
+    print("\033[1;36m[e2e-env]\033[0m", *a)
+
+
+def warn(*a):
+    print("\033[1;33m[e2e-env]\033[0m", *a)
+
+
+def err(*a):
+    print("\033[1;31m[e2e-env]\033[0m", *a, file=sys.stderr)
 
 
 def existing(key: str) -> str:
@@ -98,25 +103,34 @@ if MODE == "print":
 log(f"Fetching CRON_SECRET from SSM at {SSM_PREFIX}/CRON_SECRET")
 if shutil.which("aws"):
     r = subprocess.run(
-        ["aws", "ssm", "get-parameter",
-         "--name", f"{SSM_PREFIX}/CRON_SECRET",
-         "--with-decryption", "--region", REGION,
-         "--query", "Parameter.Value", "--output", "text"],
-        capture_output=True, text=True)
+        [
+            "aws",
+            "ssm",
+            "get-parameter",
+            "--name",
+            f"{SSM_PREFIX}/CRON_SECRET",
+            "--with-decryption",
+            "--region",
+            REGION,
+            "--query",
+            "Parameter.Value",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     val = r.stdout.strip()
     if val and val != "None":
         upsert("CRON_SECRET", val)
         log(f"✓ CRON_SECRET pulled from SSM (len={len(val)})")
     else:
-        warn("Could not fetch CRON_SECRET from SSM. Cron happy-path "
-             "tests will skip.")
-        warn("  Possible causes: AWS creds not loaded, parameter "
-             "missing, wrong region.")
+        warn("Could not fetch CRON_SECRET from SSM. Cron happy-path tests will skip.")
+        warn("  Possible causes: AWS creds not loaded, parameter missing, wrong region.")
         if not existing("CRON_SECRET"):
             upsert("CRON_SECRET", "")
 else:
-    warn("aws-cli not found in PATH. Cron happy-path tests will "
-         "skip.")
+    warn("aws-cli not found in PATH. Cron happy-path tests will skip.")
     if not existing("CRON_SECRET"):
         upsert("CRON_SECRET", "")
 
@@ -125,19 +139,13 @@ if MODE == "ssm-only":
     sys.exit(0)
 
 log("Configuring test user credentials")
-log("  (Press Enter to keep existing; leave both blank to skip "
-    "user-auth tests)")
-upsert("E2E_USER_EMAIL", prompt("E2E_USER_EMAIL",
-                                "Test user email"))
-upsert("E2E_USER_PASSWORD",
-       prompt("E2E_USER_PASSWORD", "Test user password", hide=True))
+log("  (Press Enter to keep existing; leave both blank to skip user-auth tests)")
+upsert("E2E_USER_EMAIL", prompt("E2E_USER_EMAIL", "Test user email"))
+upsert("E2E_USER_PASSWORD", prompt("E2E_USER_PASSWORD", "Test user password", hide=True))
 
 log("Configuring test admin credentials")
-upsert("E2E_ADMIN_EMAIL", prompt("E2E_ADMIN_EMAIL",
-                                 "Test admin email"))
-upsert("E2E_ADMIN_PASSWORD",
-       prompt("E2E_ADMIN_PASSWORD", "Test admin password",
-              hide=True))
+upsert("E2E_ADMIN_EMAIL", prompt("E2E_ADMIN_EMAIL", "Test admin email"))
+upsert("E2E_ADMIN_PASSWORD", prompt("E2E_ADMIN_PASSWORD", "Test admin password", hide=True))
 
 if not existing("PLAYWRIGHT_BASE_URL"):
     upsert("PLAYWRIGHT_BASE_URL", "http://localhost:4000")

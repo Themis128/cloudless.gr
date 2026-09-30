@@ -16,14 +16,12 @@ print(f"==> Project: {PROJECT_DIR}")
 
 ts = time.strftime("%Y%m%d-%H%M%S")
 print("==> Backing up files...")
-shutil.copy("src/index.ts",
-            f"src/index.ts.bak-agent-auth-{ts}")
+shutil.copy("src/index.ts", f"src/index.ts.bak-agent-auth-{ts}")
 for f in ("public/index.html", ".env.local"):
     if Path(f).is_file():
         shutil.copy(f, f"{f}.bak-agent-auth-{ts}")
 
-print("==> Ensuring AGENT_AUTH_TOKEN exists once in "
-      ".env.local...")
+print("==> Ensuring AGENT_AUTH_TOKEN exists once in .env.local...")
 env_p = Path(".env.local")
 token = None
 if env_p.is_file():
@@ -33,15 +31,16 @@ if env_p.is_file():
 if not token:
     token = secrets.token_urlsafe(36)
 
-lines = [l for l in env_p.read_text().splitlines()
-         if not l.startswith("AGENT_AUTH_TOKEN=")] \
-    if env_p.is_file() else []
+lines = (
+    [ln for ln in env_p.read_text().splitlines() if not ln.startswith("AGENT_AUTH_TOKEN=")]
+    if env_p.is_file()
+    else []
+)
 lines += ["", f"AGENT_AUTH_TOKEN={token}"]
 env_p.write_text("\n".join(lines) + "\n")
 
-print("==> Writing authenticated Agent router to "
-      "src/index.ts...")
-Path("src/index.ts").write_text('''import { routeAgentRequest } from "agents";
+print("==> Writing authenticated Agent router to src/index.ts...")
+Path("src/index.ts").write_text("""import { routeAgentRequest } from "agents";
 
 export { CounterAgent } from "./agents/counter";
 
@@ -96,12 +95,11 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-''')
+""")
 
-print("==> Writing token-aware vanilla JS frontend to "
-      "public/index.html...")
+print("==> Writing token-aware vanilla JS frontend to public/index.html...")
 Path("public").mkdir(exist_ok=True)
-Path("public/index.html").write_text('''<!doctype html>
+Path("public/index.html").write_text("""<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -253,20 +251,20 @@ Path("public/index.html").write_text('''<!doctype html>
     </script>
   </body>
 </html>
-''')
+""")
 
 print("==> Ensuring .env.local is ignored by git...")
 gi = Path(".gitignore")
-if ".env.local" not in (gi.read_text() if gi.is_file()
-                        else ""):
+if ".env.local" not in (gi.read_text() if gi.is_file() else ""):
     with gi.open("a") as f:
         f.write(".env.local\n")
 
-print("==> Uploading AGENT_AUTH_TOKEN as Cloudflare "
-      "Worker secret...")
+print("==> Uploading AGENT_AUTH_TOKEN as Cloudflare Worker secret...")
 subprocess.run(
-    ["pnpm", "exec", "wrangler", "secret", "put",
-     "AGENT_AUTH_TOKEN"], input=token.encode(), check=True)
+    ["pnpm", "exec", "wrangler", "secret", "put", "AGENT_AUTH_TOKEN"],
+    input=token.encode(),
+    check=True,
+)
 
 print("==> Regenerating types and checking TypeScript...")
 subprocess.call(["pnpm", "run", "cf:types"])

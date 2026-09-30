@@ -14,16 +14,16 @@ import os
 import shutil
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 DISK_MOUNT = os.environ.get(
-    "DISK_MOUNT",
-    "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7")
+    "DISK_MOUNT", "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7"
+)
 
 
 def log(msg: str) -> None:
-    print(f"[{datetime.now(timezone.utc):%H:%M:%S}] {msg}")
+    print(f"[{datetime.now(UTC):%H:%M:%S}] {msg}")
 
 
 def run(cmd: list[str], tail: int = 0) -> None:
@@ -36,11 +36,9 @@ def run(cmd: list[str], tail: int = 0) -> None:
 
 def disk_summary(header: str) -> None:
     log(header)
-    subprocess.run(["df", "-h", "/", "/var/lib/rancher/k3s",
-                    DISK_MOUNT], capture_output=False)
+    subprocess.run(["df", "-h", "/", "/var/lib/rancher/k3s", DISK_MOUNT], capture_output=False)
     log("--- Top-level space consumers on / ---")
-    for p in ("/var/lib/rancher/k3s", "/var/log", "/var/cache",
-              DISK_MOUNT):
+    for p in ("/var/lib/rancher/k3s", "/var/log", "/var/cache", DISK_MOUNT):
         run(["du", "-sh", p])
 
 
@@ -72,8 +70,7 @@ def prune_logs() -> None:
         for f in pods.rglob("*.log"):
             try:
                 st = f.stat()
-                if st.st_size > 10 * 1024 * 1024 and \
-                        now - st.st_mtime > 86400:
+                if st.st_size > 10 * 1024 * 1024 and now - st.st_mtime > 86400:
                     with open(f, "r+b") as fh:
                         fh.truncate(1024 * 1024)
             except OSError:
@@ -86,8 +83,7 @@ def prune_snapshots() -> None:
     if not snap_dir.is_dir():
         log("  Snapshot dir not found — skipping")
         return
-    snaps = sorted(snap_dir.glob("*.db"),
-                   key=lambda p: p.stat().st_mtime, reverse=True)
+    snaps = sorted(snap_dir.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
     if len(snaps) <= 2:
         log(f"  Only {len(snaps)} snapshot(s) — nothing to prune")
         return

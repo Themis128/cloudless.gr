@@ -34,13 +34,32 @@ print("""
 
 if len(sys.argv) > 1 and sys.argv[1] == "--execute":
     print("\nEnsuring orphaned D1 cloudless-auth is gone...")
-    subprocess.run(["npx", "wrangler", "d1", "delete",
-                    "cloudless-auth", "--force",
-                    "--config", "wrangler.jsonc"])
+    subprocess.run(
+        [
+            "npx",
+            "wrangler",
+            "d1",
+            "delete",
+            "cloudless-auth",
+            "--force",
+            "--config",
+            "wrangler.jsonc",
+        ]
+    )
     print("\nEnsuring orphaned KV HEALTH_CACHE is gone...")
-    subprocess.run(["npx", "wrangler", "kv", "namespace", "delete",
-                    "9a6997af9ff5495ba72b31d2c1e5e6dd", "--force",
-                    "--config", "wrangler.jsonc"])
+    subprocess.run(
+        [
+            "npx",
+            "wrangler",
+            "kv",
+            "namespace",
+            "delete",
+            "9a6997af9ff5495ba72b31d2c1e5e6dd",
+            "--force",
+            "--config",
+            "wrangler.jsonc",
+        ]
+    )
 else:
     print(f"""
 Orphans already removed from the account. Re-run with --execute only to

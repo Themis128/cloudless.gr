@@ -34,8 +34,7 @@ def probe_ports() -> bool:
                     print(f"ok: {PEER}:{port} reachable (attempt {i})")
                     break
             except OSError:
-                print(f"tcp {PEER}:{port} attempt {i}/12 failed — "
-                      "retrying in 10s")
+                print(f"tcp {PEER}:{port} attempt {i}/12 failed — retrying in 10s")
                 if i == 12:
                     failed = True
                 else:
@@ -51,33 +50,27 @@ def tailscale(*args: str, sudo: bool = False) -> int:
 print(f"::group::Wait for tailnet path to {PEER}")
 
 # Warm the path regardless — forces DERP->direct negotiation up front.
-r = subprocess.run(["tailscale", "ping", "--c", "3", "--timeout", "10s",
-                    PEER], capture_output=True, text=True)
+r = subprocess.run(
+    ["tailscale", "ping", "--c", "3", "--timeout", "10s", PEER], capture_output=True, text=True
+)
 print("\n".join((r.stdout + r.stderr).splitlines()[-3:]))
 if r.returncode:
-    print(f"::warning::tailscale ping to {PEER} failed — TCP probes are "
-          "authoritative")
+    print(f"::warning::tailscale ping to {PEER} failed — TCP probes are authoritative")
 
 if not probe_ports():
-    print("::warning::TCP probes failing — re-syncing tailscale routes "
-          "(down/up)")
+    print("::warning::TCP probes failing — re-syncing tailscale routes (down/up)")
     subprocess.call(["sudo", "tailscale", "down"])
     subprocess.call(["sudo", "tailscale", "up"])
     time.sleep(5)
-    subprocess.call(["tailscale", "ping", "--c", "3", "--timeout",
-                     "10s", PEER])
+    subprocess.call(["tailscale", "ping", "--c", "3", "--timeout", "10s", PEER])
     if not probe_ports():
-        print(f"::error::{PEER} still unreachable after tailscale "
-              "re-sync")
+        print(f"::error::{PEER} still unreachable after tailscale re-sync")
         print("--- self ---")
-        subprocess.call(["tailscale", "status", "--self",
-                         "--peers=false"])
+        subprocess.call(["tailscale", "status", "--self", "--peers=false"])
         print("--- peer ---")
-        r = subprocess.run(["tailscale", "whois", PEER],
-                           capture_output=True, text=True)
+        r = subprocess.run(["tailscale", "whois", PEER], capture_output=True, text=True)
         for line in (r.stdout + r.stderr).splitlines():
-            if any(k in line.lower() for k in
-                   ("tags:", "name:", "machine")):
+            if any(k in line.lower() for k in ("tags:", "name:", "machine")):
                 print(line)
         subprocess.call(["tailscale", "status"])
         subprocess.call(["tailscale", "netcheck"])

@@ -17,23 +17,27 @@ DIAGNOSE = ROOT / "scripts" / "tailscale-diagnose.py"
 def run_ssh(host: str, cmd: str, stdin_file=None) -> None:
     print(f"Running on {host}: {cmd}")
     subprocess.run(
-        ["sshpass", "-p", SSH_PASSWORD, "ssh",
-         "-o", "StrictHostKeyChecking=no",
-         f"{OMV_USER}@{host}", cmd],
-        stdin=stdin_file)
+        [
+            "sshpass",
+            "-p",
+            SSH_PASSWORD,
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            f"{OMV_USER}@{host}",
+            cmd,
+        ],
+        stdin=stdin_file,
+    )
 
 
 print("=== Running diagnostics on omv node ===")
-with open(DIAGNOSE if DIAGNOSE.exists()
-          else ROOT / "scripts/tailscale-diagnose.sh") as f:
-    run_ssh(OMV_HOST, "bash -s" if DIAGNOSE.suffix == ".sh"
-            else "python3 -", f)
+with open(DIAGNOSE if DIAGNOSE.exists() else ROOT / "scripts/tailscale-diagnose.sh") as f:
+    run_ssh(OMV_HOST, "bash -s" if DIAGNOSE.suffix == ".sh" else "python3 -", f)
 
 print("=== Running diagnostics on omv-ha node ===")
-with open(DIAGNOSE if DIAGNOSE.exists()
-          else ROOT / "scripts/tailscale-diagnose.sh") as f:
-    run_ssh(OMV_HA_HOST, "bash -s" if DIAGNOSE.suffix == ".sh"
-            else "python3 -", f)
+with open(DIAGNOSE if DIAGNOSE.exists() else ROOT / "scripts/tailscale-diagnose.sh") as f:
+    run_ssh(OMV_HA_HOST, "bash -s" if DIAGNOSE.suffix == ".sh" else "python3 -", f)
 
 print("=== Checking Tailscale status ===")
 run_ssh(OMV_HOST, "tailscale status")

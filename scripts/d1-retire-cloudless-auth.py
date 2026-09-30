@@ -28,13 +28,12 @@ Account status: deleted 2026-07-30 (idempotent re-run OK).
 
 if os.environ.get("CONFIRM") != "1":
     print("Dry-run. To force delete attempt:")
-    print("  CONFIRM=1 python3 "
-          "scripts/d1-retire-cloudless-auth.py")
+    print("  CONFIRM=1 python3 scripts/d1-retire-cloudless-auth.py")
     sys.exit(0)
 
-r = subprocess.run(["pnpm", "exec", "wrangler", "d1",
-                    "delete", NAME, "--force"])
-print(f"✅ {'deleted' if r.returncode == 0 else 'already absent'}"
-      f" D1 {NAME}"
-      if r.returncode == 0 else
-      f"✅ D1 {NAME} already absent (nothing to do)")
+r = subprocess.run(["pnpm", "exec", "wrangler", "d1", "delete", NAME, "--force"])
+print(
+    f"✅ {'deleted' if r.returncode == 0 else 'already absent'} D1 {NAME}"
+    if r.returncode == 0
+    else f"✅ D1 {NAME} already absent (nothing to do)"
+)

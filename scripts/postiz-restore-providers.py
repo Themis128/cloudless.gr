@@ -24,10 +24,21 @@ SSM_PREFIX = os.environ.get("SSM_PREFIX", "/cloudless/production")
 
 def read_ssm(name: str) -> str:
     r = subprocess.run(
-        ["aws", "ssm", "get-parameter",
-         "--name", f"{SSM_PREFIX}/{name}", "--with-decryption",
-         "--query", "Parameter.Value", "--output", "text"],
-        capture_output=True, text=True)
+        [
+            "aws",
+            "ssm",
+            "get-parameter",
+            "--name",
+            f"{SSM_PREFIX}/{name}",
+            "--with-decryption",
+            "--query",
+            "Parameter.Value",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
@@ -42,11 +53,13 @@ def resolve(dest: str, *candidates: str) -> str:
     return ""
 
 
-if not shutil.which("aws") or subprocess.run(
-        ["aws", "sts", "get-caller-identity"],
-        capture_output=True).returncode:
-    print("ERROR: AWS CLI not authenticated — export keys manually or "
-          "fix AWS creds.", file=sys.stderr)
+if (
+    not shutil.which("aws")
+    or subprocess.run(["aws", "sts", "get-caller-identity"], capture_output=True).returncode
+):
+    print(
+        "ERROR: AWS CLI not authenticated — export keys manually or fix AWS creds.", file=sys.stderr
+    )
     sys.exit(1)
 if not shutil.which("kubectl"):
     print("ERROR: kubectl not found.", file=sys.stderr)
@@ -54,20 +67,17 @@ if not shutil.which("kubectl"):
 
 keys = {
     "FACEBOOK_APP_ID": resolve("FACEBOOK_APP_ID", "FACEBOOK_APP_ID"),
-    "FACEBOOK_APP_SECRET": resolve("FACEBOOK_APP_SECRET",
-                                   "FACEBOOK_APP_SECRET"),
-    "LINKEDIN_CLIENT_ID": resolve("LINKEDIN_CLIENT_ID",
-                                  "LINKEDIN_CLIENT_ID"),
-    "LINKEDIN_CLIENT_SECRET": resolve("LINKEDIN_CLIENT_SECRET",
-                                      "LINKEDIN_CLIENT_SECRET"),
+    "FACEBOOK_APP_SECRET": resolve("FACEBOOK_APP_SECRET", "FACEBOOK_APP_SECRET"),
+    "LINKEDIN_CLIENT_ID": resolve("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_ID"),
+    "LINKEDIN_CLIENT_SECRET": resolve("LINKEDIN_CLIENT_SECRET", "LINKEDIN_CLIENT_SECRET"),
     "X_API_KEY": resolve("X_API_KEY", "X_API_KEY"),
     "X_API_SECRET": resolve("X_API_SECRET", "X_API_SECRET"),
     "TIKTOK_CLIENT_ID": resolve(
-        "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_ID", "TIKTOK_APP_ID",
-        "tiktok-client-key"),
+        "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_ID", "TIKTOK_APP_ID", "tiktok-client-key"
+    ),
     "TIKTOK_CLIENT_SECRET": resolve(
-        "TIKTOK_CLIENT_SECRET", "TIKTOK_CLIENT_SECRET",
-        "TIKTOK_APP_SECRET", "tiktok-client-secret"),
+        "TIKTOK_CLIENT_SECRET", "TIKTOK_CLIENT_SECRET", "TIKTOK_APP_SECRET", "tiktok-client-secret"
+    ),
     "POSTIZ_API_KEY": resolve("POSTIZ_API_KEY", "POSTIZ_API_KEY"),
 }
 
@@ -75,12 +85,21 @@ keys = {
 # missing.
 if not keys["POSTIZ_API_KEY"]:
     r = subprocess.run(
-        ["kubectl", "-n", NAMESPACE, "get", "secret", SECRET_NAME,
-         "-o", "jsonpath={.data.POSTIZ_API_KEY}"],
-        capture_output=True, text=True)
+        [
+            "kubectl",
+            "-n",
+            NAMESPACE,
+            "get",
+            "secret",
+            SECRET_NAME,
+            "-o",
+            "jsonpath={.data.POSTIZ_API_KEY}",
+        ],
+        capture_output=True,
+        text=True,
+    )
     try:
-        keys["POSTIZ_API_KEY"] = base64.b64decode(
-            r.stdout.strip()).decode()
+        keys["POSTIZ_API_KEY"] = base64.b64decode(r.stdout.strip()).decode()
     except Exception:
         pass
 
@@ -91,31 +110,34 @@ if not found:
     print("ERROR: no provider keys resolved.", file=sys.stderr)
     sys.exit(1)
 
-print(f"Will upsert secret/{SECRET_NAME} in ns/{NAMESPACE} with: "
-      f"{' '.join(found)}")
+print(f"Will upsert secret/{SECRET_NAME} in ns/{NAMESPACE} with: {' '.join(found)}")
 if missing:
-    print(f"Missing (channel connect for these will fail until set): "
-          f"{' '.join(missing)}")
+    print(f"Missing (channel connect for these will fail until set): {' '.join(missing)}")
 
 
 def kubectl(*args: str) -> None:
     subprocess.run(["kubectl", *args], check=True)
 
 
-kubectl("-n", NAMESPACE, "delete", "secret", SECRET_NAME,
-        "--ignore-not-found")
-kubectl("-n", NAMESPACE, "create", "secret", "generic", SECRET_NAME,
-        *[f"--from-literal={k}={keys[k]}" for k in found])
+kubectl("-n", NAMESPACE, "delete", "secret", SECRET_NAME, "--ignore-not-found")
+kubectl(
+    "-n",
+    NAMESPACE,
+    "create",
+    "secret",
+    "generic",
+    SECRET_NAME,
+    *[f"--from-literal={k}={keys[k]}" for k in found],
+)
 kubectl("-n", NAMESPACE, "rollout", "restart", "deploy/postiz")
-kubectl("-n", NAMESPACE, "rollout", "status", "deploy/postiz",
-        "--timeout=180s")
+kubectl("-n", NAMESPACE, "rollout", "status", "deploy/postiz", "--timeout=180s")
 
 print("Verify env keys present in pod (names only):")
 check = "; ".join(
-    f'if [ -n "$(printenv {k})" ]; then echo "  OK {k}"; '
-    f'else echo "  MISSING {k}"; fi' for k in keys)
-subprocess.run(["kubectl", "-n", NAMESPACE, "exec", "deploy/postiz",
-                "--", "sh", "-c", check])
+    f'if [ -n "$(printenv {k})" ]; then echo "  OK {k}"; else echo "  MISSING {k}"; fi'
+    for k in keys
+)
+subprocess.run(["kubectl", "-n", NAMESPACE, "exec", "deploy/postiz", "--", "sh", "-c", check])
 
 print("""
 Next: connect channels in https://postiz.cloudless.gr

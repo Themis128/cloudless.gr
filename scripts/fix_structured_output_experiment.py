@@ -10,17 +10,13 @@ import shutil
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 os.chdir(ROOT)
-TARGET = ROOT / "agents/experiments/" \
-    "langchain_v1_structured_output_local_vllm.py"
+TARGET = ROOT / "agents/experiments/langchain_v1_structured_output_local_vllm.py"
 TARGET.parent.mkdir(parents=True, exist_ok=True)
 
 if TARGET.is_file():
-    shutil.copy(
-        TARGET,
-        f"{TARGET}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+    shutil.copy(TARGET, f"{TARGET}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
 
 TARGET.write_text('''"""LangChain v1 structured output experiment with local vLLM.
 
@@ -165,5 +161,4 @@ if __name__ == "__main__":
 py_compile.compile(str(TARGET), doraise=True)
 print(f"✅ Rewrote and validated: {TARGET}\n")
 print("Run:")
-print("PYTHONPATH=. python agents/experiments/"
-      "langchain_v1_structured_output_local_vllm.py")
+print("PYTHONPATH=. python agents/experiments/langchain_v1_structured_output_local_vllm.py")

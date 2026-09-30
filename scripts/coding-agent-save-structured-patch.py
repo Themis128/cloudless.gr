@@ -11,16 +11,14 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
 os = __import__("os")
 os.chdir(PROJECT_DIR)
 
-BASE_URL = (sys.argv[1] if len(sys.argv) > 1
-            else "https://cloudless-gr."
-                 "baltzakis-themis.workers.dev")
+BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://cloudless-gr.baltzakis-themis.workers.dev"
 PATCH_DIR = Path("patches/coding-agent")
 
 token = ""
@@ -36,10 +34,10 @@ PATCH_DIR.mkdir(parents=True, exist_ok=True)
 
 req = urllib.request.Request(
     f"{BASE_URL}/api/agents/coding-agent/default/result",
-    headers={"Authorization": f"Bearer {token}"})
+    headers={"Authorization": f"Bearer {token}"},
+)
 try:
-    payload = json.loads(
-        urllib.request.urlopen(req, timeout=60).read())
+    payload = json.loads(urllib.request.urlopen(req, timeout=60).read())
 except Exception as e:
     sys.exit(f"Failed to fetch result: {e}")
 
@@ -50,20 +48,16 @@ if not last_response.strip():
 try:
     structured_patch = json.loads(last_response)
 except json.JSONDecodeError as e:
-    sys.exit(f"lastResponse is not valid structured patch "
-             f"JSON: {e}")
+    sys.exit(f"lastResponse is not valid structured patch JSON: {e}")
 
 if structured_patch.get("safeToApply") is not True:
-    print("Refusing to save patch because safeToApply is "
-          "not true.\n\nSummary:")
+    print("Refusing to save patch because safeToApply is not true.\n\nSummary:")
     print(structured_patch.get("summary", ""))
     sys.exit(2)
 
 unified_diff = structured_patch.get("unifiedDiff", "")
-if not isinstance(unified_diff, str) or \
-        not unified_diff.strip():
-    sys.exit("Refusing to save patch because unifiedDiff is "
-             "empty.")
+if not isinstance(unified_diff, str) or not unified_diff.strip():
+    sys.exit("Refusing to save patch because unifiedDiff is empty.")
 
 bad = []
 repo = PROJECT_DIR.resolve()
@@ -83,35 +77,31 @@ for line in unified_diff.splitlines():
         if not path.exists():
             bad.append(raw)
 if bad:
-    print("Refusing to save patch because these paths are "
-          "invalid or missing:")
+    print("Refusing to save patch because these paths are invalid or missing:")
     for p in bad:
         print(f"- {p}")
     sys.exit(3)
 
-with tempfile.NamedTemporaryFile("w", suffix=".patch",
-                                 delete=False) as tmp:
+with tempfile.NamedTemporaryFile("w", suffix=".patch", delete=False) as tmp:
     tmp.write(unified_diff.rstrip() + "\n")
     tmp_patch = Path(tmp.name)
 try:
     check = subprocess.run(
-        ["git", "apply", "--check", str(tmp_patch)],
-        capture_output=True, text=True)
+        ["git", "apply", "--check", str(tmp_patch)], capture_output=True, text=True
+    )
     if check.returncode != 0:
-        print("Refusing to save patch because git apply "
-              "--check failed.\n")
+        print("Refusing to save patch because git apply --check failed.\n")
         print("git apply --check stderr:")
         print(check.stderr.strip())
         sys.exit(4)
 finally:
     tmp_patch.unlink(missing_ok=True)
 
-ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 patch_file = PATCH_DIR / f"{ts}.patch"
 json_file = PATCH_DIR / f"{ts}.json"
 patch_file.write_text(unified_diff.rstrip() + "\n")
-json_file.write_text(json.dumps(structured_patch,
-                                indent=2) + "\n")
+json_file.write_text(json.dumps(structured_patch, indent=2) + "\n")
 
 print(f"Saved patch: {patch_file}")
 print(f"Saved metadata: {json_file}\n")

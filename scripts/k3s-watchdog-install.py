@@ -9,7 +9,7 @@ auto-recovers from crashes without manual intervention.
 Idempotent — safe to re-run. Requires sudo (CI or directly on Pi)."""
 
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 OVERRIDE_DIR = Path("/etc/systemd/system/k3s.service.d")
@@ -27,32 +27,28 @@ StartLimitIntervalSec=0
 
 
 def sudo(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["sudo", *args], capture_output=True,
-                          text=True)
+    return subprocess.run(["sudo", *args], capture_output=True, text=True)
 
 
-print(f"=== k3s watchdog install "
-      f"{datetime.now(timezone.utc):%F %T}Z ===")
+print(f"=== k3s watchdog install {datetime.now(UTC):%F %T}Z ===")
 
 r = sudo("systemctl", "list-unit-files", "k3s.service")
 found = "k3s.service" in r.stdout
 if not found:
-    r = sudo("systemctl", "list-units", "--full", "--all",
-             "k3s.service")
+    r = sudo("systemctl", "list-units", "--full", "--all", "k3s.service")
     found = "k3s" in r.stdout
 if not found:
-    print("ERROR: k3s.service not found — is k3s installed on this "
-          "host?")
-    print("Tip: run 'which k3s' and 'sudo systemctl list-unit-files | "
-          "grep k3s' to diagnose")
+    print("ERROR: k3s.service not found — is k3s installed on this host?")
+    print("Tip: run 'which k3s' and 'sudo systemctl list-unit-files | grep k3s' to diagnose")
     raise SystemExit(1)
 
 print("k3s.service found")
 
 print(f"writing drop-in: {OVERRIDE_FILE}")
 sudo("mkdir", "-p", str(OVERRIDE_DIR))
-r = subprocess.run(["sudo", "tee", str(OVERRIDE_FILE)],
-                   input=DROP_IN, capture_output=True, text=True)
+r = subprocess.run(
+    ["sudo", "tee", str(OVERRIDE_FILE)], input=DROP_IN, capture_output=True, text=True
+)
 print("drop-in written:")
 print(OVERRIDE_FILE.read_text() if OVERRIDE_FILE.exists() else DROP_IN)
 
@@ -68,8 +64,12 @@ r = sudo("systemctl", "status", "k3s", "--no-pager")
 print("\n".join((r.stdout + r.stderr).splitlines()[:20]))
 
 print("\n=== effective restart config ===")
-r = sudo("systemctl", "show", "k3s", "--property=Restart,RestartSec,"
-         "StartLimitBurst,StartLimitIntervalSec")
+r = sudo(
+    "systemctl",
+    "show",
+    "k3s",
+    "--property=Restart,RestartSec,StartLimitBurst,StartLimitIntervalSec",
+)
 print(r.stdout.strip())
 
 print("""

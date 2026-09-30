@@ -48,13 +48,11 @@ def log(*a):
 
 if os.environ.get("AUTH_DB_PREFER_LOCAL") == "1":
     os.environ["AUTH_DB_USE_HTTP"] = "0"
-    log("AUTH_DB_PREFER_LOCAL=1 — local wrangler sqlite (not live "
-        "user-auth-db)")
+    log("AUTH_DB_PREFER_LOCAL=1 — local wrangler sqlite (not live user-auth-db)")
 else:
     os.environ["AUTH_DB_USE_HTTP"] = "1"
     os.environ["AUTH_DB_PREFER_LOCAL"] = "0"
-    log("AUTH_DB_USE_HTTP=1 — live Cloudflare D1 user-auth-db "
-        "(same as cloudless.gr)")
+    log("AUTH_DB_USE_HTTP=1 — live Cloudflare D1 user-auth-db (same as cloudless.gr)")
 
 i = 1
 while i < len(sys.argv):
@@ -68,11 +66,14 @@ while i < len(sys.argv):
     elif a == "--no-heal":
         HEAL = False
     elif a in ("-p", "--port"):
-        PORT = sys.argv[i + 1]; i += 1
+        PORT = sys.argv[i + 1]
+        i += 1
     elif a == "--hostname":
-        HOST = sys.argv[i + 1]; i += 1
+        HOST = sys.argv[i + 1]
+        i += 1
     elif a in ("-h", "--help"):
-        print(__doc__); sys.exit(0)
+        print(__doc__)
+        sys.exit(0)
     else:
         sys.exit(f"[dev-heal] unknown arg: {a}")
     i += 1
@@ -86,28 +87,34 @@ if not NEXT_BIN.exists():
     log(f"missing {NEXT_BIN} — run pnpm install")
     sys.exit(1)
 
-PIDFILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / \
-    f"cloudless-dev-{PORT}.pid"
+PIDFILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / f"cloudless-dev-{PORT}.pid"
 
-state = {"shutdown": False, "child": None, "restarts": 0,
-         "boot_failures": 0, "cleaned_for_stale": False,
-         "d1_ready": False}
+state = {
+    "shutdown": False,
+    "child": None,
+    "restarts": 0,
+    "boot_failures": 0,
+    "cleaned_for_stale": False,
+    "d1_ready": False,
+}
 
 
 def listening_pids() -> list[str]:
     pids: list[str] = []
-    if subprocess.call(["which", "lsof"],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL) == 0:
+    if (
+        subprocess.call(["which", "lsof"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        == 0
+    ):
         r = subprocess.run(
-            ["lsof", "-nP", f"-iTCP:{PORT}", "-sTCP:LISTEN", "-t"],
-            capture_output=True, text=True)
+            ["lsof", "-nP", f"-iTCP:{PORT}", "-sTCP:LISTEN", "-t"], capture_output=True, text=True
+        )
         pids = r.stdout.split()
-    if not pids and subprocess.call(
-            ["which", "ss"], stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL) == 0:
-        r = subprocess.run(["ss", "-ltnp"],
-                           capture_output=True, text=True)
+    if (
+        not pids
+        and subprocess.call(["which", "ss"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        == 0
+    ):
+        r = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True)
         for ln in r.stdout.splitlines():
             if f":{PORT} " in ln and "pid=" in ln:
                 for part in ln.split(","):
@@ -118,9 +125,9 @@ def listening_pids() -> list[str]:
 
 def kill_tree(pid: int) -> None:
     try:
-        kids = subprocess.run(["pgrep", "-P", str(pid)],
-                              capture_output=True, text=True
-                              ).stdout.split()
+        kids = subprocess.run(
+            ["pgrep", "-P", str(pid)], capture_output=True, text=True
+        ).stdout.split()
         for k in kids:
             kill_tree(int(k))
         os.kill(pid, signal.SIGTERM)
@@ -146,13 +153,10 @@ def free_port() -> bool:
                 pass
         time.sleep(0.3)
 
-    r = subprocess.run(["pgrep", "-f", f"next dev -p {PORT}"],
-                       capture_output=True, text=True)
-    leftover = [p for p in r.stdout.split()
-                if p != str(os.getpid())]
+    r = subprocess.run(["pgrep", "-f", f"next dev -p {PORT}"], capture_output=True, text=True)
+    leftover = [p for p in r.stdout.split() if p != str(os.getpid())]
     if leftover:
-        log(f"killing leftover next dev -p {PORT} "
-            f"(pids: {' '.join(leftover)})")
+        log(f"killing leftover next dev -p {PORT} (pids: {' '.join(leftover)})")
         for p in leftover:
             try:
                 os.kill(int(p), signal.SIGTERM)
@@ -167,8 +171,7 @@ def free_port() -> bool:
 
     still = listening_pids()
     if still:
-        log(f"port {PORT} still bound after kill "
-            f"(pids: {' '.join(still)})")
+        log(f"port {PORT} still bound after kill (pids: {' '.join(still)})")
         return False
 
     lock = ROOT / ".next" / "dev" / "lock"
@@ -182,8 +185,7 @@ def free_port() -> bool:
 
 def http_code(url: str, timeout: int = 3) -> str:
     try:
-        return str(urllib.request.urlopen(url,
-                                          timeout=timeout).status)
+        return str(urllib.request.urlopen(url, timeout=timeout).status)
     except urllib.error.HTTPError as e:
         return str(e.code)
     except Exception:
@@ -223,8 +225,7 @@ def stop_child() -> None:
 
 def release_pidfile() -> None:
     try:
-        if PIDFILE.is_file() and PIDFILE.read_text().strip() \
-                == str(os.getpid()):
+        if PIDFILE.is_file() and PIDFILE.read_text().strip() == str(os.getpid()):
             PIDFILE.unlink()
     except OSError:
         pass
@@ -276,9 +277,11 @@ def ensure_local_d1() -> bool:
         return True
     log("ensuring local D1 (user-auth-db)")
     script = ROOT / "scripts" / "ensure-local-d1.py"
-    cmd = ([sys.executable, str(script)]
-           if script.exists()
-           else ["bash", str(ROOT / "scripts/ensure-local-d1.sh")])
+    cmd = (
+        [sys.executable, str(script)]
+        if script.exists()
+        else ["bash", str(ROOT / "scripts/ensure-local-d1.sh")]
+    )
     if subprocess.call(cmd) != 0:
         log("local D1 migrate failed — AUTH_DB will be unbound")
         return False
@@ -288,11 +291,10 @@ def ensure_local_d1() -> bool:
 
 def health_ok() -> bool:
     try:
-        data = json.loads(urllib.request.urlopen(
-            f"http://{HOST}:{PORT}/api/health",
-            timeout=8).read())
-        return (data.get("status") == "ok"
-                and data.get("dbConnected") is True)
+        data = json.loads(
+            urllib.request.urlopen(f"http://{HOST}:{PORT}/api/health", timeout=8).read()
+        )
+        return data.get("status") == "ok" and data.get("dbConnected") is True
     except Exception:
         return False
 
@@ -301,6 +303,7 @@ def clear_cache() -> None:
     dist = os.environ.get("NEXT_DIST_DIR", ".next")
     log(f"clearing {dist} and tmp")
     import shutil as sh
+
     sh.rmtree(ROOT / dist, ignore_errors=True)
     sh.rmtree(ROOT / "tmp", ignore_errors=True)
 
@@ -335,9 +338,14 @@ def wait_ready() -> bool:
 
 
 def warm_routes() -> bool:
-    paths = ["/api/health", "/en", "/en/auth/login",
-             "/en/auth/signup", "/api/auth/session",
-             "/api/auth/login"]
+    paths = [
+        "/api/health",
+        "/en",
+        "/en/auth/login",
+        "/en/auth/signup",
+        "/api/auth/session",
+        "/api/auth/login",
+    ]
     for path in paths:
         code = "000"
         ok = False
@@ -348,8 +356,7 @@ def warm_routes() -> bool:
                 break
             time.sleep(0.5)
         if not ok:
-            log(f"warm {path} still {code} — treating as stale "
-                "routing")
+            log(f"warm {path} still {code} — treating as stale routing")
             return False
     log("warmed auth + health routes")
     return True
@@ -374,8 +381,7 @@ def watch_child() -> bool:
         code = http_code(f"http://{HOST}:{PORT}/en/auth/login")
         if not route_ok(code):
             login_fail += 1
-            log(f"auth login {code} "
-                f"({login_fail}/{FAILS_NEEDED})")
+            log(f"auth login {code} ({login_fail}/{FAILS_NEEDED})")
             if login_fail >= FAILS_NEEDED:
                 return False
         else:
@@ -385,11 +391,12 @@ def watch_child() -> bool:
 
 
 if not (ROOT / ".env.local").is_file():
-    log("warning: .env.local is missing — CMS/integrations may be "
-        "degraded; D1 still binds via local sqlite")
+    log(
+        "warning: .env.local is missing — CMS/integrations may be "
+        "degraded; D1 still binds via local sqlite"
+    )
 
-log(f"auto-heal on (crash restart always; probe restart="
-    f"{int(HEAL)}). Ctrl+C stops the tree.")
+log(f"auto-heal on (crash restart always; probe restart={int(HEAL)}). Ctrl+C stops the tree.")
 takeover_supervisor()
 
 while not state["shutdown"]:
@@ -400,8 +407,7 @@ while not state["shutdown"]:
     if not ensure_local_d1():
         state["restarts"] += 1
         if state["restarts"] >= MAX_RESTARTS:
-            log(f"gave up after {MAX_RESTARTS} restarts (D1 migrate "
-                "failed)")
+            log(f"gave up after {MAX_RESTARTS} restarts (D1 migrate failed)")
             stop_child()
             release_pidfile()
             sys.exit(1)
@@ -415,8 +421,7 @@ while not state["shutdown"]:
             break
         state["boot_failures"] += 1
         stop_child()
-        if (state["boot_failures"] == 3
-                and not state["cleaned_for_stale"]):
+        if state["boot_failures"] == 3 and not state["cleaned_for_stale"]:
             state["cleaned_for_stale"] = True
             clear_cache()
     else:
@@ -427,8 +432,7 @@ while not state["shutdown"]:
             if not state["cleaned_for_stale"]:
                 state["cleaned_for_stale"] = True
                 try:
-                    (ROOT / ".next" / "dev" / "lock").unlink(
-                        missing_ok=True)
+                    (ROOT / ".next" / "dev" / "lock").unlink(missing_ok=True)
                 except OSError:
                     pass
         else:

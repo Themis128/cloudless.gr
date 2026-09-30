@@ -7,9 +7,11 @@ validation requires all routes to be statically generatable."""
 from pathlib import Path
 
 OLD = 'export const dynamic = "force-dynamic";'
-NEW = ('// Static export compatibility - Worker handles API '
-       'routes\nexport const dynamic = "force-static";\n'
-       'export const revalidate = 3600;')
+NEW = (
+    "// Static export compatibility - Worker handles API "
+    'routes\nexport const dynamic = "force-static";\n'
+    "export const revalidate = 3600;"
+)
 
 for f in Path("src/app/api").rglob("*.ts"):
     text = f.read_text(errors="replace")

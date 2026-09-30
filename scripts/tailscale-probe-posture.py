@@ -28,18 +28,23 @@ print("== postures ==")
 print(json.dumps(acl.get("postures"), indent=2))
 print("== raw grep attestation ==")
 raw = json.dumps(acl)
-for i, line in enumerate(raw.replace(",", "\n").splitlines()):
+for line in raw.replace(",", "\n").splitlines():
     if re.search(r"attest|posture|tpm|hardware", line, re.I):
         print(f"  {line.strip()}")
 
 print("== tagged devices ==")
 for d in ts_api.get(f"tailnet/{T}/devices").get("devices") or []:
     host = d.get("hostname", "")
-    if re.search(r"kube-0|ingress-0|operator|subnet-router|github-omv|"
-                 r"omv-ha|office", host):
-        print("\t".join([host, ",".join(d.get("tags") or []),
-                         d.get("clientVersion", ""),
-                         d.get("os", "")]))
+    if re.search(
+        r"kube-0|ingress-0|operator|subnet-router|github-omv|"
+        r"omv-ha|office",
+        host,
+    ):
+        print(
+            "\t".join(
+                [host, ",".join(d.get("tags") or []), d.get("clientVersion", ""), d.get("os", "")]
+            )
+        )
 
 if os.environ.get("FIX_ATTESTATION", "0").lower() in ("1", "true"):
     print("== FIX: strip hardwareAttestation from nodeAttrs ==")
@@ -47,9 +52,11 @@ if os.environ.get("FIX_ATTESTATION", "0").lower() in ("1", "true"):
     new = []
     for a in attrs:
         attr = a.get("attr") or []
-        if any(x in ("hardwareAttestation", "hardware-attestation",
-                     "tpm") or "attest" in str(x).lower()
-               for x in attr):
+        if any(
+            x in ("hardwareAttestation", "hardware-attestation", "tpm")
+            or "attest" in str(x).lower()
+            for x in attr
+        ):
             print("removing nodeAttr", json.dumps(a))
             continue
         new.append(a)
@@ -58,8 +65,7 @@ if os.environ.get("FIX_ATTESTATION", "0").lower() in ("1", "true"):
 
     etag = next((v for k, v in hdrs.items() if k.lower() == "etag"), "")
     headers = {"If-Match": etag} if etag else {}
-    code, resp, _ = ts_api.call("POST", f"tailnet/{T}/acl", acl,
-                                headers=headers)
+    code, resp, _ = ts_api.call("POST", f"tailnet/{T}/acl", acl, headers=headers)
     print(f"POST ACL HTTP {code}")
     print(json.dumps(resp.get("nodeAttrs"), indent=2))
     if code != 200:

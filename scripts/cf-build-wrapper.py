@@ -33,8 +33,7 @@ def node(script: str) -> int:
 
 
 if os.environ.get("OPEN_NEXT_BUILD_ACTIVE"):
-    print("⚠ Recursive build detected — skipping next build (already "
-          "built above)...")
+    print("⚠ Recursive build detected — skipping next build (already built above)...")
     node("opennext-middleware-fix.mjs")
     sys.exit(0)
 
@@ -49,8 +48,7 @@ shutil.rmtree(".open-next", ignore_errors=True)
 # app_config / Wrangler secrets.
 os.environ["SSM_DISABLED"] = "1"
 
-print("▶ Patching OpenNext for Next.js 16.3.0-preview.6 middleware "
-      "compatibility...")
+print("▶ Patching OpenNext for Next.js 16.3.0-preview.6 middleware compatibility...")
 rc = node("patch-opennext-build.mjs")
 if rc:
     sys.exit(rc)
@@ -62,22 +60,28 @@ os.environ["NEXT_OUTPUT_STANDALONE"] = "1"
 rc = node("sst-next-build.mjs")
 if rc:
     sys.exit(rc)
-print("⚠ Next.js build completed (SST wrapper keeps middleware NFT "
-      "stub alive)")
+print("⚠ Next.js build completed (SST wrapper keeps middleware NFT stub alive)")
 
 print("▶ Ensuring standalone build files exist for OpenNext...")
 Path(".next/standalone/.next").mkdir(parents=True, exist_ok=True)
 if Path(".next/server").is_dir():
-    shutil.copytree(".next/server", ".next/standalone/.next/server",
-                    dirs_exist_ok=True)
+    shutil.copytree(".next/server", ".next/standalone/.next/server", dirs_exist_ok=True)
 if Path(".next/BUILD_ID").exists():
     shutil.copy(".next/BUILD_ID", ".next/standalone/.next/BUILD_ID")
-for name in ("app", "chunks", "edge", "functions-config-manifest.json",
-             "middleware", "middleware-build-manifest.js",
-             "middleware-manifest.json", "next-font-manifest.js",
-             "pages-manifest.json", "prefetch-hints.json",
-             "server-reference-manifest.js",
-             "required-server-files.json"):
+for name in (
+    "app",
+    "chunks",
+    "edge",
+    "functions-config-manifest.json",
+    "middleware",
+    "middleware-build-manifest.js",
+    "middleware-manifest.json",
+    "next-font-manifest.js",
+    "pages-manifest.json",
+    "prefetch-hints.json",
+    "server-reference-manifest.js",
+    "required-server-files.json",
+):
     src = Path(f".next/{name}")
     dst = Path(f".next/standalone/.next/{name}")
     try:
@@ -97,9 +101,15 @@ print("▶ Ensuring middleware.js.nft.json stub exists for OpenNext...")
 node("opennext-middleware-fix.mjs")
 
 print("▶ Running OpenNext Cloudflare build...")
-rc = sh("pnpm", "exec", "opennextjs-cloudflare", "build",
-        "--openNextConfigPath", "open-next.config.cloudflare.ts",
-        env_extra={"NEXT_TELEMETRY_DISABLED": "1"})
+rc = sh(
+    "pnpm",
+    "exec",
+    "opennextjs-cloudflare",
+    "build",
+    "--openNextConfigPath",
+    "open-next.config.cloudflare.ts",
+    env_extra={"NEXT_TELEMETRY_DISABLED": "1"},
+)
 if rc:
     sys.exit(rc)
 
@@ -108,8 +118,7 @@ node("patch-worker-dos.mjs")
 
 # Free plan = 3 MiB gzip Worker script. Strip OG fonts/WASM + .bin
 # stubs so we stay under the limit without Workers Paid.
-print("▶ Slimming OpenNext output for Workers Free (strip OG + .bin "
-      "fonts)...")
+print("▶ Slimming OpenNext output for Workers Free (strip OG + .bin fonts)...")
 node("strip-opennext-bin-fonts.mjs")
 node("strip-opennext-vercel-og.mjs")
 node("strip-yoga-wasm.mjs")
@@ -117,7 +126,6 @@ node("strip-yoga-wasm.mjs")
 worker = Path(".open-next/worker.js")
 if worker.is_file():
     size = len(gzip.compress(worker.read_bytes()))
-    print(f"▶ worker.js gzip ≈ {size / 1024 / 1024:.2f} MiB "
-          "(free limit 3.00)")
+    print(f"▶ worker.js gzip ≈ {size / 1024 / 1024:.2f} MiB (free limit 3.00)")
 
 print("✅ Cloudflare build complete")

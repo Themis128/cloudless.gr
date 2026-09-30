@@ -22,9 +22,15 @@ import sys
 SSH_HOST = os.environ.get("SSH_HOST", "omv")
 NS, SECRET = "cloudless", "cloudless-secrets"
 
-NEED = ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY",
-        "GOOGLE_CALENDAR_ID", "GSC_SITE_URL", "SENTRY_AUTH_TOKEN",
-        "SENTRY_ORG", "SENTRY_PROJECT"]
+NEED = [
+    "GOOGLE_CLIENT_EMAIL",
+    "GOOGLE_PRIVATE_KEY",
+    "GOOGLE_CALENDAR_ID",
+    "GSC_SITE_URL",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+]
 
 for k in NEED[:5]:
     if not os.environ.get(k):
@@ -34,7 +40,9 @@ os.environ.setdefault("SENTRY_PROJECT", "cloudless-gr")
 
 placeholder = re.compile(
     r"^(your[_-]?value|your[_-]?service|changeme|todo|xxx|"
-    r"placeholder)", re.I)
+    r"placeholder)",
+    re.I,
+)
 
 data = {}
 for k in NEED:
@@ -46,35 +54,36 @@ for k in NEED:
     if k == "GOOGLE_PRIVATE_KEY":
         pem = v.replace("\\n", "\n")
         if "BEGIN" not in pem or len(pem) < 200:
-            sys.exit("GOOGLE_PRIVATE_KEY must be a PEM private key "
-                     "(BEGIN…, length>=200)")
+            sys.exit("GOOGLE_PRIVATE_KEY must be a PEM private key (BEGIN…, length>=200)")
         v = pem
     data[k] = base64.b64encode(v.encode()).decode()
 
 patch = json.dumps({"data": data})
 print(f"Patching {NS}/{SECRET} on {SSH_HOST} (key names only)…")
 r = subprocess.run(
-    ["ssh", SSH_HOST,
-     f"sudo k3s kubectl -n {NS} patch secret {SECRET} "
-     f"--type merge -p '{patch}'"])
+    ["ssh", SSH_HOST, f"sudo k3s kubectl -n {NS} patch secret {SECRET} --type merge -p '{patch}'"]
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 r = subprocess.run(
-    ["ssh", SSH_HOST,
-     f"sudo k3s kubectl -n {NS} rollout restart "
-     "deploy/cloudless-app"])
+    ["ssh", SSH_HOST, f"sudo k3s kubectl -n {NS} rollout restart deploy/cloudless-app"]
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 subprocess.run(
-    ["ssh", SSH_HOST,
-     f"sudo k3s kubectl -n {NS} rollout status "
-     "deploy/cloudless-app --timeout=180s"])
+    [
+        "ssh",
+        SSH_HOST,
+        f"sudo k3s kubectl -n {NS} rollout status deploy/cloudless-app --timeout=180s",
+    ]
+)
 
 print("Verify key presence:")
 r = subprocess.run(
-    ["ssh", SSH_HOST,
-     f"sudo k3s kubectl -n {NS} get secret {SECRET} -o json"],
-    capture_output=True, text=True)
+    ["ssh", SSH_HOST, f"sudo k3s kubectl -n {NS} get secret {SECRET} -o json"],
+    capture_output=True,
+    text=True,
+)
 keys = set(json.loads(r.stdout).get("data", {}))
 print("present:", ", ".join(k for k in NEED if k in keys))
 missing = [k for k in NEED if k not in keys]

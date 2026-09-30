@@ -15,7 +15,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
@@ -23,24 +23,22 @@ import ts_api  # noqa: E402
 
 TAILNET = ts_api.TAILNET
 ROOT = Path(__file__).resolve().parent.parent
-ACL_PATCH = Path(os.environ.get(
-    "ACL_PATCH",
-    ROOT / "infrastructure/tailscale/acl-policy.example.json"))
+ACL_PATCH = Path(
+    os.environ.get("ACL_PATCH", ROOT / "infrastructure/tailscale/acl-policy.example.json")
+)
 DRY_RUN = os.environ.get("DRY_RUN", "0").lower() in ("1", "true", "yes")
 ACL_ONLY = os.environ.get("ACL_ONLY", "0").lower() in ("1", "true")
 
-KEEP_RE = re.compile(
-    r"^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$")
+KEEP_RE = re.compile(r"^(office(-[123])?|github-omv|omv-ha|cloudless-k3s-operator)$")
 STALE_RE = re.compile(
     r"^(monitoring-proxies-[0-9]+|monitoring-proxy-[0-9]+|appflowy|"
     r"cloudless-app|cloudless-manager|grafana|meilisearch|n8n|postgres|"
     r"redis|sync-webhook|k3s-subnet-router(-[0-9]+)?|"
-    r"tailscale-operator(-[0-9]+)?)$")
+    r"tailscale-operator(-[0-9]+)?)$"
+)
 
-if not (ts_api.TS_API_KEY or
-        (ts_api.CLIENT_ID and ts_api.CLIENT_SECRET)):
-    print("Set TS_API_KEY or TS_CLIENT_ID+TS_CLIENT_SECRET",
-          file=sys.stderr)
+if not (ts_api.TS_API_KEY or (ts_api.CLIENT_ID and ts_api.CLIENT_SECRET)):
+    print("Set TS_API_KEY or TS_CLIENT_ID+TS_CLIENT_SECRET", file=sys.stderr)
     sys.exit(2)
 
 print(f"==> Authenticated for tailnet {TAILNET}")
@@ -55,10 +53,11 @@ print(f"    ETag: {etag or 'none'}")
 
 print("==> Live ACL summary (grants)")
 for g in cur.get("grants") or cur.get("acls") or []:
-    print(f"  grant src={g.get('src')} dst={g.get('dst')} "
-          f"ip={g.get('ip') or g.get('ports') or g.get('proto')}")
-print("  tagOwners:", json.dumps(cur.get("tagOwners") or {},
-                                 sort_keys=True))
+    print(
+        f"  grant src={g.get('src')} dst={g.get('dst')} "
+        f"ip={g.get('ip') or g.get('ports') or g.get('proto')}"
+    )
+print("  tagOwners:", json.dumps(cur.get("tagOwners") or {}, sort_keys=True))
 
 print(f"==> Merge fabric ACL patch from {ACL_PATCH}")
 patch = json.loads(ACL_PATCH.read_text())
@@ -80,12 +79,10 @@ for key in ("tagOwners", "autoApprovers"):
 
 if "grants" in patch:
     existing = cur.get("grants") or cur.get("Grants") or []
-    key = "grants" if "grants" in cur or "Grants" not in cur \
-        else "Grants"
+    key = "grants" if "grants" in cur or "Grants" not in cur else "Grants"
 
     def grant_key(g):
-        return (tuple(sorted(g.get("src") or [])),
-                tuple(sorted(g.get("dst") or [])))
+        return (tuple(sorted(g.get("src") or [])), tuple(sorted(g.get("dst") or [])))
 
     by = {grant_key(g): g for g in existing}
     for g in patch["grants"]:
@@ -101,17 +98,14 @@ if "ssh" in patch:
 
 if "nodeAttrs" in patch:
     cur_attrs = cur.setdefault("nodeAttrs", [])
-    star = next((a for a in cur_attrs
-                 if a.get("target") in (["*"], "*")), None)
+    star = next((a for a in cur_attrs if a.get("target") in (["*"], "*")), None)
     if star is None:
         star = {"target": ["*"], "app": {}}
         cur_attrs.append(star)
     app = star.setdefault("app", {})
     key = "tailscale.com/app-connectors"
-    existing = {c.get("name"): c for c in (app.get(key) or [])
-                if c.get("name")}
-    for conn in (patch["nodeAttrs"][0].get("app", {}).get(key, [])
-                 if patch["nodeAttrs"] else []):
+    existing = {c.get("name"): c for c in (app.get(key) or []) if c.get("name")}
+    for conn in patch["nodeAttrs"][0].get("app", {}).get(key, []) if patch["nodeAttrs"] else []:
         name = conn.get("name")
         if name:
             existing[name] = conn
@@ -126,11 +120,9 @@ if DRY_RUN:
 else:
     print("==> POST merged ACL")
     headers = {"If-Match": etag} if etag else {}
-    code, resp, _ = ts_api.call("POST", f"tailnet/{TAILNET}/acl", cur,
-                                headers=headers)
+    code, resp, _ = ts_api.call("POST", f"tailnet/{TAILNET}/acl", cur, headers=headers)
     if code != 200:
-        print(f"POST ACL failed HTTP {code}: "
-              f"{json.dumps(resp)[:800]}", file=sys.stderr)
+        print(f"POST ACL failed HTTP {code}: {json.dumps(resp)[:800]}", file=sys.stderr)
         sys.exit(1)
     print("    ACL updated")
 
@@ -146,7 +138,7 @@ if code != 200:
     sys.exit(1)
 
 devices = data.get("devices") or []
-now = datetime.now(timezone.utc)
+now = datetime.now(UTC)
 
 
 def is_offline(d):
@@ -173,26 +165,45 @@ for d in devices:
     if KEEP_RE.match(short):
         print(f"KEEP  {short}  tags={tags}")
         if offline:
-            print(f"      WARNING: Device {short} is offline! "
-                  "Reconnect before removing from keep list.")
+            print(
+                f"      WARNING: Device {short} is offline! "
+                "Reconnect before removing from keep list."
+            )
             offline_kept.append((short, d.get("id")))
         continue
     if STALE_RE.match(short):
         to_delete.append(d)
-        print(f"STALE {short}  id={d.get('id')}  tags={tags}  "
-              f"lastSeen={last}{' (OFFLINE)' if offline else ''}")
+        print(
+            f"STALE {short}  id={d.get('id')}  tags={tags}  "
+            f"lastSeen={last}{' (OFFLINE)' if offline else ''}"
+        )
         continue
     if "tag:k8s" in tags and short not in (
-            "ingress-0", "ingress-1", "kube-0", "kube-1",
-            "k3s-cidrs-0", "k3s-cidrs-1"):
-        if ("proxy" in short or "monitoring" in short
-                or short in {"appflowy", "n8n", "grafana",
-                             "meilisearch", "postgres", "redis",
-                             "sync-webhook", "cloudless-app",
-                             "cloudless-manager"}):
+        "ingress-0",
+        "ingress-1",
+        "kube-0",
+        "kube-1",
+        "k3s-cidrs-0",
+        "k3s-cidrs-1",
+    ):
+        if (
+            "proxy" in short
+            or "monitoring" in short
+            or short
+            in {
+                "appflowy",
+                "n8n",
+                "grafana",
+                "meilisearch",
+                "postgres",
+                "redis",
+                "sync-webhook",
+                "cloudless-app",
+                "cloudless-manager",
+            }
+        ):
             to_delete.append(d)
-            print(f"STALE {short}  id={d.get('id')}  "
-                  "(tag:k8s leftover)")
+            print(f"STALE {short}  id={d.get('id')}  (tag:k8s leftover)")
 
 if offline_kept:
     print("\n!!! OFFLINE DEVICES (may need reconnection):")
@@ -205,13 +216,11 @@ if DRY_RUN:
 else:
     for d in to_delete:
         did = d.get("id")
-        short = (d.get("hostname") or d.get("name")
-                 or "").split(".")[0]
+        short = (d.get("hostname") or d.get("name") or "").split(".")[0]
         code, resp, _ = ts_api.call("DELETE", f"device/{did}")
         if code in (200, 204):
             print(f"DELETED {short} ({did}) HTTP {code}")
         else:
-            print(f"FAIL delete {short} ({did}): HTTP {code} {resp}",
-                  file=sys.stderr)
+            print(f"FAIL delete {short} ({did}): HTTP {code} {resp}", file=sys.stderr)
             sys.exit(1)
 print("==> Done")

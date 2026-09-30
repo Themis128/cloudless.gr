@@ -41,9 +41,11 @@ print("""==> Register Postiz → cloudless webhook (UI)
 
 if "--apply-api-limit" in sys.argv:
     print("==> Patching API_LIMIT=100 on deploy/postiz")
-    subprocess.run(["kubectl", "-n", NS, "set", "env",
-                    "deployment/postiz", "API_LIMIT=100"], check=True)
-    subprocess.run(["kubectl", "-n", NS, "rollout", "status",
-                    "deployment/postiz", "--timeout=300s"],
-                   check=True)
+    subprocess.run(
+        ["kubectl", "-n", NS, "set", "env", "deployment/postiz", "API_LIMIT=100"], check=True
+    )
+    subprocess.run(
+        ["kubectl", "-n", NS, "rollout", "status", "deployment/postiz", "--timeout=300s"],
+        check=True,
+    )
     print("Done.")

@@ -13,35 +13,29 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import ts_api  # noqa: E402
 
-for title, path in (("nameservers", "dns/nameservers"),
-                    ("preferences", "dns/preferences"),
-                    ("searchpaths", "dns/searchpaths")):
+for title, path in (
+    ("nameservers", "dns/nameservers"),
+    ("preferences", "dns/preferences"),
+    ("searchpaths", "dns/searchpaths"),
+):
     print(f"== {title} ==")
-    print(json.dumps(ts_api.get(f"tailnet/{ts_api.TAILNET}/{path}"),
-                     indent=2))
+    print(json.dumps(ts_api.get(f"tailnet/{ts_api.TAILNET}/{path}"), indent=2))
 
 print("== ACL autoApprovers ==")
 acl = ts_api.get(f"tailnet/{ts_api.TAILNET}/acl")
-print(json.dumps({k: acl.get(k) for k in ("tagOwners", "autoApprovers")},
-                 indent=2))
+print(json.dumps({k: acl.get(k) for k in ("tagOwners", "autoApprovers")}, indent=2))
 
 print("== enable MagicDNS (POST preferences) ==")
-_, resp, _ = ts_api.call(
-    "POST", f"tailnet/{ts_api.TAILNET}/dns/preferences",
-    {"magicDNS": True})
+_, resp, _ = ts_api.call("POST", f"tailnet/{ts_api.TAILNET}/dns/preferences", {"magicDNS": True})
 print(json.dumps(resp, indent=2))
 
 print("== GET /settings (httpsEnabled) ==")
 settings = ts_api.get(f"tailnet/{ts_api.TAILNET}/settings")
-print(json.dumps({"httpsEnabled": settings.get("httpsEnabled")},
-                 indent=2))
+print(json.dumps({"httpsEnabled": settings.get("httpsEnabled")}, indent=2))
 
 if os.environ.get("ENABLE_HTTPS", "0").lower() in ("1", "true", "yes"):
     print("== PATCH httpsEnabled=true ==")
-    _, resp, _ = ts_api.call(
-        "PATCH", f"tailnet/{ts_api.TAILNET}/settings",
-        {"httpsEnabled": True})
+    _, resp, _ = ts_api.call("PATCH", f"tailnet/{ts_api.TAILNET}/settings", {"httpsEnabled": True})
     print(json.dumps(resp, indent=2))
     settings = ts_api.get(f"tailnet/{ts_api.TAILNET}/settings")
-    print(json.dumps({"httpsEnabled": settings.get("httpsEnabled")},
-                     indent=2))
+    print(json.dumps({"httpsEnabled": settings.get("httpsEnabled")}, indent=2))

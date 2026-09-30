@@ -12,7 +12,7 @@ import ssl
 import subprocess
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def print_check(label: str, expected: str, actual: str) -> None:
@@ -20,17 +20,14 @@ def print_check(label: str, expected: str, actual: str) -> None:
     print(f"  {icon}  {label:<40} expected={expected:<6} got={actual}")
 
 
-def http_code(url: str, host_header: str = "",
-              insecure: bool = False) -> str:
+def http_code(url: str, host_header: str = "", insecure: bool = False) -> str:
     ctx = ssl.create_default_context()
     if insecure:
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-    req = urllib.request.Request(
-        url, headers={"Host": host_header} if host_header else {})
+    req = urllib.request.Request(url, headers={"Host": host_header} if host_header else {})
     try:
-        return str(urllib.request.urlopen(req, timeout=5,
-                                          context=ctx).status)
+        return str(urllib.request.urlopen(req, timeout=5, context=ctx).status)
     except urllib.error.HTTPError as e:
         return str(e.code)
     except Exception:
@@ -38,22 +35,23 @@ def http_code(url: str, host_header: str = "",
 
 
 print("═" * 63)
-print(f"  CLOUDLESS.GR HEALTH SNAPSHOT — "
-      f"{datetime.now(timezone.utc):%Y-%m-%d %H:%M UTC}")
+print(f"  CLOUDLESS.GR HEALTH SNAPSHOT — {datetime.now(UTC):%Y-%m-%d %H:%M UTC}")
 print("═" * 63)
 
 print("\n▸ Public surfaces")
 for label, url, expected in (
-        ("Lambda /api/health", "https://cloudless.gr/api/health", "200"),
-        ("Lambda /api/auth/session",
-         "https://cloudless.gr/api/auth/session", "200"),
-        ("Grafana", "https://grafana.cloudless.gr/api/health", "200")):
+    ("Lambda /api/health", "https://cloudless.gr/api/health", "200"),
+    ("Lambda /api/auth/session", "https://cloudless.gr/api/auth/session", "200"),
+    ("Grafana", "https://grafana.cloudless.gr/api/health", "200"),
+):
     print_check(label, expected, http_code(url))
 
 print("\n▸ Pi cluster (LAN)")
-print_check("k3s ingress (192.168.1.128)", "200",
-            http_code("https://192.168.1.128/api/health",
-                      host_header="cloudless.gr", insecure=True))
+print_check(
+    "k3s ingress (192.168.1.128)",
+    "200",
+    http_code("https://192.168.1.128/api/health", host_header="cloudless.gr", insecure=True),
+)
 
 for ip in ("192.168.1.128", "192.168.1.130"):
     try:
@@ -66,16 +64,16 @@ for ip in ("192.168.1.128", "192.168.1.130"):
 print("\n▸ GitHub Actions runners")
 if shutil.which("gh"):
     r = subprocess.run(
-        ["gh", "api",
-         "repos/Themis128/cloudless.gr/actions/runners"],
-        capture_output=True, text=True)
+        ["gh", "api", "repos/Themis128/cloudless.gr/actions/runners"],
+        capture_output=True,
+        text=True,
+    )
     try:
         runners = json.loads(r.stdout).get("runners", [])
         for run in runners:
             icon = "✓" if run.get("status") == "online" else "✗"
             busy = "busy" if run.get("busy") else "idle"
-            print(f"  {icon}  {run.get('name'):<15} "
-                  f"({run.get('status')}, {busy})")
+            print(f"  {icon}  {run.get('name'):<15} ({run.get('status')}, {busy})")
     except Exception as e:
         print(f"  ⚠  parse error: {e}")
 else:
@@ -84,9 +82,20 @@ else:
 print("\n▸ Recent workflows (last unique 8)")
 if shutil.which("gh"):
     r = subprocess.run(
-        ["gh", "run", "list", "--repo", "Themis128/cloudless.gr",
-         "--limit", "15", "--json", "workflowName,conclusion,status"],
-        capture_output=True, text=True)
+        [
+            "gh",
+            "run",
+            "list",
+            "--repo",
+            "Themis128/cloudless.gr",
+            "--limit",
+            "15",
+            "--json",
+            "workflowName,conclusion,status",
+        ],
+        capture_output=True,
+        text=True,
+    )
     try:
         seen = {}
         for run in json.loads(r.stdout):
@@ -95,30 +104,32 @@ if shutil.which("gh"):
                 seen[wf] = run
         for wf, run in sorted(seen.items())[:8]:
             s = run.get("conclusion") or run.get("status") or "?"
-            icon = ("✓" if s == "success"
-                    else "…" if s in ("in_progress", "queued")
-                    else "⏭" if s in ("skipped", "cancelled")
-                    else "✗")
+            icon = (
+                "✓"
+                if s == "success"
+                else "…"
+                if s in ("in_progress", "queued")
+                else "⏭"
+                if s in ("skipped", "cancelled")
+                else "✗"
+            )
             print(f"  {icon}  {wf}: {s}")
     except Exception:
         pass
 
 print("\n▸ TLS cert expiry")
-now = datetime.now(timezone.utc)
-for host in ("cloudless.gr", "auth.cloudless.gr",
-             "grafana.cloudless.gr"):
+now = datetime.now(UTC)
+for host in ("cloudless.gr", "auth.cloudless.gr", "grafana.cloudless.gr"):
     try:
         ctx = ssl.create_default_context()
         with socket.create_connection((host, 443), timeout=5) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ss:
                 cert = ss.getpeercert()
-        expiry = datetime.strptime(cert["notAfter"],
-                                   "%b %d %H:%M:%S %Y %Z")
-        expiry = expiry.replace(tzinfo=timezone.utc)
+        expiry = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
+        expiry = expiry.replace(tzinfo=UTC)
         days = (expiry - now).days
         icon = "✓" if days >= 14 else ("⚠" if days >= 3 else "✗")
-        print(f"  {icon}  {host:<40} {days} days left "
-              f"({cert['notAfter']})")
+        print(f"  {icon}  {host:<40} {days} days left ({cert['notAfter']})")
     except Exception:
         print(f"  ✗  {host:<40} failed to check")
 

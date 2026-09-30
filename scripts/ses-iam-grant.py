@@ -10,8 +10,10 @@ import sys
 from pathlib import Path
 
 r = subprocess.run(
-    ["aws", "sts", "get-caller-identity", "--query", "Account",
-     "--output", "text"], capture_output=True, text=True)
+    ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+    capture_output=True,
+    text=True,
+)
 ACCOUNT_ID = r.stdout.strip()
 
 ROLE_ARN = os.environ.get("AWS_DEPLOY_ROLE_ARN", "")
@@ -24,18 +26,27 @@ print(f"Role:    {ROLE_NAME}")
 policy = {
     "Version": "2012-10-17",
     "Statement": [
-        {"Sid": "CreateSesSmtpUser", "Effect": "Allow",
-         "Action": ["iam:GetUser", "iam:CreateUser",
-                    "iam:PutUserPolicy", "iam:ListAccessKeys",
-                    "iam:CreateAccessKey",
-                    "iam:DeleteAccessKey"],
-         "Resource": f"arn:aws:iam::{ACCOUNT_ID}:user/"
-                     "cloudless-ses-smtp"},
-        {"Sid": "SsmPutSesParams", "Effect": "Allow",
-         "Action": ["ssm:PutParameter", "ssm:GetParameter"],
-         "Resource": f"arn:aws:ssm:us-east-1:{ACCOUNT_ID}:"
-                     "parameter/cloudless/production/SES*"},
-    ]}
+        {
+            "Sid": "CreateSesSmtpUser",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetUser",
+                "iam:CreateUser",
+                "iam:PutUserPolicy",
+                "iam:ListAccessKeys",
+                "iam:CreateAccessKey",
+                "iam:DeleteAccessKey",
+            ],
+            "Resource": f"arn:aws:iam::{ACCOUNT_ID}:user/cloudless-ses-smtp",
+        },
+        {
+            "Sid": "SsmPutSesParams",
+            "Effect": "Allow",
+            "Action": ["ssm:PutParameter", "ssm:GetParameter"],
+            "Resource": f"arn:aws:ssm:us-east-1:{ACCOUNT_ID}:parameter/cloudless/production/SES*",
+        },
+    ],
+}
 
 policy_file = Path("/tmp/ses-policy.json")
 policy_file.write_text(json.dumps(policy))
@@ -53,24 +64,32 @@ def emit(key: str, value: str) -> None:
 
 
 r = subprocess.run(
-    ["aws", "iam", "put-role-policy", "--role-name", ROLE_NAME,
-     "--policy-name", POLICY_NAME, "--policy-document",
-     f"file://{policy_file}"],
-    capture_output=True, text=True)
+    [
+        "aws",
+        "iam",
+        "put-role-policy",
+        "--role-name",
+        ROLE_NAME,
+        "--policy-name",
+        POLICY_NAME,
+        "--policy-document",
+        f"file://{policy_file}",
+    ],
+    capture_output=True,
+    text=True,
+)
 
 if r.returncode == 0:
     emit("status", "success")
     emit("role_name", ROLE_NAME)
     emit("account_id", ACCOUNT_ID)
-    print(f"Policy '{POLICY_NAME}' attached to role "
-          f"'{ROLE_NAME}'")
+    print(f"Policy '{POLICY_NAME}' attached to role '{ROLE_NAME}'")
     code = 0
 else:
     emit("status", "failed")
     emit("role_name", ROLE_NAME)
     emit("account_id", ACCOUNT_ID)
-    print("::error::iam:PutRolePolicy denied — see issue #382 "
-          "for manual fix")
+    print("::error::iam:PutRolePolicy denied — see issue #382 for manual fix")
     print(r.stderr)
     code = 1
 

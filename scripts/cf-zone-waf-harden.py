@@ -23,30 +23,30 @@ import urllib.error
 import urllib.request
 
 DOMAIN = os.environ.get("DOMAIN", "cloudless.gr")
-ZONE_ID = os.environ.get("CLOUDFLARE_ZONE_ID") or \
-    os.environ.get("CF_ZONE_ID") or \
-    "7025298073d6a5c645a6ad9add0cbf0e"
+ZONE_ID = (
+    os.environ.get("CLOUDFLARE_ZONE_ID")
+    or os.environ.get("CF_ZONE_ID")
+    or "7025298073d6a5c645a6ad9add0cbf0e"
+)
 TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 API = "https://api.cloudflare.com/client/v4"
 CHECK_ONLY = "--check" in sys.argv[1:]
 
 if not TOKEN:
-    sys.exit("error: CLOUDFLARE_API_TOKEN is required "
-             "(Zone Settings:Edit)")
+    sys.exit("error: CLOUDFLARE_API_TOKEN is required (Zone Settings:Edit)")
 
-HEADERS = {"Authorization": f"Bearer {TOKEN}",
-           "Content-Type": "application/json"}
+HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 
-def cf(method: str, path: str, body: dict | None = None,
-       tolerate: bool = False) -> dict:
+def cf(method: str, path: str, body: dict | None = None, tolerate: bool = False) -> dict:
     req = urllib.request.Request(
         f"{API}{path}",
         data=json.dumps(body).encode() if body else None,
-        method=method, headers=HEADERS)
+        method=method,
+        headers=HEADERS,
+    )
     try:
-        return json.loads(urllib.request.urlopen(req,
-                                                 timeout=15).read())
+        return json.loads(urllib.request.urlopen(req, timeout=15).read())
     except Exception as e:
         if tolerate:
             return {"success": False, "errors": [{"message": str(e)}]}
@@ -80,26 +80,21 @@ if rs.get("success"):
     print(f"  rulesets: OK ({len(rs.get('result') or [])} entries)")
 else:
     print(f"  rulesets: DENIED — {rs.get('errors') or []}")
-    print("  → mint token with Zone → Firewall Services → Read "
-          "(and Edit to manage rules)")
+    print("  → mint token with Zone → Firewall Services → Read (and Edit to manage rules)")
     print("  → see skills/cloudflare-token-doctor/SKILL.md Stage 1")
 
-print("==> bot_fight_mode probe (Free: often undefined / "
-      "dashboard-only)")
-bf = cf("GET", f"/zones/{ZONE_ID}/settings/bot_fight_mode",
-        tolerate=True)
+print("==> bot_fight_mode probe (Free: often undefined / dashboard-only)")
+bf = cf("GET", f"/zones/{ZONE_ID}/settings/bot_fight_mode", tolerate=True)
 if bf.get("success"):
     print(f"  bot_fight_mode: {value(bf)}")
 else:
     print(f"  bot_fight_mode: not API-readable — {bf.get('errors')}")
-    print("  → Dashboard → Security → Bots: leave Bot Fight Mode OFF "
-          "(cron/GHA)")
+    print("  → Dashboard → Security → Bots: leave Bot Fight Mode OFF (cron/GHA)")
 
 
 def check() -> bool:
     ok = sec == "medium" and bc == "on" and eo == "off"
-    print("✓ zone WAF posture OK" if ok else
-          "✗ zone WAF posture DRIFT")
+    print("✓ zone WAF posture OK" if ok else "✗ zone WAF posture DRIFT")
     return ok
 
 

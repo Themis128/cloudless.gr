@@ -12,17 +12,14 @@ os = __import__("os")
 os.chdir(Path.home() / "code/cloudless.gr")
 
 path = Path("agents/run_langchain_docs_research.py")
-shutil.copy(
-    path,
-    path.with_suffix(
-        f".py.bak-{time.strftime('%Y%m%d-%H%M%S')}"))
+shutil.copy(path, path.with_suffix(f".py.bak-{time.strftime('%Y%m%d-%H%M%S')}"))
 
 text = path.read_text(encoding="utf-8")
 
-needle = '''pages = fetch_langchain_doc_pages([match["url"] for match in matches], max_chars_per_page=12000)
+needle = """pages = fetch_langchain_doc_pages([match["url"] for match in matches], max_chars_per_page=12000)
 
 formatted_matches = "\\n".join(f"{i + 1}. {match['title']} - {match['url']}" for i, match in enumerate(matches))
-'''
+"""
 
 replacement = '''pages = fetch_langchain_doc_pages([match["url"] for match in matches], max_chars_per_page=12000)
 
@@ -63,9 +60,7 @@ formatted_matches = "\\n".join(f"{i + 1}. {match['title']} - {match['url']}" for
 '''
 
 if needle not in text:
-    sys.exit("Target block not found; inspect "
-             "agents/run_langchain_docs_research.py manually.")
+    sys.exit("Target block not found; inspect agents/run_langchain_docs_research.py manually.")
 
-path.write_text(text.replace(needle, replacement),
-                encoding="utf-8")
+path.write_text(text.replace(needle, replacement), encoding="utf-8")
 print("✅ Added deterministic comparison output.")

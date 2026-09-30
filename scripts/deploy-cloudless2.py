@@ -29,63 +29,67 @@ if not CONFIG.is_file():
 
 # --- Path 1: direct wrangler deploy ---
 if shutil.which("npx"):
-    has_token = (os.environ.get("CLOUDFLARE_API_TOKEN")
-                 or os.environ.get("CF_API_TOKEN")
-                 or (Path.home() / ".wrangler/config/default.toml"
-                     ).is_file())
+    has_token = (
+        os.environ.get("CLOUDFLARE_API_TOKEN")
+        or os.environ.get("CF_API_TOKEN")
+        or (Path.home() / ".wrangler/config/default.toml").is_file()
+    )
     if has_token:
         print("\n-> attempting direct wrangler deploy (Path 1)")
-        r = subprocess.run(["npx", "--yes", "wrangler@4", "deploy",
-                            "--config", str(CONFIG), "--minify"])
+        r = subprocess.run(
+            ["npx", "--yes", "wrangler@4", "deploy", "--config", str(CONFIG), "--minify"]
+        )
         if r.returncode == 0:
             print("\nOK  direct deploy succeeded.")
-            print("    verify: curl -sI https://cloudless.gr | "
-                  "grep -i x-served-by")
+            print("    verify: curl -sI https://cloudless.gr | grep -i x-served-by")
             sys.exit(0)
-        print("!! direct wrangler deploy failed — falling back to "
-              "GH Actions push")
+        print("!! direct wrangler deploy failed — falling back to GH Actions push")
     else:
-        print("-- no CLOUDFLARE_API_TOKEN in env and no ~/.wrangler "
-              "config; skipping Path 1")
+        print("-- no CLOUDFLARE_API_TOKEN in env and no ~/.wrangler config; skipping Path 1")
 
 # --- Path 2: push config bump so GH Actions deploys ---
-print("\n-> Path 2: pushing config bump to main to trigger "
-      "cloudflare-deploy.yml")
+print("\n-> Path 2: pushing config bump to main to trigger cloudflare-deploy.yml")
 
 if not shutil.which("git"):
-    print("!! git not found — install git or run wrangler directly "
-          "with CLOUDFLARE_API_TOKEN set", file=sys.stderr)
+    print(
+        "!! git not found — install git or run wrangler directly with CLOUDFLARE_API_TOKEN set",
+        file=sys.stderr,
+    )
     sys.exit(2)
 
-r = subprocess.run(["git", "status", "--porcelain", str(CONFIG)],
-                   capture_output=True, text=True)
+r = subprocess.run(["git", "status", "--porcelain", str(CONFIG)], capture_output=True, text=True)
 if r.stdout.strip():
     subprocess.run(["git", "add", str(CONFIG)], check=True)
     subprocess.run(
-        ["git", "commit", "-m",
-         "chore(cloudless2): bump wrangler compat date to trigger "
-         "proxy redeploy"], check=True)
+        [
+            "git",
+            "commit",
+            "-m",
+            "chore(cloudless2): bump wrangler compat date to trigger proxy redeploy",
+        ],
+        check=True,
+    )
     subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-    print("OK  pushed to main — cloudflare-deploy.yml will run in "
-          "~30s.")
+    print("OK  pushed to main — cloudflare-deploy.yml will run in ~30s.")
     print("    watch:  gh run watch --repo Themis128/cloudless.gr")
-    print("    verify: curl -sI https://cloudless.gr | grep -i "
-          "x-served-by")
+    print("    verify: curl -sI https://cloudless.gr | grep -i x-served-by")
     sys.exit(0)
 
-print("-- no local changes to wrangler.jsonc (compat date already "
-      "committed)")
+print("-- no local changes to wrangler.jsonc (compat date already committed)")
 if shutil.which("gh"):
     print("-> gh workflow run cloudflare-deploy.yml")
-    r = subprocess.run(["gh", "workflow", "run",
-                        "cloudflare-deploy.yml", "--ref", "main"])
+    r = subprocess.run(["gh", "workflow", "run", "cloudflare-deploy.yml", "--ref", "main"])
     if r.returncode == 0:
         print("OK  workflow dispatched — watch with: gh run watch")
         sys.exit(0)
     sys.exit(r.returncode)
 
-print("!! gh CLI not installed — install it or trigger the workflow "
-      "from the GitHub UI:", file=sys.stderr)
-print("   https://github.com/Themis128/cloudless.gr/actions/workflows/"
-      "cloudflare-deploy.yml", file=sys.stderr)
+print(
+    "!! gh CLI not installed — install it or trigger the workflow from the GitHub UI:",
+    file=sys.stderr,
+)
+print(
+    "   https://github.com/Themis128/cloudless.gr/actions/workflows/cloudflare-deploy.yml",
+    file=sys.stderr,
+)
 sys.exit(3)

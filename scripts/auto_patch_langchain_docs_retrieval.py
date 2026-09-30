@@ -11,8 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 AGENTS = ROOT / "agents"
 TOOLS = AGENTS / "tools"
 DOCS = ROOT / ".agent-memory/docs"
@@ -20,10 +19,21 @@ MEM_F = ROOT / ".agent-memory/memories/AGENTS.md"
 GITIGNORE = ROOT / ".gitignore"
 
 
-def info(m): print(f"ℹ️  {m}")
-def ok(m): print(f"✅ {m}")
-def warn(m): print(f"⚠️  {m}")
-def fail(m): print(f"❌ {m}"); sys.exit(1)
+def info(m):
+    print(f"ℹ️  {m}")
+
+
+def ok(m):
+    print(f"✅ {m}")
+
+
+def warn(m):
+    print(f"⚠️  {m}")
+
+
+def fail(m):
+    print(f"❌ {m}")
+    sys.exit(1)
 
 
 def backup(p: Path):
@@ -44,11 +54,11 @@ for d in (TOOLS, DOCS, MEM_F.parent, ROOT / "scripts"):
 
 venv_py = ROOT / ".venv/bin/python"
 if not venv_py.is_file():
-    fail(f"Missing .venv in {ROOT}. Create the project venv "
-         "first.")
-subprocess.run([str(venv_py), "-m", "pip", "install",
-                "--upgrade", "requests", "python-dotenv"],
-               capture_output=True)
+    fail(f"Missing .venv in {ROOT}. Create the project venv first.")
+subprocess.run(
+    [str(venv_py), "-m", "pip", "install", "--upgrade", "requests", "python-dotenv"],
+    capture_output=True,
+)
 
 GITIGNORE.touch(exist_ok=True)
 gi = GITIGNORE.read_text(errors="replace").splitlines()
@@ -59,7 +69,7 @@ GITIGNORE.write_text("\n".join(gi) + "\n")
 
 tool = TOOLS / "langchain_docs.py"
 backup(tool)
-tool.write_text('''from __future__ import annotations
+tool.write_text("""from __future__ import annotations
 
 import re
 from pathlib import Path
@@ -295,11 +305,11 @@ def discover_and_fetch_langchain_docs(query: str, max_results: int = 5, max_char
     matches = search_langchain_docs_index(query=query, max_results=max_results)
     pages = fetch_langchain_doc_pages([match["url"] for match in matches], max_chars_per_page=max_chars_per_page)
     return {"matches": matches, "pages": pages}
-''')
+""")
 
 runner = AGENTS / "run_langchain_docs_research.py"
 backup(runner)
-runner.write_text('''import sys
+runner.write_text("""import sys
 
 from dotenv import load_dotenv
 
@@ -374,26 +384,28 @@ else:
     for i, match in enumerate(matches, start=1):
         print(f"{i}. {match['title']}")
         print(f"   {match['url']}")
-''')
+""")
 
-NOTE = ("For official docs research, use curated LangChain "
-        "docs routing and avoid unsupported claims about "
-        "cost, support, security, performance, or required "
-        "code changes unless fetched docs explicitly state "
-        "them.")
+NOTE = (
+    "For official docs research, use curated LangChain "
+    "docs routing and avoid unsupported claims about "
+    "cost, support, security, performance, or required "
+    "code changes unless fetched docs explicitly state "
+    "them."
+)
 if not MEM_F.is_file():
-    MEM_F.write_text("# cloudless.gr Agent Memory\n\n"
-                     "## Documentation workflow\n"
-                     f"- {NOTE}\n")
+    MEM_F.write_text(f"# cloudless.gr Agent Memory\n\n## Documentation workflow\n- {NOTE}\n")
 elif NOTE not in MEM_F.read_text():
     with MEM_F.open("a") as f:
         f.write(f"\n## Documentation workflow\n- {NOTE}\n")
 
-info("Refreshing llms.txt and running retrieval smoke "
-     "tests...")
+info("Refreshing llms.txt and running retrieval smoke tests...")
 env = dict(os.environ, PYTHONPATH=".")
 r = subprocess.run(
-    [str(venv_py), "-c", """\
+    [
+        str(venv_py),
+        "-c",
+        """\
 from agents.tools.langchain_docs import (
     refresh_langchain_docs_index,
     search_langchain_docs_index,
@@ -411,18 +423,27 @@ for query in queries:
     for item in search_langchain_docs_index(
             query, max_results=8):
         print(f"- {item['title']} -> {item['url']}")
-"""], env=env)
+""",
+    ],
+    env=env,
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 
 ok("Automated LangChain docs retrieval patch complete.\n")
 print("Try:")
-print('PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"Compare Deep Agents with Claude Agent SDK for my local '
-      'vLLM-powered cloudless.gr agent architecture."')
-print('PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"How do I connect LangChain to a custom OpenAI-compatible '
-      'endpoint such as local vLLM?"')
-print('PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"How should I use LangGraph local development with uv run '
-      'langgraph dev?"')
+print(
+    "PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"Compare Deep Agents with Claude Agent SDK for my local '
+    'vLLM-powered cloudless.gr agent architecture."'
+)
+print(
+    "PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"How do I connect LangChain to a custom OpenAI-compatible '
+    'endpoint such as local vLLM?"'
+)
+print(
+    "PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"How should I use LangGraph local development with uv run '
+    'langgraph dev?"'
+)

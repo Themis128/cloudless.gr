@@ -44,7 +44,8 @@ if len(sys.argv) > 1:
         sys.exit(f"unknown arg: {sys.argv[1]} (use --check or --force)")
 
 
-def log(m): print(f"\033[1m[restore-auth]\033[0m {m}")
+def log(m):
+    print(f"\033[1m[restore-auth]\033[0m {m}")
 
 
 def die(m):
@@ -54,30 +55,34 @@ def die(m):
 
 if not shutil.which("kubectl"):
     die("kubectl not found / cluster not reachable")
-r = subprocess.run(["kubectl", "get", f"deployment/{DEPLOYMENT}",
-                    "-n", NAMESPACE], capture_output=True)
+r = subprocess.run(
+    ["kubectl", "get", f"deployment/{DEPLOYMENT}", "-n", NAMESPACE], capture_output=True
+)
 if r.returncode:
-    die(f"deployment/{DEPLOYMENT} not found in ns {NAMESPACE} — is "
-        "kubectl pointed at the k3s cluster?")
+    die(
+        f"deployment/{DEPLOYMENT} not found in ns {NAMESPACE} — is "
+        "kubectl pointed at the k3s cluster?"
+    )
 
 
 def diagnose() -> bool:
     try:
-        body = urllib.request.urlopen(
-            f"{SITE}/api/debug-db", timeout=15).read()
+        body = urllib.request.urlopen(f"{SITE}/api/debug-db", timeout=15).read()
         return b'"dbConnected":true' in body
     except Exception:
         return False
 
 
-def http_code(url: str, method: str = "GET", body=None,
-              token: str = "") -> int:
+def http_code(url: str, method: str = "GET", body=None, token: str = "") -> int:
     req = urllib.request.Request(
-        url, data=json.dumps(body).encode() if body is not None
-        else None,
-        headers={"Content-Type": "application/json",
-                 **({"Authorization": f"Bearer {token}"}
-                    if token else {})}, method=method)
+        url,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {token}"} if token else {}),
+        },
+        method=method,
+    )
     try:
         return urllib.request.urlopen(req, timeout=15).status
     except urllib.error.HTTPError as e:
@@ -106,8 +111,7 @@ env_path = Path(ENV_FILE)
 if "/" not in ENV_FILE:
     env_path = Path(".") / ENV_FILE
 if not env_path.is_file():
-    die(f"{ENV_FILE} not found (need CLOUDFLARE_API_TOKEN). Run from "
-        "the repo root.")
+    die(f"{ENV_FILE} not found (need CLOUDFLARE_API_TOKEN). Run from the repo root.")
 token = ""
 for line in env_path.read_text().splitlines():
     line = line.strip()
@@ -117,34 +121,45 @@ if not token:
     die(f"CLOUDFLARE_API_TOKEN is empty/unset in {ENV_FILE}")
 
 # --- validate against D1 before pushing ---
-log(f"Validating the {ENV_FILE} token against D1 (account "
-    f"{ACCOUNT_ID[:8]}…) ...")
+log(f"Validating the {ENV_FILE} token against D1 (account {ACCOUNT_ID[:8]}…) ...")
 code = http_code(
-    f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/"
-    f"d1/database/{DB_ID}/query",
-    method="POST", body={"sql": "SELECT 1"}, token=token)
+    f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/d1/database/{DB_ID}/query",
+    method="POST",
+    body={"sql": "SELECT 1"},
+    token=token,
+)
 if code != 200:
-    die(f"The token in {ENV_FILE} is NOT valid for D1 (HTTP {code}).\n"
+    die(
+        f"The token in {ENV_FILE} is NOT valid for D1 (HTTP {code}).\n"
         "       Mint a fresh D1-scoped token (Cloudflare dashboard → "
         "My Profile → API\n"
         "       Tokens, D1:Edit on account fb7dc7…, or the "
         "cloudflare-token-doctor\n"
         f"       skill), put it in {ENV_FILE}, then re-run this "
-        "script.")
+        "script."
+    )
 log("Token is valid (D1 query → 200).")
 
 # --- pin account + token as explicit env ---
-log(f"Pinning CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN on "
-    f"deployment/{DEPLOYMENT} ...")
-subprocess.run(["kubectl", "set", "env", f"deployment/{DEPLOYMENT}",
-                "-n", NAMESPACE,
-                f"CLOUDFLARE_ACCOUNT_ID={ACCOUNT_ID}",
-                f"CLOUDFLARE_API_TOKEN={token}"],
-               capture_output=True, check=True)
+log(f"Pinning CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN on deployment/{DEPLOYMENT} ...")
+subprocess.run(
+    [
+        "kubectl",
+        "set",
+        "env",
+        f"deployment/{DEPLOYMENT}",
+        "-n",
+        NAMESPACE,
+        f"CLOUDFLARE_ACCOUNT_ID={ACCOUNT_ID}",
+        f"CLOUDFLARE_API_TOKEN={token}",
+    ],
+    capture_output=True,
+    check=True,
+)
 log("Waiting for rollout ...")
-subprocess.run(["kubectl", "rollout", "status",
-                f"deployment/{DEPLOYMENT}", "-n", NAMESPACE,
-                "--timeout=180s"])
+subprocess.run(
+    ["kubectl", "rollout", "status", f"deployment/{DEPLOYMENT}", "-n", NAMESPACE, "--timeout=180s"]
+)
 
 log("Verifying D1 connection ...")
 ok = False
@@ -154,16 +169,21 @@ for _ in range(6):
         break
     time.sleep(5)
 if not ok:
-    die("debug-db still not connected after rollout.\n"
+    die(
+        "debug-db still not connected after rollout.\n"
         f"       Inspect: kubectl logs -n {NAMESPACE} "
-        f"deploy/{DEPLOYMENT} --tail=50")
+        f"deploy/{DEPLOYMENT} --tail=50"
+    )
 
-lcode = http_code(f"{SITE}/api/auth/login", method="POST",
-                  body={"email": "probe@example.com",
-                        "password": "wrongpassword123"})
+lcode = http_code(
+    f"{SITE}/api/auth/login",
+    method="POST",
+    body={"email": "probe@example.com", "password": "wrongpassword123"},
+)
 if lcode == 401:
-    log("✅ AUTH RESTORED — dbConnected:true and /api/auth/login "
-        "returns 401 for bad creds (was 500).")
+    log(
+        "✅ AUTH RESTORED — dbConnected:true and /api/auth/login "
+        "returns 401 for bad creds (was 500)."
+    )
 else:
-    die(f"dbConnected:true but /api/auth/login returned {lcode} "
-        "(expected 401). Investigate.")
+    die(f"dbConnected:true but /api/auth/login returned {lcode} (expected 401). Investigate.")

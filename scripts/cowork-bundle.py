@@ -13,16 +13,15 @@ Usage:
     --body-file <path> --outputs <dir> -- <path> [<path>...]"""
 
 import argparse
-import json
+import os
 import shutil
-import subprocess
 import sys
 import tarfile
 from pathlib import Path
 
 p = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+)
 p.add_argument("--name", required=True)
 p.add_argument("--branch", required=True)
 p.add_argument("--title", required=True)
@@ -36,7 +35,7 @@ if not body_file.is_file():
     sys.exit(f"ERR: body-file missing: {body_file}")
 
 REPO = Path(__file__).resolve().parent.parent
-import os
+
 os.chdir(REPO)
 
 for path in a.paths:

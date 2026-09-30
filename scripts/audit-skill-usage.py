@@ -15,8 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-claude = (ROOT / "CLAUDE.md").read_text() \
-    if (ROOT / "CLAUDE.md").is_file() else ""
+claude = (ROOT / "CLAUDE.md").read_text() if (ROOT / "CLAUDE.md").is_file() else ""
 
 
 def count_refs(name: str, dirs: list[str], glob_pat: str = "*") -> int:
@@ -40,16 +39,13 @@ for d in sorted((ROOT / "skills").iterdir()):
         continue
     name = d.name
     r = subprocess.run(
-        ["git", "log", "-1", "--format=%cs", "--", str(d)],
-        capture_output=True, text=True, cwd=ROOT)
+        ["git", "log", "-1", "--format=%cs", "--", str(d)], capture_output=True, text=True, cwd=ROOT
+    )
     last = r.stdout.strip() or "unknown"
     cmd_count = claude.count(name)
     docs = count_refs(name, ["docs"], "*.md")
-    code = count_refs(
-        name, ["src", "scripts", ".github/workflows",
-               "infrastructure"])
+    code = count_refs(name, ["src", "scripts", ".github/workflows", "infrastructure"])
     rows.append((last, cmd_count, docs, code, name))
 
 for last, c, doc, code, name in sorted(rows):
-    print(f"{last:<12} | claudeMD={c} docs={doc} code={code} | "
-          f"{name}")
+    print(f"{last:<12} | claudeMD={c} docs={doc} code={code} | {name}")

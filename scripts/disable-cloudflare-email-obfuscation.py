@@ -23,8 +23,10 @@ API = "https://api.cloudflare.com/client/v4"
 
 CF_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 if not CF_TOKEN:
-    print(f"::error::no CLOUDFLARE_API_TOKEN — add a GitHub repository "
-          f"secret with Zone:Read + Zone Settings:Edit on {DOMAIN}.")
+    print(
+        f"::error::no CLOUDFLARE_API_TOKEN — add a GitHub repository "
+        f"secret with Zone:Read + Zone Settings:Edit on {DOMAIN}."
+    )
     sys.exit(1)
 
 
@@ -32,8 +34,9 @@ def cf(method: str, url: str, body=None) -> dict:
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": f"Bearer {CF_TOKEN}",
-                 "Content-Type": "application/json"}, method=method)
+        headers={"Authorization": f"Bearer {CF_TOKEN}", "Content-Type": "application/json"},
+        method=method,
+    )
     try:
         return json.loads(urllib.request.urlopen(req, timeout=30).read())
     except urllib.error.HTTPError as e:
@@ -68,14 +71,14 @@ if cur_val == "off":
     sys.exit(0)
 
 print("==> disabling email_obfuscation")
-resp = cf("PATCH",
-          f"{API}/zones/{ZONE_ID}/settings/email_obfuscation",
-          {"value": "off"})
+resp = cf("PATCH", f"{API}/zones/{ZONE_ID}/settings/email_obfuscation", {"value": "off"})
 if not resp.get("success"):
     print(json.dumps(resp))
-    print("::error::PATCH failed — token likely missing 'Zone Settings: "
-          "Edit' scope. Add it to the Cloudflare token (Zone → Zone "
-          f"Settings → Edit, zone {DOMAIN}).")
+    print(
+        "::error::PATCH failed — token likely missing 'Zone Settings: "
+        "Edit' scope. Add it to the Cloudflare token (Zone → Zone "
+        f"Settings → Edit, zone {DOMAIN})."
+    )
     sys.exit(1)
 
 new_val = (resp.get("result") or {}).get("value")
@@ -83,5 +86,4 @@ print(f"==> email_obfuscation is now: {new_val}")
 if new_val != "off":
     print(f"::error::expected off, got {new_val}")
     sys.exit(1)
-print("==> done. The __cf_email__ rewrite that caused React #418 on /en "
-      "is disabled.")
+print("==> done. The __cf_email__ rewrite that caused React #418 on /en is disabled.")

@@ -14,22 +14,34 @@ import subprocess
 import sys
 
 ALL_SECRETS = [
-    "SESSION_SECRET", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
-    "SLACK_WEBHOOK_URL", "SLACK_BOT_TOKEN", "SLACK_SIGNING_SECRET",
-    "POSTIZ_API_KEY", "ADMIN_ALERT_SECRET", "ESPOCRM_API_KEY",
-    "ESPOCRM_BASE_URL", "ANTHROPIC_API_KEY",
-    "ACTIVECAMPAIGN_API_TOKEN", "NOTION_API_KEY",
+    "SESSION_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "SLACK_WEBHOOK_URL",
+    "SLACK_BOT_TOKEN",
+    "SLACK_SIGNING_SECRET",
+    "POSTIZ_API_KEY",
+    "ADMIN_ALERT_SECRET",
+    "ESPOCRM_API_KEY",
+    "ESPOCRM_BASE_URL",
+    "ANTHROPIC_API_KEY",
+    "ACTIVECAMPAIGN_API_TOKEN",
+    "NOTION_API_KEY",
 ]
 
-GH_SECRETS = ["SESSION_SECRET", "STRIPE_SECRET_KEY", "POSTIZ_API_KEY",
-              "ADMIN_ALERT_SECRET", "ANTHROPIC_API_KEY"]
+GH_SECRETS = [
+    "SESSION_SECRET",
+    "STRIPE_SECRET_KEY",
+    "POSTIZ_API_KEY",
+    "ADMIN_ALERT_SECRET",
+    "ANTHROPIC_API_KEY",
+]
 
 print("🔐 Cloudflare Workers Secrets Bulk Setup")
 print("=========================================")
 
 if not shutil.which("wrangler") and not shutil.which("npx"):
-    sys.exit("❌ wrangler not found\n"
-             "Install with: npm install -g wrangler")
+    sys.exit("❌ wrangler not found\nInstall with: npm install -g wrangler")
 
 with_values = [s for s in ALL_SECRETS if os.environ.get(s)]
 
@@ -39,12 +51,10 @@ for s in with_values:
 print()
 
 if not with_values:
-    sys.exit("❌ No secrets found in environment\n\n"
-             "Load your .env file first.")
+    sys.exit("❌ No secrets found in environment\n\nLoad your .env file first.")
 
 try:
-    reply = input(f"Set these {len(with_values)} secrets to "
-                  "Cloudflare Workers? (y/N) ")
+    reply = input(f"Set these {len(with_values)} secrets to Cloudflare Workers? (y/N) ")
 except EOFError:
     reply = "n"
 if reply.strip().lower() != "y":
@@ -57,8 +67,10 @@ for secret in with_values:
     print(f"  {secret}... ", end="", flush=True)
     r = subprocess.run(
         ["npx", "wrangler", "secret", "put", secret],
-        input=os.environ[secret], text=True,
-        capture_output=True)
+        input=os.environ[secret],
+        text=True,
+        capture_output=True,
+    )
     if r.returncode == 0:
         print("✓")
         success += 1
@@ -74,7 +86,7 @@ print("apiVersion: v1\nkind: Secret\nmetadata:")
 print("  name: cloudless-secrets\n  namespace: cloudless")
 print("type: Opaque\nstringData:")
 for s in with_values:
-    print(f"  {s}: \"{os.environ[s]}\"")
+    print(f'  {s}: "{os.environ[s]}"')
 print("---\n")
 
 print("📋 GitHub Actions repo secrets (run after gh auth login):")

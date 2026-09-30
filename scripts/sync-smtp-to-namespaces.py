@@ -23,16 +23,28 @@ import subprocess
 import sys
 
 REGION = os.environ.get("AWS_REGION", "us-east-1")
-NAMESPACES = sys.argv[1:] or ["appflowy", "espocrm", "postiz", "n8n",
-                              "monitoring"]
+NAMESPACES = sys.argv[1:] or ["appflowy", "espocrm", "postiz", "n8n", "monitoring"]
 
 
 def ssm_get(key: str, default: str = "") -> str:
     r = subprocess.run(
-        ["aws", "ssm", "get-parameter", "--region", REGION,
-         "--name", f"/cloudless/production/{key}",
-         "--with-decryption", "--query", "Parameter.Value",
-         "--output", "text"], capture_output=True, text=True)
+        [
+            "aws",
+            "ssm",
+            "get-parameter",
+            "--region",
+            REGION,
+            "--name",
+            f"/cloudless/production/{key}",
+            "--with-decryption",
+            "--query",
+            "Parameter.Value",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     v = r.stdout.strip()
     return default if not v or v == "None" else v
 
@@ -40,39 +52,51 @@ def ssm_get(key: str, default: str = "") -> str:
 user = ssm_get("SES_SMTP_USER")
 password = ssm_get("SES_SMTP_PASSWORD")
 from_email = ssm_get("SES_FROM_EMAIL", "noreply@cloudless.gr")
-host = ssm_get("SES_SMTP_HOST",
-               f"email-smtp.{REGION}.amazonaws.com")
+host = ssm_get("SES_SMTP_HOST", f"email-smtp.{REGION}.amazonaws.com")
 port = "587"
 
 if not user or not password:
-    sys.exit("✗ SES_SMTP_USER and/or SES_SMTP_PASSWORD missing from "
-             "SSM.\n  Provision them once with:  pnpm ses:provision")
+    sys.exit(
+        "✗ SES_SMTP_USER and/or SES_SMTP_PASSWORD missing from "
+        "SSM.\n  Provision them once with:  pnpm ses:provision"
+    )
 
-print(f"→ Syncing smtp-credentials Secret to {len(NAMESPACES)} "
-      "namespace(s)")
-print(f"  host={host} port={port} from={from_email} "
-      f"user={user[:6]}…\n")
+print(f"→ Syncing smtp-credentials Secret to {len(NAMESPACES)} namespace(s)")
+print(f"  host={host} port={port} from={from_email} user={user[:6]}…\n")
 
 for ns in NAMESPACES:
-    if subprocess.call(["kubectl", "get", "ns", ns],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL) != 0:
+    if (
+        subprocess.call(
+            ["kubectl", "get", "ns", ns], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        != 0
+    ):
         print(f"  ⚠  namespace {ns} not found — skipping")
         continue
 
     r = subprocess.run(
-        ["kubectl", "create", "secret", "generic",
-         "smtp-credentials", f"--namespace={ns}",
-         f"--from-literal=SMTP_HOST={host}",
-         f"--from-literal=SMTP_PORT={port}",
-         f"--from-literal=SMTP_USER={user}",
-         f"--from-literal=SMTP_PASSWORD={password}",
-         f"--from-literal=SMTP_FROM={from_email}",
-         "--dry-run=client", "-o", "yaml"],
-        capture_output=True, text=True)
-    apply = subprocess.run(["kubectl", "apply", "-f", "-"],
-                           input=r.stdout, text=True,
-                           capture_output=True)
+        [
+            "kubectl",
+            "create",
+            "secret",
+            "generic",
+            "smtp-credentials",
+            f"--namespace={ns}",
+            f"--from-literal=SMTP_HOST={host}",
+            f"--from-literal=SMTP_PORT={port}",
+            f"--from-literal=SMTP_USER={user}",
+            f"--from-literal=SMTP_PASSWORD={password}",
+            f"--from-literal=SMTP_FROM={from_email}",
+            "--dry-run=client",
+            "-o",
+            "yaml",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    apply = subprocess.run(
+        ["kubectl", "apply", "-f", "-"], input=r.stdout, text=True, capture_output=True
+    )
     if apply.returncode != 0:
         print(f"  ✗ {ns} apply failed: {apply.stderr.strip()}")
         continue
@@ -84,27 +108,26 @@ for ns in NAMESPACES:
     # env var and a rollout restart is a no-op. Deleting the pod
     # forces fresh env resolution. (Bug surfaced 2026-06-21.)
     deps = subprocess.run(
-        ["kubectl", "-n", ns, "get", "deploy", "-o", "name"],
-        capture_output=True, text=True).stdout.split()
+        ["kubectl", "-n", ns, "get", "deploy", "-o", "name"], capture_output=True, text=True
+    ).stdout.split()
     for dep in deps:
         y = subprocess.run(
-            ["kubectl", "-n", ns, "get", dep, "-o", "yaml"],
-            capture_output=True, text=True).stdout
+            ["kubectl", "-n", ns, "get", dep, "-o", "yaml"], capture_output=True, text=True
+        ).stdout
         if "secretKeyRef" not in y or "smtp-credentials" not in y:
             continue
         dep_name = dep.split("/", 1)[-1]
         pods = []
-        for sel in (f"app={dep_name}",
-                    f"app.kubernetes.io/name={dep_name}"):
+        for sel in (f"app={dep_name}", f"app.kubernetes.io/name={dep_name}"):
             pods += subprocess.run(
-                ["kubectl", "-n", ns, "get", "pod", "-l", sel,
-                 "-o", "name"],
-                capture_output=True, text=True).stdout.split()
+                ["kubectl", "-n", ns, "get", "pod", "-l", sel, "-o", "name"],
+                capture_output=True,
+                text=True,
+            ).stdout.split()
         for pod in set(pods):
-            subprocess.run(["kubectl", "-n", ns, "delete", pod,
-                            "--wait=false"], capture_output=True)
-            print(f"    ↻ deleted {pod} (forces fresh env "
-                  "resolution)")
+            subprocess.run(
+                ["kubectl", "-n", ns, "delete", pod, "--wait=false"], capture_output=True
+            )
+            print(f"    ↻ deleted {pod} (forces fresh env resolution)")
 
-print("\nDone. To verify, send a test email from each app's admin "
-      "UI.")
+print("\nDone. To verify, send a test email from each app's admin UI.")

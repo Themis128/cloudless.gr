@@ -21,7 +21,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
@@ -36,8 +36,10 @@ if not CF:
     print("→ Resolving token from Cloudflare/D1")
     CF = cf_config_get("CLOUDFLARE_API_TOKEN")
 if not CF or CF == "null":
-    print("ERR: token is empty — set CLOUDFLARE_API_TOKEN env or add to "
-          "Cloudflare secrets", file=sys.stderr)
+    print(
+        "ERR: token is empty — set CLOUDFLARE_API_TOKEN env or add to Cloudflare secrets",
+        file=sys.stderr,
+    )
     sys.exit(2)
 
 API = "https://api.cloudflare.com/client/v4"
@@ -64,8 +66,9 @@ def curl_cf(path: str, method: str = "GET", body=None) -> dict:
     req = urllib.request.Request(
         f"{API}{path}",
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": f"Bearer {CF}",
-                 "Content-Type": "application/json"}, method=method)
+        headers={"Authorization": f"Bearer {CF}", "Content-Type": "application/json"},
+        method=method,
+    )
     try:
         return json.loads(urllib.request.urlopen(req, timeout=30).read())
     except urllib.error.HTTPError as e:
@@ -114,20 +117,25 @@ else:
 # 2. Zone Settings:Read
 if ZONE_ID:
     zs = curl_cf(f"/zones/{ZONE_ID}/settings")
-    check("Zone Settings:Read") if zs.get("success") else \
-        check("Zone Settings:Read", err_msg(zs))
+    check("Zone Settings:Read") if zs.get("success") else check("Zone Settings:Read", err_msg(zs))
 
 # 3. DNS:Read/Edit
 if ZONE_ID:
     dns = curl_cf(f"/zones/{ZONE_ID}/dns_records?per_page=1")
-    check("DNS:Read") if dns.get("success") else \
-        check("DNS:Read", err_msg(dns))
+    check("DNS:Read") if dns.get("success") else check("DNS:Read", err_msg(dns))
 
-    test_record = (f"tiktok-developers-site-verification="
-                   f"cf-smoketest-{int(time.time())}")
-    create = curl_cf(f"/zones/{ZONE_ID}/dns_records", "POST", {
-        "type": "TXT", "name": f"_cf-smoketest.{ZONE_NAME}",
-        "content": test_record, "ttl": 60, "comment": "smoketest"})
+    test_record = f"tiktok-developers-site-verification=cf-smoketest-{int(time.time())}"
+    create = curl_cf(
+        f"/zones/{ZONE_ID}/dns_records",
+        "POST",
+        {
+            "type": "TXT",
+            "name": f"_cf-smoketest.{ZONE_NAME}",
+            "content": test_record,
+            "ttl": 60,
+            "comment": "smoketest",
+        },
+    )
     rec_id = (create.get("result") or {}).get("id", "")
     if create.get("success") and rec_id:
         delete = curl_cf(f"/zones/{ZONE_ID}/dns_records/{rec_id}", "DELETE")
@@ -140,18 +148,20 @@ if ZONE_ID:
 
 # 4. Analytics:Read (GraphQL) — most recent hour keeps under 3-day cap
 if ZONE_ID:
-    since = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime(
-        "%Y-%m-%dT%H:00:00Z")
+    since = (datetime.now(UTC) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:00:00Z")
     gq_body = {
-        "query": ("query($z: String!, $s: Time!) { viewer { zones(filter: "
-                  "{zoneTag: $z}) { httpRequests1hGroups(limit: 1, filter: "
-                  "{datetime_geq: $s}) { sum { requests } } } } }"),
+        "query": (
+            "query($z: String!, $s: Time!) { viewer { zones(filter: "
+            "{zoneTag: $z}) { httpRequests1hGroups(limit: 1, filter: "
+            "{datetime_geq: $s}) { sum { requests } } } } }"
+        ),
         "variables": {"z": ZONE_ID, "s": since},
     }
     gq = curl_cf("/graphql", "POST", gq_body)
     gq_err = (gq.get("errors") or [{}])[0].get("message", "")
-    check("Analytics:Read (GraphQL viewer.zones)") if not gq_err else \
-        check("Analytics:Read", gq_err)
+    check("Analytics:Read (GraphQL viewer.zones)") if not gq_err else check(
+        "Analytics:Read", gq_err
+    )
 
 # 5. User API Tokens:Read (optional)
 tl = curl_cf("/user/tokens")
@@ -159,9 +169,10 @@ tl_ok = tl.get("success")
 if tl_ok:
     check(f"User API Tokens:Read ({len(tl.get('result', []))} tokens visible)")
 else:
-    warn("User API Tokens:Read",
-         f"{err_msg(tl)} (optional; add API Tokens Read to inspect "
-         "Workers Write)")
+    warn(
+        "User API Tokens:Read",
+        f"{err_msg(tl)} (optional; add API Tokens Read to inspect Workers Write)",
+    )
 
 # 6. Workers Scripts:Read (account-scoped)
 if not ACCOUNT_ID:
@@ -171,8 +182,7 @@ if not ACCOUNT_ID:
 if ACCOUNT_ID:
     ws = curl_cf(f"/accounts/{ACCOUNT_ID}/workers/scripts")
     if ws.get("success"):
-        check(f"Workers Scripts:Read ({len(ws.get('result', []))} scripts "
-              f"on account {ACCOUNT_ID})")
+        check(f"Workers Scripts:Read ({len(ws.get('result', []))} scripts on account {ACCOUNT_ID})")
     else:
         check("Workers Scripts:Read", err_msg(ws))
 else:
@@ -182,23 +192,27 @@ else:
 WORKERS_WRITE_ID = "e086da7e2179491d91ee5f35b3ca210a"
 if tl_ok:
     has = sum(
-        1 for t in tl.get("result", []) if t.get("status") == "active"
+        1
+        for t in tl.get("result", [])
+        if t.get("status") == "active"
         for pol in t.get("policies", [])
         for pg in pol.get("permission_groups", [])
-        if pg.get("id") == WORKERS_WRITE_ID)
+        if pg.get("id") == WORKERS_WRITE_ID
+    )
     if has:
-        check("Workers Scripts:Write (present on an active user token "
-              "policy)")
+        check("Workers Scripts:Write (present on an active user token policy)")
     else:
-        check("Workers Scripts:Write",
-              "not found on active token policies — cloudflare-deploy.yml "
-              "will 10000")
+        check(
+            "Workers Scripts:Write",
+            "not found on active token policies — cloudflare-deploy.yml will 10000",
+        )
 elif ACCOUNT_ID:
     req = urllib.request.Request(
         f"{API}/accounts/{ACCOUNT_ID}/workers/scripts/cloudless2/versions",
-        data=b"{}", headers={"Authorization": f"Bearer {CF}",
-                             "Content-Type": "application/json"},
-        method="POST")
+        data=b"{}",
+        headers={"Authorization": f"Bearer {CF}", "Content-Type": "application/json"},
+        method="POST",
+    )
     try:
         urllib.request.urlopen(req, timeout=30)
         probe = "200"
@@ -213,15 +227,17 @@ elif ACCOUNT_ID:
         probe, probe_body = "000", {}
     probe_err = err_code(probe_body)
     if probe in ("400", "422", "415"):
-        check("Workers Scripts:Write (versions create rejected as "
-              "validation — auth OK)")
+        check("Workers Scripts:Write (versions create rejected as validation — auth OK)")
     elif probe in ("401", "403") or probe_err in ("10000", "1001"):
-        check("Workers Scripts:Write",
-              f"HTTP {probe} code={probe_err} — add Workers Scripts Write "
-              "for cloudless2 deploy")
+        check(
+            "Workers Scripts:Write",
+            f"HTTP {probe} code={probe_err} — add Workers Scripts Write for cloudless2 deploy",
+        )
     else:
-        warn("Workers Scripts:Write",
-             f"unexpected HTTP {probe} — see cloudflare-workers-deploy skill")
+        warn(
+            "Workers Scripts:Write",
+            f"unexpected HTTP {probe} — see cloudflare-workers-deploy skill",
+        )
 else:
     warn("Workers Scripts:Write", "skipped (no account id)")
 
@@ -234,17 +250,17 @@ if ACCOUNT_ID:
         check("D1:Read", err_msg(d1))
 
 # 9. Cloudflare Tunnel:Read (optional)
-TUNNEL_ID = os.environ.get("CLUSTER_CLOUDFLARED_TUNNEL_ID",
-                           "e977a490-58c5-4fdb-9155-86832e3e636a")
+TUNNEL_ID = os.environ.get("CLUSTER_CLOUDFLARED_TUNNEL_ID", "e977a490-58c5-4fdb-9155-86832e3e636a")
 if ACCOUNT_ID:
-    tn = curl_cf(f"/accounts/{ACCOUNT_ID}/cfd_tunnel/{TUNNEL_ID}/"
-                 "configurations")
+    tn = curl_cf(f"/accounts/{ACCOUNT_ID}/cfd_tunnel/{TUNNEL_ID}/configurations")
     if tn.get("success"):
         check("Cloudflare Tunnel:Read (config)")
     else:
-        warn("Cloudflare Tunnel:Read",
-             f"code={err_code(tn)}: {err_msg(tn)} (CI soft-skips; set "
-             "CLOUDFLARE_TUNNEL_API_TOKEN or Tunnel Write)")
+        warn(
+            "Cloudflare Tunnel:Read",
+            f"code={err_code(tn)}: {err_msg(tn)} (CI soft-skips; set "
+            "CLOUDFLARE_TUNNEL_API_TOKEN or Tunnel Write)",
+        )
 
 print("\n---------------------------")
 print(f"Pass: {PASS}  Fail: {FAIL}  Warn: {WARN}")
@@ -258,5 +274,4 @@ if FAIL > 0:
     sys.exit(1)
 
 if WARN > 0:
-    print("\n→ Warnings only — CI may still soft-skip tunnel/proxy deploy. "
-          "Fix when convenient.")
+    print("\n→ Warnings only — CI may still soft-skip tunnel/proxy deploy. Fix when convenient.")

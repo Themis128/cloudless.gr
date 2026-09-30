@@ -3,27 +3,26 @@
 src/index.ts with the prefix router and updates the demo page
 baseUrl."""
 
+import os
 import shutil
 import subprocess
 import time
 from pathlib import Path
 
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
-import os
+
 os.chdir(PROJECT_DIR)
 
 ts = time.strftime("%Y%m%d-%H%M%S")
 print("==> Setting custom Agent path prefix: /api/agents")
 print("==> Backing up files...")
-shutil.copy("src/index.ts",
-            f"src/index.ts.bak-agent-prefix-{ts}")
+shutil.copy("src/index.ts", f"src/index.ts.bak-agent-prefix-{ts}")
 html = Path("public/index.html")
 if html.is_file():
-    shutil.copy(html,
-                f"public/index.html.bak-agent-prefix-{ts}")
+    shutil.copy(html, f"public/index.html.bak-agent-prefix-{ts}")
 
 print("==> Updating src/index.ts...")
-Path("src/index.ts").write_text('''import { routeAgentRequest } from "agents";
+Path("src/index.ts").write_text("""import { routeAgentRequest } from "agents";
 
 export { CounterAgent } from "./agents/counter";
 
@@ -109,16 +108,16 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-''')
+""")
 
 print("==> Updating public/index.html baseUrl to /api/agents...")
 if html.is_file():
     text = html.read_text()
     text = text.replace(
         'const baseUrl = "/agents/counter-agent/default";',
-        'const baseUrl = "/api/agents/counter-agent/default";')
-    text = text.replace("/agents/counter-agent/default",
-                        "/api/agents/counter-agent/default")
+        'const baseUrl = "/api/agents/counter-agent/default";',
+    )
+    text = text.replace("/agents/counter-agent/default", "/api/agents/counter-agent/default")
     html.write_text(text)
 
 print("==> Regenerating types and checking TypeScript...")

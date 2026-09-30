@@ -22,18 +22,17 @@ if not proxy_token:
     sys.exit("ERROR: PROXY_TOKEN is not set")
 
 print("→ Setting Worker secrets…")
-for name, value in (("NVIDIA_API_KEY", nvidia_key),
-                    ("PROXY_TOKEN", proxy_token)):
+for name, value in (("NVIDIA_API_KEY", nvidia_key), ("PROXY_TOKEN", proxy_token)):
     r = subprocess.run(
-        ["pnpm", "wrangler", "secret", "put", name,
-         "--config", WRANGLER_CONFIG],
-        input=value, text=True)
+        ["pnpm", "wrangler", "secret", "put", name, "--config", WRANGLER_CONFIG],
+        input=value,
+        text=True,
+    )
     if r.returncode != 0:
         sys.exit(r.returncode)
 
 print("→ Deploying Worker…")
-r = subprocess.run(["pnpm", "wrangler", "deploy",
-                    "--config", WRANGLER_CONFIG])
+r = subprocess.run(["pnpm", "wrangler", "deploy", "--config", WRANGLER_CONFIG])
 if r.returncode != 0:
     sys.exit(r.returncode)
 

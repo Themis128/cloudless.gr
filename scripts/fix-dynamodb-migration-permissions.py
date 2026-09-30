@@ -47,21 +47,43 @@ if not POLICY_FILE.is_file():
     print(f"Created {POLICY_FILE}")
 
 r = subprocess.run(
-    ["aws", "iam", "list-policies", "--scope", "Local",
-     "--query",
-     f"Policies[?PolicyName=='{POLICY_NAME}'].Arn",
-     "--output", "text"], capture_output=True, text=True)
+    [
+        "aws",
+        "iam",
+        "list-policies",
+        "--scope",
+        "Local",
+        "--query",
+        f"Policies[?PolicyName=='{POLICY_NAME}'].Arn",
+        "--output",
+        "text",
+    ],
+    capture_output=True,
+    text=True,
+)
 existing_arn = r.stdout.strip()
 
 if not existing_arn:
     print(f"Creating new IAM policy: {POLICY_NAME}")
     r = subprocess.run(
-        ["aws", "iam", "create-policy", "--policy-name",
-         POLICY_NAME, "--policy-document",
-         f"file://{POLICY_FILE}", "--description",
-         "Permissions for DynamoDB to D1 migration",
-         "--query", "Policy.Arn", "--output", "text"],
-        capture_output=True, text=True)
+        [
+            "aws",
+            "iam",
+            "create-policy",
+            "--policy-name",
+            POLICY_NAME,
+            "--policy-document",
+            f"file://{POLICY_FILE}",
+            "--description",
+            "Permissions for DynamoDB to D1 migration",
+            "--query",
+            "Policy.Arn",
+            "--output",
+            "text",
+        ],
+        capture_output=True,
+        text=True,
+    )
     policy_arn = r.stdout.strip()
     print(f"Created policy: {policy_arn}")
 else:

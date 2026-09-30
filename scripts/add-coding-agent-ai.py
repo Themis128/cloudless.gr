@@ -17,14 +17,12 @@ print("==> Adding CodingAgent with Workers AI")
 
 ts = time.strftime("%Y%m%d-%H%M%S")
 print("==> Backing up files...")
-shutil.copy("wrangler.jsonc",
-            f"wrangler.jsonc.bak-coding-agent-{ts}")
-shutil.copy("src/index.ts",
-            f"src/index.ts.bak-coding-agent-{ts}")
+shutil.copy("wrangler.jsonc", f"wrangler.jsonc.bak-coding-agent-{ts}")
+shutil.copy("src/index.ts", f"src/index.ts.bak-coding-agent-{ts}")
 
 print("==> Creating src/agents/coding.ts...")
 Path("src/agents").mkdir(parents=True, exist_ok=True)
-Path("src/agents/coding.ts").write_text('''import { Agent, callable } from "agents";
+Path("src/agents/coding.ts").write_text("""import { Agent, callable } from "agents";
 
 export type CodingState = {
   lastPrompt: string;
@@ -180,30 +178,24 @@ export class CodingAgent extends Agent<Env, CodingState> {
     });
   }
 }
-''')
+""")
 
-print("==> Updating wrangler.jsonc with AI binding, CodingAgent "
-      "binding, and migration...")
+print("==> Updating wrangler.jsonc with AI binding, CodingAgent binding, and migration...")
 p = Path("wrangler.jsonc")
 data = json.loads(p.read_text())
 data["ai"] = {"binding": "AI"}
-bindings = data.setdefault("durable_objects", {})\
-    .setdefault("bindings", [])
-if not any(b.get("class_name") == "CodingAgent"
-           for b in bindings):
-    bindings.append({"name": "CodingAgent",
-                     "class_name": "CodingAgent"})
+bindings = data.setdefault("durable_objects", {}).setdefault("bindings", [])
+if not any(b.get("class_name") == "CodingAgent" for b in bindings):
+    bindings.append({"name": "CodingAgent", "class_name": "CodingAgent"})
 migrations = data.setdefault("migrations", [])
-if not any("CodingAgent" in m.get("new_sqlite_classes", [])
-           for m in migrations):
+if not any("CodingAgent" in m.get("new_sqlite_classes", []) for m in migrations):
     tags = {m.get("tag") for m in migrations}
     i = 3
     tag = f"v{i}"
     while tag in tags:
         i += 1
         tag = f"v{i}"
-    migrations.append({"tag": tag,
-                       "new_sqlite_classes": ["CodingAgent"]})
+    migrations.append({"tag": tag, "new_sqlite_classes": ["CodingAgent"]})
 p.write_text(json.dumps(data, indent=2) + "\n")
 
 print("==> Updating src/index.ts export for CodingAgent...")
@@ -217,8 +209,7 @@ if export_line not in text:
         if line.startswith("export ") and "EchoAgent" in line:
             insert_at = i + 1
             break
-        if line.startswith("export ") and \
-                "CounterAgent" in line:
+        if line.startswith("export ") and "CounterAgent" in line:
             insert_at = i + 1
     lines.insert(insert_at, export_line)
     p.write_text("\n".join(lines) + "\n")

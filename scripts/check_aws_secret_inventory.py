@@ -21,13 +21,11 @@ if not shutil.which("aws"):
 
 
 def aws(*args: str) -> str:
-    r = subprocess.run(["aws", *args], capture_output=True,
-                       text=True)
+    r = subprocess.run(["aws", *args], capture_output=True, text=True)
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
-identity = aws("sts", "get-caller-identity", "--query", "Arn",
-               "--output", "text")
+identity = aws("sts", "get-caller-identity", "--query", "Arn", "--output", "text")
 if not identity:
     c.missing("AWS identity unavailable")
     sys.exit(1)
@@ -42,34 +40,39 @@ known_params = [
 
 print("\nKnown Cloudflare/DDNS SSM parameter checks:")
 for name in known_params:
-    out = aws("ssm", "get-parameter", "--name", name,
-              "--with-decryption", "--output", "json")
+    out = aws("ssm", "get-parameter", "--name", name, "--with-decryption", "--output", "json")
     if out:
         try:
             p = json.loads(out)["Parameter"]
-            c.passed(f"{p['Name']} exists type={p['Type']} "
-                     f"version={p['Version']} "
-                     f"value_length={len(p.get('Value', ''))}")
+            c.passed(
+                f"{p['Name']} exists type={p['Type']} "
+                f"version={p['Version']} "
+                f"value_length={len(p.get('Value', ''))}"
+            )
             continue
         except Exception:
             pass
     c.warning(f"{name} missing")
 
 print("\nCloudflare/DDNS-related SSM candidates:")
-out = aws("ssm", "describe-parameters", "--query",
-          "Parameters[?contains(Name, 'cloudflare') || "
-          "contains(Name, 'Cloudflare') || contains(Name,"
-          " 'CLOUDFLARE') || contains(Name, 'ddns') || "
-          "contains(Name, 'DDNS') || contains(Name, 'CF_')]"
-          ".[Name]", "--output", "text")
-names = sorted(n for n in out.replace("\t", "\n").splitlines()
-               if n.strip())
+out = aws(
+    "ssm",
+    "describe-parameters",
+    "--query",
+    "Parameters[?contains(Name, 'cloudflare') || "
+    "contains(Name, 'Cloudflare') || contains(Name,"
+    " 'CLOUDFLARE') || contains(Name, 'ddns') || "
+    "contains(Name, 'DDNS') || contains(Name, 'CF_')]"
+    ".[Name]",
+    "--output",
+    "text",
+)
+names = sorted(n for n in out.replace("\t", "\n").splitlines() if n.strip())
 if names:
     for n in names:
         print(n)
     c.passed("Found Cloudflare/DDNS SSM parameter candidates")
 else:
-    c.warning("No Cloudflare/DDNS SSM parameter candidates "
-              "found")
+    c.warning("No Cloudflare/DDNS SSM parameter candidates found")
 
 c.finish()

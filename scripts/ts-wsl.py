@@ -21,25 +21,28 @@ os.environ["PATH"] = f"{BIN}:{os.environ['PATH']}"
 
 tailscaled = BIN / "tailscaled"
 if not tailscaled.exists() and not shutil.which("tailscaled"):
-    sys.exit("tailscaled missing in ~/bin — see "
-             "docs/kubectl-tailscale.md")
+    sys.exit("tailscaled missing in ~/bin — see docs/kubectl-tailscale.md")
 
-running = subprocess.run(["pgrep", "-f", str(BIN / "tailscaled")],
-                        capture_output=True).returncode == 0
+running = (
+    subprocess.run(["pgrep", "-f", str(BIN / "tailscaled")], capture_output=True).returncode == 0
+)
 if not running:
     log = open(STATE / "tailscaled.log", "w")
     proc = subprocess.Popen(
-        [str(tailscaled), "--tun=userspace-networking",
-         f"--socks5-server={SOCKS_ADDR}",
-         f"--outbound-http-proxy-listen={SOCKS_ADDR}",
-         f"--state={STATE}/tailscaled.state",
-         f"--socket={SOCK}", f"--statedir={STATE}"],
-        stdout=log, stderr=subprocess.STDOUT,
-        start_new_session=True)
-    print(f"tailscaled started pid {proc.pid} "
-          f"(SOCKS5 {SOCKS_ADDR})")
+        [
+            str(tailscaled),
+            "--tun=userspace-networking",
+            f"--socks5-server={SOCKS_ADDR}",
+            f"--outbound-http-proxy-listen={SOCKS_ADDR}",
+            f"--state={STATE}/tailscaled.state",
+            f"--socket={SOCK}",
+            f"--statedir={STATE}",
+        ],
+        stdout=log,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    print(f"tailscaled started pid {proc.pid} (SOCKS5 {SOCKS_ADDR})")
     time.sleep(2)
 
-os.execvp(str(BIN / "tailscale"),
-          [str(BIN / "tailscale"), f"--socket={SOCK}",
-           *sys.argv[1:]])
+os.execvp(str(BIN / "tailscale"), [str(BIN / "tailscale"), f"--socket={SOCK}", *sys.argv[1:]])

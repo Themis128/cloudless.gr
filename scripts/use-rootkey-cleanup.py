@@ -21,8 +21,7 @@ if ROOTKEY.is_file():
             os.environ["AWS_ACCESS_KEY_ID"] = rows[1][0]
             os.environ["AWS_SECRET_ACCESS_KEY"] = rows[1][1]
         else:
-            print("Detected GCP credentials format - AWS CLI "
-                  "will need separate AWS credentials")
+            print("Detected GCP credentials format - AWS CLI will need separate AWS credentials")
 
 print("""
 # Commands to remove AWS monitoring services:

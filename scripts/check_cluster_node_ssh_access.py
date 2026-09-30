@@ -26,12 +26,20 @@ for node in NODES:
     c.passed(f"{node} resolves")
 
     r = subprocess.run(
-        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
-         node,
-         "hostname; hostname -I; uname -a; "
-         "command -v kubectl >/dev/null 2>&1 && "
-         "echo kubectl-ok || true"],
-        capture_output=True, text=True)
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=8",
+            node,
+            "hostname; hostname -I; uname -a; "
+            "command -v kubectl >/dev/null 2>&1 && "
+            "echo kubectl-ok || true",
+        ],
+        capture_output=True,
+        text=True,
+    )
     print(r.stdout + r.stderr, end="")
     if r.returncode == 0:
         c.passed(f"{node} SSH works non-interactively")

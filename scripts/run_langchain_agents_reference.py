@@ -13,6 +13,4 @@ env = dict(os.environ)
 env["PYTHONPATH"] = "."
 py = ROOT / ".venv/bin/python"
 python = str(py) if py.exists() else sys.executable
-sys.exit(subprocess.call(
-    [python, "agents/run_langchain_agents_reference.py"],
-    env=env))
+sys.exit(subprocess.call([python, "agents/run_langchain_agents_reference.py"], env=env))

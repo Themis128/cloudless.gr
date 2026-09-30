@@ -5,7 +5,7 @@ cloudless.gr service status every 60s."""
 import json
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 ENDPOINTS = [
     "https://cloudless.gr/api/health",
@@ -15,14 +15,13 @@ ENDPOINTS = [
 
 def fetch(url: str) -> dict | None:
     try:
-        return json.loads(urllib.request.urlopen(
-            url, timeout=5).read())
+        return json.loads(urllib.request.urlopen(url, timeout=5).read())
     except Exception:
         return None
 
 
 while True:
-    print(f"=== {datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ} ===")
+    print(f"=== {datetime.now(UTC):%Y-%m-%dT%H:%M:%SZ} ===")
     for endpoint in ENDPOINTS:
         data = fetch(endpoint)
         if data is not None:
@@ -33,8 +32,7 @@ while True:
 
     services = fetch("https://cloudless.gr/api/services")
     if services and isinstance(services.get("services"), dict):
-        missing = [k for k, v in services["services"].items()
-                   if v is False]
+        missing = [k for k, v in services["services"].items() if v is False]
         if missing:
             print(f"Missing services: {missing}")
 

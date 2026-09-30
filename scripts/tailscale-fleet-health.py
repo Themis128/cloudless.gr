@@ -14,40 +14,37 @@ import os
 import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import ts_api  # noqa: E402
 
 TAILNET = ts_api.TAILNET
-FAIL_ON_ISSUES = os.environ.get("FAIL_ON_ISSUES", "0").lower() in (
-    "1", "true", "yes")
+FAIL_ON_ISSUES = os.environ.get("FAIL_ON_ISSUES", "0").lower() in ("1", "true", "yes")
 JSON_OUT = os.environ.get("JSON_OUT", "")
 
 # Managed hosts (physical / always-on). Ephemeral GHA nodes and user
 # laptops are reported but do not fail the job by default.
 MANAGED_RE = re.compile(r"^(github-omv|omv|omv-main|omv-ha|omv-2)$")
 
-if not (ts_api.TS_API_KEY or
-        (ts_api.CLIENT_ID and ts_api.CLIENT_SECRET)):
-    print("Set TS_API_KEY or TS_CLIENT_ID+TS_CLIENT_SECRET",
-          file=sys.stderr)
+if not (ts_api.TS_API_KEY or (ts_api.CLIENT_ID and ts_api.CLIENT_SECRET)):
+    print("Set TS_API_KEY or TS_CLIENT_ID+TS_CLIENT_SECRET", file=sys.stderr)
     sys.exit(2)
 
 print(f"==> Authenticated for tailnet {TAILNET}")
 
-pkgs = json.loads(urllib.request.urlopen(
-    "https://pkgs.tailscale.com/stable/?mode=json", timeout=30).read())
+pkgs = json.loads(
+    urllib.request.urlopen("https://pkgs.tailscale.com/stable/?mode=json", timeout=30).read()
+)
 LATEST = pkgs.get("TarballsVersion", "")
 if not LATEST:
-    print("Could not resolve latest Tailscale stable version",
-          file=sys.stderr)
+    print("Could not resolve latest Tailscale stable version", file=sys.stderr)
     sys.exit(1)
 print(f"==> Latest stable Tailscale: {LATEST}")
 
 devices = ts_api.get(f"tailnet/{TAILNET}/devices").get("devices") or []
-now = datetime.now(timezone.utc)
+now = datetime.now(UTC)
 
 
 def short_name(d):
@@ -93,9 +90,14 @@ for d in sorted(devices, key=lambda x: short_name(x)):
     outdated = bool(ver != "?" and ver_tuple(ver) < ver_tuple(LATEST))
     managed_host = bool(MANAGED_RE.match(short))
     row = {
-        "hostname": short, "os": os_name, "online": online,
-        "version": ver, "clientVersion": cv, "outdated": outdated,
-        "latest": LATEST, "managed": managed_host,
+        "hostname": short,
+        "os": os_name,
+        "online": online,
+        "version": ver,
+        "clientVersion": cv,
+        "outdated": outdated,
+        "latest": LATEST,
+        "managed": managed_host,
         "tags": ",".join(d.get("tags") or []),
         "addresses": ",".join(d.get("addresses") or []),
         "id": d.get("id") or d.get("nodeId") or "",
@@ -106,17 +108,17 @@ for d in sorted(devices, key=lambda x: short_name(x)):
     if managed_host and outdated:
         issues.append(f"OUTDATED managed host: {short} {ver} < {LATEST}")
     elif outdated and not managed_host:
-        issues.append(f"OUTDATED (manual): {short} ({os_name}) {ver} "
-                      f"< {LATEST}")
+        issues.append(f"OUTDATED (manual): {short} ({os_name}) {ver} < {LATEST}")
 
-print(f"{'HOST':<22} {'OS':<10} {'STATE':<8} {'VERSION':<12} "
-      f"{'LATEST':<10} TAGS")
+print(f"{'HOST':<22} {'OS':<10} {'STATE':<8} {'VERSION':<12} {'LATEST':<10} TAGS")
 print("-" * 90)
 for r in rows:
     state = "online" if r["online"] else "OFFLINE"
     flag = " *" if r["outdated"] else ""
-    print(f"{r['hostname']:<22} {r['os']:<10} {state:<8} "
-          f"{r['version'] + flag:<12} {r['latest']:<10} {r['tags']}")
+    print(
+        f"{r['hostname']:<22} {r['os']:<10} {state:<8} "
+        f"{r['version'] + flag:<12} {r['latest']:<10} {r['tags']}"
+    )
 
 print()
 print(f"Devices: {len(rows)}  Latest: {LATEST}  Issues: {len(issues)}")
@@ -129,13 +131,11 @@ report = {
     "generatedAt": now.isoformat(),
     "devices": rows,
     "issues": issues,
-    "managedOffline": [r["hostname"] for r in rows
-                       if r["managed"] and not r["online"]],
-    "managedOutdated": [r["hostname"] for r in rows
-                        if r["managed"] and r["outdated"]],
-    "upgradeableLinux": [r["hostname"] for r in rows
-                         if r["managed"] and
-                         r["os"].startswith("linux")],
+    "managedOffline": [r["hostname"] for r in rows if r["managed"] and not r["online"]],
+    "managedOutdated": [r["hostname"] for r in rows if r["managed"] and r["outdated"]],
+    "upgradeableLinux": [
+        r["hostname"] for r in rows if r["managed"] and r["os"].startswith("linux")
+    ],
 }
 report_path = JSON_OUT or "/tmp/tailscale-fleet-health.json"
 with open(report_path, "w") as f:
@@ -146,10 +146,8 @@ print(f"REPORT_PATH={report_path}")
 n_issues = len(report["issues"])
 n_off = len(report["managedOffline"])
 n_old = len(report["managedOutdated"])
-print(f"Summary: issues={n_issues} managed_offline={n_off} "
-      f"managed_outdated={n_old}")
+print(f"Summary: issues={n_issues} managed_offline={n_off} managed_outdated={n_old}")
 
 if FAIL_ON_ISSUES and (n_off or n_old):
-    print("::error::Managed Tailscale hosts have offline or outdated "
-          "clients")
+    print("::error::Managed Tailscale hosts have offline or outdated clients")
     sys.exit(1)

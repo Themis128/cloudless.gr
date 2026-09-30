@@ -27,19 +27,25 @@ else:
     policy = {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow",
-             "Action": ["iam:GetUser", "iam:CreateUser",
-                        "iam:PutUserPolicy",
-                        "iam:ListAccessKeys",
-                        "iam:CreateAccessKey",
-                        "iam:DeleteAccessKey"],
-             "Resource": f"arn:aws:iam::{ACCOUNT}:user/"
-                         "cloudless-ses-smtp"},
-            {"Effect": "Allow",
-             "Action": ["ssm:PutParameter", "ssm:GetParameter"],
-             "Resource": f"arn:aws:ssm:us-east-1:{ACCOUNT}:"
-                         "parameter/cloudless/production/SES*"},
-        ]}
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "iam:GetUser",
+                    "iam:CreateUser",
+                    "iam:PutUserPolicy",
+                    "iam:ListAccessKeys",
+                    "iam:CreateAccessKey",
+                    "iam:DeleteAccessKey",
+                ],
+                "Resource": f"arn:aws:iam::{ACCOUNT}:user/cloudless-ses-smtp",
+            },
+            {
+                "Effect": "Allow",
+                "Action": ["ssm:PutParameter", "ssm:GetParameter"],
+                "Resource": f"arn:aws:ssm:us-east-1:{ACCOUNT}:parameter/cloudless/production/SES*",
+            },
+        ],
+    }
     print(f"""**`iam:PutRolePolicy` denied** — the OIDC role cannot self-grant permissions.
 
 **Manual fix:** AWS Console → IAM → Roles → `GitHubActionsOIDC` → Add inline policy:

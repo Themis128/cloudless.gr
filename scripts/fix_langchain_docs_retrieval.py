@@ -12,8 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 AGENTS = ROOT / "agents"
 TOOLS = AGENTS / "tools"
 DOCS = ROOT / ".agent-memory/docs"
@@ -258,7 +257,7 @@ runner = AGENTS / "run_langchain_docs_research.py"
 if runner.is_file():
     shutil.copy(runner, f"{runner}.bak-{ts}")
 
-runner.write_text('''import sys
+runner.write_text("""import sys
 
 from dotenv import load_dotenv
 
@@ -322,11 +321,14 @@ else:
     for i, match in enumerate(matches, start=1):
         print(f"{i}. {match['title']}")
         print(f"   {match['url']}")
-''')
+""")
 
 env = dict(os.environ, PYTHONPATH=".")
 r = subprocess.run(
-    [sys.executable, "-c", """\
+    [
+        sys.executable,
+        "-c",
+        """\
 from agents.tools.langchain_docs import (
     refresh_langchain_docs_index,
     search_langchain_docs_index,
@@ -338,11 +340,16 @@ for item in search_langchain_docs_index(
         "Deep Agents filesystem-backed memory",
         max_results=8):
     print(f"- {item['title']} -> {item['url']}")
-"""], env=env)
+""",
+    ],
+    env=env,
+)
 if r.returncode != 0:
     sys.exit(r.returncode)
 
 print()
 print("✅ Fixed LangChain docs retrieval. Try:")
-print('PYTHONPATH=. python agents/run_langchain_docs_research.py '
-      '"How do I configure Deep Agents filesystem-backed memory?"')
+print(
+    "PYTHONPATH=. python agents/run_langchain_docs_research.py "
+    '"How do I configure Deep Agents filesystem-backed memory?"'
+)

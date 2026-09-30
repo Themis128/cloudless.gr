@@ -11,11 +11,9 @@ os = __import__("os")
 os.chdir(Path.home() / "code/cloudless.gr")
 
 TARGET = Path("agents/run_langchain_docs_research.py")
-shutil.copy(
-    TARGET,
-    f"{TARGET}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(TARGET, f"{TARGET}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
 
-TARGET.write_text('''import sys
+TARGET.write_text("""import sys
 
 from dotenv import load_dotenv
 
@@ -124,6 +122,6 @@ else:
     for i, match in enumerate(matches, start=1):
         print(f"{i}. {match['title']}")
         print(f"   {match['url']}")
-''')
+""")
 
 print("✅ Patched comparison-specific docs runner.")

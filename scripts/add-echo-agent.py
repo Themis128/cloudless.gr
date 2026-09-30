@@ -4,13 +4,14 @@ src/agents/echo.ts, registers the binding + migration in
 wrangler.jsonc, exports it from src/index.ts, then typechecks."""
 
 import json
+import os
 import shutil
 import subprocess
 import time
 from pathlib import Path
 
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
-import os
+
 os.chdir(PROJECT_DIR)
 
 print("==> Adding EchoAgent as a second Cloudflare Agent")
@@ -22,7 +23,7 @@ shutil.copy("src/index.ts", f"src/index.ts.bak-echo-agent-{ts}")
 
 print("==> Creating src/agents/echo.ts...")
 Path("src/agents").mkdir(parents=True, exist_ok=True)
-Path("src/agents/echo.ts").write_text('''import { Agent, callable } from "agents";
+Path("src/agents/echo.ts").write_text("""import { Agent, callable } from "agents";
 
 export type EchoState = {
   lastMessage: string;
@@ -104,29 +105,23 @@ export class EchoAgent extends Agent<Env, EchoState> {
     });
   }
 }
-''')
+""")
 
-print("==> Updating wrangler.jsonc with EchoAgent binding and "
-      "v2 migration...")
+print("==> Updating wrangler.jsonc with EchoAgent binding and v2 migration...")
 p = Path("wrangler.jsonc")
 data = json.loads(p.read_text())
-bindings = data.setdefault("durable_objects", {})\
-    .setdefault("bindings", [])
-if not any(b.get("class_name") == "EchoAgent"
-           for b in bindings):
-    bindings.append({"name": "EchoAgent",
-                     "class_name": "EchoAgent"})
+bindings = data.setdefault("durable_objects", {}).setdefault("bindings", [])
+if not any(b.get("class_name") == "EchoAgent" for b in bindings):
+    bindings.append({"name": "EchoAgent", "class_name": "EchoAgent"})
 
 migrations = data.setdefault("migrations", [])
-if not any("EchoAgent" in m.get("new_sqlite_classes", [])
-           for m in migrations):
+if not any("EchoAgent" in m.get("new_sqlite_classes", []) for m in migrations):
     tags = {m.get("tag") for m in migrations}
     tag, i = "v2", 2
     while tag in tags:
         i += 1
         tag = f"v{i}"
-    migrations.append({"tag": tag,
-                       "new_sqlite_classes": ["EchoAgent"]})
+    migrations.append({"tag": tag, "new_sqlite_classes": ["EchoAgent"]})
 p.write_text(json.dumps(data, indent=2) + "\n")
 
 print("==> Updating src/index.ts export for EchoAgent...")
@@ -137,8 +132,7 @@ if export_line not in text:
     lines = text.splitlines()
     insert_at = 0
     for i, line in enumerate(lines):
-        if line.startswith("export ") and \
-                "CounterAgent" in line:
+        if line.startswith("export ") and "CounterAgent" in line:
             insert_at = i + 1
             break
     lines.insert(insert_at, export_line)

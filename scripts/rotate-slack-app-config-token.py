@@ -33,8 +33,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from cf_secrets import (cf_config_get, cf_config_set, cf_secret_set,  # noqa: E402
-                        cf_verify_auth)
+from cf_secrets import cf_config_get, cf_config_set, cf_secret_set, cf_verify_auth  # noqa: E402
 
 GH_OUTPUT = os.environ.get("GITHUB_OUTPUT", "")
 
@@ -54,10 +53,11 @@ def mask(value: str) -> None:
 refresh = cf_config_get("SLACK_APP_CONFIG_REFRESH_TOKEN")
 
 if not refresh or refresh == "null":
-    print("::warning::No refresh token in D1 config "
-          "(slack_app_config_refresh_token) — skipping rotation.")
-    print("  Bootstrap with: python3 "
-          "scripts/seed-slack-app-config-tokens.py")
+    print(
+        "::warning::No refresh token in D1 config "
+        "(slack_app_config_refresh_token) — skipping rotation."
+    )
+    print("  Bootstrap with: python3 scripts/seed-slack-app-config-tokens.py")
     emit_output("rotated", "false")
     sys.exit(0)
 mask(refresh)
@@ -67,9 +67,9 @@ mask(refresh)
 req = urllib.request.Request(
     "https://slack.com/api/tooling.tokens.rotate",
     data=urllib.parse.urlencode({"refresh_token": refresh}).encode(),
-    headers={"Content-Type":
-             "application/x-www-form-urlencoded; charset=utf-8"},
-    method="POST")
+    headers={"Content-Type": "application/x-www-form-urlencoded; charset=utf-8"},
+    method="POST",
+)
 try:
     resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
 except Exception as e:
@@ -80,12 +80,12 @@ if not resp.get("ok"):
     err = resp.get("error", "unknown")
     print(f"::error::Slack tooling.tokens.rotate failed: {err}")
     if err in ("invalid_refresh_token", "token_expired"):
-        print("::error::The refresh token has been revoked or rotated "
-              "outside this workflow.")
-        print("::error::Reseed both tokens at https://api.slack.com/apps "
-              "→ Your App → Basic Information")
-        print("::error::then run: python3 "
-              "scripts/seed-slack-app-config-tokens.py")
+        print("::error::The refresh token has been revoked or rotated outside this workflow.")
+        print(
+            "::error::Reseed both tokens at https://api.slack.com/apps "
+            "→ Your App → Basic Information"
+        )
+        print("::error::then run: python3 scripts/seed-slack-app-config-tokens.py")
     sys.exit(1)
 
 new_access = resp.get("token", "")
@@ -103,16 +103,21 @@ if cf_verify_auth():
     sys.exit(1)
 
 print("Writing new refresh token... ", end="", flush=True)
-print("D1 ok " if cf_config_set("SLACK_APP_CONFIG_REFRESH_TOKEN",
-                              new_refresh) else "D1 failed ", end="")
-print("Wrangler ok" if cf_secret_set("SLACK_APP_CONFIG_REFRESH_TOKEN",
-                                   new_refresh) == 0 else "Wrangler failed")
+print(
+    "D1 ok " if cf_config_set("SLACK_APP_CONFIG_REFRESH_TOKEN", new_refresh) else "D1 failed ",
+    end="",
+)
+print(
+    "Wrangler ok"
+    if cf_secret_set("SLACK_APP_CONFIG_REFRESH_TOKEN", new_refresh) == 0
+    else "Wrangler failed"
+)
 
 print("Writing new access token... ", end="", flush=True)
-print("D1 ok " if cf_config_set("SLACK_APP_CONFIG_TOKEN",
-                              new_access) else "D1 failed ", end="")
-print("Wrangler ok" if cf_secret_set("SLACK_APP_CONFIG_TOKEN",
-                                   new_access) == 0 else "Wrangler failed")
+print("D1 ok " if cf_config_set("SLACK_APP_CONFIG_TOKEN", new_access) else "D1 failed ", end="")
+print(
+    "Wrangler ok" if cf_secret_set("SLACK_APP_CONFIG_TOKEN", new_access) == 0 else "Wrangler failed"
+)
 
 print("✓ Slack app-config token rotated. New access token good for ~12h.")
 

@@ -9,15 +9,14 @@ Env: REVIEW_MODE (review|patch), MAX_FILE_CHARS (default 12000)"""
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 PROJECT_DIR = Path("/home/tbaltzakis/cloudless.gr")
 os.chdir(PROJECT_DIR)
 
-BASE_URL = (sys.argv[1] if len(sys.argv) > 1
-            else "https://cloudless-gr."
-                 "baltzakis-themis.workers.dev")
+BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://cloudless-gr.baltzakis-themis.workers.dev"
 REVIEW_MODE = os.environ.get("REVIEW_MODE", "review")
 MAX_FILE_CHARS = int(os.environ.get("MAX_FILE_CHARS", "12000"))
 
@@ -48,8 +47,7 @@ for rel in SOURCE_FILES:
     text = path.read_text(errors="replace")
     if len(text) > MAX_FILE_CHARS:
         text = text[:MAX_FILE_CHARS] + "\n\n[TRUNCATED]\n"
-    sections.append(f"## FILE: {rel}\n--- BEGIN FILE ---\n"
-                    f"{text}\n--- END FILE ---\n")
+    sections.append(f"## FILE: {rel}\n--- BEGIN FILE ---\n{text}\n--- END FILE ---\n")
 
 package_path = PROJECT_DIR / "package.json"
 if package_path.exists():
@@ -59,34 +57,38 @@ if package_path.exists():
         "version": package.get("version"),
         "packageManager": package.get("packageManager"),
         "scripts": {
-            k: v for k, v in
-            package.get("scripts", {}).items()
-            if k.startswith("cf:")
-            or k in ("dev", "build", "start", "typecheck",
-                     "test", "deploy")},
+            k: v
+            for k, v in package.get("scripts", {}).items()
+            if k.startswith("cf:") or k in ("dev", "build", "start", "typecheck", "test", "deploy")
+        },
         "selectedDependencies": {
-            k: v for k, v in
-            package.get("dependencies", {}).items()
-            if k in ("agents", "hono-agents", "next", "react",
-                     "react-dom", "openai",
-                     "@anthropic-ai/sdk")},
+            k: v
+            for k, v in package.get("dependencies", {}).items()
+            if k
+            in (
+                "agents",
+                "hono-agents",
+                "next",
+                "react",
+                "react-dom",
+                "openai",
+                "@anthropic-ai/sdk",
+            )
+        },
         "selectedDevDependencies": {
-            k: v for k, v in
-            package.get("devDependencies", {}).items()
-            if k in ("wrangler", "typescript",
-                     "@cloudflare/workers-types", "vite",
-                     "vitest", "tsx")},
+            k: v
+            for k, v in package.get("devDependencies", {}).items()
+            if k in ("wrangler", "typescript", "@cloudflare/workers-types", "vite", "vitest", "tsx")
+        },
     }
     sections.append(
         "## FILE: package.json compact summary\n"
-        "--- BEGIN FILE ---\n"
-        + json.dumps(summary, indent=2)
-        + "\n--- END FILE ---\n")
+        "--- BEGIN FILE ---\n" + json.dumps(summary, indent=2) + "\n--- END FILE ---\n"
+    )
 
 worker_types = PROJECT_DIR / "worker-configuration.d.ts"
 if worker_types.exists():
-    lines = worker_types.read_text(errors="replace")\
-        .splitlines()
+    lines = worker_types.read_text(errors="replace").splitlines()
     interesting, keep = [], False
     for line in lines:
         if "interface __BaseEnv_Env" in line:
@@ -97,9 +99,8 @@ if worker_types.exists():
             break
     sections.append(
         "## FILE: worker-configuration.d.ts compact Env "
-        "summary\n--- BEGIN FILE ---\n"
-        + "\n".join(interesting[:120])
-        + "\n--- END FILE ---\n")
+        "summary\n--- BEGIN FILE ---\n" + "\n".join(interesting[:120]) + "\n--- END FILE ---\n"
+    )
 
 if REVIEW_MODE == "patch":
     task = """
@@ -173,14 +174,15 @@ print(f"==> Payload size:\n{len(body)} ")
 
 print("\n==> Preview files included:")
 for marker in [
-        "## FILE: src/index.ts",
-        "## FILE: src/agents/coding.ts",
-        "## FILE: src/agents/counter.ts",
-        "## FILE: src/agents/echo.ts",
-        "## FILE: wrangler.jsonc",
-        "## FILE: tsconfig.worker.json",
-        "## FILE: package.json compact summary",
-        "## FILE: worker-configuration.d.ts compact Env summary"]:
+    "## FILE: src/index.ts",
+    "## FILE: src/agents/coding.ts",
+    "## FILE: src/agents/counter.ts",
+    "## FILE: src/agents/echo.ts",
+    "## FILE: wrangler.jsonc",
+    "## FILE: tsconfig.worker.json",
+    "## FILE: package.json compact summary",
+    "## FILE: worker-configuration.d.ts compact Env summary",
+]:
     print(marker, "=>", marker in prompt)
 print(f"\nMode: {REVIEW_MODE}")
 print(f"Prompt length: {len(prompt)}\n")
@@ -188,19 +190,16 @@ print("First 1500 chars of prompt:")
 print(prompt[:1500])
 
 
-def send(url: str, method: str = "GET",
-         data: bytes | None = None) -> None:
+def send(url: str, method: str = "GET", data: bytes | None = None) -> None:
     headers = {"Authorization": f"Bearer {token}"}
     if data is not None:
         headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, method=method,
-                                 data=data, headers=headers)
+    req = urllib.request.Request(url, method=method, data=data, headers=headers)
     try:
         r = urllib.request.urlopen(req, timeout=120)
         print(f"\nHTTP {r.status}")
         print(r.read().decode(errors="replace"))
     except Exception as e:
-        import urllib.error
         if isinstance(e, urllib.error.HTTPError):
             print(f"\nHTTP {e.code}")
             print(e.read().decode(errors="replace"))
@@ -208,12 +207,10 @@ def send(url: str, method: str = "GET",
             print(f"\nERR {e}")
 
 
-print("\n==> Sending compact repo-context task to "
-      "CodingAgent...")
+print("\n==> Sending compact repo-context task to CodingAgent...")
 print(f"==> Base URL: {BASE_URL}")
 print(f"==> Mode: {REVIEW_MODE}")
-send(f"{BASE_URL}/api/agents/coding-agent/default/task",
-     method="POST", data=body)
+send(f"{BASE_URL}/api/agents/coding-agent/default/task", method="POST", data=body)
 
 print("\n\n==> Fetching saved result...")
 send(f"{BASE_URL}/api/agents/coding-agent/default/result")

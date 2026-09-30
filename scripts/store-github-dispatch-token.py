@@ -26,15 +26,14 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from cf_secrets import (cf_config_set, cf_secret_set,  # noqa: E402
-                        cf_verify_auth)
+from cf_secrets import cf_config_set, cf_secret_set, cf_verify_auth  # noqa: E402
 
 
 def gh_probe(path: str, token: str) -> tuple[int, dict]:
     req = urllib.request.Request(
         f"https://api.github.com{path}",
-        headers={"Authorization": f"Bearer {token}",
-                 "X-GitHub-Api-Version": "2022-11-28"})
+        headers={"Authorization": f"Bearer {token}", "X-GitHub-Api-Version": "2022-11-28"},
+    )
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             return r.status, json.loads(r.read())
@@ -59,11 +58,9 @@ if not token:
     print("ERROR: empty token.", file=sys.stderr)
     sys.exit(1)
 if not (token.startswith("github_pat_") or token.startswith("ghp_")):
-    print("WARN: token prefix is not github_pat_ or ghp_ — continuing "
-          "anyway.", file=sys.stderr)
+    print("WARN: token prefix is not github_pat_ or ghp_ — continuing anyway.", file=sys.stderr)
 
-print("Verifying token against api.github.com/user ... ", end="",
-      flush=True)
+print("Verifying token against api.github.com/user ... ", end="", flush=True)
 code, body = gh_probe("/user", token)
 if code != 200:
     print(f"FAILED (HTTP {code})")
@@ -71,20 +68,20 @@ if code != 200:
     sys.exit(1)
 print(f"ok (login: {body.get('login', '?')})")
 
-print("Verifying repo access for Themis128/cloudless.gr ... ", end="",
-      flush=True)
+print("Verifying repo access for Themis128/cloudless.gr ... ", end="", flush=True)
 code, _ = gh_probe("/repos/Themis128/cloudless.gr/actions/workflows", token)
 if code != 200:
-    print(f"FAILED (HTTP {code}) — token has /user access but cannot "
-          "read workflows. Check repo + Actions permissions.",
-          file=sys.stderr)
+    print(
+        f"FAILED (HTTP {code}) — token has /user access but cannot "
+        "read workflows. Check repo + Actions permissions.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 print("ok")
 
 for name in ("GITHUB_DISPATCH_TOKEN", "GITHUB_TOKEN"):
     print(f"Writing {name} to Cloudflare... ", end="", flush=True)
-    print("Wrangler ok " if cf_secret_set(name, token) == 0
-          else "Wrangler failed ", end="")
+    print("Wrangler ok " if cf_secret_set(name, token) == 0 else "Wrangler failed ", end="")
     print("D1 ok" if cf_config_set(name, token) else "D1 failed")
 
 print("""

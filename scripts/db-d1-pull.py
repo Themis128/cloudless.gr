@@ -28,8 +28,7 @@ if not shutil.which("pnpm"):
 
 
 def sql_to_sqlite(sql_path: Path, sqlite_path: Path) -> None:
-    sql = sql_path.read_text(encoding="utf-8",
-                            errors="replace").strip()
+    sql = sql_path.read_text(encoding="utf-8", errors="replace").strip()
     if sqlite_path.exists():
         sqlite_path.unlink()
     con = sqlite3.connect(str(sqlite_path))
@@ -44,11 +43,9 @@ def sql_to_sqlite(sql_path: Path, sqlite_path: Path) -> None:
     con = sqlite3.connect(str(sqlite_path))
     con.execute("PRAGMA user_version = 1")
     con.commit()
-    n = con.execute("SELECT count(*) FROM sqlite_master WHERE "
-                    "type='table'").fetchone()[0]
+    n = con.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
     con.close()
-    print(f"→ {sqlite_path} ({n} tables, "
-          f"{sqlite_path.stat().st_size} bytes)")
+    print(f"→ {sqlite_path} ({n} tables, {sqlite_path.stat().st_size} bytes)")
 
 
 def pull_one(name: str) -> None:
@@ -56,9 +53,21 @@ def pull_one(name: str) -> None:
     sqlite_path = OUT / f"{name}.sqlite"
     print(f"exporting D1 {name} (remote) …")
     subprocess.run(
-        ["pnpm", "exec", "wrangler", "d1", "export", name,
-         "--remote", "--output", str(sql_path), "-y"],
-        cwd=ROOT, check=True)
+        [
+            "pnpm",
+            "exec",
+            "wrangler",
+            "d1",
+            "export",
+            name,
+            "--remote",
+            "--output",
+            str(sql_path),
+            "-y",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
     print("loading into SQLite …")
     sql_to_sqlite(sql_path, sqlite_path)
 

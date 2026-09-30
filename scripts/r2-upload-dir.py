@@ -10,11 +10,9 @@ BUCKET = "cloudless-assets"
 OUT_DIR = Path("./out")
 
 if not OUT_DIR.is_dir():
-    sys.exit(f"Error: {OUT_DIR} directory not found. "
-             "Run 'pnpm cf:build' first.")
+    sys.exit(f"Error: {OUT_DIR} directory not found. Run 'pnpm cf:build' first.")
 
-print(f"Uploading files from {OUT_DIR} to R2 bucket: {BUCKET} "
-      "(remote)")
+print(f"Uploading files from {OUT_DIR} to R2 bucket: {BUCKET} (remote)")
 
 for f in sorted(OUT_DIR.rglob("*")):
     if not f.is_file():
@@ -24,8 +22,8 @@ for f in sorted(OUT_DIR.rglob("*")):
         continue
     print(f"Uploading: {rel}")
     subprocess.run(
-        ["npx", "wrangler", "r2", "object", "put",
-         f"{BUCKET}/{rel}", f"--file={f}", "--remote"],
-        capture_output=True)
+        ["npx", "wrangler", "r2", "object", "put", f"{BUCKET}/{rel}", f"--file={f}", "--remote"],
+        capture_output=True,
+    )
 
 print(f"Done uploading to {BUCKET} (remote)")

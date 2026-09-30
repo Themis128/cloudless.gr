@@ -29,10 +29,16 @@ print("== List VIP Services ==")
 _, svcs, _ = ts_api.call("GET", f"tailnet/{T}/services")
 vip = svcs.get("vipServices") or []
 for s in vip:
-    print("\t".join([s.get("name", ""),
-                     ",".join(s.get("addrs") or []),
-                     ",".join(map(str, s.get("ports") or [])),
-                     ",".join(s.get("tags") or [])]))
+    print(
+        "\t".join(
+            [
+                s.get("name", ""),
+                ",".join(s.get("addrs") or []),
+                ",".join(map(str, s.get("ports") or [])),
+                ",".join(s.get("tags") or []),
+            ]
+        )
+    )
 
 print("\n== Approve hosts for every service ==")
 for s in vip:
@@ -40,22 +46,19 @@ for s in vip:
     if not svc:
         continue
     enc = urllib.parse.quote(svc, safe="")
-    code, hosts, _ = ts_api.call(
-        "GET", f"tailnet/{T}/services/{enc}/devices")
+    code, hosts, _ = ts_api.call("GET", f"tailnet/{T}/services/{enc}/devices")
     print(f"-- {svc} devices HTTP {code}")
     if code != 200:
         continue
     for h in hosts.get("hosts") or []:
         nid = h.get("nodeId")
-        print(f"   host {nid} approval={h.get('approvalLevel')} "
-              f"configured={h.get('configured')}")
+        print(f"   host {nid} approval={h.get('approvalLevel')} configured={h.get('configured')}")
         if DRY_RUN:
             print("   DRY_RUN skip approve")
             continue
         acode, resp, _ = ts_api.call(
-            "POST",
-            f"tailnet/{T}/services/{enc}/device/{nid}/approved",
-            {"approved": True})
+            "POST", f"tailnet/{T}/services/{enc}/device/{nid}/approved", {"approved": True}
+        )
         print(f"   POST approved -> {acode} {json.dumps(resp)}")
 
 print(f"\n== Delete orphan services (not in: {' '.join(sorted(EXPECTED))}) ==")
@@ -70,8 +73,7 @@ for s in vip:
     if DRY_RUN:
         print(f"ORPHAN {svc} (would DELETE)")
         continue
-    dcode, resp, _ = ts_api.call(
-        "DELETE", f"tailnet/{T}/services/{enc}")
+    dcode, resp, _ = ts_api.call("DELETE", f"tailnet/{T}/services/{enc}")
     print(f"DELETE {svc} -> {dcode} {json.dumps(resp)[:200]}")
 
 print("\n== Final service list ==")

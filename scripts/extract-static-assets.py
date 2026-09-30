@@ -35,14 +35,14 @@ if public.is_dir():
 chunks = Path(".next/static/chunks")
 
 css = next(chunks.glob("*.css"), None)
-css_bundle = (str(css.relative_to(".next"))
-              if css else "static/chunks/2p-z36o5ca_9e.css")
+css_bundle = str(css.relative_to(".next")) if css else "static/chunks/2p-z36o5ca_9e.css"
 
-main = (next(chunks.glob("*-e5fd6e*.js"), None)
-        or next(chunks.glob("main-*.js"), None)
-        or next(chunks.glob("1ualf*.js"), None))
-main_bundle = (str(main.relative_to(".next"))
-               if main else "static/chunks/1ualfx4277rj2.js")
+main = (
+    next(chunks.glob("*-e5fd6e*.js"), None)
+    or next(chunks.glob("main-*.js"), None)
+    or next(chunks.glob("1ualf*.js"), None)
+)
+main_bundle = str(main.relative_to(".next")) if main else "static/chunks/1ualfx4277rj2.js"
 
 LOCALE_HTML = """<!DOCTYPE html>
 <html lang="{locale}">
@@ -65,9 +65,7 @@ LOCALE_HTML = """<!DOCTYPE html>
 for locale in ("en", "el", "fr", "de"):
     d = OUT / locale
     d.mkdir(exist_ok=True)
-    (d / "index.html").write_text(
-        LOCALE_HTML.format(locale=locale, css=css_bundle,
-                           js=main_bundle))
+    (d / "index.html").write_text(LOCALE_HTML.format(locale=locale, css=css_bundle, js=main_bundle))
 
 (OUT / "index.html").write_text(f"""<!DOCTYPE html>
 <html lang="en">
@@ -105,7 +103,16 @@ for f in sorted(OUT.rglob("*")):
         continue
     print(f"Uploading: {rel}")
     subprocess.run(
-        ["npx", "wrangler", "r2", "object", "put",
-         f"cloudless-assets/{rel}", f"--file={f}", "--remote"],
-        capture_output=True)
+        [
+            "npx",
+            "wrangler",
+            "r2",
+            "object",
+            "put",
+            f"cloudless-assets/{rel}",
+            f"--file={f}",
+            "--remote",
+        ],
+        capture_output=True,
+    )
 print("✅ Assets uploaded to R2")

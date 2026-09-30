@@ -10,9 +10,16 @@ import time
 from pathlib import Path
 
 
-def passed(msg): print(f"[PASS] {msg}")
-def warn(msg): print(f"[WARN] {msg}")
-def info(msg): print(f"[INFO] {msg}")
+def passed(msg):
+    print(f"[PASS] {msg}")
+
+
+def warn(msg):
+    print(f"[WARN] {msg}")
+
+
+def info(msg):
+    print(f"[INFO] {msg}")
 
 
 info("Running Dev Containers terminal/engine diagnostics")
@@ -24,30 +31,30 @@ else:
 
 if shutil.which("docker"):
     passed(f"docker CLI available: {shutil.which('docker')}")
-    if subprocess.call(["docker", "version"],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL) == 0:
+    if (
+        subprocess.call(["docker", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        == 0
+    ):
         passed("docker daemon reachable from current shell")
     else:
-        warn("docker daemon not reachable; start Docker Desktop "
-             "and wait for Engine running")
+        warn("docker daemon not reachable; start Docker Desktop and wait for Engine running")
 else:
-    warn("docker CLI not found in this distro; enable Docker "
-         "Desktop WSL integration")
+    warn("docker CLI not found in this distro; enable Docker Desktop WSL integration")
 
 if shutil.which("wsl.exe"):
     info("WSL distro list:")
     subprocess.run(["wsl.exe", "-l", "-v"])
     r = subprocess.run(["wsl.exe", "--status"], capture_output=True)
-    out = r.stdout.decode("utf-16-le", errors="replace") + \
-        r.stdout.decode("utf-8", errors="replace")
+    out = r.stdout.decode("utf-16-le", errors="replace") + r.stdout.decode(
+        "utf-8", errors="replace"
+    )
     m = re.search(r"Default Distribution:\s*(\S+)", out)
     default = m.group(1) if m else ""
     if not default:
-        r = subprocess.run(["wsl.exe", "-l", "-v"],
-                           capture_output=True)
-        out = r.stdout.decode("utf-16-le", errors="replace") + \
-            r.stdout.decode("utf-8", errors="replace")
+        r = subprocess.run(["wsl.exe", "-l", "-v"], capture_output=True)
+        out = r.stdout.decode("utf-16-le", errors="replace") + r.stdout.decode(
+            "utf-8", errors="replace"
+        )
         for ln in out.splitlines():
             if ln.strip().startswith("*"):
                 parts = ln.split()
@@ -55,8 +62,7 @@ if shutil.which("wsl.exe"):
                 break
     if default:
         if default in ("docker-desktop", "docker-desktop-data"):
-            warn(f"WSL default distro is {default}; set a real "
-                 "Linux distro as default")
+            warn(f"WSL default distro is {default}; set a real Linux distro as default")
             info("Run: wsl.exe --set-default Ubuntu-24.04")
         else:
             passed(f"WSL default distro looks valid: {default}")
@@ -67,36 +73,34 @@ if shutil.which("wsl.exe"):
 samples = []
 for _ in range(3):
     t0 = time.monotonic()
-    subprocess.run(["bash", "-lic", "exit"],
-                   env={"VSCODE_RESOLVING_ENVIRONMENT": "1"},
-                   stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["bash", "-lic", "exit"],
+        env={"VSCODE_RESOLVING_ENVIRONMENT": "1"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     samples.append(int((time.monotonic() - t0) * 1000))
 median = statistics.median(samples)
-info(f"bash -lic probe startup median ms (3 samples): "
-     f"{int(median)} {samples}")
+info(f"bash -lic probe startup median ms (3 samples): {int(median)} {samples}")
 if median > 2200:
-    warn("Probe startup is high (>2200ms); VS Code userEnvProbe "
-         "delays are likely")
-    info("Likely cause: heavy ~/.bashrc or ~/.profile init "
-         "(nvm/bash_completion/path scripts)")
+    warn("Probe startup is high (>2200ms); VS Code userEnvProbe delays are likely")
+    info("Likely cause: heavy ~/.bashrc or ~/.profile init (nvm/bash_completion/path scripts)")
 else:
     passed("Probe startup is within normal range")
 
-settings = Path("/mnt/c/Users/baltz/AppData/Roaming/"
-                "Code - Insiders/User/settings.json")
+settings = Path("/mnt/c/Users/baltz/AppData/Roaming/Code - Insiders/User/settings.json")
 if settings.is_file():
     info("Checking terminal launch-critical VS Code settings")
     pat = re.compile(
         r'"terminal\.integrated\.(defaultProfile\.windows|'
-        r'profiles\.windows|inheritEnv|automationProfile\.windows'
-        r'|cwd|env\.windows|windowsEnableConpty)"')
+        r"profiles\.windows|inheritEnv|automationProfile\.windows"
+        r'|cwd|env\.windows|windowsEnableConpty)"'
+    )
     for i, ln in enumerate(settings.read_text().splitlines(), 1):
         if pat.search(ln):
             print(f"  {i}:{ln}")
     passed("settings.json found and scanned")
 else:
-    warn(f"VS Code user settings not found at expected path: "
-         f"{settings}")
+    warn(f"VS Code user settings not found at expected path: {settings}")
 
 info("Diagnostics complete")

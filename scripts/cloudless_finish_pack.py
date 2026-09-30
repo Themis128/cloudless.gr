@@ -12,17 +12,14 @@ import py_compile
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("PROJECT_ROOT",
-                           Path.home() / "code/cloudless.gr"))
+ROOT = Path(os.environ.get("PROJECT_ROOT", Path.home() / "code/cloudless.gr"))
 os.chdir(ROOT)
 
-for d in ("docs", "scripts", "agents/experiments",
-          ".agent-memory/memories"):
+for d in ("docs", "scripts", "agents/experiments", ".agent-memory/memories"):
     Path(d).mkdir(parents=True, exist_ok=True)
 
 # 1. checklist pointer
-Path("docs/current-source-of-truth-checklist.md")\
-    .write_text("""# Current Source of Truth Checklist
+Path("docs/current-source-of-truth-checklist.md").write_text("""# Current Source of Truth Checklist
 
 Use this file as the active checklist. For full rationale and history, see:
 
@@ -46,8 +43,9 @@ for h in helpers:
     py_compile.compile(str(p), doraise=True)
 
 # 6. completion checklist doc
-Path("docs/langchain-v1-local-experiment-status.md")\
-    .write_text("""# LangChain v1 local experiment status
+Path(
+    "docs/langchain-v1-local-experiment-status.md"
+).write_text("""# LangChain v1 local experiment status
 
 ## Validated
 
@@ -80,16 +78,16 @@ Before promoting any experiment into the main app:
 
 # 7. memory note
 mem = Path(".agent-memory/memories/AGENTS.md")
-note = ("For cloudless.gr finishing work, follow "
-        "docs/current-source-of-truth-checklist.md "
-        "(details in docs/master-todo-list.md); keep "
-        "LangChain v1 create_agent/middleware/"
-        "structured-output work as isolated experiments "
-        "until promoted deliberately.")
+note = (
+    "For cloudless.gr finishing work, follow "
+    "docs/current-source-of-truth-checklist.md "
+    "(details in docs/master-todo-list.md); keep "
+    "LangChain v1 create_agent/middleware/"
+    "structured-output work as isolated experiments "
+    "until promoted deliberately."
+)
 if not mem.is_file():
-    mem.write_text("# cloudless.gr Agent Memory\n\n"
-                   "## Finish workflow\n"
-                   f"- {note}\n")
+    mem.write_text(f"# cloudless.gr Agent Memory\n\n## Finish workflow\n- {note}\n")
 elif note not in mem.read_text():
     with mem.open("a") as f:
         f.write(f"\n## Finish workflow\n- {note}\n")

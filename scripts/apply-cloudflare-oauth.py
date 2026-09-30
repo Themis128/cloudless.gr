@@ -8,8 +8,7 @@ print("🔍 Checking R2 buckets...")
 subprocess.run(["npx", "wrangler", "r2", "bucket", "list"])
 
 print("\n📋 Checking bucket: cloudless-assets")
-subprocess.run(["npx", "wrangler", "r2", "bucket", "info",
-                "cloudless-assets"])
+subprocess.run(["npx", "wrangler", "r2", "bucket", "info", "cloudless-assets"])
 
 print("""
 ✅ Configuration complete!

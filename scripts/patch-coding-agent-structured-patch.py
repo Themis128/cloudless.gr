@@ -15,21 +15,18 @@ os.chdir("/home/tbaltzakis/cloudless.gr")
 print("==> Adding /structured-patch endpoint to CodingAgent")
 
 p = Path("src/agents/coding.ts")
-shutil.copy(
-    p, f"{p}.bak-structured-patch-"
-       f"{time.strftime('%Y%m%d-%H%M%S')}")
+shutil.copy(p, f"{p}.bak-structured-patch-{time.strftime('%Y%m%d-%H%M%S')}")
 text = p.read_text()
 
-import_line = ('import { generateStructuredPatch } from '
-               '"./structured-patch";\n')
+import_line = 'import { generateStructuredPatch } from "./structured-patch";\n'
 if import_line not in text:
     text = text.replace(
         'import { Agent, callable } from "agents";\n',
-        'import { Agent, callable } from "agents";\n'
-        + import_line)
+        'import { Agent, callable } from "agents";\n' + import_line,
+    )
 
 marker = '    if (url.pathname.endsWith("/patch")) {'
-endpoint = '''    if (url.pathname.endsWith("/structured-patch")) {
+endpoint = """    if (url.pathname.endsWith("/structured-patch")) {
       let prompt = url.searchParams.get("prompt") ?? "";
       let modelProfile = normalizeModelProfile(url.searchParams.get("model"), "patch");
 
@@ -100,25 +97,29 @@ endpoint = '''    if (url.pathname.endsWith("/structured-patch")) {
       }
     }
 
-'''
+"""
 
 if "/structured-patch" not in text:
     if marker not in text:
         sys.exit("Could not find /patch endpoint marker.")
     text = text.replace(marker, endpoint + marker)
 
-old_routes = ('        patch: "/api/agents/coding-agent/default/'
-              'patch?prompt=Propose%20a%20safe%20patch&'
-              'model=deep",\n'
-              '        result: "/api/agents/coding-agent/'
-              'default/result",')
-new_routes = ('        patch: "/api/agents/coding-agent/default/'
-              'patch?prompt=Propose%20a%20safe%20patch&'
-              'model=deep",\n'
-              '        structuredPatch: "/api/agents/'
-              'coding-agent/default/structured-patch",\n'
-              '        result: "/api/agents/coding-agent/'
-              'default/result",')
+old_routes = (
+    '        patch: "/api/agents/coding-agent/default/'
+    "patch?prompt=Propose%20a%20safe%20patch&"
+    'model=deep",\n'
+    '        result: "/api/agents/coding-agent/'
+    'default/result",'
+)
+new_routes = (
+    '        patch: "/api/agents/coding-agent/default/'
+    "patch?prompt=Propose%20a%20safe%20patch&"
+    'model=deep",\n'
+    '        structuredPatch: "/api/agents/'
+    'coding-agent/default/structured-patch",\n'
+    '        result: "/api/agents/coding-agent/'
+    'default/result",'
+)
 if old_routes in text and new_routes not in text:
     text = text.replace(old_routes, new_routes)
 
@@ -129,8 +130,6 @@ subprocess.call(["pnpm", "run", "cf:typecheck"])
 
 wt = Path("worker-configuration.d.ts")
 if wt.exists():
-    wt.write_text("\n".join(
-        l.rstrip() for l in
-        wt.read_text().splitlines()) + "\n")
+    wt.write_text("\n".join(line.rstrip() for line in wt.read_text().splitlines()) + "\n")
 
 print("✅ /structured-patch endpoint added.")
