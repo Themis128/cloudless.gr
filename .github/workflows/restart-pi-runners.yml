@@ -88,7 +88,7 @@ jobs:
       - name: Connect to tailnet with OAuth
         id: tailscale-oauth
         continue-on-error: true
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
         with:
           oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
@@ -100,7 +100,7 @@ jobs:
         run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
       - name: Connect to tailnet with recovery auth key
         if: steps.tailscale-oauth.outcome == 'failure'
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
           ping: github-omv.tail4ecae1.ts.net
