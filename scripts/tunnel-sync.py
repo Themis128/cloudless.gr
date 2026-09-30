@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ROUTES = ROOT / "infrastructure/cloudflare-tunnels/routes.yaml"
 
 try:
-    import yaml  # type: ignore
+    import yaml
 except ImportError:
     yaml = None
 
@@ -28,7 +28,8 @@ def load_routes() -> list[dict]:
         data = yaml.safe_load(ROUTES.read_text())
         return [r for r in (data.get("routes") or []) if r.get("status") == "active"]
     # Minimal fallback parser — routes.yaml is a flat list of mappings
-    routes, cur = [], {}
+    routes: list[dict] = []
+    cur: dict = {}
     for ln in ROUTES.read_text().splitlines():
         ln = ln.strip()
         if ln.startswith("- hostname:") or ln.startswith("hostname:"):

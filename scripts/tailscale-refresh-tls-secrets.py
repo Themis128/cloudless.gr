@@ -26,7 +26,7 @@ for h in HOSTS:
     if r.returncode != 0:
         print(f"  skip missing {name}")
         continue
-    r = subprocess.run(
+    kget = subprocess.run(
         ["kubectl", "get", "secret", name, "-n", NS, "-o", r"jsonpath={.data.tls\.crt}"],
         capture_output=True,
         text=True,

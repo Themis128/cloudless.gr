@@ -50,9 +50,9 @@ def log(msg: str) -> None:
 
 
 def ssh_to(host: str, *args: str, stdin: str = "") -> int:
-    return subprocess.call(
+    return subprocess.run(
         ["ssh", *SSH_OPTS, f"{USER_NAME}@{host}", *args], input=stdin if stdin else None, text=True
-    )
+    ).returncode
 
 
 def reachable(host: str) -> bool:
@@ -128,7 +128,7 @@ def restore_node(node: str) -> bool:
         log(f"FAIL {node} — unreachable on Tailscale ({TS_IP[node]}) and LAN ({LAN_IP[node]})")
         return False
     log(f"OK path {node} → {addr} — running restore")
-    subprocess.call(
+    subprocess.run(
         ["ssh", *SSH_OPTS, f"{USER_NAME}@{addr}", "bash", "-s"], input=REMOTE_RESTORE, text=True
     )
     return True
@@ -139,7 +139,7 @@ def restore_omv_via_ha() -> bool:
     if not ha_addr:
         return False
     log(f"Trying omv restore via omv-ha jump ({ha_addr} → 192.168.1.128)")
-    subprocess.call(
+    subprocess.run(
         ["ssh", *SSH_OPTS, f"{USER_NAME}@{ha_addr}", "bash", "-s"], input=JUMP, text=True
     )
     return True

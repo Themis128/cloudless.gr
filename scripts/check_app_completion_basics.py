@@ -68,8 +68,8 @@ c.expect(
     grep_re(r"espo|mariadb|mysql", [])
     or any(
         f
-        for f in (Path(d).rglob("*") for d in ("k8s", "infrastructure", "scripts"))
-        for f in [f]
+        for g in (Path(d).rglob("*") for d in ("k8s", "infrastructure", "scripts"))
+        for f in g
         if f.is_file()
         and re.search(r"espo|mariadb|mysql", f.name, re.I)
         and re.search(r"backup|s3", f.name, re.I)

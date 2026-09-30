@@ -27,6 +27,7 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 os.chdir(ROOT)
@@ -89,7 +90,7 @@ if not NEXT_BIN.exists():
 
 PIDFILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / f"cloudless-dev-{PORT}.pid"
 
-state = {
+state: dict[str, Any] = {
     "shutdown": False,
     "child": None,
     "restarts": 0,

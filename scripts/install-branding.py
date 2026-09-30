@@ -66,7 +66,7 @@ with LOG.open("w") as logf:
     p = subprocess.Popen(
         ["bash", "setup.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
-    for line in p.stdout:
+    for line in p.stdout or ():
         print(line, end="")
         logf.write(line)
     p.wait()

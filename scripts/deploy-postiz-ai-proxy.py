@@ -32,9 +32,9 @@ for name, value in (("NVIDIA_API_KEY", nvidia_key), ("PROXY_TOKEN", proxy_token)
         sys.exit(r.returncode)
 
 print("→ Deploying Worker…")
-r = subprocess.run(["pnpm", "wrangler", "deploy", "--config", WRANGLER_CONFIG])
-if r.returncode != 0:
-    sys.exit(r.returncode)
+dep = subprocess.run(["pnpm", "wrangler", "deploy", "--config", WRANGLER_CONFIG])
+if dep.returncode != 0:
+    sys.exit(dep.returncode)
 
 print("""
 ✓ Worker deployed at: https://postiz-ai-proxy.cloudless.workers.dev

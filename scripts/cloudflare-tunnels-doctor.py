@@ -75,9 +75,9 @@ def pick_host(lan: str, ts: str) -> str | None:
 
 def remote(host: str, cmd: str = "", script: str = "") -> int:
     if script:
-        return subprocess.call(
+        return subprocess.run(
             ["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", "bash", "-s"], input=script, text=True
-        )
+        ).returncode
     return subprocess.call(["ssh", *SSH_OPTS, f"{SSH_USER}@{host}", cmd])
 
 

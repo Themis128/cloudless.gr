@@ -20,11 +20,11 @@ API = "https://api.cloudflare.com/client/v4"
 
 token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
 if not token:
-    r = subprocess.run(
+    proc = subprocess.run(
         ["gh", "secret", "view", "CLOUDFLARE_API_TOKEN"], capture_output=True, text=True
     )
-    if r.returncode == 0:
-        token = r.stdout.strip()
+    if proc.returncode == 0:
+        token = proc.stdout.strip()
 if not token:
     sys.exit("ERROR: CLOUDFLARE_API_TOKEN required (set in env or gh secret)")
 

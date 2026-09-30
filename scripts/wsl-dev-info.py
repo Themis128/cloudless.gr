@@ -11,8 +11,10 @@ m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", r.stdout)
 wsl_ip = m.group(1) if m else ""
 
 try:
-    r = subprocess.run(["/mnt/c/Windows/System32/wsl.exe", "-l", "--running"], capture_output=True)
-    out = r.stdout.decode("utf-16-le", errors="replace") + r.stdout.decode(
+    wsl_r = subprocess.run(
+        ["/mnt/c/Windows/System32/wsl.exe", "-l", "--running"], capture_output=True
+    )
+    out = wsl_r.stdout.decode("utf-16-le", errors="replace") + wsl_r.stdout.decode(
         "utf-8", errors="replace"
     )
     distro = next(

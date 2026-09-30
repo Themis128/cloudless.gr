@@ -106,7 +106,7 @@ if has_aws:
             False,
         ),
     ):
-        r = subprocess.run(
+        ssm_r = subprocess.run(
             [
                 "aws",
                 "ssm",
@@ -118,7 +118,7 @@ if has_aws:
             ],
             capture_output=True,
         )
-        if r.returncode == 0:
+        if ssm_r.returncode == 0:
             extra = " (server-side CAPI mirror enabled)" if "CAPI" in name else ""
             ok(f"{name} present in SSM{extra}")
         else:

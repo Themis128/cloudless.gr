@@ -237,11 +237,11 @@ if MD_OUT:
         "| Name | Status | Busy | Labels |",
         "|------|--------|------|--------|",
     ]
-    for r in runners:
-        icon = "✅" if r["status"] == "online" else "⚠️"
-        busy = "🟡 busy" if r.get("busy") else "🟢 idle"
-        labels = ", ".join(r.get("labels", [])[:6])
-        lines.append(f"| {r['name']} | {icon} {r['status']} | {busy} | {labels} |")
+    for runner in runners:
+        icon = "✅" if runner["status"] == "online" else "⚠️"
+        busy = "🟡 busy" if runner.get("busy") else "🟢 idle"
+        labels = ", ".join(runner.get("labels", [])[:6])
+        lines.append(f"| {runner['name']} | {icon} {runner['status']} | {busy} | {labels} |")
     lines += [
         "",
         "### Tailscale fleet",

@@ -14,7 +14,7 @@ import sys
 import urllib.request
 from datetime import UTC, datetime
 
-kbin = shutil.which("kubectl")
+kbin = shutil.which("kubectl") or "kubectl"
 if not kbin:
     print("# Cluster snapshot\n")
     print("_kubectl is not on PATH — doctor cannot run._")
@@ -37,7 +37,9 @@ print(f"# Cluster snapshot — {now_utc}\n")
 print(f"**Expected app SHA (main HEAD):** `{short_sha or 'unknown'}`\n")
 
 # ── Reachability ──
-r = subprocess.run([kbin, "get", "--raw=/healthz", "--request-timeout=5s"], capture_output=True)
+r = subprocess.run(
+    [kbin, "get", "--raw=/healthz", "--request-timeout=5s"], capture_output=True, text=True
+)
 if r.returncode:
     print("## ❌ kubectl cannot reach the k3s API\n")
     print("```")

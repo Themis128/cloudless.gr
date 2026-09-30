@@ -40,8 +40,8 @@ if MODE in ("--sync-only", "all"):
     ):
         if Path(script).is_file():
             print(f"Running {label}...")
-            r = subprocess.run(["npx", "tsx", script], capture_output=True)
-            if r.returncode != 0:
+            run_r = subprocess.run(["npx", "tsx", script], capture_output=True)
+            if run_r.returncode != 0:
                 print(f"Warning: {script} requires AWS credentials")
 
 if MODE in ("--dashboards", "all"):

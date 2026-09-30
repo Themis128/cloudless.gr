@@ -25,7 +25,7 @@ def fail(msg):
     print(f"{RED}✗{NC} {msg}")
 
 
-def fetch(url: str, data: bytes = None) -> dict:
+def fetch(url: str, data: bytes | None = None) -> dict:
     try:
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         return json.loads(urllib.request.urlopen(req, timeout=10).read())

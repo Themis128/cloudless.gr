@@ -124,12 +124,13 @@ for host in ("cloudless.gr", "auth.cloudless.gr", "grafana.cloudless.gr"):
         ctx = ssl.create_default_context()
         with socket.create_connection((host, 443), timeout=5) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ss:
-                cert = ss.getpeercert()
-        expiry = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
+                cert = ss.getpeercert() or {}
+        not_after = str(cert.get("notAfter", ""))
+        expiry = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
         expiry = expiry.replace(tzinfo=UTC)
         days = (expiry - now).days
         icon = "✓" if days >= 14 else ("⚠" if days >= 3 else "✗")
-        print(f"  {icon}  {host:<40} {days} days left ({cert['notAfter']})")
+        print(f"  {icon}  {host:<40} {days} days left ({not_after})")
     except Exception:
         print(f"  ✗  {host:<40} failed to check")
 

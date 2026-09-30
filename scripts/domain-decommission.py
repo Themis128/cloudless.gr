@@ -135,8 +135,8 @@ else:
             cf_found += 1
             rid, rtype, rname = rec["id"], rec["type"], rec["name"]
             if is_apply():
-                r = cf("DELETE", f"/zones/{zone_id}/dns_records/{rid}")
-                if r.get("success"):
+                del_r = cf("DELETE", f"/zones/{zone_id}/dns_records/{rid}")
+                if del_r.get("success"):
                     log(f"Cloudflare: DELETED {rtype} {rname} ({rid})")
                     cf_deleted += 1
                 else:
