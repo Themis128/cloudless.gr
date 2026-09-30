@@ -2,7 +2,9 @@
 description: "Weekly check of documentation files against recent code changes, and opens a pull request with updates when docs are out of sync."
 on:
   schedule:
-    - cron: "weekly on sunday"
+    # Explicit off-peak slot (Sat 22:47 UTC) — kept apart from the other
+    # Copilot agents to avoid Copilot API 429 collisions.
+    - cron: "47 22 * * 6"
   workflow_dispatch:
 permissions:
   contents: read
