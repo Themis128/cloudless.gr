@@ -2,6 +2,7 @@ name: Pi disk cleanup
 # Free disk space on the omv k3s Pi node when DISKPRESSUREHIGH fires.
 # Prunes container images, old logs, k3s snapshots, and caches.
 #
+# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.74.191.58.
 # Trigger: workflow_dispatch, or push to main changing this file or the script.
 
 on:
@@ -27,6 +28,8 @@ jobs:
     env:
       ISSUE: ${{ github.event.inputs.issue || '382' }}
       GH_TOKEN: ${{ github.token }}
+      PI_HOST: 100.74.191.58
+      PI_USER: tbaltzakis
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
 
@@ -42,15 +45,15 @@ jobs:
     - name: Run disk cleanup via SSH
       run: |
         SSH_KEY="/tmp/omv_key"
-        echo "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
+        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
         chmod 600 "$SSH_KEY"
 
         scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
           scripts/pi-disk-cleanup.sh \
-          omv@100.74.191.58:/tmp/pi-disk-cleanup.sh
+          "$PI_USER@$PI_HOST:/tmp/pi-disk-cleanup.sh"
 
         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-          omv@100.74.191.58 \
+          "$PI_USER@$PI_HOST" \
           "sudo bash /tmp/pi-disk-cleanup.sh" 2>&1 | tee cleanup-output.md
 
         rm -f "$SSH_KEY"
