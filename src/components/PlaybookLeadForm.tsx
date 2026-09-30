@@ -139,8 +139,8 @@ export default function PlaybookLeadForm() {
           style={inputStyle}
         />
       </label>
-      {/* Honeypot — hidden from humans and assistive tech. */}
-      <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", top: "auto" }}>
+      {/* Honeypot — `hidden` keeps it out of layout, tab order and the a11y tree. */}
+      <div hidden>
         <label>
           Website
           <input
@@ -173,7 +173,7 @@ export default function PlaybookLeadForm() {
           <Link href="/privacy" className="underline" style={{ color: "var(--secondary)" }}>
             {t("legal.privacyTitle", "Privacy Policy")}
           </Link>
-          .
+          {"."}
         </span>
       </label>
       <TurnstileWidget onToken={onTurnstile} />
@@ -193,7 +193,7 @@ export default function PlaybookLeadForm() {
       </button>
       {status !== "idle" && status !== "loading" && (
         <p
-          role="status"
+          aria-live="polite"
           className={`font-mono text-xs ${status === "success" ? "text-neon-green" : "text-red-400"}`}
         >
           {message}
