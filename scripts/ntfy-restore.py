@@ -95,7 +95,11 @@ if LAST_EXIT == "OOMKilled":
         ["kubectl", "-n", NS, "patch", "deploy", "ntfy", "--type=strategic", "-p", patch],
         capture_output=True,
     )
-    note("  patched ntfy → " + NTFY_MEM_LIMIT if kpatch.returncode == 0 else "  WARNING: patch failed")
+    note(
+        "  patched ntfy → " + NTFY_MEM_LIMIT
+        if kpatch.returncode == 0
+        else "  WARNING: patch failed"
+    )
     patched = kpatch.returncode == 0
 
 restarts = int(RESTARTS) if RESTARTS.isdigit() else 0
