@@ -11,7 +11,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/cluster-doctor.yml"
-      - "scripts/cluster-doctor.sh"
+      - "scripts/cluster-doctor.py"
 permissions:
   contents: read
   issues: read
@@ -75,7 +75,7 @@ Read-only visibility into the omv k3s cluster from CI.
 1. Checkout repository
 2. Connect to Tailscale using `tailscale/github-action@v3.2.4`
 3. Decode and configure kubectl
-4. Run `scripts/cluster-doctor.sh` and capture output
+4. Run `scripts/cluster-doctor.py` and capture output
 5. Post output as comment to the specified issue
 6. If no output, post a message indicating kubectl could not reach the cluster
 
