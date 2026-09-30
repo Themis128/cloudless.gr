@@ -63,10 +63,10 @@ export async function resolveLeadsTarget(): Promise<LeadsTarget | null> {
 
 const DELIVERIES = new Set<PlaybookDelivery>(["email", "already_sent", "download", "none"]);
 
+/** The lead endpoint never redirects; any 3xx means Access bounced us to its
+ *  login page (service token missing, wrong, or not allowed by a policy). */
 function isAccessRedirect(res: Response): boolean {
-  if (res.status < 300 || res.status >= 400) return false;
-  const location = res.headers.get("location") ?? "";
-  return location.includes("cloudflareaccess.com") || location.includes("/cdn-cgi/access/");
+  return res.status >= 300 && res.status < 400;
 }
 
 export async function forwardPlaybookLead(input: PlaybookLeadInput): Promise<ForwardResult> {
