@@ -158,11 +158,11 @@ subprocess.run(
 )
 subprocess.run(["kubectl", "-n", ns, "logs", "-f", pod])
 
-r = subprocess.run(
+wait_r = subprocess.run(
     ["kubectl", "-n", ns, "wait", "--for=condition=complete", f"job/{job}", "--timeout=60s"],
     capture_output=True,
 )
-if r.returncode == 0:
+if wait_r.returncode == 0:
     print(f"OK {job} succeeded in ns={ns}")
     subprocess.run(["kubectl", "-n", ns, "delete", "job", job, "--wait=false"], capture_output=True)
     sys.exit(0)
