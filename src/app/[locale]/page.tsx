@@ -713,7 +713,7 @@ export default async function Home({
                 )}
               </p>
               <TrackedLink
-                href="/contact?type=playbook"
+                href="/playbook"
                 event="home_playbook_download_click"
                 params={{ position: "lead_capture" }}
                 className="inline-flex items-center gap-2 rounded-lg border px-6 py-2.5 font-mono text-sm font-semibold transition-all duration-200"

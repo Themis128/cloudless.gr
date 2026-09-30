@@ -143,6 +143,8 @@ interface AppConfig {
   SOCIALAUTO_ADMIN_PASSWORD: string;
   SOCIALAUTO_SERVICE_TOKEN: string;
   SOCIALAUTO_CF_ACCESS_CLIENT_ID: string;
+  /** Full URL override for the SocialAuto public lead endpoint (/api/v1/leads/public). */
+  SOCIALAUTO_LEADS_URL: string;
   SNS_PORTAL_TOPIC_ARN: string;
   GRAFANA_BASE_URL: string;
   GRAFANA_API_TOKEN: string;
@@ -262,6 +264,7 @@ function buildConfigFromEnv(): AppConfig {
     SOCIALAUTO_ADMIN_PASSWORD: process.env.SOCIALAUTO_ADMIN_PASSWORD || "",
     SOCIALAUTO_SERVICE_TOKEN: process.env.SOCIALAUTO_SERVICE_TOKEN || "",
     SOCIALAUTO_CF_ACCESS_CLIENT_ID: process.env.SOCIALAUTO_CF_ACCESS_CLIENT_ID || "",
+    SOCIALAUTO_LEADS_URL: process.env.SOCIALAUTO_LEADS_URL || "",
     SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",

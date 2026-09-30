@@ -484,5 +484,32 @@
       "title": "Blog",
       "description": "Perspectives sur le cloud computing, l'architecture serverless, l'analyse de données et le marketing IA pour les entreprises en croissance."
     }
+  },
+  "playbook": {
+    "eyebrow": "[ GUIDE GRATUIT ]",
+    "title": "Le Guide de Migration Cloud",
+    "subtitle": "Le cadre exact que nous utilisons avec nos clients pour migrer vers le cloud en toute sécurité, dans le budget et sans interruption. Gratuit, directement dans votre boîte mail.",
+    "points": [
+      "Évaluer : inventaire des charges, dépendances et coût réel de référence",
+      "Planifier : la bonne stratégie par charge (rehost, replatform, refactor)",
+      "Migrer : bascule par vagues avec plans de retour arrière et zéro interruption",
+      "Optimiser : dimensionner, fixer budgets et alertes, et empêcher les coûts de remonter"
+    ],
+    "formTitle": "Où devons-nous l'envoyer ?",
+    "form": {
+      "ariaLabel": "Recevoir le Guide de Migration Cloud",
+      "name": "Nom (facultatif)",
+      "email": "E-mail professionnel",
+      "consent": "J'accepte de recevoir le Guide de Migration Cloud par e-mail et j'accepte la",
+      "consentRequired": "Veuillez confirmer que vous acceptez de recevoir le guide.",
+      "cta": "Envoyez-moi le guide",
+      "sending": "Envoi…",
+      "success": "C'est fait ! Le guide arrive dans votre boîte mail.",
+      "alreadySent": "Cette adresse a déjà reçu le guide — vérifiez votre boîte mail (et les spams).",
+      "successDownload": "Merci ! Téléchargez votre exemplaire ci-dessous.",
+      "unavailable": "Impossible d'envoyer le guide par e-mail pour le moment — vous pouvez le télécharger directement.",
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "downloadDirect": "Télécharger le PDF"
+    }
   }
 }
