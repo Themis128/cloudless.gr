@@ -75,7 +75,7 @@ For custom analysis, ML models, notebooks.
 
 - **Python** — direct Python SDK / REST calls
 
-**When to use for cloudless.gr:** For ad-hoc Jupyter analyses. The `./scripts/windsor-api.sh` helper already covers 80% of this.
+**When to use for cloudless.gr:** For ad-hoc Jupyter analyses. The `./scripts/windsor-api.py` helper already covers 80% of this.
 
 ## Choosing the right destination for a task
 

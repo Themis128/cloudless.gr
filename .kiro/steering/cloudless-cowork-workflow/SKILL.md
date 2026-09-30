@@ -85,7 +85,7 @@ tr -dc '\0' < path/to/file | wc -c
 diff <(cat path/to/file) <(git show HEAD:path/to/file) | head
 ```
 
-The included `scripts/cowork-preflight.sh` runs all four checks against the working tree and exits non-zero if anything looks corrupt.
+The included `scripts/cowork-preflight.py` runs all four checks against the working tree and exits non-zero if anything looks corrupt.
 
 ## What works in Cowork without workarounds
 

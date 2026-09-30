@@ -37,7 +37,7 @@ Metabase (JVM) is the most likely OOM victim in the analytics namespace.
 | Limit | `-Xmx` | Status |
 |---|---|---|
 | 400Mi | 320m | Original — tight, can OOMKill on heavy queries |
-| 600Mi | 480m | `analytics-restore.sh` default — fits comfortably |
+| 600Mi | 480m | `analytics-restore.py` default — fits comfortably |
 | 1Gi | 800m | Maximum if the node can afford it |
 
 **Rule: never set Metabase container limit below `-Xmx` + 128Mi.**
@@ -46,7 +46,7 @@ The `memory-relief-2026-05-31.yaml` manifest caps Metabase at 400Mi. If you're s
 
 ## Checking Analytics Health
 
-Run the cluster doctor (touch `scripts/cluster-doctor.sh` → PR → merge) — the doctor now covers Tier 4 Analytics sections: Metabase pods, DuckDB API pods, and their resource limits.
+Run the cluster doctor (touch `scripts/cluster-doctor.py` → PR → merge) — the doctor now covers Tier 4 Analytics sections: Metabase pods, DuckDB API pods, and their resource limits.
 
 Quick manual checks (run from a Tailscale-connected host with kubectl):
 

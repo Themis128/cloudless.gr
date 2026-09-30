@@ -110,8 +110,8 @@ Common verdicts:
 | Sign | Cause / Fix |
 |---|---|
 | `CrashLoopBackOff` + log `ECONNREFUSED postiz-postgres:5432` | Postgres not ready yet → wait, or stage 5 |
-| `CrashLoopBackOff` + log `JWT_SECRET not set` | The `postiz-secrets` Secret is missing or has empty keys → re-run `./install.sh` |
-| `OOMKilled` | Bump `postiz.resources.limits.memory` in `values-prod.yaml`. Do NOT lower requests (see CLAUDE.md JVM lesson). Re-run `./install.sh`. |
+| `CrashLoopBackOff` + log `JWT_SECRET not set` | The `postiz-secrets` Secret is missing or has empty keys → re-run `./install.py` |
+| `OOMKilled` | Bump `postiz.resources.limits.memory` in `values-prod.yaml`. Do NOT lower requests (see CLAUDE.md JVM lesson). Re-run `./install.py`. |
 | `Pending` + `no available nodes match selector` | omv-main not Ready, or the chart was applied with the wrong node selector |
 | `ImagePullBackOff` | Hub rate-limit, or the tag was bumped past v2.11.2 (the cluster has no Temporal — pin it back) |
 | HTTP 5xx from in-pod curl | App is up but failing — read the next 200 log lines, jump to stage 5 or 6 |

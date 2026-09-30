@@ -32,12 +32,12 @@ GH-hosted-with-tailnet fallback pattern by refactoring
 | #1107 | `.gitignore`: `tmp_*.sh` + `q-dev-chat-*.md` | Stops session helpers slipping into PRs |
 | #1108 | **fix(etl-selfhosted)**: use `AWS_DEPLOY_ROLE_ARN` (the `_ETL_` secret was never created) | ETL end-to-end success verified |
 | #1109 | **fix(ci)**: `lint:md:fix` 161 files clean + skip parquetjs-dependent test | CI on main GREEN again |
-| #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.sh` + refactor `sync-smtp-secrets.yml` to GH-hosted-with-tailnet | + memory `reference_pi_runner_failover` |
+| #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.py` + refactor `sync-smtp-secrets.yml` to GH-hosted-with-tailnet | + memory `reference_pi_runner_failover` |
 | #1111 | docs(pi-runner-failover): honesty pass on inventory (1 of 5 movable, not 3 of 5) | Correctness |
 | #1112 | docs(master-todo): post-R12 retitle + 2026-06-22 session log | Living roadmap |
 | #1113 | **fix(sync-smtp-secrets)**: `timeout 30s` on kubectl smoke test | Resolves 5+ min hang on first GH-hosted → tailnet handshake |
 | #1114 | docs(master-todo): #1112+#1113 + Pi-back confirmation + CI-green note | Living roadmap |
-| #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.sh` + `.github/workflows/probe-pi-ssm-scope.yml` | Closes pi-cloud-sync.md gap #2 |
+| #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.py` + `.github/workflows/probe-pi-ssm-scope.yml` | Closes pi-cloud-sync.md gap #2 |
 | #1116 | **perf(R18)**: batch `iam:SimulatePrincipalPolicy` 32 ARNs/call | v1 timed out at 5 min; v2 runs in ~75s |
 | #1117 | Automated: Notion sitemap entries sync | chore |
 | #1122 | docs(master-todo): #1114-#1116 logged + R18 ✅ in status header | Living roadmap |
@@ -50,7 +50,7 @@ GH-hosted-with-tailnet fallback pattern by refactoring
 - **R13 descoped**: R10's daily EspoCRM CronJob (03:45 UTC) already covers the 24h RPO the operator chose.
 - **CI on main**: 161 → 0 lint errors; 1 → 0 failing tests; re-verified on sha `4f558a1b` (run #27927063197).
 - **Workflow catalogue**: 124 → 115 active, indexed in `.github/workflows/README.md`, with the 9 archived ones preserved in `.github/workflows.archived/`.
-- **`pi-runner-failover` skill + `pi-runner-doctor.sh`** ship the canonical playbook for the next Pi outage (detect / triage / restore). Skill inventory honestly admits only 1 of 5 hard-pinned workflows is movable; the other 4 have legitimate Pi-binding reasons.
+- **`pi-runner-failover` skill + `pi-runner-doctor.py`** ship the canonical playbook for the next Pi outage (detect / triage / restore). Skill inventory honestly admits only 1 of 5 hard-pinned workflows is movable; the other 4 have legitimate Pi-binding reasons.
 - **`sync-smtp-secrets.yml`** refactored from Pi-pinned to GH-hosted-with-tailnet (Tailscale + `KUBECONFIG_B64` + OIDC AWS). Architecture proven end-to-end on first run.
 - **ETL — self-hosted apps → S3**: was failing 4+ ways; now runs end-to-end (AppFlowy postgres-direct + n8n + Postiz all extract to S3 lake).
 - **Healthcheck skip-when-empty gate** validated — all 6 matrix legs (appflowy/espocrm/postiz/n8n/grafana/ntfy) report success even with secrets missing.
@@ -81,7 +81,7 @@ async on `/api/webhooks/stripe`.
 
 ## Lessons from this session (for future sessions)
 
-1. **Pi-runner offline propagates fast.** Within hours, ~5 workflows queued, ~4 cascaded failures (k3s-e2e, deploy-pi, ha-sync). The canonical response is documented in `skills/pi-runner-failover/SKILL.md` and starts with `bash scripts/pi-runner-doctor.sh --auto-flip`.
+1. **Pi-runner offline propagates fast.** Within hours, ~5 workflows queued, ~4 cascaded failures (k3s-e2e, deploy-pi, ha-sync). The canonical response is documented in `skills/pi-runner-failover/SKILL.md` and starts with `python3 scripts/pi-runner-doctor.py --auto-flip`.
 2. **`git add -A` is dangerous in agent sessions.** Slipped 3 tmp scripts into PR #1102 + 5 tmp + 1 empty file into PR #1106. PR #1107 added `.gitignore` patterns to prevent recurrence.
 3. **Sequential aws-cli loops hit the 5-min GH timeout fast.** R18 v1 was sequential `iam:SimulatePrincipalPolicy`; v2 batches 32 ARNs/call → 7× speedup.
 4. **`actions/cache@v5` on `.next/cache` is free 2-3 min savings** per workflow that runs `next build`. Was only applied to `deploy.yml`; extended to ci + bundle-budget + bundle-size-pr.
@@ -93,7 +93,7 @@ async on `/api/webhooks/stripe`.
 - `docs/gh-workflows-strategy.md` — measured baseline + optimization patterns
 - `docs/session-summary-2026-06-21.md` — previous session (R7-R9 + R10-R14)
 - `skills/pi-runner-failover/SKILL.md` — new this session
-- `scripts/pi-runner-doctor.sh` — new this session
-- `scripts/audit-pi-ssm-scope.sh` — new this session
+- `scripts/pi-runner-doctor.py` — new this session
+- `scripts/audit-pi-ssm-scope.py` — new this session
 - Memory `reference_pi_runner_failover` — new this session
 - Memory `project_gh_workflows_speedup_strategy` — new this session

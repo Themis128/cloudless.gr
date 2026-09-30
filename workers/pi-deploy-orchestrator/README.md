@@ -49,6 +49,6 @@ and secret `DEPLOY_ORCHESTRATOR_TOKEN` to the same token.
 
 ```bash
 # /etc/cloudless/pi-release-pull.env — URL + token only (R2 keys optional fallback)
-sudo bash infrastructure/omv/install-pi-release-pull.sh
+sudo python3 infrastructure/omv/install-pi-release-pull.py
 journalctl -t pi-release-pull -f
 ```

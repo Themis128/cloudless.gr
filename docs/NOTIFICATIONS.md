@@ -167,7 +167,7 @@ email **directly via curl + Resend REST** — does not go through the app.
 
 Credentials: `/etc/safedeploy-watchdog.env` (mode 600).
 Logs: `journalctl -t safedeploy-watchdog`.
-Files: `infrastructure/omv/safedeploy-watchdog.sh` + `.service` + `.timer`.
+Files: `infrastructure/omv/safedeploy-watchdog.py` + `.service` + `.timer`.
 Full runbook: [`docs/SAFEDEPLOY-WATCHDOG.md`](SAFEDEPLOY-WATCHDOG.md).
 
 ---

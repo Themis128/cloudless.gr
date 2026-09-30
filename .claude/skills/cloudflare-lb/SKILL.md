@@ -117,7 +117,7 @@ If the Pi endpoint fails, check the k3s cloudless deployment and Tailscale Funne
 
 ### DNS not pointing to LB after apply
 
-The `apply-cloudflare-lb.sh` script patches the DNS record from the existing
+The `apply-cloudflare-lb.yml` workflow (via `scripts/setup-cloudflare-lb.py`) patches the DNS record from the existing
 `A`/`CNAME` to the LB hostname. If it failed mid-run, re-dispatch with `apply=true`
 (the script is idempotent).
 
@@ -134,7 +134,7 @@ Cloudflare dashboard → cloudless.gr zone → Traffic → Load Balancing → En
 
 ## Re-apply (update pools, change origins)
 
-Edit `scripts/setup-cloudflare-lb.sh` and trigger `cloudflare-lb.yml` with `apply=true`,
+Edit `scripts/setup-cloudflare-lb.py` and trigger `cloudflare-lb.yml` with `apply=true`,
 or dispatch `apply-cloudflare-lb.yml`. Both are idempotent — existing resources are
 updated in place.
 

@@ -46,9 +46,9 @@ fabric doc §3.
 ## One-time client setup (WSL)
 
 ```bash
-bash scripts/ts-wsl.sh status          # userspace daemon + SOCKS :1055
-bash scripts/ts-wsl.sh login           # approve in admin console if needed
-bash scripts/setup-kubectl-tailscale.sh
+python3 scripts/ts-wsl.py status          # userspace daemon + SOCKS :1055
+python3 scripts/ts-wsl.py login           # approve in admin console if needed
+python3 scripts/setup-kubectl-tailscale.py
 ```
 
 Persist:
@@ -68,7 +68,7 @@ kubectl get pods -n monitoring
 
 ## Off-LAN: kube-apiserver ProxyGroup
 
-After [`infrastructure/tailscale/deploy.sh`](../../infrastructure/tailscale/deploy.sh)
+After [`infrastructure/tailscale/deploy.py`](../../infrastructure/tailscale/deploy.py)
 (see fabric doc §8):
 
 ```bash

@@ -192,8 +192,8 @@ kubectl logs -n cloudless deploy/cloudless-app --tail=100 | grep -c "Signature v
 
 - `skills/selfhosted-services-doctor` — Comprehensive service audit
 - `skills/tunnel-dns-doctor` — Tunnel + DNS configuration doctor
-- `tools/secret-completeness-check.sh` — Check for missing secrets
-- `tools/cluster-health-audit.sh` — One-shot cluster audit
+- `tools/secret-completeness-check.py` — Check for missing secrets
+- `tools/cluster-health-audit.py` — One-shot cluster audit
 - `docs/cluster/cluster-overload-runbook.md` — Cluster overload recovery
 - `.clinerules/api-endpoint-fixes.md` — API endpoint fix documentation
 - `.clinerules/migration-completion.md` — Migration completion report

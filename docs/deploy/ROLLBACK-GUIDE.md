@@ -264,7 +264,7 @@ pnpm r2:sync-to-s3  # if script exists
 
 ```bash
 # Create a revert worker that proxies to AWS endpoints
-# See: scripts/create-rollback-worker.sh
+# (helper script removed with the AWS decommission — write the worker inline)
 npx wrangler deploy --config wrangler-rollback.json
 ```
 

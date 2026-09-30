@@ -42,11 +42,11 @@ Optional dedicated secret: `CLOUDFLARE_TUNNEL_API_TOKEN` (Tunnel Edit only).
 # Zone-only smoke can PASS while Workers Write is missing — always run full smoke:
 gh workflow run verify-cloudflare-token.yml --ref main
 # or locally (needs token in env — ask operator; never read .env.local):
-bash scripts/cf-token-smoketest.sh
+python3 scripts/cf-token-smoketest.py
 
 # List / ensure CI perms (needs API Tokens Write or Global API Key):
-bash scripts/cf-token-permissions.sh list
-bash scripts/cf-token-permissions.sh ensure-ci "<token-name>"
+python3 scripts/cf-token-permissions.py list
+python3 scripts/cf-token-permissions.py ensure-ci "<token-name>"
 
 # From CI (set repo secrets CF_EMAIL + CF_GLOBAL_API_KEY once):
 gh workflow run "Ensure Cloudflare CI token scopes" --ref main -f dry_run=true
@@ -83,7 +83,7 @@ curl -sSI https://cloudless.gr/api/health | rg -i 'x-served-by|HTTP/'
 ## Related
 
 - Token mint/store: `cloudflare-token-doctor`, `cloudflare-token-rotation`
-- Permissions CLI: `scripts/cf-token-permissions.sh`
-- Smoke: `scripts/cf-token-smoketest.sh`
+- Permissions CLI: `scripts/cf-token-permissions.py`
+- Smoke: `scripts/cf-token-smoketest.py`
 - Workflow: `.github/workflows/cloudflare-deploy.yml`
 - Proxy: `workers/pi-origin-proxy/`

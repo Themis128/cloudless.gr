@@ -63,7 +63,7 @@ Gap closure (MinIO/Kuma R2, D1 retire, accepted non-HA) is tabulated in
 [landscape.md](landscape.md#gap-status-post-pr-1451). Orphan D1 `cloudless-auth`
 and KV `HEALTH_CACHE` were deleted 2026-07-30.
 
-Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.  
+Scripts: `scripts/db-port-forward.py`, `scripts/db-sqlite-pull.py`, `scripts/db-d1-pull.py`.  
 SQLTools config: `.vscode/settings.json` (`sqltools.connections`).  
 Use **SQLTools**, not the Microsoft SQL Server extension (`ms-mssql`).
 

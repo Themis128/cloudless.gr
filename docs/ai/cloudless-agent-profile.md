@@ -38,7 +38,7 @@ cloudless.gr is a custom Next.js + SST/Lambda website and e-shop with analytics,
 - `agents/` — local AI, RAG, Deep Agent, and assistant code.
 - `agents/tools/` — read-only project and LangSmith registry tools.
 - `tools/langsmith_api/` — LangSmith API client scaffold.
-- `scripts/ai.sh` — local AI command dispatcher.
+- `scripts/ai.py` — local AI command dispatcher.
 - `scripts/check_deepagent_cloudless.py` — Deep Agent readiness check.
 - `scripts/check_deepagent_skills.py` — skills/tools readiness check.
 - `tests/langsmith_api/` — LangSmith API tooling tests.

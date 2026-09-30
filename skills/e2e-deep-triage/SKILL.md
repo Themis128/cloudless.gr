@@ -15,7 +15,7 @@ Local Playwright uses **port 4010** and `.next-e2e` so it does not fight interac
 pnpm e2e:deep-triage
 ```
 
-Runs `scripts/e2e-deep-triage.sh` — instrumentation doctor, then the fragile deep specs (chromium + mobile-chrome, workers=2).
+Runs `scripts/e2e-deep-triage.py` — instrumentation doctor, then the fragile deep specs (chromium + mobile-chrome, workers=2).
 
 ## Failure → fix map
 

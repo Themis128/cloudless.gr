@@ -12,7 +12,7 @@ description: >
 
 All production credentials live in AWS SSM under `/cloudless/production/`.
 There are **no** `.env` files with real values. The single tool for this job
-is `scripts/activate-integration.sh` — run it on `omv-main` (has aws CLI,
+is `scripts/activate-integration.py` — run it on `omv-main` (has aws CLI,
 curl, python3, and network access to every provider) via
 `mcp__cloudless-infra__cluster_run_command`, or locally if the operator has
 AWS credentials.
@@ -21,21 +21,21 @@ AWS credentials.
 
 ```bash
 # Which activation keys exist (no values printed)
-./scripts/activate-integration.sh status
+./scripts/activate-integration.py status
 
 # Write one key and immediately live-verify the affected integration
-./scripts/activate-integration.sh set ACTIVECAMPAIGN_API_TOKEN "<value>"
+./scripts/activate-integration.py set ACTIVECAMPAIGN_API_TOKEN "<value>"
 
 # Live-verify one or all integrations using the values already in SSM
-./scripts/activate-integration.sh verify             # all
-./scripts/activate-integration.sh verify tiktok      # one
+./scripts/activate-integration.py verify             # all
+./scripts/activate-integration.py verify tiktok      # one
 ```
 
 On omv-main from a Cowork/Claude session, fetch the script from main first:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Themis128/cloudless.gr/main/scripts/activate-integration.sh \
-  -o /tmp/activate-integration.sh && chmod +x /tmp/activate-integration.sh && /tmp/activate-integration.sh status
+  -o /tmp/activate-integration.py && chmod +x /tmp/activate-integration.py && /tmp/activate-integration.py status
 ```
 
 ## Per-integration notes

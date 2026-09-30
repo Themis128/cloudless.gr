@@ -123,7 +123,7 @@ probe hits the health endpoint before the backend is fully initialized.
 **Assessment**: No OOMKills detected. All restarts are from normal
 operational events (node reboots, ACME renewals, startup sequences).
 
-**Remediation**: See `tools/pod-restart-investigator.sh`
+**Remediation**: See `tools/pod-restart-investigator.py`
 
 ### ⚠️ 5. appflowy Domain Mismatch in Docs
 
@@ -147,7 +147,7 @@ Every request to the newsletter Slack endpoint is rejected as unauthorized.
 
 **Impact**: Newsletter Slack webhook integration doesn't work.
 
-**Remediation**: See `tools/secret-completeness-check.sh` and
+**Remediation**: See `tools/secret-completeness-check.py` and
 `skills/cloudless-app-doctor/SKILL.md`
 
 ### ⚠️ 7. Slack Signature Verification Failures
@@ -164,10 +164,10 @@ E2E tests hitting the Slack endpoint without proper headers.
 
 | Tool | Path | Purpose |
 |------|------|---------|
-| cluster-health-audit.sh | `tools/cluster-health-audit.sh` | One-shot comprehensive cluster health audit (10 checks) |
-| pod-restart-investigator.sh | `tools/pod-restart-investigator.sh` | Investigate high-restart pods |
-| tunnel-endpoint-validator.sh | `tools/tunnel-endpoint-validator.sh` | Validate tunnel config vs actual services |
-| secret-completeness-check.sh | `tools/secret-completeness-check.sh` | Check for missing secrets/env vars |
+| cluster-health-audit.py | `tools/cluster-health-audit.py` | One-shot comprehensive cluster health audit (10 checks) |
+| pod-restart-investigator.py | `tools/pod-restart-investigator.py` | Investigate high-restart pods |
+| tunnel-endpoint-validator.py | `tools/tunnel-endpoint-validator.py` | Validate tunnel config vs actual services |
+| secret-completeness-check.py | `tools/secret-completeness-check.py` | Check for missing secrets/env vars |
 
 ## Skills Created
 
@@ -183,31 +183,31 @@ E2E tests hitting the Slack endpoint without proper headers.
 ### Quick health check
 
 ```bash
-bash tools/cluster-health-audit.sh
+python3 tools/cluster-health-audit.py
 ```
 
 ### JSON output for monitoring
 
 ```bash
-bash tools/cluster-health-audit.sh --json | jq .
+python3 tools/cluster-health-audit.py --json | jq .
 ```
 
 ### Investigate a specific pod
 
 ```bash
-bash tools/pod-restart-investigator.sh tailscale kube-0
+python3 tools/pod-restart-investigator.py tailscale kube-0
 ```
 
 ### Validate tunnel configuration
 
 ```bash
-bash tools/tunnel-endpoint-validator.sh
+python3 tools/tunnel-endpoint-validator.py
 ```
 
 ### Check for missing secrets
 
 ```bash
-bash tools/secret-completeness-check.sh
+python3 tools/secret-completeness-check.py
 ```
 
 ## Related Documentation

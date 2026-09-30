@@ -72,11 +72,11 @@ Enable in the Postiz UI once channels exist:
 
 ## Hub implementation order (do in order)
 
-1. Restore `postiz-providers` OAuth keys (`scripts/postiz-restore-providers.sh`); connect **P0**: LinkedIn Page, X, FB/IG, Bluesky — see `docs/integrations/POSTIZ-CONNECT.md`.
-2. Confirm MCP `integrationList` and `/admin/postiz` Channels are non-empty (`scripts/postiz-connect-ready.sh`).
+1. Restore `postiz-providers` OAuth keys (`scripts/postiz-restore-providers.py`); connect **P0**: LinkedIn Page, X, FB/IG, Bluesky — see `docs/integrations/POSTIZ-CONNECT.md`.
+2. Confirm MCP `integrationList` and `/admin/postiz` Channels are non-empty (`scripts/postiz-connect-ready.py`).
 3. Install `postiz` CLI with Tailscale `POSTIZ_API_URL` (`postiz-agent-cli`).
 4. Import + activate `postiz-rss-multichannel.json` + `postiz-utm-guard.json`; optionally install `n8n-nodes-postiz`. In-cluster API base: `http://postiz.postiz.svc.cluster.local:5000/api`.
-5. Register Postiz → app webhook (`scripts/postiz-register-webhook.sh`) and Plugs for X + LinkedIn Page.
+5. Register Postiz → app webhook (`scripts/postiz-register-webhook.py`) and Plugs for X + LinkedIn Page.
 6. Keep `AUTO_POST_BLOG_TO_SOCIAL` **unset** on cloudless-app unless you want AppFlowy Published → social fan-out (default = vet-before-post).
 7. Optional: agent-media MCP for short-form video creatives, then publish via Postiz.
 8. Optional: `OPENAI_API_KEY` + R2 on the Postiz pod for in-app AI/media.

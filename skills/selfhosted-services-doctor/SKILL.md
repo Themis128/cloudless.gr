@@ -28,10 +28,10 @@ specific services as needed.
 
 ```bash
 # Run the comprehensive audit tool
-bash tools/cluster-health-audit.sh
+python3 tools/cluster-health-audit.py
 
 # JSON mode for piping to monitoring/alerting
-bash tools/cluster-health-audit.sh --json | jq .
+python3 tools/cluster-health-audit.py --json | jq .
 ```
 
 This checks all 10 areas:
@@ -286,11 +286,11 @@ kubectl -n alert-manager logs deploy/alert-api --tail=20
 
 ```bash
 # List all pods with >2 restarts
-bash tools/pod-restart-investigator.sh
+python3 tools/pod-restart-investigator.py
 
 # Deep dive on a specific pod
-bash tools/pod-restart-investigator.sh tailscale kube-0
-bash tools/pod-restart-investigator.sh monitoring kube-prom-prometheus-node-exporter-lw66t
+python3 tools/pod-restart-investigator.py tailscale kube-0
+python3 tools/pod-restart-investigator.py monitoring kube-prom-prometheus-node-exporter-lw66t
 ```
 
 Known high-restart pods (as of 2026-07-31):
@@ -307,7 +307,7 @@ Known high-restart pods (as of 2026-07-31):
 
 ```bash
 # Validate all tunnel endpoints against actual services
-bash tools/tunnel-endpoint-validator.sh
+python3 tools/tunnel-endpoint-validator.py
 ```
 
 This checks:
@@ -322,7 +322,7 @@ This checks:
 
 ```bash
 # Check for missing secrets across all services
-bash tools/secret-completeness-check.sh
+python3 tools/secret-completeness-check.py
 ```
 
 This checks:

@@ -28,7 +28,7 @@ Lives on the omv-main Pi at `~/alert-api/`. Source-of-truth is this repo.
 | `tls_check.py` | Background task: checks TLS cert expiry, fires `CERT_EXPIRING_*` alerts. |
 | `healthchecks_ping.py` | Background task: pings healthchecks.io to prove the service is alive. |
 | `esp32_command_routes.py` | LED / OTA / config endpoints for the ESP32 board. |
-| `deploy.sh` | scp's the Python files to the Pi and rebuilds the container. |
+| `deploy.py` | scp's the Python files to the Pi and rebuilds the container. |
 | `tests/` | Unit tests + live smoke test. |
 
 ## How the pipeline works
@@ -48,7 +48,7 @@ Every rule:
 
 ### 2. AlertManager filters with an allowlist
 
-`apply-prometheus-rule-tuning.sh` patches the AlertManager secret to enforce:
+`apply-prometheus-rule-tuning.py` patches the AlertManager secret to enforce:
 
 - **Default route → `"null"` receiver** (alert is evaluated but NOT Slacked).
 - **Severity = `critical` → `alert-api` receiver** (always Slacked).
@@ -57,7 +57,7 @@ Every rule:
   `ESP32WatchdogDown`, `ESP32WifiWeak`, `NodeDiskUsageHigh`, `NodeDiskUsageOmvMain`,
   `NodeMemoryPressure`, `NodeHighSwapUsage`.
 
-Marker `# tuned-by: apply-prometheus-rule-tuning.sh v2` makes the patch idempotent.
+Marker `# tuned-by: apply-prometheus-rule-tuning.py v2` makes the patch idempotent.
 
 ### 3. alert-api renders the Slack message
 
@@ -105,7 +105,7 @@ Each test file stubs `httpx`/`fastapi`/`pydantic`/etc. so it runs in any clean P
 ### Live smoke test (hits the cluster + Slack)
 
 ```bash
-bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
+python3 infrastructure/pi-alert-api/tests/smoke_test_live.py
 ```
 
 Sends a synthetic `SMOKETEST_<unixtime>` alert to the live alert-api webhook, polls `/api/alerts?status=active` to confirm the verbose body was persisted, then resolves the alert. Exits non-zero if any of the expected fields (`*Instance:*`, `*Target / Probe:*`, `📖 *Runbook:*`, `📊 *Source:*`) are missing.
@@ -116,7 +116,7 @@ Override URL when running off-cluster:
 
 ```bash
 ALERT_API_URL=http://192.168.1.128:30820 \
-  bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
+  python3 infrastructure/pi-alert-api/tests/smoke_test_live.py
 ```
 
 ## Operator runbook
@@ -130,12 +130,12 @@ ALERT_API_URL=http://192.168.1.128:30820 \
 
 2. **Decide if it should Slack:**
    - `severity: critical` → automatically Slacks. No further action.
-   - `severity: warning` → must be added to the AlertManager allowlist. Edit `apply-prometheus-rule-tuning.sh`, append the alertname to the `alertname =~ "..."` regex in the route block. Bump the marker version (`v2` → `v3`) so the script re-applies the AM secret.
+   - `severity: warning` → must be added to the AlertManager allowlist. Edit `apply-prometheus-rule-tuning.py`, append the alertname to the `alertname =~ "..."` regex in the route block. Bump the marker version (`v2` → `v3`) so the script re-applies the AM secret.
 
 3. **Apply** (idempotent):
 
    ```bash
-   bash k8s/cluster-protection/apply-prometheus-rule-tuning.sh
+   python3 k8s/cluster-protection/apply-prometheus-rule-tuning.py
    ```
 
 4. **Add a proposed-solution string** for the new code in `slack_notify.py::_proposed_solution()` — operators get one-line remediation in the Slack message itself. The unit test `test_all_esp32_watchdog_codes_have_solutions` enforces this for the ESP32 family; extend the required-codes list if needed.
@@ -146,7 +146,7 @@ ALERT_API_URL=http://192.168.1.128:30820 \
 
 Two options depending on permanence:
 
-- **Strip the alert rule entirely** (permanent) — add the alertname to one of the `strip_alerts_from_rule` calls in `apply-prometheus-rule-tuning.sh`, re-apply. Rule won't fire at all anymore.
+- **Strip the alert rule entirely** (permanent) — add the alertname to one of the `strip_alerts_from_rule` calls in `apply-prometheus-rule-tuning.py`, re-apply. Rule won't fire at all anymore.
 - **Route to `"null"` but keep evaluating** — remove from the AM allowlist regex (warnings) or downgrade `severity:` from `critical` to `warning` and don't allowlist it. Prometheus still records it, alert-api DB still tracks it, but no Slack.
 
 The chatty kube-prometheus-stack rule groups (`monitoring-prometheus`, `monitoring-prometheus-operator`, `monitoring-alertmanager.rules`, `monitoring-kubernetes-system-apiserver`, `monitoring-config-reloaders`, `monitoring-node-network`) are deleted outright by the apply script — they regenerate on every `helm upgrade` and need re-deleting after.
@@ -177,7 +177,7 @@ If step 5 → check Slack webhook URL secret (`alert-api-secrets/SLACK_WEBHOOK_U
 ### Re-deploying the alert-api
 
 ```bash
-bash infrastructure/pi-alert-api/deploy.sh
+python3 infrastructure/pi-alert-api/deploy.py
 ```
 
 scp's `main.py` + `slack_notify.py` + `mqtt_publish.py` + `tls_check.py` + `esp32_command_routes.py` to the Pi (with `.bak.<ts>` safety copies), then `docker build` + `k3s ctr images import` + `kubectl rollout`. Takes ~30-60s.
@@ -185,7 +185,7 @@ scp's `main.py` + `slack_notify.py` + `mqtt_publish.py` + `tls_check.py` + `esp3
 After redeploy, always run the smoke test:
 
 ```bash
-bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
+python3 infrastructure/pi-alert-api/tests/smoke_test_live.py
 ```
 
 ## See also

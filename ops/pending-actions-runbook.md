@@ -226,7 +226,7 @@ aws ssm get-parameter \
 ### Alternative: Manual Verification via Script
 
 ```bash
-# scripts/cf-token-smoketest.sh (already exists)
+# scripts/cf-token-smoketest.py (already exists)
 # Tests zone read, LB pool access, and DNS edit scopes
 
 # Run locally (requires awscli + jq):

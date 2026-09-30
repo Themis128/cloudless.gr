@@ -6,7 +6,7 @@ Python-based agent workflows for research, documentation, and local experimentat
 
 ```bash
 # 1. Create virtual environment and install dependencies
-./setup-agents.sh
+./setup-agents.py
 
 # Or manually:
 python3 -m venv .venv

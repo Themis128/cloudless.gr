@@ -7,17 +7,17 @@ A single project that bundles **every Claude Desktop / Claude Code branding & so
 ```
 BRANDING/
 ├── cloudless-brand/                  # Brand pack v2 source-of-truth
-├── repos/                            # External skill repos (populated by setup.sh)
+├── repos/                            # External skill repos (populated by setup.py)
 ├── scripts/                          # Install + verify + uninstall scripts
 ├── claude-desktop-mcp.json           # MCP server JSON snippet for Claude Desktop
-├── setup.sh                          # One-shot installer
+├── setup.py                          # One-shot installer
 └── docs/                             # Workflow + install guide + post-install checklist
 ```
 
 ## Install (one command)
 
 ```bash
-cd ~/code/BRANDING && bash setup.sh
+cd ~/code/BRANDING && python3 setup.py
 ```
 
 The script will:
@@ -27,7 +27,7 @@ The script will:
 3. Copy slash-commands (`/brand-design`) into `~/.claude/commands/`.
 4. Symlink the **Cloudless brand pack** into `~/.claude/skills/cloudless-brand/` so any skill can read `brand.md`, the SVG logos and the social templates without leaving the agent.
 5. Print the Claude Desktop MCP-server JSON to merge into `%APPDATA%\Claude\claude_desktop_config.json` (also written to `~/.config/Claude/claude_desktop_config.suggested.json` for reference).
-6. Run `scripts/verify.sh`.
+6. Run `scripts/verify.py`.
 
 **Restart Claude Desktop once** after install for the MCP servers to register.
 
@@ -64,7 +64,7 @@ See `docs/workflow.md` for the full diagram.
 ## Uninstall
 
 ```bash
-bash scripts/uninstall.sh
+python3 scripts/uninstall.py
 ```
 
 Removes the symlinks under `~/.claude/skills/` and the copied commands under `~/.claude/commands/`. Leaves `repos/` and `cloudless-brand/` intact.

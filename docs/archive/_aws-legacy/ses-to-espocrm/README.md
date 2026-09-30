@@ -64,7 +64,7 @@ Requires AWS creds in env (`AWS_ACCESS_KEY_ID` + `_SECRET_ACCESS_KEY` or
 `cd`s into its own dir.
 
 ```bash
-bash infrastructure/ses-to-espocrm/deploy.sh
+python3 infrastructure/ses-to-espocrm/deploy.py
 ```
 
 Idempotent: re-running upgrades the Lambda code in place, leaves all

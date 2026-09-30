@@ -13,7 +13,7 @@ The canonical local AI / Deep Agent workflow should use the existing project fil
 
 ## Scripts
 
-- `scripts/ai.sh` — single CLI wrapper for local AI commands.
+- `scripts/ai.py` — single CLI wrapper for local AI commands.
 - `scripts/check_deepagent_cloudless.py` — readiness checker.
 - `scripts/test_vllm_connection.py` — vLLM smoke test.
 - `scripts/ingest_repo_docs.py` — builds `.deepagents/cloudless_repo_chroma/`.

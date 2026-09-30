@@ -45,7 +45,7 @@ not live SKILL.md files. Unzip if a colleague needs to install one.
 
 ## How this list is maintained
 
-`scripts/audit-skill-usage.sh` lists every active skill + reference
+`scripts/audit-skill-usage.py` lists every active skill + reference
 counts. Re-run when adding a skill — entries should land here too.
 
 If a skill has zero references in CLAUDE.md / docs/ / code AND its last

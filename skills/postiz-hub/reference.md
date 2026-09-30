@@ -8,7 +8,7 @@ Queried 2026-08-15 from https://github.com/gitroomhq.
 | --- | --- | --- |
 | postiz-app | Scheduler core (we run v2.11.2) | `postiz`, `postiz-doctor` |
 | postiz-docs | Docs source | docs.postiz.com |
-| postiz-agent | `postiz` CLI + agent skill | `postiz-agent-cli`, `scripts/postiz-cli-env.sh` |
+| postiz-agent | `postiz` CLI + agent skill | `postiz-agent-cli`, `scripts/postiz-cli-env.py` |
 | postiz-n8n | Community n8n node | `postiz-n8n-node` |
 | agent-media / agent-media-app | UGC video MCP/CLI | `postiz-agent-media` |
 

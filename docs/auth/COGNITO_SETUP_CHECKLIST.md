@@ -4,7 +4,7 @@
 
 ### Core Automation
 
-- [x] `scripts/archive/cognito/cognito-setup.sh` — Main bash script (338 lines)
+- [x] `scripts/archive/cognito/cognito-setup.py` — Main bash script (338 lines)
   - [x] AWS CLI validation
   - [x] AWS credential checking
   - [x] SSO fallback
@@ -26,7 +26,7 @@
 
 - [x] `tools/cognito-setup-mcp/src/index.ts` — MCP server (5 tools)
 - [x] `tools/cognito-setup-mcp/package.json` — Dependencies
-- [x] `.claude/skills/cognito-setup/index.sh` — Skill wrapper
+- [x] `.claude/skills/cognito-setup/index.py` — Skill wrapper
 - [x] `.github/workflows/cognito-setup.yml` — GH Actions
 - [x] `package.json` — pnpm aliases (3 new commands)
 
@@ -103,7 +103,7 @@ Then use `/cognito-setup` in Claude Code (or call MCP tools directly).
 ```
 /cloudless.gr/
 ├── scripts/
-│   └── cognito-setup.sh                    ✅ Main automation
+│   └── cognito-setup.py                    ✅ Main automation
 ├── docs/
 │   ├── COGNITO_SETUP.md                    ✅ User guide
 │   └── COGNITO_AUTOMATION.md               ✅ Architecture
@@ -114,7 +114,7 @@ Then use `/cognito-setup` in Claude Code (or call MCP tools directly).
 │       └── README.md                       ✅ MCP docs
 ├── .claude/skills/cognito-setup/
 │   ├── index.md                            ✅ Skill docs
-│   └── index.sh                            ✅ Skill wrapper
+│   └── index.py                            ✅ Skill wrapper
 ├── .github/workflows/
 │   └── cognito-setup.yml                   ✅ GH Actions
 ├── package.json                            ✅ pnpm aliases

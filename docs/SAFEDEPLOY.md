@@ -53,10 +53,10 @@ on disk (last 5 kept), so any of them can be re-selected.
 **Manual rollback** (any time, no rebuild):
 
 ```bash
-scripts/rollback.sh --check         # show current live + linked SHAs
-scripts/rollback.sh list            # list all available releases (newest first)
-scripts/rollback.sh previous        # flip to the release before current
-scripts/rollback.sh <sha-prefix>    # flip to a specific release
+scripts/rollback.py --check         # show current live + linked SHAs
+scripts/rollback.py list            # list all available releases (newest first)
+scripts/rollback.py previous        # flip to the release before current
+scripts/rollback.py <sha-prefix>    # flip to a specific release
 ```
 
 The script SSHes to omv over Tailscale, flips the symlink, restarts the
@@ -68,10 +68,10 @@ leave things half-flipped.
 | Problem | Response |
 |---|---|
 | **Deploy fails health check** | Auto-rollback fires inside the workflow. Bad release never stays live. |
-| **Site broken 5 min after "successful" deploy** | `scripts/rollback.sh previous` |
-| **Need to bisect** | `scripts/rollback.sh list` → pick any of the 5 → flip. Roll forward and backward freely. |
+| **Site broken 5 min after "successful" deploy** | `scripts/rollback.py previous` |
+| **Need to bisect** | `scripts/rollback.py list` → pick any of the 5 → flip. Roll forward and backward freely. |
 | **Symlink itself corrupt / release dir deleted** | SSH to omv, `ln -sfn cloudless-releases/<known-good-sha> cloudless-standalone` manually. |
-| **D1 auth broken** | Different problem — use `scripts/restore-auth.sh` (see `login-500-pi-d1-token` memory). |
+| **D1 auth broken** | Different problem — use `scripts/restore-auth.py` (see `login-500-pi-d1-token` memory). |
 
 ## Design decisions
 
@@ -93,7 +93,7 @@ Verified 2026-08-08:
 - Migration to new layout preserved live site (`/api/health` = ok before
   and after; version unchanged).
 - Full pod restart after symlink swap works — k8s does follow the symlink.
-- `rollback.sh --check` / `list` / `<sha>` / `previous` all work end-to-end.
+- `rollback.py --check` / `list` / `<sha>` / `previous` all work end-to-end.
 - Deliberate flip to a fake SHA correctly triggers the version-mismatch
   guard rather than declaring false success.
 - `previous` restores the real release cleanly, `/api/health` recovers.
@@ -116,7 +116,7 @@ Verified 2026-08-08:
   monitor with alerts (ntfy + Slack + email) + auto-rollback at 16 min
   unhealthy. SafeDeploy's built-in auto-rollback only fires during the ~1-min
   deploy-verify window; the Watchdog covers everything after.
-- `scripts/rollback.sh` — the manual rollback command
+- `scripts/rollback.py` — the manual rollback command
 - `.github/workflows/deploy-pi.yml` — the deploy pipeline + auto-rollback
 - `k8s/cloudless-app-hostpath.yaml` — the Deployment that mounts the symlink
 - Project memory `login-500-pi-d1-token` — separate D1 auth recovery

@@ -17,7 +17,7 @@ When a PR/main check fails for **SonarCloud** or **Cloudflare Workers Deploy**:
 2. **Workers Deploy** (wrangler **10000**, tunnel 401, D1 migrate):
    - Read `.claude/skills/cloudflare-workers-deploy/SKILL.md`
    - Token mint/scopes: `skills/cloudflare-token-doctor/SKILL.md`
-   - Run `pnpm cf:token:smoke` or `bash scripts/cf-token-permissions.sh ensure-ci "<token-name>"`
+   - Run `pnpm cf:token:smoke` or `python3 scripts/cf-token-permissions.py ensure-ci "<token-name>"`
    - Never read `.env.local`; ask the operator for secrets
 
 Do not upgrade Cloudflare Workers to Paid to “fix” deploy size — keep `cloudless2` as pi-origin-proxy.

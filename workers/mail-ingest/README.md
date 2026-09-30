@@ -20,7 +20,7 @@ remotely managed and the usual API token cannot PUT new ingress hostnames.
 ```bash
 cd workers/mail-ingest
 # Use THIS directory's wrangler.jsonc (repo-root wrangler is a different Worker)
-# Generate a long secret; put the SAME value on omv-ha (see install-mail-ingest.sh)
+# Generate a long secret; put the SAME value on omv-ha (see install-mail-ingest.py)
 openssl rand -hex 32
 npx wrangler secret put MAIL_INGEST_SECRET --config wrangler.jsonc
 npx wrangler deploy --config wrangler.jsonc
@@ -34,7 +34,7 @@ Keep `FALLBACK_FORWARD` (Gmail) until soak is done; then clear the var and redep
 
 ```bash
 scp -r infrastructure/omv-ha/mail-ingest omv-ha-lan:/tmp/
-ssh omv-ha-lan 'sudo MAIL_INGEST_SECRET=… bash /tmp/mail-ingest/install-mail-ingest.sh'
+ssh omv-ha-lan 'sudo MAIL_INGEST_SECRET=… python3 /tmp/mail-ingest/install-mail-ingest.py'
 ```
 
 Adds nginx vhost + PHP endpoint + tunnel checklist for `mail-ingest.cloudless.gr`.

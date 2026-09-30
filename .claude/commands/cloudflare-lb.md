@@ -74,7 +74,7 @@ The workflow:
 
 - Masks the token immediately (will NOT appear in logs)
 - Writes it as GitHub Actions secret `CLOUDFLARE_API_TOKEN` (via `gh secret set`; requires `GH_PAT`)
-- Runs `scripts/setup-cloudflare-lb.sh` in apply mode with the token from the workflow input
+- Runs `scripts/setup-cloudflare-lb.py` in apply mode with the token from the workflow input
 - Creates health monitors, origin pools (AWS + Pi), load balancers, DNS records
 - Posts the full result to issue #382
 

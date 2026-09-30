@@ -60,7 +60,7 @@ want enrichment back.)_
 
 1. Import `postiz-utm-guard.json` the same way.
 2. Wire its webhook URL into Postiz Settings → Webhooks **or** use the app
-   receiver (`scripts/postiz-register-webhook.sh` →
+   receiver (`scripts/postiz-register-webhook.py` →
    `https://cloudless.gr/api/webhooks/postiz?secret=<POSTIZ_WEBHOOK_SECRET>`).
 3. Activate once channels exist.
 
@@ -73,7 +73,7 @@ swap the HTTP Request nodes for the dedicated Postiz node. Host must end with `/
 Easiest path — use the canned probe script:
 
 ```bash
-bash scripts/probe-lead-enrich.sh
+python3 scripts/probe-lead-enrich.py
 ```
 
 Or by hand:

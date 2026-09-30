@@ -16,15 +16,15 @@ Operate the R21 Meilisearch search backend safely on the Pi k3s cluster.
 
 - `k8s/search/meilisearch.yaml`
 - `docs/roadmap/r21-meilisearch-deployment.md`
-- `scripts/check_r21_search_baseline.sh`
-- `scripts/check_r21_meilisearch_k3s_storage.sh`
-- `scripts/check_r21_meilisearch_live_readiness.sh`
+- `scripts/check_r21_search_baseline.py`
+- `scripts/check_r21_meilisearch_k3s_storage.py`
+- `scripts/check_r21_meilisearch_live_readiness.py`
 
 ## Read-only readiness check
 
 Run:
 
-    bash scripts/check_r21_meilisearch_live_readiness.sh
+    python3 scripts/check_r21_meilisearch_live_readiness.py
 
 Expected:
 
@@ -96,7 +96,7 @@ Apply the manifest only after read-only checks pass:
 
 Then verify:
 
-    bash scripts/check_r21_meilisearch_live_readiness.sh
+    python3 scripts/check_r21_meilisearch_live_readiness.py
 
 ## Restart
 
@@ -125,9 +125,9 @@ unless intentionally destroying the Meilisearch index.
 
 Run:
 
-    bash scripts/check_r21_search_baseline.sh
-    bash scripts/check_r21_meilisearch_k3s_storage.sh
-    bash scripts/check_r21_meilisearch_live_readiness.sh
+    python3 scripts/check_r21_search_baseline.py
+    python3 scripts/check_r21_meilisearch_k3s_storage.py
+    python3 scripts/check_r21_meilisearch_live_readiness.py
 
     pnpm run ai:skills-check
     pnpm run ai:test:api

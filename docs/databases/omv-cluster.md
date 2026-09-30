@@ -60,7 +60,7 @@ pnpm db:refresh-snapshots # sqlite + d1 pull (avoid stale SQLTools views)
 pnpm db:forward:stop
 ```
 
-Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.
+Scripts: `scripts/db-port-forward.py`, `scripts/db-sqlite-pull.py`, `scripts/db-d1-pull.py`.
 
 ### Cursor / VS Code — use SQLTools (not Microsoft SQL Server)
 

@@ -21,7 +21,7 @@ The script calls `gh api` with the `application/vnd.github.star+json` Accept hea
 The script lives next to this file. From the skill directory:
 
 ```bash
-bash github-stars.sh <owner/repo | search-term> [--tz <IANA tz>] [--days N] [--hours-days N]
+python3 github-stars.py <owner/repo | search-term> [--tz <IANA tz>] [--days N] [--hours-days N]
 ```
 
 - **`<owner/repo>`** — exact repo (e.g. `facebook/react`). Skips the search.
@@ -34,13 +34,13 @@ bash github-stars.sh <owner/repo | search-term> [--tz <IANA tz>] [--days N] [--h
 
 ```bash
 # default: last 14 days daily + last 2 days hourly
-bash github-stars.sh vercel/next.js
+python3 github-stars.py vercel/next.js
 
 # resolve a search term, show UTC
-bash github-stars.sh next.js --tz UTC
+python3 github-stars.py next.js --tz UTC
 
 # zoom in: only today hourly, 7-day daily window
-bash github-stars.sh facebook/react --days 7 --hours-days 1
+python3 github-stars.py facebook/react --days 7 --hours-days 1
 ```
 
 ## Sample output

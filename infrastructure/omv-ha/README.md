@@ -13,26 +13,26 @@ longer a cluster node. See `CLAUDE.md` "Cluster Topology" note.
 GitHub Actions runner (`labels: self-hosted, omv-ha, deploy`). It does
 **not** build Next.js (1GB RAM will OOM) — it only rsyncs the standalone
 artifact to omv and runs `kubectl` over SSH. See `docs/deploy/runners.md`
-and `scripts/pi-rollout-from-artifact.sh`.
+and `scripts/pi-rollout-from-artifact.py`.
 
 ## Deploy runner + GHA heal
 
 ```bash
 # Register (once) — get token from:
 #   gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq .token
-scp .github/scripts/register-deploy-runner.sh tbaltzakis@192.168.1.130:~/
-ssh tbaltzakis@192.168.1.130 "bash ~/register-deploy-runner.sh <REG_TOKEN>"
+scp .github/scripts/register-deploy-runner.py tbaltzakis@192.168.1.130:~/
+ssh tbaltzakis@192.168.1.130 "python3 ~/register-deploy-runner.py <REG_TOKEN>"
 
 # Install runner heal (boot + every 5 min) — clears ghost-busy after power cycle
-scp infrastructure/omv-ha/gha-runner-heal* infrastructure/omv-ha/install-gha-runner-heal.sh \
+scp infrastructure/omv-ha/gha-runner-heal* infrastructure/omv-ha/install-gha-runner-heal.py \
   tbaltzakis@192.168.1.130:/tmp/gha-heal/
-ssh tbaltzakis@192.168.1.130 "sudo bash /tmp/gha-heal/install-gha-runner-heal.sh"
+ssh tbaltzakis@192.168.1.130 "sudo python3 /tmp/gha-heal/install-gha-runner-heal.py"
 ```
 
 SSH from omv-ha → omv for rollout uses `~/.ssh/omv_ha` → `tbaltzakis@192.168.1.128`
 (passwordless sudo on omv required for hostPath + kubectl).
 
-## `setup-mail-server.sh`
+## `setup-mail-server.py`
 
 One-shot idempotent installer for the self-hosted mail stack (postfix
 relay via Resend + dovecot IMAP/LMTP). Reads `RESEND_API_KEY` and
@@ -42,10 +42,10 @@ See `docs/MAIL-SERVER-SETUP.md` for the full architecture.
 ```bash
 ssh tbaltzakis@omv-ha  # over Tailscale
 sudo RESEND_API_KEY=re_… MAIL_TBALTZAKIS_PASSWORD=… \
-  bash /path/to/setup-mail-server.sh
+  python3 /path/to/setup-mail-server.py
 ```
 
-## `cloudless-cleanup.sh`
+## `cloudless-cleanup.py`
 
 Daily disk-cleanup script triggered by
 `/etc/systemd/system/cloudless-cleanup.timer` at 03:45 EEST.
@@ -64,8 +64,8 @@ to do it from CI without SSH — pattern below):
 ssh tbaltzakis@omv-ha
 sudo curl -fsSL \
   https://raw.githubusercontent.com/Themis128/cloudless.gr/main/infrastructure/omv-ha/cloudless-cleanup.sh \
-  -o /usr/local/sbin/cloudless-cleanup.sh
-sudo chmod +x /usr/local/sbin/cloudless-cleanup.sh
+  -o /usr/local/sbin/cloudless-cleanup.py
+sudo chmod +x /usr/local/sbin/cloudless-cleanup.py
 sudo systemctl daemon-reload
 # Force one off-schedule run for verification:
 sudo systemctl start cloudless-cleanup.service
