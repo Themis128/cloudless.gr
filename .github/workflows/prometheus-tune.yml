@@ -2,7 +2,7 @@ name: Prometheus tune (stop PrometheusRuleFailures)
 
 # Disables the heavy kube-apiserver SLO/burnrate/availability recording rules
 # that time out on the small omv Prometheus (1 CPU / 500Mi) and trip the
-# PrometheusRuleFailures alert. Runs scripts/prometheus-tune.sh on a hosted
+# PrometheusRuleFailures alert. Runs scripts/prometheus-tune.py on a hosted
 # runner over Tailscale + KUBECONFIG_B64, and posts the result to issue #382.
 #
 # Trigger: workflow_dispatch, or push to this file / the tune script on main.
@@ -13,7 +13,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/prometheus-tune.yml
-    - scripts/prometheus-tune.sh
+    - scripts/prometheus-tune.py
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 6443
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 6443
     - name: Configure kubectl
       run: |
         mkdir -p ~/.kube
@@ -43,7 +43,7 @@ jobs:
         chmod 600 ~/.kube/config
 
     - name: Tune Prometheus rules
-      run: bash scripts/prometheus-tune.sh 2>&1 | tee prom-tune.log
+      run: python3 scripts/prometheus-tune.py 2>&1 | tee prom-tune.log
 
     - name: Post result to tracking issue
       if: always()

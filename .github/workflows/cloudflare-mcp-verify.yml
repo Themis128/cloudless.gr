@@ -1,6 +1,6 @@
 name: Cloudflare MCP Verification
 
-# Runs scripts/cloudflare-fix.sh using the CLOUDFLARE_API_TOKEN secret.
+# Runs scripts/cloudflare-fix.py using the CLOUDFLARE_API_TOKEN secret.
 # This verifies the token validity and checks Pages/KV/DNS access.
 
 on:
@@ -46,7 +46,7 @@ jobs:
       run: |
         set -uo pipefail
         echo "::add_mask::${{ secrets.CLOUDFLARE_API_TOKEN }}"
-        bash scripts/cloudflare-fix.sh 2>&1 | tee cloudflare-fix.log || true
+        python3 scripts/cloudflare-fix.py 2>&1 | tee cloudflare-fix.log || true
 
     - name: Summary
       if: always()

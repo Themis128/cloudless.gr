@@ -1,6 +1,6 @@
 name: Self-hosted admin login probe
 
-# Runs scripts/probe-selfhosted-admin.sh against AppFlowy, EspoCRM, Postiz,
+# Runs scripts/probe-selfhosted-admin.py against AppFlowy, EspoCRM, Postiz,
 # n8n every 6 hours. Fails loudly if the unified admin password
 # (tbaltzakis@cloudless.gr / TH!123789th!) is broken on any app — catches
 # credential drift (an admin pw rotation that didn't sweep one of the apps,
@@ -18,7 +18,7 @@ on:
     # Restrict to main so Release tags do not fire this path-filtered job.
     branches: [main]
     paths:
-    - scripts/probe-selfhosted-admin.sh
+    - scripts/probe-selfhosted-admin.py
     - .github/workflows/admin-login-probe.yml
 
 permissions:
@@ -43,4 +43,4 @@ jobs:
           echo "::warning::ADMIN_PASSWORD_UNIFIED repo secret not set — skipping probe"
           exit 0
         fi
-        bash scripts/probe-selfhosted-admin.sh
+        python3 scripts/probe-selfhosted-admin.py

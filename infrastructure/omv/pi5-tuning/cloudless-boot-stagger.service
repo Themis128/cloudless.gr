@@ -6,7 +6,7 @@ Wants=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/cloudless-boot-stagger.sh
+ExecStart=python3 /usr/local/sbin/cloudless-boot-stagger.py
 RemainAfterExit=yes
 TimeoutStartSec=600
 Nice=10

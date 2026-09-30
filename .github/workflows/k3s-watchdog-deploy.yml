@@ -1,6 +1,6 @@
 name: k3s-watchdog-deploy — install Restart=always systemd override on Pi
 
-# Deploys scripts/k3s-watchdog-install.sh to the Pi via SSH.
+# Deploys scripts/k3s-watchdog-install.py to the Pi via SSH.
 # The script writes a systemd drop-in that sets Restart=always + removes start
 # limits so k3s auto-recovers from crashes without manual intervention.
 #
@@ -17,7 +17,7 @@ on:
     branches: [main]
     paths:
     - .github/workflows/k3s-watchdog-deploy.yml
-    - scripts/k3s-watchdog-install.sh
+    - scripts/k3s-watchdog-install.py
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,7 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
     - name: Install SSH key
       run: |
         mkdir -p ~/.ssh
@@ -66,15 +66,15 @@ jobs:
     - name: Copy watchdog install script to Pi
       run: |
         scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-          scripts/k3s-watchdog-install.sh \
-          "$PI_USER@$PI_HOST:/tmp/k3s-watchdog-install.sh"
+          scripts/k3s-watchdog-install.py \
+          "$PI_USER@$PI_HOST:/tmp/k3s-watchdog-install.py"
 
     - name: Run watchdog install on Pi
       run: |
         echo "=== k3s watchdog deploy $(date -u '+%F %T')Z ===" | tee watchdog-deploy.log
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
           "$PI_USER@$PI_HOST" \
-          "chmod +x /tmp/k3s-watchdog-install.sh && bash /tmp/k3s-watchdog-install.sh" \
+          "chmod +x /tmp/k3s-watchdog-install.py && python3 /tmp/k3s-watchdog-install.py" \
           2>&1 | tee -a watchdog-deploy.log
 
     - name: Post result to tracking issue

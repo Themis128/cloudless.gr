@@ -4,4 +4,4 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/gha-runner-heal.sh --check
+ExecStart=/usr/bin/python3 /usr/local/sbin/gha-runner-heal.py --check

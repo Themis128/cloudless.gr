@@ -8,7 +8,7 @@ name: Restore Pi connectivity (SSH + Tailscale)
 #   gh workflow run restore-pi-connectivity.yml
 #
 # Local equivalent (when you still have LAN or partial TS):
-#   bash scripts/restore-pi-connectivity.sh
+#   python3 scripts/restore-pi-connectivity.py
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
     - name: Set up SSH key
       run: |
         set -euo pipefail
@@ -178,5 +178,5 @@ jobs:
           echo ""
           echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo ""
-          echo "Local remedy: \`bash scripts/restore-pi-connectivity.sh\`"
+          echo "Local remedy: \`python3 scripts/restore-pi-connectivity.py\`"
         } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file - || true

@@ -5,7 +5,7 @@ name: Workers AI verify
 # token validity + Workers AI scope (real 1-token inference), Lambda env
 # wiring, and the live auth gate. Posts the result to issue #382.
 #
-# Trigger: workflow_dispatch, or edit scripts/workers-ai-doctor.sh / this file
+# Trigger: workflow_dispatch, or edit scripts/workers-ai-doctor.py / this file
 # (path-trigger pattern — the GitHub MCP cannot workflow_dispatch).
 
 on:
@@ -48,7 +48,7 @@ jobs:
         CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
       run: |
         set +e
-        OUT=$(bash scripts/workers-ai-doctor.sh 2>&1)
+        OUT=$(python3 scripts/workers-ai-doctor.py 2>&1)
         CODE=$?
         echo "$OUT"
         {

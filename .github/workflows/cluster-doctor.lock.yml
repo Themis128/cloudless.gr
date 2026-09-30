@@ -60,7 +60,7 @@ on:
       - main
     paths:
       - .github/workflows/cluster-doctor.yml
-      - scripts/cluster-doctor.sh
+      - scripts/cluster-doctor.py
   workflow_dispatch:
     inputs:
       aw_context:

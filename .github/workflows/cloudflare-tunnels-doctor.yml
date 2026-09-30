@@ -19,7 +19,7 @@ on:
     paths:
       - .github/workflows/cloudflare-tunnels-doctor.yml
       - .github/workflows/fix-selfhosted-tunnels.yml
-      - scripts/cloudflare-tunnels-doctor.sh
+      - scripts/cloudflare-tunnels-doctor.py
       - infrastructure/cloudflare-tunnels/cloudflared-config.yml
   workflow_dispatch:
     inputs:
@@ -59,8 +59,8 @@ jobs:
     - name: Run tunnels doctor
       id: doctor
       run: |
-        chmod +x scripts/cloudflare-tunnels-doctor.sh
-        bash scripts/cloudflare-tunnels-doctor.sh
+        chmod +x scripts/cloudflare-tunnels-doctor.py
+        python3 scripts/cloudflare-tunnels-doctor.py
 
     - name: Comment issue 382 on failure
       if: failure()
@@ -74,7 +74,7 @@ jobs:
 
         Manual on omv:
         \`\`\`
-        FIX=1 bash scripts/cloudflare-tunnels-doctor.sh
+        FIX=1 python3 scripts/cloudflare-tunnels-doctor.py
         \`\`\`
         EOF
         )

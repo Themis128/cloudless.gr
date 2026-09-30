@@ -97,7 +97,7 @@ jobs:
 
       - name: Wait for tailnet path to omv
         if: steps.tailscale-oauth.outcome == 'failure'
-        run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
       - name: Connect to tailnet with recovery auth key
         if: steps.tailscale-oauth.outcome == 'failure'
         uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
@@ -107,7 +107,7 @@ jobs:
 
       - name: Wait for tailnet path to omv
         if: steps.tailscale-oauth.outcome == 'failure'
-        run: bash scripts/ci/tailscale-wait.sh 100.74.191.58 22
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh

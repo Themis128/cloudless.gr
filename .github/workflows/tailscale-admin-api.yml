@@ -50,14 +50,14 @@ jobs:
       run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
 
     - name: Run Tailscale Admin API script
-      run: bash scripts/tailscale-admin-api.sh
+      run: python3 scripts/tailscale-admin-api.py
 
     - name: Retag fleet (all machines)
       if: inputs.dry_run != 'true'
-      run: bash scripts/tailscale-retag-fleet.sh
+      run: python3 scripts/tailscale-retag-fleet.py
 
     - name: List fleet tags (dry_run)
       if: inputs.dry_run == 'true'
       env:
         LIST_ONLY: "1"
-      run: bash scripts/tailscale-retag-fleet.sh
+      run: python3 scripts/tailscale-retag-fleet.py

@@ -20,7 +20,7 @@ on:
       - package.json
       - pnpm-lock.yaml
       - .github/workflows/cloudflare-deploy.yml
-      - scripts/cf-build-wrapper.sh
+      - scripts/cf-build-wrapper.py
       - scripts/strip-opennext-bin-fonts.mjs
       - scripts/strip-opennext-vercel-og.mjs
       - open-next.config.cloudflare.ts
@@ -129,7 +129,7 @@ jobs:
             exit 0
           fi
           if grep -qE '10000|Authentication error|Not authorized|Unauthorized|No access to the specified resource' /tmp/cf-proxy-deploy.log; then
-            echo "::warning::cloudless2 deploy skipped — CLOUDFLARE_API_TOKEN lacks Workers Scripts Write (API 10000). Prod proxy may already be live. Fix via scripts/cf-token-permissions.sh ensure-ci or cloudflare-workers-deploy skill. Do not upgrade to Workers Paid."
+            echo "::warning::cloudless2 deploy skipped — CLOUDFLARE_API_TOKEN lacks Workers Scripts Write (API 10000). Prod proxy may already be live. Fix via scripts/cf-token-permissions.py ensure-ci or cloudflare-workers-deploy skill. Do not upgrade to Workers Paid."
             exit 0
           fi
           exit "$code"

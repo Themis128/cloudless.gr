@@ -58,10 +58,10 @@ jobs:
             fi
           fi
 
-          echo "Running local: sudo bash scripts/omv-security-update.sh $ARGS"
+          echo "Running local: sudo python3 scripts/omv-security-update.py $ARGS"
 
           # Execute directly on this host (the runner IS omv)
-          sudo bash scripts/omv-security-update.sh $ARGS \
+          sudo python3 scripts/omv-security-update.py $ARGS \
             2>&1 | tee /tmp/security-update-output.txt
 
           # Extract summary values
@@ -95,4 +95,4 @@ jobs:
       - name: Cleanup temp files
         if: always()
         run: |
-          sudo rm -f /tmp/omv-security-update.sh /tmp/apt-update.log /tmp/apt-upgrade.log /tmp/apt-simulate.log /tmp/security-update-summary.txt /tmp/needrestart.log 2>/dev/null || true
+          sudo rm -f /tmp/omv-security-update.py /tmp/apt-update.log /tmp/apt-upgrade.log /tmp/apt-simulate.log /tmp/security-update-summary.txt /tmp/needrestart.log 2>/dev/null || true

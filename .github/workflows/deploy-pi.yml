@@ -22,7 +22,7 @@ on:
       - pnpm-workspace.yaml
       - next.config.ts
       - patches/**
-      - scripts/pi-rollout-from-artifact.sh
+      - scripts/pi-rollout-from-artifact.py
       - workers/pi-deploy-orchestrator/**
       - infrastructure/omv/pi-release-pull*
       - .github/workflows/deploy-pi.yml

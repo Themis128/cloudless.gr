@@ -8,7 +8,7 @@ name: Ad readiness check
 #
 # Companion to:
 #   - skills/linkedin-insight-doctor/SKILL.md  (diagnostic playbook)
-#   - scripts/linkedin-insight-doctor.sh       (full diagnostic script)
+#   - scripts/linkedin-insight-doctor.py       (full diagnostic script)
 #   - skills/linkedin-campaigns/SKILL.md       (operating playbook)
 
 on:
