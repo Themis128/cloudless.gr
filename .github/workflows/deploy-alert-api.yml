@@ -56,13 +56,18 @@ jobs:
         # The Dockerfile + requirements.txt live in ~/alert-api/ on the
         # Pi (pre-CI history). Only the .py modules are tracked in the
         # repo; sync them so the image build picks up the latest code.
+        # Directory may be root-owned from prior deploys — write via sudo,
+        # then restore ownership for the docker build as tbaltzakis.
+        DEST="${HOME}/alert-api"
+        sudo mkdir -p "${DEST}"
         for f in main.py slack_notify.py mqtt_publish.py tls_check.py esp32_command_routes.py; do
           if [[ -f "infrastructure/pi-alert-api/${f}" ]]; then
-            cp "infrastructure/pi-alert-api/${f}" "${HOME}/alert-api/${f}"
+            sudo install -m 0644 "infrastructure/pi-alert-api/${f}" "${DEST}/${f}"
           fi
         done
+        sudo chown -R "$(id -un):$(id -gn)" "${DEST}"
         # Ensure paho-mqtt is in requirements (idempotent)
-        REQ="${HOME}/alert-api/requirements.txt"
+        REQ="${DEST}/requirements.txt"
         if ! grep -qi "^paho-mqtt" "${REQ}" 2>/dev/null; then
           echo "paho-mqtt>=1.6" >> "${REQ}"
         fi

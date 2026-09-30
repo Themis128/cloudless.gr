@@ -73,7 +73,10 @@ jobs:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CF_ACCOUNT_ID }}
         command: deploy -c wrangler-cloudflare-free.json
-        wranglerVersion: 4.15.0
+        # pnpm workspace root rejects `pnpm add wrangler@…` (ERR_PNPM_ADDING_TO_ROOT).
+        # Match deploy-espocrm-fanout.yml (#2018): npm + pin to workspace wrangler.
+        packageManager: npm
+        wranglerVersion: "4.141.0"
 
     - name: Validate Cloudflare account ID secret
       if: always()

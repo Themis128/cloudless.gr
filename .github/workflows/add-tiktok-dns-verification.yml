@@ -43,14 +43,32 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
+      # Token comes from workflow_dispatch input only (not a repo secret).
+      # On push the input is empty — skip success so main CI stays green.
+      # workflow_dispatch without a token must still hard-fail.
+      - name: Gate on verification token
+        id: gate
+        run: |
+          if [ -z "${TIKTOK_VERIFICATION_TOKEN}" ]; then
+            if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+              echo "::error::verification_token is required for workflow_dispatch"
+              exit 1
+            fi
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "No TIKTOK_VERIFICATION_TOKEN on push — skipping (run workflow_dispatch with token)."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Add TXT record
         id: add
+        if: steps.gate.outputs.skip != 'true'
         run: |
           set -o pipefail
           python3 scripts/add-tiktok-dns-verification.py 2>&1 | tee tiktok-dns.log
 
       - name: Post result to tracking issue
-        if: always()
+        if: always() && steps.gate.outputs.skip != 'true'
         run: |
           {
             echo "# TikTok DNS Verification — $(date -u '+%F %T')Z"
