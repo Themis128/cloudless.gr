@@ -81,24 +81,30 @@ jobs:
 
     - name: Bump Deployment image
       run: |
-        kubectl -n alert-manager set image deployment/alert-api \
+        # Runner env often sets KUBECONFIG=/etc/rancher/k3s/k3s.yaml which
+        # tbaltzakis cannot read. Use sudo k3s kubectl like other omv Pi
+        # workflows (k3s-recover-from-pi, k3s-fix-rollout-quota).
+        K=(sudo k3s kubectl -n alert-manager)
+        "${K[@]}" set image deployment/alert-api \
           "alert-api=docker.io/library/alert-api:${TAG}"
-        kubectl -n alert-manager rollout status deployment/alert-api --timeout=180s
+        "${K[@]}" rollout status deployment/alert-api --timeout=180s
 
     - name: Verify MQTT_USERNAME + MQTT_PASSWORD are live in pod
       run: |
         set -euo pipefail
-        POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
+        K=(sudo k3s kubectl -n alert-manager)
+        POD=$("${K[@]}" get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
         # Both env names should be present; their values come from the
         # alert-api-mqtt-creds Secret (optional, so absence wouldn't
         # crash the pod — but for v3.4 we expect them set).
-        kubectl -n alert-manager exec "${POD}" -- env | grep -E '^MQTT_(USERNAME|PASSWORD)=' | sed 's/=.*/=<set>/'
+        "${K[@]}" exec "${POD}" -- env | grep -E '^MQTT_(USERNAME|PASSWORD)=' | sed 's/=.*/=<set>/'
 
     - name: Smoke-test authenticated publish from inside pod
       run: |
         set -euo pipefail
-        POD=$(kubectl -n alert-manager get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
-        kubectl -n alert-manager exec "${POD}" -- python3 -c '
+        K=(sudo k3s kubectl -n alert-manager)
+        POD=$("${K[@]}" get pod -l app=alert-api -o jsonpath='{.items[0].metadata.name}')
+        "${K[@]}" exec "${POD}" -- python3 -c '
         import os, paho.mqtt.publish as publish, json, time
         publish.single(
             "homelab/alerts/events",
