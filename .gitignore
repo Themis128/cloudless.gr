@@ -287,3 +287,7 @@ mcp.json
 # Playwright / e2e env (also covered by .env.* ; keep explicit)
 .env.playwright
 .env.playwright.local
+
+# Merge/backup leftovers
+*.orig
+*.bak*
