@@ -61,7 +61,7 @@ ok, _ = kubectl("-n", "search", "get", "pvc", "meilisearch-data")
 if ok:
     c.passed("meilisearch-data PVC already exists")
     print(kubectl("-n", "search", "get", "pvc", "meilisearch-data")[1])
-    _, phase = kubectl(
+    pvc_ok, phase = kubectl(
         "-n", "search", "get", "pvc", "meilisearch-data", "-o", "jsonpath={.status.phase}"
     )
     c.expect(
@@ -82,7 +82,7 @@ if ok:
             "-n", "search", "get", "pod", "-l", "app.kubernetes.io/name=meilisearch", "-o", "wide"
         )[1]
     )
-    _, pod_nodes = kubectl(
+    pod_ok, pod_nodes = kubectl(
         "-n",
         "search",
         "get",

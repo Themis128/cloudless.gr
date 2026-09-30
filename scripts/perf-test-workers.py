@@ -135,7 +135,7 @@ except Exception:
 print(f"HTTP {code}")
 
 print("  Unknown route: ", end="")
-code, _ = timed_get(f"{BASE_URL}/api/unknown")
+code, ms_unk = timed_get(f"{BASE_URL}/api/unknown")
 print(f"HTTP {code}")
 
 # Test 5: projection

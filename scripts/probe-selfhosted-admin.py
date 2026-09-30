@@ -23,7 +23,7 @@ if not ADMIN_PASSWORD:
     sys.exit("ADMIN_PASSWORD env var required")
 
 passed = failed = 0
-failed_apps = []
+failed_apps: list[str] = []
 
 
 def probe(app: str, url: str, method: str, data: str, auth: str, pattern: str) -> None:

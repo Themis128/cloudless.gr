@@ -103,9 +103,9 @@ if (
     print("Hint: kubectl get cronjob -A | grep pvc-backup", file=sys.stderr)
     sys.exit(1)
 
-r = subprocess.run(["kubectl", "-n", ns, "create", "job", f"--from=cronjob/{cj}", job])
-if r.returncode != 0:
-    sys.exit(r.returncode)
+create_r = subprocess.run(["kubectl", "-n", ns, "create", "job", f"--from=cronjob/{cj}", job])
+if create_r.returncode != 0:
+    sys.exit(create_r.returncode)
 
 subprocess.run(
     [

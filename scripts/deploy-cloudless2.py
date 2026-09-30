@@ -57,8 +57,8 @@ if not shutil.which("git"):
     )
     sys.exit(2)
 
-r = subprocess.run(["git", "status", "--porcelain", str(CONFIG)], capture_output=True, text=True)
-if r.stdout.strip():
+chk = subprocess.run(["git", "status", "--porcelain", str(CONFIG)], capture_output=True, text=True)
+if chk.stdout.strip():
     subprocess.run(["git", "add", str(CONFIG)], check=True)
     subprocess.run(
         [

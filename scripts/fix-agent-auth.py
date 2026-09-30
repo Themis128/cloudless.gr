@@ -256,8 +256,8 @@ Path("public/index.html").write_text("""<!doctype html>
 print("==> Ensuring .env.local is ignored by git...")
 gi = Path(".gitignore")
 if ".env.local" not in (gi.read_text() if gi.is_file() else ""):
-    with gi.open("a") as f:
-        f.write(".env.local\n")
+    with gi.open("a") as fh:
+        fh.write(".env.local\n")
 
 print("==> Uploading AGENT_AUTH_TOKEN as Cloudflare Worker secret...")
 subprocess.run(

@@ -194,10 +194,12 @@ print(
     "Wrangler ok" if cf_secret_set("NEWSLETTER_SLACK_CHANNEL_ID", ch_id) == 0 else "Wrangler failed"
 )
 
-r = subprocess.run(
+gh_r = subprocess.run(
     ["gh", "secret", "set", "NEWSLETTER_SLACK_CHANNEL_ID", "--body", ch_id], capture_output=True
 )
-print(f"gh:    repo secret NEWSLETTER_SLACK_CHANNEL_ID {'set' if r.returncode == 0 else 'FAILED'}")
+print(
+    f"gh:    repo secret NEWSLETTER_SLACK_CHANNEL_ID {'set' if gh_r.returncode == 0 else 'FAILED'}"
+)
 
 print(f"""
 Done. Next weekly-article-draft.yml + weekly-newsletter.yml runs will

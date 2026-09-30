@@ -79,7 +79,7 @@ subprocess.run(
 )
 
 print("Verify key presence:")
-r = subprocess.run(
+ssh_r = subprocess.run(
     ["ssh", SSH_HOST, f"sudo k3s kubectl -n {NS} get secret {SECRET} -o json"],
     capture_output=True,
     text=True,

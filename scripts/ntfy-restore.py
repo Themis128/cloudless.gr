@@ -91,7 +91,7 @@ if LAST_EXIT == "OOMKilled":
             }
         }
     )
-    r = subprocess.run(
+    kpatch = subprocess.run(
         ["kubectl", "-n", NS, "patch", "deploy", "ntfy", "--type=strategic", "-p", patch],
         capture_output=True,
     )

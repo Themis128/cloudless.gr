@@ -111,11 +111,11 @@ if n8n_key and n8n_url:
         if not execs:
             print("  no executions yet")
         else:
-            e = execs[0]
+            ex = execs[0]
             print(
-                f"  id={e.get('id')} workflow={e.get('workflowId')} "
-                f"status={e.get('status')} "
-                f"started={e.get('startedAt')}"
+                f"  id={ex.get('id')} workflow={ex.get('workflowId')} "
+                f"status={ex.get('status')} "
+                f"started={ex.get('startedAt')}"
             )
     except Exception as e:
         print(f"  executions fetch failed: {e}")

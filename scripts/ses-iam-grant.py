@@ -53,7 +53,7 @@ policy_file.write_text(json.dumps(policy))
 print(f"Policy:\n{json.dumps(policy)}")
 
 gh_out = os.environ.get("GITHUB_OUTPUT", "")
-out_lines = None
+out_lines: list[str] | None = None
 if gh_out:
     out_lines = []
 
