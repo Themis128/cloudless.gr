@@ -149,7 +149,7 @@ Campaign Manager:
    until tracking is proven healthy.
 
    ```bash
-   bash scripts/linkedin-insight-doctor.sh --slug <campaign-slug> --locale el
+   python3 scripts/linkedin-insight-doctor.py --slug <campaign-slug> --locale el
    ```
 
    Full reference: `skills/linkedin-insight-doctor/SKILL.md`.

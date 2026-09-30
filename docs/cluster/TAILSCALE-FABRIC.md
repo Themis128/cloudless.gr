@@ -178,7 +178,7 @@ Manifest map:
 | `ingresses.yaml`          | L7 backends                                                |
 | `ingress-class.yaml`      | `IngressClass` `tailscale`                                 |
 | `acl-policy.example.json` | ACL tags / autoApprovers / grants / ssh / Apps `nodeAttrs` |
-| `deploy.sh`               | Helm operator install (OAuth env — **no AWS SSM**)         |
+| `deploy.py`               | Helm operator install (OAuth env — **no AWS SSM**)         |
 
 ---
 
@@ -210,7 +210,7 @@ resolver on the Pi (CoreDNS / LAN DNS stay authoritative).
 | member                               | `tag:app-connector`                                             | DNS `53` only                                               |
 | admin/member SSH (Tailscale SSH ACL) | `tag:pi` + self                                                 | `accept` (no check-mode)                                    |
 
-**Device tags (canonical — `scripts/tailscale-retag-fleet.sh`):**
+**Device tags (canonical — `scripts/tailscale-retag-fleet.py`):**
 
 | Hostname pattern                                           | Tags                           |
 | ---------------------------------------------------------- | ------------------------------ |
@@ -331,7 +331,7 @@ sequenceDiagram
   Kube->>API: impersonating Tailscale identity
 ```
 
-Fallback: add TLS SANs (`100.74.191.58`, MagicDNS) via `scripts/configure-k3s.sh`,
+Fallback: add TLS SANs (`100.74.191.58`, MagicDNS) via `scripts/configure-k3s.py`,
 then dial `:6443` with `--accept-routes`. WSL **userspace** Tailscale is unreliable
 for raw `100.x` TCP — use LAN or the kube ProxyGroup instead.
 
@@ -375,7 +375,7 @@ Typical secrets: `TS_AUTHKEY` (ephemeral, pre-authorized), `KUBECONFIG_B64`,
 | D3  | Subnet routes only via `Connector`                                 | ProxyGroup cannot advertise routes; wrong CRD caused silent failures                                                                                  |
 | D4  | `ProxyClass/pi-fabric` arm64 + tiny limits                         | Pi 5 RAM budget; avoid scheduling operator proxies on starved nodes                                                                                   |
 | D5  | kube ProxyGroup for off-LAN kubectl                                | Avoids k3s TLS SAN churn and WSL userspace TCP pain                                                                                                   |
-| D6  | No AWS SSM in `deploy.sh`                                          | Free-tier / Cloudflare-first policy — OAuth env only                                                                                                  |
+| D6  | No AWS SSM in `deploy.py`                                          | Free-tier / Cloudflare-first policy — OAuth env only                                                                                                  |
 | D7  | Prefer MagicDNS over CGNAT literals                                | Tailscale IPs rotate; docs and new automation must not hardcode                                                                                       |
 | D8  | CI origin fallback = private fabric L4, not Funnel                 | Funnel is public Serve over DERP — intermittent timeouts from GHA; NodePort via MagicDNS after `TS_AUTHKEY` is the same origin Cloudflare Tunnel uses |
 | D9  | Members HTTPS-only to `tag:k8s`; admins `*`                        | Stops accidental reach to node_exporter / k3s / discovery ports over the tailnet                                                                      |
@@ -446,14 +446,14 @@ gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
 4. Enable HTTPS Certificates if the toggle was ever off:
 
 ```bash
-bash scripts/tailscale-enable-https.sh
+python3 scripts/tailscale-enable-https.py
 # Workflow: Tailscale enable HTTPS
 ```
 
 5. Approve Service hosts (HA VIPs stay dark until approved):
 
 ```bash
-bash scripts/tailscale-approve-service-hosts.sh
+python3 scripts/tailscale-approve-service-hosts.py
 # Workflow: Tailscale approve service hosts
 ```
 
@@ -463,7 +463,7 @@ bash scripts/tailscale-approve-service-hosts.sh
 export TS_CLIENT_ID=…
 export TS_CLIENT_SECRET=…
 export KUBECONFIG=~/.kube/config-cloudless-ts   # LAN kubeconfig at office
-bash infrastructure/tailscale/deploy.sh
+python3 infrastructure/tailscale/deploy.py
 ```
 
 ```bash
@@ -477,13 +477,13 @@ kubectl get pods -n tailscale
 Empty TLS Secrets after HTTPS enable:
 
 ```bash
-bash scripts/tailscale-refresh-tls-secrets.sh
+python3 scripts/tailscale-refresh-tls-secrets.py
 ```
 
 ### 8.3 k3s TLS SANs (only if dialing `:6443` over Tailscale)
 
 ```yaml
-# /etc/rancher/k3s/config.yaml (via scripts/configure-k3s.sh)
+# /etc/rancher/k3s/config.yaml (via scripts/configure-k3s.py)
 tls-san:
   - "192.168.1.128"
   - "100.74.191.58" # refresh if CGNAT changed
@@ -492,7 +492,7 @@ tls-san:
 
 ```bash
 sudo TLS_SAN_TS=100.74.191.58 TLS_SAN_MAGICDNS=github-omv.tail4ecae1.ts.net \
-  ./scripts/configure-k3s.sh
+  ./scripts/configure-k3s.py
 sudo systemctl restart k3s
 ```
 
@@ -512,9 +512,9 @@ sudo tailscale set --accept-routes   # Linux with real TUN
 | `tailscale-fix-fabric-acl.yml`                         | ACL merge helper                                              |
 | `tailscale-probe-posture.yml`                          | Posture / health of fabric                                    |
 | `tailscale-admin-api.yml`                              | ACL merge (+ optional device cleanup); prefer `acl_only=true` |
-| `scripts/tailscale-diagnose.sh`                        | Local diagnosis                                               |
-| `scripts/setup-kubectl-tailscale.sh`                   | Client kubeconfig helper                                      |
-| `scripts/ts-wsl.sh`                                    | WSL userspace Tailscale                                       |
+| `scripts/tailscale-diagnose.py`                        | Local diagnosis                                               |
+| `scripts/setup-kubectl-tailscale.py`                   | Client kubeconfig helper                                      |
+| `scripts/ts-wsl.py`                                    | WSL userspace Tailscale                                       |
 
 ---
 
@@ -541,8 +541,8 @@ tailscale status
 kubectl get connector,proxygroup,proxyclass -A
 kubectl get pods -n tailscale
 kubectl logs -n tailscale -l app.kubernetes.io/name=operator --tail=100
-bash scripts/tailscale-diagnose.sh
-bash scripts/tailscale-probe-posture.sh
+python3 scripts/tailscale-diagnose.py
+python3 scripts/tailscale-probe-posture.py
 ```
 
 Offline / orphaned devices: [`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastructure/tailscale/OFFLINE-DEVICE-TROUBLESHOOTING.md)

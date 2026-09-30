@@ -32,8 +32,8 @@ infrastructure/postiz/
 │       ├── Chart.yaml
 │       ├── values.yaml             # defaults (mirrors the live k8s manifest)
 │       ├── values-prod.yaml        # cloudless.gr overrides
-│       ├── install.sh              # idempotent installer
-│       ├── uninstall.sh
+│       ├── install.py              # idempotent installer
+│       ├── uninstall.py
 │       ├── README.md
 │       └── templates/
 │           ├── _helpers.tpl
@@ -51,7 +51,7 @@ infrastructure/postiz/
 
 ```bash
 cd infrastructure/postiz/helm/postiz
-./install.sh
+./install.py
 ```
 
 The script:
@@ -84,9 +84,9 @@ curl -H "Authorization: $POSTIZ_API_KEY" https://postiz.cloudless.gr/api/public/
 ## Uninstall
 
 ```bash
-./uninstall.sh                # helm uninstall only (PVCs preserved)
-./uninstall.sh --delete-pvcs  # ALSO wipes Postgres / Redis / uploads
-./uninstall.sh --delete-ns    # ALSO deletes the namespace
+./uninstall.py                # helm uninstall only (PVCs preserved)
+./uninstall.py --delete-pvcs  # ALSO wipes Postgres / Redis / uploads
+./uninstall.py --delete-ns    # ALSO deletes the namespace
 ```
 
 ## Operations
@@ -110,7 +110,7 @@ kubectl -n postiz rollout restart deploy/postiz
 Bump `image.postiz.tag` in `values-prod.yaml`, then:
 
 ```bash
-./install.sh
+./install.py
 ```
 
 **Do not skip past v2.11.2 without first deploying a Temporal stack** —

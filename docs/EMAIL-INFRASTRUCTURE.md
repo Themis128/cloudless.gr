@@ -33,7 +33,7 @@ Slack (`slack-notify.ts`) is a parallel ops channel, not a mail transport.
   `X-Mail-Ingest-Secret` check — Access bypass does not weaken it.
 - Clients: IMAPS `:993` + submission `:587` on omv-ha (Tailscale / LAN);
   Roundcube at https://webmail.cloudless.gr.
-- Installer: `infrastructure/omv-ha/setup-mail-server.sh` +
+- Installer: `infrastructure/omv-ha/setup-mail-server.py` +
   `infrastructure/omv-ha/mail-ingest/` + `workers/mail-ingest/`.
 - Admin nav: Infrastructure → Webmail.
 - DMARC: `_dmarc.cloudless.gr` live (`p=none`, RUA → `dmarc@` → catch-all → Gmail).
@@ -67,7 +67,7 @@ API routes import **`@/lib/email`**, not `email-sender.ts` (Workers-only helper)
 ## EspoCRM mail (2026-09-20)
 
 Inbound and outbound both run on the omv-ha stack — the old SES→Lambda case
-bridge and `scripts/espocrm-smtp-bootstrap.sh` (AWS SSM) are retired.
+bridge and `scripts/espocrm-smtp-bootstrap.py` (AWS SSM) are retired.
 
 - **Mailbox:** `espocrm@cloudless.gr` — dedicated dovecot account
   (`/var/mail/vhosts/cloudless.gr/espocrm`), password in
@@ -101,12 +101,12 @@ Supporting: `render-email.ts` (React Email), `client-report-email.ts`
 
 ## DNS / ops scripts
 
-Active theme: `configure-email-routing.sh`, `setup-email-routing.mjs`,
-`cloudflare-email-setup.sh`, `setup-email-deliverability.sh`,
-`setup-email-dns.sh`, `disable-cloudflare-email-obfuscation.sh`.
+Active theme: `configure-email-routing.py`, `setup-email-routing.mjs`,
+`cloudflare-email-setup.py`, `setup-email-deliverability.py`,
+`setup-email-dns.py`, `disable-cloudflare-email-obfuscation.py`.
 
-Legacy SES (retired for the Next app): `provision-ses-smtp.sh`,
-`ses-iam-grant.sh`, archived workflows under `.github/workflows.archived/`.
+Legacy SES (retired for the Next app): `provision-ses-smtp.py`,
+`ses-iam-grant.py`, archived workflows under `.github/workflows.archived/`.
 See `docs/aws/EMAIL-SES.md`.
 
 ## Tests

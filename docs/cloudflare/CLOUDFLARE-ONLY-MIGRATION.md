@@ -152,7 +152,7 @@ When ready to remove AWS entirely:
 
 ## Files Modified for Migration
 
-- `scripts/setup-cloudflare-lb.sh` - Pi primary, Workers fallback
+- `scripts/setup-cloudflare-lb.py` - Pi primary, Workers fallback
 - `.github/workflows/cloudflare-lb.yml` - Updated comments
 - `k8s/tunnel/pi-tunnel.yaml` - New tunnel manifest
 - `.github/workflows/setup-pi-tunnel.yml` - New tunnel setup workflow

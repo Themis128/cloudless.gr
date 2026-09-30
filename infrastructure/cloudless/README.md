@@ -37,7 +37,7 @@ Or use the bulk setup script:
 ```bash
 # Load your .env file and run the bulk secret script
 export $(cat .env.local | grep -v '^#' | xargs)
-CLOUDFLARE_API_TOKEN=your-token ./scripts/save-secrets-to-cloudflare.sh
+CLOUDFLARE_API_TOKEN=your-token ./scripts/save-secrets-to-cloudflare.py
 ```
 
 ### For k3s (SSM_DISABLED=1 mode)

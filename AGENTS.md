@@ -57,7 +57,7 @@ src/
 │       ├── auth/                # D1 Auth endpoints
 │       ├── checkout/            # Stripe Checkout
 │       ├── slack/               # Two-way Slack integration
-│       └── webhooks/            # Stripe & Notion webhooks
+│       └── webhooks/            # Stripe, Postiz, n8n, EspoCRM, Kuma, MQTT, Sentry, SocialAuto lead webhooks
 ├── components/                  # UI Components (HolographicCard, TerminalBlock, etc.)
 ├── context/                     # AuthContext, CartContext
 ├── lib/                         # Server + shared utilities
@@ -76,15 +76,13 @@ The project includes a suite of Python-based agents for research and documentati
 - **Research Agent:** `agents/run_cloudless_agent.py` — Uses Tavily search + Deep Agents for technical analysis.
 - **Docs Research:** `agents/run_langchain_docs_research.py` — Specialized for LangChain/LangGraph documentation.
 - **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
-- **Setup:** Run `./setup-agents.sh` to initialize the Python environment.
+- **Setup:** Run `./setup-agents.py` to initialize the Python environment.
 
 ## MCP Configuration
 
-Workspace MCP servers configured in `mcp.json`:
-
-- `project`: `project-mcp` for codebase context.
-- `mcp-tool-shop`: Additional utility tools.
-- `notion`: `@notionhq/notion-mcp-server` for direct Notion CMS access.
+Workspace MCP servers configured in `mcp.json` / `.devin/mcp_config.json` when
+present. The `notion` MCP entry was removed — the CMS migrated to self-hosted
+AppFlowy (`src/lib/appflowy-*.ts`, admin routes under `src/app/api/admin/appflowy/`).
 
 ## Authentication (Cloudflare D1)
 

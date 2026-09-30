@@ -32,7 +32,7 @@ ending in the target domain, and hard-guards that id (see `PROTECTED_HEALTH_CHEC
 
 | Command / Workflow | What it does |
 | --- | --- |
-| `pnpm domain:decommission` (`scripts/domain-decommission.sh`) | Report (default) or apply. Lists/deletes Route 53 health checks whose FQDN is `$DOMAIN` (or `*.{DOMAIN}`), and Cloudflare DNS records in `$DOMAIN`'s zone. Scoped by name; protected ids are skipped. `DOMAIN=`, `MODE=report\|apply`, `CONFIRM=1`. |
+| `pnpm domain:decommission` (`scripts/domain-decommission.py`) | Report (default) or apply. Lists/deletes Route 53 health checks whose FQDN is `$DOMAIN` (or `*.{DOMAIN}`), and Cloudflare DNS records in `$DOMAIN`'s zone. Scoped by name; protected ids are skipped. `DOMAIN=`, `MODE=report\|apply`, `CONFIRM=1`. |
 | `.github/workflows/domain-decommission.yml` | Runs it on a hosted runner via OIDC (`AWS_DEPLOY_ROLE_ARN`), reads `CLOUDFLARE_API_TOKEN` from SSM, posts the result to **#382**. `workflow_dispatch` inputs `domain` + `apply`; a push to the workflow/script is **report-only**. |
 
 ## Run order

@@ -43,8 +43,8 @@ The watchdog script never prints credential values.
 From a workstation with `.env.local` (or a Cowork session):
 
 ```bash
-scp -i ~/.ssh/id_rsa infrastructure/omv/{safedeploy-watchdog.sh,safedeploy-watchdog.service,safedeploy-watchdog.timer,install-safedeploy-watchdog.sh} tbaltzakis@omv:/tmp/sdw/
-ssh tbaltzakis@omv 'sudo bash /tmp/sdw/install-safedeploy-watchdog.sh'
+scp -i ~/.ssh/id_rsa infrastructure/omv/{safedeploy-watchdog.py,safedeploy-watchdog.service,safedeploy-watchdog.timer,install-safedeploy-watchdog.py} tbaltzakis@omv:/tmp/sdw/
+ssh tbaltzakis@omv 'sudo python3 /tmp/sdw/install-safedeploy-watchdog.py'
 ```
 
 The installer is idempotent — re-run it to refresh creds after any secret
@@ -76,7 +76,7 @@ sudo systemctl start safedeploy-watchdog.timer
 
 - **"⚠️ cloudless.gr unhealthy"** — 3rd consecutive failure. Includes the
   last HTTP code and the exact command to roll back manually if you don't
-  want to wait for auto-rollback: `scripts/rollback.sh previous`.
+  want to wait for auto-rollback: `scripts/rollback.py previous`.
 - **"🔁 cloudless.gr auto-rolled-back"** — 8th consecutive failure; the
   watchdog flipped the symlink from `<old-sha>` to `<previous-sha>` and
   restarted the deployment.

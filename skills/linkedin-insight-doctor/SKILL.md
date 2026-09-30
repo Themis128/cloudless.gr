@@ -26,7 +26,7 @@ verified on cloudless.gr in 2026-06.
 From the repo root:
 
 ```bash
-bash scripts/linkedin-insight-doctor.sh
+python3 scripts/linkedin-insight-doctor.py
 ```
 
 The script:

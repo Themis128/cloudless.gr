@@ -14,10 +14,10 @@ Live-cluster checks stay in `e2e/k3s/` and use `playwright.k3s.config.mts`.
 pnpm exec playwright test --project=chromium --workers=2
 
 # Smoke subset
-bash scripts/e2e-smart-run.sh smoke
+python3 scripts/e2e-smart-run.py smoke
 
 # k3s / production
-bash scripts/e2e-smart-run.sh k3s
+python3 scripts/e2e-smart-run.py k3s
 pnpm exec playwright test --config=playwright.production.config.mts
 ```
 

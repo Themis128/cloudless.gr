@@ -313,4 +313,4 @@ See `src/lib/newsletter-slack-config.ts` for the reference implementation.
 
 - `slack-app-builder` — manifest design + scope selection (do this first)
 - `slack-app-debugging` — when your endpoint returns 401/500 or Slack times out
-- `scripts/slack-app-doctor.sh` — live health probe against a deployed app
+- `scripts/slack-app-doctor.py` — live health probe against a deployed app

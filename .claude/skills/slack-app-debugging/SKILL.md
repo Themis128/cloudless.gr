@@ -45,12 +45,12 @@ the webhook URL within hours (you'll find a Slack notification in the owner's
 inbox).
 **Fix:** Mint a new webhook URL at app settings → Incoming Webhooks; move
 the URL into a secret manager (SSM, env, 1Password) — never commit. See
-`scripts/restore-slack-webhook.sh` for the one-shot helper.
+`scripts/restore-slack-webhook.py` for the one-shot helper.
 
 ### Generator/publisher worked at midnight, fails at 08:15
 
 **Cause:** App-config token (`xoxe.xoxp-…`) expired at the 12-hour mark.
-**Fix:** Run `scripts/rotate-slack-app-config-token.sh` (uses
+**Fix:** Run `scripts/rotate-slack-app-config-token.py` (uses
 `tooling.tokens.rotate`). **Don't put `refresh_token` in the Bearer header**
 — it goes in the form body. Otherwise: `invalid_auth`.
 
@@ -120,7 +120,7 @@ curl -sS https://slack.com/api/tooling.tokens.rotate \
 
 ```
 
-Reference: `scripts/rotate-slack-app-config-token.sh` in this repo (PR #899).
+Reference: `scripts/rotate-slack-app-config-token.py` in this repo (PR #899).
 
 ### `url_verification` fails when saving the Request URL
 
@@ -144,7 +144,7 @@ When the symptom isn't in §1, walk the four layers in order:
 Quick health check command:
 
 ```bash
-bash scripts/slack-app-doctor.sh \
+python3 scripts/slack-app-doctor.py \
   --token "$SLACK_BOT_TOKEN" \
   --signing-secret "$SLACK_SIGNING_SECRET" \
   --channel "$NEWSLETTER_SLACK_CHANNEL_ID"

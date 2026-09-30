@@ -58,7 +58,7 @@ pnpm newsletter:send    # publish [Review] pages + email subscribers
 | `NEWSLETTER_SLACK_CHANNEL_ID` | Prefer `C0BBDKY6Q9E` |
 | `NEWSLETTER_SLACK_BOT_TOKEN` / `NEWSLETTER_SLACK_SIGNING_SECRET` | Dedicated Newsletter Slack app |
 
-Seed Newsletter app secrets with `scripts/setup-newsletter-slack-app.sh` (must set signing secret on the Pi/D1 path or `/api/newsletter-slack/*` rejects all requests).
+Seed Newsletter app secrets with `scripts/setup-newsletter-slack-app.py` (must set signing secret on the Pi/D1 path or `/api/newsletter-slack/*` rejects all requests).
 
 ## Slack channel wiring
 

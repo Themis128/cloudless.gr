@@ -1,10 +1,10 @@
 # Post-install checklist
 
-After `setup.sh` finishes, work through this list. Each box maps to a concrete action you do once.
+After `setup.py` finishes, work through this list. Each box maps to a concrete action you do once.
 
 ## In WSL
 
-- [ ] `bash scripts/verify.sh` shows ≥ 20 skills installed and `/brand-design` present.
+- [ ] `python3 scripts/verify.py` shows ≥ 20 skills installed and `/brand-design` present.
 - [ ] `~/.claude/skills/cloudless-brand/brand.md` opens and reads as the v2 brand doc.
 - [ ] Env vars set in `~/.bashrc`: `FIGMA_API_KEY`, `CANVA_CONNECT_TOKEN`, `BRAND_SYSTEM_API_KEY`, `POSTIZ_API_KEY`.
 

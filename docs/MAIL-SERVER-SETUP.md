@@ -142,8 +142,8 @@ Internet → CF MX (Email Routing)
   gains `mail-ingest.cloudless.gr` → `http://192.168.1.130:80`.
 
 Deploy notes: `workers/mail-ingest/README.md`.
-Host install: `infrastructure/omv-ha/mail-ingest/install-mail-ingest.sh`.
-Submission/IMAPS: `infrastructure/omv-ha/enable-mail-submission.sh`.
+Host install: `infrastructure/omv-ha/mail-ingest/install-mail-ingest.py`.
+Submission/IMAPS: `infrastructure/omv-ha/enable-mail-submission.py`.
 
 ### Mail client (Tailscale)
 
@@ -181,7 +181,7 @@ compose — not the app API path. See `docs/EMAIL-INFRASTRUCTURE.md`.
 
 ## Reproduce / recover
 
-`infrastructure/omv-ha/setup-mail-server.sh` installs and configures the
+`infrastructure/omv-ha/setup-mail-server.py` installs and configures the
 dovecot + postfix relay stack idempotently (reads `RESEND_API_KEY` and the
 mailbox password from the environment; never hard-codes secrets). Roundcube
 

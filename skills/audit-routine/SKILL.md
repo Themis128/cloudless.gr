@@ -26,7 +26,7 @@ output is a markdown table the operator can scan in 30 seconds.
 | Lint hygiene | `pnpm lint` | ESLint errors → CI fail; warnings → drift |
 | Dependency vulns | `pnpm audit` | known advisories from the npm DB |
 | Outdated deps | `pnpm outdated` | major+minor lag, deprecated packages |
-| Lambda env drift | `bash scripts/lambda-env-audit.sh` | required vars missing or stale |
+| Env drift | `python3 tools/secret-completeness-check.py` | required vars missing or stale |
 | Live `/` round-trip | `curl -w '%{time_total}'` | regression in TTFB |
 | Live `/api/health` | same + version field cross-check | deploy version vs current `main` |
 | Live `/sitemap.xml` | same + 1.75 s threshold | ISR cache not engaging |
@@ -46,7 +46,7 @@ pnpm typecheck
 pnpm lint
 pnpm audit --audit-level=moderate
 pnpm outdated
-bash scripts/lambda-env-audit.sh
+python3 tools/secret-completeness-check.py
 
 # Live surface — measure in 5 sequential warm hits to filter cold-start
 for i in 1 2 3 4 5; do

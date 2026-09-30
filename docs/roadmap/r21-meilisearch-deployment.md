@@ -49,7 +49,7 @@ This keeps search available even when the Meilisearch service is unavailable.
 
 ## Validation commands
 
-    bash scripts/check_r21_search_baseline.sh
+    python3 scripts/check_r21_search_baseline.py
 
     pnpm vitest run \
       __tests__/r21-ai-baseline.test.ts \
@@ -84,4 +84,4 @@ The manifest must document that persistent data uses the dedicated 120GB SSD on 
 
 Validate with:
 
-    bash scripts/check_r21_meilisearch_k3s_storage.sh
+    python3 scripts/check_r21_meilisearch_k3s_storage.py

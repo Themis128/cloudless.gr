@@ -88,9 +88,9 @@ If k3s crashed and all runners are also down (no jobs can be picked up), SSH in 
 
 ```bash
 # Run on omv-main (192.168.1.128) for each runner name:
-bash /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.sh omv
-bash /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.sh omv-2
-bash /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.sh omv-3
+python3 /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.py omv
+python3 /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.py omv-2
+python3 /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.py omv-3
 ```
 
 Or fetch and run from the repo directly:
@@ -131,7 +131,7 @@ gh_runner_restart(repo: "cloudless.gr", runner: "omv")
 If k3s crashes AND runners are all offline (both at the same time):
 
 1. SSH to omv-main: `ssh omv-main` (192.168.1.128)
-2. Run harden script for each runner: `sudo bash .github/scripts/harden-runner-systemd.sh omv`
+2. Run harden script for each runner: `sudo python3 .github/scripts/harden-runner-systemd.py omv`
 3. Once at least one runner is online, trigger "k3s restart (manual)" from GitHub Actions
 4. After k3s is up, trigger "build pi image" or "Deploy to Pi" to restore the app
 

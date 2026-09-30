@@ -83,7 +83,7 @@ provision.
 
 ## R18 note — different secret, different header
 
-The R18 probe (`scripts/audit-pi-ssm-scope.sh` + `probe-pi-ssm-scope.yml`)
+The R18 probe (`scripts/audit-pi-ssm-scope.py` + `probe-pi-ssm-scope.yml`)
 also POSTs to `/api/webhooks/admin-alert` but uses
 `Authorization: Bearer <token>` against a GH-secret-stored
 `ADMIN_ALERT_TOKEN`. That's actually **wrong** — the route ignores

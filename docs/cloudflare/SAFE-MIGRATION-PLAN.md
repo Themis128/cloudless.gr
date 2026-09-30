@@ -399,7 +399,7 @@ Set up alerts for free tier limits:
 | `migrations/0001-auth-schema.sql` | D1 schema | ✅ Apply via Wrangler |
 | `scripts/sync-ssm-to-wrangler.ts` | Secret migration | ✅ Run to migrate secrets |
 | `scripts/migrate-dynamodb-to-d1.ts` | Data migration | ✅ Run to migrate data |
-| `scripts/deploy-cloudflare.sh` | Deployment script | ✅ Run for cutover |
+| `scripts/deploy-cloudflare.py` | Deployment script | ✅ Run for cutover |
 | `docs/MIGRATION-CLOUDFLARE-FREE.md` | Full guide | ✅ Read for details |
 | `.github/workflows/deploy-cloudflare.yml` | (Needs creation) CI/CD | ⬜ Create for automation |
 

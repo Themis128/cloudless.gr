@@ -71,7 +71,7 @@ pnpm db:backup:test appflowy   # -n appflowy
 pnpm db:backup:test minio      # -n appflowy  (MinIO pods)
 pnpm db:backup:test kuma       # -n uptime-kuma
 pnpm db:backup:test n8n        # -n n8n
-# equivalent: bash scripts/pvc-backup-test.sh <target>
+# equivalent: python3 scripts/pvc-backup-test.py <target>
 ```
 
 | Target     | Namespace     | CronJob                     |
@@ -95,7 +95,7 @@ kubectl get cronjob -A -l app.kubernetes.io/name=pvc-backup
 kubectl -n appflowy get pods -l app.kubernetes.io/name=pvc-backup
 kubectl -n uptime-kuma get pods -l app.kubernetes.io/name=pvc-backup
 
-# Or by Job name after pvc-backup-test.sh prints it
+# Or by Job name after pvc-backup-test.py prints it
 kubectl -n appflowy get pods -l job-name=test-minio-…
 ```
 

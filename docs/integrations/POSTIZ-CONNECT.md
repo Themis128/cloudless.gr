@@ -3,7 +3,7 @@
 OAuth app credentials are restored on the Postiz pod for **LinkedIn, X, TikTok**
 (+ `POSTIZ_API_KEY`). **Facebook/Instagram** are still missing from SSM —
 add `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET` then re-run
-`bash scripts/postiz-restore-providers.sh`.
+`python3 scripts/postiz-restore-providers.py`.
 
 ## Verify pod is ready
 

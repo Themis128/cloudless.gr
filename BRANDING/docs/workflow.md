@@ -1,6 +1,6 @@
 # Cloudless content workflow — end-to-end
 
-Once `setup.sh` has run, the skills below are globally available in every Claude Code / Claude Agent SDK / Claude Desktop session.
+Once `setup.py` has run, the skills below are globally available in every Claude Code / Claude Agent SDK / Claude Desktop session.
 
 ## Onboarding (run once)
 
@@ -31,7 +31,7 @@ Once `setup.sh` has run, the skills below are globally available in every Claude
 
 ## How skills find the Cloudless brand pack
 
-`setup.sh` symlinks `~/.claude/skills/cloudless-brand/` to this repo's `cloudless-brand/`. Every skill listed above reads `cloudless-brand/brand.md` before drafting:
+`setup.py` symlinks `~/.claude/skills/cloudless-brand/` to this repo's `cloudless-brand/`. Every skill listed above reads `cloudless-brand/brand.md` before drafting:
 
 - `voice-builder` uses §6 (voice & tone) as the seed voice rules.
 - `/brand-design` replaces its default tokens with §2 (colors) and §3 (typography).

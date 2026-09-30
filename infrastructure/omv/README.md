@@ -218,7 +218,7 @@ See also: `infrastructure/omv-ha/` for standby node configuration
 After power-cycles, runners can go ghost-busy on GitHub. Install:
 
 ```bash
-sudo bash infrastructure/omv/install-gha-runner-heal.sh
+sudo python3 infrastructure/omv/install-gha-runner-heal.py
 ```
 
 See `docs/deploy/runners.md`.
@@ -233,9 +233,9 @@ handler looped and inflated the error count.
 
 ```bash
 # preview (no changes), then:
-sudo bash infrastructure/omv/install-monit-postfix-fix.sh --apply
+sudo python3 infrastructure/omv/install-monit-postfix-fix.py --apply
 # optional: also point monit alerts at the external relay (see caveats in the script)
-sudo bash infrastructure/omv/install-monit-postfix-fix.sh --apply --mail-relay
+sudo python3 infrastructure/omv/install-monit-postfix-fix.py --apply --mail-relay
 ```
 
 See the script header for the full root-cause writeup.

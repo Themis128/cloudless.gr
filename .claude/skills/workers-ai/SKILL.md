@@ -16,7 +16,7 @@ workflow: `CLOUDFLARE_ACCOUNT_ID` (inline in `deploy.yml`,
 
 | Tool | What it does |
 | --- | --- |
-| `scripts/workers-ai-doctor.sh` | Full chain check: token validity + Workers AI scope (real 1-token inference), Lambda env wiring, live auth gate. Each check skips gracefully without its credential. |
+| `scripts/workers-ai-doctor.py` | Full chain check: token validity + Workers AI scope (real 1-token inference), Lambda env wiring, live auth gate. Each check skips gracefully without its credential. |
 | `.github/workflows/workers-ai-verify.yml` | Runs the doctor on a hosted runner **with the repo secret** (the only way to test a secret a session can't read) and posts the result to issue #382. Trigger via `gh workflow run workers-ai-verify.yml` or by editing the doctor script. |
 
 ## Activate (one-time)

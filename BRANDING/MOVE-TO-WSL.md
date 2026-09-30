@@ -20,14 +20,14 @@ cp -r /mnt/c/Users/baltz/Documents/Claude/outputs/BRANDING/* ~/code/BRANDING/
 cp -r /mnt/c/Users/baltz/Documents/Claude/outputs/brand/* ~/code/BRANDING/cloudless-brand/
 
 # Mark scripts executable
-chmod +x ~/code/BRANDING/setup.sh ~/code/BRANDING/scripts/*.sh
+chmod +x ~/code/BRANDING/setup.py ~/code/BRANDING/scripts/*.sh
 ```
 
 ## 2. Run the installer
 
 ```bash
 cd ~/code/BRANDING
-bash setup.sh
+python3 setup.py
 ```
 
 That clones the 6 external repos into `repos/`, symlinks every skill into `~/.claude/skills/`, copies `/brand-design` into `~/.claude/commands/`, and writes the suggested Claude Desktop MCP JSON to `~/.config/Claude/claude_desktop_config.suggested.json`.
@@ -43,7 +43,7 @@ Open that file, merge the `mcpServers` object from `~/code/BRANDING/claude-deskt
 ## 4. Verify
 
 ```bash
-bash ~/code/BRANDING/scripts/verify.sh
+python3 ~/code/BRANDING/scripts/verify.py
 ```
 
 Should print all installed skills + commands + which env vars are set.

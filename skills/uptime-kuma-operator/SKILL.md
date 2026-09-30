@@ -63,7 +63,7 @@ Do not waste time scripting monitor creation. Use the UI walkthrough below.
 ## Creating a push monitor (UI walkthrough)
 
 We have 7 push monitors backing the cluster-alerts-kuma Secret. Recreate them
-exactly as below; the script `scripts/populate-kuma-secrets.sh` expects the
+exactly as below; the script `scripts/populate-kuma-secrets.py` expects the
 tokens in this order.
 
 Steps for each monitor:
@@ -120,7 +120,7 @@ breaks, but only the Kuma one persists in monitor history.
 After all 7 monitors exist and you have all 7 push tokens:
 
 ```bash
-bash scripts/populate-kuma-secrets.sh \
+python3 scripts/populate-kuma-secrets.py \
   <K3S_POD_HEALTH_TOKEN> \
   <ETCD_SNAPSHOT_AGE_TOKEN> \
   <CLOUDFLARED_DRIFT_TOKEN> \
@@ -167,10 +167,10 @@ dual-fire in the new CronJob.
 - `infrastructure/monitoring/cloudflared-drift.yaml` — cloudflared-drift-check
   (`KUMA_PUSH_CLOUDFLARED_DRIFT`).
 - `infrastructure/monitoring/cluster-alerts-kuma-secret.yaml` — docs-only
-  stub (`data: {}`); **never apply** — live tokens via `populate-kuma-secrets.sh`.
+  stub (`data: {}`); **never apply** — live tokens via `populate-kuma-secrets.py`.
 - `infrastructure/backup/cronjob-{appflowy,espocrm,n8n,postiz}.yaml` — 4
   daily backup CronJobs (`KUMA_PUSH_BACKUP_*`).
-- `scripts/populate-kuma-secrets.sh` — token loader.
+- `scripts/populate-kuma-secrets.py` — token loader.
 
 If you add a new dual-fire CronJob, update this skill's table AND the
 populate script in the same PR.

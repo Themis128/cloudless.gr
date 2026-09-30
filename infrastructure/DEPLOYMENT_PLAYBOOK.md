@@ -61,7 +61,7 @@ infrastructure/
 │   ├── proxygroup-monitoring.yaml
 │   ├── ingress-class.yaml
 │   ├── ingresses.yaml
-│   └── deploy.sh
+│   └── deploy.py
 ├── database/
 │   ├── postgresql-ha.yaml
 │   └── redis-ha.yaml

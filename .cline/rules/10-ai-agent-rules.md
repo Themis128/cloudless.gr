@@ -38,4 +38,4 @@
 
 - **One MCP operation at a time:** Similar to other tools, wait for confirmation before proceeding
 - **Resolve before query:** For Context7, call `resolve-library-id` before `query-docs`
-- **Check server status:** Use `test-mcp-servers.sh` if MCP servers are unresponsive
+- **Check server status:** Use `list-tools` if MCP servers are unresponsive

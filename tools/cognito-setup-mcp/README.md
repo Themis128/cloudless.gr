@@ -324,5 +324,5 @@ EOF
 
 - [Cognito Setup Guide](../../docs/COGNITO_SETUP.md)
 - [Cognito Automation Suite](../../docs/COGNITO_AUTOMATION.md)
-- [Bash Script](../../scripts/cognito-setup.sh)
+- [Bash Script](../../scripts/cognito-setup.py)
 - [Claude Code Skill](./.claude/skills/cognito-setup/)

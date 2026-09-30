@@ -107,7 +107,7 @@ ls -la scripts/disable-*
 # Required scripts:
 # migrate-dynamodb-to-d1.ts      ✓
 # migrate-s3-to-r2.mjs           ✓
-# disable-cloudfront.sh          ✓
+# disable-cloudfront.py          ✓
 # sync-ssm-to-wrangler.ts        ✓
 
 # Check IAM permissions for DynamoDB migration

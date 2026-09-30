@@ -47,7 +47,7 @@ Complete browser OAuth when Cursor prompts. Do not commit `ma_` tokens.
 4. Download or pass URL into Postiz:
 
 ```bash
-source scripts/postiz-cli-env.sh
+source scripts/postiz-cli-env.py
 # Prefer download → postiz upload (providers want Postiz-hosted media)
 curl -L "$VIDEO_URL" -o /tmp/ugc.mp4
 PATH_JSON=$(postiz upload /tmp/ugc.mp4)

@@ -29,7 +29,7 @@ mismatches between the tunnel config, actual k3s services, and DNS records.
 
 ```bash
 # Validate all tunnel endpoints against actual services
-bash tools/tunnel-endpoint-validator.sh
+python3 tools/tunnel-endpoint-validator.py
 ```
 
 This checks:
@@ -136,7 +136,7 @@ If a NodePort service exists but isn't in the tunnel config:
 
 ```bash
 # List all NodePorts not in the tunnel config
-bash tools/tunnel-endpoint-validator.sh | grep "not exposed via tunnel"
+python3 tools/tunnel-endpoint-validator.py | grep "not exposed via tunnel"
 ```
 
 To add a missing route, append to the tunnel config before the catch-all:
@@ -218,7 +218,7 @@ protected — check the Cloudflare Access application config.
 
 ```bash
 # Run the validator
-bash tools/tunnel-endpoint-validator.sh
+python3 tools/tunnel-endpoint-validator.py
 
 # All hostnames should show ✓ for DNS, internal, and web checks
 ```
@@ -230,6 +230,6 @@ bash tools/tunnel-endpoint-validator.sh
 - `infrastructure/cloudflare-tunnels/routes.yaml` — DNS routes
 - `skills/cloudflare-tunnel-ops` — Tunnel operations
 - `skills/selfhosted-services-doctor` — Comprehensive service audit
-- `tools/tunnel-endpoint-validator.sh` — One-shot validation tool
+- `tools/tunnel-endpoint-validator.py` — One-shot validation tool
 - `docs/cluster/kubectl-tailscale.md` — kubectl via Tailscale
 - `docs/TAILSCALE-FABRIC.md` — Tailscale fabric documentation

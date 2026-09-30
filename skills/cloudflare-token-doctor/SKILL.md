@@ -152,7 +152,7 @@ secret.
 ## Stage 3 — Smoke-test
 
 ```bash
-bash scripts/cf-token-smoketest.sh
+python3 scripts/cf-token-smoketest.py
 ```
 
 The script (shipped alongside this skill) hits one endpoint per

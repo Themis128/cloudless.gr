@@ -23,7 +23,7 @@ This is your entry point for the complete Cognito setup automation system.
 
 | File | Purpose | How to Use |
 |------|---------|-----------|
-| [scripts/archive/cognito/cognito-setup.sh](../../scripts/archive/cognito/cognito-setup.sh) | Main automation script | `bash scripts/archive/cognito/cognito-setup.sh` |
+| [scripts/archive/cognito/cognito-setup.py](../../scripts/archive/cognito/cognito-setup.py) | Main automation script | `python3 scripts/archive/cognito/cognito-setup.py` |
 | [tools/cognito-setup-mcp/src/index.ts](../../tools/cognito-setup-mcp/src/index.ts) | MCP server for programmatic access | `npx tsx tools/cognito-setup-mcp/src/index.ts` |
 | [tools/cognito-setup-mcp/README.md](../../tools/cognito-setup-mcp/README.md) | MCP API documentation | Reference when using MCP tools |
 | [.claude/skills/cognito-setup/](../../.claude/skills/cognito-setup/) | Claude Code skill | `/cognito-setup` in Claude Code |
@@ -61,7 +61,7 @@ pnpm cognito:setup:quick
 
 ```bash
 # Verbose output
-bash -x scripts/archive/cognito/cognito-setup.sh
+python3 -X dev scripts/archive/cognito/cognito-setup.py
 
 # Manual step-by-step
 aws sts get-caller-identity
@@ -115,7 +115,7 @@ pnpm cognito:setup
 pnpm cognito:setup:dry
 
 # Or run with verbose output
-bash -x scripts/archive/cognito/cognito-setup.sh
+python3 -X dev scripts/archive/cognito/cognito-setup.py
 
 # Check the logs
 cat /tmp/dev-test.log
@@ -137,7 +137,7 @@ cat /tmp/dev-test.log
 
 ✅ **Multiple Interfaces**
 
-- CLI: `bash scripts/archive/cognito/cognito-setup.sh`
+- CLI: `python3 scripts/archive/cognito/cognito-setup.py`
 - pnpm: `pnpm cognito:setup`
 - GitHub Actions: `# cognito-setup.yml removed — use Cognito console / AWS CLI`
 - MCP: Programmatic access via tools

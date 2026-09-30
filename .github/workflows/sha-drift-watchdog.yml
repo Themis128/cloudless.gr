@@ -111,7 +111,7 @@ jobs:
           echo "Compare returned no file list (or empty) — skipping deploy dispatch."
           exit 0
         fi
-        if echo "$changed" | grep -qE '^(src/|public/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.ts|patches/|scripts/pi-rollout-from-artifact\.sh|workers/pi-deploy-orchestrator/|infrastructure/omv/pi-release-pull|\.github/workflows/deploy-pi\.yml)'; then
+        if echo "$changed" | grep -qE '^(src/|public/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.ts|patches/|scripts/pi-rollout-from-artifact\.py|workers/pi-deploy-orchestrator/|infrastructure/omv/pi-release-pull|\.github/workflows/deploy-pi\.yml)'; then
           echo "Deploy-relevant changes reached main without a deploy run."
           echo "(Likely an auto-merged PR — push event was suppressed.)"
           gh workflow run deploy-pi.yml --repo "$repo"

@@ -88,7 +88,7 @@ export default defineConfig({
     // that take down :4010 (ECONNREFUSED / blank pages). Next 15.5 defaults
     // to webpack — do not pass --webpack (unknown option on this CLI).
     command:
-      'bash -c \'rm -rf "${NEXT_DIST_DIR:-.next-e2e}" && exec bash scripts/dev-server.sh\'',
+      'bash -c \'rm -rf "${NEXT_DIST_DIR:-.next-e2e}" && exec python3 scripts/dev-server.py\'',
     // Hit a real route — bare `/` can 308 and confuse the readiness probe
     // while Next is still compiling proxy.
     url: `${E2E_ORIGIN}/api/health`,

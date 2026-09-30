@@ -57,7 +57,7 @@ beefier node or a managed Temporal endpoint.
 
 ```bash
 cd infrastructure/postiz/helm/postiz
-./install.sh
+./install.py
 ```
 
 Idempotent. Creates `postiz-secrets` if missing (generates JWT + Postgres
@@ -85,7 +85,7 @@ kubectl -n postiz rollout status  deploy/postiz --timeout=120s
 ### Bump the Postiz image tag
 
 Edit `image.postiz.tag` in `infrastructure/postiz/helm/postiz/values-prod.yaml`,
-then re-run `./install.sh`. **Do not skip past v2.11.2** without first
+then re-run `./install.py`. **Do not skip past v2.11.2** without first
 deploying a Temporal stack — see the migration guide in
 `docs/POSTIZ.md` and Postiz upstream docs.
 
@@ -117,7 +117,7 @@ kubectl -n postiz exec deploy/postiz-postgres -- \
 
    ```bash
    cd infrastructure/postiz/helm/postiz
-   ./install.sh        # re-pulls SSM into the postiz-providers secret
+   ./install.py        # re-pulls SSM into the postiz-providers secret
    kubectl -n postiz rollout restart deploy/postiz
    ```
 
@@ -208,7 +208,7 @@ suspecting Postiz: `mcp__cloudless-infra__cloudflare_tunnel_status`.
 
 When you've edited Postiz files in a Cowork session and need to land them
 on `main`, use `skills/postiz-apply/SKILL.md`. It wraps
-`scripts/cowork-bundle.sh` with the canonical Postiz path set and a
+`scripts/cowork-bundle.py` with the canonical Postiz path set and a
 ready-to-use PR body — produces a tarball + commit-message file +
 `APPLY-*.md` that the user runs in `~/code/cloudless.gr` to commit /
 push / squash-merge.

@@ -53,20 +53,20 @@ offline during cluster incidents and the job queues forever).
 
 | Command / Workflow | What it does |
 | --- | --- |
-| `pnpm cluster:doctor` (`scripts/cluster-doctor.sh`) | **Full diagnostics** — App (cloudless+ntfy+n8n), Monitoring (Prometheus+Grafana+Alertmanager+Loki+rules), Analytics (Metabase+DuckDB), Infra (nodes+etcd+CronJobs), External (HTTP surfaces+runners). Posts to #382. |
-| `.github/workflows/cluster-doctor.yml` | Runs the doctor on a hosted runner over Tailscale, posts the snapshot to **#382**. Trigger by editing `scripts/cluster-doctor.sh` or the workflow. |
-| `pnpm prometheus:tune` (`scripts/prometheus-tune.sh`) | Removes heavy kube-apiserver burnrate/SLO PrometheusRules that time out and trip `PrometheusRuleFailures`. |
+| `pnpm cluster:doctor` (`scripts/cluster-doctor.py`) | **Full diagnostics** — App (cloudless+ntfy+n8n), Monitoring (Prometheus+Grafana+Alertmanager+Loki+rules), Analytics (Metabase+DuckDB), Infra (nodes+etcd+CronJobs), External (HTTP surfaces+runners). Posts to #382. |
+| `.github/workflows/cluster-doctor.yml` | Runs the doctor on a hosted runner over Tailscale, posts the snapshot to **#382**. Trigger by editing `scripts/cluster-doctor.py` or the workflow. |
+| `pnpm prometheus:tune` (`scripts/prometheus-tune.py`) | Removes heavy kube-apiserver burnrate/SLO PrometheusRules that time out and trip `PrometheusRuleFailures`. |
 | `.github/workflows/prometheus-tune.yml` | Runs `prometheus:tune` on a hosted runner, posts the log to #382. |
-| `scripts/analytics-restore.sh` | Recovers OOMKilled Metabase (patches to 600Mi + restarts) and DuckDB API (restarts if high restarts). |
-| `.github/workflows/analytics-restore.yml` | Runs `analytics-restore.sh` on a hosted runner, posts to #382. Trigger by editing the workflow. |
-| `scripts/ntfy-restore.sh` | Recovers ntfy from Error/CrashLoopBackOff — patches memory to 128Mi if OOMKilled, restarts. |
-| `.github/workflows/ntfy-restore.yml` | Runs `ntfy-restore.sh` on a hosted runner, posts to #382. Trigger by editing the workflow. |
+| `scripts/analytics-restore.py` | Recovers OOMKilled Metabase (patches to 600Mi + restarts) and DuckDB API (restarts if high restarts). |
+| `.github/workflows/analytics-restore.yml` | Runs `analytics-restore.py` on a hosted runner, posts to #382. Trigger by editing the workflow. |
+| `scripts/ntfy-restore.py` | Recovers ntfy from Error/CrashLoopBackOff — patches memory to 128Mi if OOMKilled, restarts. |
+| `.github/workflows/ntfy-restore.yml` | Runs `ntfy-restore.py` on a hosted runner, posts to #382. Trigger by editing the workflow. |
 | `.github/workflows/k3s-ssh-restart.yml` | **SSH-based k3s restart** — Tailscale + `OMV_SSH_KEY` secret → SSH to Pi → restart k3s → wait for port 6443. Requires `OMV_SSH_KEY` repo secret. |
-| `.github/workflows/k3s-watchdog-deploy.yml` | Deploys `scripts/k3s-watchdog-install.sh` to the Pi via SSH — installs `Restart=always` systemd drop-in so k3s auto-recovers. Requires `OMV_SSH_KEY`. |
+| `.github/workflows/k3s-watchdog-deploy.yml` | Deploys `scripts/k3s-watchdog-install.py` to the Pi via SSH — installs `Restart=always` systemd drop-in so k3s auto-recovers. Requires `OMV_SSH_KEY`. |
 
 ## Triage workflow
 
-1. **See the cluster** — fire `cluster-doctor` (edit `scripts/cluster-doctor.sh`
+1. **See the cluster** — fire `cluster-doctor` (edit `scripts/cluster-doctor.py`
    → PR → squash-merge), wait ~2 min, read #382. Never guess pod state; the
    doctor is your eyes.
 2. **Classify the failure mode** — see decision table below.
@@ -125,7 +125,7 @@ offline during cluster incidents and the job queues forever).
 - **`PrometheusKubernetesListWatchFailures` self-resolves** once k3s API is back up (Prometheus reconnects automatically).
 - **ntfy at 96Mi is fragile** — any spike crashes it. `ntfy-restore.yml` raises to 128Mi by default.
 - **Metabase at 400Mi can OOMKill** on heavy dashboard queries. `analytics-restore.yml` patches to 600Mi safely.
-- **Ephemeral CI nodes take time to become reachable on the tailnet.** Peers reject traffic until the new node propagates, and first packets ride DERP while a direct path negotiates — so the first `kubectl`/`ssh` can i/o-timeout even though the connect step succeeded. Always set `ping: 100.74.191.58` on `tailscale/github-action` and run `scripts/ci/tailscale-wait.sh` after connect; it TCP-probes the needed port and re-syncs routes once via `tailscale down && tailscale up` (fixes tailscale/github-action#266 missing-routes case).
+- **Ephemeral CI nodes take time to become reachable on the tailnet.** Peers reject traffic until the new node propagates, and first packets ride DERP while a direct path negotiates — so the first `kubectl`/`ssh` can i/o-timeout even though the connect step succeeded. Always set `ping: 100.74.191.58` on `tailscale/github-action` and run `scripts/ci/tailscale-wait.py` after connect; it TCP-probes the needed port and re-syncs routes once via `tailscale down && tailscale up` (fixes tailscale/github-action#266 missing-routes case).
 
 ## Reading results
 

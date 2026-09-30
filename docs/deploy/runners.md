@@ -52,11 +52,11 @@ Both shapes are valid for `runs-on`.
 ### CLI
 
 ```bash
-.github/scripts/toggle-runner.sh status
-.github/scripts/toggle-runner.sh pi          # RUNNER_GENERIC → omv build
-.github/scripts/toggle-runner.sh hosted      # clear RUNNER_GENERIC
-.github/scripts/toggle-runner.sh x64-legion  # RUNNER_X64 → Legion WSL
-.github/scripts/toggle-runner.sh x64-hosted  # clear RUNNER_X64
+.github/scripts/toggle-runner.py status
+.github/scripts/toggle-runner.py pi          # RUNNER_GENERIC → omv build
+.github/scripts/toggle-runner.py hosted      # clear RUNNER_GENERIC
+.github/scripts/toggle-runner.py x64-legion  # RUNNER_X64 → Legion WSL
+.github/scripts/toggle-runner.py x64-hosted  # clear RUNNER_X64
 ```
 
 ### GitHub UI
@@ -99,7 +99,7 @@ Default remains GitHub-hosted. Set `RUNNER_X64` only when Legion WSL is online.
   Cloudflare Access SSO on `appflowy.cloudless.gr` (broke Aug-17, six
   consecutive Monday failures).
 - `omv-security-updates.yml` — `[self-hosted, omv, pi]`; runs
-  `scripts/omv-security-update.sh` directly with sudo. Hosted tailnet+SSH
+  `scripts/omv-security-update.py` directly with sudo. Hosted tailnet+SSH
   path failed six consecutive Mondays (tailscale/github-action#266).
 - `deploy-postiz-ai-proxy.yml` — `[self-hosted, omv, pi]`; deploy token is a
   narrow Workers-Scripts-Write-only token in the `cloudflare-deploy-token`
@@ -121,7 +121,7 @@ Default remains GitHub-hosted. Set `RUNNER_X64` only when Legion WSL is online.
 load/iowait high, downloads from R2, BUILD_ID-gates, flips symlink, restarts app.
 
 Worker: [`workers/pi-deploy-orchestrator/`](../../workers/pi-deploy-orchestrator/).
-Install: `sudo bash infrastructure/omv/install-pi-release-pull.sh`.
+Install: `sudo python3 infrastructure/omv/install-pi-release-pull.py`.
 
 Repo variable: `PI_DEPLOY_ORCHESTRATOR_URL`. Secrets: `DEPLOY_ORCHESTRATOR_TOKEN`,
 `CF_ACCOUNT_ID`, `CF_R2_ACCESS_KEY_ID`, `CF_R2_SECRET_ACCESS_KEY`.
@@ -133,7 +133,7 @@ Repo variable: `PI_DEPLOY_ORCHESTRATOR_URL`. Secrets: `DEPLOY_ORCHESTRATOR_TOKEN
 ### Legacy (retired)
 
 SSH/rsync via omv-ha deploy runner is retired. Do not restore on the happy
-path. `scripts/pi-rollout-from-artifact.sh` remains for emergency manual use.
+path. `scripts/pi-rollout-from-artifact.py` remains for emergency manual use.
 
 ## omv timers (ops checklist — no new CI server)
 
@@ -159,13 +159,13 @@ Manual runner heal:
 ```bash
 sudo systemctl restart 'actions.runner.*'
 # or
-sudo /usr/local/sbin/gha-runner-heal.sh --boot
+sudo /usr/local/sbin/gha-runner-heal.py --boot
 ```
 
 Install heal on omv (and omv-ha if it still hosts a runner):
 
 ```bash
-sudo bash infrastructure/omv/install-gha-runner-heal.sh
+sudo python3 infrastructure/omv/install-gha-runner-heal.py
 ```
 
 ## Legion WSL runner (x64 browser failover)
@@ -219,9 +219,9 @@ as current when you install; bump on upgrade.
 ### Fail over browser suites
 
 ```bash
-.github/scripts/toggle-runner.sh x64-legion   # when Legion is Idle in GH UI
+.github/scripts/toggle-runner.py x64-legion   # when Legion is Idle in GH UI
 # … re-run failed LH / e2e / a11y …
-.github/scripts/toggle-runner.sh x64-hosted   # restore default
+.github/scripts/toggle-runner.py x64-hosted   # restore default
 ```
 
 Install Chrome/Playwright deps in WSL before the first run
@@ -233,7 +233,7 @@ Existing runner (`~/actions-runner`, labels `omv,pi`) stays. Optional second
 profile (`~/actions-runner-build`, labels `omv,build`) for Docker/image work:
 
 ```bash
-./.github/scripts/register-build-runner.sh <REG_TOKEN> omv-build
+./.github/scripts/register-build-runner.py <REG_TOKEN> omv-build
 ```
 
 | Labels | Purpose | Workflows |
@@ -255,7 +255,7 @@ park work on omv: `nice`, cgroup CPU limits, lower `max-parallel`.
 
 | Surface | Config | Command / trigger |
 | ------- | ------ | ----------------- |
-| **Lab (local)** | [`lighthouserc.local.cjs`](../../lighthouserc.local.cjs) | `pnpm lighthouse:audit` → [`scripts/lighthouse-local.sh`](../../scripts/lighthouse-local.sh) |
+| **Lab (local)** | [`lighthouserc.local.cjs`](../../lighthouserc.local.cjs) | `pnpm lighthouse:audit` → [`scripts/lighthouse-local.py`](../../scripts/lighthouse-local.py) |
 | **CI (post-deploy)** | [`.github/lighthouserc.cjs`](../../.github/lighthouserc.cjs) + budget | `lighthouse.yml` after successful Deploy to Pi (+ daily cron / `workflow_dispatch`) |
 
 Lab audits hit whatever URL you pass (often production or local). CI uses the

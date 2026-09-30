@@ -62,7 +62,7 @@ entered. Two things must hold for delivery:
 - The address you enter MUST be allowed by an Access policy (the include rule).
 - If that address is `@cloudless.gr` (e.g. `tbaltzakis@cloudless.gr`), the
   mailbox must actually exist & be able to receive mail — see
-  `scripts/configure-email-routing.sh` to configure Email Routing and verify the
+  `scripts/configure-email-routing.py` to configure Email Routing and verify the
   destination address. If the inbox is elsewhere (e.g. Gmail), just enter that
   address and ensure it's listed in the policy include rules.
 
@@ -141,5 +141,5 @@ No changes needed to `/etc/cloudflared/config.yml` on omv nodes for Access.
 2. **Confirm the app has `allowed_idps`** pointing at that IdP.
 3. **Confirm the policy includes your email address** in its include rules.
 4. **Verify the destination inbox can receive mail** — check spam, and that
-   Email Routing destination is verified (`scripts/configure-email-routing.sh`).
+   Email Routing destination is verified (`scripts/configure-email-routing.py`).
 5. **Check Cloudflare audit logs** — Zero Trust → Logs → Access for the attempted login.

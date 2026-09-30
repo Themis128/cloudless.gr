@@ -48,7 +48,7 @@ a broken path. Fixed:
 - `sst.config.ts` (Lambda) — env now sets `NEXT_PUBLIC_COGNITO_USER_POOL_ID`,
   `NEXT_PUBLIC_COGNITO_DOMAIN`, `COGNITO_USER_POOL_ID` inline; `NEXT_PUBLIC_COGNITO_CLIENT_ID`
   from `process.env`; `COGNITO_CLIENT_ID` / `COGNITO_CLIENT_SECRET` from SSM at runtime.
-- `scripts/lambda-env-audit.sh`, `scripts/dev-server-restart.sh` — Cognito keys.
+- `scripts/lambda-env-audit.sh`, `scripts/dev-server-restart.py` — Cognito keys.
 
 **Still blocked on infra below** — the pipeline now wires the values, but the values
 (GitHub secrets + SSM params) must exist for login to actually work.
