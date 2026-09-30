@@ -1,5 +1,9 @@
 name: Deploy Cloudflare Worker
 
+# Legacy R2 static-upload helper. Worker script deploy is retired (stub
+# wrangler-cloudflare-free.json); production Workers go through
+# cloudflare-deploy.yml.
+
 on:
   workflow_dispatch:
   push:
@@ -67,16 +71,17 @@ jobs:
 
         echo "✅ Assets uploaded to R2"
 
+    # wrangler-cloudflare-free.json is a stub since #1567 ("Use wrangler.jsonc
+    # / workers/pi-origin-proxy"). Deploying the old cloudless-gr-free Worker
+    # with custom_domain routes would collide with cloudless2 — see
+    # docs/cloudflare/CLOUDFLARE.md. Canonical free-plan deploy:
+    # .github/workflows/cloudflare-deploy.yml
     - name: Deploy Worker
-      uses: cloudflare/wrangler-action@v4
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CF_ACCOUNT_ID }}
-        command: deploy -c wrangler-cloudflare-free.json
-        # pnpm workspace root rejects `pnpm add wrangler@…` (ERR_PNPM_ADDING_TO_ROOT).
-        # Match deploy-espocrm-fanout.yml (#2018): npm + pin to workspace wrangler.
-        packageManager: npm
-        wranglerVersion: "4.141.0"
+      run: |
+        set -euo pipefail
+        echo "::notice::Skipping legacy wrangler-cloudflare-free.json deploy (stub; no Worker entry-point)."
+        echo "Canonical path: cloudflare-deploy.yml (cloudless2 / pi-origin-proxy)."
+        echo "R2 asset upload above remains available for static objects."
 
     - name: Validate Cloudflare account ID secret
       if: always()
