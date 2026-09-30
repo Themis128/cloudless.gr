@@ -1856,8 +1856,8 @@ server.tool(
   "tf_doctor",
   "Diagnose and (optionally) fix a stuck Terraform CI workflow. Pulls the most-recent failed run for the named workflow, classifies the error against the terraform-doctor skill's known patterns (openpgp expired, fmt drift, validate schema drift, plan precondition), and runs terraform locally on omv-main to verify. Pass apply_fmt=true to write the fmt result back. Read-only otherwise.",
   {
-    workflow: z.string().describe("Workflow filename, e.g. 'deploy-infrastructure.yml'"),
-    tf_dir: z.string().describe("Terraform directory relative to repo root, e.g. 'infrastructure/terraform'"),
+    workflow: z.string().describe("Workflow filename of the failing Terraform CI run"),
+    tf_dir: z.string().describe("Terraform directory relative to repo root, e.g. 'infrastructure/cloudflare-access'"),
     apply_fmt: z.boolean().optional().describe("If true, write `terraform fmt` result to the .tf files. Default false."),
   },
   async ({ workflow, tf_dir, apply_fmt }) => {
@@ -1904,7 +1904,7 @@ server.tool(
         `## Last failure log\n\`\`\`\n${log}\n\`\`\`\n\n` +
         `## Local verification (terraform ${tfVer}${apply ? ", fmt applied" : ", fmt check only"})\n\`\`\`\n${verify}\n\`\`\`\n\n` +
         `## Next steps\n` +
-        `Consult skills/terraform-doctor/SKILL.md for the matching stage. If "validate_schema_drift", scripts/tf-validate-fix.py covers the common AWS 5.x patterns.\n`
+        `Consult skills/terraform-doctor/SKILL.md for the matching stage. If "validate_schema_drift", the AWS-era scripts/tf-validate-fix.py was retired with the AWS stack.\n`
       );
     } catch (e) { return err(e); }
   }
