@@ -41,7 +41,11 @@ channel = ssm("/cloudless/production/NEWSLETTER_SLACK_CHANNEL_ID")
 print(f"token len: {len(token)}  secret len: {len(secret)}  channel: {channel}")
 
 script = Path("scripts/slack-app-doctor.py")
-cmd = [sys.executable, str(script)] if script.exists() else [sys.executable, "scripts/slack-app-doctor.py"]
+cmd = (
+    [sys.executable, str(script)]
+    if script.exists()
+    else [sys.executable, "scripts/slack-app-doctor.py"]
+)
 r = subprocess.run(
     [
         *cmd,
