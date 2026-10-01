@@ -184,7 +184,9 @@ def main() -> None:
     steps.append(("R14 Sentry check", ["python3", "scripts/check_r14_sentry_env_tagging.py"]))
 
     if (REPO_ROOT / "scripts/check_app_completion_basics.py").exists():
-        steps.append(("app completion basics", ["python3", "scripts/check_app_completion_basics.py"]))
+        steps.append(
+            ("app completion basics", ["python3", "scripts/check_app_completion_basics.py"])
+        )
 
     started_all = time.monotonic()
     results: list[tuple[str, int, list[str]]] = []
