@@ -26,19 +26,19 @@ required_handlers = [
     "langsmith-endpoint",
 ]
 
-text = Path("scripts/ai.sh").read_text()
+text = Path("scripts/ai.py").read_text()
 
 missing = []
 
 for handler in required_handlers:
-    needle = f"  {handler})"
+    needle = f'"{handler}"'
     if needle not in text:
         missing.append(handler)
 
 if missing:
-    print("Missing ai.sh handlers:")
+    print("Missing ai.py handlers:")
     for item in missing:
         print(f"- {item}")
     raise SystemExit(1)
 
-print("ai.sh dispatcher handlers OK")
+print("ai.py dispatcher handlers OK")

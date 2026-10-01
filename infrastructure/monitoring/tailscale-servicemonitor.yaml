@@ -1,5 +1,5 @@
 # Scrape Tailscale client metrics from host exporters on :9102.
-# Install exporters: bash infrastructure/monitoring/host-fabric-metrics/install.sh
+# Install exporters: python3 infrastructure/monitoring/host-fabric-metrics/install.py
 apiVersion: v1
 kind: Service
 metadata:

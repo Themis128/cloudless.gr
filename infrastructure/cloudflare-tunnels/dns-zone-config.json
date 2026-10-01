@@ -16,8 +16,8 @@
         "nosniff": true
       }
     },
-    "apply": "bash scripts/cf-zone-tls-harden.sh",
-    "check": "bash scripts/cf-zone-tls-harden.sh --check"
+    "apply": "python3 scripts/cf-zone-tls-harden.py",
+    "check": "python3 scripts/cf-zone-tls-harden.py --check"
   },
   "waf": {
     "security_level": "medium",
@@ -30,8 +30,8 @@
       "required_token_permission": "Zone → Firewall Services → Read (+ Edit to manage rulesets)",
       "current_token_gap": "CLOUDFLARE_API_TOKEN returns Authentication error on /zones/:id/rulesets until token is rotated with Firewall Services scope"
     },
-    "apply": "bash scripts/cf-zone-waf-harden.sh",
-    "check": "bash scripts/cf-zone-waf-harden.sh --check"
+    "apply": "python3 scripts/cf-zone-waf-harden.py",
+    "check": "python3 scripts/cf-zone-waf-harden.py --check"
   },
   "dns_records": [
     {

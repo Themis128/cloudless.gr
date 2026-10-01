@@ -138,7 +138,7 @@ def build_plan(proposal_path: Path) -> str:
                 "- Verify client/browser uses `process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT`.",
                 "- Verify AWS deploy sets `SENTRY_ENVIRONMENT: prod` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod`.",
                 "- Verify Pi deploy/build workflows set `SENTRY_ENVIRONMENT=pi-standby` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby`.",
-                "- Run `bash scripts/check_r14_sentry_env_tagging.sh`.",
+                "- Run `python3 scripts/check_r14_sentry_env_tagging.py`.",
             ]
         )
     elif "langsmith" in request_lc and "auth" in request_lc:

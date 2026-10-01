@@ -18,9 +18,9 @@ def troubleshoot_r21() -> int:
     print()
 
     commands = [
-        ["bash", "scripts/check_r21_search_baseline.sh"],
-        ["bash", "scripts/check_r21_meilisearch_k3s_storage.sh"],
-        ["bash", "scripts/check_r21_meilisearch_live_readiness.sh"],
+        ["python3", "scripts/check_r21_search_baseline.py"],
+        ["python3", "scripts/check_r21_meilisearch_k3s_storage.py"],
+        ["python3", "scripts/check_r21_meilisearch_live_readiness.py"],
         [
             "pnpm",
             "vitest",

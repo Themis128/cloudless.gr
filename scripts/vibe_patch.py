@@ -33,7 +33,7 @@ def infer_relevant_files(request):
     if "dispatcher" in request_lc or "ai.sh" in request_lc:
         files.extend(
             [
-                "scripts/ai.sh",
+                "scripts/ai.py",
                 "scripts/check_ai_dispatcher.py",
             ]
         )
@@ -66,7 +66,7 @@ def infer_relevant_files(request):
                 ".github/workflows/cloudflare-deploy.yml",
                 ".github/workflows/deploy-pi.yml",
                 ".github/workflows/build-pi-image.yml",
-                "scripts/check_r14_sentry_env_tagging.sh",
+                "scripts/check_r14_sentry_env_tagging.py",
                 "__tests__/r14-sentry-env-tagging.test.ts",
             ]
         )
@@ -105,7 +105,7 @@ def infer_relevant_files(request):
             [
                 "docs/cloudless-agent-profile.md",
                 "agents/cloudless_deep_agent.py",
-                "scripts/ai.sh",
+                "scripts/ai.py",
             ]
         )
 

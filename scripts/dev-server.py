@@ -281,7 +281,7 @@ def ensure_local_d1() -> bool:
     cmd = (
         [sys.executable, str(script)]
         if script.exists()
-        else ["bash", str(ROOT / "scripts/ensure-local-d1.sh")]
+        else ["python3", str(ROOT / "scripts/ensure-local-d1.py")]
     )
     if subprocess.call(cmd) != 0:
         log("local D1 migrate failed — AUTH_DB will be unbound")

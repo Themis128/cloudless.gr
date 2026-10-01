@@ -19,9 +19,9 @@ print("== DDNS update auth check ==")
 print(f"Node: {node}\n")
 
 c.expect(
-    c.exists("infrastructure/omv/ddns-update-auth.sh"),
+    c.exists("infrastructure/omv/ddns-update-auth.py"),
     "tracked DDNS script exists",
-    "tracked DDNS script missing: infrastructure/omv/ddns-update-auth.sh",
+    "tracked DDNS script missing: infrastructure/omv/ddns-update-auth.py",
 )
 c.expect(
     c.exists("infrastructure/omv/ddns-update-auth.env.example"),

@@ -195,7 +195,7 @@ All DNS records are now correctly configured and working.
 ## ☁️ AWS → CLOUDFLARE MIGRATION (COMPLETE)
 
 ### Phase 1: Secrets Migration (SSM → Workers) - ✅ COMPLETE
-- [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
+- [x] Created scripts/save-secrets-to-cloudflare.py for secret migration
 - [x] Migrate ADMIN_ALERT_SECRET to Workers secret (463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
 - [x] Migrate SLACK_WEBHOOK_URL to Workers secret (2026-07-19)
 - [x] Migrate POSTIZ_API_KEY to Workers secret (2026-07-19)

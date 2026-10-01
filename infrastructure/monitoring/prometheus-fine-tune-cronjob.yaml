@@ -8,7 +8,7 @@
 #   1. Patch Prometheus CR: scrapeInterval + evaluationInterval = 60s
 #      (was 30s; halves scrape/eval load on a home cluster).
 #   2. Delete heavy apiserver SLO PrometheusRules — same set
-#      `scripts/prometheus-tune.sh` targets; see that file's header
+#      `scripts/prometheus-tune.py` targets; see that file's header
 #      for why (multi-day rate() queries exceed rule-eval timeout).
 #
 # Failure alerts: writes any change or error to stdout (visible via

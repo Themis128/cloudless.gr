@@ -11,7 +11,7 @@ def test_vibe_patch_infers_r14_sentry_files():
     assert "sentry.server.config.ts" in files
     assert ".github/workflows/cloudflare-deploy.yml" in files
     assert ".github/workflows/deploy-pi.yml" in files
-    assert "scripts/check_r14_sentry_env_tagging.sh" in files
+    assert "scripts/check_r14_sentry_env_tagging.py" in files
 
 
 def test_vibe_plan_includes_r14_sentry_steps(tmp_path, monkeypatch):
@@ -50,7 +50,7 @@ def test_vibe_plan_includes_r14_sentry_steps(tmp_path, monkeypatch):
                 "",
                 "## Tests to run",
                 "",
-                "- bash scripts/check_r14_sentry_env_tagging.sh",
+                "- bash scripts/check_r14_sentry_env_tagging.py",
                 "",
                 "## Rollback plan",
                 "",
@@ -69,4 +69,4 @@ def test_vibe_plan_includes_r14_sentry_steps(tmp_path, monkeypatch):
 
     assert "process.env.SENTRY_ENVIRONMENT" in plan
     assert "NEXT_PUBLIC_SENTRY_ENVIRONMENT" in plan
-    assert "bash scripts/check_r14_sentry_env_tagging.sh" in plan
+    assert "bash scripts/check_r14_sentry_env_tagging.py" in plan

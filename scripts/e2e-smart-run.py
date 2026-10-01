@@ -80,7 +80,7 @@ elif MODE == "deep-triage":
     triage = ROOT / "scripts/e2e-deep-triage.py"
     if triage.exists():
         sys.exit(subprocess.call([sys.executable, str(triage)]))
-    sys.exit(subprocess.call(["bash", "scripts/e2e-deep-triage.sh"]))
+    sys.exit(subprocess.call([sys.executable, "scripts/e2e-deep-triage.py"]))
 
 else:
     sys.exit(f"Usage: {sys.argv[0]} {{smoke|full|k3s|k3s-smoke|prod|deep-triage}}")
