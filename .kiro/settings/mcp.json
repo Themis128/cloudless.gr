@@ -30,21 +30,6 @@
         "write"
       ]
     },
-    "notion": {
-      "command": "npx",
-      "args": [
-        "--no-install",
-        "@notionhq/notion-mcp-server"
-      ],
-      "env": {
-        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
-      },
-      "autoStart": true,
-      "autoApprove": [
-        "search_pages",
-        "get_block"
-      ]
-    },
     "cloudflare": {
       "url": "https://mcp.cloudflare.com/mcp",
       "env": {

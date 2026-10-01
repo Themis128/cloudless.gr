@@ -11,13 +11,15 @@ This workspace supports the MCP Manager Bridge VS Code extension, allowing VS Co
 
 ## Supported servers in this workspace
 
-The canonical config is `mcp.json`. The files `.mcp.json` and `project.mcp.json` are symlinks to it, so all consumers read the same configuration.
+The MCP configs live at `.cursor/rules/mcp.json` and `.kiro/settings/mcp.json` (per-tool consumers read their own file).
 
 Configured servers:
 
 - `project` — launches `project-mcp`
 - `mcp-tool-shop` — launches `mcp-tool-shop`
-- `notion` — launches `@notionhq/notion-mcp-server` (official Notion MCP); reads `NOTION_API_KEY` from the environment via `OPENAPI_MCP_HEADERS`
+- `cloudflare-worker` / `cloudflare` — Cloudflare Workers + platform ops
+
+> The `notion` server entry was removed 2026-11-21 — the Notion workspace was decommissioned (CMS is AppFlowy now).
 
 ## Setup
 

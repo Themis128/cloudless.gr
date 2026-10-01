@@ -11,12 +11,12 @@
 | Resource name | `docs-server` |
 | Hostname / DNS | docs.cloudless.gr (tunnel → NodePort 30901) |
 | Ports | NodePort 30901 |
-| Role | Standalone docs portal host (separate from Notion/AppFlowy CMS). |
+| Role | Standalone docs portal host (separate from the AppFlowy CMS). |
 
 ## How cloudless.gr uses it
 
 Public docs hostname via Cloudflare Tunnel. Product `/[locale]/docs` in Next
-may still use AppFlowy/Notion APIs; this pod is the tunnel target for
+may still use AppFlowy APIs; this pod is the tunnel target for
 `docs.cloudless.gr` when that ingress is enabled.
 
 ## Key files
