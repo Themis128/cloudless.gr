@@ -4,6 +4,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
+  # NOTE: keep this file changing when the chain goes silent — GitHub's workflow
+  # registry can lose the workflow_run listener mapping (stopped firing 2026-08-13
+  # after deploy-pi was renamed); any edit on main forces re-registration.
   workflow_run:
     # Production edge ships via deploy-pi (R2 → CF Workflow → omv pull), not the
     # legacy OpenNext/Workers workflow name.
