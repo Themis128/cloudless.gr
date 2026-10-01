@@ -1,4 +1,6 @@
-# Auth (Cognito)
+# Auth (Cognito) — RETIRED
+
+> **Historical.** Auth migrated to Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies) — Cognito and these docs describe the old AWS stack. For current admin promotion use `POST /api/admin/users` `{action:"promote",username}`.
 
 | Doc | File |
 |-----|------|

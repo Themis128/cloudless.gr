@@ -1,4 +1,6 @@
-# Notion integration re-share runbook
+# Notion integration re-share runbook — RETIRED
+
+> **Historical.** Notion was decommissioned in favour of self-hosted AppFlowy on omv k3s (`src/lib/appflowy-*.ts`). This runbook applied to the old Notion-backed content DBs and is kept for reference only.
 
 **Problem:** `case-studies`, `testimonials`, `services`, and `FAQs` Notion DBs
 return `object_not_found` from the Notion API. Calls hit

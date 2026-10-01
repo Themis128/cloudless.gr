@@ -14,7 +14,7 @@ production edge in `.cursor/rules/cloudless2-pi-proxy.mdc`
 | [ai/](ai/) | Workers AI, agents, analytics orchestration |
 | [archive/](archive/) | Historical / superseded docs |
 | [agentic-migration/](agentic-migration/) | Claude Desktop / agentic tooling migration |
-| [auth/](auth/) | Cognito setup and automation |
+| [auth/](auth/) | **Historical** — Cognito setup/automation (retired; live auth is D1) |
 | [aws/](aws/) | Legacy AWS (IAM, SES, cost, credentials) |
 | [cloudflare/](cloudflare/) | Cloudflare platform, Workers, R2, AWS→CF migration |
 | [cluster/](cluster/) | Pi / k3s / OMV / Tailscale / in-cluster monitoring |
@@ -22,7 +22,7 @@ production edge in `.cursor/rules/cloudless2-pi-proxy.mdc`
 | [databases/](databases/) | DB landscape, ADR, omv inventory |
 | [deploy/](deploy/) | CI/CD, runners, Pi deploy, rollback |
 | [dev/](dev/) | Local developer tooling |
-| [integrations/](integrations/) | Stripe, Slack, Notion, GSC, Sentry, CRM, … |
+| [integrations/](integrations/) | Stripe, Slack, GSC, Sentry, EspoCRM, … (Notion/HubSpot retired) |
 | [marketing/](marketing/) | Campaigns, LinkedIn, Meta, Agency Hub |
 | [mcp/](mcp/) | MCP rules and bridges |
 | [performance/](performance/) | Lighthouse / CWV |
