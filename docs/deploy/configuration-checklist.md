@@ -75,7 +75,7 @@ Steps:
    - cloudless.gr/api/health
    - Each self-hosted app health endpoint
    - Each Pi node
-   - Stripe/Cognito surface checks
+   - Stripe/D1-auth surface checks
 3. Wire to ntfy + Slack channels (Settings → Notifications)
 
 ### 3. ESP32 Notion Page Restore

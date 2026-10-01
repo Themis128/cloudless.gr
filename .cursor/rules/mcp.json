@@ -14,14 +14,6 @@
       ],
       "description": "Utility toolbox for various MCP helpers."
     },
-    "notion": {
-      "module": "@notionhq/notion-mcp-server",
-      "arguments": {
-        "token": "{{ .Env.NOTION_TOKEN }}",
-        "spaceId": "default"
-      },
-      "description": "Direct access to the project's Notion workspace."
-    },
     "cloudflare-worker": {
       "command": "wrangler",
       "args": [

@@ -466,7 +466,7 @@ src/app/[locale]/admin/campaigns/x/page.tsx
 
 **Implemented:** `src/lib/content-calendar.ts` (in-memory CRUD store), API routes at `/api/admin/calendar/` (GET), `/api/admin/calendar/create/` (POST), `/api/admin/calendar/[id]/` (PATCH/DELETE), `src/app/[locale]/admin/calendar/page.tsx` (month grid with click-to-add modal). Supports types: `social_post`, `email_campaign`, `blog_post`, `consultation`, `ad_campaign`.
 
-**Note:** The in-memory store resets on server restart. For persistence, connect `content-calendar.ts` to a database or Notion.
+**Note:** The in-memory store resets on server restart. For persistence, connect `content-calendar.ts` to D1 or AppFlowy.
 
 ### Original plan
 
@@ -488,7 +488,7 @@ src/app/[locale]/admin/calendar/
 |---|---|---|
 | Social posts | Meta / LinkedIn / TikTok / X schedule | Platform colour |
 | Email campaigns | ActiveCampaign scheduled sends | Purple |
-| Blog posts | Notion Blog DB publish dates | Cyan |
+| Blog posts | AppFlowy blog publish dates | Cyan |
 | Consultations | Google Calendar bookings | Green |
 | Ad campaigns | Start/end dates from all ad platforms | Orange |
 
@@ -527,7 +527,7 @@ src/app/[locale]/admin/reports/
 3. **Paid Social** — Meta / LinkedIn / TikTok / X: impressions, clicks, conversions, ROAS
 4. **Email Marketing** — ActiveCampaign: sent, open rate, click rate, unsubscribes
 5. **Lead Pipeline** — EspoCRM: new leads, qualified, proposals, closed won, conversion rate
-6. **Website Analytics** — Notion Analytics: page views, form submits, store visits
+6. **Website Analytics** — AppFlowy analytics: page views, form submits, store visits
 
 **Report generation flow:**
 
