@@ -83,7 +83,7 @@ Last verified against the codebase: 2026-11-21.
 | One dashboard for the whole business    | `/admin` command center: action queue, quick actions, live KPIs, complete grouped navigation                      | live                                        |
 | Weekly business digest in Slack         | Cron `owner-digest`: new leads, content published, reviews pending, open payments, at-risk clients                | live, scheduled Mondays 06:00 UTC           |
 | Cross-source KPI view                   | `/admin/kpi` (GSC + AppFlowy analytics + projects + tasks), `/admin/analytics/unified` (SEO/revenue/pipeline/email) | live                                        |
-| Track site analytics                    | `/admin/appflowy/analytics` event tracking, `/admin/analytics/web`                                                  | live                                        |
+| Track site analytics                    | `/admin/appflowy/analytics` event tracking, `/admin/analytics` web dashboard                                                  | live                                        |
 | Run A/B tests                           | `/admin/ab-tests`                                                                                                 | live                                        |
 
 ## 7. Owner — website management (CMS)
