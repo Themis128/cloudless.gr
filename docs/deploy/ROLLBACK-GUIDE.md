@@ -1,5 +1,7 @@
 # Cloudflare Free Tier Migration - Rollback Guide
 
+> **Note (2026-11-21):** The AWS-side rollback paths in this document ("Full AWS Rollback", "Restore AWS Services", `pnpm deploy` to AWS, Route 53/CloudFront fallback) are **no longer executable** — the AWS infrastructure was decommissioned and removed. The D1/session-lifecycle diagrams and "what breaks" decision framing remain accurate for the current Cloudflare + Pi architecture. For live rollback procedures see `docs/deploy/README.md`.
+
 ## Architecture Overview
 
 ```mermaid
