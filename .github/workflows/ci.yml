@@ -12,6 +12,9 @@ on:
       - public/**
       - e2e/**
       - __tests__/**
+        # Unit/surface test sources — a tests-only PR must still fire the
+        # required Build/Unit/Lint/Type checks or it stays BLOCKED forever.
+      - tests/**
       - sst.config.cloudflare.ts
       - next.config.ts
       - package.json
