@@ -53,11 +53,13 @@ test.describe("postiz-ai-proxy Worker — model swap", () => {
         Authorization: `Bearer ${PROXY_TOKEN}`,
         "Content-Type": "application/json",
       },
-      // Postiz hardcodes "gpt-4.1" — the Worker must swap it
+      // Postiz hardcodes "gpt-4.1" — the Worker must swap it.
+      // max_tokens must exceed nemotron's reasoning budget (~60) or
+      // content comes back null with finish_reason "length".
       data: {
         model: "gpt-4.1",
         messages: [{ role: "user", content: "Reply with exactly one word: cloud" }],
-        max_tokens: 10,
+        max_tokens: 300,
         temperature: 0,
       },
     });
@@ -96,7 +98,7 @@ test("POST /v1/chat/completions?thinking=1 uses nemotron model and strips reason
     data: {
       model: "gpt-4.1",
       messages: [{ role: "user", content: "Reply with exactly one word: cloud" }],
-      max_tokens: 20,
+      max_tokens: 300,
       temperature: 0.6,
     },
   });
