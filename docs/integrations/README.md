@@ -13,6 +13,6 @@
 | [ACTIVECAMPAIGN.md](ACTIVECAMPAIGN.md) | `integrations/ACTIVECAMPAIGN.md` |
 | [POSTIZ.md](POSTIZ.md) | `integrations/POSTIZ.md` |
 | [NEWSLETTER.md](NEWSLETTER.md) | `integrations/NEWSLETTER.md` |
-| [notion-integration-reshare.md](notion-integration-reshare.md) | `integrations/notion-integration-reshare.md` |
+| [notion-integration-reshare.md](notion-integration-reshare.md) | **Historical** — Notion era; CMS is AppFlowy now. |
 | [stripe-webhook-audit-r22.md](stripe-webhook-audit-r22.md) | `integrations/stripe-webhook-audit-r22.md` |
 | [google-drive-cleanup.md](google-drive-cleanup.md) | `integrations/google-drive-cleanup.md` |
