@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".local" / "db"
 OUT.mkdir(parents=True, exist_ok=True)
 
-# cloudless-auth retired — see scripts/d1-retire-cloudless-auth.sh
+# cloudless-auth retired — see scripts/d1-retire-cloudless-auth.py
 ALL_DBS = ["user-auth-db", "auth-db-preview"]
 
 if not shutil.which("pnpm"):

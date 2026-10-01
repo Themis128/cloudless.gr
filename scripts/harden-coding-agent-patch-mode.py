@@ -20,8 +20,7 @@ ts = time.strftime("%Y%m%d-%H%M%S")
 shutil.copy("src/agents/coding.ts", f"src/agents/coding.ts.bak-strict-patch-{ts}")
 
 review_py = Path("scripts/coding-agent-review-repo.py")
-review_sh = Path("scripts/coding-agent-review-repo.sh")
-review = review_py if review_py.exists() else review_sh
+review = review_py
 shutil.copy(review, f"{review}.bak-strict-patch-{ts}")
 
 # --- coding.ts rules block ---

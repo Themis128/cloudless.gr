@@ -32,12 +32,12 @@ def run_ssh(host: str, cmd: str, stdin_file=None) -> None:
 
 
 print("=== Running diagnostics on omv node ===")
-with open(DIAGNOSE if DIAGNOSE.exists() else ROOT / "scripts/tailscale-diagnose.sh") as f:
-    run_ssh(OMV_HOST, "bash -s" if DIAGNOSE.suffix == ".sh" else "python3 -", f)
+with open(DIAGNOSE) as f:
+    run_ssh(OMV_HOST, "python3 -", f)
 
 print("=== Running diagnostics on omv-ha node ===")
-with open(DIAGNOSE if DIAGNOSE.exists() else ROOT / "scripts/tailscale-diagnose.sh") as f:
-    run_ssh(OMV_HA_HOST, "bash -s" if DIAGNOSE.suffix == ".sh" else "python3 -", f)
+with open(DIAGNOSE) as f:
+    run_ssh(OMV_HA_HOST, "python3 -", f)
 
 print("=== Checking Tailscale status ===")
 run_ssh(OMV_HOST, "tailscale status")

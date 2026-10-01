@@ -23,7 +23,7 @@ tswsl = ROOT / "scripts" / "ts-wsl.py"
 cmd = (
     [sys.executable, str(tswsl), "status"]
     if tswsl.exists()
-    else ["bash", str(ROOT / "scripts/ts-wsl.sh"), "status"]
+    else [sys.executable, str(ROOT / "scripts/ts-wsl.py"), "status"]
 )
 subprocess.run(cmd, capture_output=True)
 

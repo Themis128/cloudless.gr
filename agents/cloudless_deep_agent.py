@@ -121,7 +121,7 @@ def expand_repo_query(question: str) -> str:
     if "sst" in q or "lambda" in q or "aws" in q:
         return f"{question} sst aws lambda infrastructure config"
     if "agent" in q or "deep agent" in q or "langchain" in q:
-        return f"{question} docs/local-ai-deep-agent-structure.md agents/cloudless_deep_agent.py agents/cloudless_deep_agent_smoke.py agents/cloudless_unified_assistant.py agents/cloudless_repo_fast_rag.py agents/langchain_docs_fast_rag.py scripts/ai.sh scripts/check_deepagent_cloudless.py scripts/ingest_repo_docs.py scripts/ingest_langchain_docs_focused.py deepagents langchain local vllm"
+        return f"{question} docs/local-ai-deep-agent-structure.md agents/cloudless_deep_agent.py agents/cloudless_deep_agent_smoke.py agents/cloudless_unified_assistant.py agents/cloudless_repo_fast_rag.py agents/langchain_docs_fast_rag.py scripts/ai.py scripts/check_deepagent_cloudless.py scripts/ingest_repo_docs.py scripts/ingest_langchain_docs_focused.py deepagents langchain local vllm"
     return question
 
 
@@ -335,7 +335,7 @@ Instructions:
   - agents/cloudless_repo_fast_rag.py
   - agents/langchain_docs_fast_rag.py
   - agents/local_qwen_agent.py
-  - scripts/ai.sh
+  - scripts/ai.py
   - scripts/check_deepagent_cloudless.py
   - scripts/ingest_repo_docs.py
   - scripts/ingest_langchain_docs_focused.py

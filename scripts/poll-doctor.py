@@ -16,7 +16,7 @@ for i in range(1, 16):
     cmd = (
         [sys.executable, str(script)]
         if script.exists()
-        else ["bash", str(ROOT / "scripts/linkedin-insight-doctor.sh")]
+        else [sys.executable, str(ROOT / "scripts/linkedin-insight-doctor.py")]
     )
     r = subprocess.run(
         [*cmd, "--slug", "shop-online", "--locale", "el", "--no-color"],

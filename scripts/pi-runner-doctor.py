@@ -108,7 +108,7 @@ if pi_offline > 0 and pi_online == 0:
         if AUTO_FLIP:
             print("  -> Flipping RUNNER_GENERIC to hosted (--auto-flip)...")
             r = subprocess.run(
-                ["bash", ".github/scripts/toggle-runner.sh", "hosted"],
+                [sys.executable, ".github/scripts/toggle-runner.py", "hosted"],
                 capture_output=True,
                 text=True,
             )
@@ -117,7 +117,7 @@ if pi_offline > 0 and pi_online == 0:
             sys.exit(0)
         else:
             print("  -> Run with --auto-flip to flip RUNNER_GENERIC to hosted, OR")
-            print("    run manually: .github/scripts/toggle-runner.sh hosted\n")
+            print("    run manually: .github/scripts/toggle-runner.py hosted\n")
             print("  Then cancel queued runs targeting Pi and re-trigger them.")
             print("  See skills/pi-runner-failover/SKILL.md for the full playbook.")
             sys.exit(2)
@@ -129,7 +129,7 @@ if pi_offline > 0 and pi_online == 0:
 elif pi_online > 0 and rg_mode == "hosted":
     print("  Pi runners are healthy but RUNNER_GENERIC is on hosted.")
     print("      This is fine, but if you want to push load back to Pi:")
-    print("      .github/scripts/toggle-runner.sh pi")
+    print("      .github/scripts/toggle-runner.py pi")
     sys.exit(3)
 else:
     print("  Pi runners healthy. No action needed.")

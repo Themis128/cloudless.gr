@@ -163,12 +163,12 @@ def main() -> None:
             ("Deep Agent readiness", ["pnpm", "run", "ai:check"]),
             ("skills check", ["pnpm", "run", "ai:skills-check"]),
             ("dispatcher check", ["python", "scripts/check_ai_dispatcher.py"]),
-            ("cluster node SSH access", ["bash", "scripts/check_cluster_node_ssh_access.sh"]),
-            ("DDNS auth updater", ["bash", "scripts/check_ddns_update_auth.sh"]),
-            ("R21 search baseline", ["bash", "scripts/check_r21_search_baseline.sh"]),
+            ("cluster node SSH access", ["python3", "scripts/check_cluster_node_ssh_access.py"]),
+            ("DDNS auth updater", ["python3", "scripts/check_ddns_update_auth.py"]),
+            ("R21 search baseline", ["python3", "scripts/check_r21_search_baseline.py"]),
             (
                 "R21 Meilisearch k3s storage",
-                ["bash", "scripts/check_r21_meilisearch_k3s_storage.sh"],
+                ["python3", "scripts/check_r21_meilisearch_k3s_storage.py"],
             ),
         ]
     )
@@ -177,14 +177,14 @@ def main() -> None:
         steps.append(
             (
                 "R21 Meilisearch live readiness",
-                ["bash", "scripts/check_r21_meilisearch_live_readiness.sh"],
+                ["python3", "scripts/check_r21_meilisearch_live_readiness.py"],
             )
         )
 
-    steps.append(("R14 Sentry check", ["bash", "scripts/check_r14_sentry_env_tagging.sh"]))
+    steps.append(("R14 Sentry check", ["python3", "scripts/check_r14_sentry_env_tagging.py"]))
 
-    if (REPO_ROOT / "scripts/check_app_completion_basics.sh").exists():
-        steps.append(("app completion basics", ["bash", "scripts/check_app_completion_basics.sh"]))
+    if (REPO_ROOT / "scripts/check_app_completion_basics.py").exists():
+        steps.append(("app completion basics", ["python3", "scripts/check_app_completion_basics.py"]))
 
     started_all = time.monotonic()
     results: list[tuple[str, int, list[str]]] = []
