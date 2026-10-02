@@ -199,6 +199,7 @@ cloudless.gr/
 ### **Infrastructure & Monitoring**
 
 - **Raspberry Pi k3s cluster** (single-node omv Pi 5)
+- **Self-hosted workspace on omv** (Nextcloud + Collabora + Talk, OMV Compose-managed plain Docker on the 1TB SSD — replaces M365/Google Workspace; see `deploy/omv-workspace/` in cu130-slim)
 - **ESP32 sensor network** with real-time alerts
 - **Cloudflare tunnel** for secure Pi access
 - **Prometheus + Grafana** monitoring stack
