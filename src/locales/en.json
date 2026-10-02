@@ -18,7 +18,8 @@
     "theme": "Theme",
     "themeSystem": "System",
     "themeLight": "Light",
-    "themeDark": "Dark"
+    "themeDark": "Dark",
+    "partners": "Partners"
   },
   "navbar": {
     "cloudless": "Cloudless",
@@ -38,7 +39,12 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
+    "typingTexts": [
+      "Zero friction.",
+      "Full control.",
+      "Pure speed.",
+      "Real results."
+    ],
     "subtitle": "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",
@@ -483,6 +489,10 @@
     "blog": {
       "title": "Blog",
       "description": "Insights on cloud computing, serverless architecture, data analytics, and AI-powered marketing for growing businesses."
+    },
+    "partners": {
+      "title": "Partner with Cloudless — Sponsorships & Brand Deals",
+      "description": "Sponsored content, product walkthroughs, and brand partnerships with an engaged niche audience of founders and engineers. Media kit and formats inside."
     }
   },
   "playbook": {
@@ -511,5 +521,42 @@
       "error": "Something went wrong. Please try again.",
       "downloadDirect": "Download the PDF"
     }
+  },
+  "partners": {
+    "title": "Put your product in front of builders.",
+    "subtitle": "Cloudless builds in public: cloud architecture, self-hosted stacks, and AI marketing — documented honestly for an audience of founders and engineers who actually ship. If your tool belongs in that story, let's talk.",
+    "ctaHero": "Start a partnership inquiry",
+    "statsTitle": "Small audience. Serious engagement.",
+    "statsSubtitle": "We optimize for depth, not reach. Numbers below are 30-day figures pulled from our own analytics pipeline — refreshed, not estimated.",
+    "statErValue": "~19%",
+    "statErLabel": "avg. LinkedIn engagement rate",
+    "statErNote": "vs. ~2% platform average",
+    "statPostsValue": "100+",
+    "statPostsLabel": "posts / month, 6 platforms",
+    "statPostsNote": "LinkedIn · IG · FB · Threads · TikTok · X",
+    "statCtrValue": "4.15%",
+    "statCtrLabel": "CTR on our own paid test",
+    "statCtrNote": "9x the LinkedIn average — see below",
+    "statReachValue": "890+",
+    "statReachLabel": "LinkedIn followers & growing",
+    "statReachNote": "founders, engineers, SMB owners",
+    "proofTitle": "We ran the experiment on ourselves first.",
+    "proofBody1": "Before asking anyone to sponsor our content, we spent our own money proving the format works. A €100 LinkedIn promotion of a single carousel returned a 4.15% click-through rate — nine times the platform average — and drove qualified traffic to cloudless.gr.",
+    "proofBody2": "We published the full breakdown — budget, targeting, creative, results — as a case study, because that's what we do for partners too: show the work, report real numbers.",
+    "formatsTitle": "Ways to work together",
+    "formatSponsoredTitle": "Sponsored post or carousel",
+    "formatSponsoredBody": "A dedicated LinkedIn post or multi-slide carousel in our signature engineering case-study format. Your product appears where it naturally fits the story — real usage, real numbers.",
+    "formatWalkthroughTitle": "Product walkthrough",
+    "formatWalkthroughBody": "A hands-on demo of your tool: we build something real with it and document the result across LinkedIn and the blog. Readers see the product working, not a screenshot.",
+    "formatCobrandTitle": "Co-branded content",
+    "formatCobrandBody": "Joint webinars, data studies, or technical guides published under both brands. Best for tools our audience would genuinely evaluate.",
+    "formatAmbassadorTitle": "Ambassador retainer",
+    "formatAmbassadorBody": "Ongoing monthly collaboration: recurring mentions, content integration, and feedback loops. For products we already use and can vouch for long-term.",
+    "audienceTitle": "Who reads this",
+    "audience1": "Founders and SMB owners evaluating cloud, automation, and AI tooling",
+    "audience2": "Engineers and technical decision-makers who follow build-in-public content",
+    "audience3": "Greece-first with EU reach — the audience our paid test already proved converts",
+    "fitTitle": "Honest fit check",
+    "fitBody": "We're a growing niche account, not a reach machine — and we won't pretend otherwise. If you need a million impressions, we're not it. If you need a credible voice telling an engaged technical audience that your product actually works, that's the deal on the table. Every sponsored piece is clearly disclosed."
   }
 }

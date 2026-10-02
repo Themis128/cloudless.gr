@@ -20,6 +20,7 @@ const serviceOptions = [
   "Data Analytics & Dashboards",
   "AI & Digital Marketing",
   "Full-Stack Growth Engine (Bundle)",
+  "Brand Partnership / Sponsorship",
   "Not sure yet — let's discuss",
 ];
 
