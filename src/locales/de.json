@@ -18,7 +18,8 @@
     "theme": "Theme",
     "themeSystem": "System",
     "themeLight": "Hell",
-    "themeDark": "Dunkel"
+    "themeDark": "Dunkel",
+    "partners": "Partnerschaften"
   },
   "navbar": {
     "cloudless": "Cloudless",
@@ -488,6 +489,10 @@
     "blog": {
       "title": "Blog",
       "description": "Einblicke in Cloud Computing, Serverless-Architektur, Datenanalyse und KI-gestütztes Marketing für wachsende Unternehmen."
+    },
+    "partners": {
+      "title": "Partnerschaft mit Cloudless — Sponsoring & Brand Deals",
+      "description": "Gesponserter Content, Produkt-Walkthroughs und Markenpartnerschaften mit einem engagierten Nischenpublikum aus Gründern und Ingenieuren. Media Kit inklusive."
     }
   },
   "playbook": {
@@ -516,5 +521,42 @@
       "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "downloadDirect": "PDF herunterladen"
     }
+  },
+  "partners": {
+    "title": "Bringen Sie Ihr Produkt vor Builders.",
+    "subtitle": "Cloudless baut öffentlich: Cloud-Architektur, Self-Hosted-Stacks und KI-Marketing — ehrlich dokumentiert für ein Publikum aus Gründern und Ingenieuren, die wirklich liefern. Wenn Ihr Tool in diese Geschichte passt, sprechen wir.",
+    "ctaHero": "Partnerschaftsanfrage starten",
+    "statsTitle": "Kleines Publikum. Ernsthaftes Engagement.",
+    "statsSubtitle": "Wir optimieren auf Tiefe, nicht auf Reichweite. Die Zahlen unten sind 30-Tage-Werte aus unserer eigenen Analytics-Pipeline — echt, nicht geschätzt.",
+    "statErValue": "~19%",
+    "statErLabel": "Ø LinkedIn-Engagement-Rate",
+    "statErNote": "vs. ~2% Plattformdurchschnitt",
+    "statPostsValue": "100+",
+    "statPostsLabel": "Posts / Monat, 6 Plattformen",
+    "statPostsNote": "LinkedIn · IG · FB · Threads · TikTok · X",
+    "statCtrValue": "4,15%",
+    "statCtrLabel": "CTR in unserem eigenen Paid-Test",
+    "statCtrNote": "9x LinkedIn-Durchschnitt — siehe unten",
+    "statReachValue": "890+",
+    "statReachLabel": "LinkedIn-Follower, wachsend",
+    "statReachNote": "Gründer, Engineers, KMU-Inhaber",
+    "proofTitle": "Wir haben das Experiment zuerst an uns selbst durchgeführt.",
+    "proofBody1": "Bevor wir jemanden baten, unsere Inhalte zu sponsern, haben wir eigenes Geld ausgegeben, um zu beweisen, dass das Format funktioniert. Eine 100-€-LinkedIn-Promotion eines einzelnen Carousels erzielte eine CTR von 4,15 % — das Neunfache des Plattformdurchschnitts — und brachte qualifizierten Traffic auf cloudless.gr.",
+    "proofBody2": "Wir haben die vollständige Aufschlüsselung — Budget, Targeting, Creative, Ergebnisse — als Case Study veröffentlicht, denn genau das tun wir auch für Partner: Arbeit zeigen, echte Zahlen liefern.",
+    "formatsTitle": "Zusammenarbeitsformen",
+    "formatSponsoredTitle": "Gesponserter Post oder Carousel",
+    "formatSponsoredBody": "Ein dedizierter LinkedIn-Post oder ein Multi-Slide-Carousel in unserem typischen Engineering-Case-Study-Format. Ihr Produkt erscheint dort, wo es natürlich zur Geschichte passt — echte Nutzung, echte Zahlen.",
+    "formatWalkthroughTitle": "Produkt-Walkthrough",
+    "formatWalkthroughBody": "Eine Hands-on-Demo Ihres Tools: Wir bauen etwas Reales damit und dokumentieren das Ergebnis auf LinkedIn und im Blog. Leser sehen das Produkt funktionieren, nicht nur einen Screenshot.",
+    "formatCobrandTitle": "Co-branded Content",
+    "formatCobrandBody": "Gemeinsame Webinare, Datenstudien oder technische Guides unter beiden Marken. Ideal für Tools, die unser Publikum tatsächlich evaluieren würde.",
+    "formatAmbassadorTitle": "Ambassador-Retainer",
+    "formatAmbassadorBody": "Laufende monatliche Zusammenarbeit: wiederkehrende Erwähnungen, Content-Integration und Feedback-Loops. Für Produkte, die wir bereits nutzen und langfristig empfehlen können.",
+    "audienceTitle": "Wer das liest",
+    "audience1": "Gründer und KMU-Inhaber, die Cloud-, Automation- und KI-Tools evaluieren",
+    "audience2": "Engineers und technische Entscheider, die Build-in-Public-Content folgen",
+    "audience3": "Griechenland zuerst, EU-Reichweite — das Publikum, dessen Conversion unser Paid-Test bewiesen hat",
+    "fitTitle": "Ehrlicher Fit-Check",
+    "fitBody": "Wir sind ein wachsender Nischen-Account, keine Reichweitenmaschine — und wir tun nicht so, als wären wir es. Wenn Sie eine Million Impressionen brauchen, sind wir es nicht. Wenn Sie eine glaubwürdige Stimme brauchen, die einem engagierten technischen Publikum sagt, dass Ihr Produkt wirklich funktioniert — das ist der Deal. Jeder gesponserte Beitrag ist klar gekennzeichnet."
   }
 }

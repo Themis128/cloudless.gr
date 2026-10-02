@@ -53,6 +53,7 @@ const SERVICE_SLUG: Record<string, string> = {
   "Data Analytics & Dashboards": "analytics",
   "AI & Digital Marketing": "digital-marketing",
   "Full-Stack Growth Engine (Bundle)": "full-bundle",
+  "Brand Partnership / Sponsorship": "brand-partnership",
 };
 
 function jsonError(error: string, status: number): Response {
@@ -227,7 +228,7 @@ async function syncEspoForInbound(input: {
   }
 }
 
-export async function GET() {
+export function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
 }
 

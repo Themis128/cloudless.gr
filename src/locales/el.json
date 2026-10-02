@@ -18,7 +18,8 @@
     "theme": "Θέμα",
     "themeSystem": "Σύστημα",
     "themeLight": "Φωτεινό",
-    "themeDark": "Σκούρο"
+    "themeDark": "Σκούρο",
+    "partners": "Συνεργασίες"
   },
   "navbar": {
     "cloudless": "Cloudless",
@@ -488,6 +489,10 @@
     "blog": {
       "title": "Blog",
       "description": "Άρθρα για cloud computing, serverless αρχιτεκτονική, ανάλυση δεδομένων και AI marketing για αναπτυσσόμενες επιχειρήσεις."
+    },
+    "partners": {
+      "title": "Συνεργασία με την Cloudless — Sponsorships & Brand Deals",
+      "description": "Sponsored περιεχόμενο, product walkthroughs και brand συνεργασίες με engaged niche κοινό founders και engineers. Media kit και formats εδώ."
     }
   },
   "playbook": {
@@ -516,5 +521,42 @@
       "error": "Κάτι πήγε στραβά. Δοκιμάστε ξανά.",
       "downloadDirect": "Λήψη PDF"
     }
+  },
+  "partners": {
+    "title": "Βάλτε το προϊόν σας μπροστά σε builders.",
+    "subtitle": "Η Cloudless χτίζει δημόσια: cloud αρχιτεκτονική, self-hosted stacks και AI marketing — τεκμηριωμένα ειλικρινά για κοινό από founders και engineers που πραγματικά παραδίδουν. Αν το εργαλείο σας ανήκει σε αυτή την ιστορία, ας μιλήσουμε.",
+    "ctaHero": "Ξεκινήστε ένα αίτημα συνεργασίας",
+    "statsTitle": "Μικρό κοινό. Σοβαρή αφοσίωση.",
+    "statsSubtitle": "Βελτιστοποιούμε για βάθος, όχι reach. Τα νούμερα παρακάτω είναι 30ήμερα στοιχεία από το δικό μας analytics pipeline — πραγματικά, όχι εκτιμήσεις.",
+    "statErValue": "~19%",
+    "statErLabel": "μ.ο. engagement rate στο LinkedIn",
+    "statErNote": "έναντι ~2% μέσου όρου πλατφόρμας",
+    "statPostsValue": "100+",
+    "statPostsLabel": "δημοσιεύσεις / μήνα, 6 πλατφόρμες",
+    "statPostsNote": "LinkedIn · IG · FB · Threads · TikTok · X",
+    "statCtrValue": "4.15%",
+    "statCtrLabel": "CTR στη δική μας paid δοκιμή",
+    "statCtrNote": "9x ο μέσος όρος LinkedIn — δείτε παρακάτω",
+    "statReachValue": "890+",
+    "statReachLabel": "ακόλουθοι LinkedIn και αυξάνονται",
+    "statReachNote": "founders, engineers, ιδιοκτήτες ΜΜΕ",
+    "proofTitle": "Κάναμε το πείραμα πρώτα στον εαυτό μας.",
+    "proofBody1": "Πριν ζητήσουμε από κανέναν να χρηματοδοτήσει το περιεχόμενό μας, ξοδέψαμε δικά μας χρήματα αποδεικνύοντας ότι το format δουλεύει. Μια προώθηση €100 στο LinkedIn ενός carousel έφερε 4.15% CTR — εννέα φορές τον μέσο όρο της πλατφόρμας — και οδήγησε qualified traffic στο cloudless.gr.",
+    "proofBody2": "Δημοσιεύσαμε την πλήρη ανάλυση — budget, targeting, creative, αποτελέσματα — ως case study, γιατί αυτό κάνουμε και για τους partners: δείχνουμε τη δουλειά, αναφέρουμε πραγματικά νούμερα.",
+    "formatsTitle": "Τρόποι συνεργασίας",
+    "formatSponsoredTitle": "Sponsored post ή carousel",
+    "formatSponsoredBody": "Ένα αφιερωμένο LinkedIn post ή multi-slide carousel στο χαρακτηριστικό μας engineering case-study format. Το προϊόν σας εμφανίζεται εκεί που ταιριάζει φυσικά στην ιστορία — πραγματική χρήση, πραγματικά νούμερα.",
+    "formatWalkthroughTitle": "Product walkthrough",
+    "formatWalkthroughBody": "Hands-on demo του εργαλείου σας: χτίζουμε κάτι πραγματικό με αυτό και τεκμηριώνουμε το αποτέλεσμα σε LinkedIn και blog. Οι αναγνώστες βλέπουν το προϊόν να δουλεύει, όχι ένα screenshot.",
+    "formatCobrandTitle": "Co-branded περιεχόμενο",
+    "formatCobrandBody": "Κοινά webinars, data studies ή τεχνικοί οδηγοί με και τα δύο brands. Ιδανικό για εργαλεία που το κοινό μας θα αξιολογούσε πραγματικά.",
+    "formatAmbassadorTitle": "Ambassador retainer",
+    "formatAmbassadorBody": "Συνεχής μηνιαία συνεργασία: επαναλαμβανόμενες αναφορές, ενσωμάτωση στο περιεχόμενο και feedback loops. Για προϊόντα που ήδη χρησιμοποιούμε και μπορούμε να εγγυηθούμε μακροπρόθεσμα.",
+    "audienceTitle": "Ποιος διαβάζει",
+    "audience1": "Founders και ιδιοκτήτες ΜΜΕ που αξιολογούν cloud, automation και AI εργαλεία",
+    "audience2": "Engineers και τεχνικοί decision-makers που ακολουθούν build-in-public περιεχόμενο",
+    "audience3": "Πρώτα Ελλάδα με EU reach — το κοινό που το paid test μας απέδειξε ότι μετατρέπει",
+    "fitTitle": "Ειλικρινής έλεγχος fit",
+    "fitBody": "Είμαστε ένα αναπτυσσόμενο niche account, όχι μηχανή reach — και δεν θα προσποιηθούμε το αντίθετο. Αν χρειάζεστε ένα εκατομμύριο impressions, δεν είμαστε εμείς. Αν χρειάζεστε μια αξιόπιστη φωνή να πει σε ένα engaged τεχνικό κοινό ότι το προϊόν σας πραγματικά δουλεύει, αυτή είναι η συμφωνία. Κάθε sponsored κομμάτι δηλώνεται ξεκάθαρα."
   }
 }

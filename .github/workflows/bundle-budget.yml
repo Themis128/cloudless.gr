@@ -43,7 +43,10 @@ jobs:
       #     GFM table rendering; measured 3274KB on PR #1751.
       #   3400KB → 3450KB (2026-09-28): SocialAuto UTM/page_view instrumentation
       #     in the client bundle; measured 3402KB on PR #1989.
-      BUNDLE_MAX_KB: "3450"
+      #   3450KB → 3520KB (2026-10-02): new /partners marketing page route chunk
+      #     (media-kit stats + formats + ContactFormSection reuse);
+      #     measured 3456KB on PR #2048.
+      BUNDLE_MAX_KB: "3520"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
