@@ -39,12 +39,7 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": [
-      "Zero friction.",
-      "Full control.",
-      "Pure speed.",
-      "Real results."
-    ],
+    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
     "subtitle": "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",

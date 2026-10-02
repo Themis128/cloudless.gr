@@ -228,7 +228,7 @@ async function syncEspoForInbound(input: {
   }
 }
 
-export async function GET() {
+export function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
 }
 

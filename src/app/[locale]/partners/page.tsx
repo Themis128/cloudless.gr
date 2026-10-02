@@ -147,7 +147,7 @@ export default async function PartnersPage() {
       {/* Media kit stats */}
       <section className="bg-void dot-matrix py-16 md:py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <p className="mb-3 font-mono text-xs font-medium tracking-[0.3em] text-neon-cyan">
+          <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ MEDIA KIT ]
           </p>
           <h2 className="font-heading mb-2 text-2xl font-bold text-white md:text-3xl">
@@ -162,7 +162,7 @@ export default async function PartnersPage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((s) => (
               <ScrollReveal key={s.label}>
-                <div className="hover:border-neon-cyan/50 rounded-xl border border-slate-800 bg-void-light/50 p-6 transition-colors">
+                <div className="hover:border-neon-cyan/50 bg-void-light/50 rounded-xl border border-slate-800 p-6 transition-colors">
                   <p className="font-heading text-neon-cyan text-3xl font-bold">{s.value}</p>
                   <p className="mt-2 text-sm font-medium text-white">{s.label}</p>
                   <p className="mt-1 text-xs text-slate-500">{s.note}</p>
@@ -179,7 +179,7 @@ export default async function PartnersPage() {
           <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
             <ScrollReveal>
               <div>
-                <p className="mb-3 font-mono text-xs font-medium tracking-[0.3em] text-neon-cyan">
+                <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                   [ PROOF ]
                 </p>
                 <h2 className="font-heading mb-4 text-2xl font-bold text-white md:text-3xl">
@@ -200,14 +200,28 @@ export default async function PartnersPage() {
               </div>
             </ScrollReveal>
             <ScrollReveal>
-              <div className="border-neon-cyan/20 rounded-xl border bg-void p-6 font-mono text-sm">
-                <p className="mb-4 text-xs tracking-widest text-slate-500">$ experiment --summary</p>
+              <div className="border-neon-cyan/20 bg-void rounded-xl border p-6 font-mono text-sm">
+                <p className="mb-4 text-xs tracking-widest text-slate-500">
+                  $ experiment --summary
+                </p>
                 <div className="space-y-2 text-slate-300">
-                  <p><span className="text-slate-500">budget:</span> €100 LinkedIn credit</p>
-                  <p><span className="text-slate-500">format:</span> 6-slide carousel, company page</p>
-                  <p><span className="text-slate-500">ctr:</span> <span className="text-neon-cyan font-bold">4.15%</span> <span className="text-slate-500">(avg ≈ 0.44%)</span></p>
-                  <p><span className="text-slate-500">audience:</span> Greece · founders &amp; owners</p>
-                  <p><span className="text-slate-500">result:</span> qualified traffic → cloudless.gr</p>
+                  <p>
+                    <span className="text-slate-500">budget:</span> €100 LinkedIn credit
+                  </p>
+                  <p>
+                    <span className="text-slate-500">format:</span> 6-slide carousel, company page
+                  </p>
+                  <p>
+                    <span className="text-slate-500">ctr:</span>{" "}
+                    <span className="text-neon-cyan font-bold">4.15%</span>{" "}
+                    <span className="text-slate-500">(avg ≈ 0.44%)</span>
+                  </p>
+                  <p>
+                    <span className="text-slate-500">audience:</span> Greece · founders &amp; owners
+                  </p>
+                  <p>
+                    <span className="text-slate-500">result:</span> qualified traffic → cloudless.gr
+                  </p>
                 </div>
               </div>
             </ScrollReveal>
@@ -218,7 +232,7 @@ export default async function PartnersPage() {
       {/* Formats */}
       <section className="bg-void py-16 md:py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <p className="mb-3 font-mono text-xs font-medium tracking-[0.3em] text-neon-cyan">
+          <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ FORMATS ]
           </p>
           <h2 className="font-heading mb-10 text-2xl font-bold text-white md:text-3xl">
@@ -227,7 +241,7 @@ export default async function PartnersPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {formats.map((f) => (
               <ScrollReveal key={f.title}>
-                <div className="hover:border-neon-cyan/50 h-full rounded-xl border border-slate-800 bg-void-light/50 p-6 transition-colors">
+                <div className="hover:border-neon-cyan/50 bg-void-light/50 h-full rounded-xl border border-slate-800 p-6 transition-colors">
                   <h3 className="font-heading mb-2 text-lg font-bold text-white">{f.title}</h3>
                   <p className="text-sm text-slate-400">{f.body}</p>
                 </div>
@@ -243,21 +257,39 @@ export default async function PartnersPage() {
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
             <ScrollReveal>
               <div>
-                <p className="mb-3 font-mono text-xs font-medium tracking-[0.3em] text-neon-cyan">
+                <p className="text-neon-cyan mb-3 font-mono text-xs font-medium tracking-[0.3em]">
                   [ AUDIENCE ]
                 </p>
                 <h2 className="font-heading mb-4 text-2xl font-bold text-white md:text-3xl">
                   {t("partners.audienceTitle", "Who reads this")}
                 </h2>
                 <ul className="space-y-3 text-slate-400">
-                  <li className="flex gap-3"><span className="text-neon-cyan">→</span>{t("partners.audience1", "Founders and SMB owners evaluating cloud, automation, and AI tooling")}</li>
-                  <li className="flex gap-3"><span className="text-neon-cyan">→</span>{t("partners.audience2", "Engineers and technical decision-makers who follow build-in-public content")}</li>
-                  <li className="flex gap-3"><span className="text-neon-cyan">→</span>{t("partners.audience3", "Greece-first with EU reach — the audience our paid test already proved converts")}</li>
+                  <li className="flex gap-3">
+                    <span className="text-neon-cyan">→</span>
+                    {t(
+                      "partners.audience1",
+                      "Founders and SMB owners evaluating cloud, automation, and AI tooling"
+                    )}
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-neon-cyan">→</span>
+                    {t(
+                      "partners.audience2",
+                      "Engineers and technical decision-makers who follow build-in-public content"
+                    )}
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-neon-cyan">→</span>
+                    {t(
+                      "partners.audience3",
+                      "Greece-first with EU reach — the audience our paid test already proved converts"
+                    )}
+                  </li>
                 </ul>
               </div>
             </ScrollReveal>
             <ScrollReveal>
-              <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
+              <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
                 <h3 className="font-heading mb-3 text-lg font-bold text-white">
                   {t("partners.fitTitle", "Honest fit check")}
                 </h3>
