@@ -54,7 +54,7 @@ are now strictly separated:
 | ----------- | -------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `mmcblk0p2` | SD card (SR64G)                                    | 58GB  | `/`                                                                                                                | OS root only                                                                               |
 | `/dev/sda1` | SanDisk SDSSDP128G via ICY_BOX IB-AC603b-U3 (USB3) | 119GB | `a9a5a108-8095-4b7b-8011-716889995cd7` → `/srv/dev-disk-by-uuid-a9a5a108-…` (and bind to `/var/lib/rancher/k3s`)  | **Dedicated k3s data**: containerd images, etcd, kubelet state, all local-path PVs. Local-path-provisioner `nodePath` = `/srv/dev-disk-by-uuid-a9a5a108-…/k3s/storage` (verified 2026-06-20). |
-| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `fa6231ab-eae7-40ea-a4b6-400f767a89d7` → `/srv/dev-disk-by-uuid-fa6231ab-…`                                       | **User data only**: Windows backups, photos, media. K3s does NOT live here.                |
+| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `fa6231ab-eae7-40ea-a4b6-400f767a89d7` → `/srv/dev-disk-by-uuid-fa6231ab-…`                                       | **User data + workspace**: Windows backups, photos, media, and the **OMV-managed workspace stack** (Nextcloud/Collabora/Talk — plain Docker, NOT k3s) under `workspace/` + `compose-files/`. K3s does NOT live here. |
 
 **Why this matters for any future debugging:**
 
@@ -74,6 +74,16 @@ are now strictly separated:
   set of prunes (journal, apt cache, pnpm store, buildx volumes, crictl
   rmi). It now has +810GB of true headroom on sdb1 because nothing
   cluster-relevant lives there.
+
+**OMV workspace stack (added 2026-10-02):** sdb1 also hosts a self-hosted
+workspace — Nextcloud + Collabora + Talk HPB/recording + notify-push + AppAPI
+HaRP — run as a **plain Docker Compose** project managed by the OMV Compose
+plugin (shared folders `workspace/` + `compose-files/`), NOT by k3s. Public
+endpoints `cloud.cloudless.gr` / `office.cloudless.gr` / `signal.cloudless.gr`
+come through the `social-cloudflared` tunnel on cu130. OMV workbench moved to
+**`:9080`** (IPv4 :80 is claimed by k3s/Traefik; ufw allows :9080 from
+`192.168.1.0/24`). Full ops doc lives in the cu130-slim repo:
+`deploy/omv-workspace/README.md` + `MOBILE_SETUP.md`.
 
 **Quick disk audit one-liner** (run on omv-main):
 
