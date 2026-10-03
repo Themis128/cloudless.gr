@@ -99,16 +99,23 @@ OPTIONAL_PUBLIC: list[tuple[str, str]] = []
 
 LAN_PORTS = [
     ("grafana", 30850, "/api/health"),
-    ("n8n", 30900, "/"),
     ("ntfy", 30080, "/"),
     ("espocrm", 30700, "/"),
-    ("postiz", 30500, "/"),
-    ("appflowy", 30810, "/"),
     ("kuma", 32501, "/"),
     ("docs", 30901, "/"),
     ("meili", 30902, "/health"),
     ("logs", 30820, "/health"),
     ("app", 30300, "/api/health"),
+]
+
+# Deliberately scaled to 0 on omv k3s (verified unused — revive via
+# `kubectl scale` if ever needed). Their NodePorts stay provisioned so the
+# tunnel keeps routing (Access still gates them), but an unreachable
+# backend must not count as a tunnel failure or trigger remediation.
+OPTIONAL_LAN = [
+    ("n8n", 30900, "/"),
+    ("postiz", 30500, "/"),
+    ("appflowy", 30810, "/"),
 ]
 
 OK_CODES = {200, 301, 302, 303, 307, 401, 403}
@@ -152,6 +159,12 @@ def probe_lan(omv: str) -> bool:
         else:
             print(f"  BAD [{name}] :{port} → {code}")
             fail = True
+    for name, port, path in OPTIONAL_LAN:
+        code = http_code(f"http://{omv}:{port}{path}", timeout=5)
+        if isinstance(code, int) and code in (*OK_CODES, 404):
+            print(f"  OK  [{name}] :{port} → {code} (optional)")
+        else:
+            print(f"  WARN [{name}] :{port} → {code} (optional — scaled to 0)")
     return not fail
 
 

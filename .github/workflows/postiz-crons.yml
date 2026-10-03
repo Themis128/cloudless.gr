@@ -14,8 +14,13 @@ name: Postiz crons
 # Manual run: workflow_dispatch with a target picker (defaults to both).
 
 on:
-  schedule:
-  - cron: '*/15 * * * *'   # every 15 min (sync always; oauth once per hour)
+  # Schedule disabled: the postiz namespace on omv k3s is deliberately
+  # scaled to 0 (verified unused — SocialAuto schedules natively + n8n).
+  # The app's Postiz upstream 502s, which correctly hard-failed every run.
+  # Re-enable the cron below when Postiz is revived (kubectl scale), or
+  # use workflow_dispatch to trigger manually.
+  # schedule:
+  # - cron: '*/15 * * * *'   # every 15 min (sync always; oauth once per hour)
   workflow_dispatch:
     inputs:
       target:

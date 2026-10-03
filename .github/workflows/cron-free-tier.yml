@@ -45,13 +45,40 @@ jobs:
 
     - name: Wait for tailnet path to omv
       run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: SSH tunnel to AppFlowy NodePort
+
+    # AppFlowy is deliberately scaled to 0 on omv k3s while unused — in that
+    # state there is nothing to sync into, so the sync steps soft-skip.
+    # replicas>0 + unreachable gotrue is a real outage and still fails.
+    - name: Check AppFlowy deployment state on omv
+      id: appflowy
       run: |
         set -euo pipefail
         mkdir -p ~/.ssh
         printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
+        REPS=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+          -i ~/.ssh/id_ed25519 tbaltzakis@100.74.191.58 \
+          "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get deploy -n appflowy \
+            --no-headers -o custom-columns=R:.spec.replicas 2>/dev/null" || echo "KUBECTL_FAILED")
+        if echo "$REPS" | grep -q KUBECTL_FAILED; then
+          echo "::error::cannot read appflowy deployment state over SSH to omv"
+          exit 1
+        fi
+        LIVE=$(echo "$REPS" | grep -cE '^[1-9]' || true)
+        echo "appflowy deployments with replicas>0: $LIVE"
+        if [ "$LIVE" -gt 0 ]; then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::AppFlowy is intentionally scaled to 0 on omv — sync skipped (kubectl scale to revive)"
+          echo "## AppFlowy scaled to 0 — sync skipped" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: SSH tunnel to AppFlowy NodePort
+      if: steps.appflowy.outputs.enabled == 'true'
+      run: |
+        set -euo pipefail
         ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
           -i ~/.ssh/id_ed25519 \
           -L 18080:127.0.0.1:30810 -N -f \
@@ -63,10 +90,11 @@ jobs:
           fi
           sleep 1
         done
-        echo "SSH tunnel to AppFlowy NodePort failed" >&2
+        echo "SSH tunnel to AppFlowy NodePort failed (deployments scaled >0 — real outage)" >&2
         exit 1
 
     - name: Run GSC sync to AppFlowy
+      if: steps.appflowy.outputs.enabled == 'true'
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
@@ -106,29 +134,46 @@ jobs:
       run: |
         curl -X POST https://cloudless.gr/api/admin/cleanup-sessions
 
+  # Only scheduled trigger is '0 1 * * *', so `github.event.schedule` can
+  # never equal a weekly expression — the old `if:` made this job dead code.
+  # Now: runs every night, but gates itself to Mondays (and manual runs).
   weekly-full-sync:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' && github.event.schedule == '0 1 * * 1'
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
 
+    - name: Weekly gate (Mondays only on schedule)
+      id: weekly
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "1" ]; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "run=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Not Monday — weekly full sync skipped"
+        fi
+
     - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86         # v6.0.10
+      if: steps.weekly.outputs.run == 'true'
       with:
         dest: ~/setup-pnpm-${{ runner.name }}
 
     - name: pin pnpm store to persistent local path
+      if: steps.weekly.outputs.run == 'true'
       run: |
         mkdir -p "$HOME/.pnpm-store"
         pnpm config set store-dir "$HOME/.pnpm-store"
 
     - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e         # v6.4.0
+      if: steps.weekly.outputs.run == 'true'
       with:
         node-version: 22
         cache: pnpm
 
-    - run: pnpm install --frozen-lockfile --prefer-offline
+    - if: steps.weekly.outputs.run == 'true'
+      run: pnpm install --frozen-lockfile --prefer-offline
 
     - name: Join Tailscale
+      if: steps.weekly.outputs.run == 'true'
       uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
       with:
         oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
@@ -137,14 +182,42 @@ jobs:
         ping: 100.74.191.58
 
     - name: Wait for tailnet path to omv
+      if: steps.weekly.outputs.run == 'true'
       run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: SSH tunnel to AppFlowy NodePort
+
+    # Same scaled-0 contract as analytics-rollup: skip when AppFlowy is
+    # deliberately off, fail only on real outage.
+    - name: Check AppFlowy deployment state on omv
+      id: appflowy
+      if: steps.weekly.outputs.run == 'true'
       run: |
         set -euo pipefail
         mkdir -p ~/.ssh
         printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
+        REPS=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+          -i ~/.ssh/id_ed25519 tbaltzakis@100.74.191.58 \
+          "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get deploy -n appflowy \
+            --no-headers -o custom-columns=R:.spec.replicas 2>/dev/null" || echo "KUBECTL_FAILED")
+        if echo "$REPS" | grep -q KUBECTL_FAILED; then
+          echo "::error::cannot read appflowy deployment state over SSH to omv"
+          exit 1
+        fi
+        LIVE=$(echo "$REPS" | grep -cE '^[1-9]' || true)
+        echo "appflowy deployments with replicas>0: $LIVE"
+        if [ "$LIVE" -gt 0 ]; then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::AppFlowy is intentionally scaled to 0 on omv — sync skipped (kubectl scale to revive)"
+          echo "## AppFlowy scaled to 0 — sync skipped" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: SSH tunnel to AppFlowy NodePort
+      if: steps.weekly.outputs.run == 'true' && steps.appflowy.outputs.enabled == 'true'
+      run: |
+        set -euo pipefail
         ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
           -i ~/.ssh/id_ed25519 \
           -L 18080:127.0.0.1:30810 -N -f \
@@ -156,10 +229,11 @@ jobs:
           fi
           sleep 1
         done
-        echo "SSH tunnel to AppFlowy NodePort failed" >&2
+        echo "SSH tunnel to AppFlowy NodePort failed (deployments scaled >0 — real outage)" >&2
         exit 1
 
     - name: Run full analytics sync to AppFlowy
+      if: steps.weekly.outputs.run == 'true' && steps.appflowy.outputs.enabled == 'true'
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
