@@ -17,10 +17,7 @@
  * - This module is server-only; never import it from client components.
  */
 import { getConfig } from "@/lib/ssm-config";
-import {
-  SELFHOSTED_PUBLIC_URLS,
-  type SelfhostedApp,
-} from "@/lib/selfhosted-apps";
+import { SELFHOSTED_PUBLIC_URLS, type SelfhostedApp } from "@/lib/selfhosted-apps";
 
 export type { SelfhostedApp } from "@/lib/selfhosted-apps";
 export { SELFHOSTED_APP_NAMES, SELFHOSTED_PUBLIC_URLS } from "@/lib/selfhosted-apps";
