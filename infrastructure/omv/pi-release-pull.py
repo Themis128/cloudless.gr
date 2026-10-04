@@ -60,6 +60,12 @@ ENDPOINT = env("R2_ENDPOINT", f"https://{env('CF_ACCOUNT_ID', '')}.r2.cloudflare
 DEPLOY_ORCHESTRATOR_URL = env("DEPLOY_ORCHESTRATOR_URL", "")
 DEPLOY_ORCHESTRATOR_TOKEN = env("DEPLOY_ORCHESTRATOR_TOKEN", "")
 
+# Cloudflare's Browser Integrity Check rejects the default "Python-urllib/x.y"
+# User-Agent on *.workers.dev with HTTP 403 (error code 1010) before the
+# orchestrator Worker ever runs. curl (used by the old pi-release-pull.sh) was
+# allowed, so every request here must send an explicit, non-default UA.
+USER_AGENT = env("PI_RELEASE_PULL_USER_AGENT", "pi-release-pull/1.0 (+cloudless.gr omv)")
+
 
 def log(msg: str) -> None:
     print(f"[{LOG_TAG}] {msg}")
@@ -77,6 +83,7 @@ def track(**kvs: str) -> None:
                 headers={
                     "Authorization": f"Bearer {DEPLOY_ORCHESTRATOR_TOKEN}",
                     "content-type": "application/json",
+                    "User-Agent": USER_AGENT,
                 },
                 method="POST",
             )
@@ -122,7 +129,11 @@ def http_download(url: str, dest: Path, timeout: int) -> str:
     on any failure the partial file is removed.
     """
     req = urllib.request.Request(
-        url, headers={"Authorization": f"Bearer {DEPLOY_ORCHESTRATOR_TOKEN}"}
+        url,
+        headers={
+            "Authorization": f"Bearer {DEPLOY_ORCHESTRATOR_TOKEN}",
+            "User-Agent": USER_AGENT,
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp, dest.open("wb") as f:
@@ -137,7 +148,7 @@ def http_download(url: str, dest: Path, timeout: int) -> str:
 
 
 def http_get(url: str, timeout: int, auth: bool = False) -> tuple[str, bytes]:
-    headers = {}
+    headers = {"User-Agent": USER_AGENT}
     if auth:
         headers["Authorization"] = f"Bearer {DEPLOY_ORCHESTRATOR_TOKEN}"
     req = urllib.request.Request(url, headers=headers)
