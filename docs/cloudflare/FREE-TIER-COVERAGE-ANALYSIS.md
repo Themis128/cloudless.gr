@@ -1,7 +1,7 @@
 # Cloudflare Free Tier Coverage Analysis
 
 > **Can you achieve 100% free coverage?** Let me analyze the blueprint vs reality.
-
+>
 > **Update 2026-10-05** — Cloudflare's "Enterprise for all" year-1 update
 > (<https://blog.cloudflare.com/enterprise-for-all-update/>) moved additional
 > features to free/PAYG plans since this analysis:
