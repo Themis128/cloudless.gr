@@ -83,6 +83,7 @@ WORKER_ROLLBACK_SCRIPTS = ["postiz-ai-proxy"]
 WORKER_ROLLBACK_AFTER = 2  # consecutive error checks before rollback
 WORKER_ROLLBACK_MIN_AGE = 900  # skip rollback for deploys <15min old (verify window)
 WORKER_ROLLBACK_MAX_AGE = 7200  # skip rollback for deploys >2h old (not deploy-correlated)
+NODE_ALERT_MIN_TICKS = 2  # consecutive NotReady ticks (~4min) before mailing
 DISK_K3S_PCT = 85  # alert when the k3s SSD (sda1) exceeds this
 DISK_DATA_PCT = 90  # alert when the data SSD (sdb1) exceeds this
 
@@ -550,14 +551,24 @@ def check_infra() -> None:
         if line.split() and len(line.split()) > 1 and line.split()[1] != "Ready"
     ]
     if notready:
-        if _get("infra_node_alert", "0") == "0":
-            names = ",".join(notready)
+        streak = int(_get("infra_node_streak", "0")) + 1
+        _set("infra_node_streak", str(streak))
+        names = ",".join(notready)
+        if streak >= NODE_ALERT_MIN_TICKS and _get("infra_node_alert", "0") == "0":
             log(f"INFRA: node(s) NotReady: {names}")
-            notify_all("🚨 k3s node NotReady", f"Node(s) not Ready: {names}", "urgent")
+            notify_all(
+                "🚨 k3s node NotReady",
+                f"Node(s) not Ready for ≥{streak * 2}min: {names}",
+                "urgent",
+            )
             _set("infra_node_alert", "1")
-    elif _get("infra_node_alert", "0") == "1":
-        _set("infra_node_alert", "0")
-        notify_all("✅ k3s nodes Ready", "All nodes back to Ready.", "low")
+        else:
+            log(f"INFRA: node(s) NotReady (tick {streak}/{NODE_ALERT_MIN_TICKS}): {names}")
+    else:
+        _set("infra_node_streak", "0")
+        if _get("infra_node_alert", "0") == "1":
+            _set("infra_node_alert", "0")
+            notify_all("✅ k3s nodes Ready", "All nodes back to Ready.", "low")
 
     for dev, thresh, tag in (
         ("/var/lib/rancher/k3s", DISK_K3S_PCT, "k3s-ssd"),
