@@ -67,7 +67,7 @@ jobs:
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "User-Agent: github-actions/linkedin-poll" \
             --max-time 90 \
-            "${SITE_ORIGIN}/api/cron/ad-analytics-poll" || echo "000")
+            "${SITE_ORIGIN}/api/cron/ad-analytics-poll" || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
           echo "attempt ${attempt}: HTTP ${STATUS}"
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
             echo "::error::Cloudflare Bot Fight Mode intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml (disables bot_fight_mode) or turn Bot Fight Mode off in the CF dashboard."
