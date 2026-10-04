@@ -153,8 +153,14 @@ def main() -> int:
         changed_files.append((path, BACKUP_DIR / f"{path.name}.bak-{BACKUP_TS}", new_text))
 
     if not changed_files:
-        print("\nnothing to do — all 1-min loadavg thresholds already at target")
-        return 0
+        print("\nall 1-min loadavg thresholds already at target")
+        if not args.apply:
+            return 0
+        # Converge: someone may have edited the config out-of-band (hand-tune,
+        # OMV upgrade) without validating/reloading. A reload of an unchanged,
+        # validated config is safe and makes the runtime state provable.
+        print("converging: monit -t && monit reload")
+        changed_files = []  # nothing to restore; fall through to validate+reload
 
     step("3/3 validate + reload (only when applying)")
     if not args.apply:
