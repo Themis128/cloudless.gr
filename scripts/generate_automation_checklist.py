@@ -111,9 +111,15 @@ CHECKLIST = [
 
 TOOLS = [
     ("n8n", "Self-hosted workflow engine — the backbone of half this list."),
-    ("Cloudflare Workers", "Serverless compute with zero cold start. Free tier covers most SMB workloads."),
+    (
+        "Cloudflare Workers",
+        "Serverless compute with zero cold start. Free tier covers most SMB workloads.",
+    ),
     ("Uptime Kuma", "Free self-hosted monitoring with alerting — runs on a Raspberry Pi."),
-    ("Metabase", "Open-source business intelligence. Connect to any database, get dashboards in minutes."),
+    (
+        "Metabase",
+        "Open-source business intelligence. Connect to any database, get dashboards in minutes.",
+    ),
     ("Workers AI", "Run inference on Cloudflare's edge. Free tier includes 10K requests/day."),
 ]
 
