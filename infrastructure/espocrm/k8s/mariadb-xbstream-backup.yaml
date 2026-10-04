@@ -120,7 +120,7 @@ spec:
                   log "→ streaming xbstream → ${LOCAL}"
 
                   kubectl exec -n espocrm "${POD}" -- \
-                    mariadb-backup \
+                    timeout -k 15 900 mariadb-backup \
                       --backup \
                       --stream=xbstream \
                       --host=localhost \
