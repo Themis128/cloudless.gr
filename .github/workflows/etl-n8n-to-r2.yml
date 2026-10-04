@@ -3,8 +3,12 @@ name: 'ETL: n8n to R2'
 # Fallback to Pi self-hosted runner via RUNNER_GENERIC when Tailscale OAuth is not configured.
 
 on:
-  schedule:
-  - cron: 25 6 * * *       # daily 06:25 UTC
+  # Schedule disabled: the n8n namespace on omv k3s is deliberately scaled
+  # to 0 (verified unused — SocialAuto runs its own n8n on cu130). The
+  # NodePort probe hard-fails on that intended state. Re-enable the cron
+  # if n8n is revived (kubectl scale), or use workflow_dispatch manually.
+  # schedule:
+  # - cron: 25 6 * * *       # daily 06:25 UTC
   workflow_dispatch:
 
 permissions:
