@@ -65,6 +65,8 @@ GOOGLE_PRIVATE_KEY.pem
 
 # Pochi (AI coding agent) — may contain tokens; managed per-machine
 .pochi/
+# ZCode IDE — synced .gitignore mirror + extra exclusion rules, per-machine
+.zcodeignore
 # Local AI-stack launcher scripts (per-machine tooling)
 scripts/tabby-up.sh
 scripts/tabby-pochi-proxy.mjs
