@@ -78,6 +78,19 @@ The project includes a suite of Python-based agents for research and documentati
 - **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
 - **Setup:** Run `./setup-agents.py` to initialize the Python environment.
 
+### Custom Claude Agents (2026-10)
+
+The following Claude-powered agents are available (see `.claude/agents/*.md` for full docs):
+
+- **api-security-audit** — Audits `/api` route handlers for auth, validation, error leakage, rate limiting, and secret logging issues.
+- **cms-populate** — Bootstraps Notion CMS databases (testimonials, case studies, services, FAQs) with static content.
+- **lighthouse-triage** — Diagnoses failing Lighthouse/Core Web Vitals CI runs, distinguishes variance from regressions, and identifies likely causes.
+- **notion-schema-drift** — Detects schema drift between expected Notion DB schemas and the live workspace.
+- **pr-review-debug** — Inspects and debugs the Phase 4a PR review workflow (triggers, model, prompt, comment posting).
+- **release-notes** — Drafts release notes from commit ranges, grouping by Features/Fixes/Performance/Internal.
+- **slack-routing-verify** — Verifies Slack notification routing (channels, bot invites, SSM params, test messages).
+- **sonarcloud-cleanup** — Audits and fixes SonarCloud-style code quality issues in changed files (dup strings, complexity, void, global fetch).
+
 ## MCP Configuration
 
 Workspace MCP servers configured in `mcp.json` / `.devin/mcp_config.json` when
