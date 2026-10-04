@@ -1,6 +1,17 @@
 # Cloudflare Free Tier Coverage Analysis
 
 > **Can you achieve 100% free coverage?** Let me analyze the blueprint vs reality.
+>
+> **Update 2026-10-05** — Cloudflare's "Enterprise for all" year-1 update
+> (<https://blog.cloudflare.com/enterprise-for-all-update/>) moved additional
+> features to free/PAYG plans since this analysis:
+> **Custom Dashboards** (GA for all), **Security Insights** (weekly scans on
+> Free + on-demand on every plan), **resource-level RBAC** incl. Workers,
+> **Resource Tagging**, the **New Account** button, **MCP Server Portals**,
+> and **Logpush** (self-serve on Free but **pay-as-you-go priced** — verify
+> cost before enabling). Platform limits also rose: Workers 64 MiB/1 s
+> startup/1M subrequests, Browser Rendering 200 concurrent, Vectorize 20M
+> vectors, Pages 100k assets. See `CLOUDFLARE.md` → "Platform updates".
 
 ## Component Coverage Matrix
 
@@ -37,7 +48,7 @@
 **✅ YES - Workers AI provides free models:**
 
 - LLaMA 3.1 8B: 100K tokens/day
-- Mistral 7B: 100K tokens/day  
+- Mistral 7B: 100K tokens/day
 - Gemma 2B: 100K tokens/day
 - Enough for a few thousand chat messages daily
 
@@ -86,7 +97,7 @@ The only paid service remaining is **domain registration** (~$10/year), which Cl
 All core AWS components can be replaced with free Cloudflare alternatives:
 
 - SSM → Wrangler Secrets ✓
-- Lambda → Workers ✓  
+- Lambda → Workers ✓
 - S3 → R2 ✓
 - Athena → DuckDB-Wasm ✓
 - Cognito → D1 ✓

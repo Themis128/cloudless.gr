@@ -903,6 +903,50 @@ dig omv.cloudless.gr +short
 
 ---
 
+## Platform updates — "Enterprise for all" (October 2026)
+
+Cloudflare's year-1 update moved formerly Enterprise-only features to
+free/pay-as-you-go accounts and raised platform limits
+(<https://blog.cloudflare.com/enterprise-for-all-update/>).
+Impact on this deployment (plan: **Free**):
+
+### Newly available, $0
+
+| Feature | Status / action |
+| ------- | --------------- |
+| Billable Usage API + budget alerts (on by default) | Verify alerts armed; poll usage for the daily ops digest |
+| Security Insights — weekly scans (Free) + on-demand | Enable on `cloudless.gr` zone; on-demand scan before releases |
+| Resource-level RBAC (now incl. Workers) | Scope the `cloudless2` deploy token to just that Worker + DNS |
+| Resource Tagging (API) | Tag `cloudless2`, tunnel, D1, R2 with `project=cloudless` |
+| Custom Dashboards (GA for all) | Optional — CF metric views without Grafana |
+| New Account button | Free — segment experiments/client work off this account |
+| MCP Server Portals (GA) | Optional — expose internal tools to remote agents |
+
+### Limit increases already in effect
+
+| Service | New limit | Was |
+| ------- | --------- | --- |
+| Workers bundle | 64 MiB uncompressed | 10 MB |
+| Workers startup / subrequests | 1 s / 1M per request | 400 ms / 1,000 |
+| Browser Rendering | 200 concurrent, 10 REST req/s, multi-client sessions | 30, 3 req/s |
+| Vectorize | 20M vectors/index, `topK` ≤ 50 | 5M / 20 |
+| Pages static assets | 100,000 | 20,000 |
+| Durable Objects | 15 min alive on outbound connection | evict after 70–140 s |
+| HTTP headers | 128 KB | 32 KB |
+| API Shield JWT configs | 32 configs × 16 keys | 4 × 4 |
+
+### Watch items
+
+- **Logpush PAYG** — self-serve on Free now, but usage-priced; check per-GB
+  rate before enabling. If acceptable, R2 delivery would feed the
+  `etl-n8n-to-r2` datalake pipeline.
+- **Organizations** — multi-account grouping; Enterprise beta now, free
+  accounts early 2027.
+- **Terraform provider GA** — optional path to codify tunnel/DNS/Worker config
+  as auditable IaC.
+
+---
+
 ## Reference
 
 ### Useful Links
@@ -931,9 +975,10 @@ dig omv.cloudless.gr +short
 | 2026-07-26 | Cline      | Updated DNS records with all active services, added Worker architecture                                                                                                                                                      |
 | 2026-07-31 | Cline      | Comprehensive update: corrected tunnel ID, added missing DNS records, documented both Workers, updated token storage to GitHub Secrets                                                                                       |
 | 2026-08-07 | Claude     | Added Deployment Inventory section; flagged `cloudless-gr-free` as unused; noted `cloudless-failover` is documented but not deployed; removed orphan `wrangler-cloudless2.json` and dead `scripts/store_cloudflare_token.sh` |
+| 2026-10-05 | Devin      | Added "Enterprise for all" Oct-2026 platform updates section (newly-free features, limit increases, watch items) |
 
 ---
 
 **Status:** ✅ Production Ready
-**Last Reviewed:** 2026-08-07
-**Next Review:** 2026-09-07 (monthly)
+**Last Reviewed:** 2026-10-05
+**Next Review:** 2026-11-05 (monthly)
