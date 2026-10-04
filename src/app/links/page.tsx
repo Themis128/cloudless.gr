@@ -23,6 +23,18 @@ const LINKS: HubLink[] = [
     sub: "Free PDF — the exact workflows that run this stack",
   },
   {
+    href: "https://cloud.cloudless.gr/call/zsykkx97",
+    label: "Book a free video consult",
+    sub: "30 min — hosted on our own self-hosted Nextcloud Talk",
+    external: true,
+  },
+  {
+    href: "https://cloud.cloudless.gr",
+    label: "Client Workspace",
+    sub: "Private file portal — self-hosted Nextcloud, your data stays ours",
+    external: true,
+  },
+  {
     href: "https://www.linkedin.com/company/cloudless-gr",
     label: "LinkedIn",
     sub: "Weekly automation builds & document playbooks",
