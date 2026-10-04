@@ -36,85 +36,91 @@ OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "automation-checklist.pdf"
 
 CHECKLIST = [
     (
-        "Social analytics digest",
-        "Pull every platform's numbers once a day, have AI write the summary, deliver to Slack or email.",
-        "n8n cron + your analytics source + any LLM",
-        "~45 min/week",
-    ),
-    (
         "Cross-platform publishing",
-        "Write one post, publish to LinkedIn, Threads, Instagram, TikTok and Facebook automatically.",
-        "SocialAuto or a scheduled n8n workflow",
+        "Write one post, publish to LinkedIn, Threads, Instagram, TikTok, Facebook, and X automatically. One dashboard, six platforms, zero copy-pasting.",
+        "Celery + Redis + free-tier platform APIs",
         "~60 min/week",
     ),
     (
-        "Content repurposing",
-        "Turn each long post into platform-adapted variants (tone, length, format) without rewriting.",
-        "LLM prompt chain + brand voice system prompt",
+        "AI content generation",
+        "Generate platform-adapted post copy from a single brief. SEO scoring, NLP plain-English check, and brand-voice compliance built in.",
+        "Workers AI / local LLM + brand voice system prompt",
         "~40 min/post",
     ),
     (
-        "DM keyword replies",
-        "Comment 'AUTO' -> auto-DM the link. Highest-converting social funnel there is.",
-        "Manual replies at small scale; ManyChat free tier later",
-        "scales with volume",
+        "Social analytics digest",
+        "Pull every platform's engagement, reach, and follower data daily. AI writes the summary and delivers it to Slack before your coffee.",
+        "n8n cron + analytics APIs + LLM summary",
+        "~45 min/week",
     ),
     (
-        "Lead capture to inbox",
-        "Every download/lead lands in a spreadsheet or CRM with zero manual entry.",
-        "Webhook -> Google Sheets / Airtable free tier",
+        "Lead capture to CRM",
+        "Every form submission, download, or booking lands in your CRM with zero manual entry. Automatic lead scoring and Slack notification.",
+        "Webhook + EspoCRM / Airtable free tier",
         "~30 min/week",
     ),
     (
-        "Invoice & payment tracking",
-        "Auto-flag overdue invoices and send a polite nudge before you notice.",
-        "Stripe/Paddle webhook + scheduled check",
-        "~20 min/week",
-    ),
-    (
-        "Meeting notes to tasks",
-        "Transcribe calls, extract action items, push them to your task board.",
-        "Whisper (self-hosted) + task webhook",
-        "~25 min/meeting",
-    ),
-    (
-        "SEO rank & content watch",
-        "Weekly check: which pages gained/lost positions, drafted straight into a report.",
-        "Google Search Console API + LLM summary",
+        "SEO rank and content watch",
+        "Weekly report: which pages gained or lost positions, new keyword opportunities, and a drafted action plan.",
+        "Google Search Console API + Ahrefs + LLM summary",
         "~35 min/week",
     ),
     (
-        "Uptime & deploy alerts",
-        "Get pinged the moment prod breaks or a deploy rolls back — before users complain.",
-        "Healthchecks.io free tier / Uptime Kuma",
+        "Uptime and deploy alerts",
+        "Get pinged the moment production breaks or a deploy rolls back. Self-hosted monitoring with zero monthly cost.",
+        "Uptime Kuma + Healthchecks.io free tier",
         "sleep at night",
     ),
     (
-        "Email triage labels",
-        "Classify inbound mail (lead / support / spam) and draft first replies automatically.",
-        "IMAP poll + LLM classifier",
+        "Serverless deploy pipeline",
+        "Push to main, auto-deploy to Cloudflare Workers. Zero-downtime with automatic rollback if health checks fail.",
+        "GitHub Actions + Wrangler + Workers",
+        "~20 min/deploy",
+    ),
+    (
+        "Automated backup and restore",
+        "Daily backups to R2 with one-click restore. Database, files, and config. Tested monthly so it works when you need it.",
+        "Cron + R2 + pg_dump / restic",
+        "disaster-proof",
+    ),
+    (
+        "Email triage and auto-reply",
+        "Classify inbound mail (lead / support / spam) and draft first replies automatically. Route to the right person.",
+        "IMAP poll + LLM classifier + self-hosted Postfix",
         "~30 min/day",
     ),
     (
-        "Competitor changelog watch",
-        "Get a weekly diff of competitor pricing/feature pages you actually care about.",
+        "Custom analytics dashboards",
+        "Real-time dashboards that pull from your actual data sources. No more spreadsheets, no more guessing.",
+        "Metabase / Grafana + DuckDB / Postgres",
+        "~50 min/week",
+    ),
+    (
+        "Competitor pricing watch",
+        "Weekly diff of competitor pricing and feature pages. AI summary of what changed and what it means for you.",
         "URL watch + diff + LLM summary",
         "~20 min/week",
     ),
     (
-        "Weekly brief generation",
-        "One scheduled job that assembles your metrics, wins, and next-week plan into a brief.",
-        "n8n cron + your data sources + LLM",
+        "Weekly strategy brief",
+        "One scheduled job assembles your metrics, wins, content performance, and next-week plan into a brief. Delivered to Slack every Monday.",
+        "n8n cron + Windsor.ai + LLM",
         "~50 min/week",
     ),
 ]
 
 TOOLS = [
     ("n8n", "Self-hosted workflow engine — the backbone of half this list."),
-    ("beehiiv", "Newsletter platform with a genuinely useful free tier."),
-    ("Make", "No-code automation, generous free plan for light flows."),
-    ("Uptime Kuma", "Free self-hosted monitoring with alerting."),
-    ("Semrush", "SEO/competitor data when you're ready to go deeper."),
+    (
+        "Cloudflare Workers",
+        "Serverless compute with zero cold start. Free tier covers most SMB workloads.",
+    ),
+    ("Uptime Kuma", "Free self-hosted monitoring with alerting — runs on a Raspberry Pi."),
+    (
+        "Metabase",
+        "Open-source business intelligence. Connect to any database, get dashboards in minutes.",
+    ),
+    ("Workers AI", "Run inference on Cloudflare's edge. Free tier includes 10K requests/day."),
 ]
 
 
@@ -132,7 +138,7 @@ def build(path: str) -> None:
         bottomMargin=16 * mm,
         title="The 12-Automation Checklist",
         author="cloudless.gr",
-        subject="Free no-code automation checklist for solo founders",
+        subject="Free automation checklist for startups and SMBs — October 2026 edition",
     )
 
     title = ParagraphStyle(
@@ -177,10 +183,10 @@ def build(path: str) -> None:
         para("The 12-Automation Checklist", title),
         Spacer(1, 4 * mm),
         para(
-            "Reclaim ~6 hours a week. Twelve automations a solo founder "
-            "can wire up in an afternoon — every one runs on a free tier "
+            "Reclaim ~6 hours a week. Twelve automations any startup can "
+            "wire up in an afternoon — every one runs on a free tier "
             "or self-hosted stack. Built from the workflows that run "
-            "cloudless.gr in production.",
+            "cloudless.gr in production. Updated October 2026.",
             sub,
         ),
         Spacer(1, 6 * mm),
@@ -226,7 +232,10 @@ def build(path: str) -> None:
         ),
         Spacer(1, 6 * mm),
         para(
-            "Want the workflows built for you? <b>cloudless.gr</b> — managed cloud, automation, and AI marketing systems for startups and SMBs.",
+            "Want these workflows built for you? <b>cloudless.gr</b> offers six services — "
+            "Cloud Architecture, Serverless Development, Data Analytics, AI Marketing, "
+            "Web Design, and Managed Hosting — individually or bundled at 30% savings. "
+            "Book a free 30-minute audit: <b>cloudless.gr/contact</b>",
             sub,
         ),
     ]
