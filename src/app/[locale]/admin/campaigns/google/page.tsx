@@ -65,7 +65,9 @@ export default function GoogleCampaignsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (notConfigured) {

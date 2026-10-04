@@ -554,6 +554,7 @@ function tryLoadLocalAuthDb(): AuthDatabase | null {
     // Edge proxy even with webpackIgnore. Module-scoped require() still
     // resolves in Turbopack Node (eval/new Function require does not).
     const spec = "." + "/" + ["auth", "db", "local"].join("-");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- computed specifier is deliberate (see above): a literal require would be traced into Edge proxy
     const mod = require(spec) as { getLocalAuthDb?: () => AuthDatabase | null };
     return mod.getLocalAuthDb?.() ?? null;
   } catch {
@@ -568,6 +569,7 @@ function tryLoadHttpAuthDb(): AuthDatabase | null {
     // /api/health dbConnected:false even when CLOUDFLARE_* creds work via REST.
     // d1-http is fetch-only (safe for server chunks). Local sqlite is loaded
     // with a computed specifier in tryLoadLocalAuthDb so Edge never traces it.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- bundler-visible require is deliberate (see above): dynamic import broke Pi standalone resolution
     const { getHttpAuthDb } = require("./d1-http") as typeof import("./d1-http");
     return getHttpAuthDb() ?? null;
   } catch {

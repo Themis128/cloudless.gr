@@ -48,7 +48,9 @@ export default function AdminBlogPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   const filtered = posts.filter((p) => {

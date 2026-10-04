@@ -44,7 +44,9 @@ export default function AdminCompaniesPage() {
   }, []);
 
   useEffect(() => {
-    fetchCompanies().catch(() => {});
+    void (async () => {
+      await fetchCompanies().catch(() => {});
+    })();
     const interval = setInterval(() => {
       fetchCompanies().catch(() => {});
     }, REFRESH_INTERVAL);

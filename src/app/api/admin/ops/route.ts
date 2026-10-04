@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       command?: string;
       target?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
 
     const command = body?.command;

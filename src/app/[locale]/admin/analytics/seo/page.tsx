@@ -135,7 +135,9 @@ export default function SeoAnalyticsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (notConfigured) {

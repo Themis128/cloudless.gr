@@ -170,7 +170,9 @@ export default function ClusterStatusPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   return (

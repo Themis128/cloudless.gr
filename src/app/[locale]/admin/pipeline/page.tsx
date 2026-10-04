@@ -73,7 +73,9 @@ export default function PipelinePage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   async function moveDeal(dealId: string, stageId: string) {

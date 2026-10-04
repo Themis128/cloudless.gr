@@ -69,7 +69,9 @@ export default function GrafanaAdminPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   const chip = (() => {

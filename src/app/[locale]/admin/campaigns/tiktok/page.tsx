@@ -57,7 +57,9 @@ export default function TikTokPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (notConfigured) {

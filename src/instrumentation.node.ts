@@ -59,6 +59,7 @@ function bindLocalAuthDb(): void {
   // auth-d1.getAuthDbFromEnv() retries the adapter (and D1 HTTP) per request.
   const spec = "." + "/lib/" + ["auth", "db", "local"].join("-");
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- computed-specifier require is deliberate: keeps node:sqlite out of the Edge instrumentation graph (see above)
     const { getLocalAuthDb } = require(spec) as {
       getLocalAuthDb?: () => AuthDbBinding | null;
     };

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { normalizeAndValidatePrompt } from '@/lib/comfyui';
+import { normalizeAndValidatePrompt, type ComfyNode } from '@/lib/comfyui';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,11 +8,11 @@ export async function POST(request: Request) {
     const body = await request.json() as Record<string, unknown>;
 
     // Validate and normalize the payload using our ComfyUI utilities
-    const { client_id, prompt } = normalizeAndValidatePrompt(body as Record<string, any>);
-    
+    const { client_id } = normalizeAndValidatePrompt(body as Record<string, ComfyNode>);
+
     // Validate client_id format (optional, can be removed if not needed)
     const clientIdPattern = /^cloudless-factory-\d+$/;
-    if (!clientIdPattern.test(client_id)) {
+    if (typeof client_id !== "string" || !clientIdPattern.test(client_id)) {
       return NextResponse.json(
         { error: 'Invalid client_id format' },
         { status: 400 }

@@ -58,7 +58,9 @@ export default function SubscriptionsPage() {
   }
 
   useEffect(() => {
-    load(statusFilter);
+    void (async () => {
+      await load(statusFilter);
+    })();
   }, [statusFilter]);
 
   async function openPortal(customerId: string) {

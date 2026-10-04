@@ -49,7 +49,9 @@ export default function ABTestsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   async function updateFlag(id: string, patch: Partial<ABFlag>) {
