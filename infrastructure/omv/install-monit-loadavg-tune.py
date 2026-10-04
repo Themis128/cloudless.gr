@@ -56,6 +56,29 @@ SCAN_PATHS = [
 LOADAVG_1MIN = re.compile(r"(loadavg\s*\(\s*1min\s*\)\s*[><]\s*)([0-9]+(?:\.[0-9]+)?)")
 
 BACKUP_TS = time.strftime("%Y%m%d-%H%M%S")
+# Monit's include globs pick up EVERYTHING under conf.d/monitrc.d/ — a .bak
+# file parked next to the live config would be parsed as config and fail
+# `monit -t` with a duplicate-service error (observed 2026-10-04). Backups
+# therefore live outside the include tree.
+BACKUP_DIR = Path("/var/backups/monit-loadavg-tune")
+
+
+def _format_like(old: str, target: str) -> str:
+    """Keep the original numeric style (monit accepts both, but stay consistent)."""
+    if "." in old and "." not in target:
+        return target + ".0"
+    return target
+
+
+def _sweep_stray_backups() -> None:
+    """Remove .bak-* files this tool previously left inside monit include dirs."""
+    for d in ("/etc/monit/conf.d", "/etc/monit/monitrc.d"):
+        p = Path(d)
+        if not p.is_dir():
+            continue
+        for stray in sorted(p.glob("openmediavault-*.conf.bak-*")):
+            print(f"  removing stray backup from include path: {stray}")
+            stray.unlink(missing_ok=True)
 
 
 def step(msg: str) -> None:
@@ -83,6 +106,8 @@ def main() -> int:
     target = args.threshold_1min
 
     step(f"1/3 discover loadavg (1min) checks — target threshold {target}")
+    if args.apply:
+        _sweep_stray_backups()
     hits: list[tuple[Path, int]] = []  # (file, line index)
     for path in SCAN_PATHS:
         if not path.is_file():
@@ -105,23 +130,27 @@ def main() -> int:
         return 1
 
     step("2/3 rewrite 1-min thresholds")
-    changed_files: dict[Path, str] = {}
+    # (file, backup, rewritten text) for everything we touch
+    changed_files: list[tuple[Path, Path, str]] = []
     for path, _ in {h[0]: h[1] for h in hits}.items():  # dedupe, preserve order
         text = path.read_text()
-        new_text = LOADAVG_1MIN.sub(lambda m: f"{m.group(1)}{target}", text)
+        new_text = LOADAVG_1MIN.sub(
+            lambda m: f"{m.group(1)}{_format_like(m.group(2), target)}", text
+        )
         if new_text == text:
             print(f"  {path}: already at threshold {target} — no change")
             continue
         old_vals = ", ".join(m.group(2) for m in LOADAVG_1MIN.finditer(text))
-        print(f"  {path}: {old_vals} -> {target}")
+        print(f"  {path}: {old_vals} -> {_format_like(old_vals.split(', ')[0], target)}")
         if args.apply:
-            backup = f"{path}.bak-{BACKUP_TS}"
+            BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+            backup = BACKUP_DIR / f"{path.name}.bak-{BACKUP_TS}"
             shutil.copy2(path, backup)
-            print(f"  backup: {backup}")
+            print(f"  backup: {backup} (outside monit include globs)")
             path.write_text(new_text)
         else:
             print("  [preview] would rewrite this file")
-        changed_files[path] = new_text
+        changed_files.append((path, BACKUP_DIR / f"{path.name}.bak-{BACKUP_TS}", new_text))
 
     if not changed_files:
         print("\nnothing to do — all 1-min loadavg thresholds already at target")
@@ -132,13 +161,17 @@ def main() -> int:
         print("  [preview] would run: monit -t && monit reload")
         return 0
 
-    if subprocess.run(["monit", "-t"], capture_output=True, check=False).returncode == 0:
+    probe = subprocess.run(["monit", "-t"], capture_output=True, text=True, check=False)
+    if probe.returncode == 0:
         subprocess.run(["monit", "reload"], check=False)
         print("  monit: config OK, reloaded")
     else:
         print("  monit -t FAILED — restoring backups", file=sys.stderr)
-        for path in changed_files:
-            backup = Path(f"{path}.bak-{BACKUP_TS}")
+        if probe.stdout:
+            print(probe.stdout, file=sys.stderr)
+        if probe.stderr:
+            print(probe.stderr, file=sys.stderr)
+        for path, backup, _ in changed_files:
             if backup.is_file():
                 shutil.copy2(backup, path)
                 print(f"  restored {path} from {backup}")
