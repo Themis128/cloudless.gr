@@ -467,7 +467,7 @@ jobs:
                     ;;
                 esac
               else
-                CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || echo 000)
+                CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
                 echo "  try ${i}: $u → http=${CODE} (no version json)"
               fi
             done
@@ -481,7 +481,7 @@ jobs:
 
           SMOKE_LINES=()
           for u in "${PAGE_URLS[@]}"; do
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo 000)
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$u" || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
             echo "smoke $u → ${CODE}"
             SMOKE_LINES+=("| \`$u\` | ${CODE} |")
             case "$CODE" in

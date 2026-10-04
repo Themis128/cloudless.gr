@@ -165,7 +165,7 @@ jobs:
       run: |
         echo "=== health via pi-origin.cloudless.gr ==="
         CODE=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 \
-          https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+          https://pi-origin.cloudless.gr/api/health 2>/dev/null || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
         echo "HTTP $CODE"
         if [ "$CODE" = "200" ]; then
           echo "✓ pi-origin is healthy"
@@ -181,7 +181,7 @@ jobs:
           sudo systemctl restart cloudflared 2>/dev/null || true
           sleep 8
           CODE2=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 \
-            https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+            https://pi-origin.cloudless.gr/api/health 2>/dev/null || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
           echo "HTTP after cloudflared restart: $CODE2"
         fi
 
