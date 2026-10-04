@@ -56,7 +56,9 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
-    load(tab);
+    void (async () => {
+      await load(tab);
+    })();
   }, [tab]);
 
   if (notConfigured) {

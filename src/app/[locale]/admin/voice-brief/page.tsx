@@ -69,7 +69,9 @@ export default function VoiceBriefPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
     return () => {
       globalThis.speechSynthesis?.cancel();
     };

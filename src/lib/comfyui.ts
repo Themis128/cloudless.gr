@@ -1,8 +1,14 @@
 // Define a stable client id or use env var
 const CLIENT_ID = process.env.COMFY_CLIENT_ID || "cloudless-test-override";
 
+/** One ComfyUI prompt node: a class_type plus its inputs map. */
+export interface ComfyNode {
+  class_type?: unknown;
+  inputs?: Record<string, unknown>;
+}
+
 // Normalizer + validator for ComfyUI prompt payloads
-function normalizeAndValidatePrompt(promptObj: Record<string, any>) {
+function normalizeAndValidatePrompt(promptObj: Record<string, ComfyNode>) {
   const nameMap = {
     PrimitiveNode: "Primitive",
     Primitive: "Primitive",
@@ -66,9 +72,9 @@ function normalizeAndValidatePrompt(promptObj: Record<string, any>) {
 // Deterministic payload builder that matches ComfyUI engine keys and link shapes
 // Uses local CPU models when REPLICATE_API_TOKEN is not set, otherwise uses Replicate (cloud)
 export function buildPayloadForSmokeTest(
-  workflow: any = {},
-  includeMetadata: boolean = false,
-  format: string = "json"
+  _workflow: unknown = {},
+  _includeMetadata: boolean = false,
+  _format: string = "json"
 ) {
   // If REPLICATE_API_TOKEN is set, use the cloud-based Replicate node
   if (process.env.REPLICATE_API_TOKEN) {

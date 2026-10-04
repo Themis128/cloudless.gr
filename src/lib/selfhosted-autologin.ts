@@ -18,7 +18,6 @@
  */
 import { getConfig } from "@/lib/ssm-config";
 import {
-  SELFHOSTED_APP_NAMES,
   SELFHOSTED_PUBLIC_URLS,
   type SelfhostedApp,
 } from "@/lib/selfhosted-apps";

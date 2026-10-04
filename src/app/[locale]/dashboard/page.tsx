@@ -70,7 +70,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user?.email) {
-      setLoading(false);
+      void (async () => {
+        setLoading(false);
+      })();
       return;
     }
     fetchDashboardStats(setStats, setLoading);

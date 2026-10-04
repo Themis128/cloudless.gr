@@ -42,8 +42,6 @@ export async function GET(request: NextRequest) {
         minute: "2-digit",
         hour12: false,
       });
-      const meetLine = c.meetLink ? `\nMeet: ${c.meetLink}` : "";
-
       await Promise.all([
         new SlackClient().post({
           text: `⏰ Consultation starting in ~1 hour: *${c.title}*`,

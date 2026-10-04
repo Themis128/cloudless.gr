@@ -816,7 +816,9 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (loading) {
@@ -989,7 +991,9 @@ export default function ClientPortalsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   return (

@@ -38,7 +38,12 @@ const eslintConfig = [
   ...typescript,
   {
     rules: {
-      "no-unused-vars": [
+      // typescript-eslint's no-unused-vars understands TS semantics (types,
+      // interfaces, parameter properties) and works on plain JS as well, so it
+      // is the single authoritative rule; the core rule is disabled everywhere
+      // to avoid double-reporting. ^_ marks intentionally-unused args/vars.
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
         "warn",
         {
           argsIgnorePattern: "^_",
@@ -56,8 +61,10 @@ const eslintConfig = [
   {
     rules: {
       // Newly enabled by the v16 flat bundles (typescript-eslint recommended +
-      // react-hooks v6). The legacy .eslintrc never ran them — keep them visible
-      // as warnings, not CI failures, until a dedicated cleanup pass lands.
+      // react-hooks v6); the legacy .eslintrc never ran them. The cleanup pass
+      // (2026-10) cleared the tree; level stays "warn" to avoid changing CI
+      // policy. Remaining no-require-imports suppressions in auth-d1.ts and
+      // instrumentation.node.ts are deliberate bundler-evasion requires.
       "react-hooks/set-state-in-effect": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-require-imports": "warn",

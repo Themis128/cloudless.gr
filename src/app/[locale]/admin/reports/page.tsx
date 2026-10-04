@@ -39,7 +39,9 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
-    loadReports();
+    void (async () => {
+      await loadReports();
+    })();
   }, []);
 
   async function handleGenerate(e: React.FormEvent) {

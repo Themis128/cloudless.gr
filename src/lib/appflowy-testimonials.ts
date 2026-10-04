@@ -19,7 +19,7 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import type { Testimonial, TestimonialInput } from "./cms-static";
+import type { Testimonial } from "./cms-static";
 import { staticTestimonials } from "./cms-static";
 
 export type { Testimonial, TestimonialInput } from "./cms-static";

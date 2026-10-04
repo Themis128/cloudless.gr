@@ -228,7 +228,9 @@ export default function AdminLayoutClient({ children }: { readonly children: Rea
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    setDrawerOpen(false);
+    void (async () => {
+      setDrawerOpen(false);
+    })();
   }, [pathname]);
 
   useEffect(() => {

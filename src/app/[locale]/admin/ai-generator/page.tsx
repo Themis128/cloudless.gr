@@ -23,7 +23,6 @@ export default function AiGeneratorPage() {
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notConfigured, setNotConfigured] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [usage, setUsage] = useState<GenerateResponse["usage"] | null>(null);
   const [copied, setCopied] = useState(false);
@@ -43,8 +42,7 @@ export default function AiGeneratorPage() {
         body: JSON.stringify({ prompt: prompt.trim(), model }),
       });
       if (res.status === 503) {
-        setNotConfigured(true);
-        return;
+        throw new Error("AI generation is not configured on this deployment");
       }
       const data = (await res.json()) as Partial<GenerateResponse> & { error?: string };
       if (!res.ok || !data.success) {

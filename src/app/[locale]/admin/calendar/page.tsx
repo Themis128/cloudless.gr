@@ -54,7 +54,9 @@ export default function CalendarPage() {
   }
 
   useEffect(() => {
-    loadItems();
+    void (async () => {
+      await loadItems();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
 

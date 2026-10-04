@@ -75,7 +75,9 @@ export default function CostAdminPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   const maxService = data ? Math.max(...data.topServices.map((s) => s.total_usd), 0.01) : 0;

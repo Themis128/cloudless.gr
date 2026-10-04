@@ -64,7 +64,9 @@ export default function LinkedInPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (notConfigured) {

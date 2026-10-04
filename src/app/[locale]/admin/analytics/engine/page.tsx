@@ -41,7 +41,9 @@ export default function AnalyticsEngineExplorerPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    void (async () => {
+      await load().catch(() => {});
+    })();
   }, [load]);
 
   const rows = data?.rows ?? [];

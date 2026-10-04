@@ -2,9 +2,16 @@
 
 import { useEffect } from "react";
 
+/** The experimental WebMCP `window.modelContext` API (not yet in lib.dom). */
+interface WebMCPWindow extends Window {
+  modelContext?: {
+    provideContext: (context: { tools: unknown[] }) => void;
+  };
+}
+
 export default function WebMCPProvider() {
   useEffect(() => {
-    const win = window as any;
+    const win = window as WebMCPWindow;
     if (typeof window !== "undefined" && win.modelContext) {
       win.modelContext.provideContext({
         tools: [

@@ -17,7 +17,7 @@ import {
   extractDocText,
   isAppFlowyConfigured,
 } from "./appflowy";
-import { staticFaqs, type Faq, type FaqCategory, type FaqInput } from "./cms-static";
+import { staticFaqs, type Faq, type FaqCategory } from "./cms-static";
 
 export type { Faq, FaqCategory, FaqInput } from "./cms-static";
 export { staticFaqs } from "./cms-static";

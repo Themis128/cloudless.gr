@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Link } from "@/i18n/navigation";
 import NewsletterForm from "@/components/NewsletterForm";
 import Logo from "@/components/Logo";
@@ -16,17 +16,16 @@ export default function Footer() {
   // server HTML carries the year from the last build/revalidation. Reading
   // `new Date().getFullYear()` during render — on the server OR in the initial
   // client render — risks a different year than the cached HTML across a
-  // revalidation/year boundary → React #418 (hydration text mismatch). Mirror
-  // the useStoredPref() idiom: both sides render no year on the first pass,
-  // then a post-mount flip swaps in the live year (client-only). See
+  // revalidation/year boundary → React #418 (hydration text mismatch).
+  // useSyncExternalStore gives us the same post-hydration swap the
+  // useStoredPref() idiom relies on: server + hydration snapshots render no
+  // year, then the client snapshot swaps in the live year (client-only). See
   // src/lib/theme-pref.ts and e2e/k3s/assets.spec.ts.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // Intentional post-hydration flip to swap from the SSR-matching empty
-    // snapshot to the real year. See React error #418 context above.
-    setMounted(true);
-  }, []);
-  const year = mounted ? new Date().getFullYear() : null;
+  const year = useSyncExternalStore<number | null>(
+    () => () => {}, // the year never changes reactively; no-op subscribe
+    () => new Date().getFullYear(),
+    () => null // server + hydration snapshot: no year, avoids #418
+  );
 
   return (
     <footer

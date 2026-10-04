@@ -76,7 +76,9 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     if (!user?.email) {
-      setLoading(false);
+      void (async () => {
+        setLoading(false);
+      })();
       return;
     }
     fetchPurchasesData(setPurchases, setSubscriptions, setError, setLoading);

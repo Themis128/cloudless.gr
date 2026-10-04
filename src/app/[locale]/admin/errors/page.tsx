@@ -101,7 +101,9 @@ export default function AdminErrorsPage() {
   }, []);
 
   useEffect(() => {
-    fetchErrors();
+    void (async () => {
+      await fetchErrors();
+    })();
   }, [fetchErrors]);
 
   const handleAction = async (id: string, status: "resolved" | "ignored" | "unresolved") => {
