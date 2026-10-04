@@ -61,7 +61,7 @@ jobs:
         echo ""
         echo "=== pi-origin health (before) ==="
         code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
-          https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+          https://pi-origin.cloudless.gr/api/health 2>/dev/null || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
         echo "HTTP $code"
 
     - name: Check port 18443 on Pi host via privileged pod
@@ -206,7 +206,7 @@ jobs:
         echo "=== polling pi-origin.cloudless.gr/api/health (up to 90s) ==="
         for i in $(seq 1 9); do
           code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
-            https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+            https://pi-origin.cloudless.gr/api/health 2>/dev/null || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
           echo "  [$i/9] HTTP $code"
           if [ "$code" = "200" ]; then
             echo "✓ pi-origin is healthy"
