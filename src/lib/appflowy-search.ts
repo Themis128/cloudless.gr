@@ -124,7 +124,7 @@ export async function listUsers(): Promise<Array<{ id: string; name: string; ema
 /**
  * Get database schema for a folder (not applicable to AppFlowy, returns empty).
  */
-export async function getDatabaseSchema(databaseId: string): Promise<DatabaseSchema | null> {
+export async function getDatabaseSchema(_databaseId: string): Promise<DatabaseSchema | null> {
   // AppFlowy doesn't have a schema concept like Notion databases
   return null;
 }

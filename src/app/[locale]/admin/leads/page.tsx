@@ -61,7 +61,9 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => {
-    fetchLeads().catch(() => {});
+    void (async () => {
+      await fetchLeads().catch(() => {});
+    })();
     const interval = setInterval(() => {
       fetchLeads().catch(() => {});
     }, REFRESH_INTERVAL);

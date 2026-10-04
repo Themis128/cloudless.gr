@@ -142,7 +142,7 @@ export function isPageVisible(): boolean {
  */
 export function createThrottledFetch(
   baseFetcher: () => Promise<Response>,
-  baseInterval = 30_000
+  _baseInterval = 30_000
 ): () => Promise<Response> {
   let inFlight = false;
   let pendingPromise: Promise<Response> | null = null;
@@ -156,7 +156,6 @@ export function createThrottledFetch(
       return pendingPromise;
     }
     // Check backoff
-    const effectiveInterval = getEffectiveInterval(baseInterval);
     const state = getPollingState();
     const now = Date.now();
     if (state.backoffUntil > now || state.retryAfter > now) {

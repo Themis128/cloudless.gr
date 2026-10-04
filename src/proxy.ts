@@ -9,17 +9,6 @@ import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
 
-function getLocaleFromPath(pathname: string): string {
-  const segment = pathname.split("/")[1];
-  return LOCALES.includes(segment) ? segment : DEFAULT_LOCALE;
-}
-
-function stripLocale(pathname: string): string {
-  const segment = pathname.split("/")[1];
-  if (!LOCALES.includes(segment)) return pathname;
-  return pathname.slice(segment.length + 1) || "/";
-}
-
 /**
  * localePrefix is "always". Unprefixed public paths like /store would otherwise
  * bind `[locale]=store` and 404 (especially with dynamicParams=false).
@@ -73,20 +62,6 @@ function redirectUnprefixedToDefaultLocale(
   );
 }
 
-function isHomepagePath(pathname: string): boolean {
-  return pathname === "/" || pathname === ``;
-}
-
-function stripAllLocalePrefixes(pathname: string): string {
-  let path = pathname;
-  while (true) {
-    const segment = path.split("/")[1];
-    if (!LOCALES.includes(segment)) break;
-    path = path.slice(segment.length + 1) || "/";
-  }
-  return path;
-}
-
 /** Absolute URL for redirects. Never echo the listen bind (`0.0.0.0`) or CDN origin. */
 function appUrl(path: string, request: NextRequest): URL {
   return new URL(path, canonicalOrigin(request));
@@ -121,15 +96,6 @@ function handleOptionsRequest(request: NextRequest, nonce: string): NextResponse
   const response = new NextResponse(null, { status: 204 });
   return addCorsHeaders(addSecurityHeaders(response, nonce), request);
 }
-
-const RATE_LIMITED_ROUTES = [
-  "/api/contact",
-  "/api/subscribe",
-  "/api/unsubscribe",
-  "/api/checkout",
-  "/api/calendar/book",
-  "/api/crm/contact",
-];
 
 const RATE_LIMITS = {
   ip: {
@@ -279,10 +245,6 @@ function readAuthToken(request: NextRequest): string | null {
     return authHeader.substring(7);
   }
   return null;
-}
-
-function readD1SessionCookie(request: NextRequest): string | null {
-  return request.cookies.get("session_token")?.value ?? null;
 }
 
 function readNextAuthJwt(request: NextRequest): string | null {

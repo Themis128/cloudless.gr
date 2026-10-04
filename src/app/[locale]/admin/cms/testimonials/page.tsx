@@ -44,7 +44,9 @@ export default function AdminTestimonialsPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    void (async () => {
+      await load().catch(() => {});
+    })();
   }, [load]);
 
   const openCreate = () => {

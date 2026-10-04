@@ -288,7 +288,9 @@ export default function Esp32ManagerPage() {
   }, [call, selectedId]);
 
   useEffect(() => {
-    if (tab === "config") loadConfig().catch(() => {});
+    void (async () => {
+      if (tab === "config") await loadConfig().catch(() => {});
+    })();
   }, [tab, loadConfig]);
 
   const saveConfig = useCallback(async () => {

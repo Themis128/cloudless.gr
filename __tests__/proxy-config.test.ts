@@ -42,8 +42,11 @@ describe("proxy config matcher", () => {
 
 // ---------------------------------------------------------------------------
 // Proxy RATE_LIMITS coverage
-// Verify that every mutation endpoint that accepts untrusted POST input
-// is listed in the RATE_LIMITS map so the middleware enforces throttling.
+// Rate limiting is structural: proxy() routes every /api/* request through
+// handleApiRoute, which applies isRateLimited unconditionally (token- or
+// IP-based). There is no per-route allowlist anymore — the former
+// RATE_LIMITED_ROUTES array was vestigial and removed in the 2026-10 lint
+// cleanup. These assertions pin the mechanism, not a route list.
 // ---------------------------------------------------------------------------
 
 // Read proxy source to verify RATE_LIMITS entries without running middleware.
@@ -53,28 +56,17 @@ import { resolve } from "node:path";
 const proxySrc = readFileSync(resolve(process.cwd(), "src/proxy.ts"), "utf-8");
 
 describe("proxy RATE_LIMITS", () => {
-  it("covers /api/contact", () => {
-    expect(proxySrc).toContain('"/api/contact"');
+  it("routes every /api/* request through handleApiRoute", () => {
+    expect(proxySrc).toContain('pathname.startsWith("/api/")');
+    expect(proxySrc).toContain("handleApiRoute(request, pathname, nonce)");
   });
 
-  it("covers /api/subscribe", () => {
-    expect(proxySrc).toContain('"/api/subscribe"');
+  it("throttles API routes unconditionally via isRateLimited", () => {
+    expect(proxySrc).toContain("isRateLimited(identifier");
   });
 
-  it("covers /api/unsubscribe", () => {
-    expect(proxySrc).toContain('"/api/unsubscribe"');
-  });
-
-  it("covers /api/checkout", () => {
-    expect(proxySrc).toContain('"/api/checkout"');
-  });
-
-  it("covers /api/calendar/book", () => {
-    expect(proxySrc).toContain('"/api/calendar/book"');
-  });
-
-  it("covers /api/crm/contact", () => {
-    expect(proxySrc).toContain('"/api/crm/contact"');
+  it("selects the rate-limit store by token or IP", () => {
+    expect(proxySrc).toContain("authToken ? authRequestMap : ipRequestMap");
   });
 
   it("has ADMIN_RATE_LIMIT for /api/admin/* routes", () => {

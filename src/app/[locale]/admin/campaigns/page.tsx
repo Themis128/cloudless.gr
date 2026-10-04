@@ -326,7 +326,9 @@ function useCampaignsHub() {
   }, []);
 
   useEffect(() => {
-    fetchAll().catch(() => {});
+    void (async () => {
+      await fetchAll().catch(() => {});
+    })();
     const interval = setInterval(() => {
       fetchAll().catch(() => {});
     }, REFRESH_INTERVAL);

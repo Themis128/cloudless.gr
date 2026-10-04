@@ -43,8 +43,10 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY);
-    if (stored) setCurrentId(stored);
+    void (async () => {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) setCurrentId(stored);
+    })();
   }, []);
 
   useEffect(() => {
@@ -68,7 +70,9 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
     const stored = localStorage.getItem(LS_KEY);
     const valid = workspaces.some((w) => w.id === stored) ? stored : (workspaces[0]?.id ?? null);
     if (valid) {
-      setCurrentId(valid);
+      void (async () => {
+        setCurrentId(valid);
+      })();
       localStorage.setItem(LS_KEY, valid);
       writeCookie(valid);
     }

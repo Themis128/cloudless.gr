@@ -32,7 +32,9 @@ export default function ConsultationsPage() {
 
   useEffect(() => {
     if (!user?.email) {
-      setLoading(false);
+      void (async () => {
+        setLoading(false);
+      })();
       return;
     }
 

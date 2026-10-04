@@ -127,7 +127,9 @@ export default function SocialAnalyticsPage() {
   }, [days]);
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   return (

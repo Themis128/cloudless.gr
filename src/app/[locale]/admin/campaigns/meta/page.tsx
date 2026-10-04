@@ -53,7 +53,9 @@ export default function MetaPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   if (notConfigured) {

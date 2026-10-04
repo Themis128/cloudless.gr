@@ -112,7 +112,9 @@ export default function KpiDashboard() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const fmt = (n: number | undefined | null) => (n == null ? "—" : n.toLocaleString());

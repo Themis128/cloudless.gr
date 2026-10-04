@@ -76,7 +76,7 @@ async function resolveBotName(): Promise<
       ok: true,
       botName: workspaces[0]?.workspace_name ?? "AppFlowy Workspace",
     };
-  } catch (err) {
+  } catch {
     return {
       ok: false,
       response: NextResponse.json(

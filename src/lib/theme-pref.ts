@@ -16,7 +16,7 @@
  *     → themeForRoute(pathname)  (route default)
  */
 
-import { useSyncExternalStore, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export type ThemePref = "system" | "light" | "dark";
 
@@ -77,24 +77,15 @@ const getServerStoredPref = (): ThemePref | null => null;
  * matches that on the first pass before switching to the real value post-mount.
  */
 export function useStoredPref(): ThemePref | null {
-  // Hydration-safe: track whether we've mounted on the client. During SSR
-  // and the initial hydration pass both sides agree on `null`. After the
-  // first effect fires we flip `mounted` to true, which forces React to
-  // re-render with the real localStorage value — a safe post-hydration update.
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // Intentional post-hydration flip to swap from the SSR-matching null
-    // snapshot to the real localStorage value. See React error #418 context above.
-    setMounted(true);
-  }, []);
-
-  const stored = useSyncExternalStore<ThemePref | null>(
+  // useSyncExternalStore handles hydration itself: during SSR and the first
+  // client render it reads getServerStoredPref() (null — matching the server
+  // HTML), then after hydration it re-renders with the real localStorage
+  // value. That built-in swap is what previously required a manual
+  // `mounted` state + effect flip; the hook does the same post-hydration
+  // update without it, still avoiding React error #418.
+  return useSyncExternalStore<ThemePref | null>(
     subscribeStored,
     readStoredPref,
     getServerStoredPref
   );
-
-  // Before mount: always return null (matching server snapshot) to avoid #418.
-  return mounted ? stored : null;
 }

@@ -85,7 +85,9 @@ export default function EmailCampaignsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   return (

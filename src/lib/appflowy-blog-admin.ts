@@ -170,7 +170,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<AppFlowyBlogD
 
     const views = await listAllViewsDeep(workspaceId);
 
-    let view = views.find((v) => v.view_id === trimmed);
+    const view = views.find((v) => v.view_id === trimmed);
     if (view && isEditorialPage(view.name)) {
       const doc = await getDocument(workspaceId, view.view_id);
       const text = await extractDocText(doc);

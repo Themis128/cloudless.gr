@@ -5,7 +5,7 @@ import { useCookieConsent } from "@/context/CookieConsentContext";
 
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void;
+    gtag: (...args: unknown[]) => void;
     dataLayer: unknown[];
   }
 }

@@ -26,7 +26,9 @@ export default function AdminDocsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   const filtered = showDrafts ? docs : docs.filter((d) => d.published);

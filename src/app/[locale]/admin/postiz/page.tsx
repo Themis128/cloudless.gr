@@ -372,7 +372,11 @@ function AnalyticsTab({ integrations }: { integrations: PostizIntegration[] | nu
   // Seed the channel picker with the first integration once data arrives.
   useEffect(() => {
     const firstId = integrations?.[0]?.id;
-    if (!selectedId && firstId) setSelectedId(firstId);
+    if (!selectedId && firstId) {
+      void (async () => {
+        setSelectedId(firstId);
+      })();
+    }
   }, [integrations, selectedId]);
 
   // Thin wrapper — all async logic lives in doLoadAnalytics above.

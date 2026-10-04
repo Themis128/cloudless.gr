@@ -3,7 +3,7 @@
 /**
  * /admin/analytics/explore — DuckDB-Wasm over catalog-allowlisted R2 parquet.
  */
-import { useState, useSyncExternalStore, useTransition, useEffect, type ChangeEvent } from "react";
+import { useState, useSyncExternalStore, useTransition, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { LAKE_PARQUET_CATALOG, queryLakeParquet, isDuckDBAvailable } from "@/lib/analytics-client";

@@ -1,7 +1,7 @@
 "use client";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useRef, useState } from "react";
-import { Video, Calendar, Clock, User, Mail, ExternalLink } from "lucide-react";
+import { Video, Calendar, User, ExternalLink } from "lucide-react";
 
 interface Consultation {
   id: string;
@@ -119,9 +119,13 @@ export default function ConsultationsPage() {
 
   useEffect(() => {
     if (typeof Notification !== "undefined") {
-      setNotifPermission(Notification.permission);
+      void (async () => {
+        setNotifPermission(Notification.permission);
+      })();
     }
-    loadConsultations();
+    void (async () => {
+      await loadConsultations();
+    })();
     // Poll every 60 seconds so new bookings surface in real time
     pollRef.current = setInterval(loadConsultations, 60_000);
     return () => {

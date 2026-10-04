@@ -77,7 +77,9 @@ export default function WorkspaceAnalyticsPage() {
   }
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, []);
 
   const totals = useMemo(() => {

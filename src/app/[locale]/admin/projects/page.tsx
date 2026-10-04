@@ -109,12 +109,16 @@ export default function AdminProjectsPage() {
   }
 
   useEffect(() => {
-    loadProjects();
+    void (async () => {
+      await loadProjects();
+    })();
   }, []);
 
   useEffect(() => {
     if (tab === "tasks" && !fetchedTasks) {
-      loadTasks();
+      void (async () => {
+        await loadTasks();
+      })();
     }
   }, [tab, fetchedTasks]);
 

@@ -62,7 +62,9 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    void (async () => {
+      await fetchUsers();
+    })();
   }, [fetchUsers]);
 
   const handleAction = async (action: string, username: string) => {

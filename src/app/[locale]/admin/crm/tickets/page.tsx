@@ -57,7 +57,9 @@ export default function AdminTicketsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTickets().catch(() => {});
+    void (async () => {
+      await fetchTickets().catch(() => {});
+    })();
     const interval = setInterval(() => {
       fetchTickets().catch(() => {});
     }, REFRESH_INTERVAL);

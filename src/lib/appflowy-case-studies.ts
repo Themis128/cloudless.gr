@@ -18,7 +18,6 @@ import {
   type CaseStudy,
   type CaseStudyMetric,
   type CaseStudyWithContent,
-  type CaseStudyInput,
 } from "./cms-static";
 
 export type {
