@@ -1,0 +1,5 @@
+Contact: mailto:tbaltzakis@cloudless.gr
+Contact: https://cloudless.gr/contact
+Expires: 2027-10-31T23:59:59.000Z
+Preferred-Languages: en, el
+Canonical: https://cloudless.gr/.well-known/security.txt
