@@ -114,6 +114,23 @@ spec:
                   [ -n "${POD}" ] || { log "no running MariaDB pod found"; exit 1; }
                   log "→ backing up via pod: ${POD}"
 
+                  # Reap orphaned mariadb-backup processes: if a previous run's
+                  # kubectl exec stream died mid-backup, the remote process keeps
+                  # running inside the DB pod holding the InnoDB backup lock.
+                  # Under concurrencyPolicy=Forbid nothing legit can be running
+                  # now — kill leftovers and clear the stale target dir.
+                  log "→ reaping orphaned mariadb-backup procs (if any)"
+                  kubectl exec -n espocrm "${POD}" -- sh -c '
+                    for c in /proc/[0-9]*/comm; do
+                      pid="${c%/comm}"; pid="${pid#/proc/}"
+                      read -r name < "$c" 2>/dev/null || continue
+                      case "$name" in
+                        mariadb-backup|mariabackup) kill -9 "$pid" 2>/dev/null || true ;;
+                      esac
+                    done
+                    rm -rf /tmp/mariadb-backup-tmp
+                  ' || true
+
                   DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
                   KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
                   LOCAL="/tmp/${DATE}.xbstream"
