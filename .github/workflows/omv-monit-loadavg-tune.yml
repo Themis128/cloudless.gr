@@ -1,0 +1,89 @@
+name: OMV Monit Loadavg Tune
+
+# Retunes monit's 1-min loadavg alert threshold on the omv host. omv is a
+# 4-core Pi running single-node k3s + hourly mariadb-xbstream backups + three
+# GitHub Actions runners (CPU limits ~367% overcommitted) — the stock
+# threshold trips on transient backup/CI/deploy fan-in and then fires a
+# recovery mail minutes later (observed 2026-10-04). Only the `loadavg
+# (1min)` lines are touched; 5/15-min checks keep alerting on real saturation.
+#
+# Runs directly on the omv self-hosted runner — no Tailscale/SSH hop (the
+# hosted-runner tailnet path has a known flakiness; see omv-security-updates).
+#
+# Trigger: workflow_dispatch, dry-run by default — pass apply=true to change.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply the new threshold (default: dry-run discovery only)'
+        required: false
+        type: boolean
+        default: false
+      threshold:
+        description: 'Target loadavg(1min) alert threshold (default: 12 = 3x cores)'
+        required: false
+        default: '12'
+
+concurrency:
+  group: omv-monit-loadavg-tune-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monit-tune:
+    name: OMV Monit Loadavg Tune
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: '382'
+      APPLY: ${{ github.event.inputs.apply == 'true' }}
+      THRESHOLD: ${{ github.event.inputs.threshold || '12' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+
+      - name: Monit loadavg tune (dry-run or apply)
+        run: |
+          set -euo pipefail
+
+          ARGS="--threshold-1min=$THRESHOLD"
+          if [[ "$APPLY" == "true" ]]; then
+            ARGS="--apply $ARGS"
+          fi
+
+          echo "Running local: sudo python3 infrastructure/omv/install-monit-loadavg-tune.py $ARGS"
+
+          # Execute directly on this host (the runner IS omv)
+          sudo python3 infrastructure/omv/install-monit-loadavg-tune.py $ARGS \
+            2>&1 | tee /tmp/monit-tune-output.txt
+          # pipefail + set -e propagate the installer's exit code; the
+          # if:always() step below posts the captured output either way
+
+      - name: Post results to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# OMV Monit Loadavg Tune — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            if [[ "$APPLY" == "true" ]]; then
+              echo "**Mode:** APPLY (threshold → $THRESHOLD, monit reloaded)"
+            else
+              echo "**Mode:** PREVIEW (dry-run, no changes made)"
+            fi
+            echo ""
+            echo '```'
+            cat /tmp/monit-tune-output.txt 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } > /tmp/monit-tune-report.md
+
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+            --body-file /tmp/monit-tune-report.md
+
+      - name: Cleanup temp files
+        if: always()
+        run: |
+          rm -f /tmp/monit-tune-output.txt /tmp/monit-tune-report.md 2>/dev/null || true
