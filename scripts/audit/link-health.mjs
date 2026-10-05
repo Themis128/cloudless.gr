@@ -92,6 +92,61 @@ for (let i = 0; i < sample.length; i += CONCURRENCY) {
 }
 process.stdout.write("\n");
 
+// Transient failures (5xx, unreachable, 408/429) get re-probed — a cold-start
+// or brief origin blip should not fail the strict audit. A URL that is still
+// down after RETRY_ATTEMPTS spaced retries is genuinely broken and kept.
+const RETRY_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 5000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function isTransient(r) {
+  return r.error || r.status === 408 || r.status === 429 || r.status >= 500;
+}
+
+const flaky = out.filter(isTransient);
+if (flaky.length > 0) {
+  console.log(`Re-probing ${flaky.length} transient failure(s) after ${RETRY_DELAY_MS / 1000}s…`);
+  for (const r of flaky) {
+    r.attempts = 1;
+    // Capture the original failure before retries overwrite status/error —
+    // "First probe" in the report must show what failed first, not the
+    // last failed retry.
+    const firstStatus = r.status || r.error;
+    for (let a = 0; a < RETRY_ATTEMPTS; a++) {
+      await sleep(RETRY_DELAY_MS);
+      const again = await probe(r.url);
+      r.attempts++;
+      if (!isTransient(again)) {
+        // "Recovered" means healthy again: ok/slow, or an expected
+        // locale-prefix redirect. A non-transient but still-broken retry
+        // (404, external redirect…) is a permanent failure — record it,
+        // don't count it as recovered, and don't bother retrying further.
+        again.category = category(again);
+        const healthy =
+          again.category === "ok" ||
+          again.category === "slow" ||
+          (again.category === "redirect" && isLocaleRedirect(again));
+        if (healthy) {
+          Object.assign(r, again, { attempts: r.attempts, recovered: true, firstStatus });
+        } else {
+          Object.assign(r, again, { attempts: r.attempts });
+        }
+        // probe() results carry no error key, so the initial network
+        // failure's stale error would still trip category()/isTransient()
+        // and double-report a recovered URL as broken.
+        if (!again.error) delete r.error;
+        break;
+      }
+      Object.assign(r, again, { attempts: r.attempts });
+      if (!again.error) delete r.error;
+    }
+  }
+  const recoveredCount = flaky.filter((r) => r.recovered).length;
+  console.log(
+    `  → ${recoveredCount} recovered, ${flaky.length - recoveredCount} still broken`
+  );
+}
+
 function category(r) {
   if (r.error) return "unreachable";
   if (r.status >= 200 && r.status < 300) return r.ms > SLOW_MS ? "slow" : "ok";
@@ -140,13 +195,21 @@ for (const r of out) {
   }
 }
 
+const recovered = out.filter((r) => r.recovered);
 const summary = {
   generatedAt: new Date().toISOString(),
   base,
   total: out.length,
   broken: buckets.client_error + buckets.server_error + buckets.unreachable,
+  transientRecovered: recovered.length,
   buckets,
   problems,
+  recovered: recovered.map((r) => ({
+    url: r.url,
+    firstStatus: r.firstStatus,
+    finalStatus: r.status,
+    attempts: r.attempts,
+  })),
 };
 
 if (jsonOut) {
@@ -168,6 +231,9 @@ if (mdOut) {
   lines.push(`| ⚠️ 4xx | ${buckets.client_error} |`);
   lines.push(`| 🔴 5xx | ${buckets.server_error} |`);
   lines.push(`| ❌ Unreachable | ${buckets.unreachable} |`);
+  if (recovered.length > 0) {
+    lines.push(`| 🔄 Transient (recovered on retry) | ${recovered.length} |`);
+  }
   if (problems.length > 0) {
     lines.push("");
     lines.push("### Problems");
@@ -183,6 +249,16 @@ if (mdOut) {
     }
     if (problems.length > 50) {
       lines.push(`| _… and ${problems.length - 50} more_ | | | | |`);
+    }
+  }
+  if (recovered.length > 0) {
+    lines.push("");
+    lines.push("### Transient — recovered on retry");
+    lines.push("");
+    lines.push("| URL | First probe | Final | Attempts |");
+    lines.push("|-----|-------------|-------|----------|");
+    for (const r of recovered) {
+      lines.push(`| ${r.url} | ${r.firstStatus} | ${r.status} | ${r.attempts} |`);
     }
   }
   await writeFile(mdOut, lines.join("\n") + "\n");
