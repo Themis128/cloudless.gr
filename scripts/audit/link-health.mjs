@@ -108,17 +108,28 @@ if (flaky.length > 0) {
   console.log(`Re-probing ${flaky.length} transient failure(s) after ${RETRY_DELAY_MS / 1000}s…`);
   for (const r of flaky) {
     r.attempts = 1;
+    // Capture the original failure before retries overwrite status/error —
+    // "First probe" in the report must show what failed first, not the
+    // last failed retry.
+    const firstStatus = r.status || r.error;
     for (let a = 0; a < RETRY_ATTEMPTS; a++) {
       await sleep(RETRY_DELAY_MS);
       const again = await probe(r.url);
       r.attempts++;
       if (!isTransient(again)) {
-        r.recovered = true;
-        r.firstStatus = r.status || r.error;
-        Object.assign(r, again, { attempts: r.attempts, recovered: true, firstStatus: r.firstStatus });
+        Object.assign(r, again, {
+          attempts: r.attempts,
+          recovered: true,
+          firstStatus,
+        });
+        // probe() results carry no error key, so the initial network
+        // failure's stale error would still trip category()/isTransient()
+        // and double-report a recovered URL as broken.
+        if (!again.error) delete r.error;
         break;
       }
       Object.assign(r, again, { attempts: r.attempts });
+      if (!again.error) delete r.error;
     }
   }
   const stillDown = flaky.filter(isTransient).length;
