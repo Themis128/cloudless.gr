@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
 
 // ContactFormSection pulls App Router hooks + GSAP/Cloudflare widgets that
 // have no meaning in jsdom — stub the boundaries, keep the real sidebar.
@@ -43,6 +43,8 @@ vi.mock("next/image", () => ({
 
 import ContactFormSection from "@/components/ContactFormSection";
 import LinksPage from "@/app/links/page";
+
+afterEach(cleanup);
 
 describe("Nextcloud integration — contact form sidebar", () => {
   it("offers the Talk room link on the VIDEO CALL row", () => {
