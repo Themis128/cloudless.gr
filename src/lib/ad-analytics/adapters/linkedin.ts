@@ -100,7 +100,15 @@ export const linkedinAdapter: AdPlatformAdapter = {
     const results: AdMetrics[] = [];
     for (const campaignId of campaignIds) {
       // 1. Headline metrics (impressions / clicks / cost / conversions).
-      const headline = await fetchHeadlineMetrics(cfg.token, accountId, campaignId, dateRangeParam);
+      // A failed fetch degrades to zeros here — pullMetrics feeds anomaly
+      // detection and digests, which prefer a zeroed row to a dropped one.
+      const headline =
+        (await fetchHeadlineMetrics(cfg.token, accountId, campaignId, dateRangeParam)) ?? {
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          spendEur: 0,
+        };
       const base: AdMetrics = {
         platform: "linkedin",
         campaignId,
@@ -206,6 +214,10 @@ export const linkedinAdapter: AdPlatformAdapter = {
     for (const el of elements) {
       if (el.id === undefined || el.id === null) continue;
       const h = await fetchHeadlineMetrics(cfg.token, accountId, String(el.id), dateRangeParam);
+      // A failed per-campaign read must not masquerade as €0 — returning the
+      // partial/zero sum would let the digest claim "credit intact" on data
+      // we never got. Bubble up so the runtime falls back.
+      if (!h) return null;
       total += h.spendEur;
     }
     return Math.round(total * 100) / 100;
@@ -355,7 +367,7 @@ async function fetchHeadlineMetrics(
   _accountId: string,
   campaignId: string,
   dateRangeParam: string
-): Promise<HeadlineMetrics> {
+): Promise<HeadlineMetrics | null> {
   const empty: HeadlineMetrics = { impressions: 0, clicks: 0, conversions: 0, spendEur: 0 };
   try {
     const path = buildAdAnalyticsPath({
@@ -377,7 +389,7 @@ async function fetchHeadlineMetrics(
       console.warn(
         `[ad-analytics/linkedin] adAnalytics ${res.status} campaign=${campaignId}: ${body}`
       );
-      return empty;
+      return null;
     }
     const data = (await res.json()) as {
       elements?: Array<{
@@ -402,7 +414,7 @@ async function fetchHeadlineMetrics(
       `[ad-analytics/linkedin] adAnalytics fetch failed campaign=${campaignId}:`,
       err instanceof Error ? err.message : err
     );
-    return empty;
+    return null;
   }
 }
 
