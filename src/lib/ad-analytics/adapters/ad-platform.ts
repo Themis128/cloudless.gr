@@ -58,10 +58,17 @@ export interface AdPlatformAdapter {
    * the same promo credit, so summing only the configured `campaignIds`
    * undercounts: a paused sibling's spend is invisible to pacing math and
    * the digest falsely reports "card safe" while the credit is already
-   * exhausted. Returns `null` when the platform can't answer (caller
-   * falls back to the configured-campaign sum).
+   * exhausted. Must sum over the same window the digest divides by when
+   * computing pace (`since` = pacing.adsStartAt) — pairing one window's
+   * numerator with another's denominator inflates the pace. Returns
+   * `null` when the platform can't answer (caller falls back to the
+   * configured-campaign sum); never throws.
    */
-  pullAccountSpendEur?(opts: { accountId: string; until: Date }): Promise<number | null>;
+  pullAccountSpendEur?(opts: {
+    accountId: string;
+    since: string;
+    until: Date;
+  }): Promise<number | null>;
 
   /**
    * Server-side conversion push (CAPI). For LinkedIn this requires that

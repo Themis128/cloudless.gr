@@ -159,3 +159,68 @@ describe("linkedinAdapter.pullMetrics", () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 });
+
+describe("linkedinAdapter.pullAccountSpendEur", () => {
+  const ACCOUNT_SPEND_ARGS = {
+    accountId: "511588554",
+    since: "2026-09-24",
+    until: new Date("2026-10-06T12:00:00Z"),
+  };
+
+  it("sums every campaign's spend over the caller's since window", async () => {
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ id: 907100946 }, { id: 857622786 }] }), {
+          status: 200,
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ costInLocalCurrency: "90.40" }] }), {
+          status: 200,
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ costInLocalCurrency: "33.25" }] }), {
+          status: 200,
+        })
+      );
+    const spend = await linkedinAdapter.pullAccountSpendEur(ACCOUNT_SPEND_ARGS);
+    expect(spend).toBe(123.65);
+    // The per-campaign analytics window must derive from the caller's
+    // `since` (pacing.adsStartAt) — pairing the digest's pace denominator.
+    const analyticsUrl = String(fetchSpy.mock.calls[1]?.[0]);
+    expect(analyticsUrl).toContain("year:2026,month:9,day:24");
+  });
+
+  it("returns null instead of throwing when the campaign list fetch fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    fetchSpy.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+    const spend = await linkedinAdapter.pullAccountSpendEur(ACCOUNT_SPEND_ARGS);
+    expect(spend).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it("returns null when the campaign list answers non-OK", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    fetchSpy.mockResolvedValueOnce(new Response("throttled", { status: 503 }));
+    const spend = await linkedinAdapter.pullAccountSpendEur(ACCOUNT_SPEND_ARGS);
+    expect(spend).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it("returns null when a per-campaign analytics read fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ elements: [{ id: 907100946 }] }), { status: 200 })
+      )
+      .mockResolvedValueOnce(new Response("boom", { status: 500 }));
+    const spend = await linkedinAdapter.pullAccountSpendEur(ACCOUNT_SPEND_ARGS);
+    expect(spend).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+});

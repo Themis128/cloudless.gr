@@ -300,10 +300,13 @@ export async function runScheduledPoll(opts?: {
           // Prefer account-wide spend — every campaign drains the same
           // promo credit, so the configured-campaign sum undercounts and
           // the digest falsely reports "card safe" while a paused sibling
-          // already exhausted it. Falls back when the adapter can't answer.
+          // already exhausted it. Same window as the fallback query below
+          // (and as the digest's pace divisor) so numerator and denominator
+          // stay paired. Falls back when the adapter can't answer.
           let totalSpend = adapter.pullAccountSpendEur
             ? await adapter.pullAccountSpendEur({
                 accountId: platformConfig.accountId,
+                since: platformConfig.pacing.adsStartAt,
                 until: now,
               })
             : null;
