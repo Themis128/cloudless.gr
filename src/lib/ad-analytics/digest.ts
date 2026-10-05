@@ -266,9 +266,11 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     tail = `· CREDIT EXHAUSTED — the card on file is billed for any further delivery ` + tail;
   } else if (pacePerDay !== null && pacePerDay > 0) {
     const daysLeft = Math.max(0, (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000);
-    const projectedUncapped = spent + pacePerDay * daysLeft;
-    const cappedByBudget = projectedUncapped > p.lifetimeBudgetEur;
-    const projectedEnd = Math.min(projectedUncapped, p.lifetimeBudgetEur);
+    // Account-wide projection: pacePerDay is the account's burn rate, so
+    // the tracked campaign's lifetime cap cannot bound this projection —
+    // capping it here would suppress the warning while sibling campaigns
+    // drain the same credit. The cap is informational only.
+    const projectedEnd = spent + pacePerDay * daysLeft;
     warn = projectedEnd > p.creditEur;
     if (warn) {
       const daysToDeplete = remaining / pacePerDay;
@@ -277,7 +279,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
         `· burn ~€${pacePerDay.toFixed(2)}/day → credit gone ~` +
         `${Math.max(0, Math.round(daysToDeplete))}d (→ ${depletes}) ` +
         tail;
-    } else if (cappedByBudget) {
+    } else if (projectedEnd > p.lifetimeBudgetEur) {
       tail =
         `· burn ~€${pacePerDay.toFixed(2)}/day · campaign cap ` +
         `€${p.lifetimeBudgetEur} limits this campaign's further spend ` +

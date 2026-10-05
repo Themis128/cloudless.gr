@@ -143,18 +143,19 @@ describe("renderDigest", () => {
     expect(text).toContain("burn ~€");
   });
 
-  it("does not warn when the campaign cap stops spend below the credit", () => {
+  it("warns when account-wide spend projects past the credit even though the campaign cap is lower", () => {
     const blocks = renderDigest({
       campaignSlug: "shop-online",
-      // High burn, but the €100 lifetime cap halts the campaign before the
-      // €136.75 credit is exhausted — the card on file stays untouched.
+      // High burn projects past the €136.75 credit before ads end. The
+      // €100 lifetime cap only bounds THIS campaign — siblings drain the
+      // same credit — so it must not suppress the warning.
       current: baseMetrics({ lifetimeSpendEur: 74.2 }),
       previous: null,
       pacing,
     });
     const text = JSON.stringify(blocks);
-    expect(text).toContain("Credit:");
-    expect(text).not.toContain("⚠️");
+    expect(text).toContain("⚠️");
+    expect(text).toContain("credit gone ~");
   });
 
   it("omits the pacing line without lifetime spend", () => {
