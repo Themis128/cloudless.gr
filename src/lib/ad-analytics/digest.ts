@@ -256,10 +256,17 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
 
   let tail = `· ads end ${p.adsEndAt}`;
   let warn = false;
-  if (pacePerDay !== null && pacePerDay > 0) {
-    // The card on file is charged only if spend that survives the
-    // campaign's lifetime cap still exceeds the credit. If the campaign
-    // hits its cap first, spend stops before the card is touched.
+  // `spent` is account-wide (every campaign drains the same promo credit)
+  // so the tracked campaign's lifetime cap does NOT bound it — a sibling
+  // campaign can push the account past the credit while the tracked one
+  // stays under its own cap. Only two honest states: already over, or
+  // projected over.
+  if (remaining <= 0) {
+    warn = true;
+    tail =
+      `· CREDIT EXHAUSTED — the card on file is billed for any further delivery ` +
+      tail;
+  } else if (pacePerDay !== null && pacePerDay > 0) {
     const daysLeft = Math.max(0, (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000);
     const projectedUncapped = spent + pacePerDay * daysLeft;
     const cappedByBudget = projectedUncapped > p.lifetimeBudgetEur;
@@ -275,7 +282,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     } else if (cappedByBudget) {
       tail =
         `· burn ~€${pacePerDay.toFixed(2)}/day · campaign cap ` +
-        `€${p.lifetimeBudgetEur} hits first — card safe ` +
+        `€${p.lifetimeBudgetEur} limits this campaign's further spend ` +
         tail;
     } else {
       const daysToDeplete = remaining / pacePerDay;

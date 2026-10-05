@@ -153,6 +153,61 @@ export const linkedinAdapter: AdPlatformAdapter = {
     return results;
   },
 
+  /**
+   * Account-wide lifetime spend for promo-credit pacing. Enumerates every
+   * campaign in the ad account (a paused/completed sibling still drained
+   * the shared credit), pulls analytics from the earliest campaign start,
+   * and sums `costInLocalCurrency`. `null` on API failure so the runtime
+   * falls back to the configured-campaign sum.
+   */
+  async pullAccountSpendEur({
+    accountId,
+    until,
+  }: {
+    accountId: string;
+    until: Date;
+  }): Promise<number | null> {
+    const cfg = await resolveConfig();
+    if (!cfg) return null;
+
+    const acct = String(accountId).replace(/[^\w-]/g, "");
+    const list = await fetch(
+      `${LINKEDIN_API_ROOT}/adAccounts/${acct}/adCampaigns` +
+        "?q=search&search=(status:(values:List(ACTIVE,PAUSED,DRAFT,COMPLETED,CANCELED)))&count=500",
+      {
+        headers: {
+          Authorization: `Bearer ${cfg.token}`,
+          [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+          [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
+        },
+      }
+    );
+    if (!list.ok) {
+      console.warn(`[ad-analytics/linkedin] adCampaigns list ${list.status} acct=${acct}`);
+      return null;
+    }
+    const elements =
+      ((await list.json()) as { elements?: Array<{ id?: number | string; runSchedule?: { start?: number } }> })
+        .elements ?? [];
+    if (elements.length === 0) return 0;
+
+    const starts = elements
+      .map((el) => el.runSchedule?.start)
+      .filter((s): s is number => typeof s === "number");
+    const since = starts.length
+      ? new Date(Math.min(...starts))
+      : new Date(until.getTime() - 365 * 86_400_000);
+    const dateRangeParam = formatDateRange(since, until);
+
+    let total = 0;
+    for (const el of elements) {
+      if (el.id === undefined || el.id === null) continue;
+      const h = await fetchHeadlineMetrics(cfg.token, accountId, String(el.id), dateRangeParam);
+      total += h.spendEur;
+    }
+    return Math.round(total * 100) / 100;
+  },
+
   async pushConversion({
     accountId: _accountId,
     conversionId,

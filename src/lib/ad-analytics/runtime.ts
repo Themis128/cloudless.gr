@@ -297,14 +297,26 @@ export async function runScheduledPoll(opts?: {
       // the lifetime figure is identical on each campaign row.
       if (platformConfig.pacing && metrics.length > 0) {
         try {
-          const lifetime = await adapter.pullMetrics({
-            accountId: platformConfig.accountId,
-            campaignIds: platformConfig.campaignIds,
-            since: new Date(platformConfig.pacing.adsStartAt),
-            until: now,
-            pivots: [],
-          });
-          const totalSpend = lifetime.reduce((acc, m) => acc + m.spendEur, 0);
+          // Prefer account-wide spend — every campaign drains the same
+          // promo credit, so the configured-campaign sum undercounts and
+          // the digest falsely reports "card safe" while a paused sibling
+          // already exhausted it. Falls back when the adapter can't answer.
+          let totalSpend = adapter.pullAccountSpendEur
+            ? await adapter.pullAccountSpendEur({
+                accountId: platformConfig.accountId,
+                until: now,
+              })
+            : null;
+          if (totalSpend === null || totalSpend === undefined) {
+            const lifetime = await adapter.pullMetrics({
+              accountId: platformConfig.accountId,
+              campaignIds: platformConfig.campaignIds,
+              since: new Date(platformConfig.pacing.adsStartAt),
+              until: now,
+              pivots: [],
+            });
+            totalSpend = lifetime.reduce((acc, m) => acc + m.spendEur, 0);
+          }
           for (const m of metrics) m.lifetimeSpendEur = totalSpend;
         } catch (err) {
           console.error("[ad-analytics/runtime] lifetime spend fetch failed:", err);
