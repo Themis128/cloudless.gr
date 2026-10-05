@@ -366,6 +366,17 @@ export default function ContactFormSection({ source = "" }: { source?: string })
                     </a>
                   </p>
                   <p>
+                    <span className={SIDEBAR_LABEL_CLASS}>VIDEO CALL:</span>{" "}
+                    <a
+                      href="https://cloud.cloudless.gr/call/zsykkx97"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neon-cyan text-xs hover:underline"
+                    >
+                      Join a Talk call — no account needed
+                    </a>
+                  </p>
+                  <p>
                     <span className={SIDEBAR_LABEL_CLASS}>LOCATION:</span>{" "}
                     <span className="text-xs text-slate-400">Greece, EU</span>
                   </p>
