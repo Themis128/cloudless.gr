@@ -263,9 +263,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   // projected over.
   if (remaining <= 0) {
     warn = true;
-    tail =
-      `· CREDIT EXHAUSTED — the card on file is billed for any further delivery ` +
-      tail;
+    tail = `· CREDIT EXHAUSTED — the card on file is billed for any further delivery ` + tail;
   } else if (pacePerDay !== null && pacePerDay > 0) {
     const daysLeft = Math.max(0, (new Date(p.adsEndAt).getTime() - Date.now()) / 86_400_000);
     const projectedUncapped = spent + pacePerDay * daysLeft;

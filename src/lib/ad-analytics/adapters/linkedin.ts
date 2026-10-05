@@ -187,8 +187,11 @@ export const linkedinAdapter: AdPlatformAdapter = {
       return null;
     }
     const elements =
-      ((await list.json()) as { elements?: Array<{ id?: number | string; runSchedule?: { start?: number } }> })
-        .elements ?? [];
+      (
+        (await list.json()) as {
+          elements?: Array<{ id?: number | string; runSchedule?: { start?: number } }>;
+        }
+      ).elements ?? [];
     if (elements.length === 0) return 0;
 
     const starts = elements
