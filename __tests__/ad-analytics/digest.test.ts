@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { renderDigest } from "@/lib/ad-analytics/digest";
 import type { AdMetrics } from "@/lib/ad-analytics/types";
@@ -109,6 +109,17 @@ describe("renderDigest", () => {
     adsEndAt: "2026-10-23",
   };
 
+  // Pacing math derives elapsed days from the wall clock — pin it so the
+  // projections (and the warn/no-warn expectations below) stay
+  // deterministic instead of drifting as real time advances.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-06T12:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders the credit pacing line when pacing config + lifetime spend are present", () => {
     const blocks = renderDigest({
       campaignSlug: "shop-online",
@@ -124,8 +135,8 @@ describe("renderDigest", () => {
     // Burn rate derives from lifetime spend ÷ elapsed days — no previous
     // bookmark needed.
     expect(text).toContain("burn ~€");
-    // €52.10 over ~3.5 elapsed days ≈ €15/day — projected end spend is
-    // capped by the €100 lifetime budget, well under the €136.75 credit.
+    // Pinned clock: €52.10 over 12.5 elapsed days ≈ €4.17/day, so the
+    // account-wide projection lands ~€121 — under the €136.75 credit.
     expect(text).not.toContain("⚠️");
   });
 
@@ -143,18 +154,19 @@ describe("renderDigest", () => {
     expect(text).toContain("burn ~€");
   });
 
-  it("does not warn when the campaign cap stops spend below the credit", () => {
+  it("warns when account-wide spend projects past the credit even though the campaign cap is lower", () => {
     const blocks = renderDigest({
       campaignSlug: "shop-online",
-      // High burn, but the €100 lifetime cap halts the campaign before the
-      // €136.75 credit is exhausted — the card on file stays untouched.
+      // High burn projects past the €136.75 credit before ads end. The
+      // €100 lifetime cap only bounds THIS campaign — siblings drain the
+      // same credit — so it must not suppress the warning.
       current: baseMetrics({ lifetimeSpendEur: 74.2 }),
       previous: null,
       pacing,
     });
     const text = JSON.stringify(blocks);
-    expect(text).toContain("Credit:");
-    expect(text).not.toContain("⚠️");
+    expect(text).toContain("⚠️");
+    expect(text).toContain("credit gone ~");
   });
 
   it("omits the pacing line without lifetime spend", () => {

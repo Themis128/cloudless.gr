@@ -100,7 +100,19 @@ export const linkedinAdapter: AdPlatformAdapter = {
     const results: AdMetrics[] = [];
     for (const campaignId of campaignIds) {
       // 1. Headline metrics (impressions / clicks / cost / conversions).
-      const headline = await fetchHeadlineMetrics(cfg.token, accountId, campaignId, dateRangeParam);
+      // A failed fetch degrades to zeros here — pullMetrics feeds anomaly
+      // detection and digests, which prefer a zeroed row to a dropped one.
+      const headline = (await fetchHeadlineMetrics(
+        cfg.token,
+        accountId,
+        campaignId,
+        dateRangeParam
+      )) ?? {
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        spendEur: 0,
+      };
       const base: AdMetrics = {
         platform: "linkedin",
         campaignId,
@@ -151,6 +163,74 @@ export const linkedinAdapter: AdPlatformAdapter = {
       results.push(base);
     }
     return results;
+  },
+
+  /**
+   * Account-wide lifetime spend for promo-credit pacing. Enumerates every
+   * campaign in the ad account (a paused/completed sibling still drained
+   * the shared credit) and sums `costInLocalCurrency` over the caller's
+   * `since` window — the same `pacing.adsStartAt` window the digest divides
+   * by when computing pace, so numerator and denominator stay paired.
+   * `null` on any API failure (never throws) so the runtime falls back to
+   * the configured-campaign sum.
+   */
+  async pullAccountSpendEur({
+    accountId,
+    since,
+    until,
+  }: {
+    accountId: string;
+    since: string;
+    until: Date;
+  }): Promise<number | null> {
+    const cfg = await resolveConfig();
+    if (!cfg) return null;
+
+    const acct = String(accountId).replace(/[^\w-]/g, "");
+    let elements: Array<{ id?: number | string }> = [];
+    try {
+      const list = await fetch(
+        `${LINKEDIN_API_ROOT}/adAccounts/${acct}/adCampaigns` +
+          "?q=search&search=(status:(values:List(ACTIVE,PAUSED,DRAFT,COMPLETED,CANCELED)))&count=500",
+        {
+          headers: {
+            Authorization: `Bearer ${cfg.token}`,
+            [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+            [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
+          },
+        }
+      );
+      if (!list.ok) {
+        console.warn(`[ad-analytics/linkedin] adCampaigns list ${list.status} acct=${acct}`);
+        return null;
+      }
+      elements =
+        ((await list.json()) as { elements?: Array<{ id?: number | string }> }).elements ?? [];
+    } catch (err) {
+      // A network/JSON error here must not throw past the fallback — the
+      // runtime's outer catch would skip pacing entirely instead of
+      // degrading to the configured-campaign sum.
+      console.warn(
+        `[ad-analytics/linkedin] adCampaigns list failed acct=${acct}:`,
+        err instanceof Error ? err.message : err
+      );
+      return null;
+    }
+    if (elements.length === 0) return 0;
+
+    const dateRangeParam = formatDateRange(new Date(since), until);
+
+    let total = 0;
+    for (const el of elements) {
+      if (el.id === undefined || el.id === null) continue;
+      const h = await fetchHeadlineMetrics(cfg.token, accountId, String(el.id), dateRangeParam);
+      // A failed per-campaign read must not masquerade as €0 — returning the
+      // partial/zero sum would let the digest claim "credit intact" on data
+      // we never got. Bubble up so the runtime falls back.
+      if (!h) return null;
+      total += h.spendEur;
+    }
+    return Math.round(total * 100) / 100;
   },
 
   async pushConversion({
@@ -297,7 +377,7 @@ async function fetchHeadlineMetrics(
   _accountId: string,
   campaignId: string,
   dateRangeParam: string
-): Promise<HeadlineMetrics> {
+): Promise<HeadlineMetrics | null> {
   const empty: HeadlineMetrics = { impressions: 0, clicks: 0, conversions: 0, spendEur: 0 };
   try {
     const path = buildAdAnalyticsPath({
@@ -319,7 +399,7 @@ async function fetchHeadlineMetrics(
       console.warn(
         `[ad-analytics/linkedin] adAnalytics ${res.status} campaign=${campaignId}: ${body}`
       );
-      return empty;
+      return null;
     }
     const data = (await res.json()) as {
       elements?: Array<{
@@ -344,7 +424,7 @@ async function fetchHeadlineMetrics(
       `[ad-analytics/linkedin] adAnalytics fetch failed campaign=${campaignId}:`,
       err instanceof Error ? err.message : err
     );
-    return empty;
+    return null;
   }
 }
 
