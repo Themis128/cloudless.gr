@@ -47,6 +47,13 @@ updates:
       # Pinned to 1.8.9 by scripts/etl/package.json — do not bump until a
       # release actually ships dist/ again.
   - dependency-name: '@dsnp/parquetjs'
+      # TypeScript 7.x is the native (tsgo) port — Next 16's next.config.ts
+      # loader calls into classic-tsc API surface that 7.x does not expose,
+      # so the build dies with "Cannot read properties of undefined
+      # (reading 'fileExists')" (dependabot PR #2073, 2026-10-05). Stay on
+      # the 6.x line until Next.js supports tsgo for config loading.
+  - dependency-name: typescript
+    update-types: [version-update:semver-major]
 
 - package-ecosystem: github-actions
   directory: /
