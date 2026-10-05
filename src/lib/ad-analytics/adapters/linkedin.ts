@@ -102,13 +102,17 @@ export const linkedinAdapter: AdPlatformAdapter = {
       // 1. Headline metrics (impressions / clicks / cost / conversions).
       // A failed fetch degrades to zeros here — pullMetrics feeds anomaly
       // detection and digests, which prefer a zeroed row to a dropped one.
-      const headline =
-        (await fetchHeadlineMetrics(cfg.token, accountId, campaignId, dateRangeParam)) ?? {
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          spendEur: 0,
-        };
+      const headline = (await fetchHeadlineMetrics(
+        cfg.token,
+        accountId,
+        campaignId,
+        dateRangeParam
+      )) ?? {
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        spendEur: 0,
+      };
       const base: AdMetrics = {
         platform: "linkedin",
         campaignId,
