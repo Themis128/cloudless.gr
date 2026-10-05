@@ -117,11 +117,20 @@ if (flaky.length > 0) {
       const again = await probe(r.url);
       r.attempts++;
       if (!isTransient(again)) {
-        Object.assign(r, again, {
-          attempts: r.attempts,
-          recovered: true,
-          firstStatus,
-        });
+        // "Recovered" means healthy again: ok/slow, or an expected
+        // locale-prefix redirect. A non-transient but still-broken retry
+        // (404, external redirect…) is a permanent failure — record it,
+        // don't count it as recovered, and don't bother retrying further.
+        again.category = category(again);
+        const healthy =
+          again.category === "ok" ||
+          again.category === "slow" ||
+          (again.category === "redirect" && isLocaleRedirect(again));
+        if (healthy) {
+          Object.assign(r, again, { attempts: r.attempts, recovered: true, firstStatus });
+        } else {
+          Object.assign(r, again, { attempts: r.attempts });
+        }
         // probe() results carry no error key, so the initial network
         // failure's stale error would still trip category()/isTransient()
         // and double-report a recovered URL as broken.
@@ -132,8 +141,10 @@ if (flaky.length > 0) {
       if (!again.error) delete r.error;
     }
   }
-  const stillDown = flaky.filter(isTransient).length;
-  console.log(`  → ${flaky.length - stillDown} recovered, ${stillDown} still broken`);
+  const recoveredCount = flaky.filter((r) => r.recovered).length;
+  console.log(
+    `  → ${recoveredCount} recovered, ${flaky.length - recoveredCount} still broken`
+  );
 }
 
 function category(r) {
