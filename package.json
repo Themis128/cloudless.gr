@@ -201,7 +201,7 @@
     "remark-gfm": "^4.0.1",
     "resend": "^6.32.0",
     "server-only": "^0.0.1",
-    "stripe": "^22.6.2",
+    "stripe": "^23.0.0",
     "three": "^0.186.1",
     "undici": "8.11.2",
     "workers-ai-provider": "^4.0.0",
