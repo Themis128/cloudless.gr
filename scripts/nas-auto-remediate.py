@@ -230,18 +230,16 @@ def fix_failed_units(state: dict) -> None:
                 log(f"systemd: restarted failed unit {unit}")
             else:
                 persistent.append(unit)
-                log(f"systemd: restart of {unit} FAILED rc={rr.returncode}: {rr.stderr.strip()[:200]}")
+                log(
+                    f"systemd: restart of {unit} FAILED rc={rr.returncode}: {rr.stderr.strip()[:200]}"
+                )
             continue
         # Unknown unit — oneshots that already exited get their stale flag
         # cleared; services wedged at start-limit-hit get one reset+restart
         # per day (observed: pod-filebrowser recovered this way); anything
         # else is reported as persistent.
-        show = run(
-            "systemctl", "show", unit, "-p", "Type,Result,ActiveEnterTimestamp"
-        )
-        props = dict(
-            ln.split("=", 1) for ln in show.stdout.splitlines() if "=" in ln
-        )
+        show = run("systemctl", "show", unit, "-p", "Type,Result,ActiveEnterTimestamp")
+        props = dict(ln.split("=", 1) for ln in show.stdout.splitlines() if "=" in ln)
         if props.get("Type") == "oneshot":
             stale_only.append(unit)
         elif props.get("Result") == "start-limit-hit":
@@ -263,7 +261,9 @@ def fix_failed_units(state: dict) -> None:
 
     if stale_only:
         run("systemctl", "reset-failed", *stale_only)
-        log(f"systemd: cleared stale failed flag on {len(stale_only)} one-shot(s): {', '.join(stale_only)}")
+        log(
+            f"systemd: cleared stale failed flag on {len(stale_only)} one-shot(s): {', '.join(stale_only)}"
+        )
     if persistent:
         log(f"systemd: PERSISTENT failures need attention: {', '.join(persistent)}")
     if not restarted and not stale_only and not persistent:
@@ -334,7 +334,9 @@ def fix_disk() -> None:
     r1 = run("journalctl", "--vacuum-time=14d")
     log(f"disk: journal vacuum rc={r1.returncode}")
     r2 = run("docker", "system", "prune", "-f")
-    log(f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})")
+    log(
+        f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})"
+    )
     st2 = shutil.disk_usage("/")
     log(f"disk: / now at {int(st2.used * 100 / st2.total)}%")
 
