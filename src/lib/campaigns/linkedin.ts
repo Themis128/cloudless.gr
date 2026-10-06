@@ -22,7 +22,7 @@ async function liiFetch(path: string, options: RequestInit = {}): Promise<Respon
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "LinkedIn-Version": "202506",
+      "LinkedIn-Version": "202608",
       ...options.headers,
     },
   });
