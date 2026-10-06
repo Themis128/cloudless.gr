@@ -192,6 +192,8 @@ Rules:
   never report the NUMBER OF ROWS as a business figure (e.g. 1 metrics row
   does NOT mean 1 order).
 - Only entities with status "active" are active; "paused"/"completed" are not.
+- "spend_eur"/"cost_eur" is money SPENT on ads — never call it revenue.
+- Report amounts in EUR (€), not dollars.
 - If a section has rowCount 0, say its data is empty — do not claim the
   business figure is zero unless a KPI row says so.
 
