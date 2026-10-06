@@ -81,7 +81,7 @@ export default function SocialOpsPage() {
       (acc[a.platform] ??= []).push(a);
       return acc;
     },
-    {},
+    {}
   );
 
   return (
@@ -98,7 +98,7 @@ export default function SocialOpsPage() {
           <button
             onClick={() => void load()}
             disabled={loading}
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 disabled:opacity-50"
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600"
           >
             {loading ? "Refreshing…" : "Refresh"}
           </button>
@@ -234,7 +234,7 @@ export default function SocialOpsPage() {
                 <div className="text-xs text-gray-500">failed</div>
               </div>
               <div>
-                <div className="text-2xl font-bold tabular-nums text-green-600">
+                <div className="text-2xl font-bold text-green-600 tabular-nums">
                   {queue.completed ?? 0}
                 </div>
                 <div className="text-xs text-gray-500">completed</div>
@@ -267,7 +267,7 @@ export default function SocialOpsPage() {
                     <button
                       onClick={() => void runAction({ action: "release-browser-lock" })}
                       disabled={busy !== null}
-                      className="rounded border border-gray-300 px-2 py-0.5 text-xs dark:border-gray-600 disabled:opacity-50"
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs disabled:opacity-50 dark:border-gray-600"
                     >
                       {busy === "release-browser-lock" ? "Releasing…" : "Release"}
                     </button>
@@ -282,6 +282,4 @@ export default function SocialOpsPage() {
   );
 }
 
-type SaOpsActionButton =
-  | { action: "session-heal" }
-  | { action: "release-browser-lock" };
+type SaOpsActionButton = { action: "session-heal" } | { action: "release-browser-lock" };
