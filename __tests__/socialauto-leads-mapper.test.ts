@@ -17,5 +17,18 @@ describe("toEspoLeadData (SocialAuto → EspoCRM Lead)", () => {
     expect(String(data.description)).toContain("Thread ID: t_123");
     expect(String(data.description)).toContain("Notes: Asked about pricing");
   });
+
+  it("maps website leads to the Web Site enum", () => {
+    const data = toEspoLeadData({
+      source: "website",
+      name: "Web Visitor",
+      email: "visitor@cloudless.gr",
+      notes: "Contact form",
+    });
+
+    expect(data.source).toBe("Web Site");
+    expect(data.campaignSlug).toBe("socialauto-website");
+    expect(String(data.description)).toContain("website (Website)");
+  });
 });
 

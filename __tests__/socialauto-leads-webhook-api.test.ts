@@ -163,5 +163,30 @@ describe("POST /api/webhooks/socialauto-leads", () => {
       { ok: false, espocrm_lead_id: null },
     ]);
   });
+
+  it("accepts website-source leads and maps them to the Web Site enum", async () => {
+    const res = await POST(
+      req(
+        { "x-socialauto-webhook-secret": SECRET },
+        {
+          source: "website",
+          name: "Contact Form User",
+          email: "contact@cloudless.gr",
+          notes: "Requested a cloud audit",
+        }
+      )
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockCreateLead).toHaveBeenCalledTimes(1);
+    const call = mockCreateLead.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(call.emailAddress).toBe("contact@cloudless.gr");
+    expect(call.source).toBe("Web Site");
+    expect(call.campaignSlug).toBe("socialauto-website");
+    expect(String(call.description)).toContain("website (Website)");
+
+    const payload = await res.json();
+    expect(payload.results).toEqual([{ ok: true, espocrm_lead_id: "lead-123" }]);
+  });
 });
 
