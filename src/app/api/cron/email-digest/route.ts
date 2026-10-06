@@ -97,7 +97,11 @@ export async function GET(request: NextRequest) {
   }
   const dataAsOf = executive?.freshness ?? executive?.inputs_ref?.gold_generated_at ?? null;
   const dataAsOfLabel = dataAsOf
-    ? new Date(dataAsOf).toLocaleString("en-IE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Athens" })
+    ? new Date(dataAsOf).toLocaleString("en-IE", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Europe/Athens",
+      })
     : null;
   const execBullets = (executive?.bullets ?? [])
     .map((b) => `<li style="margin-bottom:6px;color:#8b949e;font-size:13px">${escapeHtml(b)}</li>`)
