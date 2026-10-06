@@ -20,5 +20,9 @@ export default defineConfig({
 		// routes reviewed: `domains` above == the two custom_domain routes from
 		// wrangler.jsonc (apex + www). manage.cloudless.gr stays off this Worker
 		// (served directly by the Cloudflare Tunnel) — do not add it here.
+		// No cron triggers: the cf DSL omits `triggers` when no scheduled
+		// triggers are declared. wrangler.jsonc keeps an explicit `crons: []`;
+		// verified via CF API that cloudless2 has 0 attached schedules, so
+		// nothing is orphaned by the omission.
 	},
 });
