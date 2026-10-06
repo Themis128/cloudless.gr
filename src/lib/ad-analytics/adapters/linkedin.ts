@@ -6,8 +6,9 @@
  * touching it, so this Phase 1 PR is non-breaking.
  *
  * Operating principles enforced here:
- *  - `LinkedIn-Version: 202605` (the legacy client pins `202401` which is
- *    16 months stale). The version is a hard-coded constant so a future bump
+ *  - `LinkedIn-Version: 202605` (the legacy `campaigns/linkedin.ts` client
+ *    now pins `202608` — versions expire ~12 months after release). The
+ *    version is a hard-coded constant so a future bump
  *    is one line.
  *  - `pushConversion()` returns `{ accepted, status }` instead of throwing on
  *    403, so the runtime can degrade cleanly when the operator hasn't yet
