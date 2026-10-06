@@ -495,6 +495,77 @@ export async function socialautoAdsControl(
   }
 }
 
+// ── Ops Console ────────────────────────────────────────────────────────────
+
+export interface SaOpsService {
+  name: string;
+  online: boolean;
+  detail: string;
+}
+
+export interface SaOpsAccount {
+  id: string;
+  platform: string;
+  username: string | null;
+  display_name: string | null;
+  status: string;
+  account_type: string;
+  token_expires_at: string | null;
+  audit: Record<string, unknown> | null;
+}
+
+export interface SaOpsConsole {
+  checked_at: string;
+  services: SaOpsService[];
+  accounts: SaOpsAccount[];
+  publish_queue: Record<string, number>;
+  media: {
+    ai_generated_assets?: number;
+    comfyui_queue?: { pending?: number; running?: number };
+  };
+  browser_orchestrator: {
+    current_platform: string | null;
+    queue_length: number;
+    lock_held: boolean;
+    message: string;
+  };
+  tiktok_audit: Record<string, unknown> | null;
+}
+
+/** GET /ops/console — aggregated service/account/queue/media/audit state. */
+export async function getOpsConsole(): Promise<SaOpsConsole> {
+  return callThrowing<SaOpsConsole>("/ops/console", { timeoutMs: 20_000 });
+}
+
+export type SaOpsAction =
+  | { action: "session-heal" }
+  | { action: "release-browser-lock" }
+  | { action: "set-tiktok-audit"; status: string; reference?: string; detail?: string };
+
+/** POST-mapped ops actions — the only mutations the admin UI is allowed to
+ *  trigger against the SocialAuto ops surface. Unknown actions 400. */
+export async function runOpsAction(action: SaOpsAction): Promise<unknown> {
+  switch (action.action) {
+    case "session-heal":
+      // Must stay under the route's maxDuration (60s) — a longer client-side
+      // timeout lets the platform kill the function while the upstream heal
+      // is still running, leaving its outcome indeterminate. The heal itself
+      // continues server-side on SocialAuto regardless of the response.
+      return callThrowing("/ops/session-heal", { method: "POST", timeoutMs: 55_000 });
+    case "release-browser-lock":
+      return callThrowing("/ops/browser-orchestrator/release", { method: "POST" });
+    case "set-tiktok-audit":
+      return callThrowing("/ops/tiktok-audit", {
+        method: "PUT",
+        body: JSON.stringify({
+          status: action.status,
+          reference: action.reference,
+          detail: action.detail,
+        }),
+      });
+  }
+}
+
 export async function isSocialAutoConfigured(): Promise<boolean> {
   try {
     await getSaConfig();

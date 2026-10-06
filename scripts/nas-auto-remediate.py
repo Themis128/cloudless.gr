@@ -197,8 +197,16 @@ def fix_backup() -> None:
         log("backup: health heuristic already corrected")
 
 
-def fix_failed_units(state: dict) -> None:
+def fix_failed_units() -> None:
     """Clear stale 'failed' flags on recovered one-shots; restart real services once/day."""
+    state = load_state()
+    try:
+        _fix_failed_units(state)
+    finally:
+        save_state(state)
+
+
+def _fix_failed_units(state: dict) -> None:
     r = run("systemctl", "list-units", "--failed", "--no-pager", "--no-legend", "--plain")
     failed = [
         ln.split()[0]
@@ -352,17 +360,12 @@ def fix_tailscale() -> None:
 
 
 def main() -> None:
-    state = load_state()
     log("===== nas-auto-remediate start =====")
     for fn in (fix_minio, fix_backup, fix_failed_units, fix_stuck_pods, fix_disk, fix_tailscale):
         try:
-            if fn is fix_failed_units:
-                fn(state)
-            else:
-                fn()
+            fn()
         except Exception as exc:  # remediation must never kill the pass
             log(f"{fn.__name__}: unexpected error: {exc}")
-    save_state(state)
     try:
         with HEALTH_LOG.open("a") as f:
             f.write(f"[{stamp()}] nas-auto-remediate: pass complete\n")
