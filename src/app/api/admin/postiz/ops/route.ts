@@ -9,6 +9,9 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// session-heal probes every platform session server-side and can exceed the
+// default serverless timeout — give the proxied call a full minute.
+export const maxDuration = 60;
 
 const VALID_ACTIONS = new Set(["session-heal", "release-browser-lock", "set-tiktok-audit"]);
 
