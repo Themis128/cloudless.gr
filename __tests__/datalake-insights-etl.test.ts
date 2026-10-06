@@ -8,7 +8,6 @@
  */
 import { describe, expect, it } from "vitest";
 
-// eslint-disable-next-line import/no-unresolved -- plain .mjs ETL script, no types
 import {
   extractMetrics,
   sectionPack,
