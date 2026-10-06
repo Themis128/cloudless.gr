@@ -18,7 +18,7 @@ const CONTENT_TYPE_JSON = "application/json";
 const DOMAINS = [
   { domain: "seo", sections: ["top_keywords", "freshness"] },
   { domain: "revenue", sections: ["stripe_revenue", "acquisition_funnel", "attribution"] },
-  { domain: "crm_funnel", sections: ["espocrm_funnel"] },
+  { domain: "crm_funnel", sections: ["espocrm_funnel", "social_leads"] },
   { domain: "ads", sections: ["linkedin_ads", "linkedin_ads_audience", "ads_funnel"] },
   { domain: "ops_errors", sections: ["top_errors"] },
   {
@@ -27,6 +27,7 @@ const DOMAINS = [
       "stripe_revenue",
       "top_keywords",
       "espocrm_funnel",
+      "social_leads",
       "linkedin_ads",
       "ads_funnel",
       "top_errors",
@@ -79,7 +80,10 @@ function extractMetrics(packs) {
       metrics.push({ key: `${pack.section}.error`, value: pack.error });
       continue;
     }
-    metrics.push({ key: `${pack.section}.rowCount`, value: pack.rowCount ?? 0 });
+    // NOTE: pack.rowCount is deliberately NOT emitted here. It is structural
+    // metadata ("how many rows this section has"), not a business metric —
+    // LLMs read `stripe_revenue.rowCount: 1` as "1 paid order" and produce
+    // contradictions. Row counts stay visible on the section packs only.
     const first = pack.rows?.[0];
     if (first && typeof first === "object") {
       for (const [k, v] of Object.entries(first).slice(0, 6)) {
@@ -183,6 +187,13 @@ Produce JSON with keys:
   "confidence" ("high"|"medium"|"low")
 
 Use ONLY the metrics below. Do not invent numbers not present.
+Rules:
+- A row with a "metric" field is a KPI: report its "value"/"amount_eur" —
+  never report the NUMBER OF ROWS as a business figure (e.g. 1 metrics row
+  does NOT mean 1 order).
+- Only entities with status "active" are active; "paused"/"completed" are not.
+- If a section has rowCount 0, say its data is empty — do not claim the
+  business figure is zero unless a KPI row says so.
 
 Metrics:
 ${JSON.stringify(metrics, null, 2)}
@@ -297,7 +308,16 @@ async function main() {
   console.log(`[insights] wrote ${indexKey}`);
 }
 
-main().catch((error) => {
-  console.error("[insights] fatal:", error);
-  process.exit(1);
-});
+// Export for tests — importing this module must not run main().
+export { sectionPack, extractMetrics, buildPrompt, parseInsightJson, DOMAINS };
+
+const isDirectRun =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === new URL(`file://${process.argv[1]}`).href;
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error("[insights] fatal:", error);
+    process.exit(1);
+  });
+}
