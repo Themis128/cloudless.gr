@@ -245,11 +245,14 @@
     "typescript-eslint": "^8.71.0",
     "vite-node": "^6.0.0",
     "vitest": "^5.0.3",
-    "wrangler": "^4.147.0"
+    "wrangler": "^4.147.0",
+    "cf": "1.0.0-beta.12"
   },
   "pnpm": {
     "auditConfig": {
-      "ignoreGhsas": ["GHSA-vfj7-8cjw-p6xm"]
+      "ignoreGhsas": [
+        "GHSA-vfj7-8cjw-p6xm"
+      ]
     },
     "overrides": {
       "postcss@<8.5": "^8.5.26",
@@ -265,7 +268,8 @@
       "svgo@>=4.0.0 <4.1.0": "4.1.0",
       "smol-toml@<=1.7.0": "1.7.1",
       "qs": ">=6.16.0",
-      "hono": ">=4.13.5"
+      "hono": ">=4.13.5",
+      "source-map-js@<1.2.2": "1.2.2"
     }
   }
 }

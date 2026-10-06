@@ -8,6 +8,7 @@
     "types": "wrangler types"
   },
   "devDependencies": {
+    "cf": "1.0.0-beta.12",
     "wrangler": "4.147.0"
   }
 }
