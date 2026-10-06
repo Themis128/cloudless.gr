@@ -31,6 +31,9 @@ data:
   D1_FUNNEL_SAMPLE: "0.05"
   D1_ANALYTICS_SAMPLE: "0.05"
   ADMIN_PUSH_VIA_NTFY: "1"
+  # Weekly email-digest cron (/api/cron/email-digest) recipient. Unset falls
+  # back to a personal gmail — keep the reports on the cloudless.gr mailbox.
+  DIGEST_RECIPIENT_EMAIL: tbaltzakis@cloudless.gr
   GRAFANA_URL: https://grafana.cloudless.gr
   KUMA_URL: https://kuma.cloudless.gr
   KUMA_BASE_URL: http://uptime-kuma.uptime-kuma.svc.cluster.local:3001
