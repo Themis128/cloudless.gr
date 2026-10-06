@@ -30,5 +30,8 @@ export const POST = saAdminRoute(async (req: NextRequest) => {
   if (!body.action || !VALID_ACTIONS.has(body.action)) {
     return NextResponse.json({ error: "unknown_action" }, { status: 400 });
   }
+  if (body.action === "set-tiktok-audit" && typeof body.status !== "string") {
+    return NextResponse.json({ error: "status_required" }, { status: 400 });
+  }
   return NextResponse.json({ ok: true, result: await runOpsAction(body as SaOpsAction) });
 });

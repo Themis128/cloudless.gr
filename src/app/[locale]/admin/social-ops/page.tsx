@@ -262,8 +262,8 @@ export default function SocialOpsPage() {
               <div className="flex items-center justify-between">
                 <span>Browser orchestrator</span>
                 <span className="flex items-center gap-2">
-                  {data?.browser_orchestrator.message ?? "—"}
-                  {data?.browser_orchestrator.lock_held && (
+                  {data?.browser_orchestrator?.message ?? "—"}
+                  {data?.browser_orchestrator?.lock_held && (
                     <button
                       onClick={() => void runAction({ action: "release-browser-lock" })}
                       disabled={busy !== null}
