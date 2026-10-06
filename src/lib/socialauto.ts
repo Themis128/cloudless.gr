@@ -547,7 +547,11 @@ export type SaOpsAction =
 export async function runOpsAction(action: SaOpsAction): Promise<unknown> {
   switch (action.action) {
     case "session-heal":
-      return callThrowing("/ops/session-heal", { method: "POST", timeoutMs: 300_000 });
+      // Must stay under the route's maxDuration (60s) — a longer client-side
+      // timeout lets the platform kill the function while the upstream heal
+      // is still running, leaving its outcome indeterminate. The heal itself
+      // continues server-side on SocialAuto regardless of the response.
+      return callThrowing("/ops/session-heal", { method: "POST", timeoutMs: 55_000 });
     case "release-browser-lock":
       return callThrowing("/ops/browser-orchestrator/release", { method: "POST" });
     case "set-tiktok-audit":
