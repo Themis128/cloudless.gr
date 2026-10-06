@@ -63,7 +63,7 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 The infrastructure uses **two Workers** with different purposes:
 
-1. **`cloudless2` (pi-origin-proxy)** — Free-tier Worker (<50 KiB) that proxies all traffic from `cloudless.gr`, `www.cloudless.gr`, and `manage.cloudless.gr` to the Pi origin via Tunnel (`pi-origin.cloudless.gr` → NodePort 30300). This Worker stays under the 3 MiB gzip Free tier limit. Full OpenNext SSR (~5.5 MiB) cannot be deployed on Free.
+1. **`cloudless2` (pi-origin-proxy)** — Free-tier Worker (<50 KiB) that proxies all traffic from `cloudless.gr` and `www.cloudless.gr` to the Pi origin via Tunnel (`manage.cloudless.gr` is served by the Tunnel directly) (`pi-origin.cloudless.gr` → NodePort 30300). This Worker stays under the 3 MiB gzip Free tier limit. Full OpenNext SSR (~5.5 MiB) cannot be deployed on Free.
 
 2. **`cloudless-failover`** — Paid-tier Worker that implements request-level HA failover. It tries AWS CloudFront first (primary), and falls back to the Pi origin via Tunnel if AWS returns >= 400 or times out. Routes: `cloudless.gr/*` and `www.cloudless.gr/*`.
 
@@ -312,7 +312,7 @@ Each ingress rule maps a hostname to an origin service:
 
 ### Worker 1: cloudless2 (pi-origin-proxy)
 
-**Purpose:** Free-tier origin proxy that forwards all traffic from `cloudless.gr`, `www.cloudless.gr`, and `manage.cloudless.gr` to the Pi via Tunnel.
+**Purpose:** Free-tier origin proxy that forwards all traffic from `cloudless.gr` and `www.cloudless.gr` to the Pi via Tunnel (`manage.cloudless.gr` bypasses the Worker).
 
 **Configuration** (`workers/pi-origin-proxy/wrangler.jsonc`):
 
@@ -320,10 +320,15 @@ Each ingress rule maps a hostname to an origin service:
 | --------------------- | ---------------------------------------------------------------------- |
 | Worker Name           | cloudless2                                                             |
 | Type                  | HTTP Handler                                                           |
-| Routes                | `cloudless.gr`, `www.cloudless.gr`, `manage.cloudless.gr`              |
+| Routes                | `cloudless.gr`, `www.cloudless.gr` (custom domains)                    |
 | Plan                  | Free                                                                   |
 | Environment Variables | `PI_ORIGIN_HOST` = `pi-origin.cloudless.gr`, `PI_TIMEOUT_MS` = `30000` |
 | Size                  | <50 KiB (stays under Free tier 3 MiB gzip limit)                       |
+
+> `manage.cloudless.gr` is intentionally **not** routed here — it is served
+> directly by the Cloudflare Tunnel → Pi `cloudless-app` so cron callers dodge
+> Bot Fight Mode. Do not add it to the routes: a bare route silently reappears
+> on the next `wrangler deploy` and steals manage traffic from the Tunnel.
 
 **Traffic Flow:**
 
