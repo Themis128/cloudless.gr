@@ -1,7 +1,7 @@
 import type { LeadData } from "@/lib/espocrm";
 
 export type SocialAutoSource =
-  "whatsapp_flow" | "whatsapp_dm" | "facebook_messenger" | "instagram_dm";
+  "whatsapp_flow" | "whatsapp_dm" | "facebook_messenger" | "instagram_dm" | "website";
 export type SocialAutoInterest = "cloud" | "growth" | "audit";
 
 export interface SocialAutoLead {
@@ -44,6 +44,8 @@ function mapSourceToEspo(source: SocialAutoSource): { espoSource: string; channe
       return { espoSource: "Other", channelLabel: "WhatsApp Flow" };
     case "whatsapp_dm":
       return { espoSource: "Other", channelLabel: "WhatsApp DM" };
+    case "website":
+      return { espoSource: "Web Site", channelLabel: "Website" };
     default:
       return { espoSource: "Other", channelLabel: "Other" };
   }
@@ -102,7 +104,8 @@ export function isSocialAutoLead(input: unknown): input is SocialAutoLead {
     (source === "whatsapp_flow" ||
       source === "whatsapp_dm" ||
       source === "facebook_messenger" ||
-      source === "instagram_dm") &&
+      source === "instagram_dm" ||
+      source === "website") &&
     typeof obj.name === "string" &&
     typeof obj.email === "string"
   );
