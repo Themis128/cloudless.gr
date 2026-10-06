@@ -122,3 +122,13 @@ AppFlowy (`src/lib/appflowy-*.ts`, admin routes under `src/app/api/admin/appflow
 - **Unit:** `pnpm test` (Vitest + jsdom)
 - **E2E:** `npx playwright test`
 - **Coverage:** `pnpm test:coverage:full`
+
+## OMV Self-Healing Automation
+
+- **nas-auto-remediate**: Automated self-healing script for the omv node. Handles:
+  - Failed systemd units: clears stale flags, resets/restarts wedged units (one per day), reports persistent failures.
+  - Stuck k3s pods: deletes CrashLoopBackOff, bad-image, or Pending>30m pods for controller recreation.
+  - Root disk pressure: triggers journal vacuum and docker prune at 85% usage.
+  - Tailscale: restarts tailscaled if status check fails.
+- State is tracked in `/var/lib/nas-auto-remediate/state.json` (per-unit daily restart budget).
+- Each remediation pass is isolated—one failing checker does not abort the run.
