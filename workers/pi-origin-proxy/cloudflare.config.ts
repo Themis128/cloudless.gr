@@ -1,19 +1,5 @@
 import { bindings, defineConfig } from "cf/config";
 
-/**
- * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
- */
-/**
- * TODO(@cloudflare): cf migrate: config.routes.0: Custom-domain route options require manual review.
- */
-/**
- * TODO(@cloudflare): cf migrate: config.routes.1: Custom-domain route options require manual review.
- */
-/**
- * TODO(@cloudflare): cf migrate: An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker.
- */
-throw new Error("Migration incomplete. Resolve every cf migrate TODO in `cloudflare.config.ts`.");
-
 export default defineConfig({
 	accountId: "fb7dc7b69b662480cd5961a4d1913c78",
 	worker: {
@@ -31,11 +17,8 @@ export default defineConfig({
 				name: "cloudless_analytics",
 			}),
 		},
-		/**
-		 * TODO(@cloudflare): cf migrate: Custom-domain route options require manual review.
-		 */
-		/**
-		 * TODO(@cloudflare): cf migrate: Custom-domain route options require manual review.
-		 */
+		// routes reviewed: `domains` above == the two custom_domain routes from
+		// wrangler.jsonc (apex + www). manage.cloudless.gr stays off this Worker
+		// (served directly by the Cloudflare Tunnel) — do not add it here.
 	},
 });
