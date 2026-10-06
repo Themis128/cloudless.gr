@@ -16,7 +16,16 @@ export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) return cronUnauthorized();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cloudless.gr";
-  const recipient = process.env.DIGEST_RECIPIENT_EMAIL ?? "baltzakis.themis@gmail.com";
+  // Comma-separated list supported; the owner mailbox always receives a copy.
+  const recipients = [
+    ...new Set(
+      (process.env.DIGEST_RECIPIENT_EMAIL ?? "baltzakis.themis@gmail.com")
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean)
+        .concat("tbaltzakis@cloudless.gr")
+    ),
+  ];
 
   const [executive, revenue, seo, crm] = await Promise.all([
     getInsight("executive").catch(() => null),
@@ -53,6 +62,47 @@ export async function GET(request: NextRequest) {
   const execSummary =
     executive?.summary ??
     "No executive insight available yet — run the analytics orchestration job to generate one.";
+
+  // Verified figures — rendered from the insight's cited gold metrics, NOT
+  // from LLM prose, so this block cannot contradict the domain data.
+  const cited = new Map(
+    (executive?.metrics_cited ?? [])
+      .filter((m) => m && typeof m.key === "string")
+      .map((m) => [m.key, m.value])
+  );
+  const verifiedRows: string[] = [];
+  if (typeof cited.get("stripe_revenue.metric") === "string") {
+    const metricName = String(cited.get("stripe_revenue.metric")).replace(/_/g, " ");
+    verifiedRows.push(
+      `${metricName}: ${cited.get("stripe_revenue.value") ?? "—"} · revenue: €${cited.get("stripe_revenue.amount_eur") ?? "—"}`
+    );
+  }
+  if (typeof cited.get("linkedin_ads.spend_eur") === "number") {
+    const name = cited.get("linkedin_ads.ad_set_name") ?? "LinkedIn ads";
+    verifiedRows.push(
+      `${name}: €${cited.get("linkedin_ads.spend_eur")} · ${cited.get("linkedin_ads.impressions") ?? "—"} impressions · ${cited.get("linkedin_ads.clicks") ?? "—"} clicks`
+    );
+  }
+  if (typeof cited.get("ads_funnel.count") === "number") {
+    const stage = cited.get("ads_funnel.stage") ?? "funnel";
+    const cost = cited.get("ads_funnel.cost_eur");
+    verifiedRows.push(
+      `Ads funnel ${stage}: ${cited.get("ads_funnel.count")}${cost != null ? ` · €${cost}` : ""}`
+    );
+  }
+  if (typeof cited.get("social_leads.leads") === "number") {
+    verifiedRows.push(
+      `Website leads: ${cited.get("social_leads.leads")} · synced to EspoCRM: ${cited.get("social_leads.espocrm_synced") ?? 0}`
+    );
+  }
+  const dataAsOf = executive?.freshness ?? executive?.inputs_ref?.gold_generated_at ?? null;
+  const dataAsOfLabel = dataAsOf
+    ? new Date(dataAsOf).toLocaleString("en-IE", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Europe/Athens",
+      })
+    : null;
   const execBullets = (executive?.bullets ?? [])
     .map((b) => `<li style="margin-bottom:6px;color:#8b949e;font-size:13px">${escapeHtml(b)}</li>`)
     .join("");
@@ -71,6 +121,15 @@ export async function GET(request: NextRequest) {
 
     <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;margin-bottom:20px">
       <div style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3fb950;margin-bottom:10px">Executive Summary</div>
+      ${dataAsOfLabel ? `<p style="font-size:11px;color:#484f58;margin:0 0 10px">Data as of ${escapeHtml(dataAsOfLabel)} (datalake gold snapshot)</p>` : ""}
+      ${
+        verifiedRows.length
+          ? `<div style="background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:10px 14px;margin-bottom:12px">
+              <div style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#58a6ff;margin-bottom:6px">Verified figures</div>
+              ${verifiedRows.map((r) => `<div style="font-size:12px;color:#c9d1d9;line-height:1.6">${escapeHtml(r)}</div>`).join("")}
+            </div>`
+          : ""
+      }
       <p style="font-size:14px;color:#e6edf3;line-height:1.6;margin:0 0 12px">${escapeHtml(execSummary)}</p>
       ${execBullets ? `<ul style="padding-left:18px;margin:0">${execBullets}</ul>` : ""}
     </div>
@@ -103,7 +162,9 @@ export async function GET(request: NextRequest) {
 
   const text = [
     `cloudless.gr — Weekly Digest (${weekLabel})`,
+    ...(dataAsOfLabel ? [`Data as of ${dataAsOfLabel}`] : []),
     "",
+    ...(verifiedRows.length ? ["VERIFIED FIGURES", ...verifiedRows.map((r) => `• ${r}`), ""] : []),
     "EXECUTIVE SUMMARY",
     execSummary,
     ...(executive?.bullets ?? []).map((b) => `• ${b}`),
@@ -118,18 +179,20 @@ export async function GET(request: NextRequest) {
     .join("\n");
 
   try {
-    await sendEmail({
-      to: recipient,
-      from: SENDERS.admin,
-      fromLabel: "cloudless.gr",
-      subject: `Weekly Digest — ${weekLabel}`,
-      html,
-      text,
-    });
+    for (const to of recipients) {
+      await sendEmail({
+        to,
+        from: SENDERS.admin,
+        fromLabel: "cloudless.gr",
+        subject: `Weekly Digest — ${weekLabel}`,
+        html,
+        text,
+      });
+    }
 
     return NextResponse.json({
       ok: true,
-      recipient,
+      recipients,
       domains: ["executive", "revenue", "seo", "crm_funnel"],
       sentAt: now.toISOString(),
     });
