@@ -556,8 +556,8 @@ slack@cloudless.gr → CF Email Routing → mail-ingest Worker
 `src/lib/mail-to-slack.ts` is the deterministic sorter:
 
 - **alert** (ops senders like github.com/stripe.com/sentry.io, or alert
-  subjects) → `SLACK_OPS_CHANNEL` (#ops-alerts)
-- **human** → `SLACK_INBOX_CHANNEL` (#inbox)
+  subjects) → `SLACK_OPS_CHANNEL` (`C0C7N9SB59S`, #ops-alerts)
+- **human** → `SLACK_INBOX_CHANNEL` (`C0C7JEEG2E6`, #inbox)
 - **bulk** (List-Id / Precedence: bulk / Auto-Submitted / unsubscribe) →
   suppressed from Slack; still delivered to the mailbox
 
