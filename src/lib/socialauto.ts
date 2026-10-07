@@ -495,6 +495,44 @@ export async function socialautoAdsControl(
   }
 }
 
+// ── Publish queue control (Slack buttons → /publishing/*) ──────────────────
+
+/** Requeue a failed publish-queue item. Called by the
+ *  `socialauto_retry_queue` Slack button (value = queue item id). */
+export async function retryQueueItem(
+  queueId: string
+): Promise<{ ok: boolean; error?: string; detail?: string }> {
+  try {
+    await callThrowing(`/publishing/queue/${encodeURIComponent(queueId)}/retry`, {
+      method: "POST",
+      timeoutMs: 20_000,
+    });
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: (err as Error).message,
+      detail: err instanceof SocialAutoApiError ? err.body.slice(0, 200) : undefined,
+    };
+  }
+}
+
+/** Cancel a queued/failed publish-queue item. Called by the
+ *  `socialauto_cancel_queue` Slack button (value = queue item id). */
+export async function cancelQueueItem(
+  queueId: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await callThrowing(`/publishing/queue/${encodeURIComponent(queueId)}/cancel`, {
+      method: "POST",
+      timeoutMs: 20_000,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
 // ── Ops Console ────────────────────────────────────────────────────────────
 
 export interface SaOpsService {

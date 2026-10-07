@@ -11,6 +11,10 @@
     "FALLBACK_FORWARD": "themis.baltzakis@gmail.com",
     "SPAM_TAG_AT": "4",
     "SPAM_REJECT_AT": "9",
-    "SPAM_BLOCK_SENDERS": ""
+    "SPAM_BLOCK_SENDERS": "",
+    // Mail→Slack bridge: slack@cloudless.gr is mirrored to the workspace.
+    // SLACK_INGEST_SECRET stays a wrangler secret — never a var.
+    "SLACK_INGEST_URL": "https://cloudless.gr/api/slack/inbound-email",
+    "SLACK_ROUTE_PREFIXES": "slack"
   }
 }

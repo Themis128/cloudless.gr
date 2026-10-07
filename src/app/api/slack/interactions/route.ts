@@ -26,6 +26,13 @@ import {
 } from "@/lib/campaigns/linkedin";
 import { socialautoAdsControl } from "@/lib/socialauto";
 import { getLiveCampaigns } from "@/data/campaigns";
+import {
+  retryQueueItem,
+  cancelQueueItem,
+  runOpsAction,
+  getOpsConsole,
+  isSocialAutoConfigured,
+} from "@/lib/socialauto";
 
 /**
  * Action IDs registered in this route that map to a workflow_dispatch
@@ -59,6 +66,8 @@ interface SlackInteractionPayload {
   response_url?: string;
   trigger_id?: string;
   callback_id?: string;
+  channel?: { id: string };
+  message?: { ts?: string; blocks?: Array<Record<string, unknown>> };
   view?: {
     callback_id: string;
     private_metadata: string;
@@ -128,6 +137,12 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
     switch (action.action_id) {
       case "open_stripe_dashboard":
       case "open_store":
+      case "open_socialauto_admin":
+      case "open_socialauto_queue":
+      case "open_webmail":
+      case "home_open_stripe":
+      case "home_open_site":
+      case "home_open_admin":
         // URL buttons — Slack handles the navigation client-side.
         // Acknowledge the action; no server-side work needed.
         break;
@@ -144,6 +159,39 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
             payload.response_url,
             payload.user.id
           ).catch((err) => console.error(`[Slack Interactions] ${action.action_id} failed:`, err));
+        }
+        break;
+      }
+
+      case "socialauto_retry_queue":
+      case "socialauto_cancel_queue":
+      case "socialauto_session_heal":
+      case "socialauto_browser_release":
+      case "socialauto_ops_status": {
+        // Buttons on SocialAuto alerts (posted via incoming webhooks owned by
+        // this app). All dispatch into SocialAuto's admin API — mutations are
+        // gated on the ops allowlist, status reads are open to the workspace.
+        if (payload.response_url) {
+          socialautoActionAsync(
+            action.action_id,
+            action.value ?? "",
+            payload.response_url,
+            payload.user.id,
+            payload.message
+          ).catch((err) =>
+            console.error(`[Slack Interactions] ${action.action_id} failed:`, err)
+          );
+        }
+        break;
+      }
+
+      case "slack_ack": {
+        // Generic "Acknowledge" button — stamps the original message so the
+        // whole channel sees who claimed the alert. No server-side state.
+        if (payload.response_url) {
+          acknowledgeAsync(payload.response_url, payload.user.id, payload.message).catch(
+            (err) => console.error("[Slack Interactions] slack_ack failed:", err)
+          );
         }
         break;
       }
@@ -570,4 +618,193 @@ async function rerunWorkflowAsync(
   }).catch((err) =>
     console.error(`[Slack Interactions] follow-up post failed for ${actionId}:`, err)
   );
+}
+
+// ---------------------------------------------------------------------------
+// SocialAuto ops responder
+//
+// SocialAuto posts its alerts through incoming webhooks owned by this Slack
+// app, so clicks on its buttons land here. Actions proxy into the SocialAuto
+// admin API (see src/lib/socialauto.ts). Mutations are gated on the ops
+// allowlist; the ops-status read is open to anyone in the workspace.
+// ---------------------------------------------------------------------------
+
+async function postResponseUrl(
+  responseUrl: string,
+  body: Record<string, unknown>
+): Promise<void> {
+  if (!responseUrl.startsWith("https://hooks.slack.com/")) return;
+  await fetch(responseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5_000),
+  }).catch((err) => console.error("[Slack Interactions] response_url post failed:", err));
+}
+
+async function socialautoActionAsync(
+  actionId: string,
+  value: string,
+  responseUrl: string,
+  userId: string,
+  message?: SlackInteractionPayload["message"]
+): Promise<void> {
+  if (!(await isSocialAutoConfigured())) {
+    await postResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      text: ":warning: SocialAuto isn't configured on this deployment.",
+    });
+    return;
+  }
+
+  // Status read is informational — no allowlist needed.
+  if (actionId === "socialauto_ops_status") {
+    try {
+      const c = await getOpsConsole();
+      const svc = c.services
+        .map((s) => `${s.online ? ":large_green_circle:" : ":red_circle:"} ${s.name}`)
+        .join("  ");
+      const queue = Object.entries(c.publish_queue)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(" · ");
+      const dead = c.accounts.filter((a) => a.status !== "active");
+      await postResponseUrl(responseUrl, {
+        response_type: "ephemeral",
+        replace_original: false,
+        text:
+          `*SocialAuto ops — ${c.checked_at}*\n` +
+          `Services: ${svc}\n` +
+          `Queue: ${queue || "empty"}\n` +
+          `Accounts needing attention: ${dead.length ? dead.map((a) => `${a.platform} (@${a.username ?? "?"})`).join(", ") : "none"}`,
+      });
+    } catch (err) {
+      await postResponseUrl(responseUrl, {
+        response_type: "ephemeral",
+        text: `:warning: Ops console fetch failed: ${(err as Error).message}`,
+      });
+    }
+    return;
+  }
+
+  // Mutations — ops allowlist gate.
+  const opsUsers = await getSlackOpsUsers();
+  if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
+    await postResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      text:
+        ":no_entry: You're not on the ops allowlist. " +
+        "Ask the admin to add your Slack user ID to `SLACK_OPS_USERS`.",
+    });
+    return;
+  }
+
+  let text: string;
+  switch (actionId) {
+    case "socialauto_retry_queue": {
+      if (!value) {
+        text = ":warning: No queue item id on this button — can't retry.";
+        break;
+      }
+      const r = await retryQueueItem(value);
+      text = r.ok
+        ? `:repeat: <@${userId}> re-queued publish item \`${value}\`.`
+        : `:warning: Retry failed for \`${value}\`: ${r.detail ?? r.error}`;
+      break;
+    }
+    case "socialauto_cancel_queue": {
+      if (!value) {
+        text = ":warning: No queue item id on this button — can't cancel.";
+        break;
+      }
+      const r = await cancelQueueItem(value);
+      text = r.ok
+        ? `:no_entry_sign: <@${userId}> cancelled queue item \`${value}\`.`
+        : `:warning: Cancel failed for \`${value}\`: ${r.error}`;
+      break;
+    }
+    case "socialauto_session_heal": {
+      const r = (await runOpsAction({ action: "session-heal" }).catch((err) => ({
+        error: (err as Error).message,
+      }))) as Record<string, unknown> & { error?: string };
+      text = r.error
+        ? `:warning: Session heal failed to start: ${r.error}`
+        : `:hammer_and_wrench: <@${userId}> triggered a session heal — the sweep rechecks OAuth tokens, the browser bridge, and sidecar sessions. Results post back to the alerts channel.`;
+      break;
+    }
+    case "socialauto_browser_release": {
+      const r = (await runOpsAction({ action: "release-browser-lock" }).catch((err) => ({
+        error: (err as Error).message,
+      }))) as Record<string, unknown> & { error?: string };
+      text = r.error
+        ? `:warning: Browser-lock release failed: ${r.error}`
+        : `:unlock: <@${userId}> released the browser orchestrator lock.`;
+      break;
+    }
+    default:
+      text = `:question: Unknown SocialAuto action \`${actionId}\`.`;
+  }
+
+  await postResponseUrl(responseUrl, {
+    response_type: "in_channel",
+    replace_original: false,
+    text,
+  });
+
+  // Reflect the decision on the original alert card: drop the actions block
+  // and append an actioned-by context line so the channel sees it was handled.
+  const blocks = message?.blocks;
+  if (Array.isArray(blocks) && blocks.length) {
+    const kept = blocks.filter((b) => b.type !== "actions");
+    await postResponseUrl(responseUrl, {
+      replace_original: true,
+      blocks: [
+        ...kept,
+        {
+          type: "context",
+          elements: [{ type: "mrkdwn", text: `Handled by <@${userId}> — ${actionId}` }],
+        },
+      ],
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Generic acknowledge responder
+//
+// `slack_ack` buttons mark an alert as claimed without mutating anything
+// server-side: the original message is replaced with its blocks minus the
+// actions row plus an "acknowledged by" context line.
+// ---------------------------------------------------------------------------
+
+async function acknowledgeAsync(
+  responseUrl: string,
+  userId: string,
+  message?: SlackInteractionPayload["message"]
+): Promise<void> {
+  const blocks = message?.blocks;
+  if (Array.isArray(blocks) && blocks.length) {
+    const kept = blocks.filter((b) => b.type !== "actions");
+    await postResponseUrl(responseUrl, {
+      replace_original: true,
+      blocks: [
+        ...kept,
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `:white_check_mark: Acknowledged by <@${userId}> <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|now>`,
+            },
+          ],
+        },
+      ],
+    });
+    return;
+  }
+  // No blocks to update — fall back to an in-channel ack line.
+  await postResponseUrl(responseUrl, {
+    response_type: "in_channel",
+    replace_original: false,
+    text: `:white_check_mark: Acknowledged by <@${userId}>`,
+  });
 }

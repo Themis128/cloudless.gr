@@ -509,3 +509,92 @@ The integration test script verifies all endpoints with properly signed HMAC-SHA
 - **Token isolation** — tokens come from `process.env` first, falling back to AWS SSM Parameter Store via `getSlackConfigAsync()`. The integration cache prevents repeated SSM lookups.
 - **Bot loop prevention** — the events handler checks for `bot_id` and skips all bot-originated messages.
 - **Mrkdwn-injection prevention** — every user-supplied string (contact form name/email/message/company/service, subscriber email, order email) is passed through `slackEscape()` before being interpolated into Block Kit text. This blocks attacks like `<@here>` (channel ping) or `<!channel>` (broadcast) embedded in form input. Message text is also truncated to 2000 characters.
+
+---
+
+## Slack-first admin control plane (2026-10)
+
+Slack is the primary operational surface; email remains the report/archive
+channel. Three additions make alerts actionable instead of read-only.
+
+### Actionable SocialAuto alerts
+
+SocialAuto posts through incoming webhooks owned by this app, so Block Kit
+buttons on its alert messages dispatch to `/api/slack/interactions` — no
+second Slack app needed (preserves the free-plan 10-app budget) and no new
+public endpoint on social.cloudless.gr.
+
+Handled `socialauto_*` action ids (see `src/app/api/slack/interactions/route.ts`):
+
+| action_id | Effect |
+|---|---|
+| `socialauto_retry_queue` | `POST /api/v1/publishing/queue/{id}/retry` |
+| `socialauto_cancel_queue` | `POST /api/v1/publishing/queue/{id}/cancel` (confirm dialog client-side) |
+| `socialauto_session_heal` | `POST /api/v1/ops/session-heal` |
+| `socialauto_browser_release` | `POST /api/v1/ops/browser-orchestrator/release` |
+| `socialauto_ops_status` | `GET /api/v1/ops/console` → ephemeral summary |
+| `slack_ack` | Stamps the alert card "Acknowledged by @user" (no server state) |
+
+Mutations are gated on `SLACK_OPS_USERS`; the ops-status read is open.
+`src/lib/socialauto.ts` carries `retryQueueItem` / `cancelQueueItem` /
+`runOpsAction` / `getOpsConsole`. On the SocialAuto side
+(`cu130-slim`), `slack_notifications.py` exposes `publish_failure_buttons()`
+and `session_heal_buttons()` used by the publish-failure, session-check and
+session-healer alerts.
+
+### Mail → Slack bridge (Outlook/mailbox visibility)
+
+Free-plan Slack has no channel email addresses, so inbound admin mail is
+bridged through the existing mail stack:
+
+```
+slack@cloudless.gr → CF Email Routing → mail-ingest Worker
+  → POST /api/slack/inbound-email (shared secret)
+  → sorted → Slack channel   AND delivered to the mailbox
+```
+
+`src/lib/mail-to-slack.ts` is the deterministic sorter:
+
+- **alert** (ops senders like github.com/stripe.com/sentry.io, or alert
+  subjects) → `SLACK_OPS_CHANNEL` (#ops-alerts)
+- **human** → `SLACK_INBOX_CHANNEL` (#inbox)
+- **bulk** (List-Id / Precedence: bulk / Auto-Submitted / unsubscribe) →
+  suppressed from Slack; still delivered to the mailbox
+
+Worker env: `SLACK_INGEST_URL`, `SLACK_INGEST_SECRET` (wrangler secret —
+use the `ADMIN_ALERT_SECRET` value or set `SLACK_EMAIL_INGEST_SECRET` in the
+app config), `SLACK_ROUTE_PREFIXES` (comma-separated local-parts,
+default `slack`). The `slack@cloudless.gr` Email Routing rule → worker
+`mail-ingest` must be created in the CF dashboard (or with a token holding
+Email Routing:Edit on the zone — `CLOUDFLARE_EMAIL_API_TOKEN` slot).
+
+Every card carries *Open in webmail* and *Acknowledge* buttons; message-id
+dedup covers Worker retries. HTML and attachments never leave the Worker —
+only headers + a truncated plain-text excerpt are forwarded.
+
+### Personal Outlook mail → Slackbot DM (free, no code)
+
+Slack → your avatar → Preferences → Messages & media →
+*Bring emails into Slack* → **Get a forwarding address**, then an Outlook
+rule forwarding the messages you want. Everything forwarded lands as a
+Slackbot DM. Use this for mail meant for *your eyes only*; use `slack@`
+for anything that should be visible to the workspace.
+
+### DM ops console
+
+`message.im` DMs to the bot answer ops keywords directly:
+
+- `status` / `ops` / `health` — services, queue, dead accounts
+- `queue` — publish-queue depth + admin link
+- `heal` — triggers `/ops/session-heal` (ops allowlist enforced)
+
+### Newsletter app — consolidation note
+
+The separate *Newsletter* Slack app (own signing secret + token, its own
+`/api/newsletter-slack/*` routes) consumes a second slot of the free-plan
+10-app budget. Its scopes are a subset of the main app's; consolidation is
+mechanically possible (move the newsletter command handlers under the main
+`slack-*` routes and delete the second app). It is intentionally deferred —
+merging means re-scoping tokens, re-mapping channel ids, and moving secrets
+mid-flight; do it when the app budget actually tightens. Track under
+`SLACK_OPS` housekeeping.
