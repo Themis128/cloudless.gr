@@ -25,3 +25,9 @@ overrides:
   'nanoid@^3': '3.3.18'
   # GHSA-r28c-9q8g-f849: postcss <=8.5.17 vulnerable; pin transitive via next/sentry.
   'postcss': '>=8.5.18'
+  # GHSA-x9cq-mdhh-c7v8 (smol-toml quadratic parseKey), GHSA-mq3g-xx2f-4fmf (katex
+  # prototype pollution), GHSA-3fj5 (sprintf-js unbounded precision via argparse@1
+  # bin script only — 2.x drops sprintf-js entirely).
+  'smol-toml@<=1.9.0': '1.9.0'
+  'katex@<0.18.2': '0.18.2'
+  'argparse@1.0.10': '2.0.1'
