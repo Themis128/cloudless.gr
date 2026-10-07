@@ -8,6 +8,7 @@ Requires: nginx, php-fpm, dovecot (already on omv-ha for Roundcube).
 """
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -180,6 +181,23 @@ if SIEVE_SRC.is_file():
     # fatal — dovecot compiles .sieve on first use.
     run("sievec", str(SIEVE_DST), check=False)
     print(f"[mail-ingest] sieve installed → {SIEVE_DST}")
+
+# Sieve must be enabled for the LDA protocol — ingest.php delivers via
+# dovecot-lda, and stock 15-lda.conf comments mail_plugins out, so the
+# default script silently never ran on ingested mail.
+LDA_CONF = Path("/etc/dovecot/conf.d/15-lda.conf")
+if LDA_CONF.is_file():
+    lda = LDA_CONF.read_text()
+    m = re.search(r"protocol lda \{(.*?)\n\}", lda, re.S)
+    if m and "#" in m.group(1):
+        fixed = lda[: m.start(1)] + re.sub(
+            r"^\s*#\s*(?=(mail_plugins|sieve|\}))", "", m.group(1), flags=re.M
+        ) + lda[m.end(1) :]
+        if fixed != lda:
+            LDA_CONF.write_text(fixed)
+            run("doveconf", "-n", check=False)
+            run("systemctl", "reload", "dovecot", check=False)
+            print("[mail-ingest] sieve enabled for protocol lda")
 
 print("[mail-ingest] installed")
 print(f"  endpoint: http://127.0.0.1/ingest  (Host: {DOMAIN_HOST})")
