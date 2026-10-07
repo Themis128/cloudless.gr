@@ -65,4 +65,22 @@ describe("mail-to-slack classifier", () => {
     });
     expect(r.cls).toBe("alert");
   });
+
+  it("does not trust lookalike sender domains", () => {
+    const r = classifyEmail({
+      from: "alerts@fakestripe.com",
+      subject: "Your receipt",
+      text: "hello",
+    });
+    expect(r.reasons.some((x) => x.startsWith("alert_sender"))).toBe(false);
+  });
+
+  it("does trust subdomains of alert senders", () => {
+    const r = classifyEmail({
+      from: "noreply@mail.stripe.com",
+      subject: "payout",
+      text: "hello",
+    });
+    expect(r.reasons.some((x) => x.startsWith("alert_sender"))).toBe(true);
+  });
 });

@@ -22,7 +22,7 @@
  * `SLACK_EMAIL_INGEST_SECRET` (falls back to `ADMIN_ALERT_SECRET`).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
@@ -73,7 +73,9 @@ function rememberId(id: string): void {
   for (const [k, ts] of seenIds) {
     if (now - ts > SEEN_TTL_MS) seenIds.delete(k);
   }
-  seenIds.set(id.slice(0, 300), now);
+  // Hash rather than truncate: slicing long Message-IDs at 300 chars can map
+  // distinct messages to the same key and silently drop them.
+  seenIds.set(createHash("sha256").update(id).digest("hex"), now);
 }
 
 // ---------------------------------------------------------------------------

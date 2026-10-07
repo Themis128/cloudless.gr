@@ -64,7 +64,9 @@ export function classifyEmail(body: Record<string, unknown>): ClassifiedMail {
   let score = 0;
 
   const fromDomain = from.match(/@([a-z0-9.\-]+\.[a-z]{2,})/)?.[1] ?? "";
-  if (ALERT_SENDER_DOMAINS.some((d) => fromDomain.endsWith(d))) {
+  // Exact or subdomain match only — endsWith(d) alone would let lookalikes
+  // like `fakestripe.com` match `stripe.com`.
+  if (ALERT_SENDER_DOMAINS.some((d) => fromDomain === d || fromDomain.endsWith(`.${d}`))) {
     score += 4;
     reasons.push(`alert_sender:${fromDomain}`);
   }
