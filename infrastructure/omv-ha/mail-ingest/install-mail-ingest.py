@@ -190,9 +190,11 @@ if LDA_CONF.is_file():
     lda = LDA_CONF.read_text()
     m = re.search(r"protocol lda \{(.*?)\n\}", lda, re.S)
     if m and "#" in m.group(1):
-        fixed = lda[: m.start(1)] + re.sub(
-            r"^\s*#\s*(?=(mail_plugins|sieve|\}))", "", m.group(1), flags=re.M
-        ) + lda[m.end(1) :]
+        fixed = (
+            lda[: m.start(1)]
+            + re.sub(r"^\s*#\s*(?=(mail_plugins|sieve|\}))", "", m.group(1), flags=re.M)
+            + lda[m.end(1) :]
+        )
         if fixed != lda:
             LDA_CONF.write_text(fixed)
             run("doveconf", "-n", check=False)
