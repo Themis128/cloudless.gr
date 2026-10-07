@@ -68,14 +68,18 @@ function excerptBody(text: string): string {
 const SEEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h — covers CF email retries
 const seenIds = new Map<string, number>();
 
+function dedupKey(id: string): string {
+  // Hash rather than truncate: slicing long Message-IDs at 300 chars can map
+  // distinct messages to the same key and silently drop them.
+  return createHash("sha256").update(id).digest("hex");
+}
+
 function rememberId(id: string): void {
   const now = Date.now();
   for (const [k, ts] of seenIds) {
     if (now - ts > SEEN_TTL_MS) seenIds.delete(k);
   }
-  // Hash rather than truncate: slicing long Message-IDs at 300 chars can map
-  // distinct messages to the same key and silently drop them.
-  seenIds.set(createHash("sha256").update(id).digest("hex"), now);
+  seenIds.set(dedupKey(id), now);
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   // Dedup on Message-ID — Workers can retry delivery.
   const messageId = String(body.message_id ?? "");
-  if (messageId && seenIds.has(messageId)) {
+  if (messageId && seenIds.has(dedupKey(messageId))) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
   if (messageId) rememberId(messageId);
