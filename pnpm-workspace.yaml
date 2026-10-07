@@ -31,3 +31,18 @@ overrides:
   'smol-toml@<=1.9.0': '1.9.0'
   'katex@<0.18.2': '0.18.2'
   'argparse@1.0.10': '2.0.1'
+  # GHSA-6qxp-vccf-f47h: MCP SDK OAuth client could send credentials to a
+  # server-chosen authorization endpoint. Same class for the client package.
+  '@modelcontextprotocol/sdk@<1.31.0': '1.31.0'
+  '@modelcontextprotocol/client@<2.2.0': '2.2.0'
+  # agents@0.25.x pins these three exactly — override the literal specifiers too.
+  '@modelcontextprotocol/client@2.0.0': '2.2.0'
+  '@modelcontextprotocol/server@<2.2.0': '2.2.0'
+  '@modelcontextprotocol/server@2.0.0': '2.2.0'
+  'sharp@<0.35.5': '0.35.5'
+
+peerDependencyRules:
+  allowedVersions:
+    # agents@0.25 pins these peers at exactly 2.0.0 (vulnerable, GHSA-6qxp-vccf-f47h)
+    '@modelcontextprotocol/client': '>=2.0.0'
+    '@modelcontextprotocol/server': '>=2.0.0'
