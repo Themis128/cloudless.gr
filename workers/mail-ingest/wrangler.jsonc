@@ -8,6 +8,9 @@
     // Prefer webmail path until tunnel API token has Cloudflare Tunnel:Edit
     // for dedicated hostname mail-ingest.cloudless.gr (DNS already exists).
     "MAIL_INGEST_URL": "https://webmail.cloudless.gr/ingest",
-    "FALLBACK_FORWARD": "themis.baltzakis@gmail.com"
+    "FALLBACK_FORWARD": "themis.baltzakis@gmail.com",
+    "SPAM_TAG_AT": "4",
+    "SPAM_REJECT_AT": "9",
+    "SPAM_BLOCK_SENDERS": ""
   }
 }

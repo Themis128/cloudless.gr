@@ -166,6 +166,21 @@ sudoers.write_text("www-data ALL=(vmail) NOPASSWD: /usr/lib/dovecot/dovecot-lda\
 sudoers.chmod(0o440)
 run("visudo", "-cf", str(sudoers))
 
+# Default Sieve — files Worker-tagged spam (X-Spam-Flag) + redirect-lure
+# phishing into Junk. dovecot sieve_script default applies when a mailbox
+# has no personal script.
+SIEVE_SRC = Path(__file__).resolve().parent / "default.sieve"
+SIEVE_DST = Path("/etc/dovecot/sieve/default/phishing.sieve")
+if SIEVE_SRC.is_file():
+    SIEVE_DST.parent.mkdir(parents=True, exist_ok=True)
+    SIEVE_DST.write_text(SIEVE_SRC.read_text())
+    run("chown", "root:root", str(SIEVE_DST), check=False)
+    SIEVE_DST.chmod(0o644)
+    # Recompile if dovecot-sieve tooling is present; missing compile is not
+    # fatal — dovecot compiles .sieve on first use.
+    run("sievec", str(SIEVE_DST), check=False)
+    print(f"[mail-ingest] sieve installed → {SIEVE_DST}")
+
 print("[mail-ingest] installed")
 print(f"  endpoint: http://127.0.0.1/ingest  (Host: {DOMAIN_HOST})")
 print(f"  secret:   {SECRET_FILE}")

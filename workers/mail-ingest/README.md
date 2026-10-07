@@ -11,6 +11,30 @@ Internet → Cloudflare MX (Email Routing)
 
 Outbound (clients / Roundcube) stays: postfix → Resend `:587` (Resend free tier).
 
+## Spam layer (replaces rspamd — too heavy for the 1 GB Pi)
+
+The Worker scores every inbound message before ingest:
+
+| Signal | Score |
+|---|---|
+| `Received-SPF: fail` | +5 |
+| `Received-SPF: softfail` | +3, `neutral`/`none` +1 |
+| `Authentication-Results` `dkim=fail` | +2, `dmarc=fail` +3 |
+| Missing/malformed `From` | +2 |
+| `Reply-To` domain ≠ `From` domain | +1 |
+| Missing `Message-ID` | +1 |
+| Sending IP on DNSBL (SpamCop, DroneBL via DoH) | +4 |
+| `From` domain has no MX/A record | +2 |
+| Subject spam terms (crypto/lottery/urgent-verify) | +2 |
+| `SPAM_BLOCK_SENDERS` match | +10 |
+
+- `score >= SPAM_REJECT_AT` (default 9) → SMTP-time `setReject`, never ingested.
+- `score >= SPAM_TAG_AT` (default 4) → `X-Spam-Flag: YES` is prepended to the
+  raw message; the default Sieve (`infrastructure/omv-ha/mail-ingest/default.sieve`)
+  files it into `Junk`.
+- All DNS lookups go through `cloudflare-dns.com` DNS-over-HTTPS with a 2.5s
+  timeout — every failure path contributes 0 (fail-open, never blocks mail).
+
 `MAIL_INGEST_URL` uses the **webmail** hostname because the shared tunnel is
 remotely managed and the usual API token cannot PUT new ingress hostnames.
 `mail-ingest.cloudless.gr` DNS + nginx vhost exist for when Tunnel:Edit is available.
