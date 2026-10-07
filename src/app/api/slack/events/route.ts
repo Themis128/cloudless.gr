@@ -21,6 +21,8 @@ import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackConfigAsync } from "@/lib/integrations";
+import { getSlackOpsUsers } from "@/lib/slack-ops-users";
+import { getOpsConsole, isSocialAutoConfigured, runOpsAction } from "@/lib/socialauto";
 
 // ---------------------------------------------------------------------------
 // Event deduplication
@@ -206,9 +208,100 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
   if (!event.channel) return;
 
   const client = new SlackClient({ channel: event.channel });
+  const text = (event.text ?? "").trim().toLowerCase();
+  const userId = event.user ?? "";
+
+  // DM ops console — the bot answers operational questions directly in Slack,
+  // so the admin doesn't have to leave for the SocialAuto UI.
+  if (text === "status" || text === "ops" || text === "health") {
+    await dmOpsStatus(client, event.channel);
+    return;
+  }
+  if (text === "queue") {
+    await dmQueueStatus(client, event.channel);
+    return;
+  }
+  if (text === "heal" || text === "session heal" || text === "sessions") {
+    await dmSessionHeal(client, event.channel, userId);
+    return;
+  }
+
   await client.post({
-    text: `Hi! I respond to slash commands:\n${HELP_TEXT}`,
+    text:
+      "Hi! DM me an ops keyword — *status*, *queue*, or *heal* — " +
+      "or use the slash commands:\n" +
+      HELP_TEXT,
   });
+}
+
+async function dmOpsStatus(client: SlackClient, channel: string): Promise<void> {
+  if (!(await isSocialAutoConfigured())) {
+    await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
+    return;
+  }
+  try {
+    const c = await getOpsConsole();
+    const svc = c.services
+      .map((s) => `${s.online ? ":large_green_circle:" : ":red_circle:"} ${s.name}`)
+      .join("  ");
+    const queue = Object.entries(c.publish_queue)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(" · ");
+    const dead = c.accounts.filter((a) => a.status !== "active");
+    await client.post({
+      text:
+        `*SocialAuto ops — ${c.checked_at}*\n` +
+        `Services: ${svc}\n` +
+        `Queue: ${queue || "empty"}\n` +
+        `Accounts needing attention: ${dead.length ? dead.map((a) => `${a.platform} (@${a.username ?? "?"})`).join(", ") : "none"}`,
+    });
+  } catch (err) {
+    await client.post({
+      text: `:warning: Ops console fetch failed: ${(err as Error).message}`,
+    });
+  }
+}
+
+async function dmQueueStatus(client: SlackClient, channel: string): Promise<void> {
+  if (!(await isSocialAutoConfigured())) {
+    await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
+    return;
+  }
+  try {
+    const c = await getOpsConsole();
+    const queue = Object.entries(c.publish_queue)
+      .map(([k, v]) => `• ${k}: *${v}*`)
+      .join("\n");
+    await client.post({
+      text: `*Publish queue*\n${queue || "Queue is empty."}\n<https://social.cloudless.gr/admin|Open the admin console>`,
+    });
+  } catch (err) {
+    await client.post({
+      text: `:warning: Queue fetch failed: ${(err as Error).message}`,
+    });
+  }
+}
+
+async function dmSessionHeal(client: SlackClient, channel: string, userId: string): Promise<void> {
+  const opsUsers = await getSlackOpsUsers();
+  if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
+    await client.post({
+      text: ":no_entry: Session heal is restricted to the ops allowlist (`SLACK_OPS_USERS`).",
+    });
+    return;
+  }
+  try {
+    await runOpsAction({ action: "session-heal" });
+    await client.post({
+      text:
+        ":hammer_and_wrench: Session heal triggered — the sweep rechecks OAuth tokens, " +
+        "the browser bridge, and sidecar sessions. Results post back to the alerts channel.",
+    });
+  } catch (err) {
+    await client.post({
+      text: `:warning: Session heal failed to start: ${(err as Error).message}`,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -309,6 +309,10 @@ importers:
         version: 4.147.0(@cloudflare/workers-types@5.20261002.1)(@types/node@26.6.4)
 
   workers/mail-ingest:
+    dependencies:
+      postal-mime:
+        specifier: 4.0.2
+        version: 4.0.2
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20261002.1
@@ -6790,6 +6794,10 @@ packages:
 
   postal-mime@2.7.6:
     resolution: {integrity: sha512-UUlyE2KlxmvwMGq060onF/VWU3zD6dVW31FwokQ5v26jWd35fbs2MoTFzh+jXnPwAyV2MULMKXcBInGOl5TO6Q==}
+
+  postal-mime@4.0.2:
+    resolution: {integrity: sha512-b/FqJGdS+Y+leh30r2ord1gWZNPfYcTiFBR1BIPvZYvQrKJjYYqGeECh9sQ5BpkWtcjSj39ngIAiE2w6XNfMjA==}
+    engines: {node: '>=20'}
 
   postcss-value-parser@4.2.0:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
@@ -15347,6 +15355,8 @@ snapshots:
   possible-typed-array-names@1.1.0: {}
 
   postal-mime@2.7.6: {}
+
+  postal-mime@4.0.2: {}
 
   postcss-value-parser@4.2.0:
     optional: true

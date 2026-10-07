@@ -332,6 +332,17 @@ export async function slackErrorNotify(opts: {
         ? [sectionBlock(`*Details:*\n\`\`\`${errText.slice(0, MAX_ERROR_TEXT_LENGTH)}\`\`\``)]
         : []),
       contextBlock(slackTimestamp(), "cloudless.gr"),
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Acknowledge", emoji: true },
+            action_id: "slack_ack",
+            value: errorFingerprint(opts.title, errText).slice(0, 150),
+          },
+        ],
+      },
       divider,
     ],
     icon_url: BOT_ICON_URL,

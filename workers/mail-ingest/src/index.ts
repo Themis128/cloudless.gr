@@ -17,6 +17,8 @@
  *   FALLBACK_FORWARD=themis.baltzakis@gmail.com  (optional)
  *   SPAM_TAG_AT="4" SPAM_REJECT_AT="9" SPAM_BLOCK_SENDERS="bad.com,scammer"
  */
+import PostalMime from "postal-mime";
+
 export interface Env {
   MAIL_INGEST_URL: string;
   MAIL_INGEST_SECRET: string;
@@ -26,6 +28,11 @@ export interface Env {
   SPAM_REJECT_AT?: string;
   /** Comma-separated From/envelope substrings that instantly reject. */
   SPAM_BLOCK_SENDERS?: string;
+  /** Mail→Slack bridge: cloudless.gr endpoint + shared secret. */
+  SLACK_INGEST_URL?: string;
+  SLACK_INGEST_SECRET?: string;
+  /** Comma-separated local-parts routed to Slack (default "slack@"). */
+  SLACK_ROUTE_PREFIXES?: string;
 }
 
 export interface SpamVerdict {
@@ -196,6 +203,72 @@ function tagRaw(raw: ArrayBuffer, verdict: SpamVerdict): ArrayBuffer {
   return out.buffer;
 }
 
+/** True when the envelope recipient is a Slack-routed alias (default: slack@). */
+function isSlackRouted(to: string, env: Env): boolean {
+  const local = (to.split("@")[0] ?? "").toLowerCase();
+  const prefixes = (env.SLACK_ROUTE_PREFIXES ?? "slack")
+    .split(",")
+    .map((s) => s.trim().replace(/@$/, "").toLowerCase())
+    .filter(Boolean);
+  return prefixes.includes(local);
+}
+
+/**
+ * Parse the RFC822 and POST a normalized summary to the app's
+ * /api/slack/inbound-email endpoint. Only headers + a truncated text excerpt
+ * leave the Worker — HTML bodies and attachments never do.
+ */
+async function postToSlackIngest(
+  raw: ArrayBuffer,
+  message: ForwardableEmailMessage,
+  verdict: SpamVerdict,
+  env: Env
+): Promise<void> {
+  let text = "";
+  let subject = message.headers.get("subject") ?? "";
+  let from = message.headers.get("from") ?? "";
+  let messageId = message.headers.get("message-id") ?? "";
+  let listId = message.headers.get("list-id") ?? "";
+  let precedence = message.headers.get("precedence") ?? "";
+  let autoSubmitted = message.headers.get("auto-submitted") ?? "";
+
+  try {
+    const parsed = await PostalMime.parse(raw);
+    text = parsed.text ?? "";
+    subject = parsed.subject ?? subject;
+    from = parsed.from?.address
+      ? `${parsed.from.name ? `${parsed.from.name} ` : ""}<${parsed.from.address}>`
+      : from;
+    messageId = parsed.messageId ?? messageId;
+  } catch (err) {
+    console.error("postal-mime parse failed; posting headers only", err);
+  }
+
+  const res = await fetch(env.SLACK_INGEST_URL!, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-mail-to-slack-secret": env.SLACK_INGEST_SECRET!,
+    },
+    body: JSON.stringify({
+      to: message.to,
+      from,
+      subject,
+      text: text.slice(0, 6000), // the app truncates further for the card
+      message_id: messageId,
+      list_id: listId,
+      precedence,
+      auto_submitted: autoSubmitted,
+      spam_score: verdict.score,
+      spam_reasons: verdict.reasons,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    console.error(`slack-ingest ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  }
+}
+
 export default {
   async email(
     message: ForwardableEmailMessage,
@@ -254,6 +327,20 @@ export default {
       if (verdict.score >= tagAt) {
         raw = tagRaw(raw, verdict);
       }
+
+      // Mail→Slack bridge: addresses like slack@cloudless.gr are mirrored to
+      // the admin Slack workspace (sorted by /api/slack/inbound-email) AND
+      // still delivered to the mailbox below — Slack is the notification
+      // surface, not the mail store. Best-effort: a Slack failure must never
+      // lose the email.
+      if (isSlackRouted(message.to, env) && env.SLACK_INGEST_URL && env.SLACK_INGEST_SECRET) {
+        try {
+          await postToSlackIngest(raw, message, verdict, env);
+        } catch (err) {
+          console.error("slack-ingest threw (mail still delivered)", err);
+        }
+      }
+
       const res = await fetch(env.MAIL_INGEST_URL, {
         method: "POST",
         headers: {

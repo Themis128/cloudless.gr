@@ -89,6 +89,8 @@ export interface AppConfig {
   GITHUB_DISPATCH_TOKEN: string;
   // Admin alerts / webhooks
   ADMIN_ALERT_SECRET: string;
+  /** Shared secret for the mail-ingest Worker → /api/slack/inbound-email bridge. */
+  SLACK_EMAIL_INGEST_SECRET: string;
   CONTENT_WEBHOOK_SECRET: string;
   SENTRY_WEBHOOK_SECRET: string;
   /** Shared secret authenticating SocialAuto lead ingest webhooks. */
@@ -241,6 +243,7 @@ function buildConfigFromEnv(): AppConfig {
     AI_GENERATE_SECRET: process.env.AI_GENERATE_SECRET || "",
     GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
     ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
+    SLACK_EMAIL_INGEST_SECRET: process.env.SLACK_EMAIL_INGEST_SECRET || "",
     CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
     SOCIALAUTO_LEADS_WEBHOOK_SECRET: process.env.SOCIALAUTO_LEADS_WEBHOOK_SECRET || "",
