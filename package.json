@@ -211,6 +211,8 @@
     "@axe-core/playwright": "^4.13.0",
     "@cloudflare/workers-types": "^5.20261002.1",
     "@conorbronsdon/postlint-mcp": "^1.1.0",
+    "@modelcontextprotocol/client": "2.2.0",
+    "@modelcontextprotocol/server": "2.2.0",
     "@next/bundle-analyzer": "^16.3.8",
     "@notionhq/notion-mcp-server": "^2.5.2",
     "@opennextjs/cloudflare": "^1.20.7",
@@ -224,6 +226,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^5.0.3",
     "@vitest/utils": "^5.0.3",
+    "cf": "1.0.0-beta.12",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.8",
     "jsdom": "^30.1.1",
@@ -245,8 +248,7 @@
     "typescript-eslint": "^8.71.0",
     "vite-node": "^6.0.0",
     "vitest": "^5.0.3",
-    "wrangler": "^4.147.0",
-    "cf": "1.0.0-beta.12"
+    "wrangler": "^4.147.0"
   },
   "pnpm": {
     "auditConfig": {
@@ -259,7 +261,7 @@
       "minimatch@<9.0.7": "^9.0.9",
       "ws@<8.21.0": "^8.21.3",
       "undici@<7.29.1": "^7.30.0",
-      "sharp@<0.35.4": "0.35.4",
+      "sharp@<0.35.5": "0.35.5",
       "glob@<10.5.0": "^10.5.0",
       "thrift": "^0.23.0",
       "fast-uri@<3.1.7": "3.1.8",
@@ -269,6 +271,10 @@
       "smol-toml@<=1.9.0": "1.9.0",
       "katex@<0.18.2": "0.18.2",
       "argparse@1.0.10": "2.0.1",
+      "@modelcontextprotocol/sdk@<1.31.0": "1.31.0",
+      "@modelcontextprotocol/client@<2.2.0": "2.2.0",
+      "@modelcontextprotocol/client@2.0.0": "2.2.0",
+      "@modelcontextprotocol/server@2.0.0": "2.2.0",
       "qs": ">=6.16.0",
       "hono": ">=4.13.5",
       "source-map-js@<1.2.2": "1.2.2"
