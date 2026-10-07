@@ -121,25 +121,19 @@ describe("SocialAuto interaction actions", () => {
       user: baseUser,
       response_url: responseUrl,
       message: { ts: "1", blocks: [{ type: "section" }, { type: "actions" }] },
-      actions: [
-        { action_id: "socialauto_retry_queue", value: "q-123", type: "button" },
-      ],
+      actions: [{ action_id: "socialauto_retry_queue", value: "q-123", type: "button" }],
     });
 
     const res = await POST(makeRequest({}));
     expect(res.status).toBe(200);
     await waitForAsync();
     expect(mockRetryQueueItem).toHaveBeenCalledWith("q-123");
-    const bodies = fetchSpy.mock.calls.map((c) =>
-      JSON.parse((c[1] as RequestInit).body as string)
-    );
+    const bodies = fetchSpy.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
     const inChannel = bodies.find((b) => b.response_type === "in_channel");
     expect(String(inChannel?.text)).toContain("re-queued");
     // original card updated — actions block stripped, handled-by context added
     const replaced = bodies.find((b) => b.replace_original === true);
-    expect(replaced?.blocks?.some((b) => (b as {type:string}).type === "actions")).toBe(
-      false
-    );
+    expect(replaced?.blocks?.some((b) => (b as { type: string }).type === "actions")).toBe(false);
   });
 
   it("blocks queue mutations for non-ops users", async () => {
@@ -147,9 +141,7 @@ describe("SocialAuto interaction actions", () => {
       type: "block_actions",
       user: { id: "U-STRANGER", username: "x" },
       response_url: responseUrl,
-      actions: [
-        { action_id: "socialauto_cancel_queue", value: "q-9", type: "button" },
-      ],
+      actions: [{ action_id: "socialauto_cancel_queue", value: "q-9", type: "button" }],
     });
 
     const res = await POST(makeRequest({}));

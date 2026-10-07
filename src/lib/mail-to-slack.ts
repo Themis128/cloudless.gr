@@ -90,4 +90,3 @@ export function classifyEmail(body: Record<string, unknown>): ClassifiedMail {
         : "";
   return { cls, score, reasons, channel };
 }
-

@@ -178,9 +178,7 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
             payload.response_url,
             payload.user.id,
             payload.message
-          ).catch((err) =>
-            console.error(`[Slack Interactions] ${action.action_id} failed:`, err)
-          );
+          ).catch((err) => console.error(`[Slack Interactions] ${action.action_id} failed:`, err));
         }
         break;
       }
@@ -189,8 +187,8 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
         // Generic "Acknowledge" button — stamps the original message so the
         // whole channel sees who claimed the alert. No server-side state.
         if (payload.response_url) {
-          acknowledgeAsync(payload.response_url, payload.user.id, payload.message).catch(
-            (err) => console.error("[Slack Interactions] slack_ack failed:", err)
+          acknowledgeAsync(payload.response_url, payload.user.id, payload.message).catch((err) =>
+            console.error("[Slack Interactions] slack_ack failed:", err)
           );
         }
         break;
@@ -629,10 +627,7 @@ async function rerunWorkflowAsync(
 // allowlist; the ops-status read is open to anyone in the workspace.
 // ---------------------------------------------------------------------------
 
-async function postResponseUrl(
-  responseUrl: string,
-  body: Record<string, unknown>
-): Promise<void> {
+async function postResponseUrl(responseUrl: string, body: Record<string, unknown>): Promise<void> {
   if (!responseUrl.startsWith("https://hooks.slack.com/")) return;
   await fetch(responseUrl, {
     method: "POST",

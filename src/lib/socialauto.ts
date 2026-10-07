@@ -519,9 +519,7 @@ export async function retryQueueItem(
 
 /** Cancel a queued/failed publish-queue item. Called by the
  *  `socialauto_cancel_queue` Slack button (value = queue item id). */
-export async function cancelQueueItem(
-  queueId: string
-): Promise<{ ok: boolean; error?: string }> {
+export async function cancelQueueItem(queueId: string): Promise<{ ok: boolean; error?: string }> {
   try {
     await callThrowing(`/publishing/queue/${encodeURIComponent(queueId)}/cancel`, {
       method: "POST",

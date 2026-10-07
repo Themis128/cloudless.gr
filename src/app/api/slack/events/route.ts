@@ -22,11 +22,7 @@ import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackConfigAsync } from "@/lib/integrations";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
-import {
-  getOpsConsole,
-  isSocialAutoConfigured,
-  runOpsAction,
-} from "@/lib/socialauto";
+import { getOpsConsole, isSocialAutoConfigured, runOpsAction } from "@/lib/socialauto";
 
 // ---------------------------------------------------------------------------
 // Event deduplication
@@ -286,11 +282,7 @@ async function dmQueueStatus(client: SlackClient, channel: string): Promise<void
   }
 }
 
-async function dmSessionHeal(
-  client: SlackClient,
-  channel: string,
-  userId: string
-): Promise<void> {
+async function dmSessionHeal(client: SlackClient, channel: string, userId: string): Promise<void> {
   const opsUsers = await getSlackOpsUsers();
   if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
     await client.post({

@@ -118,10 +118,7 @@ export async function POST(request: NextRequest) {
 
   const from = mrkdwnEscape(String(body.from ?? "unknown")).slice(0, 300);
   const to = mrkdwnEscape(String(body.to ?? "")).slice(0, 200);
-  const subject = mrkdwnEscape(String(body.subject ?? "(no subject)")).slice(
-    0,
-    MAX_SUBJECT_CHARS
-  );
+  const subject = mrkdwnEscape(String(body.subject ?? "(no subject)")).slice(0, MAX_SUBJECT_CHARS);
   const excerpt = mrkdwnEscape(excerptBody(String(body.text ?? "")));
   const spamScore = Number(body.spam_score ?? 0);
   const isAlert = classified.cls === "alert";
@@ -145,9 +142,7 @@ export async function POST(request: NextRequest) {
           { type: "mrkdwn", text: `*Subject*\n${subject}` },
         ],
       },
-      ...(excerpt
-        ? [{ type: "section", text: { type: "mrkdwn", text: excerpt } }]
-        : []),
+      ...(excerpt ? [{ type: "section", text: { type: "mrkdwn", text: excerpt } }] : []),
       {
         type: "actions",
         elements: [
