@@ -15,13 +15,17 @@ always carries a channel ID the bot can actually post to.
 
 import json
 import os
+import urllib.parse
 import urllib.request
 
 
-def slack_call(method: str, data: dict) -> dict:
+def slack_call(method: str, data: dict | None = None, params: dict | None = None) -> dict:
+    url = f"https://slack.com/api/{method}"
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(
-        f"https://slack.com/api/{method}",
-        data=json.dumps(data).encode(),
+        url,
+        data=json.dumps(data).encode() if data is not None else None,
         headers={
             "Authorization": "Bearer " + os.environ["SLACK_BOT_TOKEN"],
             "Content-Type": "application/json; charset=utf-8",
@@ -35,6 +39,7 @@ def resolve_channel() -> str:
     """Find or create SLACK_CHANNEL_NAME in the bot's workspace; join it."""
     name = os.environ["SLACK_CHANNEL_NAME"].lstrip("#")
     cursor = ""
+    channel_id = None
     while True:
         params = {
             "exclude_archived": "true",
@@ -42,20 +47,24 @@ def resolve_channel() -> str:
             "types": "public_channel",
             "cursor": cursor,
         }
-        listing = slack_call("conversations.list", params)
+        listing = slack_call("conversations.list", params=params)
         if not listing.get("ok"):
             raise SystemExit(f"conversations.list failed: {listing.get('error')}")
         for ch in listing.get("channels") or []:
             if ch.get("name") == name:
-                return ch["id"]
+                channel_id = ch["id"]
+                break
+        if channel_id:
+            break
         cursor = (listing.get("response_metadata") or {}).get("next_cursor") or ""
         if not cursor:
             break
 
-    created = slack_call("conversations.create", {"name": name})
-    if not created.get("ok"):
-        raise SystemExit(f"conversations.create failed: {created.get('error')}")
-    channel_id = created["channel"]["id"]
+    if not channel_id:
+        created = slack_call("conversations.create", {"name": name})
+        if not created.get("ok"):
+            raise SystemExit(f"conversations.create failed: {created.get('error')}")
+        channel_id = created["channel"]["id"]
 
     joined = slack_call("conversations.join", {"channel": channel_id})
     if not joined.get("ok") and joined.get("error") != "already_in_channel":
