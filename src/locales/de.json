@@ -40,12 +40,12 @@
     "badge": "v2.0 — Neue Kunden willkommen",
     "titleStatic": "Klarer Himmel.",
     "typingTexts": [
-      "Kein Reibungsverlust.",
-      "Volle Kontrolle.",
-      "Maximale Geschwindigkeit.",
-      "Echte Ergebnisse."
+      "Fester Umfang.",
+      "Keine Überraschungsrechnungen.",
+      "KI ohne Hype.",
+      "Tech, die funktioniert."
     ],
-    "subtitle": "Enterprise-Cloud? Zu teuer. DIY-Infrastruktur? Zu riskant. Wir sind der dritte Weg — serverless, datengetrieben und skalierbar für Teams von 2 bis 20 Personen.",
+    "subtitle": "Enterprise-Cloud? Zu teuer. Der verschwundene Freelancer oder die Agentur, die überliefert? Kennen Sie. Websites, Cloud-Infrastruktur und KI-Automatisierungen für Teams von 2 bis 20 Personen — fester Umfang, ein Ansprechpartner, messbare Ergebnisse in 14 Tagen.",
     "subtitleHighlight": "Endlich.",
     "ctaPrimary": "Kostenloses Audit buchen",
     "ctaSecondary": "Leistungen ansehen",
@@ -69,7 +69,7 @@
   },
   "credibility": {
     "builtBy": "Entwickelt von Themistoklis Baltzakis",
-    "bio": "— Zertifizierter Cloud-Architekt (Cloudflare) mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
+    "bio": "— Zertifizierter Cloud-Architekt (Cloudflare) mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr für Inhaber gegründet, die von Agenturen und Freelancern enttäuscht wurden — fester Umfang, klare Sprache, Technologie, die endlich hält, was sie verspricht.",
     "badgeAws": "Cloudflare-zertifiziert",
     "badgeOss": "Open-Source-Contributor",
     "badgeCapacity": "Noch 5 Plätze frei für Q2 2026"
@@ -78,7 +78,7 @@
     "label": "[ UNSERE LEISTUNGEN ]",
     "title": "Alles, was Sie brauchen zum",
     "titleHighlight": "Skalieren",
-    "subtitle": "Von Infrastruktur bis Marketing — wir decken den gesamten Stack modernen Unternehmenswachstums ab.",
+    "subtitle": "Von Infrastruktur bis Marketing — fest umrissen, klar bepreist und geliefert ohne Agentur-Drama.",
     "viewPricing": "Preise & Details anzeigen",
     "service1Title": "Cloud-Architektur & Migration",
     "service1Desc": "Ihre Infrastruktur zu Cloudflare, GCP oder Azure migrieren — mit null Ausfallzeit. Skalierbar, sicher, kostenoptimiert.",
@@ -145,7 +145,7 @@
     "titleHighlight": "Gründer",
     "name": "Themistoklis Baltzakis",
     "role": "Cloud-Architekt & Growth Engineer",
-    "bio": "Zertifizierter Cloud-Architekt mit praktischer Erfahrung in Cloudflare Workers, serverlosen Architekturen, Datenanalyse und KI-gesteuertem Marketing. Ich helfe Startups und KMUs, Infrastrukturen aufzubauen, die skalieren — ohne Enterprise-Overhead."
+    "bio": "Zertifizierter Cloud-Architekt mit praktischer Erfahrung in Cloudflare Workers, serverlosen Architekturen, Datenanalyse und KI-Marketing. Ich habe cloudless.gr für Unternehmen gebaut, die überversprechende Technologie satt haben."
   },
   "social": {
     "label": "[ VERBINDEN ]",
@@ -472,7 +472,7 @@
   "meta": {
     "home": {
       "title": "Cloudless — Cloud Computing, Serverless & KI-Marketing",
-      "description": "Klarer Himmel. Kein Reibungsverlust. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalen Marketing."
+      "description": "Websites, Cloud-Infrastruktur und KI-Automatisierungen für kleine Teams, die schon enttäuscht wurden — fester Umfang, kein Lock-in, messbare Ergebnisse in 14 Tagen."
     },
     "services": {
       "title": "Leistungen",

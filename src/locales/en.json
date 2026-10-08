@@ -39,8 +39,13 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
-    "subtitle": "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days.",
+    "typingTexts": [
+      "Fixed scope.",
+      "Zero surprise invoices.",
+      "AI without the hype.",
+      "Tech that just works."
+    ],
+    "subtitle": "Websites, cloud infrastructure, and AI automations for 2–20 person teams that have been let down before — fixed scope, one point of contact, measurable results in 14 days. No enterprise overhead, no lock-in.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Book a Free Audit",
     "ctaSecondary": "View Services",
@@ -64,7 +69,7 @@
   },
   "credibility": {
     "builtBy": "Built by Themistoklis Baltzakis",
-    "bio": "— Cloudflare Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr because startups deserve enterprise-grade cloud without the enterprise price or the enterprise BS.",
+    "bio": "— Cloudflare Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr for owners who got burned by agencies and freelancers — fixed scope, plain language, technology that finally does what it promised.",
     "badgeAws": "Cloudflare Certified",
     "badgeOss": "Open-Source Contributor",
     "badgeCapacity": "Now accepting 5 clients for Q3 2026"
@@ -73,7 +78,7 @@
     "label": "[ WHAT WE DO ]",
     "title": "Everything you need to",
     "titleHighlight": "scale",
-    "subtitle": "From infrastructure to marketing — the full stack for teams that need to grow.",
+    "subtitle": "From infrastructure to marketing — scoped, priced, and delivered without the agency drama.",
     "viewPricing": "See pricing & details",
     "service1Title": "Cloud Architecture & Migration",
     "service1Desc": "Design and migrate your infrastructure to Cloudflare, GCP, or Azure with zero downtime. Scalable, secure, cost-optimized.",
@@ -140,7 +145,7 @@
     "titleHighlight": "founder",
     "name": "Themistoklis Baltzakis",
     "role": "Cloud Architect & Growth Engineer",
-    "bio": "Certified cloud architect — Cloudflare Workers, serverless, data analytics, and AI-powered marketing."
+    "bio": "Certified cloud architect — Cloudflare Workers, serverless, data analytics, and AI-powered marketing. Built cloudless.gr for businesses tired of tech that overpromises."
   },
   "social": {
     "label": "[ CONNECT ]",
@@ -467,7 +472,7 @@
   "meta": {
     "home": {
       "title": "Cloudless — Cloud Computing, Serverless & AI Marketing",
-      "description": "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing."
+      "description": "Websites, cloud infrastructure, and AI automations for small teams that have been let down before — fixed scope, no lock-in, measurable results in 14 days."
     },
     "services": {
       "title": "Services",
