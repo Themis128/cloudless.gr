@@ -48,25 +48,9 @@ jobs:
           RELAY_TEXT: ${{ github.event.client_payload.text }}
           RELAY_REPO: ${{ github.event.client_payload.repo }}
           TEST_TEXT: ${{ github.event.inputs.test_message }}
-          SLACK_CHANNEL: ${{ vars.SLACK_GITHUB_CHANNEL }}
-        run: python3 .github/scripts/slack_github_notify.py
-
-      - name: Join #github-activity
-        if: steps.msg.outputs.payload != ''
-        env:
+          SLACK_CHANNEL_NAME: ${{ vars.SLACK_GITHUB_CHANNEL }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ vars.SLACK_GITHUB_CHANNEL }}
-        run: |
-          python3 -c "
-          import json, os, urllib.request
-          req = urllib.request.Request(
-              'https://slack.com/api/conversations.join',
-              data=json.dumps({'channel': os.environ['SLACK_CHANNEL']}).encode(),
-              headers={'Authorization': 'Bearer ' + os.environ['SLACK_BOT_TOKEN'],
-                       'Content-Type': 'application/json'},
-          )
-          print(json.load(urllib.request.urlopen(req)))
-          "
+        run: python3 .github/scripts/slack_github_notify.py
 
       - name: Post to Slack
         if: steps.msg.outputs.payload != ''
