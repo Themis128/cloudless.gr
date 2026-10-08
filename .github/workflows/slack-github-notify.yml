@@ -1,0 +1,77 @@
+name: slack-github-notify
+
+# Posts repo events to #github-activity via the existing Cloudless Slack app
+# (SLACK_BOT_TOKEN) — no extra Slack app slot needed on the free plan.
+# Also receives repository_dispatch "github-notify" events relayed from
+# cu130-slim, which has no Slack token of its own.
+
+on:
+  pull_request:
+    types: [opened, closed]
+  release:
+    types: [published]
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+    branches: [main]
+  repository_dispatch:
+    types: [github-notify]
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: Text to send to #github-activity
+        required: false
+        default: ""
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose Slack payload
+        id: msg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          REL_TAG: ${{ github.event.release.tag_name }}
+          REL_URL: ${{ github.event.release.html_url }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WF_URL: ${{ github.event.workflow_run.html_url }}
+          RELAY_TEXT: ${{ github.event.client_payload.text }}
+          RELAY_REPO: ${{ github.event.client_payload.repo }}
+          TEST_TEXT: ${{ github.event.inputs.test_message }}
+          SLACK_CHANNEL: ${{ vars.SLACK_GITHUB_CHANNEL }}
+        run: python3 .github/scripts/slack_github_notify.py
+
+      - name: Join #github-activity
+        if: steps.msg.outputs.payload != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ vars.SLACK_GITHUB_CHANNEL }}
+        run: |
+          python3 -c "
+          import json, os, urllib.request
+          req = urllib.request.Request(
+              'https://slack.com/api/conversations.join',
+              data=json.dumps({'channel': os.environ['SLACK_CHANNEL']}).encode(),
+              headers={'Authorization': 'Bearer ' + os.environ['SLACK_BOT_TOKEN'],
+                       'Content-Type': 'application/json'},
+          )
+          print(json.load(urllib.request.urlopen(req)))
+          "
+
+      - name: Post to Slack
+        if: steps.msg.outputs.payload != ''
+        uses: slackapi/slack-github-action@v3.0.5
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: ${{ steps.msg.outputs.payload }}
