@@ -221,7 +221,7 @@ const CRITIC_SYSTEM_PROMPT = `You are a senior editor at Cloudless, a cloud cons
 Score each draft 1–10 across five dimensions:
 - factual_credibility: facts, numbers, named services — plausible and verifiable, NO obvious hallucinations?
 - brand_voice: direct, practical, no buzzword soup, no hedging, no hype, EU sensibility?
-- structure: hooks the problem first; ≥4 H2 sections; ends with one concrete actionable next step?
+- structure: hooks the problem first; ≥4 H2 sections; LEADS the reader somewhere (names where they are → one clear shift → where they go) rather than only informing; ends with one concrete actionable next step?
 - originality: not a generic listicle, not a rehash of obvious points, a specific angle?
 - technical_accuracy: AWS/serverless/AI claims technically accurate to a competent engineer reading it?
 
