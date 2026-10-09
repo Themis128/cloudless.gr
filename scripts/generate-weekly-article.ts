@@ -247,6 +247,10 @@ Article structure:
 - 800–1200 words.
 - 4–6 H2 sections (## headings).
 - Open with the problem, not a generic intro.
+- The article LEADS, not just informs (Visibility Era 3-part arc): name the
+  exact situation the reader is stuck in, deliver ONE clear shift in how
+  they see it, then show what becomes possible after the shift. The reader
+  must end somewhere different from where they started.
 - Close with a concrete next step the reader can take this week.
 
 Output format — strict JSON, no prose, no markdown fences. EVERY field
