@@ -80,6 +80,10 @@ jobs:
             echo "::error::cannot read appflowy deployment state on omv"
             exit 1
           fi
+          if [ -z "$REPS" ]; then
+            echo "::error::appflowy namespace returned no Deployments — not a deliberate scale-to-0, refusing to skip"
+            exit 1
+          fi
 
           LIVE=$(echo "$REPS" | grep -cE '^[1-9]' || true)
           echo "appflowy deployments with replicas>0: $LIVE"
