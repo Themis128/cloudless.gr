@@ -39,12 +39,11 @@ export default function SocialOpsPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/admin/postiz/ops", { cache: "no-store" });
       if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
       setData((await res.json()) as SaOpsConsole);
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -53,7 +52,9 @@ export default function SocialOpsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    // Defer the fetch to a microtask — setState in a callback, not the
+    // effect body (react-hooks/set-state-in-effect).
+    Promise.resolve().then(load);
   }, [load]);
 
   const runAction = async (action: SaOpsActionButton) => {

@@ -214,11 +214,11 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
   // DM ops console — the bot answers operational questions directly in Slack,
   // so the admin doesn't have to leave for the SocialAuto UI.
   if (text === "status" || text === "ops" || text === "health") {
-    await dmOpsStatus(client, event.channel);
+    await dmOpsStatus(client);
     return;
   }
   if (text === "queue") {
-    await dmQueueStatus(client, event.channel);
+    await dmQueueStatus(client);
     return;
   }
   if (text === "heal" || text === "session heal" || text === "sessions") {
@@ -234,7 +234,7 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
   });
 }
 
-async function dmOpsStatus(client: SlackClient, channel: string): Promise<void> {
+async function dmOpsStatus(client: SlackClient): Promise<void> {
   if (!(await isSocialAutoConfigured())) {
     await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
     return;
@@ -262,7 +262,7 @@ async function dmOpsStatus(client: SlackClient, channel: string): Promise<void> 
   }
 }
 
-async function dmQueueStatus(client: SlackClient, channel: string): Promise<void> {
+async function dmQueueStatus(client: SlackClient): Promise<void> {
   if (!(await isSocialAutoConfigured())) {
     await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
     return;
