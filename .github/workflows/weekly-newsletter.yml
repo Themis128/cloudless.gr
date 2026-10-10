@@ -64,12 +64,10 @@ jobs:
           set -euo pipefail
 
           KCTL=(kubectl)
-          if [ -r /etc/rancher/k3s/k3s.yaml ]; then
-            if kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
-              KCTL=(kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml)
-            else
-              KCTL=(sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl)
-            fi
+          if [ -r /etc/rancher/k3s/k3s.yaml ] && kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
+            KCTL=(kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml)
+          elif sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
+            KCTL=(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml)
           elif kubectl get ns >/dev/null 2>&1; then
             KCTL=(kubectl)
           else
