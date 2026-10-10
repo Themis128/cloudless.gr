@@ -234,7 +234,7 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
   });
 }
 
-async function dmOpsStatus(client: SlackClient, channel: string): Promise<void> {
+async function dmOpsStatus(client: SlackClient, _channel: string): Promise<void> {
   if (!(await isSocialAutoConfigured())) {
     await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
     return;
@@ -262,7 +262,7 @@ async function dmOpsStatus(client: SlackClient, channel: string): Promise<void> 
   }
 }
 
-async function dmQueueStatus(client: SlackClient, channel: string): Promise<void> {
+async function dmQueueStatus(client: SlackClient, _channel: string): Promise<void> {
   if (!(await isSocialAutoConfigured())) {
     await client.post({ text: ":warning: SocialAuto isn't configured on this deployment." });
     return;
