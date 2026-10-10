@@ -39,12 +39,11 @@ export default function SocialOpsPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/admin/postiz/ops", { cache: "no-store" });
       if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
       setData((await res.json()) as SaOpsConsole);
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -53,7 +52,13 @@ export default function SocialOpsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    // Defer the fetch to a microtask — setState in a callback, not the
+    // effect body (react-hooks/set-state-in-effect).
+    Promise.resolve()
+      .then(load)
+      .catch(() => {
+        // load() handles its own errors; this terminates the promise chain.
+      });
   }, [load]);
 
   const runAction = async (action: SaOpsActionButton) => {
@@ -96,7 +101,11 @@ export default function SocialOpsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => void load()}
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              void load();
+            }}
             disabled={loading}
             className="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600"
           >
