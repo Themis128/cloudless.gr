@@ -54,7 +54,9 @@ export default function SocialOpsPage() {
   useEffect(() => {
     // Defer the fetch to a microtask — setState in a callback, not the
     // effect body (react-hooks/set-state-in-effect).
-    Promise.resolve().then(load);
+    Promise.resolve()
+      .then(load)
+      .catch(() => {});
   }, [load]);
 
   const runAction = async (action: SaOpsActionButton) => {
