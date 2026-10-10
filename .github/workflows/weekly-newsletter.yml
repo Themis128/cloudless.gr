@@ -55,10 +55,57 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # AppFlowy is deliberately scaled to 0 on omv k3s while unused — in that
+      # state there is nothing to publish from, so the publish step soft-skips.
+      # replicas>0 + unreachable NodePort is a real outage and still fails.
+      - name: Check AppFlowy deployment state on omv
+        id: appflowy
+        run: |
+          set -euo pipefail
+
+          KCTL=(kubectl)
+          if [ -r /etc/rancher/k3s/k3s.yaml ] && kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
+            KCTL=(kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml)
+          elif sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get ns >/dev/null 2>&1; then
+            KCTL=(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml)
+          elif kubectl get ns >/dev/null 2>&1; then
+            KCTL=(kubectl)
+          else
+            echo "::error::No kubeconfig found on runner (cannot determine AppFlowy deployment state)"
+            exit 1
+          fi
+
+          REPS=$("${KCTL[@]}" get deploy -n appflowy --no-headers -o custom-columns=R:.spec.replicas 2>/dev/null || echo "KUBECTL_FAILED")
+          if echo "$REPS" | grep -q KUBECTL_FAILED; then
+            echo "::error::cannot read appflowy deployment state on omv"
+            exit 1
+          fi
+          if [ -z "$REPS" ]; then
+            echo "::error::appflowy namespace returned no Deployments — not a deliberate scale-to-0, refusing to skip"
+            exit 1
+          fi
+
+          LIVE=$(echo "$REPS" | grep -cE '^[1-9]' || true)
+          echo "appflowy deployments with replicas>0: $LIVE"
+
+          if [ "$LIVE" -gt 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AppFlowy is intentionally scaled to 0 on omv — newsletter publish skipped (kubectl scale to revive)"
+            {
+              echo "## AppFlowy scaled to 0 — newsletter skipped"
+              echo ""
+              echo "AppFlowy deployments are scaled to 0 on omv; weekly newsletter publish is skipped."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Install dependencies
+        if: steps.appflowy.outputs.enabled == 'true'
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Publish approved posts and send newsletter
+        if: steps.appflowy.outputs.enabled == 'true'
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts
 
       - name: Notify Slack on failure
