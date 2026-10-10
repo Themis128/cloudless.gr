@@ -87,8 +87,28 @@ def find_health_script() -> Path | None:
 HEALTH = find_health_script()
 
 
+def _find_kubectl() -> str:
+    """Resolve kubectl for cron's minimal PATH (/usr/bin:/bin).
+
+    Cron does not include /usr/local/bin, which is where k3s installs
+    kubectl on omv — bare "kubectl" raised FileNotFoundError and the
+    whole fix_stuck_pods pass logged an error daily."""
+    for cand in (
+        shutil.which("kubectl"),
+        "/usr/local/bin/kubectl",
+        "/usr/bin/kubectl",
+        "/bin/kubectl",
+    ):
+        if cand and Path(cand).is_file():
+            return cand
+    return "kubectl"
+
+
+KUBECTL = _find_kubectl()
+
+
 def kubectl(*args: str) -> str:
-    r = run("kubectl", *args)
+    r = run(KUBECTL, *args)
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
@@ -137,7 +157,7 @@ def fix_minio() -> None:
     if limit not in ("512Mi", "1Gi"):
         log(f"minio: raising limit {limit or 'unset'} -> 512Mi")
         r = run(
-            "kubectl",
+            KUBECTL,
             "-n",
             "appflowy",
             "patch",
@@ -280,7 +300,7 @@ def _fix_failed_units(state: dict) -> None:
 
 def fix_stuck_pods() -> None:
     """Delete pods stuck in bad states so their controllers recreate them."""
-    r = run("kubectl", "get", "pods", "-A", "-o", "json")
+    r = run(KUBECTL, "get", "pods", "-A", "-o", "json")
     if r.returncode != 0:
         log(f"pods: kubectl unavailable ({r.stderr.strip()[:120]})")
         return
@@ -317,7 +337,7 @@ def fix_stuck_pods() -> None:
         if phase == "Succeeded" or (phase == "Running" and not bad_wait):
             continue
         if bad_wait or pending_old or phase in ("Failed", "Unknown"):
-            dr = run("kubectl", "-n", ns, "delete", "pod", name, "--ignore-not-found")
+            dr = run(KUBECTL, "-n", ns, "delete", "pod", name, "--ignore-not-found")
             if dr.returncode == 0:
                 deleted.append(f"{ns}/{name}")
                 log(
