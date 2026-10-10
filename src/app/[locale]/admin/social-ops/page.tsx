@@ -56,7 +56,9 @@ export default function SocialOpsPage() {
     // effect body (react-hooks/set-state-in-effect).
     Promise.resolve()
       .then(load)
-      .catch(() => {});
+      .catch(() => {
+        // load() handles its own errors; this terminates the promise chain.
+      });
   }, [load]);
 
   const runAction = async (action: SaOpsActionButton) => {
