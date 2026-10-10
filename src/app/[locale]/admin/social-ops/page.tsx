@@ -101,7 +101,11 @@ export default function SocialOpsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => void load()}
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              void load();
+            }}
             disabled={loading}
             className="rounded border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600"
           >
