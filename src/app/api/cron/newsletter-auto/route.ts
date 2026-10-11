@@ -17,6 +17,7 @@ import { recordNotification } from "@/lib/admin-notifications";
 import { SlackClient } from "@/lib/slack-notify";
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { fetchNewsletterCover } from "@/lib/newsletter-cover";
 
 export const runtime = "nodejs";
 
@@ -92,6 +93,21 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
   const date = new Date().toISOString();
   const readTime = parsed.readTime ?? "5 min read";
 
+  // Cover: SocialAuto renders the branded banner; failures never block the issue.
+  const cover = await fetchNewsletterCover({ title: parsed.title, slug, category, date: today });
+  let coverUrl: string | null = null;
+  if (cover) {
+    const bucketForCover = getDataLakeBucketFromEnv();
+    try {
+      await bucketForCover?.put(`newsletter/covers/${slug}.png`, cover.buffer, {
+        httpMetadata: { contentType: "image/png" },
+      });
+      coverUrl = `https://cloudless.gr/api/newsletter/covers/${slug}.png`;
+    } catch (err) {
+      console.error("[newsletter-auto] cover upload failed:", err);
+    }
+  }
+
   const article = {
     slug,
     title: parsed.title,
@@ -99,6 +115,7 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
     date,
     readTime,
     category,
+    cover: coverUrl,
     content: stripHtml(parsed.contentHTML),
     html: parsed.contentHTML,
   };
@@ -120,6 +137,7 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
   const subject = `${today} — ${article.title}`;
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+      ${coverUrl ? `<img src="${coverUrl}" alt="${article.title}" style="width:100%;border-radius:12px;margin-bottom:24px;" />` : ""}
       <h1 style="color: #00fff5; margin-top: 0;">${article.title}</h1>
       <p style="color: #a0a0a0;">${article.excerpt}</p>
       <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
