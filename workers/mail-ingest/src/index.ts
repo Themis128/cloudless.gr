@@ -275,23 +275,37 @@ export default {
     env: Env,
     _ctx: ExecutionContext
   ): Promise<void> {
-    const subject = message.headers.get("subject") ?? "";
     const tagAt = parseInt(env.SPAM_TAG_AT ?? "4", 10);
     const rejectAt = parseInt(env.SPAM_REJECT_AT ?? "9", 10);
 
-    const verdict = scoreHeaders(message.headers, message.from);
-    const dns = await scoreDns(message.headers, senderIpFromHeaders(message.headers));
-    verdict.score += dns.score;
-    verdict.reasons.push(...dns.reasons);
+    // Scoring must never lose mail: malformed headers (or any scorer bug)
+    // used to escape this block as an uncaught exception, which Email
+    // Routing treats as a permanent failure — the message bounced instead
+    // of reaching the fallback forward. Fail open: score 0, deliver.
+    let subject = "";
+    let verdict: SpamVerdict = { score: 0, reasons: ["scorer_error"] };
+    try {
+      subject = message.headers.get("subject") ?? "";
+      verdict = scoreHeaders(message.headers, message.from);
+      const dns = await scoreDns(
+        message.headers,
+        senderIpFromHeaders(message.headers)
+      );
+      verdict.score += dns.score;
+      verdict.reasons.push(...dns.reasons);
 
-    const blocked = (env.SPAM_BLOCK_SENDERS ?? "")
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-    const haystack = `${message.from} ${message.headers.get("from") ?? ""}`.toLowerCase();
-    if (blocked.some((b) => haystack.includes(b))) {
-      verdict.score += 10;
-      verdict.reasons.push("blocklisted_sender");
+      const blocked = (env.SPAM_BLOCK_SENDERS ?? "")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const haystack =
+        `${message.from} ${message.headers.get("from") ?? ""}`.toLowerCase();
+      if (blocked.some((b) => haystack.includes(b))) {
+        verdict.score += 10;
+        verdict.reasons.push("blocklisted_sender");
+      }
+    } catch (err) {
+      console.error("spam scoring threw; delivering untagged", err);
     }
 
     console.log(
@@ -308,8 +322,14 @@ export default {
 
     if (verdict.score >= rejectAt) {
       console.log(`rejecting spam score=${verdict.score} reasons=${verdict.reasons}`);
-      message.setReject("Message rejected: spam policy");
-      return;
+      try {
+        message.setReject("Message rejected: spam policy");
+        return;
+      } catch (err) {
+        // A failed reject must not become an uncaught exception (message
+        // loss). Fall through to delivery — worst case spam reaches Junk.
+        console.error("setReject threw; continuing to ingest", err);
+      }
     }
 
     if (!env.MAIL_INGEST_URL || !env.MAIL_INGEST_SECRET) {

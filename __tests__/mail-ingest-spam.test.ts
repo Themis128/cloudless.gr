@@ -104,3 +104,99 @@ describe("senderIpFromHeaders", () => {
     ).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fail-open handler tests: a throwing headers object (malformed inbound mail)
+// must never become an uncaught exception — Email Routing drops/bounces those.
+// ---------------------------------------------------------------------------
+
+import { afterEach, vi } from "vitest";
+import worker from "../workers/mail-ingest/src/index";
+
+type StubMessage = {
+  from: string;
+  to: string;
+  raw: ReadableStream;
+  rawSize: number;
+  headers: Headers;
+  setReject: (reason: string) => void;
+  forward: (rcpt: string) => Promise<void>;
+};
+
+function stubMessage(over: Partial<StubMessage> = {}): StubMessage {
+  return {
+    from: "spammer@evil.example",
+    to: "info@cloudless.gr",
+    raw: new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("From: a@b.c\r\n\r\nhi"));
+        c.close();
+      },
+    }),
+    rawSize: 24,
+    headers: new Headers({ subject: "hi" }),
+    setReject: vi.fn(),
+    forward: vi.fn().mockResolvedValue(undefined),
+    ...over,
+  };
+}
+
+const ENV = {
+  MAIL_INGEST_URL: "https://webmail.cloudless.gr/ingest",
+  MAIL_INGEST_SECRET: "test-secret",
+  FALLBACK_FORWARD: "fallback@example.com",
+  SPAM_TAG_AT: "4",
+  SPAM_REJECT_AT: "9",
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("email handler resilience", () => {
+  it("delivers untagged when header access throws during scoring", async () => {
+    const throwingHeaders = {
+      get: () => {
+        throw new TypeError("Could not parse header");
+      },
+    } as unknown as Headers;
+    const msg = stubMessage({ headers: throwingHeaders });
+    const fetchSpy = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await expect(
+      worker.email(msg as never, ENV as never, {} as never)
+    ).resolves.toBeUndefined();
+    expect(msg.setReject).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://webmail.cloudless.gr/ingest",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("falls back to delivery when setReject itself throws", async () => {
+    const msg = stubMessage({
+      headers: new Headers({
+        subject: "seed phrase wallet verify",
+        "received-spf": "fail (...)",
+        "authentication-results": "dkim=fail dmarc=fail",
+      }),
+      setReject: vi.fn(() => {
+        throw new Error("cannot reject");
+      }),
+    });
+    const fetchSpy = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await expect(
+      worker.email(msg as never, ENV as never, {} as never)
+    ).resolves.toBeUndefined();
+    // score 5+2+2+3 = 12 >= rejectAt → setReject attempted, threw → fell
+    // through to ingest instead of dying uncaught.
+    expect(msg.setReject).toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://webmail.cloudless.gr/ingest",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+});
