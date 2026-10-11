@@ -16,7 +16,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  // email URLs use covers/<slug>.png — strip the extension before validating
+  const slug = rawSlug.replace(/\.png$/, "");
   if (!SLUG_RE.test(slug)) {
     return new Response("Invalid slug", { status: 400 });
   }

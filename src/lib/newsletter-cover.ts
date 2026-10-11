@@ -45,7 +45,7 @@ export async function fetchNewsletterCover(input: {
         category: input.category,
         issue_date: input.date,
       }),
-      signal: AbortSignal.timeout(90_000),
+      signal: AbortSignal.timeout(45_000),
     });
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "";
