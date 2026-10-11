@@ -1,0 +1,57 @@
+name: Tailscale relogin omv-ha
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  relogin:
+    runs-on: [self-hosted, omv, pi]
+    steps:
+      - name: Mint auth key + tailscale up on omv-ha (192.168.1.130)
+        env:
+          TS_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TS_SEC: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          TS_ID2: ${{ secrets.TS_CLIENT_ID }}
+          TS_SEC2: ${{ secrets.TS_CLIENT_SECRET }}
+          TS_AUTHKEY_FALLBACK: ${{ secrets.TS_AUTHKEY }}
+          OMV_SSH: ${{ secrets.OMV_SSH_KEY }}
+        run: |
+          set -u
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$OMV_SSH" > ~/.ssh/omv_key
+          chmod 600 ~/.ssh/omv_key
+          ssh-keyscan -H 192.168.1.130 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          up_with_key() {
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+              -i ~/.ssh/omv_key tbaltzakis@192.168.1.130 \
+              "sudo tailscale up --auth-key='$1' --hostname=omv-ha && tailscale status | head -3" 2>&1
+          }
+
+          mint_key() {
+            tok=$(curl -fsS -X POST https://api.tailscale.com/api/v2/oauth/token \
+              -d "grant_type=client_credentials" -u "$1:$2" | python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])') || return 1
+            curl -fsS -X POST https://api.tailscale.com/api/v2/tailnet/-/keys \
+              -H "Authorization: Bearer $tok" -H 'Content-Type: application/json' \
+              -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true}}},"expirySeconds":300}' \
+              | python3 -c 'import json,sys;print(json.load(sys.stdin)["key"])'
+          }
+
+          KEY=""
+          KEY=$(mint_key "$TS_ID" "$TS_SEC" 2>/dev/null) || KEY=""
+          [ -n "$KEY" ] || KEY=$(mint_key "$TS_ID2" "$TS_SEC2" 2>/dev/null) || KEY=""
+          [ -n "$KEY" ] || KEY="$TS_AUTHKEY_FALLBACK"
+
+          if [ -z "$KEY" ]; then
+            echo "::error::no auth key could be minted and TS_AUTHKEY fallback empty"
+            exit 1
+          fi
+          echo "::add-mask::$KEY"
+          if out=$(up_with_key "$KEY"); then
+            echo "$out"
+            echo "## omv-ha tailscale relogin OK" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "$out"
+            echo "::error::tailscale up failed on omv-ha"
+            exit 1
+          fi
