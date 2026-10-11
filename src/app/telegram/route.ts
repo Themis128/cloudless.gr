@@ -9,8 +9,9 @@ import { canonicalOrigin } from "@/lib/canonical-origin";
  * our own redirect keeps every surface (/links page, SOCIAL_ACCOUNTS icon
  * row, printed QR codes) stable when the underlying invite link rotates.
  *
- * Configure via TELEGRAM_CHANNEL_URL (website-source invite link). Falls
- * back to /links until the channel exists so we never ship a dead URL.
+ * Configure via TELEGRAM_CHANNEL_URL (website-source invite link, see
+ * .env.example). Falls back to /links until the channel exists so we
+ * never ship a dead URL.
  * The route sits on the app root and is exempted from locale prefixing in
  * src/proxy.ts — bare /telegram must reach this handler, not /en/telegram.
  */
