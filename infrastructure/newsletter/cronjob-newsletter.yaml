@@ -29,28 +29,28 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-          - name: newsletter
-            image: curlimages/curl:latest
-            command:
-            - /bin/sh
-            - -c
-            - |
-              set -euo pipefail
-              echo "→ sending weekly newsletter"
-              curl -fsS --max-time 120 \
-                -H "Authorization: Bearer ${CRON_SECRET}" \
-                "https://cloudless.gr/api/cron/newsletter-auto"
-              echo "✅ newsletter sent"
-            env:
-            - name: CRON_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: cloudless-secrets
-                  key: CRON_SECRET
-            resources:
-              requests:
-                memory: 16Mi
-                cpu: 10m
-              limits:
-                memory: 64Mi
-                cpu: 100m
+            - name: newsletter
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  echo "→ sending weekly newsletter"
+                  curl -fsS --max-time 240 \
+                    -H "Authorization: Bearer ${CRON_SECRET}" \
+                    "https://cloudless.gr/api/cron/newsletter-auto"
+                  echo "✅ newsletter sent"
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: cloudless-secrets
+                      key: CRON_SECRET
+              resources:
+                requests:
+                  memory: 16Mi
+                  cpu: 10m
+                limits:
+                  memory: 64Mi
+                  cpu: 100m
