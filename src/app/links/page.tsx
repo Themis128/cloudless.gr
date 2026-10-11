@@ -23,6 +23,12 @@ const LINKS: HubLink[] = [
     sub: "Free PDF — the exact workflows that run this stack",
   },
   {
+    href: "/telegram",
+    label: "Telegram — Automation HQ",
+    sub: "Private channel — build logs, drops & automation playbooks",
+    external: true,
+  },
+  {
     href: "https://cloud.cloudless.gr/call/zsykkx97",
     label: "Book a free video consult",
     sub: "30 min — hosted on our own self-hosted Nextcloud Talk",
