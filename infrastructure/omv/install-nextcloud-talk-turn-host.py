@@ -131,10 +131,10 @@ def main() -> int:
             )
         else:
             print("  replacing 'turn,turns' 192.168.1.200:3478 entry with turn-only")
-            subprocess.run(
-                occ + ["talk:turn:delete", "turn,turns", "192.168.1.200:3478", "udp,tcp"],
-                check=False,
-            )
+            # add the new turn-only entry BEFORE deleting the old one — the two
+            # schemes coexist, so a failed add leaves the old entry in place
+            # (only a failed delete could matter afterwards, and that one is
+            # retried on the next run)
             subprocess.run(
                 occ
                 + [
@@ -145,6 +145,10 @@ def main() -> int:
                     f"--secret={secret}",
                 ],
                 check=True,
+            )
+            subprocess.run(
+                occ + ["talk:turn:delete", "turn,turns", "192.168.1.200:3478", "udp,tcp"],
+                check=False,
             )
     elif "schemes: turn" in lst.stdout and GOOD_HOST in lst.stdout:
         print("  turn-only entry already present — nothing to do")
