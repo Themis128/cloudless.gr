@@ -21,4 +21,24 @@ describe("GET /telegram", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("https://t.me/+AbCdEfGhIjK");
   });
+
+  it("falls back to /links when the configured URL is malformed", async () => {
+    process.env.TELEGRAM_CHANNEL_URL = "t.me/+not-a-url";
+    const res = GET(req());
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://cloudless.gr/links");
+  });
+
+  it("rejects non-https targets", async () => {
+    process.env.TELEGRAM_CHANNEL_URL = "http://t.me/insecure";
+    const res = GET(req());
+    expect(res.headers.get("location")).toBe("https://cloudless.gr/links");
+  });
+
+  it("builds the fallback from the canonical origin, not the request host", async () => {
+    const leaked = new NextRequest("https://d3k7muo3c6lw6s.cloudfront.net/telegram");
+    const res = GET(leaked);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://cloudless.gr/links");
+  });
 });

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 
 /**
  * /telegram — stable join URL for the Cloudless Telegram channel.
@@ -10,12 +11,22 @@ import { NextResponse } from "next/server";
  *
  * Configure via TELEGRAM_CHANNEL_URL (website-source invite link). Falls
  * back to /links until the channel exists so we never ship a dead URL.
+ * The route sits on the app root and is exempted from locale prefixing in
+ * src/proxy.ts — bare /telegram must reach this handler, not /en/telegram.
  */
-export function GET(request: Request) {
+export function GET(request: NextRequest) {
+  const fallback = new URL("/links", canonicalOrigin(request));
   const target = process.env.TELEGRAM_CHANNEL_URL?.trim();
-  const fallback = new URL("/links", request.url);
   if (!target) {
     return NextResponse.redirect(fallback, { status: 307 });
   }
-  return NextResponse.redirect(target, { status: 307 });
+  try {
+    const url = new URL(target);
+    if (url.protocol !== "https:") {
+      return NextResponse.redirect(fallback, { status: 307 });
+    }
+    return NextResponse.redirect(url, { status: 307 });
+  } catch {
+    return NextResponse.redirect(fallback, { status: 307 });
+  }
 }
