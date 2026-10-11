@@ -38,14 +38,10 @@ if os.geteuid() != 0:
     print("must be root", file=sys.stderr)
     sys.exit(1)
 
-APPLY = "--apply" in sys.argv
-for a in sys.argv[1:]:
-    if a != "--apply":
-        print(f"unknown arg: {a}", file=sys.stderr)
-        sys.exit(2)
-
 TARGET = Path("/etc/logrotate.d/omv-writecache-logs")
 BACKUP_TS = datetime.now().strftime("%Y%m%d-%H%M%S")
+BACKUP_DIR = Path(os.environ.get("LOGROTATE_BACKUP_DIR", "/root"))
+APPLY: bool = False  # set by main() from argv; tests patch it directly
 
 # Logs that belong to THIS file (unique to it). syslog/kern.log/user.log are
 # owned by the rsyslog package config, ufw.log by the ufw package config —
@@ -73,6 +69,13 @@ def step(msg: str) -> None:
 
 
 def main() -> int:
+    global APPLY
+    for a in sys.argv[1:]:
+        if a != "--apply":
+            print(f"unknown arg: {a}", file=sys.stderr)
+            sys.exit(2)
+    APPLY = "--apply" in sys.argv
+
     step(f"inspect {TARGET}")
     if not TARGET.exists():
         print("  file not present — nothing to fix")
@@ -87,7 +90,7 @@ def main() -> int:
             print(f"  duplicate claim found: {c}")
 
     step("rewrite with unique logs only (backup kept)")
-    backup = Path(f"/root/{TARGET.name}.bak-{BACKUP_TS}")
+    backup = BACKUP_DIR / f"{TARGET.name}.bak-{BACKUP_TS}"
     if APPLY:
         shutil.copy2(TARGET, backup)
         TARGET.write_text(FIXED_BODY)
