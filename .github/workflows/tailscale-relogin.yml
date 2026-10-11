@@ -29,18 +29,25 @@ jobs:
           }
 
           mint_key() {
-            tok=$(curl -fsS -X POST https://api.tailscale.com/api/v2/oauth/token \
-              -d "grant_type=client_credentials" -u "$1:$2" | python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])') || return 1
-            curl -fsS -X POST https://api.tailscale.com/api/v2/tailnet/-/keys \
+            local resp
+            resp=$(curl -sS -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/oauth/token \
+              -d "grant_type=client_credentials&scope=all" -u "$1:$2") || { echo "oauth curl fail" >&2; return 1; }
+            local code body tok
+            code=$(printf '%s' "$resp" | tail -1); body=$(printf '%s' "$resp" | sed '$d')
+            tok=$(printf '%s' "$body" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("access_token",""))' 2>/dev/null)
+            [ -n "$tok" ] || { echo "oauth token fail http=$code: $(printf '%s' "$body" | head -c 300)" >&2; return 1; }
+            resp=$(curl -sS -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/tailnet/-/keys \
               -H "Authorization: Bearer $tok" -H 'Content-Type: application/json' \
-              -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true}}},"expirySeconds":300}' \
-              | python3 -c 'import json,sys;print(json.load(sys.stdin)["key"])'
+              -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true}}},"expirySeconds":300}')
+            code=$(printf '%s' "$resp" | tail -1); body=$(printf '%s' "$resp" | sed '$d')
+            printf '%s' "$body" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("key",""))' 2>/dev/null
+            [ "$code" = "200" ] || echo "key mint http=$code: $(printf '%s' "$body" | head -c 300)" >&2
           }
 
           KEY=""
-          KEY=$(mint_key "$TS_ID" "$TS_SEC" 2>/dev/null) || KEY=""
-          [ -n "$KEY" ] || KEY=$(mint_key "$TS_ID2" "$TS_SEC2" 2>/dev/null) || KEY=""
-          [ -n "$KEY" ] || KEY="$TS_AUTHKEY_FALLBACK"
+          KEY=$(mint_key "$TS_ID" "$TS_SEC") || KEY=""
+          [ -n "$KEY" ] || KEY=$(mint_key "$TS_ID2" "$TS_SEC2") || KEY=""
+          if [ -z "$KEY" ]; then echo "::warning::oauth mints failed — trying TS_AUTHKEY fallback"; KEY="$TS_AUTHKEY_FALLBACK"; fi
 
           if [ -z "$KEY" ]; then
             echo "::error::no auth key could be minted and TS_AUTHKEY fallback empty"
