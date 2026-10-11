@@ -100,7 +100,8 @@ def main() -> int:
     cmd = ["logrotate", "-d", "/etc/logrotate.conf"]
     out = subprocess.run(cmd, capture_output=True, text=True)
     dupes = [
-        ln for ln in (out.stdout + out.stderr).splitlines()
+        ln
+        for ln in (out.stdout + out.stderr).splitlines()
         if "duplicate log entry" in ln or "found error in file" in ln
     ]
     if dupes:

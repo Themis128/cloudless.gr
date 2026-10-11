@@ -28,7 +28,6 @@ Applied live on omv 2026-10-10 (backup kept at /root/workspace.yml.bak-talkhost)
 
 import glob
 import os
-import re
 import shutil
 import socket
 import subprocess
@@ -81,9 +80,7 @@ def main() -> int:
             shutil.copy2(compose, backup)
             Path(compose).write_text(new)
             print(f"  rewrote TALK_HOST={BAD_HOST} -> {GOOD_HOST} (backup: {backup})")
-            subprocess.run(
-                ["docker", "compose", "-f", compose, "up", "-d", "talk-hpb"], check=True
-            )
+            subprocess.run(["docker", "compose", "-f", compose, "up", "-d", "talk-hpb"], check=True)
         else:
             print(f"  [preview] would rewrite TALK_HOST={BAD_HOST} -> {GOOD_HOST}")
             print("  [preview] would run: docker compose -f <file> up -d talk-hpb")
@@ -125,7 +122,7 @@ def main() -> int:
             ],
             check=True,
         )
-    elif f"schemes: turn" in lst.stdout and GOOD_HOST in lst.stdout:
+    elif "schemes: turn" in lst.stdout and GOOD_HOST in lst.stdout:
         print("  turn-only entry already present — nothing to do")
     else:
         print("  unexpected talk:turn:list output — inspect manually:")
