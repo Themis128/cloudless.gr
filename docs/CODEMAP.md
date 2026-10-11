@@ -1,6 +1,6 @@
 # Cloudless.gr Application Codemap
 
-Last verified: 2026-09-26. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
+Last verified: 2026-10-12. Companion codemap for the social-automation platform: `cu130-slim/docs/CODEMAP.md` (SocialAuto at social.cloudless.gr).
 
 ## 🏗️ **Architecture Overview**
 
@@ -205,6 +205,12 @@ cloudless.gr/
 - **Prometheus + Grafana** monitoring stack
 - **SafeDeploy** rollback system with auto-rollback watchdog
 - **Health checks** and automatic recovery
+- **Tailscale relogin workflow** (added 2026-10-11, `.github/workflows/tailscale-relogin.yml`):
+  manual `workflow_dispatch` that mints a single-use `tag:k8s` auth key via the
+  `TAILSCALE_OAUTH_*` repo secrets and SSHes over LAN (`OMV_SSH_KEY`) to run
+  `tailscale up` — recovers omv-ha (`mail.cloudless.gr` etc.) when tailscaled
+  loses its node key. Single-use keys must carry the OAuth client's
+  authorized tag or the mint call fails.
 
 ---
 
@@ -304,10 +310,29 @@ pnpm typecheck              # TypeScript type checking
 
 ## 📊 **Coverage & Quality**
 
-- **Vitest coverage thresholds**: lines 47%, functions 37%, branches 37%, statements 46%
+- **Vitest coverage thresholds** (`vitest.config.ts`, V8 provider): lines 40,
+  statements 39, functions 36, branches 33 — a ratchet set just below the
+  measured baseline (40.6/39.65/36.22/33.73) that must **rise** as coverage
+  batches land; never lower silently. New modules should arrive with tests in
+  the same PR.
+- **Coverage include/exclude**: `src/**/*.{ts,tsx}` minus declaration/test/
+  layout/loading/error/not-found/type/index files and `src/agents/**`.
+- **Backend (cu130-slim SocialAuto)**: `pytest` + `pytest-cov`, coverage
+  source `app`, ~94% line coverage (see `social-automation/backend/pyproject.toml`).
+- **Test policy**: exercise real production code; fakes only at
+  infrastructure boundaries (HTTP fetch, Redis, browser bridges, Docker CLI,
+  DB session seams). Boundary-fake convention for this repo: `vi.mock` on
+  `@/lib/ssm-config`, `@/lib/integrations`, `@/lib/api-auth`,
+  `@/lib/espocrm-cache`; `vi.stubGlobal("fetch", …)`; sequential
+  `mockResolvedValueOnce` queues — call `mockFetch.mockReset()` in
+  `beforeEach` or queued responses leak between tests (JWT caches make the
+  login response shift position).
 - **E2E test coverage**: 200+ Playwright tests across 3 projects
 - **Accessibility**: @axe-core/playwright integration
 - **Code quality**: ESLint, Prettier, Ruff (Python), mypy (Python)
+- **CI path-filter note**: `vitest.config.*` and `playwright.config.*` are in
+  the PR path filter — otherwise required checks never fire and the PR blocks
+  forever (fixed 2026-10-11 in #2123).
 
 ---
 
@@ -334,6 +359,8 @@ cloudless.gr → Worker cloudless2 (pi-origin-proxy)
 - **ActiveCampaign**: Email marketing and automation
 - **SocialAuto** (`social.cloudless.gr`): social publishing, DM inbox, analytics — see `cu130-slim/docs/CODEMAP.md`. The site also calls it **server-to-server**: `src/lib/socialauto.ts` backs the `/admin/postiz` console (channels, schedule, compose, per-channel metrics) via admin-login JWT + CF Access service token; config keys `SOCIALAUTO_*` in app_config.
   - **Playbook lead funnel** (added 2026-09-30): `/[locale]/playbook` form → `POST /api/playbook-lead` (Turnstile + rate-limit + honeypot + consent) → `src/lib/socialauto-public-leads.ts` → SocialAuto `POST /api/v1/leads/public` through CF Access with the `cloudless-site-bridge` service token (`CF-Access-Client-Id`/`Secret` headers). Config keys: `SOCIALAUTO_API_URL` / `SOCIALAUTO_LEADS_URL` / `SOCIALAUTO_SERVICE_TOKEN` / `SOCIALAUTO_CF_ACCESS_CLIENT_ID` in D1 `app_config`. The public PDF is mirrored at `public/playbooks/cloud-migration-playbook.pdf` (source: `cu130-slim/docs/playbooks/cloud-migration-playbook.md`, builder `scripts/build_playbook_pdf.py`).
+  - **Telegram community funnel** (added 2026-10-11, #2110/#2112): `GET /telegram` → 307 to the `Cloudless — Automation HQ` private-channel invite (`TELEGRAM_CHANNEL_URL` env on `cloudless-app`). `/links` carries the community CTA; IG captions point at link-in-bio (`/links` → `/telegram`), Threads/other posts can embed per-source invite links. SocialAuto `channel-config` stores `telegram_channel` meta + named invite links (`ig`, `threads`, `website`) for join-source attribution; the `telegram_funnel` datalake gold section reports member growth by source. n8n workflow `cloudless-telegram-channel` publishes to the channel Mon/Wed/Fri 11:00 via the Cloudless_newbot Bot API (channel admin). Channel was created through a Telethon user session (bots cannot create channels); ongoing ops are bot-side.
+  - **Newsletter cover pipeline** (added 2026-10-11, cu130-slim #566 + this repo #2124): the weekly newsletter cronjob calls SocialAuto `POST /api/v1/newsletter/cover` (service-token authed) which renders a branded PNG and uploads it to R2; the site serves the cover from the newsletter route layer.
 - **Postiz**: Legacy social media scheduling (superseded by SocialAuto; kept only for the content-calendar publish path + webhooks)
 - **N8N**: Workflow automation (runs the SocialAuto posting pipelines)
 - **Slack**: Notifications and team communication
@@ -425,6 +452,27 @@ browser → cloudless.gr → Worker cloudless2 (pi-origin-proxy)
 - **Origin**: `pi-origin.cloudless.gr` via Cloudflare Tunnel
 - **Headers**: `x-served-by: pi-tunnel-proxy` indicates proxy path
 - **Secrets**: Empty Wrangler secrets (proxy doesn't need app secrets)
+
+### **Cloudflare Worker: mail-ingest**
+
+- **Worker**: `workers/mail-ingest` — the inbound edge for
+  `*@cloudless.gr` Email Routing. Scores headers (DNSBL lookups, MX/A
+  checks, blocklist), then POSTs accepted mail to the omv ingest endpoint
+  (`MAIL_INGEST_SECRET`), else forwards to `FALLBACK_FORWARD`.
+- **Fail-open scoring (2026-10-11, #2127)**: exceptions in header scoring /
+  blocklist / `setReject` are logged via an `X-Mail-Ingest-Scorer-Error`
+  header, the verdict degrades to 0, and mail still reaches ingest or the
+  fallback forwarder. Pre-fix, scorer exceptions aborted the handler before
+  the delivery `try` block — mail was dropped rather than forwarded.
+- **Deploys**: manual Wrangler/Workers API upload (not in the
+  `cloudflare-deploy.yml` set — that only deploys `pi-origin-proxy`).
+  `secret_text` bindings (`MAIL_INGEST_SECRET`, `SLACK_INGEST_SECRET`) are
+  preserved automatically when omitted from the upload; `keep_bindings`
+  does **not** accept secret names.
+- **Tests**: `__tests__/mail-ingest-spam.test.ts` + regression cases for the
+  scorer fail-open path.
+- **Watchdog**: the SafeDeploy worker-exception watcher alerts when any
+  worker throws ≥3 times/30min (`safedeploy-watchdog@cloudless.gr` mail).
 
 ### **Cloudflare Tunnel**
 
