@@ -23,10 +23,11 @@ const LINKS: HubLink[] = [
     sub: "Free PDF — the exact workflows that run this stack",
   },
   {
+    // Internal route — same-tab nav. /telegram 307s to the channel invite
+    // (or back to /links while TELEGRAM_CHANNEL_URL is unset).
     href: "/telegram",
     label: "Telegram — Automation HQ",
     sub: "Private channel — build logs, drops & automation playbooks",
-    external: true,
   },
   {
     href: "https://cloud.cloudless.gr/call/zsykkx97",
