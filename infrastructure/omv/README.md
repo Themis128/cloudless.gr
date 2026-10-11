@@ -239,3 +239,41 @@ sudo python3 infrastructure/omv/install-monit-postfix-fix.py --apply --mail-rela
 ```
 
 See the script header for the full root-cause writeup.
+
+## Logrotate duplicate entries (rsyslog/ufw skipped)
+
+`/etc/logrotate.d/omv-writecache-logs` (pi-alert-remediation log + daemon.log
+cap) also claimed `/var/log/syslog`, `kern.log`, `user.log` and `ufw.log` —
+the same logs the distro `rsyslog` and `ufw` package configs own. logrotate
+refuses a log claimed by two stanzas: it errors and *skips the rsyslog and
+ufw files entirely*, so those logs were never rotated while the duplicate
+existed (root got the classic `duplicate log entry` cron mail).
+
+```bash
+# preview (no changes), then:
+sudo python3 infrastructure/omv/install-logrotate-writecache-fix.py --apply
+```
+
+Keeps only the logs unique to the file (`daemon.log`,
+`pi-alert-remediation.log`); the distro configs own the rest. Verified with a
+`logrotate -d` dry run inside the script.
+
+## Nextcloud Talk TURN host (no relay candidates)
+
+The `nextcloud/aio-talk` HPB advertises `TALK_HOST` to Talk clients as the
+TURN/STUN address (eturnal, port 3478). It was set to `signal.cloudless.gr`
+— a Cloudflare-tunnel hostname, which carries HTTP(S)/WebSocket only, never
+UDP — so clients had no reachable TURN/STUN and calls couldn't negotiate
+media. The fix points `TALK_HOST` at the keepalived VIP `192.168.1.200`
+(ports 3478/udp+tcp are published there), recreates `talk-hpb`, and removes
+the stale `turns`-scheme TURN entry in the Talk app. The signaling URL
+(`https://signal.cloudless.gr`) is unaffected.
+
+```bash
+# preview (no changes), then:
+sudo python3 infrastructure/omv/install-nextcloud-talk-turn-host.py --apply
+```
+
+Caveat: `192.168.1.200` is LAN-only — guests joining from outside need a
+router port-forward of 3478/udp+tcp plus a public TURN hostname (or a hosted
+TURN such as Cloudflare Calls).
