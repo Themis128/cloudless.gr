@@ -9,6 +9,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { BUCKET, r2Put, r2Get, r2List } from "./_r2-config.mjs";
+import { telegramFunnel } from "./_telegram-funnel.mjs";
 
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
@@ -958,6 +959,9 @@ async function main() {
 	const saPosts = await safeJson("lake/socialauto-posts/posts.json");
 	const saLeads = await safeJson("lake/socialauto-leads/leads.json");
 	const saWebEvents = await safeJson("lake/socialauto-web-events/events.json");
+	const saAccountEvents = await safeJson("lake/socialauto-account-events/events.json");
+	const saFollowers = await safeJson("lake/socialauto-followers/followers.json");
+	const saTgChannels = await safeJson("lake/socialauto-telegram/channels.json");
 
 	let saInsights = null;
 	try {
@@ -1006,6 +1010,18 @@ async function main() {
 		saAdDaily
 			? sectionOk("ads_funnel", adsFunnel(saAdDaily, saWebEvents, saLeads))
 			: sectionErr("ads_funnel", "missing socialauto ads json")
+	);
+
+	// Telegram channel funnel — member growth, join-source attribution,
+	// post↔join correlation from the SocialAuto event/member exports.
+	const tgFunnel =
+		saTgChannels || saAccountEvents || saFollowers
+			? telegramFunnel(saTgChannels, saAccountEvents, saFollowers)
+			: null;
+	sections.push(
+		tgFunnel
+			? sectionOk("telegram_funnel", tgFunnel)
+			: sectionErr("telegram_funnel", "no telegram channel data yet")
 	);
 
 	const afWs = await safeParquet("lake/appflowy-workspaces/workspaces.parquet");
