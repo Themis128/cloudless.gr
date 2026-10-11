@@ -80,7 +80,19 @@ def main() -> int:
             shutil.copy2(compose, backup)
             Path(compose).write_text(new)
             print(f"  rewrote TALK_HOST={BAD_HOST} -> {GOOD_HOST} (backup: {backup})")
-            subprocess.run(["docker", "compose", "-f", compose, "up", "-d", "talk-hpb"], check=True)
+            try:
+                subprocess.run(
+                    ["docker", "compose", "-f", compose, "up", "-d", "talk-hpb"],
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                shutil.copy2(backup, compose)
+                print(
+                    "  compose up FAILED — reverted workspace.yml from backup; "
+                    "container left as it was",
+                    file=sys.stderr,
+                )
+                raise
         else:
             print(f"  [preview] would rewrite TALK_HOST={BAD_HOST} -> {GOOD_HOST}")
             print("  [preview] would run: docker compose -f <file> up -d talk-hpb")
