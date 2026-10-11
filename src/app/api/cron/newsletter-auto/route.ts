@@ -98,13 +98,15 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
   let coverUrl: string | null = null;
   if (cover) {
     const bucketForCover = getDataLakeBucketFromEnv();
-    try {
-      await bucketForCover?.put(`newsletter/covers/${slug}.png`, cover.buffer, {
-        httpMetadata: { contentType: "image/png" },
-      });
-      coverUrl = `https://cloudless.gr/api/newsletter/covers/${slug}.png`;
-    } catch (err) {
-      console.error("[newsletter-auto] cover upload failed:", err);
+    if (bucketForCover) {
+      try {
+        await bucketForCover.put(`newsletter/covers/${slug}.png`, cover.buffer, {
+          httpMetadata: { contentType: "image/png" },
+        });
+        coverUrl = `https://cloudless.gr/api/newsletter/covers/${slug}`;
+      } catch (err) {
+        console.error("[newsletter-auto] cover upload failed:", err);
+      }
     }
   }
 
