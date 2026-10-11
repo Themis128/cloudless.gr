@@ -39,13 +39,9 @@ if os.geteuid() != 0:
     print("must be root", file=sys.stderr)
     sys.exit(1)
 
-APPLY = "--apply" in sys.argv
-for a in sys.argv[1:]:
-    if a != "--apply":
-        print(f"unknown arg: {a}", file=sys.stderr)
-        sys.exit(2)
-
 BACKUP_TS = datetime.now().strftime("%Y%m%d-%H%M%S")
+BACKUP_DIR = Path(os.environ.get("TALK_BACKUP_DIR", "/root"))
+APPLY: bool = False  # set by main() from argv; tests patch it directly
 GOOD_HOST = "192.168.1.200"
 BAD_HOST = "signal.cloudless.gr"
 NEXTCLOUD_CONTAINER = "nextcloud"
@@ -62,6 +58,13 @@ def find_compose_file() -> str | None:
 
 
 def main() -> int:
+    global APPLY
+    for a in sys.argv[1:]:
+        if a != "--apply":
+            print(f"unknown arg: {a}", file=sys.stderr)
+            sys.exit(2)
+    APPLY = "--apply" in sys.argv
+
     step("locate workspace compose file")
     compose = find_compose_file()
     if not compose:
@@ -74,7 +77,7 @@ def main() -> int:
     if f"TALK_HOST={GOOD_HOST}" in text:
         print(f"  already {GOOD_HOST} — compose part nothing to do")
     elif f"TALK_HOST={BAD_HOST}" in text:
-        backup = Path(f"/root/workspace.yml.bak-talkhost-{BACKUP_TS}")
+        backup = BACKUP_DIR / f"workspace.yml.bak-talkhost-{BACKUP_TS}"
         new = text.replace(f"TALK_HOST={BAD_HOST}", f"TALK_HOST={GOOD_HOST}")
         if APPLY:
             shutil.copy2(compose, backup)
