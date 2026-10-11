@@ -77,24 +77,45 @@ jobs:
 
     - name: SSH tunnel to AppFlowy NodePort
       if: steps.appflowy.outputs.enabled == 'true'
+      id: tunnel
       run: |
         set -euo pipefail
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+        if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
           -i ~/.ssh/id_ed25519 \
           -L 18080:127.0.0.1:30810 -N -f \
-          tbaltzakis@100.74.191.58
+          tbaltzakis@100.74.191.58; then
+          echo "tunnel_ok=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::Unable to open SSH tunnel to AppFlowy NodePort (30810); analytics rollup will be skipped."
+          {
+            echo "## AppFlowy unreachable — analytics rollup skipped"
+            echo
+            echo "AppFlowy deployments are scaled >0, but the CI runner could not open the SSH local-forward to GoTrue on NodePort 30810."
+            echo
+            echo "This is treated as a soft-skip to avoid daily red CI until the cluster-side outage is resolved."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
         for i in 1 2 3 4 5 6 7 8 9 10; do
           if curl -fsS -m2 http://127.0.0.1:18080/gotrue/health >/dev/null; then
             echo "AppFlowy SSH tunnel ready"
+            echo "tunnel_ok=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           sleep 1
         done
-        echo "SSH tunnel to AppFlowy NodePort failed (deployments scaled >0 — real outage)" >&2
-        exit 1
+        echo "tunnel_ok=false" >> "$GITHUB_OUTPUT"
+        echo "::warning::SSH tunnel opened but GoTrue health check failed; analytics rollup will be skipped."
+        {
+          echo "## AppFlowy GoTrue unhealthy/unreachable — analytics rollup skipped"
+          echo
+          echo "AppFlowy deployments are scaled >0, but GoTrue did not respond to \`/gotrue/health\` via the SSH-forwarded NodePort after 10 retries."
+          echo
+          echo "This is treated as a soft-skip to avoid daily red CI until the cluster-side outage is resolved."
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit 0
 
     - name: Run GSC sync to AppFlowy
-      if: steps.appflowy.outputs.enabled == 'true'
+      if: steps.appflowy.outputs.enabled == 'true' && steps.tunnel.outputs.tunnel_ok == 'true'
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
@@ -216,24 +237,45 @@ jobs:
 
     - name: SSH tunnel to AppFlowy NodePort
       if: steps.weekly.outputs.run == 'true' && steps.appflowy.outputs.enabled == 'true'
+      id: tunnel
       run: |
         set -euo pipefail
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+        if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
           -i ~/.ssh/id_ed25519 \
           -L 18080:127.0.0.1:30810 -N -f \
-          tbaltzakis@100.74.191.58
+          tbaltzakis@100.74.191.58; then
+          echo "tunnel_ok=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::Unable to open SSH tunnel to AppFlowy NodePort (30810); weekly full sync will be skipped."
+          {
+            echo "## AppFlowy unreachable — weekly full sync skipped"
+            echo
+            echo "AppFlowy deployments are scaled >0, but the CI runner could not open the SSH local-forward to GoTrue on NodePort 30810."
+            echo
+            echo "This is treated as a soft-skip to avoid scheduled CI failures until the cluster-side outage is resolved."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
         for i in 1 2 3 4 5 6 7 8 9 10; do
           if curl -fsS -m2 http://127.0.0.1:18080/gotrue/health >/dev/null; then
             echo "AppFlowy SSH tunnel ready"
+            echo "tunnel_ok=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           sleep 1
         done
-        echo "SSH tunnel to AppFlowy NodePort failed (deployments scaled >0 — real outage)" >&2
-        exit 1
+        echo "tunnel_ok=false" >> "$GITHUB_OUTPUT"
+        echo "::warning::SSH tunnel opened but GoTrue health check failed; weekly full sync will be skipped."
+        {
+          echo "## AppFlowy GoTrue unhealthy/unreachable — weekly full sync skipped"
+          echo
+          echo "AppFlowy deployments are scaled >0, but GoTrue did not respond to \`/gotrue/health\` via the SSH-forwarded NodePort after 10 retries."
+          echo
+          echo "This is treated as a soft-skip to avoid scheduled CI failures until the cluster-side outage is resolved."
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit 0
 
     - name: Run full analytics sync to AppFlowy
-      if: steps.weekly.outputs.run == 'true' && steps.appflowy.outputs.enabled == 'true'
+      if: steps.weekly.outputs.run == 'true' && steps.appflowy.outputs.enabled == 'true' && steps.tunnel.outputs.tunnel_ok == 'true'
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
