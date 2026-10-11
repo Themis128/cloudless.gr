@@ -31,14 +31,14 @@ jobs:
           mint_key() {
             local resp
             resp=$(curl -sS -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/oauth/token \
-              -d "grant_type=client_credentials&scope=all" -u "$1:$2") || { echo "oauth curl fail" >&2; return 1; }
+              -d "grant_type=client_credentials" -u "$1:$2") || { echo "oauth curl fail" >&2; return 1; }
             local code body tok
             code=$(printf '%s' "$resp" | tail -1); body=$(printf '%s' "$resp" | sed '$d')
             tok=$(printf '%s' "$body" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("access_token",""))' 2>/dev/null)
             [ -n "$tok" ] || { echo "oauth token fail http=$code: $(printf '%s' "$body" | head -c 300)" >&2; return 1; }
             resp=$(curl -sS -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/tailnet/-/keys \
               -H "Authorization: Bearer $tok" -H 'Content-Type: application/json' \
-              -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true}}},"expirySeconds":300}')
+              -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true,"tags":["tag:k8s"]}}},"expirySeconds":300}')
             code=$(printf '%s' "$resp" | tail -1); body=$(printf '%s' "$resp" | sed '$d')
             printf '%s' "$body" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("key",""))' 2>/dev/null
             [ "$code" = "200" ] || echo "key mint http=$code: $(printf '%s' "$body" | head -c 300)" >&2
