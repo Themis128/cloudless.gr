@@ -20,6 +20,8 @@ on:
       - package.json
       - pnpm-lock.yaml
       - tsconfig.json
+      - vitest.config.*
+      - playwright.config.*
       - mcp.json
       - .mcp.json
       - .github/workflows/**
