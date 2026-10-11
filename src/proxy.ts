@@ -33,6 +33,7 @@ function redirectUnprefixedToDefaultLocale(
     pathname.startsWith("/api/") ||
     pathname.startsWith("/portal") ||
     pathname.startsWith("/links") ||
+    pathname.startsWith("/telegram") ||
     pathname.startsWith("/_next")
   ) {
     return null;
