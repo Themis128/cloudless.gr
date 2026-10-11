@@ -144,7 +144,7 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
   const subject = `${today} — ${article.title}`;
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
-      ${coverUrl ? `<img src="${coverUrl}" alt="${article.title}" style="width:100%;border-radius:12px;margin-bottom:24px;" />` : ""}
+      ${coverUrl ? `<img src="${coverUrl}" alt="${article.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")}" style="width:100%;border-radius:12px;margin-bottom:24px;" />` : ""}
       <h1 style="color: #00fff5; margin-top: 0;">${article.title}</h1>
       <p style="color: #a0a0a0;">${article.excerpt}</p>
       <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
