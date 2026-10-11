@@ -21,6 +21,24 @@ import { fetchNewsletterCover } from "@/lib/newsletter-cover";
 
 export const runtime = "nodejs";
 
+async function uploadNewsletterCoverToR2(
+  cover: { buffer: Uint8Array | ArrayBuffer },
+  slug: string
+): Promise<string | null> {
+  const bucket = getDataLakeBucketFromEnv();
+  if (!bucket) return null;
+
+  try {
+    await bucket.put(`newsletter/covers/${slug}.png`, cover.buffer, {
+      httpMetadata: { contentType: "image/png" },
+    });
+    return `https://cloudless.gr/api/newsletter/covers/${slug}`;
+  } catch (err) {
+    console.error("[newsletter-auto] cover upload failed:", err);
+    return null;
+  }
+}
+
 function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -95,20 +113,7 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
 
   // Cover: SocialAuto renders the branded banner; failures never block the issue.
   const cover = await fetchNewsletterCover({ title: parsed.title, slug, category, date: today });
-  let coverUrl: string | null = null;
-  if (cover) {
-    const bucketForCover = getDataLakeBucketFromEnv();
-    if (bucketForCover) {
-      try {
-        await bucketForCover.put(`newsletter/covers/${slug}.png`, cover.buffer, {
-          httpMetadata: { contentType: "image/png" },
-        });
-        coverUrl = `https://cloudless.gr/api/newsletter/covers/${slug}`;
-      } catch (err) {
-        console.error("[newsletter-auto] cover upload failed:", err);
-      }
-    }
-  }
+  const coverUrl = cover ? await uploadNewsletterCoverToR2(cover, slug) : null;
 
   const article = {
     slug,
@@ -165,7 +170,7 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
         html: html.replaceAll("%UNSUBSCRIBELINK%", unsubscribeUrl),
         text: text.replaceAll("%UNSUBSCRIBELINK%", unsubscribeUrl),
         listUnsubscribeUrl: unsubscribeUrl,
-      });
+      }); // NOSONAR -- sequential delivery avoids provider rate limiting
       sent++;
     } catch (err) {
       failed++;
