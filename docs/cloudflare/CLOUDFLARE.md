@@ -27,9 +27,9 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 1. **DNS Management** - Zone records with Cloudflare nameservers
 2. **Tunnel (Private Network)** - Secure connection to Raspberry Pi k3s cluster
-3. **Workers (Serverless)** - Two Workers: pi-origin-proxy (Free) and cloudless-failover (Paid)
+3. **Workers (Serverless)** - Three live Workers: `cloudless2` / pi-origin-proxy (Free), `cloudless-monorepo-production-analyticsworkerscript` (Analytics Engine), and `mail-ingest` (Email Routing inbound edge)
 4. **DDoS & WAF Protection** - Managed security layer
-5. **HA Failover** - Automatic failover between Pi origin and AWS CloudFront via cloudless-failover Worker
+5. **HA Failover** - **retired** — the CloudFront-primary `cloudless-failover` Worker is not deployed; cloudless2 proxies directly to the Pi origin (design history below)
 
 ### Service Architecture
 
@@ -61,11 +61,13 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 ### Worker Architecture
 
-The infrastructure uses **two Workers** with different purposes:
+The infrastructure has **three live Workers** plus one historical design:
 
 1. **`cloudless2` (pi-origin-proxy)** — Free-tier Worker (<50 KiB) that proxies all traffic from `cloudless.gr` and `www.cloudless.gr` to the Pi origin via Tunnel (`manage.cloudless.gr` is served by the Tunnel directly) (`pi-origin.cloudless.gr` → NodePort 30300). This Worker stays under the 3 MiB gzip Free tier limit. Full OpenNext SSR (~5.5 MiB) cannot be deployed on Free.
 
-2. **`cloudless-failover`** — Paid-tier Worker that implements request-level HA failover. It tries AWS CloudFront first (primary), and falls back to the Pi origin via Tunnel if AWS returns >= 400 or times out. Routes: `cloudless.gr/*` and `www.cloudless.gr/*`.
+2. **`cloudless-failover`** — Paid-tier Worker that implements request-level HA failover. It tries AWS CloudFront first (primary), and falls back to the Pi origin via Tunnel if AWS returns >= 400 or times out. Routes: `cloudless.gr/*` and `www.cloudless.gr/*`. **Not deployed** — design history only (see the deployment inventory below).
+
+3. **`mail-ingest`** — Email Routing worker, the inbound edge for `*@cloudless.gr` mail (scorer + ingest relay; fail-open as of 2026-10-11). See Worker 4 below.
 
 ---
 
@@ -422,14 +424,33 @@ npx wrangler deploy
 | Routes      | `/api/analytics/export`, `/api/analytics/query`, `/api/analytics/rollup`                |
 | Bindings    | `ANALYTICS` (Analytics Engine dataset), `DATALAKE_BUCKET` (R2), `ANALYTICS_BUCKET` (R2) |
 
+### Worker 4: mail-ingest (Email Routing)
+
+**Purpose:** Inbound edge for `*@cloudless.gr` Email Routing. Scores headers
+(DNSBL lookups, MX/A checks, blocklist), POSTs accepted mail to the omv
+ingest endpoint, and forwards the rest to `FALLBACK_FORWARD` (Gmail).
+
+**Source:** `workers/mail-ingest/` — see `docs/EMAIL-INFRASTRUCTURE.md` and
+`docs/MAIL-SERVER-SETUP.md` for the full ingest chain.
+
+**Deploys:** manual Wrangler / Workers API upload — `cloudflare-deploy.yml`
+only deploys `pi-origin-proxy`. `secret_text` bindings
+(`MAIL_INGEST_SECRET`, `SLACK_INGEST_SECRET`) are preserved automatically
+when omitted from an upload payload.
+
+**Fail-open scoring (2026-10-11):** exceptions inside header scoring /
+blocklist / `setReject` are logged (`X-Mail-Ingest-Scorer-Error` header) and
+the mail still reaches ingest/fallback — scorer throws must never drop mail.
+
 ### Deployment inventory (single source of truth)
 
-The Cloudflare account currently holds **exactly two** deployed Workers:
+The Cloudflare account currently holds **three** deployed Workers:
 
 | Live script name                                      | Source config                                                                            | Deployed by                                                                                | Notes                                          |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
 | `cloudless2`                                          | [`workers/pi-origin-proxy/wrangler.jsonc`](../../workers/pi-origin-proxy/wrangler.jsonc) | [`.github/workflows/cloudflare-deploy.yml`](../../.github/workflows/cloudflare-deploy.yml) | The Free-tier pi-origin proxy described above. |
 | `cloudless-monorepo-production-analyticsworkerscript` | Analytics Engine worker (see Worker 3)                                                   | Monorepo pipeline                                                                          | Serves `/api/analytics/*`.                     |
+| `mail-ingest`                                         | [`workers/mail-ingest`](../../workers/mail-ingest)                                      | Manual Wrangler / Workers API upload                                                       | Inbound mail scorer + ingest relay (Worker 4). |
 
 Verify with `mcp__cloudflare-observability__workers_list` or
 `npx wrangler deployments list --config workers/pi-origin-proxy/wrangler.jsonc`.
