@@ -114,7 +114,9 @@ def main() -> int:
                 return 1
         elif not APPLY:
             print("  [preview] would run talk:turn:delete turn,turns 192.168.1.200:3478 udp,tcp")
-            print("  [preview] would run talk:turn:add turn 192.168.1.200:3478 udp,tcp --secret=***")
+            print(
+                "  [preview] would run talk:turn:add turn 192.168.1.200:3478 udp,tcp --secret=***"
+            )
         else:
             print("  replacing 'turn,turns' 192.168.1.200:3478 entry with turn-only")
             subprocess.run(
