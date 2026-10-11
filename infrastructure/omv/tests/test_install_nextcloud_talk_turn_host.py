@@ -54,7 +54,6 @@ class TestNextcloudTalkTurnHost(unittest.TestCase):
         argv_p = mock.patch.object(sys, "argv", argv)
         argv_p.start()
         self.addCleanup(argv_p.stop)
-
         bdir_p = mock.patch.object(self.mod, "BACKUP_DIR", Path(self.tmp.name))
         bdir_p.start()
         self.addCleanup(bdir_p.stop)
@@ -75,11 +74,11 @@ class TestNextcloudTalkTurnHost(unittest.TestCase):
         cp.start()
         self.addCleanup(cp.stop)
         # docker compose / occ / docker exec
-        runs = []
+        calls: list[list] = []
 
         def fake_run(cmd, **kwargs):
-            runs.append(list(cmd))
-            if any("TURN_SECRET" in c for c in cmd):
+            calls.append(list(cmd))
+            if any("TURN_SECRET" in str(c) for c in cmd):
                 return mock.Mock(returncode=0, stdout="test-secret\n", stderr=b"")
             out = turn_list if "talk:turn:list" in cmd else ""
             return mock.Mock(returncode=0, stdout=out, stderr=b"")
@@ -87,7 +86,7 @@ class TestNextcloudTalkTurnHost(unittest.TestCase):
         rp = mock.patch.object(self.mod.subprocess, "run", side_effect=fake_run)
         rp.start()
         self.addCleanup(rp.stop)
-        return runs
+        return calls
 
     def test_missing_compose_file_fails(self):
         with mock.patch.object(self.mod.glob, "glob", return_value=[]):
@@ -97,9 +96,9 @@ class TestNextcloudTalkTurnHost(unittest.TestCase):
         self.compose.write_text(
             COMPOSE_BODY.replace("TALK_HOST=signal.cloudless.gr", "TALK_HOST=192.168.1.200")
         )
-        runs = self._patch_common(turn_list="schemes: turn")
+        calls = self._patch_common(turn_list="schemes: turn")
         self.assertEqual(self.mod.main(), 0)
-        self.assertNotIn("compose", " ".join(r[0] for r in runs if r))
+        self.assertNotIn("compose", [c[0] for c in calls])
 
     def test_preview_does_not_touch_file(self):
         self._patch_common(apply=False)
@@ -107,31 +106,28 @@ class TestNextcloudTalkTurnHost(unittest.TestCase):
         self.assertIn("TALK_HOST=signal.cloudless.gr", self.compose.read_text())
 
     def test_apply_rewrites_host_recreates_and_clears_stale_turn_entry(self):
-        self._patch_common(apply=True, turn_list="schemes: turn,turns")
+        calls = self._patch_common(apply=True, turn_list="schemes: turn,turns")
         self.assertEqual(self.mod.main(), 0)
         text = self.compose.read_text()
         self.assertIn("TALK_HOST=192.168.1.200", text)
         self.assertNotIn("TALK_HOST=signal.cloudless.gr", text)
-        flat = [c for r in runs for c in r]
+        flat = [c for call in calls for c in call]
         self.assertIn("talk-hpb", flat)  # compose up recreated the container
         self.assertIn("talk:turn:delete", flat)
         self.assertIn("talk:turn:add", flat)
 
-    def test_add_failure_still_leaves_compose_rewritten_but_reports(self):
-        """compose up failing is propagated (nonzero) even though the file changed."""
+    def test_add_failure_reverts_file_and_raises(self):
+        """compose up failing reverts workspace.yml from the backup and propagates."""
         self._patch_common(apply=True)
 
         def failing_compose(cmd, **kwargs):
-            if "compose" in cmd:
-                if kwargs.get("check"):
-                    raise subprocess.CalledProcessError(1, cmd)
-                return mock.Mock(returncode=1, stdout="", stderr=b"boom")
-            return mock.Mock(returncode=0, stdout="schemes: turn,turns", stderr=b"")
+            if "compose" in cmd and kwargs.get("check"):
+                raise subprocess.CalledProcessError(1, cmd)
+            return mock.Mock(returncode=0, stdout="", stderr=b"")
 
         with mock.patch.object(self.mod.subprocess, "run", side_effect=failing_compose):
-            with self.assertRaises(self.mod.subprocess.CalledProcessError):
+            with self.assertRaises(subprocess.CalledProcessError):
                 self.mod.main()
-        # compose failure reverts the file from the backup (documented behaviour)
         self.assertIn("TALK_HOST=signal.cloudless.gr", self.compose.read_text())
         self.assertNotIn("TALK_HOST=192.168.1.200", self.compose.read_text())
 
