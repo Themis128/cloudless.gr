@@ -101,27 +101,37 @@ def main() -> int:
     occ = ["docker", "exec", "-u", "www-data", NEXTCLOUD_CONTAINER, "php", "occ"]
     lst = subprocess.run(occ + ["talk:turn:list"], capture_output=True, text=True)
     if "turn,turns" in lst.stdout:
-        print("  removing 'turn,turns' 192.168.1.200:3478 entry")
-        subprocess.run(
-            occ + ["talk:turn:delete", "turn,turns", "192.168.1.200:3478", "udp,tcp"],
-            check=False,
-        )
+        # fetch and validate the secret BEFORE deleting anything, so a failed
+        # fetch can never leave Talk without a usable TURN entry
         secret = subprocess.run(
             ["docker", "exec", TALK_CONTAINER, "sh", "-c", "echo $TURN_SECRET"],
             capture_output=True,
             text=True,
         ).stdout.strip()
-        subprocess.run(
-            occ
-            + [
-                "talk:turn:add",
-                "turn",
-                "192.168.1.200:3478",
-                "udp,tcp",
-                f"--secret={secret}",
-            ],
-            check=True,
-        )
+        if not secret:
+            print("  TURN_SECRET empty in talk container — refusing to touch the entry")
+            if APPLY:
+                return 1
+        elif not APPLY:
+            print("  [preview] would run talk:turn:delete turn,turns 192.168.1.200:3478 udp,tcp")
+            print("  [preview] would run talk:turn:add turn 192.168.1.200:3478 udp,tcp --secret=***")
+        else:
+            print("  replacing 'turn,turns' 192.168.1.200:3478 entry with turn-only")
+            subprocess.run(
+                occ + ["talk:turn:delete", "turn,turns", "192.168.1.200:3478", "udp,tcp"],
+                check=False,
+            )
+            subprocess.run(
+                occ
+                + [
+                    "talk:turn:add",
+                    "turn",
+                    "192.168.1.200:3478",
+                    "udp,tcp",
+                    f"--secret={secret}",
+                ],
+                check=True,
+            )
     elif "schemes: turn" in lst.stdout and GOOD_HOST in lst.stdout:
         print("  turn-only entry already present — nothing to do")
     else:
