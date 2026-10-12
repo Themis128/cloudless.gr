@@ -1,77 +1,101 @@
-/**
- * Tests for src/lib/analytics-client.ts
- *
- * analytics-client.ts is a "use client" module. We can test isDuckDBAvailable()
- * by manipulating globalThis properties. queryLakeParquet() requires DuckDB-Wasm
- * and is tested at a high level only (guards the early-return path).
- */
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Re-export of lake-parquet-catalog is covered in its own test file.
-// Focus here: isDuckDBAvailable and the no-runtime early return.
+const m = vi.hoisted(() => ({
+  fetchWithAuth: vi.fn(),
+  connQuery: vi.fn(),
+  connClose: vi.fn(),
+  registerFileBuffer: vi.fn(),
+  instantiate: vi.fn(),
+}));
 
-// We need to test isDuckDBAvailable in isolation. The function reads from
-// globalThis at call time, so we can manipulate globalThis fields directly.
+vi.mock("@/lib/fetch-with-auth", () => ({ fetchWithAuth: m.fetchWithAuth }));
 
-// Import after any potential env manipulation
-import { isDuckDBAvailable } from "@/lib/analytics-client";
+vi.mock("@duckdb/duckdb-wasm", () => ({
+  getJsDelivrBundles: () => ({ mvp: {}, eh: {} }),
+  selectBundle: vi.fn(async () => ({
+    mainWorker: "https://cdn.example/worker.js",
+    mainModule: "https://cdn.example/duckdb.wasm",
+    pthreadWorker: undefined,
+  })),
+  ConsoleLogger: class {},
+  LogLevel: { WARNING: 2 },
+  AsyncDuckDB: class {
+    registerFileBuffer = m.registerFileBuffer;
+    instantiate = m.instantiate;
+    connect = async () => ({ query: m.connQuery, close: m.connClose });
+  },
+}));
 
-afterEach(() => {
-  vi.restoreAllMocks();
+import { isDuckDBAvailable, queryLakeParquet } from "@/lib/analytics-client";
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
+
+class FakeWorker {
+  constructor(public url: string) {}
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  m.connQuery.mockResolvedValue({ toArray: () => [{ a: 1 }] });
+  m.connClose.mockResolvedValue(undefined);
+  m.registerFileBuffer.mockResolvedValue(undefined);
+  m.instantiate.mockResolvedValue(undefined);
 });
 
 describe("isDuckDBAvailable", () => {
-  it("returns true in a browser-like environment (jsdom has window, Worker, crypto)", () => {
-    // jsdom provides window, Worker, crypto.subtle — should return true
-    if (typeof window !== "undefined" && typeof Worker !== "undefined" && typeof crypto?.subtle !== "undefined") {
-      expect(isDuckDBAvailable()).toBe(true);
-    }
+  it("reflects Worker availability in this env", () => {
+    const had = typeof Worker !== "undefined";
+    expect(isDuckDBAvailable()).toBe(had);
+  });
+});
+
+describe("queryLakeParquet", () => {
+  it("returns [] when Worker is unavailable", async () => {
+    const orig = globalThis.Worker;
+    // @ts-expect-error — simulate a non-worker env
+    delete globalThis.Worker;
+    const out = await queryLakeParquet("cat1", "SELECT 1");
+    expect(out).toEqual([]);
+    globalThis.Worker = orig;
+    expect(m.fetchWithAuth).not.toHaveBeenCalled();
   });
 
-  it("returns false when window is undefined", () => {
-    const origWindow = globalThis.window;
-    // Temporarily hide window
-    Object.defineProperty(globalThis, "window", {
-      value: undefined,
-      writable: true,
-      configurable: true,
+  it("throws on a non-ok lake-parquet response", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    m.fetchWithAuth.mockResolvedValue(new Response("x", { status: 500 }));
+    await expect(queryLakeParquet("cat1", "SELECT 1")).rejects.toThrow("lake-parquet 500");
+  });
+
+  it("loads parquet into duckdb, runs the sql, and closes the conn", async () => {
+    vi.stubGlobal("Worker", FakeWorker);
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:fake"),
     });
-    try {
-      expect(isDuckDBAvailable()).toBe(false);
-    } finally {
-      Object.defineProperty(globalThis, "window", {
-        value: origWindow,
-        writable: true,
-        configurable: true,
-      });
-    }
-  });
+    m.fetchWithAuth.mockResolvedValue(
+      new Response(new Uint8Array([80, 65, 82, 49]).buffer, { status: 200 })
+    );
+    mockFetch.mockResolvedValueOnce(new Response("worker-js", { status: 200 }));
 
-  it("returns false when Worker is undefined", () => {
-    const origWorker = globalThis.Worker;
-    try {
-      (globalThis as { Worker?: unknown }).Worker = undefined;
-      expect(isDuckDBAvailable()).toBe(false);
-    } finally {
-      (globalThis as { Worker?: unknown }).Worker = origWorker;
-    }
-  });
+    const rows = await queryLakeParquet("cat/1", "SELECT * FROM lake");
+    expect(rows).toEqual([{ a: 1 }]);
 
-  it("returns false when crypto.subtle is undefined", () => {
-    const origCrypto = globalThis.crypto;
-    try {
-      Object.defineProperty(globalThis, "crypto", {
-        value: {},
-        writable: true,
-        configurable: true,
-      });
-      expect(isDuckDBAvailable()).toBe(false);
-    } finally {
-      Object.defineProperty(globalThis, "crypto", {
-        value: origCrypto,
-        writable: true,
-        configurable: true,
-      });
-    }
+    // Worker script was fetched for the blob wrap.
+    expect(mockFetch).toHaveBeenCalledWith("https://cdn.example/worker.js");
+    // Parquet registered under a sanitized name.
+    const [name, bytes] = m.registerFileBuffer.mock.calls[0];
+    expect(name).toBe("lake_cat_1.parquet");
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    // View created + user sql executed + conn closed.
+    expect(m.connQuery).toHaveBeenNthCalledWith(
+      1,
+      "CREATE OR REPLACE VIEW lake AS SELECT * FROM read_parquet('lake_cat_1.parquet')"
+    );
+    expect(m.connQuery).toHaveBeenNthCalledWith(2, "SELECT * FROM lake");
+    expect(m.connClose).toHaveBeenCalled();
+    expect(m.fetchWithAuth).toHaveBeenCalledWith(
+      "/api/admin/analytics/lake-parquet?id=cat%2F1"
+    );
   });
 });

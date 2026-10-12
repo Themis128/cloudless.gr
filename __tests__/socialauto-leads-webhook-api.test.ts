@@ -190,3 +190,55 @@ describe("POST /api/webhooks/socialauto-leads", () => {
   });
 });
 
+
+describe("POST /api/webhooks/socialauto-leads tails", () => {
+  const auth = { "x-socialauto-webhook-secret": "socialauto-test-secret" };
+  const lead = { source: "whatsapp_dm", name: "A B", email: "a@b.com" };
+
+  it("rejects a wrong secret and GET requests", async () => {
+    const { GET } = await import("@/app/api/webhooks/socialauto-leads/route");
+    expect((await GET()).status).toBe(405);
+
+    const res = await POST(req({ "x-socialauto-webhook-secret": "wrong" }, lead));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("unauthorized");
+  });
+
+  it("rejects invalid JSON and empty item lists", async () => {
+    const bad = new NextRequest("https://cloudless.gr/api/webhooks/socialauto-leads", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...auth },
+      body: "{broken",
+    });
+    expect((await POST(bad)).status).toBe(400);
+
+    const res = await POST(req(auth, []));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, results: [] });
+  });
+
+  it("marks unrecognised and non-lead candidates invalid in the results", async () => {
+    const res = await POST(
+      req(auth, [{ other: 1 }, { source: "not_a_lead", name: "X" }, lead])
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.results).toEqual([
+      { ok: false, espocrm_lead_id: null },
+      { ok: false, espocrm_lead_id: null },
+      { ok: true, espocrm_lead_id: "lead-123" },
+    ]);
+  });
+
+  it("rejects batches over 100 items", async () => {
+    const res = await POST(req(auth, Array.from({ length: 101 }, () => lead)));
+    expect(res.status).toBe(413);
+  });
+
+  it("returns ok:false when the mapped lead lacks an email", async () => {
+    const res = await POST(req(auth, { source: "whatsapp_dm", name: "No Email" }));
+    const data = await res.json();
+    expect(data.results[0]).toEqual({ ok: false, espocrm_lead_id: null });
+    expect(mockCreateLead).not.toHaveBeenCalled();
+  });
+});

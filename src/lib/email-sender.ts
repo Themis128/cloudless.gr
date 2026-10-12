@@ -88,7 +88,7 @@ async function checkSuppression(toEmail: string): Promise<boolean> {
   // In Workers, check D1 suppression list
   try {
     const { isSuppressed } = await import("@/lib/ses-suppression-d1");
-    return isSuppressed(toEmail);
+    return await isSuppressed(toEmail);
   } catch {
     return false;
   }

@@ -245,3 +245,94 @@ describe("POST /api/calendar/book", () => {
     expect(res.status).toBe(500);
   });
 });
+
+vi.mock("@/lib/espocrm", () => ({
+  upsertContact: vi.fn(async () => "c1"),
+  createDeal: vi.fn(async () => "d1"),
+  createContactNote: vi.fn(async () => true),
+  associateDealWithContact: vi.fn(async () => true),
+}));
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  withScope: vi.fn((cb: (s: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
+
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
+
+describe("POST /api/calendar/book — tail branches", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetIntegrationCache();
+    process.env.CAL_API_KEY = "cal_live_test_key";
+    const { bookConsultation } = vi.mocked(
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
+    );
+    (bookConsultation as ReturnType<typeof vi.fn>).mockResolvedValue({
+      eventId: "evt_x",
+      htmlLink: "https://cal.com/x",
+    });
+  });
+
+  const book = (over: Record<string, unknown> = {}) =>
+    bookRequest({
+      name: TEST_USER_NAME,
+      email: TEST_USER_EMAIL,
+      start: futureStart,
+      end: futureEnd,
+      ...over,
+    });
+
+  it("400 on invalid dates + end before start", async () => {
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(book({ start: "not-a-date" }));
+    expect(res.status).toBe(400);
+    const res2 = await POST(
+      book({ start: futureEnd, end: futureStart })
+    );
+    expect(res2.status).toBe(400);
+  });
+
+  it("espo sync runs with notes (fire-and-forget)", async () => {
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(book({ notes: "needs audit" }));
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(vi.mocked(upsertContact)).toHaveBeenCalled());
+    await vi.waitFor(() => expect(vi.mocked(createDeal)).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(vi.mocked(associateDealWithContact)).toHaveBeenCalledWith("d1", "c1")
+    );
+  });
+
+  it("espo sync failure is swallowed", async () => {
+    vi.mocked(upsertContact).mockRejectedValueOnce(new Error("espo down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(book({}));
+    expect(res.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        "[Calendar→EspoCRM] Deal creation failed:",
+        expect.any(Error)
+      )
+    );
+    spy.mockRestore();
+  });
+
+  it("500 + Sentry when booking throws", async () => {
+    const { bookConsultation } = vi.mocked(
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
+    );
+    (bookConsultation as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cal down"));
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://dsn";
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(book({}));
+    expect(res.status).toBe(500);
+    const sentry = await import("@sentry/nextjs");
+    expect(vi.mocked(sentry.captureException)).toHaveBeenCalled();
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    spy.mockRestore();
+  });
+});

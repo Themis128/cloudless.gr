@@ -27,3 +27,4 @@ describe("appflowy-analytics (not configured)", () => {
     expect(await createWeeklyRollup()).toBe(true);
   });
 });
+

@@ -164,3 +164,76 @@ describe("GET /api/unsubscribe", () => {
     expect(body).toContain("Error");
   });
 });
+
+describe("unsubscribe route tails", () => {
+  it("400 on unparseable JSON body", async () => {
+    const { POST } = await import("@/app/api/unsubscribe/route");
+    const res = await POST(
+      new globalThis.Request("http://localhost:4000/api/unsubscribe", {
+        method: "POST",
+        body: "{bad",
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("still 200 when the confirmation email rejects", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    sendUnsubscribeConfirmationMock.mockRejectedValueOnce(new Error("smtp down"));
+    const { POST } = await import("@/app/api/unsubscribe/route");
+    const res = await POST(
+      new globalThis.Request("http://localhost:4000/api/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "u@v.co" }),
+      })
+    );
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Confirmation email failed"),
+      expect.any(Error)
+    );
+    warn.mockRestore();
+  });
+
+  it("500s when the suppression/CRM update throws", async () => {
+    addToSuppressionListMock.mockRejectedValueOnce(new Error("ses down"));
+    const { POST } = await import("@/app/api/unsubscribe/route");
+    const res = await POST(
+      new globalThis.Request("http://localhost:4000/api/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "u@v.co" }),
+      })
+    );
+    expect(res.status).toBe(500);
+  });
+
+  it("GET link path rate-limits to a 429 HTML page", async () => {
+    const rl = await import("@/lib/rate-limit");
+    vi.mocked(rl.rateLimit).mockReturnValueOnce({ ok: false, remaining: 0 } as never);
+    const { GET } = await import("@/app/api/unsubscribe/route");
+    const res = await GET(
+      new Request("http://localhost:4000/api/unsubscribe?email=u%40v.co")
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Content-Type")).toContain("text/html");
+  });
+
+  it("GET link path still unsubscribes when the confirmation email rejects", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    sendUnsubscribeConfirmationMock.mockRejectedValueOnce(new Error("smtp down"));
+    const { GET } = await import("@/app/api/unsubscribe/route");
+    const res = await GET(
+      new Request("http://localhost:4000/api/unsubscribe?email=u%40v.co")
+    );
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Confirmation email failed"),
+      expect.any(Error)
+    );
+    warn.mockRestore();
+  });
+});

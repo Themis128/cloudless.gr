@@ -120,6 +120,54 @@ describe("GET /api/admin/leads", () => {
     expect(data.total).toBe(0);
   });
 
+  it("merges EspoCRM lead records with tier/campaign interest extraction", async () => {
+    mockListContacts.mockResolvedValue([]);
+    mockListLeads.mockResolvedValue([
+      {
+        id: "l1",
+        emailAddress: "lead@acme.com",
+        firstName: "Lead",
+        lastName: "One",
+        accountName: "Acme",
+        description: "Tier: Growth\nCampaign: Q4 launch",
+        status: "New",
+        createdAt: "2026-06-05T10:00:00Z",
+      },
+      {
+        id: "l2",
+        emailAddress: "solo@acme.com",
+        description: "Campaign: Q4 launch",
+        status: "Assigned",
+        createdAt: "2026-06-04T10:00:00Z",
+      },
+      { id: "l3", firstName: "NoEmail" },
+    ]);
+    const { GET } = await import("@/app/api/admin/leads/route");
+    const res = await GET(makeRequest());
+    const json = (await res.json()) as {
+      leads: { email: string; interest?: string; sources: string[] }[];
+      total: number;
+    };
+    expect(res.status).toBe(200);
+    expect(json.total).toBe(2);
+    const l1 = json.leads.find((l) => l.email === "lead@acme.com");
+    expect(l1?.interest).toBe("Growth (Q4 launch)");
+    expect(l1?.sources).toContain("espocrm-lead");
+    const l2 = json.leads.find((l) => l.email === "solo@acme.com");
+    expect(l2?.interest).toBe("Q4 launch");
+  });
+
+  it("returns 500 when a lead source throws synchronously", async () => {
+    mockListContacts.mockImplementation(() => {
+      throw new Error("sdk init boom");
+    });
+    const { GET } = await import("@/app/api/admin/leads/route");
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(500);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toBe("Failed to fetch leads.");
+  });
+
   it("still serves portal leads when EspoCRM is unconfigured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
     mockReadPendingClients.mockResolvedValue([PENDING_CLIENT]);

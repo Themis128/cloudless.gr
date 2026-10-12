@@ -88,4 +88,44 @@ describe("POST /api/webhooks/kuma", () => {
     expect(mockPost.mock.calls[0][0].text).toContain("DNS flap");
     vi.useRealTimers();
   });
+
+  it("returns 503 when no webhook secret is configured", async () => {
+    mockGetConfig.mockResolvedValueOnce({ ADMIN_ALERT_SECRET: "", NOTION_WEBHOOK_SECRET: "" });
+    const mod = await import("@/app/api/webhooks/kuma/route");
+    const res = await mod.POST(new NextRequest("http://localhost/api/webhooks/kuma", {
+      method: "POST",
+      headers: { authorization: "Bearer whatever" },
+      body: "{}",
+    }));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns 400 on malformed JSON", async () => {
+    const mod = await import("@/app/api/webhooks/kuma/route");
+    const res = await mod.POST(new NextRequest("http://localhost/api/webhooks/kuma", {
+      method: "POST",
+      headers: { authorization: "Bearer test-secret" },
+      body: "{bad json",
+    }));
+    expect(res.status).toBe(400);
+  });
+
+  it("maps PENDING and MAINTENANCE heartbeat statuses into the post title", async () => {
+    const mod = await import("@/app/api/webhooks/kuma/route");
+    for (const [status, label] of [[2, "PENDING"], [3, "MAINTENANCE"], [9, "UNKNOWN"]] as const) {
+      const res = await mod.POST(new NextRequest("http://localhost/api/webhooks/kuma", {
+        method: "POST",
+        headers: { authorization: "Bearer test-secret" },
+        body: JSON.stringify({
+          monitor: { name: `m-${status}`, url: "https://x.gr" },
+          heartbeat: { status },
+          msg: "",
+        }),
+      }));
+      expect(res.status).toBe(200);
+      const post = mockPost.mock.calls.at(-1)![0] as { text?: string; title?: string };
+      const serialized = JSON.stringify(post);
+      expect(serialized).toContain(label);
+    }
+  });
 });

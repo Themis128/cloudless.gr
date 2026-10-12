@@ -82,4 +82,52 @@ describe("GET/PUT /api/admin/config", () => {
       "slug"
     );
   });
+
+  it("GET ?key= reads a value, 404s unknown keys, and 403s secrets", async () => {
+    getAuthDbFromEnvMock.mockReturnValue({});
+    const { GET } = await import("@/app/api/admin/config/route");
+
+    // blocked secret
+    let res = await GET(makeRequest("GET", undefined, "http://localhost/api/admin/config?key=STRIPE_SECRET_KEY"));
+    expect(res.status).toBe(403);
+
+    // unknown key
+    getD1ConfigValueMock.mockResolvedValueOnce(undefined);
+    res = await GET(makeRequest("GET", undefined, "http://localhost/api/admin/config?key=MISSING_KEY"));
+    expect(res.status).toBe(404);
+
+    // real key
+    getD1ConfigValueMock.mockResolvedValueOnce("https://kuma.example.com");
+    res = await GET(makeRequest("GET", undefined, "http://localhost/api/admin/config?key=KUMA_BASE_URL"));
+    const json = (await res.json()) as { key: string; value: string };
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ key: "KUMA_BASE_URL", value: "https://kuma.example.com" });
+  });
+
+  it("PUT validates JSON body, key format, and value constraints", async () => {
+    getAuthDbFromEnvMock.mockReturnValue({});
+    const { PUT } = await import("@/app/api/admin/config/route");
+
+    // invalid JSON
+    let res = await PUT(
+      new NextRequest("http://localhost/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: "{bad",
+      })
+    );
+    expect(res.status).toBe(400);
+
+    // lowercase key rejected
+    res = await PUT(makeRequest("PUT", { key: "lowercase_key", value: "v" }));
+    expect(res.status).toBe(400);
+
+    // missing value rejected
+    res = await PUT(makeRequest("PUT", { key: "VALID_KEY" }));
+    expect(res.status).toBe(400);
+
+    // oversized value rejected
+    res = await PUT(makeRequest("PUT", { key: "VALID_KEY", value: "x".repeat(8001) }));
+    expect(res.status).toBe(400);
+  });
 });

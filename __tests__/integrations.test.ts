@@ -3,6 +3,8 @@ import {
   getIntegrations,
   isConfigured,
   getIntegrationsAsync,
+  requireIntegrationAsync,
+  IntegrationNotConfiguredError,
   isConfiguredAsync,
   getSlackConfig,
   resetIntegrationCache,
@@ -138,5 +140,23 @@ describe("integrations.ts", () => {
       const second = getSlackConfig();
       expect(first).toBe(second);
     });
+  });
+});
+
+describe("requireIntegrationAsync() tails", () => {
+  it("throws IntegrationNotConfiguredError for a key absent from the async config", async () => {
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    resetIntegrationCache();
+    await expect(requireIntegrationAsync("STRIPE_WEBHOOK_SECRET")).rejects.toBeInstanceOf(
+      IntegrationNotConfiguredError
+    );
+    resetIntegrationCache();
+  });
+
+  it("returns the merged config when the key is set", async () => {
+    process.env.NOTION_API_KEY = "secret_test_key_12345";
+    resetIntegrationCache();
+    const cfg = await requireIntegrationAsync("NOTION_API_KEY");
+    expect(cfg.NOTION_API_KEY).toBe("secret_test_key_12345");
   });
 });

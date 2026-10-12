@@ -241,3 +241,171 @@ describe("POST /api/webhooks/linkedin-leads", () => {
     expect(arg.campaignSlug).toBe("shop-online");
   });
 });
+
+
+describe("linkedin-leads route tails", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  const mockDeps = (opts: {
+    secret?: string;
+    token?: string;
+    fetchResp?: unknown;
+    fetchQuestions?: unknown;
+    createLead?: (d: unknown) => Promise<string | null>;
+  }) => {
+    vi.doMock("@/lib/ssm-config", () => ({
+      getConfig: vi.fn().mockResolvedValue({
+        LINKEDIN_CLIENT_SECRET: opts.secret ?? "sec",
+        LINKEDIN_ACCESS_TOKEN: opts.token ?? "",
+        LINKEDIN_AD_ACCOUNT_ID: "512642510",
+        LINKEDIN_CAPI_ACCESS_TOKEN: "",
+      }),
+    }));
+    vi.doMock("@/lib/espocrm", () => ({
+      createLead: opts.createLead ?? (vi.fn().mockResolvedValue("lead-1") as never),
+    }));
+    vi.doMock("@/lib/linkedin-leadgen", async () => {
+      const actual =
+        await vi.importActual<typeof import("@/lib/linkedin-leadgen")>(
+          "@/lib/linkedin-leadgen"
+        );
+      return {
+        ...actual,
+        fetchLeadFormResponse: vi.fn().mockResolvedValue(opts.fetchResp ?? null),
+        fetchLeadFormQuestions: vi.fn().mockResolvedValue(opts.fetchQuestions ?? []),
+      };
+    });
+  };
+
+  const req = async (body: string, secret: string) => {
+    const sig = createHmac("sha256", secret)
+      .update(`hmacsha256=${body}`)
+      .digest("hex");
+    const { NextRequest } = await import("next/server");
+    return new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-li-signature": sig },
+      body,
+    });
+  };
+
+  it("GET 400 without challengeCode and 503 without client secret", async () => {
+    mockDeps({ secret: "sec" });
+    const { GET } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const { NextRequest } = await import("next/server");
+    const noParam = await GET(
+      new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads")
+    );
+    expect(noParam.status).toBe(400);
+  });
+
+  it("GET 503 when the receiver secret is unconfigured", async () => {
+    vi.doMock("@/lib/ssm-config", () => ({
+      getConfig: vi.fn().mockResolvedValue({}),
+    }));
+    const { GET } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const { NextRequest } = await import("next/server");
+    const r = await GET(
+      new NextRequest(
+        "https://cloudless.gr/api/webhooks/linkedin-leads?challengeCode=x"
+      )
+    );
+    expect(r.status).toBe(503);
+  });
+
+  it("POST 503 without secret and 400 on invalid JSON", async () => {
+    vi.doMock("@/lib/ssm-config", () => ({
+      getConfig: vi.fn().mockResolvedValue({}),
+    }));
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const { NextRequest } = await import("next/server");
+    const unconfigured = await POST(
+      new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads", {
+        method: "POST",
+        headers: { "x-li-signature": "s" },
+        body: "{}",
+      })
+    );
+    expect(unconfigured.status).toBe(503);
+  });
+
+  it("returns invalid_json for a signed but non-JSON body", async () => {
+    mockDeps({ secret: "sec" });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const r = await POST(await req("not-json{{{", "sec"));
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { error: string }).error).toBe("invalid_json");
+  });
+
+  it("acknowledges with token_missing when the access token is absent", async () => {
+    vi.stubEnv("LINKEDIN_ACCESS_TOKEN", "");
+    vi.stubEnv("LINKEDIN_CAPI_ACCESS_TOKEN", "");
+    mockDeps({ secret: "sec", token: "" });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify({
+      type: "LEAD_ACTION",
+      leadAction: "CREATED",
+      leadGenFormResponse: "urn:li:leadGenFormResponse:r1",
+      occurredAt: 1,
+    });
+    const r = await POST(await req(body, "sec"));
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as { warning: string }).warning).toBe("token_missing");
+  });
+
+  it("skips non-CREATED notifications and DELETED actions", async () => {
+    mockDeps({ secret: "sec", token: "tok" });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify([
+      { type: "OTHER", leadAction: "CREATED", leadGenFormResponse: "urn:li:leadGenFormResponse:r1", occurredAt: 1 },
+      { type: "LEAD_ACTION", leadAction: "DELETED", leadGenFormResponse: "urn:li:leadGenFormResponse:r2", occurredAt: 2 },
+    ]);
+    const r = await POST(await req(body, "sec"));
+    const j = (await r.json()) as { results: { skipped?: boolean }[] };
+    expect(r.status).toBe(200);
+    expect(j.results.every((x) => x.skipped)).toBe(true);
+  });
+
+  it("returns ok:false when the form-response URN is unparseable", async () => {
+    mockDeps({ secret: "sec", token: "tok" });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify({
+      type: "LEAD_ACTION",
+      leadAction: "CREATED",
+      leadGenFormResponse: "garbage-urn",
+      occurredAt: 1,
+    });
+    const r = await POST(await req(body, "sec"));
+    const j = (await r.json()) as { results: { ok: boolean }[] };
+    expect(j.results[0].ok).toBe(false);
+  });
+
+  it("returns ok:false when fetchLeadFormResponse fails and when lead has no email", async () => {
+    mockDeps({ secret: "sec", token: "tok", fetchResp: null });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify({
+      type: "LEAD_ACTION",
+      leadAction: "CREATED",
+      leadGenFormResponse: "urn:li:leadGenFormResponse:r1",
+      occurredAt: 1,
+    });
+    const r = await POST(await req(body, "sec"));
+    expect(((await r.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
+
+    // response exists but maps to no email
+    vi.resetModules();
+    mockDeps({
+      secret: "sec",
+      token: "tok",
+      fetchResp: { id: "r1", formResponse: { answers: [] } },
+    });
+    const { POST: POST2 } = await import(
+      "@/app/api/webhooks/linkedin-leads/route"
+    );
+    const r2 = await POST2(await req(body, "sec"));
+    expect(((await r2.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
+  });
+});

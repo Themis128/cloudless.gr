@@ -90,3 +90,41 @@ describe("dashboard /settings — theme button live preview", () => {
     expect(updatePreferences).not.toHaveBeenCalled();
   });
 });
+
+
+describe("dashboard /settings — save + toggles", () => {
+  afterEach(() => cleanup());
+
+  it("persists preferences via updatePreferences and shows the saved state", async () => {
+    const updatePreferences = vi.fn().mockResolvedValue(undefined);
+    useAuthMock.mockReturnValue({ ...authMock(), updatePreferences });
+    const SettingsPage = (await import("@/app/[locale]/dashboard/settings/page")).default;
+    render(<SettingsPage />);
+
+    // toggle a checkbox + language, then save
+    fireEvent.click(screen.getByRole("button", { name: /Français/i }));
+    const boxes = screen.getAllByRole("checkbox");
+    fireEvent.click(boxes[1]);
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await vi.waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    expect(updatePreferences).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "fr", emailNewsletter: true })
+    );
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toMatch(/saved/i)
+    );
+  });
+
+  it("shows the error message when updatePreferences rejects", async () => {
+    const updatePreferences = vi.fn().mockRejectedValue(new Error("nope"));
+    useAuthMock.mockReturnValue({ ...authMock(), updatePreferences });
+    const SettingsPage = (await import("@/app/[locale]/dashboard/settings/page")).default;
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain("nope")
+    );
+  });
+});

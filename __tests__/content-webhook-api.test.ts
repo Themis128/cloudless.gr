@@ -300,3 +300,93 @@ describe("analytics.event", () => {
     expect(slackContactNotify).not.toHaveBeenCalled();
   });
 });
+
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  withScope: vi.fn((cb: (scope: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
+
+describe("page.created — remaining databases", () => {
+  it.each(["testimonials", "case-studies", "services", "faqs", "unknown-db"])(
+    "revalidates %s without throwing",
+    async (db) => {
+      const res = await POST(req(base({ type: "page.created", database: db })));
+      expect(res.status).toBe(200);
+      expect((await res.json()).ok).toBe(true);
+    }
+  );
+});
+
+describe("postiz fan-out logging branches", () => {
+  const flush = () => vi.waitFor(() => expect(scheduleBlogShare).toHaveBeenCalled());
+  const postReq = () =>
+    req(
+      base({
+        type: "page.updated",
+        database: "blog",
+        slug: "post-1",
+        data: { status: "Published", title: "T", url: "https://x/p", locale: "en" },
+      })
+    );
+
+  it("logs skipped", async () => {
+    vi.mocked(scheduleBlogShare).mockResolvedValue({ skipped: "no integrations" } as never);
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await POST(postReq());
+    await flush();
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("skipped: no integrations"))
+    );
+    spy.mockRestore();
+  });
+
+  it("logs posted channel count", async () => {
+    vi.mocked(scheduleBlogShare).mockResolvedValue({ ok: true, postIds: ["a", "b"] } as never);
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await POST(postReq());
+    await flush();
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("posted 2 channel"))
+    );
+    spy.mockRestore();
+  });
+
+  it("logs failure and thrown errors", async () => {
+    vi.mocked(scheduleBlogShare).mockResolvedValue({ ok: false, error: "postiz down" } as never);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await POST(postReq());
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("failed: postiz down"))
+    );
+    vi.mocked(scheduleBlogShare).mockRejectedValue(new Error("boom") as never);
+    await POST(postReq());
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        "[content webhook → postiz] threw:",
+        expect.any(Error)
+      )
+    );
+    spy.mockRestore();
+  });
+});
+
+describe("unhandled error path", () => {
+  it("returns 500 and reports to Sentry when configured", async () => {
+    vi.mocked(invalidateCache).mockImplementation(() => {
+      throw new Error("cache explode");
+    });
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://dsn";
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST(req(base({ type: "page.created", database: "blog" })));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toContain("Internal error");
+    await vi.waitFor(async () => {
+      const sentry = await import("@sentry/nextjs");
+      expect(vi.mocked(sentry.captureException)).toHaveBeenCalled();
+    });
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    spy.mockRestore();
+  });
+});

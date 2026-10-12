@@ -95,4 +95,41 @@ describe("ThemePreferenceSync", () => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
   });
+
+  it("follows the OS color scheme when preference is system", async () => {
+    usePathnameMock.mockReturnValue("/en/services");
+    useAuthMock.mockReturnValue({
+      user: { preferences: { theme: "system" } },
+    } as never);
+
+    let changeCb: (() => void) | undefined;
+    const media = {
+      matches: true,
+      media: "(prefers-color-scheme: dark)",
+      addEventListener: vi.fn((_t: string, cb: () => void) => {
+        changeCb = cb;
+      }),
+      removeEventListener: vi.fn(),
+    };
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(() => media),
+    });
+
+    const { unmount } = render(<ThemePreferenceSync />);
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    });
+    expect(media.addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+
+    // OS flips to light → listener applies it live
+    media.matches = false;
+    changeCb?.();
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    });
+
+    unmount();
+    expect(media.removeEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+  });
 });

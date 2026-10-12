@@ -117,3 +117,54 @@ describe("POST /api/subscribe", () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe("subscribe route tails", () => {
+  it("GET returns 405", async () => {
+    const { GET } = await import("@/app/api/subscribe/route");
+    const res = await GET();
+    expect(res.status).toBe(405);
+  });
+
+  it("400 on unparseable body", async () => {
+    const { POST } = await import("@/app/api/subscribe/route");
+    const res = await POST(
+      new globalThis.Request("http://localhost:4000/api/subscribe", {
+        method: "POST",
+        body: "{not json",
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("403 when Turnstile rejects the token", async () => {
+    const turnstile = await import("@/lib/turnstile");
+    vi.mocked(turnstile.verifyTurnstileToken).mockResolvedValueOnce({
+      ok: false,
+      error: "turnstile failed",
+    } as never);
+    const { POST } = await import("@/app/api/subscribe/route");
+    const res = await POST(makeRequest({ email: "a@b.co", turnstileToken: "t" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("still 200 when the Slack subscriber notify rejects", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    slackSubscriberNotifyMock.mockRejectedValueOnce(new Error("slack down"));
+    const { POST } = await import("@/app/api/subscribe/route");
+    const res = await POST(makeRequest({ email: "new@sub.co", turnstileToken: "t" }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(errSpy).toHaveBeenCalledWith(
+      "[subscribe] Slack notification failed:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
+  });
+
+  it("500s when an awaited step throws", async () => {
+    removeFromSuppressionListMock.mockRejectedValueOnce(new Error("ses down"));
+    const { POST } = await import("@/app/api/subscribe/route");
+    const res = await POST(makeRequest({ email: "x@y.co", turnstileToken: "t" }));
+    expect(res.status).toBe(500);
+  });
+});

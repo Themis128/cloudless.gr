@@ -240,3 +240,48 @@ describe("POST /api/admin/subscriptions", () => {
     expect(mockSubsUpdate).toHaveBeenCalledWith(TEST_SUB_ID, { cancel_at_period_end: true });
   });
 });
+
+describe("admin/subscriptions tails", () => {
+  it("GET 500s when the Stripe list call throws", async () => {
+    mockSubsList.mockRejectedValueOnce(new Error("stripe down"));
+    const { GET } = await import("@/app/api/admin/subscriptions/route");
+    const res = await GET(adminReq(SUBSCRIPTIONS_URL));
+    expect(res.status).toBe(500);
+  });
+
+  it("POST 400s on a malformed customerId", async () => {
+    const { POST } = await import("@/app/api/admin/subscriptions/route");
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "portal", customerId: "not-a-cus" }),
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("customerId");
+  });
+
+  it("POST 400s on a malformed subscriptionId", async () => {
+    const { POST } = await import("@/app/api/admin/subscriptions/route");
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "cancel", subscriptionId: "bad-id!" }),
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("subscriptionId");
+  });
+
+  it("POST 500s when the Stripe action throws", async () => {
+    mockSubsUpdate.mockRejectedValueOnce(new Error("stripe down"));
+    const { POST } = await import("@/app/api/admin/subscriptions/route");
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "cancel", subscriptionId: TEST_SUB_ID }),
+      })
+    );
+    expect(res.status).toBe(500);
+  });
+});
