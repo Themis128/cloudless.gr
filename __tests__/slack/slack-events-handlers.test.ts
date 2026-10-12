@@ -265,4 +265,82 @@ describe("POST /api/slack/events — handler internals", () => {
     const posts = sentPostBodies();
     expect(posts[0]!.text).toContain("ops keyword");
   });
+
+  it("returns ok for non-event payload types", async () => {
+    const body = { type: "app_rate_limited", team_id: "T1" };
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("logs the handler error when handleEvent rejects", async () => {
+    // getSlackOpsUsers throwing inside dmSessionHeal propagates out of
+    // handleEvent → the fire-and-forget .catch logs it.
+    getSlackOpsUsers.mockRejectedValue(new Error("ops store down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const body = eventBody({ type: "message", channel: "D9", user: "U1", text: "heal" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    await settle();
+    expect(errSpy).toHaveBeenCalledWith(
+      "[Slack Events] Handler error:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
+  });
+
+  it("DM 'help' replies with the help text", async () => {
+    const body = eventBody({ type: "message", channel: "D10", user: "U1", text: "help" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    await POST(makeRequest(body));
+    await settle();
+    const posts = sentPostBodies();
+    expect(posts[0]!.text).toContain("/cloudless-");
+  });
+
+  it("DM 'sessions' triggers the heal path; unconfigured SocialAuto degrades queue", async () => {
+    const body = eventBody({ type: "message", channel: "D11", user: "U1", text: "sessions" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    await POST(makeRequest(body));
+    await settle();
+    expect(runOpsAction).toHaveBeenCalledWith({ action: "session-heal" });
+
+    isSocialAutoConfigured.mockResolvedValue(false);
+    const body2 = eventBody({ type: "message", channel: "D12", user: "U1", text: "queue" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body2) });
+    await POST(makeRequest(body2));
+    await settle();
+    const mine = sentPostBodies().filter((b) => b.channel === "D12");
+    expect(mine.at(-1)!.text).toContain("isn't configured");
+  });
+
+  it("DM 'queue' posts a warning when the queue fetch fails", async () => {
+    getOpsConsole.mockRejectedValue(new Error("redis gone"));
+    const body = eventBody({ type: "message", channel: "D13", user: "U1", text: "queue" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    await POST(makeRequest(body));
+    await settle();
+    const mine = sentPostBodies().filter((b) => b.channel === "D13");
+    expect(mine.at(-1)!.text).toContain("Queue fetch failed: redis gone");
+  });
+
+  it("member_joined_channel swallows a conversations.open failure", async () => {
+    mockFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("conversations.info")) {
+        return new Response(JSON.stringify({ ok: true, channel: { name: "orders" } }), { status: 200 });
+      }
+      if (String(url).includes("conversations.open")) {
+        throw new Error("slack down");
+      }
+      return slackOk();
+    });
+    const body = eventBody({ type: "member_joined_channel", user: "U56", channel: "C10" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    await settle();
+    expect(sentPostBodies()).toHaveLength(0);
+  });
 });

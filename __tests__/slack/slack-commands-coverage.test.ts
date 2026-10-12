@@ -523,3 +523,81 @@ describe("/cloudless-analytics ads", () => {
     expect(posted.text).toContain("linkedin 500");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tail branches: rate limits, orders, ticket/deploy modals, ads list/status catch
+// ---------------------------------------------------------------------------
+
+import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
+import { listRecentCheckoutSessions } from "@/lib/stripe";
+
+describe("slash-command tail branches", () => {
+  it("IP rate limit returns 429", async () => {
+    vi.mocked(checkSlackRateLimit).mockReturnValueOnce(false);
+    const res = await POST(cmd("/cloudless-help"));
+    expect(res.status).toBe(429);
+  });
+
+  it("per-user rate limit returns 429", async () => {
+    vi.mocked(checkSlackRateLimit)
+      .mockReturnValueOnce(true)   // IP check passes
+      .mockReturnValueOnce(false); // user check fails
+    const res = await POST(cmd("/cloudless-help"));
+    expect(res.status).toBe(429);
+  });
+
+  it("/cloudless-orders with no orders renders the empty state", async () => {
+    vi.mocked(listRecentCheckoutSessions).mockResolvedValueOnce({ orders: [], hasMore: false });
+    const res = await POST(cmd("/cloudless-orders"));
+    const json = await res.json();
+    expect(json.blocks[1].text.text).toContain("No checkout sessions found");
+  });
+
+  it("/cloudless-orders surfaces Stripe errors as a warning", async () => {
+    vi.mocked(listRecentCheckoutSessions).mockRejectedValueOnce(new Error("stripe down"));
+    const res = await POST(cmd("/cloudless-orders"));
+    const json = await res.json();
+    expect(json.text).toContain("Failed to fetch orders");
+  });
+
+  it("/cloudless-ticket opens the modal and returns bare 200", async () => {
+    const res = await POST(cmd("/cloudless-ticket"));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("");
+    const viewsOpen = mockFetch.mock.calls.find((c) => String(c[1]?.body ?? "").includes("create-ticket-modal"));
+    expect(viewsOpen).toBeDefined();
+  });
+
+  it("/cloudless-ticket still returns 200 when views.open throws", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("slack api down"));
+    const res = await POST(cmd("/cloudless-ticket"));
+    expect(res.status).toBe(200);
+  });
+
+  it("/cloudless-analytics ads with no wired campaigns explains the setup", async () => {
+    mockLiveCampaigns.mockReturnValue([]);
+    const res = await POST(cmd("/cloudless-analytics", { text: "ads" }));
+    const json = await res.json();
+    expect(json.text).toContain("No campaigns have ad-analytics wiring");
+  });
+
+  it("/cloudless-deploy opens the modal and returns bare 200", async () => {
+    const res = await POST(cmd("/cloudless-deploy"));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("");
+    const viewsOpen = mockFetch.mock.calls.find((c) => String(c[1]?.body ?? "").includes("deploy-confirm-modal"));
+    expect(viewsOpen).toBeDefined();
+  });
+
+  it("/cloudless-ads status posts the throw message when the API rejects", async () => {
+    mockLiveCampaigns.mockReturnValue([
+      { slug: "boost", adPlatforms: [{ platform: "linkedin", campaignIds: ["907100946"] }], startsAt: "2026-09-24" },
+    ]);
+    mockLiStatus.mockRejectedValue(new Error("linkedin boom"));
+    await POST(cmd("/cloudless-ads", { text: "status" }));
+    await flush();
+    const posted = JSON.parse(responseUrlCalls()[0][1].body as string);
+    expect(posted.text).toContain("linkedin boom");
+    expect(posted.replace_original).toBe(true);
+  });
+});

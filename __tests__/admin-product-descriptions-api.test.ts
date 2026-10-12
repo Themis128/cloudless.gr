@@ -17,6 +17,12 @@ vi.mock("@/lib/gemini-admin", () => ({
   callGemini: (...a: unknown[]) => mockCallGemini(...a),
 }));
 
+const mockGetStripe = vi.fn();
+const mockProductsUpdate = vi.fn();
+vi.mock("@/lib/stripe", () => ({
+  getStripe: (...a: unknown[]) => mockGetStripe(...a),
+}));
+
 function adminOk() {
   mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } });
 }
@@ -240,5 +246,57 @@ describe("product-descriptions route tails", () => {
       })
     );
     expect(res.status).toBe(400);
+  });
+
+  it("PUT fires Stripe metadata updates when Stripe is configured", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([{ ...sampleProduct }]);
+    mockGetStripe.mockResolvedValue({
+      products: { update: mockProductsUpdate },
+    });
+    mockProductsUpdate.mockResolvedValue({});
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      req("PUT", {
+        descriptions: [{ id: "srv-cloud", description: "new copy" }],
+      })
+    );
+    expect((await res.json()).applied).toBe(1);
+    // Fire-and-forget — let the dynamic import + update settle.
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockProductsUpdate).toHaveBeenCalledWith("srv-cloud", {
+      description: "new copy",
+    });
+  });
+
+  it("PUT tolerates Stripe update failures and an unconfigured Stripe", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([{ ...sampleProduct }]);
+    mockGetStripe.mockResolvedValue({
+      products: { update: mockProductsUpdate },
+    });
+    mockProductsUpdate.mockRejectedValue(new Error("stripe 500"));
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      req("PUT", {
+        descriptions: [{ id: "srv-cloud", description: "new copy" }],
+      })
+    );
+    // Per-product update failure is swallowed (Promise.allSettled).
+    expect((await res.json()).applied).toBe(1);
+
+    // Stripe unconfigured — getStripe() returns null → update skipped.
+    mockGetStripe.mockResolvedValue(null);
+    const res2 = await PUT(
+      req("PUT", {
+        descriptions: [{ id: "srv-cloud", description: "newer copy" }],
+      })
+    );
+    expect((await res2.json()).applied).toBe(1);
   });
 });
