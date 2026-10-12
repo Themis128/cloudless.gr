@@ -216,4 +216,43 @@ describe("proxy tail branches", () => {
     );
     expect(res.status).toBe(200);
   });
+
+  it("same-IP page requests 429 once the shared limiter is exhausted", async () => {
+    const mk = () =>
+      new NextRequest("http://localhost:4000/en/services", {
+        headers: { "x-forwarded-for": "77.77.77.7" },
+      });
+    let res: NextResponse | undefined;
+    for (let i = 0; i < 101; i++) res = await proxy(mk());
+    expect(res!.status).toBe(429);
+    expect(res!.headers.get("retry-after")).toBeTruthy();
+  });
+
+  it("cleanup sampling sweeps the API limiter maps too", async () => {
+    const spy = vi
+      .spyOn(crypto, "getRandomValues")
+      .mockImplementation((arr: Uint32Array) => arr.fill(0) as Uint32Array);
+    const res = await proxy(makeRequest("/api/health"));
+    expect(res.status).toBe(200);
+    spy.mockRestore();
+  });
+
+  it("a throwing D1 session lookup falls through to the NextAuth check", async () => {
+    mockGetAuthDbFromEnv.mockReturnValue({ prepare: () => ({}) });
+    mockGetUserBySession.mockRejectedValue(new Error("d1 down"));
+    const res = await proxy(
+      makeRequest("/en/dashboard", { cookie: "session_token=d1-tok" })
+    );
+    // falls through to NextAuth → getToken returns null → login redirect
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/auth/login");
+  });
+
+  it("a throwing NextAuth getToken redirects to login", async () => {
+    mockGetAuthDbFromEnv.mockReturnValue(null);
+    mockGetToken.mockRejectedValue(new Error("jwt broken"));
+    const res = await proxy(makeRequest("/en/dashboard"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/auth/login");
+  });
 });

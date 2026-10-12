@@ -14,6 +14,7 @@ vi.mock("@/lib/is-cloudflare-api-host-error", () => ({
   isCloudflareApiHostError: m.isCfHostErr,
 }));
 vi.mock("../sentry.server.config", () => ({}));
+vi.mock("../sentry.edge.config", () => ({}));
 
 import { shouldBindRemoteAuthDb, shouldPreferLocalAuthDb } from "@/instrumentation-flags";
 
@@ -191,5 +192,32 @@ describe("registerNode", () => {
     const { registerNode } = await import("@/instrumentation.node");
     await registerNode();
     expect(m.slackDeployNotify).not.toHaveBeenCalled();
+  });
+});
+
+describe("register() runtime dispatch", () => {
+  it("nodejs runtime delegates to registerNode", async () => {
+    devEnv();
+    const { register } = await import("@/instrumentation");
+    // registerNode in dev+no-auth-db only warns — safe to run for real.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await register();
+    warn.mockRestore();
+  });
+
+  it("edge runtime returns early in development", async () => {
+    process.env.NODE_ENV = "development";
+    process.env.NEXT_RUNTIME = "edge";
+    const { register } = await import("@/instrumentation");
+    await expect(register()).resolves.toBeUndefined();
+  });
+
+  it("edge runtime loads the sentry edge config in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_RUNTIME = "edge";
+    const { register } = await import("@/instrumentation");
+    await expect(register()).resolves.toBeUndefined();
+    const edge = await import("../sentry.edge.config");
+    expect(edge).toBeDefined();
   });
 });

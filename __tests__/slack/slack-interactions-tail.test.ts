@@ -239,3 +239,97 @@ describe("slack/interactions dispatch tails", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("slack/interactions per-action .catch tails", () => {
+  let POST: (req: Request) => Promise<Response>;
+  let resetOpsCache: () => void;
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn(async () => new Response("{}", { status: 200 }));
+    const mod = await import("@/app/api/slack/interactions/route");
+    POST = mod.POST;
+    resetOpsCache = (await import("@/lib/slack-ops-users")).resetSlackOpsUsersCache;
+    resetOpsCache();
+    delete process.env.SLACK_OPS_USERS;
+  });
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+    vi.restoreAllMocks();
+    resetOpsCache();
+  });
+
+  const send = async (payload: object) => {
+    const body = formFor(payload);
+    verifyOk(body);
+    return POST(makeRequest(body, `10.9.${Math.random()}.1`));
+  };
+
+  it("linkedin_ads_status logs when the LinkedIn status call rejects", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const li = await import("@/lib/campaigns/linkedin");
+    vi.spyOn(li, "getLinkedInCampaignStatus").mockRejectedValue(new Error("li api down"));
+    const res = await send(blockAction("linkedin_ads_status", { value: "907100946" }));
+    expect(res.status).toBe(200);
+    await vi.waitFor(
+      () => expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("linkedin_ads_status failed"),
+        expect.any(Error)
+      ),
+      { timeout: 3000 }
+    );
+  });
+
+  it("socialauto actions log when isSocialAutoConfigured rejects", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const sa = await import("@/lib/socialauto");
+    vi.spyOn(sa, "isSocialAutoConfigured").mockRejectedValue(new Error("cfg store down"));
+    const res = await send(blockAction("socialauto_retry_queue", { value: "q-1" }));
+    expect(res.status).toBe(200);
+    await vi.waitFor(
+      () => expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("socialauto_retry_queue failed"),
+        expect.any(Error)
+      ),
+      { timeout: 3000 }
+    );
+  });
+
+  it("rerun dispatch logs when the ops-allowlist lookup rejects", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ops = await import("@/lib/slack-ops-users");
+    vi.spyOn(ops, "getSlackOpsUsers").mockRejectedValue(new Error("ssm down"));
+    const res = await send(blockAction("rerun_weekly_draft"));
+    expect(res.status).toBe(200);
+    await vi.waitFor(
+      () => expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("rerun_weekly_draft failed"),
+        expect.any(Error)
+      ),
+      { timeout: 3000 }
+    );
+  });
+
+  it("deploy-confirm-modal logs when the ops-allowlist lookup rejects", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ops = await import("@/lib/slack-ops-users");
+    vi.spyOn(ops, "getSlackOpsUsers").mockRejectedValue(new Error("ssm down"));
+    const res = await send({
+      type: "view_submission",
+      user: { id: "U_NOTOPS", username: "u" },
+      response_url: "https://hooks.slack.com/actions/x",
+      view: {
+        callback_id: "deploy-confirm-modal",
+        private_metadata: JSON.stringify({ user_id: "U_NOTOPS" }),
+        state: { values: {} },
+      },
+    });
+    expect(res.status).toBe(200);
+    await vi.waitFor(
+      () => expect(spy).toHaveBeenCalledWith(
+        "[Slack Interactions] deploy-confirm-modal error:",
+        expect.any(Error)
+      ),
+      { timeout: 3000 }
+    );
+  });
+});
