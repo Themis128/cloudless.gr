@@ -183,3 +183,110 @@ describe("POST /api/checkout", () => {
     expect(response.status).toBe(400);
   });
 });
+
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  withScope: vi.fn((cb: (s: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
+
+import { getTokenFromHeader, verifyToken } from "@/lib/api-auth";
+
+describe("checkout — tail branches", () => {
+  let GET2: (request: NextRequest) => Promise<Response>;
+  let POST2: (request: NextRequest) => Promise<Response>;
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({
+      checkout: { sessions: { create: mockCreate } },
+    });
+    mockCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_abc",
+      id: "cs_test_abc",
+    });
+    const mod = await import("@/app/api/checkout/route");
+    GET2 = mod.GET;
+    POST2 = mod.POST;
+  });
+
+  it("GET 400 on unknown campaign", async () => {
+    const res = await GET2(
+      new NextRequest("http://localhost/api/checkout?campaign=nope&tier=x")
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Unknown campaign");
+  });
+
+  it("GET 400 on unknown tier", async () => {
+    const res = await GET2(
+      new NextRequest("http://localhost/api/checkout?campaign=shop-online&tier=nope")
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Unknown tier");
+  });
+
+  it("POST authenticates via Bearer token when present", async () => {
+    vi.mocked(getTokenFromHeader).mockReturnValueOnce("tok-1");
+    vi.mocked(verifyToken).mockResolvedValueOnce({ sub: "u9", email: "u9@x.dev" } as never);
+    const res = await POST2(
+      new NextRequest("http://localhost/api/checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cloudless.gr",
+        },
+        body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
+      })
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("POST rejects malformed idempotency keys silently", async () => {
+    const res = await POST2(
+      new NextRequest("http://localhost/api/checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cloudless.gr",
+          "idempotency-key": "bad key with spaces!",
+        },
+        body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
+      })
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("POST 400 on unknown product + sentry on stripe failure", async () => {
+    const res = await POST2(
+      new NextRequest("http://localhost/api/checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cloudless.gr",
+        },
+        body: JSON.stringify({ items: [{ id: "nope-nothing", quantity: 1 }] }),
+      })
+    );
+    expect(res.status).toBe(400);
+
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://dsn";
+    mockCreate.mockRejectedValueOnce(new Error("stripe exploded"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res2 = await POST2(
+      new NextRequest("http://localhost/api/checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cloudless.gr",
+        },
+        body: JSON.stringify({ items: [{ id: "srv-cloud", quantity: 1 }] }),
+      })
+    );
+    expect(res2.status).toBe(500);
+    const sentry = await import("@sentry/nextjs");
+    expect(vi.mocked(sentry.captureException)).toHaveBeenCalled();
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    spy.mockRestore();
+  });
+});
