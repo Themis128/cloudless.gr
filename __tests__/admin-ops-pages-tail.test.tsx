@@ -245,4 +245,46 @@ describe("admin users", () => {
     await act(async () => fireEvent.click(getByText("Disable")));
     await waitFor(() => expect(container.textContent).toContain("cognito down"));
   });
+
+  it("shows the load error when fetchUsers rejects", async () => {
+    fetchWithAuthMock.mockImplementation(async () => {
+      throw new Error("directory down");
+    });
+    const { container } = render(<UsersPage />);
+    await waitFor(() => expect(container.textContent).toContain("directory down"));
+  });
+
+  it("enable + demote actions on a disabled admin user", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return okJson({ message: "done" });
+      return okJson({
+        users: [
+          user({ username: "u2", email: "u2@x.dev", name: "Admin Two", role: "admin", status: "disabled", userStatus: "CONFIRMED" }),
+        ],
+        provider: "d1",
+      });
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const { container, getByText } = render(<UsersPage />);
+    await waitFor(() => expect(container.textContent).toContain("Admin Two"));
+
+    await act(async () => fireEvent.click(getByText("Enable")));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(
+          ([_u, i]) => String((i as RequestInit)?.body ?? "").includes('"action":"enable"')
+        )
+      ).toBe(true)
+    );
+
+    await act(async () => fireEvent.click(getByText("→ User")));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(
+          ([_u, i]) => String((i as RequestInit)?.body ?? "").includes('"action":"demote"')
+        )
+      ).toBe(true)
+    );
+  });
 });

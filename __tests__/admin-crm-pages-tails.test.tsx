@@ -139,6 +139,25 @@ describe("admin/crm/tickets", () => {
     const c2 = await renderPage(<TicketsPage />);
     expect(c2.textContent).toContain("HTTP 500");
   });
+
+  it("interval + visibilitychange refetch tickets", async () => {
+    vi.useFakeTimers();
+    const c = await renderPage(<TicketsPage />);
+    expect(c.textContent).toContain("Billing broken");
+
+    fetchWithAuthMock.mockClear();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(fetchWithAuthMock).toHaveBeenCalled();
+    vi.useRealTimers();
+
+    fetchWithAuthMock.mockClear();
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(fetchWithAuthMock).toHaveBeenCalled();
+  });
 });
 
 describe("admin/crm/[id]", () => {

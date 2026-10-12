@@ -109,6 +109,13 @@ describe("marketing pages", () => {
     expect(container.textContent).toContain("CONTACT_FORM");
   });
 
+  it("playbook generateMetadata returns a localized title/description", async () => {
+    const { generateMetadata } = await import("@/app/[locale]/playbook/page");
+    const meta = await generateMetadata({ params: sp({ locale: "en" }) });
+    expect(meta.title).toBeTruthy();
+    expect(meta.description).toBeTruthy();
+  });
+
   it("playbook renders the lead form", async () => {
     const { container } = render(await PlaybookPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("LEAD_FORM");

@@ -214,3 +214,42 @@ describe("admin search funnel", () => {
     await waitFor(() => expect(container.textContent).toContain("not configured"));
   });
 });
+
+// ── audits + funnel tails ────────────────────────────────────────────────────
+
+describe("admin audits — error/refresh tails", () => {
+  it("shows the fetch error and reloads on refresh click", async () => {
+    fetchWithAuthMock
+      .mockImplementationOnce(async () => new Response("x", { status: 500 }))
+      .mockImplementation(async () => okJson(auditsDashboard));
+    const { container, getByText } = render(<AuditsPage />);
+    await waitFor(() => expect(container.textContent).toContain("HTTP 500"));
+
+    await act(async () => fireEvent.click(getByText(/Refresh|↺|reload/i)));
+    await waitFor(() => expect(container.textContent).toContain("Lighthouse"));
+  });
+});
+
+describe("admin search funnel — error/days tails", () => {
+  it("shows the error when the fetch rejects", async () => {
+    fetchWithAuthMock.mockImplementation(async () => {
+      throw new Error("funnel down");
+    });
+    const { container } = render(<FunnelPage />);
+    await waitFor(() => expect(container.textContent).toContain("funnel down"));
+  });
+
+  it("switches the day window on button click", async () => {
+    fetchWithAuthMock.mockImplementation(async () =>
+      okJson({ configured: true, days: 30, rows: [] })
+    );
+    const { getByText } = render(<FunnelPage />);
+    await waitFor(() =>
+      expect(fetchWithAuthMock).toHaveBeenCalledWith("/api/admin/analytics/search-funnel?days=30")
+    );
+    await act(async () => fireEvent.click(getByText("7d")));
+    await waitFor(() =>
+      expect(fetchWithAuthMock).toHaveBeenCalledWith("/api/admin/analytics/search-funnel?days=7")
+    );
+  });
+});

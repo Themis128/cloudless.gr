@@ -248,3 +248,33 @@ describe("delivery — populated interactions", () => {
     expect(c.textContent).toContain("Failed to create draft invoice");
   });
 });
+
+describe("delivery — form tails", () => {
+  beforeEach(() => {
+    fetchWithAuthMock.mockClear();
+    routes["/api/admin/delivery/projects"] = { projects: PROJECTS };
+  });
+
+  it("log-time network throw -> 'Failed to log time'; date input + select click", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("Site rebuild"));
+
+    routes["/api/admin/delivery/projects/p1/time"] = () =>
+      Promise.reject(new Error("net down"));
+    const forms = c.querySelectorAll("form");
+    const timeForm = forms[1] as HTMLFormElement;
+
+    // workDate input onChange (covers the date-field handler)
+    const dateInput = timeForm.querySelector("input[type='date']") as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: "2026-02-14" } });
+    expect(dateInput.value).toBe("2026-02-14");
+
+    await submit(timeForm);
+    expect(c.textContent).toContain("Failed to log time");
+
+    // status select click — stopPropagation keeps the row select from firing
+    const sel = c.querySelectorAll("select")[0] as HTMLSelectElement;
+    fireEvent.click(sel);
+    await flush();
+  });
+});
