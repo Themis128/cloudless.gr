@@ -78,7 +78,7 @@ const click = async (el: Element | null) => {
 describe("campaigns hub — populated interactions", () => {
   beforeEach(() => {
     seedRoutes();
-  
+
     fetchWithAuthMock.mockClear();
     fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
       const u = String(url);
@@ -122,7 +122,7 @@ describe("campaigns hub — populated interactions", () => {
   });
 
   it("totals strip sums active campaigns/impressions/clicks", async () => {
-    await renderPage();
+    const c = await renderPage();
     // active: 2 (tiktok) + 1 (linkedin) + 0 (google) = 3
     expect(c.textContent).toContain("Active campaigns");
     // impressions: 12000+8000+20000 = 40,000
