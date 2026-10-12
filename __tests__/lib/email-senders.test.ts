@@ -75,6 +75,70 @@ describe("sendEmail provider chain", () => {
   });
 });
 
+// The Workers branch needs `typeof process === "undefined"` — re-import the
+// module with process removed (mirrors the real Workers runtime).
+async function inWorkersEnv<T>(fn: (mod: typeof import("@/lib/email")) => Promise<T>): Promise<T> {
+  const realProcess = globalThis.process;
+  const g = globalThis as Record<string, unknown>;
+  g.caches = {};
+  // @ts-expect-error — simulate the Workers runtime
+  delete globalThis.process;
+  vi.resetModules();
+  try {
+    return await fn(await import("@/lib/email"));
+  } finally {
+    globalThis.process = realProcess;
+    delete g.caches;
+    delete g.__ENV__;
+    vi.resetModules();
+  }
+}
+
+describe("sendEmail on Workers", () => {
+  it("sends via EMAIL_BINDING with List-Unsubscribe header", async () => {
+    const send = vi.fn(async () => {});
+    await inWorkersEnv(async ({ sendEmail }) => {
+      (globalThis as Record<string, unknown>).__ENV__ = { EMAIL_BINDING: { send } };
+      await sendEmail({
+        to: "w@x.co",
+        subject: "s",
+        html: "h",
+        text: "t",
+        fromLabel: "Orders",
+        listUnsubscribeUrl: "https://x/u",
+      });
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "w@x.co",
+        from: "Orders <noreply@cloudless.gr>",
+        headers: { "List-Unsubscribe": "<https://x/u>" },
+      })
+    );
+  });
+
+  it("returns 503 when no binding is present", async () => {
+    await inWorkersEnv(async ({ sendEmail }) => {
+      const res = await sendEmail({ to: "w@x.co", subject: "s", html: "h", text: "t" });
+      expect(res?.status).toBe(503);
+      expect(await res?.json()).toEqual({ error: "Email service not configured" });
+    });
+  });
+
+  it("wraps binding send failures", async () => {
+    await inWorkersEnv(async ({ sendEmail }) => {
+      (globalThis as Record<string, unknown>).__ENV__ = {
+        EMAIL_BINDING: { send: vi.fn(async () => { throw new Error("bind down"); }) },
+      };
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      await expect(
+        sendEmail({ to: "w@x.co", subject: "s", html: "h", text: "t" })
+      ).rejects.toThrow("Email send failed: bind down");
+      err.mockRestore();
+    });
+  });
+});
+
 describe("sender helpers", () => {
   it("sendSubscriberWelcome uses the newsletter sender + unsubscribe link", async () => {
     await sendSubscriberWelcome("sub@x.co");

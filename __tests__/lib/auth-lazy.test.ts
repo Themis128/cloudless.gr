@@ -94,7 +94,7 @@ describe("lib/auth lazy next-auth", () => {
     const { handlers } = await importAuth();
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
-    const jwt = (m.nextAuthConfig.callbacks as Record<string, Function>).jwt;
+    const jwt = (m.nextAuthConfig.callbacks as Record<string, (...args: never[]) => unknown>).jwt;
     const token = await jwt({ token: { sub: "u1" }, user: { id: "u1", email: "e" } });
     expect(token.tokensPersisted).toBe(true);
     expect(token.groups).toEqual([]);
@@ -108,7 +108,7 @@ describe("lib/auth lazy next-auth", () => {
     const { handlers } = await importAuth();
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
-    const jwt = (m.nextAuthConfig.callbacks as Record<string, Function>).jwt;
+    const jwt = (m.nextAuthConfig.callbacks as Record<string, (...args: never[]) => unknown>).jwt;
 
     const live = await jwt({ token: { sub: "u1", expiresAt: Math.floor(Date.now() / 1000) + 500 } });
     expect(live.error).toBeUndefined();
@@ -125,7 +125,7 @@ describe("lib/auth lazy next-auth", () => {
     const { handlers } = await importAuth();
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
-    const jwt = (m.nextAuthConfig.callbacks as Record<string, Function>).jwt;
+    const jwt = (m.nextAuthConfig.callbacks as Record<string, (...args: never[]) => unknown>).jwt;
 
     const noSub = await jwt({ token: { expiresAt: 1 } });
     expect(noSub.error).toBe("RefreshTokenError");
@@ -148,7 +148,7 @@ describe("lib/auth lazy next-auth", () => {
     const { handlers } = await importAuth();
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
-    const sessionCb = (m.nextAuthConfig.callbacks as Record<string, Function>).session;
+    const sessionCb = (m.nextAuthConfig.callbacks as Record<string, (...args: never[]) => unknown>).session;
     const session = await sessionCb({
       session: { user: {} },
       token: { sub: "u9", groups: ["g"], roles: ["admin"], error: "RefreshTokenError" },
@@ -164,7 +164,7 @@ describe("lib/auth lazy next-auth", () => {
     const { handlers } = await importAuth();
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
-    const signOutEvent = (m.nextAuthConfig.events as Record<string, Function>).signOut;
+    const signOutEvent = (m.nextAuthConfig.events as Record<string, (...args: never[]) => unknown>).signOut;
     await signOutEvent({ token: { sub: "u1" } });
     expect(db.calls[0].sql).toContain("DELETE FROM sessions");
     await signOutEvent({ session: {} }); // no token — no-op
@@ -180,7 +180,7 @@ describe("lib/auth lazy next-auth", () => {
     m.handlersGet.mockResolvedValue(Response.json(null));
     await handlers.GET(new Request("https://x/api/auth/session"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    (m.nextAuthConfig.logger as Record<string, Function>).error(new Error("bad"));
+    (m.nextAuthConfig.logger as Record<string, (...args: never[]) => unknown>).error(new Error("bad"));
     expect(spy).toHaveBeenCalledWith("[auth][error] bad");
     spy.mockRestore();
   });
