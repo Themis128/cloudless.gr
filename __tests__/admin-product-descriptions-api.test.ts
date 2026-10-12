@@ -123,3 +123,122 @@ describe("PUT /api/admin/ai/product-descriptions", () => {
     expect(products[0].description).toBe("Approved Cloudflare-first copy.");
   });
 });
+
+
+describe("product-descriptions route tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    delete (process.env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY;
+    delete (process.env as { AI?: unknown }).AI;
+  });
+
+  it("generates for all products when the body is unparseable", async () => {
+    adminOk();
+    process.env.GEMINI_API_KEY = "k";
+    mockGetProducts.mockResolvedValue([sampleProduct]);
+    mockCallGemini.mockResolvedValue("desc");
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const bad = new NextRequest(
+      "http://localhost/api/admin/ai/product-descriptions",
+      { method: "POST", body: "not-json{{{" }
+    );
+    const res = await POST(bad);
+    expect(res.status).toBe(200);
+    expect((await res.json()).results).toHaveLength(1);
+  });
+
+  it("filters non-string productIds and returns 400 when none match", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([sampleProduct]);
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await POST(
+      req("POST", { productIds: [42, null, "missing"] })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("falls back to Gemini when the AI binding is unusable", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([sampleProduct]);
+    process.env.GEMINI_API_KEY = "k";
+    mockCallGemini.mockResolvedValue("gemini copy");
+    // In Node, process.env coerces the binding to a string — ai.run throws,
+    // exercising the same catch → fallback branch the Workers path uses.
+    (process.env as { AI?: unknown }).AI = {
+      run: vi.fn().mockResolvedValue({ response: "workers-ai copy" }),
+    };
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await POST(req("POST", { productIds: ["srv-cloud"] }));
+    const data = await res.json();
+    expect(data.results[0].description).toBe("gemini copy");
+    expect(mockCallGemini).toHaveBeenCalled();
+  });
+
+  it("falls back to Gemini when Workers AI throws, and records per-product errors", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([
+      sampleProduct,
+      { ...sampleProduct, id: "srv-fail", name: "Failing" },
+    ]);
+    // Workers AI throws → falls through to Gemini; no GEMINI key for srv-fail ordering:
+    // set key so first succeeds, then remove — simpler: both go through Gemini.
+    (process.env as { AI?: unknown }).AI = {
+      run: vi.fn().mockRejectedValue(new Error("ai down")),
+    };
+    process.env.GEMINI_API_KEY = "k";
+    mockCallGemini
+      .mockResolvedValueOnce("ok copy")
+      .mockRejectedValueOnce(new Error("quota"));
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await POST(req("POST", {}));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.results).toHaveLength(1);
+    expect(data.errors).toHaveLength(1);
+    expect(data.errors[0].id).toBe("srv-fail");
+  });
+
+  it("PUT filters malformed entries and applies only valid ones", async () => {
+    adminOk();
+    const products = [{ ...sampleProduct }];
+    mockGetProducts.mockResolvedValue(products);
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      req("PUT", {
+        descriptions: [
+          { id: "srv-cloud", description: "valid" },
+          { id: 42, description: "bad id" },
+          { description: "no id" },
+          { id: "ghost", description: "no product" },
+        ],
+      })
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).applied).toBe(1);
+  });
+
+  it("PUT 400 on unparseable JSON body", async () => {
+    adminOk();
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ai/product-descriptions", {
+        method: "PUT",
+        body: "{{{",
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+});
