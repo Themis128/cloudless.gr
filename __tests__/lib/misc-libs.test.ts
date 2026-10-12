@@ -2,7 +2,7 @@
  * Final lib batch — the last untested files:
  * d1-cache-entry, d1-params-hash, upstream-client, nlp/*, track-client-event.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const libs = vi.hoisted(() => ({
   callWorkersAiChat: vi.fn(async () => "{}"),
@@ -120,7 +120,7 @@ describe("nlp language", () => {
 
   it("classifyIntentLocal: short→spam, each intent, service hint, general", () => {
     expect(classifyIntentLocal("hi").intent).toBe("spam_or_noise");
-    expect(classifyIntentLocal("hi", "bundle")).toBeDefined; // short+service → pattern loop
+    expect(classifyIntentLocal("hi", "bundle").intent).toBeDefined(); // short+service → pattern loop
     expect(classifyIntentLocal("buy viagra casino crypto pump").intent).toBe("spam_or_noise");
     expect(classifyIntentLocal("can we book a demo call next week").intent).toBe("booking");
     expect(classifyIntentLocal("I need a quote and pricing estimate").intent).toBe("quote_request");
