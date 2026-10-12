@@ -106,4 +106,56 @@ describe("slack/interactions tail", () => {
     await vi.waitFor(() => expect(spy).toHaveBeenCalled(), { timeout: 3000 });
     spy.mockRestore();
   });
+
+  it("429s the IP after 60 requests in the window", async () => {
+    verifyOk("payload=");
+    let last = 0;
+    for (let i = 0; i < 65; i++) {
+      const res = await POST(makeRequest("other=1", "7.7.7.7"));
+      last = res.status;
+      if (last === 429) break;
+    }
+    expect(last).toBe(429);
+  });
+
+  it("429s a single noisy user across distinct IPs", async () => {
+    const fixedUser = { id: "Unoisy1", username: "n" };
+    const payload = {
+      type: "block_actions",
+      user: fixedUser,
+      actions: [{ action_id: "slack_ack", type: "button" }],
+    };
+    const body = formFor(payload);
+    let last = 0;
+    for (let i = 0; i < 65; i++) {
+      verifyOk(body);
+      const res = await POST(makeRequest(body, `6.6.${i % 200}.${(i * 7) % 250}`));
+      last = res.status;
+      if (last === 429) break;
+    }
+    expect(last).toBe(429);
+  });
+
+  it("dispatches a RERUN_ACTIONS workflow and warns on unknown action ids", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // rerun action — catch fires when the dispatch fetch rejects
+    const rerun = blockAction("rerun_weekly_draft");
+    verifyOk(formFor(rerun));
+    const r1 = await POST(makeRequest(formFor(rerun), `5.5.${Date.now() % 200}.1`));
+    expect(r1.status).toBe(200);
+    await vi.waitFor(() => expect(spy).toHaveBeenCalled(), { timeout: 3000 });
+
+    // unknown action → warn log, still a 200 ack
+    const unknown = blockAction("totally_unknown_button");
+    verifyOk(formFor(unknown));
+    const r2 = await POST(makeRequest(formFor(unknown), `5.5.${Date.now() % 200}.2`));
+    expect(r2.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Unhandled action_id: totally_unknown_button")
+    );
+    spy.mockRestore();
+    warn.mockRestore();
+  });
 });

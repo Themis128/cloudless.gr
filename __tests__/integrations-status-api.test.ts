@@ -190,6 +190,111 @@ describe("GET /api/admin/integrations/status", () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
   });
 
+  it("surfaces ping-level degraded/error states per service", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      ESPOCRM_BASE_URL: "https://espo.test",
+      ESPOCRM_API_KEY: "k",
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("espo.test")) {
+        return Promise.resolve({ ok: false, status: 401, json: async () => ({}) });
+      }
+      if (u.includes("slack.com")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: false, error: "invalid_auth" }),
+        });
+      }
+      if (u.includes("api.notion.com")) {
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+      }
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => [],
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const byId = Object.fromEntries(
+      data.integrations.map((i: { id: string }) => [i.id, i])
+    ) as Record<string, { status: string; message?: string }>;
+    expect(byId["espocrm"].status).toBe("degraded");
+    expect(byId["espocrm"].message).toContain("401");
+    expect(byId["slack"].status).toBe("degraded");
+    expect(byId["slack"].message).toContain("invalid_auth");
+    expect(byId["notion"].status).toBe("error");
+    expect(byId["postiz"].status).toBe("configured");
+  });
+
+  it("flags Postiz ≥500 as error and notes the missing /groups endpoint", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("/api/public/v1/groups")) {
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      }
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({ ok: false, status: 503, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const postiz = data.integrations.find((i: { id: string }) => i.id === "postiz");
+    expect(postiz.status).toBe("error");
+    expect(postiz.message).toContain("503");
+  });
+
+  it("marks Postiz degraded on non-OK non-5xx and error when unreachable", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const postiz = data.integrations.find((i: { id: string }) => i.id === "postiz");
+    expect(postiz.status).toBe("degraded");
+    expect(postiz.message).toContain("404");
+  });
+
   it("summary counts match integrations statuses", async () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
