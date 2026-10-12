@@ -388,4 +388,50 @@ describe("langgraph admin tails", () => {
     expect(c.textContent).toContain("resumed answer");
     expect(actionCalls("resume-run")).toHaveLength(1);
   });
+
+
+  it("runs panel ↺ refetches the run list", async () => {
+    const t = { thread_id: "th-1", created_at: "t" };
+    healthy([t]);
+    routes["get-thread-state"] = { values: { messages: [] } };
+    routes["list-runs"] = { runs: [{ run_id: "r-1", status: "success", created_at: "t" }] };
+    const c = await renderPage();
+    await click(screen.getByText("Thread th-1"));
+    await click(screen.getByText("runs"));
+    expect(c.textContent).toContain("r-1");
+
+    fetchWithAuthMock.mockClear();
+    // the ↺ inside the Run history panel (not the header refresh)
+    const panelBtn = [...c.querySelectorAll("button")].find(
+      (b) => b.textContent === "↺" && b.closest("div")?.textContent?.includes("Run history")
+    )!;
+    await click(panelBtn);
+    expect(actionCalls("list-runs")).toHaveLength(1);
+  });
+
+  it("resume-run failure renders an error bubble", async () => {
+    const t = { thread_id: "th-1", created_at: "t" };
+    healthy([t]);
+    routes["stream-run"] = sse([
+      'data: {"run_id":"run-int"}\n',
+      'data: [{"content":"need input"}]\n',
+      'data: {"type":"interrupt"}\n',
+    ]);
+    routes["resume-run"] = new Response(
+      JSON.stringify({ error: "resume rejected by graph" }),
+      { status: 500 }
+    );
+    const c = await renderPage();
+    await click(screen.getByText("Thread th-1"));
+
+    const ta = c.querySelector("textarea[placeholder*='Ask anything']") as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: "go" } });
+    await click(c.querySelector("button.bg-violet-600")!);
+    expect(c.textContent).toContain("Run paused — waiting for input");
+
+    const resumeInput = screen.getByPlaceholderText(/Resume value/);
+    fireEvent.change(resumeInput, { target: { value: "yes" } });
+    await act(async () => fireEvent.keyDown(resumeInput, { key: "Enter" }));
+    expect(c.textContent).toContain("resume rejected by graph");
+  });
 });

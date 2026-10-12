@@ -106,6 +106,17 @@ const SPECS: CmsSpec[] = [
       fireEvent.change(inputs[0], { target: { value: "New Svc" } }); // name
       fireEvent.change(inputs[1], { target: { value: "new-svc" } }); // slug
       fireEvent.change(m.querySelector("textarea")!, { target: { value: "d" } });
+      // featuresText, category, stripePriceId, published
+      const areas = m.querySelectorAll("textarea");
+      fireEvent.change(areas[areas.length - 1], {
+        target: { value: "Fast audits\nCost reports" },
+      });
+      fireEvent.change(m.querySelector("select")!, { target: { value: "devops" } });
+      fireEvent.change(inputs[inputs.length - 1], {
+        target: { value: "price_123" },
+      });
+      const cb = m.querySelector("input[type='checkbox']") as HTMLInputElement;
+      if (cb.checked === false) fireEvent.click(cb);
     },
   },
   {
@@ -261,5 +272,44 @@ describe.each(SPECS)("cms $name — CRUD", (spec) => {
     await click(screen.getByText("Archive"));
     expect(getCalls("DELETE").length).toBe(0);
     expect(c!.textContent).toContain(spec.itemText);
+  });
+});
+
+describe("cms services — delete failure tail", () => {
+  beforeEach(() => {
+    routes = {
+      "/api/admin/appflowy/services": okJson({
+        services: [
+          {
+            id: "s1",
+            name: "Cloud Audit",
+            slug: "cloud-audit",
+            category: "consulting",
+            features: [],
+            published: true,
+          },
+        ],
+      }),
+      "/api/admin/appflowy/services?pageId=s1": okJson({ error: "gone" }, 500),
+    };
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("surfaces the delete error and keeps the row", async () => {
+    let c: HTMLElement | undefined;
+    await act(async () => {
+      c = render(<AdminServicesPage />).container;
+    });
+    expect(c!.textContent).toContain("Cloud Audit");
+    await click(screen.getByText("Archive"));
+    await flush();
+    expect(c!.textContent).toContain("HTTP 500");
+    expect(c!.textContent).toContain("Cloud Audit"); // row not removed
   });
 });

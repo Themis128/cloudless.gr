@@ -156,4 +156,58 @@ describe("admin analytics social", () => {
     const { container } = render(<SocialPage />);
     await waitFor(() => expect(container.textContent).toContain("Postiz not configured"));
   });
+
+
+  it("surfaces an engagement API error", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("social-attribution")) return okJson(attribution);
+      return new Response("x", { status: 500 });
+    });
+    const { container } = render(<SocialPage />);
+    await waitFor(() =>
+      expect(container.textContent).toContain("Engagement API error: 500")
+    );
+  });
+
+  it("keeps engagement data when attribution fails with a non-503", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("social-attribution")) return new Response("x", { status: 404 });
+      return okJson(summary);
+    });
+    const { container } = render(<SocialPage />);
+    await waitFor(() => expect(container.textContent).toContain("Cloudless LinkedIn"));
+    // attribution section is skipped when attribution stays null
+    expect(container.textContent).not.toContain("pi-cluster");
+  });
+
+  it("shows a network error when the fetch rejects", async () => {
+    fetchWithAuthMock.mockRejectedValue(new Error("boom"));
+    const { container } = render(<SocialPage />);
+    await waitFor(() => expect(container.textContent).toContain("boom"));
+  });
+
+  it("refetches on day-range select and Refresh click", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("social-attribution")) return okJson(attribution);
+      return okJson(summary);
+    });
+    const { container } = render(<SocialPage />);
+    await waitFor(() => expect(container.textContent).toContain("Cloudless LinkedIn"));
+
+    fetchWithAuthMock.mockClear();
+    const select = container.querySelector("select")!;
+    await act(async () => fireEvent.change(select, { target: { value: "7" } }));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("days=7"))
+      ).toBe(true)
+    );
+
+    fetchWithAuthMock.mockClear();
+    const refreshBtn = [...container.querySelectorAll("button")].find((b) =>
+      /refresh/i.test(b.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(refreshBtn));
+    await waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalled());
+  });
 });

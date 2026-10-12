@@ -399,3 +399,59 @@ describe("Navbar tails", () => {
     expect(container.querySelector('button[aria-expanded="true"]')).toBeNull();
   });
 });
+
+describe("ContactFormSection — tails", () => {
+  const fillAndSubmit = async (container: HTMLElement) => {
+    fireEvent.change(container.querySelector('input[name="name"]')!, {
+      target: { value: "Pat" },
+    });
+    fireEvent.change(container.querySelector('input[name="email"]')!, {
+      target: { value: "p@x.dev" },
+    });
+    await act(async () => {
+      fireEvent.submit(container.querySelector("form")!);
+    });
+  };
+
+  it("shows the error state on a non-ok response and on a network throw", async () => {
+    searchParamsRef.current = new URLSearchParams("");
+    mockFetch.mockResolvedValueOnce(new Response("bad", { status: 500 }));
+    const { container: c1, unmount } = render(<ContactFormSection source="t" />);
+    await fillAndSubmit(c1);
+    expect(c1.textContent).toContain("went wrong");
+    unmount();
+
+    mockFetch.mockRejectedValueOnce(new Error("offline"));
+    const { container: c2 } = render(<ContactFormSection source="t" />);
+    await fillAndSubmit(c2);
+    expect(c2.textContent).toContain("went wrong");
+  });
+
+  it("success screen → 'Send another message' resets back to the form", async () => {
+    searchParamsRef.current = new URLSearchParams("");
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), { status: 200 })
+    );
+    const { container } = render(<ContactFormSection source="t" />);
+    await fillAndSubmit(container);
+    expect(container.textContent).toContain("Message sent successfully");
+    await act(async () => {
+      fireEvent.click([...container.querySelectorAll("button")].find(b => b.textContent?.includes("Send another message"))!);
+    });
+    expect(container.querySelector("form")).not.toBeNull();
+  });
+
+  it("banner falls back to campaign name, then products, when no tier/price", async () => {
+    // campaign without tier/price → "Campaign: <slug>"
+    searchParamsRef.current = new URLSearchParams("campaign=shop-online");
+    const { container, unmount } = render(<ContactFormSection source="t" />);
+    expect(container.textContent).toContain("Campaign: shop-online");
+    unmount();
+
+    // fit-call topic + products but no campaign → products text
+    searchParamsRef.current = new URLSearchParams("topic=fit-call&products=srv-a,srv-b");
+    const { container: c2 } = render(<ContactFormSection source="t" />);
+    expect(c2.textContent).toContain("srv-a,srv-b");
+    searchParamsRef.current = new URLSearchParams("");
+  });
+});

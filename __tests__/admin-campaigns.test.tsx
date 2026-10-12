@@ -216,4 +216,44 @@ describe("campaigns hub — populated interactions", () => {
       vi.useRealTimers();
     }
   });
+
+
+  it("treats a campaigns body without an array as zero active", async () => {
+    // pickCount finds no array in { total: 2 } → [] → countActive 0
+    routes["/api/admin/campaigns/tiktok"] = { total: 2 };
+    const c = await renderPage();
+    expect(c.textContent).toContain("Connected");
+    // tiktok renders 0 active campaigns instead of crashing
+    expect(c.textContent).toContain("$151"); // insights still parsed
+  });
+
+  it("marks every platform unknown when the integrations probe rejects", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("integrations/status"))
+        throw new Error("status probe down");
+      for (const [id, body] of Object.entries(insightBodies)) {
+        if (String(url).startsWith(`/api/admin/campaigns/${id}/insights?`)) {
+          return okJson(body);
+        }
+      }
+      const out = routes[String(url)];
+      return out === undefined ? okJson({}) : okJson(out);
+    });
+    const c = await renderPage();
+    expect(c.textContent).toContain("0 / 5");
+    // no platform KPIs — every status fell back to unknown
+    expect(c.textContent).not.toContain("$151");
+    expect(c.textContent).not.toContain("Partial");
+  });
+
+  it("tolerates a malformed campaigns JSON body", async () => {
+    routes["/api/admin/campaigns/tiktok"] = new Response("{broken", {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    const c = await renderPage();
+    // parse failure is captured into stats.error (defensive field); the card still renders
+    expect(c.textContent).toContain("Connected");
+    expect(c.textContent).toContain("$151"); // insights unaffected
+  });
 });

@@ -292,4 +292,71 @@ describe("admin/workspaces", () => {
     const body = JSON.parse(String(patch![1].body));
     expect(body).toMatchObject({ id: "w1", name: "Renamed Co", notionTag: "acme-2" });
   });
+
+
+  it("sends description + notionTag on create, adminEmails + postiz on edit", async () => {
+    routes[ROUTE] = (_u: string, init?: RequestInit) =>
+      init ? okJson({}) : okJson({ workspaces: [ws] });
+    routes["/api/admin/postiz/groups"] = okJson({
+      groups: [
+        { id: "g1", name: "Acme Group" },
+        { id: "g2", name: "Beta Group" },
+      ],
+    });
+    const c = await renderPage(<WorkspacesPage />);
+    await flush();
+
+    // create form — description + notion tag + name
+    fireEvent.change(c.querySelector("#ws-name")!, { target: { value: "Tagged WS" } });
+    fireEvent.change(c.querySelector("#ws-description")!, {
+      target: { value: "Main production workspace" },
+    });
+    fireEvent.change(c.querySelector("#ws-notion")!, { target: { value: "acme-tag" } });
+    fireEvent.submit(c.querySelector("form")!);
+    await flush();
+    const post = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "POST");
+    expect(JSON.parse(String(post![1].body))).toMatchObject({
+      name: "Tagged WS",
+      description: "Main production workspace",
+      notionTag: "acme-tag",
+    });
+    fetchWithAuthMock.mockClear();
+
+    // edit — change adminEmails + postiz group
+    await click(screen.getAllByText("Edit").find((e) => e.tagName === "BUTTON")!);
+    const emailsInput = [...c.querySelectorAll("input")].find(
+      (i) => (i as HTMLInputElement).value === "a@x.gr"
+    )!;
+    fireEvent.change(emailsInput, { target: { value: "d@x.gr, e@x.gr" } });
+    const editSel = [...c.querySelectorAll("select")].find((el) =>
+      el.id.startsWith("ws-postiz-")
+    )!;
+    fireEvent.change(editSel, { target: { value: "g2" } });
+    await click(screen.getByText("Save"));
+    await flush();
+    const patch = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "PATCH");
+    expect(JSON.parse(String(patch![1].body))).toMatchObject({
+      id: "w1",
+      adminEmails: ["d@x.gr", "e@x.gr"],
+      postizGroupId: "g2",
+    });
+  });
+
+  it("types a free-text Postiz group id when groups fail to load", async () => {
+    routes[ROUTE] = (_u: string, init?: RequestInit) =>
+      init ? okJson({}) : okJson({ workspaces: [] });
+    routes["/api/admin/postiz/groups"] = okJson({}, 503);
+    const c = await renderPage(<WorkspacesPage />);
+    await flush();
+    const field = c.querySelector("#ws-postiz") as HTMLInputElement;
+    expect(field.tagName).toBe("INPUT");
+    fireEvent.change(field, { target: { value: "grp-freetext" } });
+    fireEvent.change(c.querySelector("#ws-name")!, { target: { value: "FT" } });
+    fireEvent.submit(c.querySelector("form")!);
+    await flush();
+    const post = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "POST");
+    expect(JSON.parse(String(post![1].body))).toMatchObject({
+      postizGroupId: "grp-freetext",
+    });
+  });
 });

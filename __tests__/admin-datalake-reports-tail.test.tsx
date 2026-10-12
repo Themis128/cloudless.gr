@@ -208,4 +208,36 @@ describe("admin reports", () => {
       );
     }
   });
+
+
+  it("empty state opens the form; date inputs + cancel + close", async () => {
+    fetchWithAuthMock.mockImplementation(async () => okJson({ reports: [] }));
+    const { container, getByText, queryByText } = render(<ReportsPage />);
+    await waitFor(() => expect(container.textContent).toContain("No reports yet"));
+
+    // empty-state CTA opens the same form
+    await act(async () => fireEvent.click(getByText("Generate your first report")));
+    const form = container.querySelector("form")!;
+    expect(form).toBeTruthy();
+
+    // fill name + both date inputs
+    const nameInput = form.querySelector('input[type="text"], input:not([type])')!;
+    fireEvent.change(nameInput, { target: { value: "Client X" } });
+    const dates = form.querySelectorAll('input[type="date"]');
+    fireEvent.change(dates[0], { target: { value: "2026-10-01" } });
+    fireEvent.change(dates[1], { target: { value: "2026-10-15" } });
+    expect((dates[0] as HTMLInputElement).value).toBe("2026-10-01");
+    expect((dates[1] as HTMLInputElement).value).toBe("2026-10-15");
+
+    // Cancel closes the form
+    await act(async () => fireEvent.click(getByText("Cancel")));
+    expect(container.querySelector("form")).toBeNull();
+
+    // reopen via header CTA, then ✕ closes
+    await act(async () => fireEvent.click(getByText("+ New Report")));
+    expect(container.querySelector("form")).toBeTruthy();
+    await act(async () => fireEvent.click(getByText("✕")));
+    expect(container.querySelector("form")).toBeNull();
+    expect(queryByText("Generate Report")).toBeNull();
+  });
 });

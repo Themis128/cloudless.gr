@@ -23,9 +23,13 @@ vi.mock("@/lib/user-profile", () => ({
   putUserProfile: putUserProfileMock,
 }));
 
+const { getAuthDbMock, getUserBySessionMock } = vi.hoisted(() => ({
+  getAuthDbMock: vi.fn(),
+  getUserBySessionMock: vi.fn(),
+}));
 vi.mock("@/lib/auth-d1", () => ({
-  getAuthDbFromEnv: () => null,
-  getUserBySession: vi.fn(),
+  getAuthDbFromEnv: getAuthDbMock,
+  getUserBySession: getUserBySessionMock,
 }));
 
 function makeReq(body: unknown): NextRequest {
@@ -144,5 +148,57 @@ describe("GET /api/user/profile", () => {
     const { GET } = await import("@/app/api/user/profile/route");
     const res = await GET(new NextRequest("http://localhost/api/user/profile"));
     expect(res.status).toBe(502);
+  });
+
+
+  it("resolves the user from the D1 session cookie when bound", async () => {
+    getAuthDbMock.mockReturnValue({ fake: "db" });
+    getUserBySessionMock.mockResolvedValue({
+      id: "d1-user-1",
+      email: "d1@x.gr",
+      name: "D1 User",
+    });
+    putUserProfileMock.mockResolvedValue(undefined);
+    const { POST } = await import("@/app/api/user/profile/route");
+    const req = new NextRequest("http://localhost/api/user/profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: "session_token=tok-1",
+      },
+      body: JSON.stringify({ name: "N" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(getUserBySessionMock).toHaveBeenCalledWith({ fake: "db" }, "tok-1");
+    expect(putUserProfileMock).toHaveBeenCalledWith(
+      "d1-user-1",
+      expect.objectContaining({ name: "N" })
+    );
+  });
+
+  it("401 when the D1 session lookup throws", async () => {
+    getAuthDbMock.mockReturnValue({ fake: "db" });
+    getUserBySessionMock.mockRejectedValue(new Error("d1 down"));
+    authMock.mockResolvedValue({ user: { id: "should-not-reach" } });
+    const { POST } = await import("@/app/api/user/profile/route");
+    const req = new NextRequest("http://localhost/api/user/profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: "session_token=tok-1",
+      },
+      body: JSON.stringify({ name: "N" }),
+    });
+    expect((await POST(req)).status).toBe(401);
+  });
+
+  it("503 when the profile store is unbound (AUTH_DB error)", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    putUserProfileMock.mockRejectedValue(new Error("AUTH_DB binding missing"));
+    const { POST } = await import("@/app/api/user/profile/route");
+    const res = await POST(makeReq({ name: "x" }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toContain("Profile storage not available");
   });
 });

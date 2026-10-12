@@ -21,7 +21,21 @@ vi.mock("@/lib/appflowy", () => ({ isAppFlowyConfigured: vi.fn(async () => true)
 vi.mock("@/lib/appflowy-case-studies", () => ({
   getCaseStudyBySlug: vi.fn(),
   getCaseStudies: vi.fn(async () => [{ slug: "cs-1" }]),
-  staticCaseStudies: [{ slug: "cs-static" }],
+  staticCaseStudies: [
+    {
+      id: "cs-s",
+      slug: "cs-static",
+      title: "Static Case Study",
+      client: "Acme",
+      industry: "SaaS",
+      services: ["Cloud Audit"],
+      summary: "Static fallback case study",
+      metrics: [],
+      tags: [],
+      featured: false,
+      date: "2026-01-01",
+    },
+  ],
 }));
 vi.mock("@/lib/appflowy-docs", () => ({
   getDocs: vi.fn(async () => [{ slug: "d1", title: "Other Doc" }]),
@@ -124,6 +138,29 @@ describe("case-studies/[slug] page", () => {
   });
 });
 
+
+  it("generateStaticParams falls back to static slugs when AppFlowy throws", async () => {
+    vi.mocked(isAppFlowyConfigured).mockRejectedValueOnce(new Error("unbound"));
+    const result = await csStaticParams();
+    expect(result).toEqual([{ slug: "cs-static" }]);
+  });
+
+  it("renders a static case study when AppFlowy is unconfigured", async () => {
+    vi.mocked(isAppFlowyConfigured).mockResolvedValue(false);
+    const { container } = render(
+      await CaseStudyPage({ params: params({ locale: "en", slug: "cs-static" }) })
+    );
+    expect(container.textContent).toContain("Static Case Study");
+  });
+
+  it("falls back to the static case study when config check throws", async () => {
+    vi.mocked(isAppFlowyConfigured).mockRejectedValue(new Error("unbound"));
+    const { container } = render(
+      await CaseStudyPage({ params: params({ locale: "en", slug: "cs-static" }) })
+    );
+    expect(container.textContent).toContain("Static Case Study");
+  });
+
 describe("docs/[slug] page", () => {
   const doc = {
     id: "doc1",
@@ -161,5 +198,52 @@ describe("docs/[slug] page", () => {
   it("generateMetadata falls back to default description", async () => {
     const meta = await docMeta({ params: params({ locale: "en", slug: "d1" }) });
     expect(meta.title).toBe("Setup Guide");
+  });
+
+
+  it("generateStaticParams covers both locales per doc and empty when unconfigured", async () => {
+    const { generateStaticParams: docStaticParams } = await import(
+      "@/app/[locale]/docs/[slug]/page"
+    );
+    const configured = await docStaticParams();
+    expect(configured).toEqual([
+      { locale: "en", slug: "d1" },
+      { locale: "el", slug: "d1" },
+      { locale: "fr", slug: "d1" },
+    ]);
+    vi.mocked(isAppFlowyConfigured).mockResolvedValueOnce(false);
+    expect(await docStaticParams()).toEqual([]);
+  });
+
+  it("renders the toc sidebar when the doc has toc entries", async () => {
+    const { getDocContentWithToc } = await import("@/lib/appflowy-docs");
+    vi.mocked(getDocContentWithToc).mockResolvedValueOnce({
+      html: "<p>Doc body</p>",
+      toc: [
+        { blockId: "intro", level: 2, text: "Introduction" },
+        { blockId: "deep", level: 3, text: "Deep dive" },
+      ],
+    } as never);
+    const { container } = render(
+      await DocPage({ params: params({ locale: "en", slug: "d1" }) })
+    );
+    expect(container.textContent).toContain("On this page");
+    expect(container.querySelector('a[href="#intro"]')?.textContent).toBe("Introduction");
+    expect(container.querySelector('a[href="#deep"]')?.textContent).toBe("Deep dive");
+  });
+
+  it("degrades gracefully when the doc content fetch fails", async () => {
+    const { getDocContentWithToc } = await import("@/lib/appflowy-docs");
+    vi.mocked(getDocContentWithToc).mockRejectedValueOnce(new Error("appflowy down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(
+      await DocPage({ params: params({ locale: "en", slug: "d1" }) })
+    );
+    expect(container.textContent).toContain("Setup Guide");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[Docs] Failed to fetch content"),
+      expect.any(Error)
+    );
+    spy.mockRestore();
   });
 });

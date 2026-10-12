@@ -133,4 +133,54 @@ describe("admin ai-generator", () => {
     await submit(container, "y");
     await waitFor(() => expect(container.textContent).toContain("bad prompt"));
   });
+
+
+  it("tolerates a missing clipboard API", async () => {
+    fetchWithAuthMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, result: "Out" }), { status: 200 })
+    );
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    const { container } = render(<AiGeneratorPage />);
+    await submit(container, "make a tagline");
+    await waitFor(() => expect(container.textContent).toContain("Out"));
+    const copyBtn = [...container.querySelectorAll("button")].find((b) =>
+      /copy/i.test(b.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(copyBtn));
+    expect(container.textContent).not.toMatch(/copied/i);
+  });
+
+  it("warns and stays uncopied when the clipboard write rejects", async () => {
+    fetchWithAuthMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, result: "Out2" }), { status: 200 })
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn(async () => Promise.reject(new Error("denied"))) },
+      configurable: true,
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { container } = render(<AiGeneratorPage />);
+    await submit(container, "make a tagline");
+    await waitFor(() => expect(container.textContent).toContain("Out2"));
+    const copyBtn = [...container.querySelectorAll("button")].find((b) =>
+      /copy/i.test(b.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(copyBtn));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Clipboard write failed"),
+      expect.any(Error)
+    );
+    warn.mockRestore();
+  });
+
+  it("switches the selected model", async () => {
+    const { container } = render(<AiGeneratorPage />);
+    const select = container.querySelector("#model")!;
+    const first = (select as HTMLSelectElement).value;
+    const other = [...(select as HTMLSelectElement).options].find(
+      (o) => o.value !== first
+    )!;
+    await act(async () => fireEvent.change(select, { target: { value: other.value } }));
+    expect((select as HTMLSelectElement).value).toBe(other.value);
+  });
 });

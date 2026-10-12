@@ -218,4 +218,41 @@ describe("esp32-manager — populated interactions", () => {
     await click(screen.getByText("⬆ Trigger OTA update"));
     expect(c.textContent).toContain("Failed to send OTA command");
   });
+
+
+  it("formats hours/minutes-only uptimes and tolerates invalid timestamps", async () => {
+    routes["/api/admin/esp32?action=devices"] = [
+      {
+        device_id: "esp32-hours",
+        uptime_s: 3700, // 1h 1m — hours branch
+        last_heartbeat: "bogus-iso", // fmtTs catch → rendered verbatim
+      },
+      { device_id: "esp32-mins", uptime_s: 120 }, // 2m — minutes branch
+    ];
+    const c = await renderPage();
+    expect(c.textContent).toContain("1h 1m");
+    expect(c.textContent).toContain("2m");
+    // invalid ISO is tolerated — toLocaleTimeString returns "Invalid Date"
+    expect(c.textContent).toContain("Invalid Date");
+  });
+
+  it("switches back to the devices tab and fires brightness on touchEnd", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("LED Control"));
+    await click(screen.getByText("Devices"));
+    expect(c.textContent).toContain("2 devices registered");
+
+    // back to LED — touchEnd on the brightness slider sends the command
+    await click(screen.getByText("LED Control"));
+    fetchWithAuthMock.mockClear();
+    const slider = c.querySelector('input[type="range"]')!;
+    fireEvent.change(slider, { target: { value: "120" } });
+    await act(async () => fireEvent.touchEnd(slider));
+    const cmd = fetchWithAuthMock.mock.calls.find(([u]) =>
+      String(u).includes("action=command")
+    );
+    expect(JSON.parse(String(cmd![1].body))).toMatchObject({
+      action: "set_brightness",
+    });
+  });
 });
