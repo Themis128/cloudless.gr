@@ -10,6 +10,10 @@ import {
   PostizApiError,
   isPostizConfigured,
   listPostizIntegrations,
+  listIntegrations,
+  deletePost,
+  schedulePost,
+  withSocialUtm,
 } from "@/lib/postiz";
 
 describe("PostizNotConfiguredError", () => {
@@ -38,5 +42,134 @@ describe("isPostizConfigured", () => {
 describe("listPostizIntegrations", () => {
   it("returns [] when Postiz is not configured", async () => {
     expect(await listPostizIntegrations()).toEqual([]);
+  });
+});
+
+describe("postizFetch plumbing", () => {
+  it("attaches Cloudflare Access headers when a service token is configured", async () => {
+    mockGetCfg.mockResolvedValueOnce({
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "key",
+    });
+    vi.stubEnv("POSTIZ_SERVICE_TOKEN", "cid:csec");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await listIntegrations();
+      const headers = new Headers(fetchMock.mock.calls[0][1].headers);
+      expect(headers.get("Cf-Access-Client-Id")).toBe("cid");
+      expect(headers.get("Cf-Access-Client-Secret")).toBe("csec");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("resolves a non-JSON 200 response body as undefined", async () => {
+    mockGetCfg.mockResolvedValueOnce({
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "key",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("ok", { status: 200, headers: { "Content-Type": "text/plain" } })
+      )
+    );
+    try {
+      await expect(deletePost("post-1")).resolves.toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("withSocialUtm", () => {
+  it("appends source/medium/campaign and preserves existing params", () => {
+    const out = withSocialUtm("https://cloudless.gr/contact?ref=nav", "linkedin", "launch");
+    const u = new URL(out);
+    expect(u.searchParams.get("utm_source")).toBe("linkedin");
+    expect(u.searchParams.get("utm_medium")).toBe("social");
+    expect(u.searchParams.get("utm_campaign")).toBe("launch");
+    expect(u.searchParams.get("ref")).toBe("nav");
+  });
+
+  it("keeps pre-existing utm params untouched", () => {
+    const out = withSocialUtm(
+      "https://cloudless.gr/x?utm_source=keep&utm_medium=keep&utm_campaign=keep",
+      "x"
+    );
+    expect(out).toContain("utm_source=keep");
+    expect(out).toContain("utm_campaign=keep");
+  });
+
+  it("passes through non-URLs and unparseable input", () => {
+    expect(withSocialUtm("cloudless.gr", "x")).toBe("cloudless.gr");
+    expect(withSocialUtm("http://[bad", "x")).toBe("http://[bad");
+  });
+});
+
+describe("schedulePost settings", () => {
+  it("builds per-identifier settings for every connected channel", async () => {
+    mockGetCfg.mockResolvedValue({
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "key",
+    });
+    const integrations = [
+      { id: "i-x", name: "X", identifier: "x" },
+      { id: "i-lp", name: "LI Page", identifier: "linkedin-page" },
+      { id: "i-igs", name: "IG", identifier: "instagram-standalone" },
+      { id: "i-tt", name: "TT", identifier: "tiktok" },
+      { id: "i-other", name: "Other", identifier: "mastodon" },
+    ];
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/integrations")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(integrations), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify([{ id: "post-1" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const result = await schedulePost({
+        integrationIds: integrations.map((i) => i.id),
+        content: "Ship it",
+      });
+      expect(result.ok).toBe(true);
+      const postCall = fetchMock.mock.calls.find((c) => String(c[0]).includes("/posts"));
+      const body = JSON.parse(postCall[1].body as string) as {
+        posts: { integration: { id: string }; settings: Record<string, unknown> }[];
+      };
+      const byId = Object.fromEntries(
+        body.posts.map((post) => [post.integration.id, post.settings])
+      );
+      expect(byId["i-x"]).toMatchObject({ __type: "x", who_can_reply_post: "everyone" });
+      expect(byId["i-lp"]).toMatchObject({
+        __type: "linkedin-page",
+        post_as_images_carousel: false,
+      });
+      expect(byId["i-igs"]).toMatchObject({ __type: "instagram-standalone", post_type: "post" });
+      expect(byId["i-tt"]).toMatchObject({
+        __type: "tiktok",
+        privacy_level: "PUBLIC_TO_EVERYONE",
+        content_posting_method: "DIRECT_POST",
+      });
+      expect(byId["i-other"]).toMatchObject({ __type: "mastodon" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

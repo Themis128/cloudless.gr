@@ -314,6 +314,100 @@ describe("getContact360", () => {
     expect(payload?.matchHints.attribution).toBe("hit");
     expect(payload?.matchHints.summary).toContain("hit every wired source");
   });
+
+  it("derives attribution touches from properties_json when columns are empty", async () => {
+    mockGetContact.mockResolvedValue({
+      id: CONTACT_ID,
+      emailAddress: "ada@example.com",
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
+    mockGetStripe.mockResolvedValue(null);
+    const prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue({
+          results: [
+            {
+              id: "evt_utm",
+              event: "page_view",
+              page: "/pricing",
+              source: null,
+              medium: null,
+              campaign: null,
+              properties_json: JSON.stringify({
+                utm_source: "newsletter",
+                utm_medium: 42,
+                utm_campaign: "autumn",
+              }),
+              created_at: 1_700_000_200,
+            },
+          ],
+        }),
+      }),
+    });
+    mockGetAuthDbFromEnv.mockReturnValue({ prepare });
+    mockGetUserByEmail.mockResolvedValue(null);
+    mockGetGoldDashboard.mockRejectedValue(new Error("gold down"));
+
+    const payload = await getContact360(CONTACT_ID);
+    expect(payload?.attribution.firstTouch?.source).toBe("newsletter");
+    expect(payload?.attribution.firstTouch?.campaign).toBe("autumn");
+    // numeric medium stringifies via primitiveString
+    expect(payload?.attribution.firstTouch?.medium).toBe("42");
+    // gold sections swallowed → no matches
+    expect(payload?.attribution.goldMatches).toEqual([]);
+  });
+
+  it("reports configured Stripe with no customer and maps session/subscription fallbacks", async () => {
+    mockGetContact.mockResolvedValue({
+      id: CONTACT_ID,
+      emailAddress: "ada@example.com",
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
+    // first call: no matching customer → configured:true, customer:null
+    mockGetStripe.mockResolvedValueOnce({
+      customers: { list: vi.fn().mockResolvedValue({ data: [] }) },
+    });
+    const noCustomer = await getContact360(CONTACT_ID);
+    expect(noCustomer?.stripe.configured).toBe(true);
+    expect(noCustomer?.stripe.customer).toBeNull();
+    expect(noCustomer?.stripe.purchases).toEqual([]);
+
+    // second call: session/sub with missing optional fields → mapper fallbacks
+    mockGetStripe.mockResolvedValueOnce({
+      customers: {
+        list: vi.fn().mockResolvedValue({
+          data: [{ id: "cus_2", email: "ada@example.com", created: 1_700_000_000 }],
+        }),
+      },
+      checkout: {
+        sessions: {
+          list: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: "cs_2",
+                payment_status: "unpaid",
+                amount_total: null,
+                currency: null,
+                created: 1_700_000_100,
+              },
+            ],
+          }),
+        },
+      },
+      subscriptions: {
+        list: vi.fn().mockResolvedValue({
+          data: [{ id: "sub_1", status: "active" }],
+        }),
+      },
+    });
+    const payload = await getContact360(CONTACT_ID);
+    expect(payload?.stripe.purchases[0]?.amount).toBe(0);
+    expect(payload?.stripe.purchases[0]?.currency).toBe("EUR");
+    expect(payload?.stripe.subscriptions[0]?.id).toBe("sub_1");
+    expect(payload?.stripe.subscriptions[0]?.currentPeriodEnd).toBeNull();
+  });
 });
 
 describe("GET /api/admin/crm/contacts/[id]", () => {

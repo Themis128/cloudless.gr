@@ -156,4 +156,85 @@ describe("analytics-agent-orchestrator", () => {
     expect(result.connectorPayloads).toHaveLength(2);
     expect(result.connectorPayloads[0].summaryMetrics.topRevenueCategories[0]).toBe("checkout");
   });
+
+  it("flags sparse windows, multi-currency revenue, and zero processed events", async () => {
+    const { preprocessStripeAnalyticsSnapshot } =
+      await import("@/lib/analytics-agent-orchestrator");
+
+    const result = preprocessStripeAnalyticsSnapshot({
+      windowDays: 14,
+      generatedAt: "2026-05-03T12:00:00.000Z",
+      totals: { events: 3, revenueMinor: 500, processed: 0, failed: 3 },
+      byCategory: { checkout: { events: 3, revenueMinor: 500 } },
+      byStatus: { handler_failed: 3 },
+      byCurrency: { eur: 300, usd: 200 },
+      dailyTrend: [],
+    });
+
+    expect(result.dataQuality.sparseWindow).toBe(true);
+    expect(result.dataQuality.notes.join(" ")).toContain("sparse");
+    expect(result.dataQuality.notes.join(" ")).toContain("multiple currencies");
+    expect(result.dataQuality.notes.join(" ")).toContain("No processed events");
+  });
+
+  it("parses AI JSON with confidence/timeframe edge cases", async () => {
+    generateAdminAiTextMock.mockResolvedValue({
+      text: JSON.stringify({
+        executiveSummary: "  AI summary  ",
+        keyInsights: ["one", "", "two"],
+        risks: ["r1"],
+        nextMoves: [
+          {
+            move: "Fix checkout retries",
+            rationale: "Failures clustered",
+            expectedOutcome: "+5% processed",
+            confidence: "HIGH",
+            timeframeDays: 2.9,
+          },
+          {
+            move: "Drop me",
+            rationale: "r",
+            expectedOutcome: "o",
+            confidence: "bogus",
+          },
+          { move: "No confidence default", rationale: "r", expectedOutcome: "o" },
+          { move: "Bad tf", rationale: "r", expectedOutcome: "o", timeframeDays: "x" },
+        ],
+        scenarioOutcomes: [
+          { scenario: "Retry policy", expectedRevenueDeltaPct: 3.456 },
+          "not-an-object",
+        ],
+      }),
+      provider: "workers-ai",
+    });
+    const { runAnalyticsAgentOrchestration } = await import("@/lib/analytics-agent-orchestrator");
+
+    const result = await runAnalyticsAgentOrchestration({
+      snapshot: {
+        windowDays: 7,
+        generatedAt: "2026-05-03T12:00:00.000Z",
+        totals: { events: 10, revenueMinor: 1000, processed: 9, failed: 1 },
+        byCategory: { checkout: { events: 10, revenueMinor: 1000 } },
+        byStatus: { processed: 9, handler_failed: 1 },
+        byCurrency: { eur: 1000 },
+        dailyTrend: [],
+      },
+      connectors: ["metabase"],
+    });
+
+    expect(result.report.executiveSummary).toBe("AI summary");
+    expect(result.report.keyInsights).toEqual(["one", "two"]);
+    const moves = result.report.nextMoves;
+    // bogus confidence dropped; missing confidence defaults to "medium";
+    // 2.9 truncates to 2; non-numeric timeframe defaults to 7
+    expect(moves).toHaveLength(3);
+    expect(moves[0]).toMatchObject({ confidence: "high", timeframeDays: 2 });
+    expect(moves[1].timeframeDays).toBe(7);
+    expect(moves[2].timeframeDays).toBe(7);
+    expect(result.report.scenarioOutcomes).toHaveLength(1);
+    expect(result.report.scenarioOutcomes[0]).toMatchObject({
+      scenario: "Retry policy",
+      expectedRevenueDeltaPct: 3.46,
+    });
+  });
 });
