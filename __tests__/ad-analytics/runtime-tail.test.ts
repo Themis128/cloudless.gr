@@ -275,6 +275,21 @@ describe("runScheduledPoll tail", () => {
     const out3 = await runtime.runScheduledPoll({ now: new Date("2026-06-02T12:00:00Z") });
     expect(out3.digests[0].posted.some((p) => !p.ok)).toBe(true);
     restore();
+
+    // anomaly-channel sendBlock throw → catch path records ok:false
+    const bm2 = await import("@/lib/ad-analytics/bookmarks");
+    bm2._resetBookmarkStore();
+    const ch2 = mkChannel();
+    // digest send ok, anomaly send throws
+    ch2.sendBlock = vi
+      .fn()
+      .mockResolvedValueOnce({ messageId: "slack:#d:1" })
+      .mockRejectedValueOnce(new Error("dm down"))
+      .mockResolvedValue({ messageId: "slack:#d:1" });
+    const restore2 = runtime._setRegistries({ adapters: { linkedin: adapter }, channels: { slack: ch2 } });
+    const out4 = await runtime.runScheduledPoll({ now: new Date("2026-06-03T12:00:00Z") });
+    restore2();
+    expect(out4.digests[0].posted).toContainEqual({ channel: "slack", target: "#dm", ok: false });
   });
 });
 
@@ -362,6 +377,14 @@ describe("runAdHocSnapshot", () => {
     const snap = await runtime.runAdHocSnapshot({ campaignSlug: "tail-c" });
     restore();
     expect(snap!.metrics).toHaveLength(1);
-    expect(adapter.pullMetrics).toHaveBeenCalledTimes(1);
+
+    // pullMetrics throw → tolerated, empty metrics
+    const throwAdapter = mkAdapter({
+      pullMetrics: vi.fn().mockRejectedValue(new Error("adhoc boom")),
+    });
+    const restore3 = runtime._setRegistries({ adapters: { linkedin: throwAdapter } });
+    const snap2 = await runtime.runAdHocSnapshot({ campaignSlug: "tail-c" });
+    restore3();
+    expect(snap2).toEqual({ campaign: "tail-c", metrics: [] });
   });
 });
