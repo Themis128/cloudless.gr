@@ -56,6 +56,13 @@ const listProjectsMock = vi.hoisted(() => vi.fn());
 const appflowyConfigured = vi.hoisted(() => vi.fn(async () => false));
 vi.mock("@/lib/appflowy-projects", () => ({ listProjects: listProjectsMock }));
 vi.mock("@/lib/appflowy", () => ({ isAppFlowyConfigured: appflowyConfigured }));
+const getCaseStudiesMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/appflowy-case-studies", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/appflowy-case-studies")>(
+    "@/lib/appflowy-case-studies"
+  );
+  return { ...actual, getCaseStudies: getCaseStudiesMock };
+});
 
 import TermsPage from "@/app/[locale]/terms/page";
 import PrivacyPage from "@/app/[locale]/privacy/page";
@@ -166,5 +173,46 @@ describe("admin/notion legacy redirect", () => {
     await expect(
       LegacyNotionRedirectPage({ params: sp({ locale: "en" }) })
     ).rejects.toThrow("REDIRECT:/admin/appflowy");
+  });
+});
+
+
+describe("public case-studies page — AppFlowy branch", () => {
+  it("renders AppFlowy studies with cover image, metrics, services, industry", async () => {
+    appflowyConfigured.mockResolvedValueOnce(true);
+    getCaseStudiesMock.mockResolvedValueOnce([
+      {
+        id: "cs1",
+        slug: "acme-migration",
+        title: "Acme Migration",
+        client: "Acme",
+        industry: "SaaS",
+        services: ["Migration", "Kubernetes"],
+        summary: "Moved to serverless",
+        challenge: "c",
+        solution: "s",
+        results: "r",
+        metrics: [{ label: "Cost cut", value: "-60%" }],
+        coverImage: "https://img.example/cs1.png",
+        tags: [],
+        featured: true,
+        date: "2026-01-01",
+      },
+    ]);
+    const { default: Page } = await import("@/app/[locale]/case-studies/page");
+    const { container } = render(await Page());
+    expect(container.textContent).toContain("Acme Migration");
+    expect(container.textContent).toContain("-60%");
+    expect(container.textContent).toContain("SaaS");
+    expect(container.textContent).toContain("Kubernetes");
+    expect(container.querySelector("img")).toBeTruthy();
+  });
+
+  it("falls back to static studies when the AppFlowy fetch throws", async () => {
+    appflowyConfigured.mockResolvedValueOnce(true);
+    getCaseStudiesMock.mockRejectedValueOnce(new Error("down"));
+    const { default: Page } = await import("@/app/[locale]/case-studies/page");
+    const { container } = render(await Page());
+    expect(container.querySelector("a[href*='/case-studies/']")).toBeTruthy();
   });
 });
