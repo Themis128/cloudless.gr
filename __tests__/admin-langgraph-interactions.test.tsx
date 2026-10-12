@@ -308,3 +308,84 @@ describe("langgraph admin — populated interactions", () => {
     expect(c.textContent).toContain("pending");
   });
 });
+
+describe("langgraph admin tails", () => {
+  beforeEach(() => {
+    healthy();
+    fetchWithAuthMock.mockClear();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("store panel — put/del/search error paths + namespace input", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("store"));
+
+    const ns = screen.getByPlaceholderText("namespace");
+    fireEvent.change(ns, { target: { value: "billing" } });
+    fireEvent.change(screen.getByPlaceholderText("key / search query"), {
+      target: { value: "k" },
+    });
+
+    routes["store-put"] = new Response(JSON.stringify({ error: "put denied" }), { status: 403 });
+    await click(screen.getByText("Put"));
+    expect(c.textContent).toContain("Error: put denied");
+
+    routes["store-delete"] = new Response(JSON.stringify({ error: "del denied" }), { status: 403 });
+    await click(screen.getByText("Del"));
+    expect(c.textContent).toContain("Error: del denied");
+
+    routes["store-search"] = new Response(JSON.stringify({ error: "search down" }), { status: 500 });
+    await click(screen.getByText("Search"));
+    expect(c.textContent).toContain("Error: search down");
+    expect(
+      JSON.parse(String(actionCalls("store-put")[0][1].body)).namespace
+    ).toEqual(["billing"]);
+  });
+
+  it("init Refresh ↺ re-runs health/assistant/threads", async () => {
+    await renderPage();
+    fetchWithAuthMock.mockClear();
+    await click(screen.getByTitle("Refresh"));
+    expect(actionCalls("health")).toHaveLength(1);
+    expect(actionCalls("get-assistant")).toHaveLength(1);
+    expect(actionCalls("list-threads")).toHaveLength(1);
+  });
+
+  it("thread state failure → messages cleared without crashing", async () => {
+    const t = { thread_id: "th-1", created_at: "t" };
+    healthy([t]);
+    routes["get-thread-state"] = new Response(JSON.stringify({ error: "gone" }), { status: 404 });
+    const c = await renderPage();
+    await click(screen.getByText("Thread th-1"));
+    expect(c.textContent).not.toContain("Paused before");
+  });
+
+  it("resume via Enter key submits resume-run", async () => {
+    const t = { thread_id: "th-1", created_at: "t" };
+    healthy([t]);
+    routes["stream-run"] = sse([
+      'data: {"run_id":"run-int"}\n',
+      'data: [{"content":"need input"}]\n',
+      'data: {"type":"interrupt"}\n',
+    ]);
+    routes["resume-run"] = sse(['data: [{"content":"resumed answer"}]\n']);
+    const c = await renderPage();
+    await click(screen.getByText("Thread th-1"));
+
+    const ta = c.querySelector("textarea[placeholder*='Ask anything']") as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: "go" } });
+    await click(c.querySelector("button.bg-violet-600")!);
+    expect(c.textContent).toContain("Run paused — waiting for input");
+
+    const resumeInput = screen.getByPlaceholderText(/Resume value/);
+    fireEvent.change(resumeInput, { target: { value: "yes" } });
+    await act(async () => fireEvent.keyDown(resumeInput, { key: "Enter" }));
+    expect(c.textContent).toContain("resumed answer");
+    expect(actionCalls("resume-run")).toHaveLength(1);
+  });
+});

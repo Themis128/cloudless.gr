@@ -644,3 +644,88 @@ describe("CartSlideOver — Mobile", () => {
     expect(hasRoundedLg).toBe(true);
   });
 });
+
+describe("StoreGrid tails", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("feature preview opens on hover and via the Includes toggle", () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const card = container.querySelector('[data-testid="product-card"]')!;
+    fireEvent.mouseEnter(card);
+    const includesBtn = card.querySelector('button[aria-expanded]')!;
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(includesBtn.textContent).toBe("Hide");
+    fireEvent.mouseLeave(card);
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("false");
+
+    // touch path — toggle button
+    fireEvent.click(includesBtn);
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("Add to Cart on a card adds the item and opens the drawer", async () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const addBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent === "Add to Cart"
+    )!;
+    fireEvent.click(addBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem("cloudless-cart") ?? "").toContain('"id"')
+    );
+  });
+
+  it("authoritative empty semantic result → empty state → Clear filters resets", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ query: "zzz", source: "api", hits: [] }),
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      const { container } = render(
+        <Wrapper>
+          <StoreGrid />
+        </Wrapper>
+      );
+      const search = container.querySelector('input[type="text"]')!;
+      fireEvent.change(search, { target: { value: "zzz" } });
+      await waitFor(
+        () => expect(container.textContent).toContain("No products match your search"),
+        { timeout: 1500 }
+      );
+      fireEvent.click(within(container).getByText("Clear filters"));
+      expect(container.textContent).not.toContain("No products match your search");
+      expect((search as HTMLInputElement).value).toBe("");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("sorts by price-desc and name-asc", () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const select = container.querySelector("select")!;
+    fireEvent.change(select, { target: { value: "price-desc" } });
+    const desc = container.querySelectorAll('a[href^="/store/"]');
+    expect(desc[0]?.getAttribute("href")).not.toBe("/store/phy-tshirt");
+    fireEvent.change(select, { target: { value: "name-asc" } });
+    const names = Array.from(container.querySelectorAll('[data-testid="product-card"] h3')).map(
+      (h) => h.textContent ?? ""
+    );
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+  });
+});

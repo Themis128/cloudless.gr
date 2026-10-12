@@ -371,3 +371,123 @@ describe("client-portals admin — populated interactions", () => {
     expect(c.textContent).toContain("create failed");
   });
 });
+
+describe("client-portals admin tails", () => {
+  beforeEach(() => {
+    portals = [];
+    pendingClients = [];
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (String(url).includes("pending-clients")) {
+        if (method === "GET") return okJson({ clients: pendingClients });
+        return okJson({ ok: true });
+      }
+      if (String(url).includes("client-portals")) {
+        if (method === "GET") return okJson({ portals });
+        if (method === "PATCH") {
+          const body = JSON.parse(String(init?.body ?? "{}"));
+          if (body.action === "rotate-token") return okJson({ portal: { token: "NEWTOK123" } });
+          return okJson({ ok: true });
+        }
+        if (method === "POST") return okJson({ portal: { token: "created-tok" } });
+        if (method === "DELETE") return okJson({ ok: true });
+      }
+      return okJson({}, 404);
+    });
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    Object.assign(navigator, { clipboard: { writeText: vi.fn() } });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("step keyboard expand, comment author/draft + Ctrl+Enter submit, status select", async () => {
+    portals = [portal()];
+    const c = await renderPage();
+    // expand the portal card with Enter keydown (line ~1130)
+    const cardHeader = c.querySelector("[aria-expanded]")!;
+    await act(async () => fireEvent.keyDown(cardHeader, { key: "Enter" }));
+    expect(c.textContent).toContain("Comment as:");
+
+    // shared comment-author input (line ~135)
+    const author = document.getElementById("portal-comment-author")!;
+    fireEvent.change(author, { target: { value: "Ops Bot" } });
+    expect((author as HTMLInputElement).value).toBe("Ops Bot");
+
+    // expand step s2 via Enter keydown (line ~153)
+    const stepHeader = screen.getByText("Build").closest("[aria-expanded]")!;
+    await act(async () => fireEvent.keyDown(stepHeader, { key: " " }));
+    const draft = screen.getByPlaceholderText(/Ctrl\+Enter to send/);
+    expect(draft).toBeTruthy();
+
+    // step status select (line ~173)
+    const sel = stepHeader.querySelector("select")!;
+    fireEvent.change(sel, { target: { value: "in-progress" } });
+    const statusCall = patchCalls().find((b) => b.action === "update-step");
+    expect(statusCall).toBeTruthy();
+
+    // comment draft + Ctrl+Enter submit (lines ~289-291)
+    fireEvent.change(draft, { target: { value: "shipping now" } });
+    await act(async () => fireEvent.keyDown(draft, { key: "Enter", ctrlKey: true }));
+    const commentCall = patchCalls().find((b) => b.action === "add-comment");
+    expect(commentCall).toBeTruthy();
+    expect(commentCall.text).toBe("shipping now");
+  });
+
+  it("deliverable link URL input + pending-clients load rejection", async () => {
+    portals = [portal()];
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (String(url).includes("pending-clients")) {
+        if (method === "GET") throw new Error("down");
+        return okJson({ ok: true });
+      }
+      if (String(url).includes("client-portals")) {
+        if (method === "GET") return okJson({ portals });
+        return okJson({ ok: true });
+      }
+      return okJson({}, 404);
+    });
+    const c = await renderPage();
+    // PendingClients short-circuits to null on empty clients — the catch ran
+    // (its setError is unreachable UI), and the fetch really happened.
+    expect(
+      fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("pending-clients"))
+    ).toBe(true);
+
+    await click(c.querySelector("[aria-expanded]")!);
+    const urlInput = screen.getByPlaceholderText(/Figma, staging, doc/);
+    fireEvent.change(urlInput, { target: { value: "https://d.example/new" } });
+    expect((urlInput as HTMLInputElement).value).toBe("https://d.example/new");
+  });
+
+  it("decline + revoke rejections surface their error banners", async () => {
+    pendingClients = [
+      { email: "w@x.co", plan: "cloud", status: "waiting", submittedAt: "t" },
+    ];
+    portals = [portal()];
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (String(url).includes("pending-clients")) {
+        if (method === "GET") return okJson({ clients: pendingClients });
+        if (method === "DELETE") throw new Error("decline failed");
+        return okJson({ ok: true });
+      }
+      if (String(url).includes("client-portals")) {
+        if (method === "GET") return okJson({ portals });
+        if (method === "DELETE") throw new Error("revoke failed");
+        return okJson({ ok: true });
+      }
+      return okJson({}, 404);
+    });
+    const c = await renderPage();
+    await click(screen.getByText("Decline"));
+    expect(c.textContent).toContain("Failed to decline");
+
+    await click(screen.getByText("Revoke"));
+    expect(c.textContent).toContain("Failed to revoke portal");
+  });
+});

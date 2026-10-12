@@ -159,3 +159,83 @@ describe("slack/interactions tail", () => {
     warn.mockRestore();
   });
 });
+
+describe("slack/interactions dispatch tails", () => {
+  let POST: (req: Request) => Promise<Response>;
+  let resetOpsCache: () => void;
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("net down");
+    });
+    const mod = await import("@/app/api/slack/interactions/route");
+    POST = mod.POST;
+    resetOpsCache = (await import("@/lib/slack-ops-users")).resetSlackOpsUsersCache;
+    resetOpsCache();
+    delete process.env.SLACK_OPS_USERS;
+  });
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+    delete process.env.SLACK_OPS_USERS;
+    resetOpsCache();
+  });
+
+  const send = async (payload: object) => {
+    const body = formFor(payload);
+    verifyOk(body);
+    return POST(makeRequest(body, `10.0.${Math.random()}.1`));
+  };
+
+  it("linkedin_ads_* actions dispatch to the ads control async path", async () => {
+    for (const id of ["linkedin_ads_pause", "linkedin_ads_resume", "linkedin_ads_status"]) {
+      const res = await send(blockAction(id));
+      expect(res.status).toBe(200);
+    }
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
+  it("rerun_weekly_draft dispatches the workflow responder", async () => {
+    const res = await send(blockAction("rerun_weekly_draft"));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
+  it("rerun dispatch denied for users outside the ops allowlist", async () => {
+    process.env.SLACK_OPS_USERS = "U_OPS_ONLY";
+    resetOpsCache();
+    const res = await send(blockAction("rerun_weekly_draft"));
+    expect(res.status).toBe(200);
+    // the denial post itself hits the (rejected) response_url fetch
+    await new Promise((r) => setTimeout(r, 0));
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://hooks.slack.com/actions/x",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("deploy-confirm-modal denied for users outside the ops allowlist", async () => {
+    process.env.SLACK_OPS_USERS = "U_OPS_ONLY";
+    resetOpsCache();
+    const res = await send({
+      type: "view_submission",
+      user: { id: "U_NOTOPS", username: "u" },
+      response_url: "https://hooks.slack.com/actions/x",
+      view: {
+        callback_id: "deploy-confirm-modal",
+        private_metadata: JSON.stringify({ user_id: "U_NOTOPS" }),
+        state: { values: {} },
+      },
+    });
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://hooks.slack.com/actions/x",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("unknown action_id warns but still acks 200", async () => {
+    const res = await send(blockAction("never_seen_button"));
+    expect(res.status).toBe(200);
+  });
+});

@@ -301,3 +301,101 @@ describe("admin/appflowy/projects", () => {
     expect(c2.textContent).toContain("No projects found");
   });
 });
+
+describe("admin/appflowy/projects tails", () => {
+  const ROUTE = "/api/admin/appflowy/projects";
+  const projects = [
+    {
+      id: "p1",
+      name: "Site rebuild",
+      status: "In Progress",
+      priority: "High",
+      type: "Client",
+      owner: "themis",
+      startDate: "2026-01-01",
+      dueDate: "",
+      description: "rebuild",
+      budget: 5000,
+      progress: 40,
+      tags: [],
+      url: "",
+    },
+  ];
+
+  it("PATCH failures log without crashing; create form fields propagate", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    let failPatch = false;
+    routes[ROUTE] = (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "PATCH" && failPatch) return okJson({ error: "boom" }, 500);
+      if (method === "PATCH") return okJson({ ok: true });
+      return okJson({ projects });
+    };
+    const c = await renderPage(<ProjectsPage />);
+
+    // create form — every field (priority/type/owner/description onChange)
+    await click(screen.getByText("+ New Project"));
+    fireEvent.change(c.querySelector("input[placeholder='Project name *']")!, {
+      target: { value: "Full Form Proj" },
+    });
+    const selects = Array.from(c.querySelectorAll("select")) as HTMLSelectElement[];
+    const prioSel = selects.find((el) => el.value === "Medium")!;
+    const typeSel = selects.find((el) => el.value === "Internal")!;
+    fireEvent.change(prioSel, { target: { value: "Critical" } });
+    fireEvent.change(typeSel, { target: { value: "Maintenance" } });
+    fireEvent.change(c.querySelector("input[placeholder='Owner']")!, {
+      target: { value: "sofia" },
+    });
+    fireEvent.change(c.querySelector("textarea[placeholder='Description']")!, {
+      target: { value: "desc text" },
+    });
+    await click(screen.getByText("Create"));
+    const post = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "POST");
+    expect(JSON.parse(String(post![1].body))).toMatchObject({
+      name: "Full Form Proj",
+      priority: "Critical",
+      type: "Maintenance",
+      owner: "sofia",
+      description: "desc text",
+    });
+
+    // status PATCH failure → console.error catch
+    failPatch = true;
+    const statusSel = c.querySelector("select")!;
+    fireEvent.change(statusSel, { target: { value: "On Hold" } });
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith("Failed to update status:", expect.anything());
+
+    // progress PATCH failure → console.error catch
+    const progInput = c.querySelector("input[type='number']")!;
+    fireEvent.change(progInput, { target: { value: "80" } });
+    fireEvent.blur(progInput);
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith("Failed to update progress:", expect.anything());
+    errSpy.mockRestore();
+  });
+
+  it("create failure logs; All filter chip resets status", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    routes[ROUTE] = (url: string, init?: RequestInit) =>
+      (init?.method ?? "GET") === "POST"
+        ? okJson({ error: "create fail" }, 500)
+        : okJson({ projects });
+    const c = await renderPage(<ProjectsPage />);
+    await click(screen.getByText("+ New Project"));
+    fireEvent.change(c.querySelector("input[placeholder='Project name *']")!, {
+      target: { value: "X" },
+    });
+    await click(screen.getByText("Create"));
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith("Failed to create project:", expect.anything());
+
+    // All chip resets the filter + refetches unfiltered (switch away first)
+    await click(screen.getByText(/^Completed \(/));
+    fetchWithAuthMock.mockClear();
+    await click(screen.getByText(/^All \(/));
+    const call = fetchWithAuthMock.mock.calls.find(([u]) => String(u).includes(ROUTE));
+    expect(String(call![0])).not.toContain("status=");
+    errSpy.mockRestore();
+  });
+});
