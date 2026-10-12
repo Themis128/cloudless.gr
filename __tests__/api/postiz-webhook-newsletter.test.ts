@@ -2,7 +2,7 @@
  * Tests for POST /api/webhooks/postiz and GET /api/cron/newsletter-auto.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 const hoisted = vi.hoisted(() => ({
   sigOk: true,

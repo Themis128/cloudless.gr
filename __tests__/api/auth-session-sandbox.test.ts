@@ -6,7 +6,7 @@
  * routing fetch fake drives prepare/bind/all/run/first end to end.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 const hoisted = vi.hoisted(() => ({
   db: null as unknown,
@@ -207,7 +207,6 @@ describe("/api/auth/sandbox", () => {
     expect((await post("{bad")).status).toBe(400);
     expect((await post({})).status).toBe(400);
     expect((await post({ action: "nope" })).status).toBe(400);
-    expect((await post({ action: "nope" })).then).toBeTruthy;
   });
 
   it("test-password returns the strength result with masked pw", async () => {
