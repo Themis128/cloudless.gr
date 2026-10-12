@@ -220,4 +220,13 @@ describe("register() runtime dispatch", () => {
     const edge = await import("../sentry.edge.config");
     expect(edge).toBeDefined();
   });
+
+
+  it("production with no app version skips the deploy notification", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.NEXT_PUBLIC_APP_VERSION;
+    const { registerNode } = await import("@/instrumentation.node");
+    await registerNode();
+    expect(m.slackDeployNotify).not.toHaveBeenCalled();
+  });
 });
