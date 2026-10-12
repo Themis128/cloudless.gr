@@ -180,3 +180,44 @@ describe("admin appflowy submissions", () => {
     await waitFor(() => expect(container.textContent).toContain("HTTP 500"));
   });
 });
+
+describe("admin leads tails", () => {
+  it("interval, visibilitychange and manual refresh re-fetch leads", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchWithAuthMock.mockImplementation(async () => okJson({ leads: [] }));
+      render(<LeadsPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const initial = fetchWithAuthMock.mock.calls.length;
+      expect(initial).toBeGreaterThan(0);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBe(initial + 1);
+
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        await Promise.resolve();
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBe(initial + 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("manual Refresh button triggers a refetch", async () => {
+    fetchWithAuthMock.mockImplementation(async () =>
+      okJson({ leads: [], fetchedAt: "2026-02-01T10:00:00Z" })
+    );
+    const { getByText } = render(<LeadsPage />);
+    await waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalled());
+    const n = fetchWithAuthMock.mock.calls.length;
+    await act(async () => fireEvent.click(getByText("Refresh")));
+    await waitFor(() =>
+      expect(fetchWithAuthMock.mock.calls.length).toBeGreaterThan(n)
+    );
+  });
+});

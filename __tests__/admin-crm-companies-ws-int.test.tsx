@@ -69,6 +69,48 @@ describe("admin crm companies", () => {
   });
 });
 
+describe("admin crm companies tails", () => {
+  it("interval and visibilitychange re-fetch companies", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchWithAuthMock.mockImplementation(async () =>
+        okJson({ companies: [] })
+      );
+      render(<CompaniesPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const initial = fetchWithAuthMock.mock.calls.length;
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBe(initial + 1);
+
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        await Promise.resolve();
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBe(initial + 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("manual Refresh button re-fetches", async () => {
+    fetchWithAuthMock.mockImplementation(async () =>
+      okJson({ companies: [], fetchedAt: "2026-02-01T10:00:00Z" })
+    );
+    const { getByText } = render(<CompaniesPage />);
+    await waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalled());
+    const n = fetchWithAuthMock.mock.calls.length;
+    await act(async () => fireEvent.click(getByText("Refresh")));
+    await waitFor(() =>
+      expect(fetchWithAuthMock.mock.calls.length).toBeGreaterThan(n)
+    );
+  });
+});
+
 describe("admin analytics workspaces", () => {
   const ws = {
     workspaceId: "w1",

@@ -203,3 +203,18 @@ describe("admin analytics seo", () => {
     );
   });
 });
+
+describe("admin social-ops tails", () => {
+  it("shows the thrown error and retries via the Refresh button", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("console unreachable"));
+    const { container, getByText } = render(<SocialOpsPage />);
+    await waitFor(() =>
+      expect(container.textContent).toContain("console unreachable")
+    );
+
+    mockFetch.mockImplementationOnce(async () => okJson(console_));
+    await act(async () => fireEvent.click(getByText("Refresh")));
+    await waitFor(() => expect(container.textContent).toContain("social-api"));
+    expect(container.textContent).not.toContain("console unreachable");
+  });
+});

@@ -313,3 +313,90 @@ describe("cms services — delete failure tail", () => {
     expect(c!.textContent).toContain("Cloud Audit"); // row not removed
   });
 });
+
+describe("cms case-studies — field tails", () => {
+  beforeEach(() => {
+    routes = {
+      "/api/admin/appflowy/case-studies": {
+        caseStudies: [
+          {
+            id: "c1",
+            title: "Acme migration",
+            client: "Acme",
+            industry: "Retail",
+            date: "2026-01-01",
+            published: true,
+            featured: false,
+            metrics: [{ label: "Uptime", value: "99.9%" }],
+            services: ["cloud"],
+            tags: ["migration"],
+            results: "done",
+          },
+        ],
+      },
+    };
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("parses services/tags/metrics/coverImage/flags into the POST body", async () => {
+    let c!: HTMLElement;
+    await act(async () => {
+      c = render(<AdminCaseStudiesPage />).container;
+    });
+    await click(screen.getByText("+ New"));
+    const modal = c.querySelector(".fixed.inset-0 > div") as HTMLElement;
+    const texts = modal.querySelectorAll("input[type='text']");
+    fireEvent.change(texts[0], { target: { value: "New CS" } }); // title
+    fireEvent.change(texts[1], { target: { value: "new-cs" } }); // slug
+    fireEvent.change(texts[2], { target: { value: "Beta Corp" } }); // client
+    fireEvent.change(texts[3], { target: { value: "SaaS" } }); // industry
+    fireEvent.change(texts[4], { target: { value: "cloud, ai" } }); // services
+    fireEvent.change(texts[5], { target: { value: "t1, t2" } }); // tags
+    const areas = modal.querySelectorAll("textarea");
+    fireEvent.change(areas[areas.length - 1], {
+      target: { value: "Cost | 40%" },
+    }); // metrics
+    fireEvent.change(texts[texts.length - 1], {
+      target: { value: "https://cdn.example/cover.png" },
+    }); // cover image
+    const checks = modal.querySelectorAll("input[type='checkbox']");
+    fireEvent.click(checks[0]);
+    fireEvent.click(checks[1]);
+
+    await click(screen.getByText("Create"));
+    const post = fetchWithAuthMock.mock.calls.find(
+      ([u, i]) => String(u) === "/api/admin/appflowy/case-studies" && i?.method === "POST"
+    );
+    expect(JSON.parse(String(post![1].body))).toMatchObject({
+      title: "New CS",
+      slug: "new-cs",
+      client: "Beta Corp",
+      services: ["cloud", "ai"],
+      tags: ["t1", "t2"],
+      metrics: [{ label: "Cost", value: "40%" }],
+      coverImage: "https://cdn.example/cover.png",
+      published: true,
+      featured: true,
+    });
+  });
+
+  it("shows the delete error when archive fails", async () => {
+    let c!: HTMLElement;
+    await act(async () => {
+      c = render(<AdminCaseStudiesPage />).container;
+    });
+    routes["/api/admin/appflowy/case-studies?pageId=c1"] = okJson(
+      { error: "archive exploded" },
+      500
+    );
+    await click(screen.getByText("Archive"));
+    await flush();
+    expect(c.textContent).toContain("HTTP 500");
+  });
+});

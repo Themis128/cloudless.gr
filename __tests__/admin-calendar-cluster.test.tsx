@@ -279,6 +279,46 @@ describe("admin/calendar tails", () => {
   });
 });
 
+  it("prev-month in a non-January month just decrements", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-06-15T10:00:00"));
+      routes["/api/admin/calendar"] = okJson({ items: [] });
+      const c = await renderPage(<CalendarPage />);
+      expect(c.textContent).toContain("June 2026");
+      await click(screen.getByText("\u2039"));
+      expect(c.textContent).toContain("May 2026");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("declining the delete confirm leaves the item in place", async () => {
+    const now = new Date();
+    const inMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+    routes["/api/admin/calendar"] = okJson({
+      items: [
+        {
+          id: "cal9",
+          title: "LinkedIn post",
+          type: "social_post",
+          platform: "meta",
+          status: "draft",
+          date: inMonth,
+          notes: "",
+        },
+      ],
+    });
+    const c = await renderPage(<CalendarPage />);
+    (window.confirm as ReturnType<typeof vi.fn>).mockReturnValueOnce(false);
+    const del = screen.getByLabelText("Delete LinkedIn post");
+    await act(async () => fireEvent.click(del));
+    expect(c.textContent).toContain("LinkedIn post");
+    expect(
+      fetchWithAuthMock.mock.calls.filter(([, i]) => i?.method === "DELETE")
+    ).toHaveLength(0);
+  });
+
 describe("admin/cluster tails", () => {
   it("status FAILED/PENDING, hour+day relative times, kuma pending, mqtt ok/critical", async () => {
     const twoDays = new Date(Date.now() - 2 * 86_400_000).toISOString();

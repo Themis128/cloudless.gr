@@ -211,3 +211,35 @@ describe("admin analytics social", () => {
     await waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalled());
   });
 });
+
+describe("admin analytics explore tails", () => {
+  it("quick-query chip, dataset select and sql textarea update state", async () => {
+    const { container } = render(<ExplorePage />);
+    const chips = [...container.querySelectorAll("button")].filter((b) =>
+      b.className.includes("rounded-full")
+    );
+    expect(chips.length).toBeGreaterThan(0);
+    await act(async () => fireEvent.click(chips[0]));
+    const select = container.querySelector("select")!;
+    const textarea = container.querySelector("textarea")!;
+    expect((textarea as HTMLTextAreaElement).value.length).toBeGreaterThan(0);
+
+    const second = LAKE_PARQUET_CATALOG[1]?.id ?? LAKE_PARQUET_CATALOG[0].id;
+    await act(async () =>
+      fireEvent.change(select, { target: { value: second } })
+    );
+    expect((select as HTMLSelectElement).value).toBe(second);
+
+    await act(async () =>
+      fireEvent.change(textarea, { target: { value: "select 1" } })
+    );
+    expect((textarea as HTMLTextAreaElement).value).toBe("select 1");
+
+    queryLakeParquetMock.mockResolvedValueOnce([]);
+    const runBtn = [...container.querySelectorAll("button")].find((b) =>
+      /run/i.test(b.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(runBtn));
+    expect(queryLakeParquetMock).toHaveBeenCalledWith(second, "select 1");
+  });
+});

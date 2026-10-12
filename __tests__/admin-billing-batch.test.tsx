@@ -315,6 +315,59 @@ describe("admin/subscriptions", () => {
   });
 });
 
+describe("admin/subscriptions tails", () => {
+  const ROUTE = "/api/admin/subscriptions";
+  const sub = {
+    id: "sub_1",
+    customerId: "cus_1",
+    customerEmail: "s@x.gr",
+    customerName: "Sam",
+    status: "active",
+    planName: "Pro",
+    amount: 120000,
+    currency: "EUR",
+    interval: "year",
+    currentPeriodEnd: 1767225600,
+    created: 1735689600,
+    cancelAtPeriodEnd: false,
+  };
+
+  it("portal without url + portal/cancel fetch throws surface messages", async () => {
+    routes[ROUTE] = (_u: string, init?: RequestInit) => {
+      if (init?.method === "POST") return okJson({ error: "portal disabled" });
+      return okJson({ subscriptions: [sub] });
+    };
+    const c = await renderPage(<SubscriptionsPage />);
+    await click(screen.getByText("Portal"));
+    await flush();
+    expect(c.textContent).toContain("portal disabled");
+
+    routes[ROUTE] = (_u: string, init?: RequestInit) => {
+      if (init?.method === "POST") throw new Error("offline");
+      return okJson({ subscriptions: [sub] });
+    };
+    await click(screen.getByText("Portal"));
+    await flush();
+    expect(c.textContent).toContain("Failed to open billing portal");
+
+    await click(screen.getByText("Cancel"));
+    await flush();
+    expect(c.textContent).toContain("Failed to cancel subscription");
+  });
+
+  it("header Refresh button reloads with the current filter", async () => {
+    routes[ROUTE] = okJson({ subscriptions: [sub] });
+    const c = await renderPage(<SubscriptionsPage />);
+    expect(c.textContent).toContain("s@x.gr");
+    const n = fetchWithAuthMock.mock.calls.length;
+    await click(screen.getByText("Refresh"));
+    await flush();
+    expect(fetchWithAuthMock.mock.calls.length).toBeGreaterThan(n);
+    const last = fetchWithAuthMock.mock.calls.at(-1)!;
+    expect(String(last[0])).toContain("status=active");
+  });
+});
+
 describe("admin/appflowy/submissions", () => {
   const ROUTE = "/api/admin/appflowy/submissions";
   const subs = [
