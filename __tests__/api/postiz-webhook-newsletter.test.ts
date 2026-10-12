@@ -226,6 +226,9 @@ describe("GET /api/cron/newsletter-auto", () => {
     ai.callWorkersAiChat.mockResolvedValue("no json here");
     expect((await newsletterAuto(new NextRequest(NEWS))).status).toBe(502);
 
+    ai.callWorkersAiChat.mockResolvedValue("{invalid json}");
+    expect((await newsletterAuto(new NextRequest(NEWS))).status).toBe(502);
+
     ai.callWorkersAiChat.mockResolvedValue('{"title":"t"}');
     expect((await newsletterAuto(new NextRequest(NEWS))).status).toBe(502);
   });
@@ -270,6 +273,17 @@ describe("GET /api/cron/newsletter-auto", () => {
       expect.objectContaining({ category: "subscribe" })
     );
     expect(slackPost).toHaveBeenCalled();
+  });
+
+  it("logs best-effort notification and Slack failures after delivery", async () => {
+    notifs.recordNotification.mockRejectedValueOnce(new Error("notification down"));
+    slackPost.mockRejectedValueOnce(new Error("slack down"));
+
+    const res = await newsletterAuto(new NextRequest(NEWS));
+    expect(res.status).toBe(200);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(notifs.recordNotification).toHaveBeenCalledOnce();
+    expect(slackPost).toHaveBeenCalledOnce();
   });
 
   it("falls back to Cloud category + survives cover/email failures", async () => {

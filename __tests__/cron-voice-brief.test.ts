@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { IntegrationNotConfiguredError } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -174,6 +175,24 @@ describe("GET /api/cron/voice-brief", () => {
       expect(mockRunAgent).toHaveBeenCalledOnce();
       // The legacy path used to call the Anthropic API directly via global fetch.
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("maps integration configuration failures from the agent", async () => {
+      mockRunAgent.mockRejectedValueOnce(
+        new IntegrationNotConfiguredError(["CLOUDFLARE_API_TOKEN"])
+      );
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      const res = await GET(authedRequest());
+      expect(res.status).toBe(503);
+      expect((await res.json()).reason).toBe("integration_not_configured");
+    });
+
+    it("rethrows unexpected agent failures", async () => {
+      mockRunAgent.mockRejectedValueOnce(new Error("agent crashed"));
+
+      const { GET } = await import(VOICE_BRIEF_ROUTE);
+      await expect(GET(authedRequest())).rejects.toThrow("agent crashed");
     });
 
     it("still returns 200 if persistBrief throws (best-effort)", async () => {

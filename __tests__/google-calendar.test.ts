@@ -346,6 +346,12 @@ describe("google-calendar.ts", () => {
 });
 
 describe("google-calendar tails", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
   it("a busy window removes only the overlapping slots", async () => {
     // Fixed weekday: 2026-06-15 Monday, Athens summer UTC+3 → 09:00 = 06:00Z
     vi.useFakeTimers();
