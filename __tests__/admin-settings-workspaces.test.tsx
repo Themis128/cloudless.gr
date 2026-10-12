@@ -203,4 +203,62 @@ describe("admin/workspaces", () => {
     const c2 = await renderPage(<WorkspacesPage />);
     expect(c2.textContent).toContain("HTTP 500");
   });
+
+  it("surfaces create/update/delete API errors", async () => {
+    routes[ROUTE] = (_u: string, init?: RequestInit) =>
+      init?.method === "POST" || init?.method === "PATCH"
+        ? okJson({ error: "slug taken" }, 409)
+        : init?.method === "DELETE"
+          ? Promise.reject(new Error("net down"))
+          : okJson({ workspaces: [ws] });
+    routes["/api/admin/postiz/groups"] = okJson({}, 503);
+    const c = await renderPage(<WorkspacesPage />);
+    await flush();
+    expect(c.textContent).toContain("Main");
+
+    // create → 409 → formError
+    fireEvent.change(c.querySelector("#ws-name")!, { target: { value: "Dup" } });
+    fireEvent.submit(c.querySelector("form")!);
+    await flush();
+    expect(c.textContent).toContain("slug taken");
+
+    // edit → PATCH 409 → error banner (edit mode stays open)
+    await click(screen.getAllByText("Edit").find((e) => e.tagName === "BUTTON")!);
+    await click(screen.getByText("Save"));
+    await flush();
+    expect(c.textContent).toContain("slug taken");
+    await click(screen.getByText("Cancel"));
+
+    // delete → network throw → error banner
+    await click(screen.getAllByText("Delete").find((e) => e.tagName === "BUTTON")!);
+    await flush();
+    expect(c.textContent).toContain("Failed to delete workspace");
+  });
+
+  it("edit form drives every field through PATCH", async () => {
+    routes[ROUTE] = (_u: string, init?: RequestInit) =>
+      init ? okJson({}) : okJson({ workspaces: [ws] });
+    routes["/api/admin/postiz/groups"] = okJson({
+      groups: [{ id: "g1", name: "Acme Group" }],
+    });
+    const c = await renderPage(<WorkspacesPage />);
+    await flush();
+    await click(screen.getAllByText("Edit").find((e) => e.tagName === "BUTTON")!);
+
+    const inputs = Array.from(c.querySelectorAll("input, textarea"));
+    const val = (v: string) =>
+      inputs.find((i) => (i as HTMLInputElement).value === v) as
+        | HTMLInputElement
+        | undefined;
+    fireEvent.change(val("Main")!, { target: { value: "Renamed Co" } });
+    fireEvent.change(val("prod")!, { target: { value: "staging" } });
+    fireEvent.change(val("acme")!, { target: { value: "acme-2" } });
+    const sel = c.querySelector("select");
+    if (sel) fireEvent.change(sel, { target: { value: "g1" } });
+    await click(screen.getByText("Save"));
+    await flush();
+    const patch = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "PATCH");
+    const body = JSON.parse(String(patch![1].body));
+    expect(body).toMatchObject({ id: "w1", name: "Renamed Co", notionTag: "acme-2" });
+  });
 });
