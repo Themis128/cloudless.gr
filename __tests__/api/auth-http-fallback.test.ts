@@ -199,3 +199,71 @@ describe("confirm route HTTP D1 fallback", () => {
     expect((await res.json()).ok).toBe(true);
   });
 });
+
+describe("register route tails", () => {
+  it("HTTP stmt returns its non-ok fallbacks for all/run", async () => {
+    fetchMock.mockImplementation(async () =>
+      new Response(JSON.stringify({ success: false }), { status: 500 })
+    );
+    const { POST } = await import("@/app/api/auth/register/route");
+    createUser.mockImplementation(async (db: unknown) => {
+      const d = db as D1;
+      const stmt = d.prepare("SELECT 1") as Stmt;
+      const all = await stmt.bind().all();
+      expect(all).toEqual({ results: [], success: false });
+      const run = await stmt.bind().run();
+      expect(run).toEqual({ success: false, meta: { changes: 0 } });
+      return { user: { id: "u1", email: "n@b.c" } };
+    });
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "n@b.c", password: "Str0ng!Pass" }),
+      })
+    );
+    expect(res.status).not.toBe(503);
+  });
+
+  it("warns when the session secret fails validation", async () => {
+    validateSessionSecret.mockReturnValue({ valid: false, error: "too short" });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/auth/register/route");
+    createUser.mockResolvedValue({ user: { id: "u1", email: "n@b.c" } });
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "n@b.c", password: "Str0ng!Pass" }),
+      })
+    );
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("SESSION_SECRET validation"),
+      "too short"
+    );
+    warn.mockRestore();
+    expect(res.status).not.toBe(503);
+  });
+
+  it("still succeeds when the activation email send rejects", async () => {
+    const emailMod = await import("@/lib/email");
+    vi.mocked(emailMod.sendActivationEmail).mockRejectedValueOnce(new Error("smtp down"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/auth/register/route");
+    createUser.mockResolvedValue({ user: { id: "u1", email: "n@b.c" } });
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "n@b.c", password: "Str0ng!Pass" }),
+      })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("activation email failed"),
+      expect.any(Error)
+    );
+    err.mockRestore();
+    expect(res.status).not.toBe(503);
+  });
+});

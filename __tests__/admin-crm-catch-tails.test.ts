@@ -15,6 +15,11 @@ vi.mock("@/lib/integrations", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/integrations")>();
   return { ...mod, isConfiguredAsync: vi.fn(async () => true) };
 });
+const getContact360Mock = vi.fn();
+vi.mock("@/lib/crm-contact-360", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/crm-contact-360")>();
+  return { ...mod, getContact360: getContact360Mock };
+});
 vi.mock("@/lib/espocrm", () => ({
   isEspoCRMConfigured: isConfiguredMock,
   listCompanies: listCompaniesMock,
@@ -97,4 +102,30 @@ describe("admin crm routes — error mapping tails", () => {
       spy.mockRestore();
     });
   }
+});
+
+describe("GET /api/admin/crm/contacts/[id] — catch tails", () => {
+  const ESP = { params: Promise.resolve({ id: "68f1a2b3c4d5e6f7" }) };
+
+  it("IntegrationNotConfiguredError maps via mapIntegrationError", async () => {
+    getContact360Mock.mockRejectedValue(new IntegrationNotConfiguredError(["ESPOCRM_URL"]));
+    const { GET } = await import("@/app/api/admin/crm/contacts/[id]/route");
+    const res = await GET(
+      new NextRequest("http://localhost:4500/api/admin/crm/contacts/68f1a2b3c4d5e6f7"),
+      ESP
+    );
+    expect(res.status).toBe(503);
+    expect((await res.json()).reason).toBe("integration_not_configured");
+  });
+
+  it("generic error → 500", async () => {
+    getContact360Mock.mockRejectedValue(new Error("espo down"));
+    const { GET } = await import("@/app/api/admin/crm/contacts/[id]/route");
+    const res = await GET(
+      new NextRequest("http://localhost:4500/api/admin/crm/contacts/68f1a2b3c4d5e6f7"),
+      ESP
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to fetch contact.");
+  });
 });

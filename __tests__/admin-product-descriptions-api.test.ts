@@ -300,3 +300,85 @@ describe("product-descriptions route tails", () => {
     expect((await res2.json()).applied).toBe(1);
   });
 });
+
+describe("POST /api/admin/ai/product-descriptions — tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    delete (process.env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY;
+    delete (process.env as { AI?: unknown }).AI;
+  });
+
+  it("a Workers AI result without `response` falls through to Gemini", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([sampleProduct]);
+    (process.env as { AI?: unknown }).AI = {
+      run: vi.fn().mockResolvedValue({}),
+    };
+    process.env.GEMINI_API_KEY = "k";
+    mockCallGemini.mockResolvedValue("gemini fallback copy");
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await POST(req("POST", { productIds: ["srv-cloud"] }));
+    expect((await res.json()).results[0].description).toBe("gemini fallback copy");
+  });
+
+  it("no provider configured → per-product error entry", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([sampleProduct]);
+    const { POST } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await POST(req("POST", { productIds: ["srv-cloud"] }));
+    const data = await res.json();
+    expect(data.errors).toHaveLength(1);
+    expect(data.errors[0].error).toContain("GEMINI_API_KEY");
+  });
+});
+
+describe("PUT /api/admin/ai/product-descriptions — stripe tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("warns (and still applies) when the stripe import rejects", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([{ ...sampleProduct }]);
+    mockGetStripe.mockRejectedValue(new Error("stripe sdk down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      req("PUT", { descriptions: [{ id: "srv-cloud", description: "new" }] })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(res.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Stripe metadata update failed")
+    );
+    warn.mockRestore();
+  });
+
+  it("warns per product when stripe.products.update rejects", async () => {
+    adminOk();
+    mockGetProducts.mockResolvedValue([{ ...sampleProduct }]);
+    mockProductsUpdate.mockRejectedValue(new Error("rate limited"));
+    mockGetStripe.mockResolvedValue({ products: { update: mockProductsUpdate } });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { PUT } = await import(
+      "@/app/api/admin/ai/product-descriptions/route"
+    );
+    const res = await PUT(
+      req("PUT", { descriptions: [{ id: "srv-cloud", description: "new" }] })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(res.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Stripe product update failed")
+    );
+    warn.mockRestore();
+  });
+});

@@ -217,3 +217,37 @@ describe("auth D1 routes", () => {
     });
   });
 });
+
+describe("reset-password tails", () => {
+  beforeEach(() => {
+    hoisted.db = null;
+  });
+
+  it("HTTP-D1 all() non-ok → user lookup returns empty → silent ok", async () => {
+    vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "acct");
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "tok");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => d1Body([], false))
+    );
+    const res = await resetPost(req(RESET, { email: "gone@x.gr" }));
+    expect(res.status).toBe(200);
+  });
+
+  it("HTTP-D1 run() non-ok → token write reports success:false, still 200", async () => {
+    vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "acct");
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "tok");
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls++;
+        // first(): SELECT user → row; run(): UPDATE preferences → failure
+        return calls === 1 ? d1Body([{ id: "u1" }]) : d1Body([], false);
+      })
+    );
+    const res = await resetPost(req(RESET, { email: "there@x.gr" }));
+    expect(res.status).toBe(200);
+    expect(calls).toBe(2);
+  });
+});

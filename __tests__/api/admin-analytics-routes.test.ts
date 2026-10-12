@@ -23,6 +23,7 @@ const libs = vi.hoisted(() => ({
   aggregateAllWorkspaceAnalytics: vi.fn(),
   aggregateWorkspaceAnalytics: vi.fn(),
   getDataLakeBucketFromEnv: vi.fn(),
+  getConfig: vi.fn(),
 }));
 vi.mock("@/lib/datalake-r2", () => ({
   getDatalakeDashboard: libs.getDatalakeDashboard,
@@ -48,6 +49,7 @@ vi.mock("@/lib/workspace-analytics", () => ({
 vi.mock("@/lib/r2-client", () => ({
   getDataLakeBucketFromEnv: libs.getDataLakeBucketFromEnv,
 }));
+vi.mock("@/lib/ssm-config", () => ({ getConfig: libs.getConfig }));
 
 import { GET as datalakeGet } from "@/app/api/admin/analytics/datalake/route";
 import { GET as engineGet } from "@/app/api/admin/analytics/engine/route";
@@ -201,5 +203,28 @@ describe("lake catalog + parquet", () => {
     expect(new Uint8Array(await res.arrayBuffer())).toEqual(
       new Uint8Array([1, 2, 3])
     );
+  });
+});
+
+import { GET as summaryGet } from "@/app/api/admin/analytics/route";
+import { IntegrationNotConfiguredError } from "@/lib/integrations";
+
+describe("GET /api/admin/analytics — consolidated catch tails", () => {
+  it("maps IntegrationNotConfiguredError via mapIntegrationError", async () => {
+    libs.getConfig.mockRejectedValue(new IntegrationNotConfiguredError(["STRIPE_SECRET_KEY"]));
+    const res = await summaryGet(
+      new NextRequest("http://localhost/api/admin/analytics")
+    );
+    expect(res.status).toBe(503);
+    expect((await res.json()).reason).toBe("integration_not_configured");
+  });
+
+  it("generic error → 500", async () => {
+    libs.getConfig.mockRejectedValue(new Error("ssm down"));
+    const res = await summaryGet(
+      new NextRequest("http://localhost/api/admin/analytics")
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to fetch analytics data");
   });
 });

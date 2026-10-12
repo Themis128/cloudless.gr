@@ -256,3 +256,36 @@ describe("POST /api/pi-proxy", () => {
     expect((await post({ target: "omv" })).status).toBe(500);
   });
 });
+
+describe("GET /api/admin/appflowy/status — catch tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiAuth.ok = true;
+    appflowy.isAppFlowyConfigured.mockResolvedValue(true);
+  });
+
+  it("AppFlowyNotConfiguredError → 200 unauthenticated payload", async () => {
+    const { AppFlowyNotConfiguredError } = await import("@/lib/appflowy");
+    // resolveBotName swallows the first call's failure — the workspace listing
+    // inside the outer try must be the one that throws.
+    appflowy.listAllWorkspaces
+      .mockResolvedValueOnce([{ workspace_id: "ws1", workspace_name: "Cloudless" }])
+      .mockRejectedValue(new AppFlowyNotConfiguredError());
+    const res = await appflowyStatus(new NextRequest(STATUS));
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.authenticated).toBe(false);
+    expect(j.databases).toEqual([]);
+  });
+
+  it("generic error → 200 error payload", async () => {
+    appflowy.listAllWorkspaces
+      .mockResolvedValueOnce([{ workspace_id: "ws1", workspace_name: "Cloudless" }])
+      .mockRejectedValue(new Error("appflowy unreachable"));
+    const res = await appflowyStatus(new NextRequest(STATUS));
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.authenticated).toBe(false);
+    expect(j.error).toBe("appflowy unreachable");
+  });
+});
