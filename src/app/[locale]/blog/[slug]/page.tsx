@@ -7,7 +7,7 @@ import { posts as staticPosts, formatDate } from "@/lib/blog";
 import { getBlogPostBySlug, getBlogPosts } from "@/lib/blog-source";
 import { trackEvent } from "@/lib/appflowy-analytics";
 import JsonLd from "@/components/JsonLd";
-import { getBlogPostSchema, getBreadcrumbSchema } from "@/lib/structured-data";
+import { getBlogPostSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import React from "react";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
@@ -143,6 +143,7 @@ export default async function BlogPostPage({ params }: Props) {
           category: post.category,
         })}
       />
+      {post.faqs && post.faqs.length > 0 && <JsonLd data={getFAQSchema(post.faqs)} />}
       <JsonLd
         data={getBreadcrumbSchema([
           { name: "Home", url: "https://cloudless.gr" },
@@ -204,6 +205,22 @@ export default async function BlogPostPage({ params }: Props) {
               );
             })}
           </div>
+
+          {post.faqs && post.faqs.length > 0 && (
+            <div className="mt-12">
+              <h2 className="font-heading mb-4 text-xl font-bold text-white md:text-2xl">
+                Frequently asked questions
+              </h2>
+              <div className="space-y-6">
+                {post.faqs.map((faq, i) => (
+                  <div key={i}>
+                    <h3 className="font-semibold text-white">{faq.question}</h3>
+                    <p className="mt-2 leading-relaxed text-slate-300">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Bottom CTA */}
           <div className="neon-border bg-void-light/50 mt-12 rounded-xl p-8 text-center">
