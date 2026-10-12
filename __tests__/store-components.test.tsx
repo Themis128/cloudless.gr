@@ -729,3 +729,79 @@ describe("StoreGrid tails", () => {
     expect(names).toEqual(sorted);
   });
 });
+
+describe("CartSlideOver — checkout tails", () => {
+  it("blocks checkout for a mixed subscription + one-time cart", async () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockRecurringProduct} />
+        <AddToCartButton product={mockDigitalProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Subscribe"));
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() =>
+      expect(
+        view.getByText(/can't be purchased together/i)
+      ).toBeTruthy()
+    );
+  });
+
+  it("surfaces the API error message when checkout fails", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "card declined upstream" }), { status: 400 })
+      );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("card declined upstream")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
+
+  it("shows the generic error when checkout throws", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("offline"));
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() =>
+      expect(view.getByText(/Checkout failed\. Please try again\./)).toBeTruthy()
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("decrements quantity and removes the item at zero", () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockDigitalProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("+"));
+    expect(view.getByText("Cart (2)")).toBeTruthy();
+    fireEvent.click(view.getByText("-"));
+    expect(view.getByText("Cart (1)")).toBeTruthy();
+    fireEvent.click(view.getByText("-"));
+    expect(view.getByText("Your cart is empty")).toBeTruthy();
+  });
+});

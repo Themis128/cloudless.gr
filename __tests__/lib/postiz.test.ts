@@ -14,6 +14,9 @@ import {
   deletePost,
   schedulePost,
   withSocialUtm,
+  createPostsBulk,
+  listGroups,
+  isApiKeyValid,
 } from "@/lib/postiz";
 
 describe("PostizNotConfiguredError", () => {
@@ -171,5 +174,64 @@ describe("schedulePost settings", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("postiz tails", () => {
+  const configured = () => {
+    mockGetCfg.mockResolvedValueOnce({
+      POSTIZ_API_URL: "https://postiz.example",
+      POSTIZ_API_KEY: "pk-test",
+    });
+  };
+
+  it("throws PostizApiError with content-type detail on malformed JSON", async () => {
+    configured();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("not-json", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listGroups()).rejects.toThrow(PostizApiError);
+  });
+
+  it("listGroups returns [] on a 404 (older Postiz builds lack /groups)", async () => {
+    configured();
+    const fetchMock = vi.fn().mockResolvedValue(new Response("nf", { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listGroups()).resolves.toEqual([]);
+  });
+
+  it("isApiKeyValid reports connected:false on a 404 probe", async () => {
+    configured();
+    const fetchMock = vi.fn().mockResolvedValue(new Response("nf", { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(isApiKeyValid()).resolves.toEqual({ connected: false });
+  });
+
+  it("createPostsBulk captures a generic (non-PostizApiError) failure per post", async () => {
+    configured();
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("socket hang up"));
+    vi.stubGlobal("fetch", fetchMock);
+    const [result] = await createPostsBulk([
+      {
+        date: "2026-01-01T00:00:00Z",
+        type: "schedule",
+        shortLink: false,
+        tags: [],
+        posts: [
+          {
+            integration: { id: "i1" },
+            value: [{ content: "hi", image: [] }],
+            settings: {},
+          },
+        ],
+      },
+    ] as never[]);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("socket hang up");
+    expect(result.status).toBeUndefined();
   });
 });

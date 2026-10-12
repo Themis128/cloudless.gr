@@ -22,6 +22,7 @@ vi.mock("@/lib/socialauto-analytics", () => ({
 }));
 
 import PageViewBeacon from "@/components/analytics/PageViewBeacon";
+import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 
 describe("PageViewBeacon", () => {
@@ -148,5 +149,82 @@ describe("TypingText tails", () => {
       vi.advanceTimersByTime(500);
     });
     expect(el.textContent).not.toContain("a");
+  });
+});
+
+describe("ScrollReveal tails", () => {
+  const ioCbs: Array<{
+    cb: IntersectionObserverCallback;
+    instance: { observe: (el: Element) => void; unobserve: (el: Element) => void };
+  }> = [];
+  const observed: Element[] = [];
+
+  beforeEach(() => {
+    // sharedObserver is a module singleton — the first render captures the
+    // IntersectionObserver once, so keep ioCbs populated across tests.
+    observed.length = 0;
+    class FakeIO {
+      observe = (el: Element) => observed.push(el);
+      unobserve = (el: Element) => {
+        const i = observed.indexOf(el);
+        if (i >= 0) observed.splice(i, 1);
+      };
+      disconnect = () => {};
+      constructor(cb: IntersectionObserverCallback) {
+        ioCbs.push({ cb, instance: this as never });
+      }
+    }
+    vi.stubGlobal("IntersectionObserver", FakeIO);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    cleanup();
+  });
+
+  const fireEntry = (el: Element, cb?: IntersectionObserverCallback) => {
+    const entry = { isIntersecting: true, target: el } as IntersectionObserverEntry;
+    const c = cb ?? ioCbs[0]?.cb;
+    c?.([entry], ioCbs[0]?.instance as unknown as IntersectionObserver);
+  };
+
+  it("reveals immediately when intersecting with no delay", () => {
+    const { container } = render(
+      <ScrollReveal>
+        <div>content</div>
+      </ScrollReveal>
+    );
+    const el = container.firstChild as HTMLElement;
+    expect(observed).toContain(el);
+    act(() => fireEntry(el));
+    expect(el.classList.contains("reveal-visible")).toBe(true);
+  });
+
+  it("delays the reveal by the data attribute delay", () => {
+    const { container } = render(
+      <ScrollReveal delay={120}>
+        <div>content</div>
+      </ScrollReveal>
+    );
+    const el = container.firstChild as HTMLElement;
+    act(() => fireEntry(el));
+    expect(el.classList.contains("reveal-visible")).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+    expect(el.classList.contains("reveal-visible")).toBe(true);
+  });
+
+  it("reveals immediately when IntersectionObserver is unavailable", () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    const { container } = render(
+      <ScrollReveal>
+        <div>content</div>
+      </ScrollReveal>
+    );
+    const el = container.firstChild as HTMLElement;
+    expect(el.classList.contains("reveal-visible")).toBe(true);
   });
 });

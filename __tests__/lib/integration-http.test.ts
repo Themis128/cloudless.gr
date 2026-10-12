@@ -137,3 +137,69 @@ describe("integrationFetchWithMeta", () => {
     expect(result.data).toBeUndefined();
   });
 });
+
+describe("integrationFetch tails", () => {
+  const resp429 = (retryAfter: string | null): Response =>
+    ({
+      ok: false,
+      status: 429,
+      headers: { get: (h: string) => (h === "Retry-After" ? retryAfter : null) },
+      json: async () => null,
+      text: async () => "rate limited",
+    }) as unknown as Response;
+
+  it("honors a numeric Retry-After on 429 then succeeds", async () => {
+    mockFetch
+      .mockResolvedValueOnce(resp429("0"))
+      .mockResolvedValueOnce(okResponse({ done: true }));
+    const result = await integrationFetchWithMeta("svc", "https://x", undefined, {
+      maxRetries: 1,
+      backoffMs: 1,
+    });
+    expect(result.data).toEqual({ done: true });
+    expect(result.retries).toBe(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses an HTTP-date Retry-After header", async () => {
+    const future = new Date(Date.now() - 60_000).toUTCString();
+    mockFetch
+      .mockResolvedValueOnce(resp429(future))
+      .mockResolvedValueOnce(okResponse({ ok: 1 }));
+    const result = await integrationFetch("svc", "https://x", undefined, {
+      maxRetries: 1,
+      backoffMs: 1,
+    });
+    expect(result).toEqual({ ok: 1 });
+  });
+
+  it("ignores an unparseable Retry-After and uses exponential backoff", async () => {
+    mockFetch
+      .mockResolvedValueOnce(resp429("not-a-date"))
+      .mockResolvedValueOnce(okResponse({ ok: 2 }));
+    const result = await integrationFetch("svc", "https://x", undefined, {
+      maxRetries: 1,
+      backoffMs: 1,
+    });
+    expect(result).toEqual({ ok: 2 });
+  });
+
+  it("passthroughErrors returns null data when the error body is not JSON", async () => {
+    const broken = {
+      ok: false,
+      status: 502,
+      headers: { get: () => null },
+      json: async () => {
+        throw new Error("html body");
+      },
+      text: async () => "<html>bad gateway</html>",
+    } as unknown as Response;
+    mockFetch.mockResolvedValueOnce(broken);
+    const result = await integrationFetchWithMeta<{ e: string }>("svc", "https://x", undefined, {
+      maxRetries: 0,
+      passthroughErrors: true,
+    });
+    expect(result.data).toBeNull();
+    expect(result.status).toBe(502);
+  });
+});
