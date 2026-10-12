@@ -199,3 +199,134 @@ describe("POST /api/contact", () => {
     expect(mockSendEmailResend).not.toHaveBeenCalled();
   });
 });
+
+// ── tail coverage: cookies, validation edges, email-fail, sentry, GET ──
+vi.mock("@/lib/email", () => ({
+  sendEmail: vi.fn(async () => {}),
+  sendContactAcknowledgment: vi.fn(async () => {}),
+}));
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  withScope: vi.fn((cb: (s: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
+
+import { sendEmail } from "@/lib/email";
+import { getConfig } from "@/lib/ssm-config-d1";
+
+const validBody = { name: "Pat", email: "pat@x.dev", message: "hello there" };
+const post = (body: unknown, headers: Record<string, string> = {}) =>
+  new Request("http://localhost/api/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+
+describe("POST /api/contact — tail branches", () => {
+  let POST2: (request: Request) => Promise<Response>;
+  beforeEach(async () => {
+    const mod = await import("@/app/api/contact/route");
+    POST2 = mod.POST;
+  });
+
+  it("GET returns 405", async () => {
+    const { GET } = await import("@/app/api/contact/route");
+    expect(GET().status).toBe(405);
+  });
+
+  it("400 on invalid email format", async () => {
+    const res = await POST2(post({ ...validBody, email: "not-an-email" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Invalid email");
+  });
+
+  it("400 on whitespace-only message", async () => {
+    const res = await POST2(post({ ...validBody, message: "   " }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("whitespace");
+  });
+
+  it("400 on empty name", async () => {
+    const res = await POST2(post({ ...validBody, name: "  " }));
+    expect(res.status).toBe(400);
+  });
+
+  it("reads Meta click ids when marketing consent is set", async () => {
+    const cookie =
+      "cookieConsent=" + encodeURIComponent(JSON.stringify({ marketing: true })) +
+      "; _fbp=fb.1.x; _fbc=fb.1.y";
+    const res = await POST2(post(validBody, { cookie }));
+    expect(res.status).toBe(200);
+  });
+
+  it("handles malformed consent cookie", async () => {
+    const res = await POST2(post(validBody, { cookie: "cookieConsent=%7Bbad" }));
+    expect(res.status).toBe(200);
+  });
+
+  it("handles marketing:false consent", async () => {
+    const cookie = "cookieConsent=" + encodeURIComponent(JSON.stringify({ marketing: false }));
+    const res = await POST2(post(validBody, { cookie }));
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("sendAdminEmail + catch branches", () => {
+  let POST2: (request: Request) => Promise<Response>;
+  beforeEach(async () => {
+    const mod = await import("@/app/api/contact/route");
+    POST2 = mod.POST;
+  });
+
+  it("sends the admin email in production env", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    await POST2(post(validBody));
+    await vi.waitFor(() => expect(vi.mocked(sendEmail)).toHaveBeenCalled());
+    vi.unstubAllEnvs();
+  });
+
+  it("logs the 503 response when email is not configured", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("resend not configured"));
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await POST2(post(validBody));
+    expect(res.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith("[Contact] Admin email returned:", 503)
+    );
+    spy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("rethrows generic email errors into the rejected-task log", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("smtp exploded"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST2(post(validBody));
+    expect(res.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("[Contact] Background task"),
+        expect.any(Error)
+      )
+    );
+    spy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("500 + Sentry when the synchronous flow throws", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://dsn";
+    vi.mocked(getConfig).mockRejectedValueOnce(new Error("d1 gone"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST2(post(validBody));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toContain("Failed to process");
+    await vi.waitFor(async () => {
+      const sentry = await import("@sentry/nextjs");
+      expect(vi.mocked(sentry.captureException)).toHaveBeenCalled();
+    });
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    spy.mockRestore();
+  });
+});
