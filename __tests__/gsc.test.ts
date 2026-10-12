@@ -689,3 +689,60 @@ describe("getTrafficByCountry", () => {
     expect(body.rowLimit).toBe(5);
   });
 });
+
+describe("error catches", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("getProductPageMetrics swallows a thrown fetch and returns []", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockRejectedValueOnce(new Error("net down"))
+    );
+    const { getProductPageMetrics } = await import("@/lib/gsc");
+    expect(await getProductPageMetrics()).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "[GSC] getProductPageMetrics error:",
+      expect.any(Error)
+    );
+    spy.mockRestore();
+  });
+
+  it("getQueryPageMapping swallows a thrown fetch and returns []", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockRejectedValueOnce(new Error("net down"))
+    );
+    const { getQueryPageMapping } = await import("@/lib/gsc");
+    expect(await getQueryPageMapping()).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "[GSC] getQueryPageMapping error:",
+      expect.any(Error)
+    );
+    spy.mockRestore();
+  });
+
+  it("getSearchIntentBreakdown swallows a thrown fetch and returns empty buckets", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockRejectedValueOnce(new Error("net down"))
+    );
+    const { getSearchIntentBreakdown } = await import("@/lib/gsc");
+    expect(await getSearchIntentBreakdown()).toEqual({
+      brand: [],
+      product: [],
+      informational: [],
+      navigational: [],
+    });
+    expect(spy).toHaveBeenCalledWith(
+      "[GSC] getSearchIntentBreakdown error:",
+      expect.any(Error)
+    );
+    spy.mockRestore();
+  });
+});

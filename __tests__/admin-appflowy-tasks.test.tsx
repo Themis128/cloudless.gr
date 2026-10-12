@@ -246,3 +246,73 @@ describe("appflowy tasks — populated interactions", () => {
     expect(c3.textContent).toContain("HTTP 500");
   });
 });
+
+describe("appflowy tasks — tails", () => {
+  beforeEach(() => {
+    routes = { "/api/admin/appflowy/tasks": { tasks: TASKS } };
+    fetchWithAuthMock.mockClear();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("kanban toggle button switches back from list view", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("≡ List"));
+    expect(c.textContent).toContain("Fix login");
+    await click(screen.getByText("☰ Board"));
+    // kanban columns render again
+    expect(c.textContent).toContain("In Progress");
+  });
+
+  it("list-row status select PATCHes the task and logs failures", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("≡ List"));
+
+    routes["/api/admin/appflowy/tasks"] = (init?: RequestInit) =>
+      init?.method === "PATCH" ? okJson({}) : okJson({ tasks: TASKS });
+    const row = [...c.querySelectorAll("select")].find(
+      (s) => (s as HTMLSelectElement).value === "In Progress"
+    )!;
+    fireEvent.change(row, { target: { value: "Done" } });
+    await flush();
+    const patches = fetchWithAuthMock.mock.calls.filter(
+      ([, i]) => i?.method === "PATCH" && String(i.body).includes('"Done"')
+    );
+    expect(patches.length).toBe(1);
+
+    // failure path → console.error, task keeps its state
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    routes["/api/admin/appflowy/tasks"] = (init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? new Response("bad", { status: 500 })
+        : okJson({ tasks: TASKS });
+    const row2 = [...c.querySelectorAll("select")].find(
+      (s) => (s as HTMLSelectElement).value === "Backlog"
+    )!;
+    fireEvent.change(row2, { target: { value: "Done" } });
+    await flush();
+    expect(spy).toHaveBeenCalledWith("Failed to update task:", expect.any(Error));
+    spy.mockRestore();
+  });
+
+  it("bulk update failure logs and keeps the selection usable", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("≡ List"));
+    fireEvent.click(c.querySelectorAll("input[type='checkbox']")[0]);
+    await flush();
+    expect(c.textContent).toContain("1 selected");
+
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    routes["/api/admin/appflowy/tasks"] = (init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? Promise.reject(new Error("appflowy offline"))
+        : okJson({ tasks: TASKS });
+    const bulkBar = screen.getByText("Update All").parentElement!;
+    fireEvent.change(bulkBar.querySelector("select")!, { target: { value: "Done" } });
+    await click(screen.getByText("Update All"));
+    expect(spy).toHaveBeenCalledWith("Bulk update failed:", expect.any(Error));
+    spy.mockRestore();
+  });
+});
