@@ -123,6 +123,50 @@ describe("admin notifications", () => {
     const { container } = render(<NotificationsPage />);
     await waitFor(() => expect(container.textContent).toMatch(/down|error|failed/i));
   });
+
+  it("shows the not-configured message on 503", async () => {
+    fetchWithAuthMock.mockResolvedValue(new Response("x", { status: 503 }));
+    const { container } = render(<NotificationsPage />);
+    await waitFor(() =>
+      expect(container.textContent).toContain("not configured")
+    );
+  });
+
+  it("marks a single notification read and switches the analytics window", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).includes("analytics")) return okJson(analytics);
+      if (init?.method === "PATCH") return okJson({ ok: true });
+      return okJson({
+        notifications: [
+          notif({ type: "warning" }),
+          notif({ id: "n2", type: "error", read: true }),
+        ],
+      });
+    });
+    const { container, getByText } = render(<NotificationsPage />);
+    await waitFor(() => expect(container.textContent).toContain("Deploy finished"));
+
+    // per-notification mark-read PATCH (unread item renders the button)
+    await act(async () => fireEvent.click(getByText("mark read")));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(
+          ([, i]) =>
+            (i as RequestInit)?.method === "PATCH" &&
+            String((i as RequestInit).body).includes('"id"')
+        )
+      ).toBe(true)
+    );
+
+    // 30d window pill rescopes the list+analytics refetch (new `since` param)
+    fetchWithAuthMock.mockClear();
+    await act(async () => fireEvent.click(getByText("30d")));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("since="))
+      ).toBe(true)
+    );
+  });
 });
 
 // ── users ───────────────────────────────────────────────────────────────────
