@@ -146,6 +146,82 @@ describe("GET/POST /api/admin/delivery/projects", () => {
   });
 });
 
+describe("GET/POST /api/admin/delivery/projects tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("GET 500s when listProjects throws", async () => {
+    mockListProjects.mockRejectedValue(new Error("d1 down"));
+    const { GET } = await import("@/app/api/admin/delivery/projects/route");
+    const res = await GET(adminReq("http://localhost/api/admin/delivery/projects"));
+    expect(res.status).toBe(500);
+  });
+
+  it("POST 400s on invalid JSON body", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        headers: { authorization: "Bearer test-admin-session", "content-type": "application/json" },
+        body: "{nope",
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("POST create validates name and clientEmail", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    let res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "create", clientEmail: "a@b.com" }),
+      })
+    );
+    expect(res.status).toBe(400);
+
+    res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "create", name: "P", clientEmail: "not-an-email" }),
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("POST create 503s when the project insert fails", async () => {
+    mockCreateProject.mockResolvedValue(null);
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "create", name: "Retainer" }),
+      })
+    );
+    expect(res.status).toBe(503);
+  });
+
+  it("POST status 400s on bad id/status and 404s when update fails", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    let res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "set_status", id: "bad id!", status: "active" }),
+      })
+    );
+    expect(res.status).toBe(400);
+
+    mockUpdateStatus.mockResolvedValue(false);
+    res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "set_status", id: "ap_1", status: "done" }),
+      })
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("GET/POST /api/admin/delivery/projects/[id]/time", () => {
   beforeEach(() => {
     vi.clearAllMocks();

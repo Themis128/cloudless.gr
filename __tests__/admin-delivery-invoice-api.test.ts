@@ -197,4 +197,86 @@ describe("POST /api/admin/delivery/projects/[id]/invoice", () => {
       expect.objectContaining({ customerId: "cus_existing" })
     );
   });
+
+  it("rejects malformed project ids", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/bad-id/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "bad-id" }) }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("503s when AUTH_DB unbound and 404s when the project is missing", async () => {
+    mockGetProject.mockResolvedValueOnce({ bound: false, project: null });
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+    let res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(503);
+
+    mockGetProject.mockResolvedValueOnce({ bound: true, project: null });
+    res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("400s when there are no unbilled entries or the amount is zero", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+
+    mockListUnbilled.mockResolvedValueOnce({ bound: true, entries: [] });
+    let res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("unbilled");
+
+    mockListUnbilled.mockResolvedValueOnce({
+      bound: true,
+      entries: [
+        {
+          id: "te_tiny",
+          projectId: "ap_abc",
+          userId: null,
+          workDate: "2026-08-14",
+          minutes: 0,
+          billable: true,
+          description: "x",
+          stripeInvoiceId: null,
+          createdAt: 1,
+        },
+      ],
+    });
+    res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("400s without client email and 500s when customer resolution fails", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+
+    mockGetProject.mockResolvedValueOnce({
+      bound: true,
+      project: { ...project, clientEmail: null },
+    });
+    let res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Client email");
+
+    mockResolveCustomer.mockResolvedValueOnce(null);
+    res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(500);
+  });
 });
