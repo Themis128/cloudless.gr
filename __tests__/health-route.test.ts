@@ -77,3 +77,41 @@ describe("GET /api/health", () => {
     expect(body.status).toBe("ok");
   });
 });
+
+describe("GET /api/health tails", () => {
+  afterEach(() => {
+    resetLocalAuthDbCache();
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+    delete process.env.AUTH_DB_USE_HTTP;
+  });
+
+  it("degraded with no bound or local db", async () => {
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+    const res = await GET();
+    const body = (await res.json()) as { status: string; dbConnected: boolean };
+    expect(body.dbConnected).toBe(false);
+    expect(body.status).toBe("degraded");
+  });
+
+  it("d1-http mode reports a diagnostic when the binding is absent", async () => {
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+    process.env.AUTH_DB_USE_HTTP = "1";
+    const res = await GET();
+    const body = (await res.json()) as { status: string; diagnostic?: string; authDb: string };
+    expect(body.authDb).toBe("d1-http");
+    expect(body.diagnostic).toContain("getAuthDbFromEnv() returned null");
+    expect(body.status).toBe("degraded");
+  });
+
+  it("db probe throw → degraded with error diagnostic", async () => {
+    (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = {
+      prepare: () => {
+        throw new Error("bind exploded");
+      },
+    };
+    const res = await GET();
+    const body = (await res.json()) as { status: string; diagnostic?: string };
+    expect(body.status).toBe("degraded");
+    expect(body.diagnostic).toContain("bind exploded");
+  });
+});
