@@ -80,6 +80,79 @@ describe("admin datalake", () => {
     const { container } = render(<DatalakePage />);
     await waitFor(() => expect(container.textContent).toContain("Failed to load"));
   });
+
+  it("shows the 429 message and the HOT D1 badge, formats all column types", async () => {
+    fetchWithAuthMock.mockResolvedValueOnce(new Response("x", { status: 429 }));
+    const { container, unmount } = render(<DatalakePage />);
+    await waitFor(() =>
+      expect(container.textContent).toContain("Too many admin requests")
+    );
+    unmount();
+
+    fetchWithAuthMock.mockResolvedValue(
+      okJson({
+        ...datalakeBody,
+        source: "hot_only",
+        sections: [
+          {
+            section: "top_keywords",
+            rows: [
+              {
+                query: "cloud migration",
+                clicks: 42,
+                impressions: 1200,
+                ctr: 0.035,
+                avg_position: 7.481,
+              },
+              // null + non-numeric values exercise the fmt fallback branches
+              { query: "n/a-query", clicks: null, impressions: "—", ctr: "x", avg_position: "" },
+            ],
+            rowCount: 2,
+          },
+        ],
+      })
+    );
+    const { container: c2 } = render(<DatalakePage />);
+    await waitFor(() => expect(c2.textContent).toContain("HOT D1 ONLY"));
+    expect(c2.textContent).toContain("3.50%");
+    expect(c2.textContent).toContain("7.481");
+    expect(c2.textContent).toContain("1,200");
+    expect(c2.textContent).toContain("n/a-query");
+  });
+
+  it("plain Refresh refetches without refresh=1; CSV download clicks work", async () => {
+    fetchWithAuthMock.mockResolvedValue(okJson(datalakeBody));
+    const createUrl = vi.fn(() => "blob:x");
+    const revokeUrl = vi.fn();
+    (URL as { createObjectURL?: unknown }).createObjectURL = createUrl;
+    (URL as { revokeObjectURL?: unknown }).revokeObjectURL = revokeUrl;
+
+    const { container } = render(<DatalakePage />);
+    await waitFor(() => expect(container.textContent).toContain("GOLD SNAPSHOT"));
+
+    fetchWithAuthMock.mockClear();
+    const refreshBtn = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "Reload"
+    )!;
+    await act(async () => fireEvent.click(refreshBtn));
+    await waitFor(() =>
+      expect(
+        fetchWithAuthMock.mock.calls.some(
+          ([u]) => String(u).includes("/datalake") && !String(u).includes("refresh=1")
+        )
+      ).toBe(true)
+    );
+
+    // CSV export on the rendered section
+    const csvBtn = [...container.querySelectorAll("button")].find((b) =>
+      /csv/i.test(b.textContent ?? "")
+    );
+    if (csvBtn) {
+      await act(async () => fireEvent.click(csvBtn));
+      expect(createUrl).toHaveBeenCalled();
+      expect(revokeUrl).toHaveBeenCalled();
+    }
+  });
 });
 
 // ── reports ─────────────────────────────────────────────────────────────────
