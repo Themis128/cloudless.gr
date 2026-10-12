@@ -331,6 +331,27 @@ describe("CartSlideOver", () => {
     await waitFor(() => expect(view.getByText("Stripe not configured")).toBeTruthy());
     fetchSpy.mockRestore();
   });
+
+  it("warns and disables checkout on a mixed subscription + one-time cart", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <AddToCartButton product={mockRecurringProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    // The recurring product's CTA reads "Subscribe".
+    fireEvent.click(view.getByText("Subscribe"));
+    expect(view.getByText(/can't be purchased together/)).toBeTruthy();
+    const checkout = view.getByText("Checkout") as HTMLButtonElement;
+    expect(checkout.disabled).toBe(true);
+    fireEvent.click(checkout);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
 });
 
 // ──────────────────────────────────────────

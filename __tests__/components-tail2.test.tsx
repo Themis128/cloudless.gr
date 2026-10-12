@@ -398,6 +398,25 @@ describe("Navbar tails", () => {
     await act(async () => fireEvent.click(admin));
     expect(container.querySelector('button[aria-expanded="true"]')).toBeNull();
   });
+
+  it("logged-out mobile drawer: free-audit/sign-in/sign-up links close the menu", async () => {
+    const prev = authState.current;
+    authState.current = { ...prev, user: null, isAdmin: false };
+    try {
+      const { container } = render(<Navbar />);
+      const menu = () => container.querySelector('[data-testid="mobile-menu"]')!;
+      for (const label of [/free audit/i, /sign in/i, /sign up/i]) {
+        await act(async () => openMobile(container));
+        const link = [...menu().querySelectorAll("a")].find((a) =>
+          label.test(a.textContent ?? "")
+        )!;
+        await act(async () => fireEvent.click(link));
+        expect(menu().hasAttribute("hidden")).toBe(true);
+      }
+    } finally {
+      authState.current = prev;
+    }
+  });
 });
 
 describe("ContactFormSection — tails", () => {

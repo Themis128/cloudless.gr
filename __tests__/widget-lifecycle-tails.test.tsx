@@ -13,6 +13,7 @@ import React from "react";
 
 import TurnstileWidget from "@/components/TurnstileWidget";
 import DeferredRender from "@/components/DeferredRender";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 type TurnstileOpts = {
   callback: (token: string) => void;
@@ -131,5 +132,78 @@ describe("DeferredRender", () => {
       vi.advanceTimersByTime(0);
     });
     expect(screen.getByTestId("real")).toBeTruthy();
+  });
+});
+
+describe("TurnstileWidget remount", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "site-key-test");
+    document.getElementById("cf-turnstile-script")?.remove();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllEnvs?.();
+    delete (window as Record<string, unknown>).turnstile;
+    document.getElementById("cf-turnstile-script")?.remove();
+  });
+
+  it("removes the prior widget before re-rendering on prop change", () => {
+    const { api, renders, removed } = fakeTurnstile();
+    (window as Record<string, unknown>).turnstile = api;
+    const { rerender } = render(<TurnstileWidget onToken={vi.fn()} />);
+    expect(renders).toHaveLength(1);
+
+    rerender(<TurnstileWidget onToken={vi.fn()} />);
+    expect(removed).toContain("w-1");
+    expect(renders).toHaveLength(2);
+  });
+});
+
+describe("PushNotificationPrompt", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sessionStorage.clear();
+    vi.stubGlobal("Notification", {
+      permission: "default",
+      requestPermission: vi.fn().mockResolvedValue("granted"),
+    });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    sessionStorage.clear();
+  });
+
+  it("reveals immediately on the second visit and enables notifications", async () => {
+    sessionStorage.setItem("cloudless-visits", "1");
+    render(<PushNotificationPrompt />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(screen.getByText("Stay updated")).toBeTruthy();
+    await act(async () => {
+      screen.getByText("Enable").click();
+    });
+    expect(screen.queryByText("Stay updated")).toBeNull();
+  });
+
+  it("polls until the cookie banner clears before revealing", () => {
+    document.documentElement.style.setProperty("--cookie-banner-h", "64px");
+    sessionStorage.setItem("cloudless-visits", "1");
+    render(<PushNotificationPrompt />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(screen.queryByText("Stay updated")).toBeNull();
+
+    document.documentElement.style.removeProperty("--cookie-banner-h");
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(screen.getByText("Stay updated")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(120_000);
+    });
   });
 });

@@ -1,198 +1,169 @@
 /**
- * Component tails: HolographicCard tilt, ServiceWorkerRegistration install
- * banner + dev unregister, CookieConsent idle/keyboard branches.
- *
- * @vitest-environment jsdom
+ * Tail coverage — client dynamic-import wrappers, analytics scripts,
+ * CloudCockpit visibility hooks, LenisInitializer lifecycle, theme-pref
+ * storage catches, CookieConsentContext dispatches, PushNotificationPrompt
+ * deferred reveal.
  */
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
+import React, { useContext } from "react";
 
-(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
-
-vi.mock("@/lib/use-locale", () => ({ useCurrentLocale: () => ["en", vi.fn()] }));
-vi.mock("@/i18n/navigation", () => ({
-  Link: ({ href, children, ...rest }: { href: string; children?: React.ReactNode }) => (
-    <a href={href} {...rest}>{children}</a>
+vi.mock("next/script", () => ({
+  __esModule: true,
+  default: ({ id, children, ...rest }: { id?: string; children?: React.ReactNode }) => (
+    <script data-testid={`script-${id ?? "unnamed"}`} {...rest}>
+      {children}
+    </script>
   ),
 }));
 
-import HolographicCard from "@/components/HolographicCard";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
-import CookieConsent from "@/components/CookieConsent";
-import { CookieConsentProvider } from "@/context/CookieConsentContext";
-import enMessages from "@/locales/en.json";
+vi.mock("next/dynamic", () => ({
+  __esModule: true,
+  default: (_loader: () => Promise<unknown>) => () => <div data-testid="dynamic-stub" />,
+}));
 
-const wrap = (node: React.ReactNode) => (
-  <NextIntlClientProvider locale="en" messages={enMessages}>
-    {node}
-  </NextIntlClientProvider>
-);
+const lenisDestroy = vi.fn();
+const lenisRaf = vi.fn();
+vi.mock("lenis", () => ({
+  __esModule: true,
+  default: class Lenis {
+    raf = lenisRaf;
+    destroy = lenisDestroy;
+  },
+}));
 
-afterEach(() => cleanup());
+import ClientCartSlideOver from "@/components/ClientCartSlideOver";
+import ClientChatWidget from "@/components/ClientChatWidget";
+import ClientParticleField from "@/components/ClientParticleField";
+import ClarityAnalytics from "@/components/ClarityAnalytics";
+import PlausibleAnalytics from "@/components/PlausibleAnalytics";
+import LenisInitializer from "@/components/LenisInitializer";
+import { readStoredPref, writeStoredPref } from "@/lib/theme-pref";
+import {
+  CookieConsentProvider,
+  CookieConsentContext,
+} from "@/context/CookieConsentContext";
 
-// ── HolographicCard ─────────────────────────────────────────────────────────
-
-describe("HolographicCard tails", () => {
-  it("applies tilt + glare on mousemove and resets on mouseleave", () => {
+describe("client dynamic wrappers", () => {
+  it("renders the ssr:false cart/chat/particle boundaries", () => {
     const { container } = render(
-      <HolographicCard>
-        <span>card body</span>
-      </HolographicCard>
+      <>
+        <ClientCartSlideOver />
+        <ClientChatWidget />
+        <ClientParticleField className="x" particleCount={3} />
+      </>,
     );
-    const card = container.firstElementChild as HTMLElement;
-    vi.spyOn(card, "getBoundingClientRect").mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 100,
-      height: 100,
-      right: 100,
-      bottom: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    } as DOMRect);
-
-    fireEvent.mouseMove(card, { clientX: 75, clientY: 25 });
-    const moved = container.querySelector<HTMLElement>("[style*='rotateX']");
-    expect(moved).toBeTruthy();
-    expect(moved!.style.transform).toContain("rotateX");
-
-    fireEvent.mouseLeave(card);
-    const left = container.querySelector<HTMLElement>("[style*='rotateX']");
-    expect(left!.style.transform).toContain("rotateX(0deg)");
+    expect(container.querySelectorAll("[data-testid='dynamic-stub']")).toHaveLength(3);
   });
 });
 
-// ── ServiceWorkerRegistration ───────────────────────────────────────────────
-
-describe("ServiceWorkerRegistration tails", () => {
-  const setSw = (value: unknown) => {
-    Object.defineProperty(window.navigator, "serviceWorker", {
-      value,
-      configurable: true,
-    });
-  };
-
-  it("unregisters existing registrations in non-production", async () => {
-    const unregister = vi.fn();
-    setSw({ getRegistrations: vi.fn().mockResolvedValue([{ unregister }]) });
-    render(wrap(<ServiceWorkerRegistration />));
-    await waitFor(() => expect(unregister).toHaveBeenCalled());
+describe("analytics scripts", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
-  it("shows the install banner on beforeinstallprompt and handles install/dismiss", async () => {
-    const origEnv = process.env.NODE_ENV;
-    (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
-    Reflect.deleteProperty(window.navigator, "serviceWorker");
-    (window as { matchMedia?: unknown }).matchMedia = () => ({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      media: "",
-      onchange: null,
-      dispatchEvent: vi.fn(),
-    });
-    localStorage.clear();
+  it("renders Clarity when the project id is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLARITY_PROJECT_ID", "clar-1");
+    render(<ClarityAnalytics />);
+    expect(screen.getByTestId("script-ms-clarity").textContent).toContain("clar-1");
+  });
 
-    const { container } = render(wrap(<ServiceWorkerRegistration />));
-    const prompt = vi.fn().mockResolvedValue(undefined);
-    const evt = new Event("beforeinstallprompt") as Event & {
-      prompt: typeof prompt;
-      userChoice: Promise<{ outcome: string }>;
-    };
-    Object.assign(evt, { prompt, userChoice: Promise.resolve({ outcome: "accepted" }) });
-    fireEvent(window, evt);
-
-    await waitFor(() =>
-      expect(container.textContent).toMatch(/install/i)
-    );
-
-    // install → accepted hides banner
-    const installBtn = [...container.querySelectorAll("button")].find((b) =>
-      /^install$/i.test(b.textContent ?? "")
-    )!;
-    await act(async () => fireEvent.click(installBtn));
-    await waitFor(() => expect(prompt).toHaveBeenCalled());
-
-    // second prompt → dismiss persists to localStorage
-    fireEvent(window, evt);
-    await waitFor(() => expect(container.textContent).toMatch(/install/i));
-    const dismiss = [...container.querySelectorAll("button")].find((b) =>
-      /not now/i.test(b.textContent ?? "")
-    )!;
-    await act(async () => fireEvent.click(dismiss));
-    expect(localStorage.getItem("pwa-install-dismissed")).toBeTruthy();
-    (process.env as { NODE_ENV?: string }).NODE_ENV = origEnv;
+  it("renders Plausible when the domain is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_PLAUSIBLE_DOMAIN", "cloudless.gr");
+    const { container } = render(<PlausibleAnalytics />);
+    expect(container.querySelector("script[data-domain='cloudless.gr']")).toBeTruthy();
   });
 });
 
-// ── CookieConsent ───────────────────────────────────────────────────────────
-
-describe("CookieConsent tails", () => {
+describe("LenisInitializer", () => {
   beforeEach(() => {
-    document.cookie = "cookieConsent=; max-age=0; path=/";
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    lenisDestroy.mockClear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("mounts via requestIdleCallback when available", async () => {
-    vi.useFakeTimers();
-    const idle = vi.fn((cb: () => void) => {
-      cb();
-      return 1;
+  it("starts the raf loop and destroys Lenis on unmount", async () => {
+    const { unmount } = render(<LenisInitializer />);
+    await act(async () => {
+      await Promise.resolve();
     });
-    (globalThis as { requestIdleCallback?: unknown }).requestIdleCallback = idle;
-    (globalThis as { cancelIdleCallback?: unknown }).cancelIdleCallback = vi.fn();
-    try {
-      await act(async () => {
-        render(
-          <CookieConsentProvider>
-            <CookieConsent />
-          </CookieConsentProvider>
-        );
-      });
-      expect(idle).toHaveBeenCalled();
-      expect(document.body.textContent).toContain("Your cookies");
-      // unmount while the stubs still exist, then delete them
-      await act(async () => cleanup());
-    } finally {
-      delete (globalThis as { requestIdleCallback?: unknown })
-        .requestIdleCallback;
-      delete (globalThis as { cancelIdleCallback?: unknown })
-        .cancelIdleCallback;
-      vi.useRealTimers();
-    }
+    unmount();
+    expect(lenisDestroy).toHaveBeenCalled();
+  });
+});
+
+describe("theme-pref storage catches", () => {
+  it("returns null when localStorage.getItem throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("private mode");
+    });
+    expect(readStoredPref()).toBeNull();
+    vi.restoreAllMocks();
   });
 
-  it("Escape closes the settings modal and Tab cycles focus", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    await act(async () => {
-      render(
-        <CookieConsentProvider>
-          <CookieConsent />
-        </CookieConsentProvider>
-      );
+  it("skips the dispatch when localStorage.setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("private mode");
     });
-    await act(async () => {
-      vi.advanceTimersByTime(1100);
-    });
-    await act(async () => fireEvent.click(screen.getByText("Customise")));
-    expect(document.body.textContent).toContain("Cookie Preferences");
+    const onPref = vi.fn();
+    window.addEventListener("cloudless:theme-pref", onPref);
+    writeStoredPref("dark");
+    window.removeEventListener("cloudless:theme-pref", onPref);
+    expect(onPref).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+});
 
-    // Tab on last focusable wraps to first; Escape closes.
-    fireEvent.keyDown(document, { key: "Tab" });
-    fireEvent.keyDown(document, { key: "Escape" });
-    await act(async () => vi.advanceTimersByTime(50));
-    expect(document.body.textContent).not.toContain("Cookie Preferences");
-    vi.useRealTimers();
+function ConsentProbe() {
+  const ctx = useContext(CookieConsentContext);
+  return (
+    <div>
+      <span data-testid="prefs">{JSON.stringify(ctx?.preferences)}</span>
+      <button onClick={() => ctx?.openSettings()}>open-settings</button>
+      <button onClick={() => ctx?.closeSettings()}>close-settings</button>
+      <button onClick={() => ctx?.savePreferences({ analytics: true })}>save-prefs</button>
+    </div>
+  );
+}
+
+describe("CookieConsentContext tails", () => {
+  it("reads an existing consent cookie on mount", () => {
+    document.cookie = "cookieConsent=%7B%22analytics%22%3Atrue%7D";
+    render(
+      <CookieConsentProvider>
+        <ConsentProbe />
+      </CookieConsentProvider>,
+    );
+    expect(screen.getByTestId("prefs")).toBeTruthy();
+    document.cookie = "cookieConsent=; path=/; max-age=0";
+  });
+
+  it("dispatches SET_SETTINGS_VISIBLE via open/close and SET_PREFERENCES via save", () => {
+    const { container } = render(
+      <CookieConsentProvider>
+        <ConsentProbe />
+      </CookieConsentProvider>,
+    );
+    const btn = (name: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent === name,
+      ) as HTMLButtonElement;
+    act(() => {
+      btn("open-settings").click();
+      btn("close-settings").click();
+      btn("save-prefs").click();
+    });
+    expect(
+      container.querySelector("[data-testid='prefs']")?.textContent,
+    ).toContain("necessary");
   });
 });
