@@ -290,3 +290,85 @@ describe("checkout — tail branches", () => {
     spy.mockRestore();
   });
 });
+
+describe("checkout — more tails", () => {
+  let POST: (request: NextRequest) => Promise<Response>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({
+      checkout: { sessions: { create: mockCreate } },
+    });
+    mockCreate.mockResolvedValue({
+      url: "https://checkout.stripe.com/c/pay/cs_test_cart",
+      id: "cs_test_cart",
+    });
+    vi.resetModules();
+    const mod = await import("@/app/api/checkout/route");
+    POST = mod.POST;
+  });
+
+  const cartReq = (items: object[], headers: Record<string, string> = {}) =>
+    new NextRequest("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        origin: "https://cloudless.gr",
+        ...headers,
+      },
+      body: JSON.stringify({ items }),
+    });
+
+  it("forwards a well-formed Idempotency-Key to session creation", async () => {
+    const res = await POST(
+      cartReq([{ id: "srv-growth", quantity: 1 }], {
+        "idempotency-key": "order_2026:abc-123",
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ idempotencyKey: "order_2026:abc-123" })
+    );
+  });
+
+  it("accepts a localhost origin in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    try {
+      const res = await POST(
+        cartReq([{ id: "srv-growth", quantity: 1 }], {
+          origin: "http://localhost:3000",
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = mockCreate.mock.calls[0]![0] as { success_url: string };
+      expect(body.success_url).toContain("http://localhost:3000");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("marks recurring products with a monthly interval in price_data", async () => {
+    const res = await POST(cartReq([{ id: "srv-growth", quantity: 1 }]));
+    expect(res.status).toBe(200);
+    const body = mockCreate.mock.calls[0]![0] as {
+      line_items: { price_data: { recurring?: { interval: string } } }[];
+    };
+    expect(body.line_items[0]!.price_data.recurring).toEqual({ interval: "month" });
+  });
+
+  it("proceeds anonymously when bearer-token verification rejects", async () => {
+    const { getTokenFromHeader, verifyToken } = await import("@/lib/api-auth");
+    vi.mocked(getTokenFromHeader).mockReturnValueOnce("tok-bad");
+    vi.mocked(verifyToken).mockRejectedValueOnce(new Error("expired"));
+    const res = await POST(cartReq([{ id: "srv-growth", quantity: 1 }]));
+    expect(res.status).toBe(200);
+  });
+
+  it("classifies a Stripe 'json' error as a 400 body problem", async () => {
+    mockCreate.mockRejectedValueOnce(new Error("Invalid JSON in request"));
+    const res = await POST(cartReq([{ id: "srv-growth", quantity: 1 }]));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Invalid request body");
+  });
+});

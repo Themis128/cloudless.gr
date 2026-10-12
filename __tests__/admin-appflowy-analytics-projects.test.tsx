@@ -202,4 +202,42 @@ describe("admin/projects", () => {
     const c2 = await renderPage(<AdminProjectsPage />);
     expect(c2.textContent).toContain("No projects in AppFlowy yet");
   });
+
+  it("tasks load error, PATCH failures, refresh click, bad dates", async () => {
+    routes["/api/admin/appflowy/projects"] = (_u: string, init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? okJson({ error: "project patch failed" }, 500)
+        : okJson({ projects: [{ ...projects[0], dueDate: "not-a-real-date" }] });
+    routes["/api/admin/appflowy/tasks"] = (_u: string, init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? okJson({ error: "task patch failed" }, 500)
+        : okJson({ error: "tasks down" }, 500);
+    const c = await renderPage(<AdminProjectsPage />);
+    // unparseable dueDate → V8 renders it as "Invalid Date"
+    expect(c.textContent).toContain("Invalid Date");
+
+    // project PATCH error → errorProjects rendered
+    fireEvent.change(c.querySelector("select")!, { target: { value: "Completed" } });
+    await flush();
+    expect(c.textContent).toContain("project patch failed");
+
+    // tasks tab: GET fails → errorTasks + Refresh button
+    await click(screen.getByText("tasks"));
+    await flush();
+    expect(c.textContent).toContain("tasks down");
+    await click(screen.getByText("↺ Refresh"));
+    await flush();
+
+    // tasks loaded on retry → PATCH error renders
+    routes["/api/admin/appflowy/tasks"] = (_u: string, init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? okJson({ error: "task patch failed" }, 500)
+        : okJson({ tasks });
+    await click(screen.getByText("↺ Refresh"));
+    await flush();
+    expect(c.textContent).toContain("Ship it");
+    fireEvent.change(c.querySelector("select")!, { target: { value: "Done" } });
+    await flush();
+    expect(c.textContent).toContain("task patch failed");
+  });
 });

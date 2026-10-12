@@ -123,6 +123,37 @@ describe("admin/settings", () => {
     await flush();
     expect(c.textContent).toContain("bad key");
   });
+
+  it("non-ok config load → HTTP error; save→reload 503; Clear All Caches", async () => {
+    // Initial load: non-ok, non-503 → the throw → catch path.
+    routes["/api/admin/config"] = okJson({ error: "db exploded" }, 500);
+    const c = await renderPage(<AdminSettingsPage />);
+    expect(c.textContent).toContain("db exploded");
+
+    // Save succeeds but the reload inside loadConfigs hits the 503 path.
+    routes["/api/admin/config"] = (url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") return okJson({ ok: true });
+      return okJson({ error: "AUTH_DB not bound" }, 503);
+    };
+    const [keyInput, valueInput] = Array.from(c.querySelectorAll("input"));
+    fireEvent.change(keyInput, { target: { value: "K2" } });
+    fireEvent.change(valueInput, { target: { value: "v" } });
+    await click(screen.getByText("Save"));
+    await flush();
+    expect(c.textContent).toContain("Saved K2");
+    expect(c.textContent).toContain("AUTH_DB not bound");
+
+    // The non-force "Clear All Caches" button → handleClearCache() no prefix.
+    routes["/api/admin/cache"] = okJson({
+      clearedPrefix: "all",
+      clearedAt: "2026-01-01T12:00:00Z",
+    });
+    await click(screen.getByText("Clear All Caches"));
+    await flush();
+    expect(c.textContent).toContain("Cache cleared");
+    const post = fetchWithAuthMock.mock.calls.find(([, i]) => i?.method === "POST");
+    expect(JSON.parse(String(post![1].body))).not.toHaveProperty("prefix");
+  });
 });
 
 describe("admin/workspaces", () => {
