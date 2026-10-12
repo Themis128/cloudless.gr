@@ -297,6 +297,40 @@ describe("CartSlideOver", () => {
 
     fetchSpy.mockRestore();
   });
+
+  it("clears the cart and redirects on a successful checkout", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/x" }), { status: 200 })
+    );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("Your cart is empty")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
+
+  it("surfaces the API error when checkout fails", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 })
+    );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("Stripe not configured")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
 });
 
 // ──────────────────────────────────────────

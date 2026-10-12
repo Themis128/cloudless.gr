@@ -191,6 +191,50 @@ describe("admin/esp32", () => {
     vi.useRealTimers();
   });
 
+  it("WS constructor throw retries; retry cap leaves the stream closed", async () => {
+    const sockets: Array<{
+      onopen: (() => void) | null;
+      onclose: (() => void) | null;
+      close: () => void;
+    }> = [];
+    let ctorFails = true;
+    class FakeWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((e: { data: string }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onclose: (() => void) | null = null;
+      close = vi.fn();
+      constructor(_url: string) {
+        if (ctorFails) throw new Error("ws refused");
+        sockets.push(this as never);
+      }
+    }
+    vi.stubGlobal("WebSocket", FakeWs);
+    vi.useFakeTimers();
+    const c = await renderPage(<Esp32Page />);
+    expect(sockets.length).toBe(0);
+    ctorFails = false;
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(sockets.length).toBe(1);
+
+    for (let i = 0; i < 10; i++) {
+      const ws = sockets.at(-1)!;
+      await act(async () => ws.onclose?.());
+      await act(async () => {
+        vi.advanceTimersByTime(40_000);
+      });
+    }
+    const count = sockets.length;
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(sockets.length).toBe(count);
+    expect(c.textContent).toContain("Disconnected");
+    vi.useRealTimers();
+  });
+
   it("offline + error + stale badge + low-RAM red", async () => {
     routes["/api/admin/ops/monitor?resource=esp32"] = okJson({ offline: true }, 503);
     routes["/api/admin/ops/monitor?resource=alerts"] = okJson([]);

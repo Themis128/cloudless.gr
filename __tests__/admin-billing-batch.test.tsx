@@ -185,6 +185,57 @@ describe("admin/invoices", () => {
     const c2 = await renderPage(<InvoicesPage />);
     expect(c2.textContent).toContain("No invoices in this filter");
   });
+
+  it("create-draft error + catch; send action on an open invoice + its error paths", async () => {
+    const openInv = { ...invoice, id: "in_2", number: "INV-2", status: "open" };
+    let createFails = "http";
+    routes[ROUTE] = (_u: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        const b = JSON.parse(String(init.body));
+        if (b.action === "create") {
+          if (createFails === "throw") return Promise.reject(new Error("net"));
+          return okJson({ error: "bad amount" }, 400);
+        }
+        // action finalize/send
+        if (b.action === "send") {
+          if (createFails === "action-http") return okJson({ error: "send refused" }, 400);
+          if (createFails === "action-throw") return Promise.reject(new Error("net"));
+          return okJson({});
+        }
+      }
+      return okJson({ invoices: [openInv] });
+    };
+    const c = await renderPage(<InvoicesPage />);
+    expect(c.textContent).toContain("INV-2");
+
+    // create → HTTP error message
+    const inputs = c.querySelectorAll("input");
+    fireEvent.change(inputs[0], { target: { value: "n@x.gr" } });
+    fireEvent.change(inputs[1], { target: { value: "Work" } });
+    fireEvent.change(inputs[2], { target: { value: "10" } });
+    await click(screen.getByText("Draft"));
+    expect(c.textContent).toContain("bad amount");
+
+    // create → network throw → generic failure
+    createFails = "throw";
+    await click(screen.getByText("Draft"));
+    expect(c.textContent).toContain("Failed to create draft");
+    createFails = "ok";
+
+    // send on the open invoice → success path
+    await click(screen.getByText("Send"));
+    expect(c.textContent).toContain("send ok for in_2");
+
+    // send → HTTP error
+    createFails = "action-http";
+    await click(screen.getByText("Send"));
+    expect(c.textContent).toContain("send refused");
+
+    // send → network throw
+    createFails = "action-throw";
+    await click(screen.getByText("Send"));
+    expect(c.textContent).toContain("Failed to send");
+  });
 });
 
 describe("admin/subscriptions", () => {

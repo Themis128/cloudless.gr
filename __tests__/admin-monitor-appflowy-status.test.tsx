@@ -195,6 +195,57 @@ describe("admin/monitor", () => {
     vi.useRealTimers();
     warn.mockRestore();
   });
+
+  it("WS constructor throw retries; retry cap leaves the stream closed", async () => {
+    routes["/api/admin/ops/monitor?resource=status"] = okJson(statusPayload);
+    routes["/api/admin/ops/monitor?resource=alerts"] = okJson({ alerts: [] });
+
+    const sockets: Array<{
+      onopen: (() => void) | null;
+      onclose: (() => void) | null;
+      close: () => void;
+    }> = [];
+    let ctorFails = true;
+    class FakeWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((e: { data: string }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onclose: (() => void) | null = null;
+      close = vi.fn();
+      constructor(_url: string) {
+        if (ctorFails) throw new Error("ws refused");
+        sockets.push(this as never);
+      }
+    }
+    vi.stubGlobal("WebSocket", FakeWs);
+    vi.useFakeTimers();
+    const c = await renderPage(<MonitorPage />);
+
+    // ctor threw → catch schedules a retry
+    expect(sockets.length).toBe(0);
+    ctorFails = false;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(sockets.length).toBe(1);
+
+    // 10 close→reconnect cycles exhaust the retry budget
+    for (let i = 0; i < 10; i++) {
+      const ws = sockets.at(-1)!;
+      await act(async () => ws.onclose?.());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(40_000);
+      });
+    }
+    const count = sockets.length;
+    // past the cap — no further reconnect attempts
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(sockets.length).toBe(count);
+    expect(c.textContent).toContain("Log stream disconnected");
+    vi.useRealTimers();
+  });
 });
 
 describe("admin/appflowy/status", () => {
