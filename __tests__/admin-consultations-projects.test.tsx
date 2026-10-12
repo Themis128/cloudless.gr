@@ -115,6 +115,93 @@ describe("admin/consultations", () => {
       expect(c2.textContent).toContain("Popup notifications on");
     }
   });
+
+  it("renders Past and Today pills for edge-case start times", async () => {
+    const ago30 = new Date(Date.now() - 30 * 60_000).toISOString();
+    const in2h = new Date(Date.now() + 2 * 3600_000).toISOString();
+    routes[ROUTE] = okJson({
+      configured: true,
+      consultations: [
+        // status stays "upcoming" server-side even when start slipped past
+        { id: "c1", title: "Cloudless Consultation — Late", start: ago30, end: in2h, status: "upcoming" },
+        { id: "c2", title: "Cloudless Consultation — Soon", start: in2h, end: in2h, status: "upcoming" },
+      ],
+    });
+    const c = await renderPage(<ConsultationsPage />);
+    expect(c.textContent).toContain("Past");
+    expect(c.textContent).toContain("Today");
+  });
+
+  it("fires booking + reminder notifications when permission is granted", async () => {
+    const in10 = new Date(Date.now() + 10 * 60_000).toISOString();
+    const in2h = new Date(Date.now() + 2 * 3600_000).toISOString();
+    const ctor = vi.fn();
+    class FakeNotification {
+      static permission: NotificationPermission = "granted";
+      constructor(...args: unknown[]) {
+        ctor(...args);
+      }
+    }
+    vi.stubGlobal("Notification", FakeNotification);
+
+    let items = [
+      { id: "c1", title: "Cloudless Consultation — First", start: in10, end: in2h, status: "upcoming" },
+    ];
+    // fake timers BEFORE render so the page's poll/reminder intervals are fake
+    vi.useFakeTimers();
+    try {
+      routes[ROUTE] = () => okJson({ configured: true, consultations: items });
+      const c = await renderPage(<ConsultationsPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      // reminder check runs on mount — in10 is ≤15m away
+      expect(ctor).toHaveBeenCalledWith(
+        "Consultation starting soon",
+        expect.objectContaining({ icon: "/favicon.ico" })
+      );
+
+      // the 60s poll re-loads → new booking notification
+      ctor.mockClear();
+      items = [
+        ...items,
+        { id: "c2", title: "Cloudless Consultation — Second", start: in2h, end: in2h, status: "upcoming" },
+      ];
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(61_000);
+      });
+      expect(ctor).toHaveBeenCalledWith(
+        "New consultation booked",
+        expect.objectContaining({ body: expect.stringContaining("Second") })
+      );
+      expect(c.textContent).toContain("Upcoming (2)");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("wraps the year on January prev and December next", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+      routes[ROUTE] = okJson({ configured: true, consultations: [] });
+      const c = await renderPage(<ConsultationsPage />);
+      await flush();
+      expect(c.textContent).toMatch(/January|Ιανουάριος|Jan/i);
+      await click(screen.getByText("‹"));
+      expect(c.textContent).toMatch(/December|Δεκέμβριος|Dec/i);
+      expect(c.textContent).toContain("2025");
+
+      cleanup();
+      vi.setSystemTime(new Date("2026-12-15T12:00:00Z"));
+      const c2 = await renderPage(<ConsultationsPage />);
+      await flush();
+      await click(screen.getByText("›"));
+      expect(c2.textContent).toContain("2027");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("admin/appflowy/projects", () => {

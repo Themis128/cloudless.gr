@@ -101,7 +101,11 @@ export default function ConsultationsPage() {
       // detect new bookings for browser notification
       for (const c of data.consultations ?? []) {
         if (!knownIds.current.has(c.id)) {
-          if (knownIds.current.size > 0 && notifPermission === "granted") {
+          if (
+            knownIds.current.size > 0 &&
+            typeof Notification !== "undefined" &&
+            Notification.permission === "granted"
+          ) {
             new Notification("New consultation booked", {
               body: `${extractClientName(c.title)} — ${formatAthens(c.start)} Athens`,
               icon: "/favicon.ico",
@@ -131,7 +135,6 @@ export default function ConsultationsPage() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Pre-meeting popup reminders — fire once when a consultation is ~15 min away
