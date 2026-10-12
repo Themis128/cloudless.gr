@@ -51,6 +51,10 @@ afterEach(restoreEnv);
 function devEnv() {
   process.env.NODE_ENV = "development";
   process.env.NEXT_RUNTIME = "nodejs";
+  delete process.env.CI;
+  delete process.env.NEXT_PUBLIC_E2E;
+  delete process.env.AUTH_DB_PREFER_LOCAL;
+  delete process.env.AUTH_DB_USE_HTTP;
 }
 
 describe("instrumentation-flags", () => {
