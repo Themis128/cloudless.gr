@@ -132,7 +132,7 @@ describe("campaigns hub — populated interactions", () => {
   });
 
   it("refresh + integrations-status failure + no-config fallthrough", async () => {
-    const c = await renderPage();
+    await renderPage();
     await click(screen.getByText("Refresh"));
     const statusCalls = fetchWithAuthMock.mock.calls.filter(([u]) =>
       String(u).includes("integrations/status")
