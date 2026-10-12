@@ -171,3 +171,69 @@ describe("createThrottledFetch", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+describe("createThrottledFetch tails", () => {
+  beforeEach(() => {
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      configurable: true,
+    });
+  });
+
+  it("survives corrupt polling state in localStorage", async () => {
+    localStorage.setItem(POLLING_STATE_KEY, "{not-json");
+    const throttled = createThrottledFetch(async () => new Response("ok", { status: 200 }));
+    const res = await throttled();
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects while backoff is active", async () => {
+    localStorage.setItem(
+      POLLING_STATE_KEY,
+      JSON.stringify({
+        lastSuccess: 0,
+        consecutiveErrors: 3,
+        backoffUntil: Date.now() + 60_000,
+        retryAfter: 0,
+      })
+    );
+    const base = vi.fn(async () => new Response("ok", { status: 200 }));
+    const throttled = createThrottledFetch(base);
+    await expect(throttled()).rejects.toThrow(/Rate limited, retry in/);
+    expect(base).not.toHaveBeenCalled();
+  });
+
+  it("records a 429 with Retry-After into the polling state", async () => {
+    const throttled = createThrottledFetch(async () =>
+      Promise.resolve(new Response("slow", { status: 429, headers: { "Retry-After": "30" } }))
+    );
+    const res = await throttled();
+    expect(res.status).toBe(429);
+    const state = JSON.parse(localStorage.getItem(POLLING_STATE_KEY) as string);
+    expect(state.consecutiveErrors).toBe(1);
+    expect(state.retryAfter).toBeGreaterThan(Date.now());
+  });
+
+  it("increments consecutiveErrors and backoff on a network failure", async () => {
+    const throttled = createThrottledFetch(async () => Promise.reject(new Error("net down")));
+    await expect(throttled()).rejects.toThrow("net down");
+    const state = JSON.parse(localStorage.getItem(POLLING_STATE_KEY) as string);
+    expect(state.consecutiveErrors).toBe(1);
+    expect(state.backoffUntil).toBeGreaterThan(Date.now());
+  });
+
+  it("dedupes concurrent calls onto the in-flight promise", async () => {
+    let release: (r: Response) => void = () => {};
+    const gate = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    const base = vi.fn(() => gate);
+    const throttled = createThrottledFetch(base);
+    const p1 = throttled();
+    const p2 = throttled();
+    release(new Response("ok", { status: 200 }));
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toBe(r2);
+    expect(base).toHaveBeenCalledTimes(1);
+  });
+});

@@ -16,6 +16,10 @@ import {
   getTopErrors,
   getErrorCounts,
   updateIssueStatus,
+  getIssue,
+  resolveIssue,
+  ignoreIssue,
+  resolveInRelease,
   __resetSentryRejectionCache,
 } from "@/lib/sentry";
 
@@ -186,6 +190,81 @@ describe("sentry.ts", () => {
         new Response(JSON.stringify({ status: "unresolved" }), { status: 200 })
       );
       expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(false);
+    });
+  });
+
+  // ── tails ───────────────────────────────────────────────────────────────
+
+  describe("sentryFetch error branches", () => {
+    it("logs and returns null on a non-auth API error", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response("", { status: 500 })
+      );
+      expect(await getUnresolvedIssues()).toBeNull();
+    });
+  });
+
+  describe("verifySentryToken() tails", () => {
+    it("short-circuits with the cached rejection on a second call", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response("", { status: 401 })
+      );
+      expect((await verifySentryToken()).status).toBe("rejected");
+      const again = await verifySentryToken();
+      expect(again.status).toBe("rejected");
+      expect(again.message).toContain("Token rejected");
+      // The second call never hit the network.
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports a connection failure when fetch rejects", async () => {
+      vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("dns fail"));
+      const result = await verifySentryToken();
+      expect(result).toEqual({ status: "error", message: "Connection failed." });
+    });
+  });
+
+  describe("issue action wrappers", () => {
+    it("getIssue fetches a single issue", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify(makeSentryIssue()), { status: 200 })
+      );
+      const issue = await getIssue(ISSUE_ID);
+      expect(issue?.id).toBe(ISSUE_ID);
+      const url = vi.mocked(globalThis.fetch).mock.lastCall?.[0] as string;
+      expect(url).toContain(`/issues/${ISSUE_ID}/`);
+    });
+
+    it("resolveIssue maps to updateIssueStatus resolved", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 })
+      );
+      expect(await resolveIssue(ISSUE_ID)).toBe(true);
+    });
+
+    it("ignoreIssue maps to updateIssueStatus ignored", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "ignored" }), { status: 200 })
+      );
+      expect(await ignoreIssue(ISSUE_ID)).toBe(true);
+    });
+
+    it("resolveInRelease sends statusDetails.inRelease", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 })
+      );
+      expect(await resolveInRelease(ISSUE_ID, "1.2.3")).toBe(true);
+      const init = vi.mocked(globalThis.fetch).mock.lastCall?.[1] as RequestInit;
+      const body = JSON.parse(init.body as string);
+      expect(body.status).toBe(STATUS_RESOLVED);
+      expect(body.statusDetails).toEqual({ inRelease: "1.2.3" });
+    });
+
+    it("resolveInRelease returns false when the API reports a different status", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "unresolved" }), { status: 200 })
+      );
+      expect(await resolveInRelease(ISSUE_ID, "1.2.3")).toBe(false);
     });
   });
 });

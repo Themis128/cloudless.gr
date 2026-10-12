@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isCapiConfigured, sendCapiEvent } from "@/lib/meta-capi";
+import {
+  isCapiConfigured,
+  sendCapiEvent,
+  sendContactEvent,
+  sendPurchaseEvent,
+} from "@/lib/meta-capi";
+
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  withScope: vi.fn((cb: (scope: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
 
 const mockFetch = vi.fn();
 
@@ -89,5 +101,87 @@ describe("sendCapiEvent", () => {
 
     const result = await sendCapiEvent("Lead", { eventId: "evt-xyz" });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("meta-capi tails", () => {
+  const configure = () => {
+    process.env.NEXT_PUBLIC_META_PIXEL_ID = "12345";
+    process.env.META_CAPI_ACCESS_TOKEN = "access-token";
+  };
+
+  it("reports the timeout when the CAPI request is aborted", async () => {
+    configure();
+    const abort = new Error("signal aborted");
+    abort.name = "AbortError";
+    mockFetch.mockRejectedValue(abort);
+
+    const result = await sendCapiEvent("Lead", { eventId: "evt-timeout" });
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(0);
+    expect(result.error).toMatch(/Request aborted after \d+ms/);
+  });
+
+  it("reports the message for non-Error rejections via String()", async () => {
+    configure();
+    mockFetch.mockRejectedValue("raw-string-failure");
+    const result = await sendCapiEvent("Lead", { eventId: "evt-str" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("raw-string-failure");
+  });
+
+  it("sendContactEvent posts a Contact event", async () => {
+    configure();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ events_received: 1 }),
+    });
+    const result = await sendContactEvent({ eventId: "evt-contact" });
+    const body = JSON.parse((mockFetch.mock.lastCall?.[1] as RequestInit).body as string);
+    expect(body.data[0].event_name).toBe("Contact");
+    expect(result.ok).toBe(true);
+  });
+
+  it("sendPurchaseEvent maps value/currency/contents into custom_data", async () => {
+    configure();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ events_received: 1 }),
+    });
+    await sendPurchaseEvent({
+      eventId: "evt-purchase",
+      value: 49.99,
+      currency: "EUR",
+      contents: [{ id: "sku-1", quantity: 2, item_price: 24.5 }],
+    });
+    const body = JSON.parse((mockFetch.mock.lastCall?.[1] as RequestInit).body as string);
+    expect(body.data[0].event_name).toBe("Purchase");
+    expect(body.data[0].custom_data.value).toBe(49.99);
+    expect(body.data[0].custom_data.currency).toBe("EUR");
+    expect(body.data[0].custom_data.contents).toEqual([
+      { id: "sku-1", quantity: 2, item_price: 24.5 },
+    ]);
+  });
+
+  it("captureCapiError forwards to Sentry when a DSN is configured", async () => {
+    configure();
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://key@sentry.example/1");
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => "meta exploded",
+    });
+
+    const result = await sendCapiEvent("Lead", { eventId: "evt-err" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("meta exploded");
+    // Allow the dynamic import + withScope chain to flush.
+    await new Promise((r) => setTimeout(r, 0));
+    const sentry = await import("@sentry/nextjs");
+    expect(sentry.withScope).toHaveBeenCalled();
+    expect(sentry.captureException).toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 });
