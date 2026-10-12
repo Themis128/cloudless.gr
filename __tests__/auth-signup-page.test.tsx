@@ -16,13 +16,19 @@ import React, { Suspense } from "react";
 
 // ── top-level mocks ───────────────────────────────────────────────────────────
 
-vi.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({
-    user: null,
+const { authState, paramGet, pushMock } = vi.hoisted(() => ({
+  authState: {
+    user: null as { email: string } | null,
     isAdmin: false,
     isLoading: false,
-    configError: null,
-  }),
+    configError: null as string | null,
+  },
+  paramGet: vi.fn((_k: string): string | null => null),
+  pushMock: vi.fn(),
+}));
+
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => authState,
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -40,11 +46,11 @@ vi.mock("@/i18n/navigation", () => ({
       {children}
     </a>
   ),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: pushMock }),
 }));
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: paramGet }),
 }));
 
 vi.mock("@/lib/i18n", () => ({
@@ -87,6 +93,11 @@ describe("SignUpPage component", () => {
     vi.resetModules();
     fetchMock = vi.fn();
     globalThis.fetch = fetchMock;
+    authState.user = null;
+    authState.isAdmin = false;
+    authState.isLoading = false;
+    paramGet.mockImplementation(() => null);
+    pushMock.mockClear();
   });
 
   afterEach(() => {
@@ -199,6 +210,44 @@ describe("SignUpPage component", () => {
     await waitFor(() => expect(screen.queryByText(/sign up failed/i)).toBeTruthy());
   });
 
+  it("rejects passwords shorter than 8 characters without calling the API", async () => {
+    await renderSignUp();
+    fillForm("a@b.com", "short1", "short1");
+    await act(async () => {
+      fireEvent.submit(screen.getByRole("button", { name: /create account/i }).closest("form")!);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText(/at least 8 characters/i)).toBeTruthy()
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects logged-in users to /dashboard (or /admin for admins)", async () => {
+    authState.user = { email: "a@b.com" };
+    await renderSignUp();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+
+    cleanup();
+    pushMock.mockClear();
+    authState.isAdmin = true;
+    await renderSignUp();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin"));
+  });
+
+  it("sends logged-in plan signups to /portal/waiting via window.location", async () => {
+    authState.user = { email: "a@b.com" };
+    paramGet.mockImplementation((k: string) => (k === "plan" ? "analytics" : null));
+    const loc = { href: "" };
+    Object.defineProperty(window, "location", {
+      value: loc,
+      writable: true,
+      configurable: true,
+    });
+    await renderSignUp();
+    await waitFor(() => expect(loc.href).toBe("/portal/waiting?plan=analytics"));
+    expect(pushMock).not.toHaveBeenCalledWith("/dashboard");
+  });
+
   it("omits fullName from the request body when name field is empty", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -226,6 +275,11 @@ describe("SignUpPage OTP confirm + resend", () => {
     vi.resetModules();
     fetchMock = vi.fn();
     globalThis.fetch = fetchMock;
+    authState.user = null;
+    authState.isAdmin = false;
+    authState.isLoading = false;
+    paramGet.mockImplementation(() => null);
+    pushMock.mockClear();
   });
 
   afterEach(() => {
@@ -325,5 +379,41 @@ describe("SignUpPage OTP confirm + resend", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     const body = JSON.parse((fetchMock.mock.calls[2] as [string, { body: string }])[1].body);
     expect(body.token).toBe("tok-2");
+  });
+
+  it("auto-resends the code when the 5-minute countdown reaches zero", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, token: "tok-1" }),
+      });
+      await renderSignUp();
+      fillForm("a@b.com", "password1", "password1");
+      await act(async () => {
+        fireEvent.submit(
+          screen.getByRole("button", { name: /create account/i }).closest("form")!
+        );
+        await Promise.resolve();
+      });
+      // confirm-code step is mounted with the countdown armed
+      expect(screen.queryByRole("button", { name: /confirm account/i })).toBeTruthy();
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, token: "tok-2" }),
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(301_000);
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/auth/resend-verification",
+        expect.objectContaining({ method: "POST" })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
