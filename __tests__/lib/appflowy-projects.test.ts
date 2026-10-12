@@ -265,3 +265,60 @@ describe("bulk + overdue + dashboard", () => {
     expect(dash!.overdueTasks.map((t) => t.task)).toEqual(["one"]);
   });
 });
+
+describe("tails — stub writes, name sort, move catch", () => {
+  it("createProject/updateProjectStatus/updateProjectProgress/createTask warn-and-return when configured", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await projects.createProject({ name: "New" })).toBeNull();
+    expect(await projects.updateProjectStatus("p1", "Completed")).toBe(false);
+    expect(await projects.updateProjectProgress("p1", 50)).toBe(false);
+    expect(await projects.createTask({ task: "T" })).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would create project"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would update status"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would update progress"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would create task"));
+    warn.mockRestore();
+  });
+
+  it("sorts same-priority projects alphabetically", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "pz", name: "[Project] Zulu", type: "document" },
+      { view_id: "pa", name: "[Project] Alpha", type: "document" },
+    ]);
+    docText(projectDoc("Zulu", { Priority: "Medium" }));
+    docText(projectDoc("Alpha", { Priority: "Medium" }));
+    const out = await projects.listProjects();
+    expect(out.map((p) => p.name)).toEqual(["Alpha", "Zulu"]);
+  });
+
+  it("strips the [Task] prefix from the view name when the doc has no Task field", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Deploy hook", type: "document" },
+    ]);
+    docText(taskDoc({ Status: "Done" })); // no Task field -> falls back to view name
+    const out = await projects.listTasks();
+    expect(out[0]?.task).toBe("Deploy hook");
+  });
+
+  it("rolloverSprintTasks logs a move failure and keeps counting", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Left over", type: "document" },
+    ]);
+    docText(taskDoc({ Task: "Left over", Status: "In Progress", Sprint: "S1" }));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi
+      .spyOn(console, "warn")
+      .mockImplementationOnce(() => {
+        throw new Error("warn broke");
+      })
+      .mockImplementation(() => {});
+    const moved = await projects.rolloverSprintTasks("S1", "S2");
+    expect(moved).toBe(0);
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("[AppFlowy Tasks] Failed to move task:"),
+      "warn broke"
+    );
+    warn.mockRestore();
+    err.mockRestore();
+  });
+});

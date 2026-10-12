@@ -329,3 +329,85 @@ describe("POST /api/agent/book", () => {
     expect(mockSendBookingConfirmation).toHaveBeenCalled();
   });
 });
+
+describe("POST /api/agent/book tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.D1_ISSUER;
+    delete process.env.NEXT_PUBLIC_D1_ISSUER;
+    mockIsAgentBookConfigured.mockResolvedValue(true);
+    mockRateLimit.mockReturnValue({ ok: true, remaining: 10 });
+    mockSlackBookingNotify.mockResolvedValue(undefined);
+    mockSendBookingConfirmation.mockResolvedValue(undefined);
+  });
+
+  const futureSlot = () => ({
+    start: new Date(Date.now() + 86_400_000).toISOString(),
+    end: new Date(Date.now() + 86_400_000 + 1_800_000).toISOString(),
+  });
+  const bookable = () => {
+    const { start, end } = futureSlot();
+    mockGetAvailableSlots.mockResolvedValueOnce([{ start, end }]);
+    mockBookConsultation.mockResolvedValueOnce({
+      eventId: "evt_t",
+      htmlLink: "https://meet.google.com/t",
+    });
+    return { start, end };
+  };
+
+  it("propose: 502 on a non-access upstream error", async () => {
+    mockProposeBookingSlot.mockRejectedValueOnce(new Error("model exploded"));
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(authPost({ intent: "tomorrow" }));
+    expect(res.status).toBe(502);
+  });
+
+  it("confirm: 400 on unparseable start/end dates", async () => {
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(authPost({ confirm: true, start: "not-a-date", end: "also-bad" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("Invalid date format");
+    expect(mockBookConsultation).not.toHaveBeenCalled();
+  });
+
+  it("confirm: logs but tolerates slack + email notification failures", async () => {
+    const { start, end } = bookable();
+    mockSlackBookingNotify.mockRejectedValueOnce(new Error("slack down"));
+    mockSendBookingConfirmation.mockRejectedValueOnce(new Error("smtp down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(authPost({ confirm: true, start, end }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("slackBookingNotify failed:"),
+      expect.any(Error)
+    );
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("sendBookingConfirmation failed:"),
+      expect.any(Error)
+    );
+    warn.mockRestore();
+  });
+
+  it("confirm: 500 when the booking call throws a non-integration error", async () => {
+    const { start, end } = futureSlot();
+    mockGetAvailableSlots.mockResolvedValueOnce([{ start, end }]);
+    mockBookConsultation.mockRejectedValueOnce(new Error("boom"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(authPost({ confirm: true, start, end }));
+    expect(res.status).toBe(500);
+    err.mockRestore();
+  });
+
+  it("confirm: falls back to the Cloudless User name when no claim or localpart", async () => {
+    const { start, end } = bookable();
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(authPost({ confirm: true, start, end }, "@"));
+    expect(res.status).toBe(200);
+    expect(mockBookConsultation).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Cloudless User", email: "@" })
+    );
+  });
+});

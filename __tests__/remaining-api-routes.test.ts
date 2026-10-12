@@ -175,3 +175,122 @@ describe("GET /api/user/purchases", () => {
     expect(Array.isArray(data.subscriptions)).toBe(true);
   });
 });
+
+describe("GET /api/user/purchases tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    mockRequireAuth.mockResolvedValue({ ok: true, user: { sub: "u1", email: "a@test.com" } });
+    mockIsConfigured.mockReturnValue(true);
+  });
+
+  it("filters fallback sessions by the token email when no customer exists", async () => {
+    const mockStripe = {
+      customers: { list: vi.fn().mockResolvedValue({ data: [] }) },
+      checkout: {
+        sessions: {
+          list: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: "cs_mine",
+                payment_status: "paid",
+                status: "complete",
+                amount_total: 4900,
+                currency: "eur",
+                created: 1750000000,
+                customer_email: "a@test.com",
+                line_items: { data: [{ description: "Audit", quantity: 1, amount_total: 4900 }] },
+              },
+              {
+                id: "cs_other",
+                payment_status: "paid",
+                status: "complete",
+                amount_total: 100,
+                currency: "usd",
+                created: 1750000000,
+                customer_email: "b@test.com",
+              },
+            ],
+          }),
+        },
+      },
+      subscriptions: { list: vi.fn().mockResolvedValue({ data: [] }) },
+    };
+    mockGetStripeForPurchases.mockResolvedValue(mockStripe);
+    const { GET } = await import("@/app/api/user/purchases/route");
+    const res = await GET(req("http://localhost/api/user/purchases"));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.purchases).toHaveLength(1);
+    expect(data.purchases[0]).toMatchObject({
+      id: "cs_mine",
+      status: "paid",
+      amount: 49,
+      currency: "EUR",
+      items: [{ name: "Audit", quantity: 1, amount: 49 }],
+    });
+  });
+
+  it("lists purchases and subscriptions for a matched customer", async () => {
+    const mockStripe = {
+      customers: { list: vi.fn().mockResolvedValue({ data: [{ id: "cus_1" }] }) },
+      checkout: {
+        sessions: {
+          list: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: "cs_1",
+                payment_status: "paid",
+                status: "complete",
+                amount_total: null,
+                currency: null,
+                created: 1750000000,
+                line_items: { data: [{}] },
+              },
+            ],
+          }),
+        },
+      },
+      subscriptions: {
+        list: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: "sub_1",
+              status: "active",
+              current_period_end: 1750000000,
+              created: 1750000000,
+              cancel_at_period_end: false,
+              items: { data: [{ price: { product: "Analytics Plan" } }] },
+            },
+          ],
+        }),
+      },
+    };
+    mockGetStripeForPurchases.mockResolvedValue(mockStripe);
+    const { GET } = await import("@/app/api/user/purchases/route");
+    const res = await GET(req("http://localhost/api/user/purchases"));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(mockStripe.checkout.sessions.list).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: "cus_1" })
+    );
+    expect(data.purchases[0]).toMatchObject({
+      id: "cs_1",
+      amount: 0,
+      currency: "EUR",
+      items: [{ name: "Item", quantity: 1, amount: 0 }],
+    });
+    expect(data.subscriptions[0].items[0].name).toBe("Analytics Plan");
+  });
+
+  it("returns 500 when Stripe throws", async () => {
+    mockGetStripeForPurchases.mockResolvedValue({
+      customers: { list: vi.fn().mockRejectedValue(new Error("stripe down")) },
+    });
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { GET } = await import("@/app/api/user/purchases/route");
+    const res = await GET(req("http://localhost/api/user/purchases"));
+    expect(res.status).toBe(500);
+    err.mockRestore();
+  });
+});
