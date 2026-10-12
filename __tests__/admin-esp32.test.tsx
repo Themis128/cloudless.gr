@@ -51,6 +51,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -131,6 +132,63 @@ describe("admin/esp32", () => {
     // log filter chips
     await click(screen.getByText("ERROR"));
     expect(c.textContent).toContain("0 lines");
+  });
+
+  it("websocket log stream: connect → messages → filter → close-retry", async () => {
+    routes["/api/admin/ops/monitor?resource=esp32"] = okJson(esp32);
+    routes["/api/admin/ops/monitor?resource=alerts"] = okJson([]);
+    const sockets: Array<{
+      onopen: (() => void) | null;
+      onmessage: ((e: { data: string }) => void) | null;
+      onerror: (() => void) | null;
+      onclose: (() => void) | null;
+      close: () => void;
+    }> = [];
+    class FakeWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((e: { data: string }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onclose: (() => void) | null = null;
+      close = vi.fn();
+      constructor(url: string) {
+        expect(url).toContain("esp32-logs");
+        sockets.push(this as never);
+      }
+    }
+    vi.stubGlobal("WebSocket", FakeWs);
+    vi.useFakeTimers();
+    const c = await renderPage(<Esp32Page />);
+    expect(sockets.length).toBe(1);
+    const ws = sockets[0];
+
+    // open → connected status
+    await act(async () => ws.onopen?.());
+    expect(c.textContent).toContain("connected");
+
+    // messages: one ERROR, one INFO, one ping (skipped), one non-JSON (skipped)
+    await act(async () => {
+      ws.onmessage?.({ data: JSON.stringify({ id: 1, level: "error", message: "boom" }) });
+      ws.onmessage?.({ data: JSON.stringify({ id: 2, level: "info", message: "fine" }) });
+      ws.onmessage?.({ data: JSON.stringify({ type: "ping" }) });
+      ws.onmessage?.({ data: "not-json{{{" });
+    });
+    expect(c.textContent).toContain("boom");
+    expect(c.textContent).toContain("2 lines");
+
+    // filter to ERROR → only boom ("ERROR" also appears as the log level span)
+    await click(screen.getAllByText("ERROR").find((e) => e.tagName === "BUTTON")!);
+    expect(c.textContent).toContain("boom");
+    expect(c.textContent).not.toContain("fine");
+    expect(c.textContent).toContain("1 lines");
+
+    // close → schedules retry (advance timers → new socket)
+    await act(async () => ws.onclose?.());
+    expect(c.textContent).toContain("Disconnected");
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(sockets.length).toBeGreaterThanOrEqual(2); // retry loop reconnected
+    vi.useRealTimers();
   });
 
   it("offline + error + stale badge + low-RAM red", async () => {
