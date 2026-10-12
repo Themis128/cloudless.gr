@@ -200,3 +200,137 @@ describe("admin/cluster", () => {
     expect(c2.textContent).toContain("HTTP 500");
   });
 });
+
+describe("admin/calendar tails", () => {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-15`;
+  const item = {
+    id: "cal1",
+    title: "LinkedIn post",
+    type: "social_post",
+    platform: "meta",
+    status: "draft",
+    date: dateStr,
+    notes: "",
+  };
+
+  it("publish failure shows the API error; network failure shows the generic alert", async () => {
+    routes["/api/admin/calendar"] = okJson({ items: [item] });
+    const c = await renderPage(<CalendarPage />);
+
+    // Non-OK publish → alert with the body error.
+    fetchWithAuthMock.mockImplementationOnce(async () => okJson({ error: "postiz down" }, 502));
+    await click(screen.getByText("LinkedIn post").closest("div")!);
+    expect(window.alert).toHaveBeenCalledWith("postiz down");
+
+    // Thrown fetch → generic failure alert.
+    fetchWithAuthMock.mockImplementationOnce(async () => {
+      throw new Error("offline");
+    });
+    await click(screen.getByText("LinkedIn post").closest("div")!);
+    expect(window.alert).toHaveBeenCalledWith("Publish failed — could not reach the server.");
+    expect(c.textContent).toContain("LinkedIn post");
+  });
+
+  it("January prev-month and December next-month wrap the year", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-15T10:00:00"));
+      routes["/api/admin/calendar"] = okJson({ items: [] });
+      const c = await renderPage(<CalendarPage />);
+      expect(c.textContent).toContain("January 2026");
+      await click(screen.getByText("‹"));
+      expect(c.textContent).toContain("December 2025");
+      cleanup();
+
+      vi.setSystemTime(new Date("2026-12-15T10:00:00"));
+      const c2 = await renderPage(<CalendarPage />);
+      expect(c2.textContent).toContain("December 2026");
+      await click(screen.getByText("›"));
+      expect(c2.textContent).toContain("January 2027");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("form selects + notes update state; cancel buttons close the modal", async () => {
+    routes["/api/admin/calendar"] = okJson({ items: [] });
+    const c = await renderPage(<CalendarPage />);
+    const day15 = Array.from(c.querySelectorAll("p")).find((p) => p.textContent === "15")!;
+    await click(day15.parentElement!);
+
+    const selects = c.querySelectorAll("form select");
+    fireEvent.change(selects[0]!, { target: { value: "blog_post" } });
+    fireEvent.change(selects[1]!, { target: { value: "x" } });
+    const notes = c.querySelector("form textarea")!;
+    fireEvent.change(notes, { target: { value: "draft notes" } });
+
+    // Cancel button closes without a POST.
+    await click(screen.getByText("Cancel"));
+    expect(c.querySelector("form")).toBeNull();
+    expect(fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("/create"))).toBe(
+      false
+    );
+
+    // Reopen + ✕ close.
+    await click(day15.parentElement!);
+    await click(screen.getByText("✕"));
+    expect(c.querySelector("form")).toBeNull();
+  });
+});
+
+describe("admin/cluster tails", () => {
+  it("status FAILED/PENDING, hour+day relative times, kuma pending, mqtt ok/critical", async () => {
+    const twoDays = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    routes["/api/admin/cluster/watchdogs"] = okJson({
+      fetchedAt: twoDays,
+      watchdogs: [
+        {
+          name: "broken-job",
+          namespace: "ns",
+          schedule: "* * * * *",
+          suspended: false,
+          lastScheduleTime: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+          lastSuccessfulTime: null,
+          lastRunFailed: true,
+        },
+        {
+          name: "never-ran",
+          namespace: "ns",
+          schedule: "0 0 * * *",
+          suspended: false,
+          lastScheduleTime: null,
+          lastSuccessfulTime: null,
+          lastRunFailed: false,
+        },
+      ],
+    });
+    routes["/api/admin/cluster/mqtt-status"] = okJson({
+      status: { severity: "critical", count: 1 },
+    });
+    routes["/api/admin/cluster/kuma-status"] = okJson({
+      summary: {
+        baseUrl: "https://kuma.example",
+        slug: "s",
+        fetchedAt: twoDays,
+        monitors: [
+          { id: 3, name: "cron", status: "pending", pingMs: null, lastHeartbeatAt: null, groupName: "g" },
+        ],
+      },
+    });
+    const c = await renderPage(<ClusterPage />);
+    expect(c.textContent).toContain("FAILED");
+    expect(c.textContent).toContain("PENDING");
+    expect(c.textContent).toContain("CRITICAL (1)");
+    expect(c.textContent).toContain("2d ago"); // fetchedAt
+    expect(c.textContent).toContain("3h ago"); // last scheduled
+    expect(c.textContent).toContain("cron");
+
+    cleanup();
+    routes["/api/admin/cluster/mqtt-status"] = okJson({
+      status: { severity: "ok", count: 7 },
+    });
+    const c2 = await renderPage(<ClusterPage />);
+    expect(c2.textContent).toContain("OK (7)");
+  });
+});

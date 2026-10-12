@@ -136,6 +136,65 @@ describe("admin/monitor", () => {
     const c2 = await renderPage(<MonitorPage />);
     expect(c2.textContent).toContain("HTTP 500");
   });
+
+  it("alerts fetch non-OK warns and keeps rendering; WS stream connects/messages/retries", async () => {
+    routes["/api/admin/ops/monitor?resource=status"] = okJson(statusPayload);
+    routes["/api/admin/ops/monitor?resource=alerts"] = okJson({}, 502);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const sockets: Array<{
+      onopen: (() => void) | null;
+      onmessage: ((e: { data: string }) => void) | null;
+      onerror: (() => void) | null;
+      onclose: (() => void) | null;
+      close: () => void;
+    }> = [];
+    class FakeWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((e: { data: string }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onclose: (() => void) | null = null;
+      close = vi.fn();
+      constructor(url: string) {
+        expect(url).toContain("esp32-logs");
+        sockets.push(this as never);
+      }
+    }
+    vi.stubGlobal("WebSocket", FakeWs);
+    vi.useFakeTimers();
+    const c = await renderPage(<MonitorPage />);
+    expect(sockets.length).toBe(1);
+    const ws = sockets[0];
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("alerts fetch returned %d"),
+      502
+    );
+
+    await act(async () => ws.onopen?.());
+    expect(c.textContent).not.toContain("Connecting to log stream");
+
+    // log entries render; ping + non-JSON frames are skipped
+    await act(async () => {
+      ws.onmessage?.({ data: JSON.stringify({ ts: "2026-01-02T00:00:00Z", level: "error", message: "kernel panic" }) });
+      ws.onmessage?.({ data: JSON.stringify({ type: "ping" }) });
+      ws.onmessage?.({ data: "garbage{{" });
+      ws.onmessage?.({ data: JSON.stringify({ custom: "no-level" }) });
+    });
+    expect(c.textContent).toContain("kernel panic");
+    expect(c.textContent).toContain("ERROR");
+    expect(c.textContent).not.toContain("Waiting for log entries");
+
+    // onerror → closed status; onclose → retry schedules a new socket
+    await act(async () => ws.onerror?.());
+    await act(async () => ws.onclose?.());
+    expect(c.textContent).toContain("Log stream disconnected");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(sockets.length).toBeGreaterThanOrEqual(2);
+    vi.useRealTimers();
+    warn.mockRestore();
+  });
 });
 
 describe("admin/appflowy/status", () => {

@@ -403,3 +403,117 @@ describe("postiz admin — populated interactions", () => {
     expect(c.textContent).toContain("no provider-specific knobs");
   });
 });
+
+describe("postiz admin tails", () => {
+  beforeEach(() => {
+    defaultRoutes();
+    vi.stubGlobal("fetch", vi.fn(routedFetch));
+    vi.stubGlobal("confirm", vi.fn(() => true));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("integrations endpoint 500 → error text; empty channels → connect hints on both tabs", async () => {
+    // posts fetch rejects → its .catch(noop) leaves the integrations error intact
+    routes = [
+      ["GET", "postiz/integrations", okJson({ error: "boom" }, 500)],
+      ["GET", "postiz/posts", () => Promise.reject(new Error("down")) as never],
+    ];
+    const c = await renderPage();
+    expect(c.textContent).toContain("integrations: 500");
+
+    routes = [
+      ["GET", "postiz/integrations", okJson({ integrations: [] })],
+      ["GET", "postiz/posts", okJson({ posts: [] })],
+    ];
+    cleanup();
+    const c2 = await renderPage();
+    await click(screen.getByText("channels"));
+    expect(c2.textContent).toContain("No channels connected yet");
+    await click(screen.getByText("analytics"));
+    expect(c2.textContent).toContain("No channels connected. Connect them in Postiz");
+  });
+
+  it("save-draft maps per-identifier settings for every provider", async () => {
+    const all = [
+      "x",
+      "linkedin",
+      "linkedin-page",
+      "instagram",
+      "instagram-standalone",
+      "facebook",
+      "youtube",
+      "tiktok",
+      "discord",
+      "slack",
+      "threads",
+      "mastodon",
+      "something-new",
+    ].map((id) => intg(`i-${id}`, id));
+    routes = routes.map(([m, f, o]): [string, string, (() => Response) | Response] =>
+      f === "postiz/integrations" && m === "GET"
+        ? [m, f, okJson({ integrations: all })]
+        : [m, f, o]
+    );
+    const c = await renderPage();
+
+    // select every channel
+    for (const i of all) await click(screen.getByText(new RegExp(`${i.identifier} chan`)));
+    expect(c.textContent).toContain(`${all.length} selected`);
+
+    fireEvent.change(document.getElementById("postiz-content")!, {
+      target: { value: "hello" },
+    });
+    await click(screen.getByText("Save draft"));
+
+    const postCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([u, i]) => String(u).includes("postiz/posts") && i?.method === "POST"
+    );
+    const body = JSON.parse(String(postCall![1].body));
+    expect(body.type).toBe("draft");
+    const byType = new Map(
+      body.posts.map((p: { integration: { id: string }; settings: { __type: string } }) => [
+        p.integration.id,
+        p.settings,
+      ])
+    );
+    expect(byType.get("i-linkedin")).toMatchObject({ __type: "linkedin", post_as_images_carousel: false });
+    expect(byType.get("i-linkedin-page")).toMatchObject({ __type: "linkedin-page" });
+    expect(byType.get("i-instagram")).toMatchObject({ __type: "instagram", post_type: "post" });
+    expect(byType.get("i-instagram-standalone")).toMatchObject({ __type: "instagram-standalone" });
+    expect(byType.get("i-facebook")).toMatchObject({ __type: "facebook" });
+    expect(byType.get("i-youtube")).toMatchObject({
+      __type: "youtube",
+      selfDeclaredMadeForKids: "no",
+    });
+    expect(byType.get("i-discord")).toMatchObject({ __type: "discord", channel: "" });
+    expect(byType.get("i-slack")).toMatchObject({ __type: "slack", channel: "" });
+    expect(byType.get("i-threads")).toMatchObject({ __type: "threads" });
+    expect(byType.get("i-mastodon")).toMatchObject({ __type: "mastodon" });
+    expect(byType.get("i-something-new")).toMatchObject({ __type: "something-new" });
+    expect(c.textContent).toBeTruthy();
+  });
+
+  it("deselecting a channel shrinks the selection; file upload failure shows feedback", async () => {
+    const c = await renderPage();
+    await click(screen.getByText(/x chan/));
+    await click(screen.getByText(/tiktok chan/));
+    expect(c.textContent).toContain("2 selected");
+    await click(screen.getByText(/x chan/));
+    expect(c.textContent).toContain("1 selected");
+
+    routes = routes.map(([m, f, o]): [string, string, (() => Response) | Response] =>
+      f === "postiz/upload-file" ? [m, f, okJson({}, 413)] : [m, f, o]
+    );
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(fileInput, {
+        target: { files: [new File(["x"], "big.png", { type: "image/png" })] },
+      });
+    });
+    expect(c.textContent).toContain("File upload failed: 413");
+  });
+});
