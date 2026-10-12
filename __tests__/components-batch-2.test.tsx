@@ -452,3 +452,86 @@ describe("WaitingRoomClient", () => {
     expect(c!.textContent).toContain("Portal status check failed (HTTP 503)");
   });
 });
+
+describe("WaitingRoomClient tails", () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+    fetchWithAuthMock.mockReset();
+    authUser = { name: "Themis", email: "t@x.gr" };
+    authLoading = false;
+    searchParamsMap = new URLSearchParams();
+    document.cookie = "NEXT_LOCALE=; max-age=0; path=/";
+  });
+  afterEach(cleanup);
+
+  it("shows the enroll error body when the POST is rejected", async () => {
+    searchParamsMap = new URLSearchParams("plan=analytics");
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("enroll"))
+        return okJson({ error: "email must be verified" }, 403);
+      return okJson({ status: "none" });
+    });
+    let c: HTMLElement | undefined;
+    await act(async () => {
+      c = render(<WaitingRoomClient />).container;
+    });
+    expect(c!.textContent).toContain("email must be verified");
+  });
+
+  it("skips the enroll POST when already waiting on the requested plan", async () => {
+    searchParamsMap = new URLSearchParams("plan=analytics");
+    const calls: string[] = [];
+    fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      return okJson({ status: "waiting", plan: "analytics", email: "t@x.gr", name: "T" });
+    });
+    await act(async () => {
+      render(<WaitingRoomClient />);
+    });
+    expect(calls.some((x) => x.includes("enroll"))).toBe(false);
+  });
+
+  it("polls while waiting and pauses/resumes on visibility changes", async () => {
+    vi.useFakeTimers();
+    try {
+      const meCalls: number[] = [];
+      fetchWithAuthMock.mockImplementation(async (url: string) => {
+        if (String(url).includes("/api/portal/me")) meCalls.push(1);
+        return okJson({ status: "waiting", plan: "analytics", email: "t@x.gr", name: "T" });
+      });
+      await act(async () => {
+        render(<WaitingRoomClient />);
+      });
+      const initial = meCalls.length;
+      expect(initial).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(meCalls.length).toBe(2);
+
+      // Hide the tab — the interval is cleared.
+      Object.defineProperty(document, "hidden", { value: true, configurable: true });
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(meCalls.length).toBe(2);
+
+      // Visible again — immediate refresh + resumed polling.
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(meCalls.length).toBe(3);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(meCalls.length).toBe(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

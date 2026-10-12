@@ -314,3 +314,88 @@ describe("Navbar user menu", () => {
     expect(container.querySelector('button[aria-expanded="true"]')).toBeNull();
   });
 });
+
+describe("Navbar tails", () => {
+  const openMobile = (container: HTMLElement) =>
+    fireEvent.click(container.querySelector('[data-testid="mobile-menu-button"]')!);
+  const menuHidden = (container: HTMLElement) =>
+    container.querySelector('[data-testid="mobile-menu"]')!.hasAttribute("hidden");
+
+  it("mobile menu: account links, locale switch, and sign-out close the drawer", async () => {
+    const { container } = render(<Navbar />);
+    await act(async () => openMobile(container));
+    expect(menuHidden(container)).toBe(false);
+
+    const menu = container.querySelector('[data-testid="mobile-menu"]')!;
+    expect(menu.textContent).toContain("Dashboard");
+    expect(menu.textContent).toContain("Admin Panel");
+    expect(menu.textContent).toContain("Sign Out");
+
+    // Locale buttons call the setter and close the menu.
+    const el = [...menu.querySelectorAll("button")].find(
+      (b) => b.getAttribute("aria-label") === "Set language to Greek"
+    ) ?? [...menu.querySelectorAll("button")].find((b) => b.textContent?.trim() === "EL");
+    await act(async () => fireEvent.click(el!));
+    expect(menuHidden(container)).toBe(true);
+  });
+
+  it("mobile dashboard/admin/sign-out buttons close the drawer and sign out", async () => {
+    const { container } = render(<Navbar />);
+    await act(async () => openMobile(container));
+    const menu = container.querySelector('[data-testid="mobile-menu"]')!;
+
+    const signOutBtn = [...menu.querySelectorAll("button")].find((b) =>
+      /sign out/i.test(b.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(signOutBtn));
+    expect(signOutMock).toHaveBeenCalled();
+    expect(menuHidden(container)).toBe(true);
+
+    await act(async () => openMobile(container));
+    const dashLink = [...menu.querySelectorAll("a")].find((a) =>
+      /dashboard/i.test(a.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(dashLink));
+    expect(menuHidden(container)).toBe(true);
+
+    await act(async () => openMobile(container));
+    const adminLink = [...menu.querySelectorAll("a")].find((a) =>
+      /admin panel/i.test(a.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(adminLink));
+    expect(menuHidden(container)).toBe(true);
+  });
+
+  it("closes the mobile menu when the window resizes to desktop width", async () => {
+    const { container } = render(<Navbar />);
+    await act(async () => openMobile(container));
+    expect(menuHidden(container)).toBe(false);
+    const innerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+    Object.defineProperty(window, "innerWidth", { value: 1280, configurable: true });
+    await act(async () => fireEvent(window, new Event("resize")));
+    expect(menuHidden(container)).toBe(true);
+    if (innerWidth) Object.defineProperty(window, "innerWidth", innerWidth);
+  });
+
+  it("desktop user menu links close the dropdown", async () => {
+    const { container } = render(<Navbar />);
+    await act(async () =>
+      fireEvent.click(container.querySelector('button[aria-haspopup="true"]')!)
+    );
+    const dropdown = container.querySelector(".absolute.top-full")!;
+    const dash = [...dropdown.querySelectorAll("a")].find((a) =>
+      /dashboard/i.test(a.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(dash));
+    expect(container.querySelector('button[aria-expanded="true"]')).toBeNull();
+
+    await act(async () =>
+      fireEvent.click(container.querySelector('button[aria-haspopup="true"]')!)
+    );
+    const admin = [...container.querySelectorAll(".absolute.top-full a")].find((a) =>
+      /admin panel/i.test(a.textContent ?? "")
+    )!;
+    await act(async () => fireEvent.click(admin));
+    expect(container.querySelector('button[aria-expanded="true"]')).toBeNull();
+  });
+});
