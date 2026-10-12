@@ -217,3 +217,113 @@ describe("SignUpPage component", () => {
     expect(body.fullName).toBeUndefined();
   });
 });
+
+describe("SignUpPage OTP confirm + resend", () => {
+  const origFetch = globalThis.fetch;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.resetModules();
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    cleanup();
+    globalThis.fetch = origFetch;
+  });
+
+  async function reachConfirmStep() {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, token: "tok-1" }),
+    });
+    await renderSignUp();
+    fillForm("a@b.com", "password1", "password1");
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: /create account/i }).closest("form")!
+      );
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /confirm account/i })).toBeTruthy()
+    );
+  }
+
+  it("confirms the OTP and reaches the done step", async () => {
+    await reachConfirmStep();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    fireEvent.change(screen.getByPlaceholderText("123456"), { target: { value: "654321" } });
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: /confirm account/i }).closest("form")!
+      );
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [url, init] = fetchMock.mock.calls[1] as [string, { body: string }];
+    expect(url).toBe("/api/auth/activate");
+    expect(JSON.parse(init.body)).toMatchObject({
+      email: "a@b.com",
+      otp: "654321",
+      token: "tok-1",
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("link", { name: /sign in|continue|login/i })
+      ).toBeTruthy()
+    );
+  });
+
+  it("surfaces a confirm error when activation fails", async () => {
+    await reachConfirmStep();
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "Invalid code" }),
+    });
+    fireEvent.change(screen.getByPlaceholderText("123456"), { target: { value: "000000" } });
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: /confirm account/i }).closest("form")!
+      );
+    });
+    await waitFor(() => expect(screen.queryByText(/invalid code/i)).toBeTruthy());
+  });
+
+  it("resends the code and uses the fresh token on confirm", async () => {
+    await reachConfirmStep();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, token: "tok-2" }),
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /resend code/i }));
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /new code sent/i })).toBeTruthy()
+    );
+    expect((fetchMock.mock.calls[1] as [string])[0]).toBe(
+      "/api/auth/resend-verification"
+    );
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    });
+    fireEvent.change(screen.getByPlaceholderText("123456"), { target: { value: "111111" } });
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: /confirm account/i }).closest("form")!
+      );
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    const body = JSON.parse((fetchMock.mock.calls[2] as [string, { body: string }])[1].body);
+    expect(body.token).toBe("tok-2");
+  });
+});
