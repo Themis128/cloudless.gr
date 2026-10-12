@@ -344,3 +344,43 @@ describe("POST /api/slack/events — handler internals", () => {
     expect(sentPostBodies()).toHaveLength(0);
   });
 });
+
+
+describe("POST /api/slack/events — tail branches", () => {
+  let POST: (req: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue(slackOk());
+    mockVerify.mockReset();
+    mockRateLimit.mockReset().mockReturnValue(true);
+    getSlackConfigAsync.mockReset().mockResolvedValue({ SLACK_BOT_TOKEN: "xoxb-test" });
+    getSlackOpsUsers.mockReset().mockResolvedValue([]);
+    isSocialAutoConfigured.mockReset().mockResolvedValue(true);
+    getOpsConsole.mockReset();
+    runOpsAction.mockReset().mockResolvedValue({});
+    const mod = await import("@/app/api/slack/events/route");
+    POST = mod.POST;
+  });
+
+  const settle = () => new Promise((r) => setTimeout(r, 50));
+
+  it("app_mention without status/help replies with the generic intro", async () => {
+    const body = eventBody({ type: "app_mention", channel: "C9", text: "hey bot", ts: "9.9" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    await POST(makeRequest(body));
+    await settle();
+    const posts = sentPostBodies();
+    expect(posts[0]!.text).toContain("Mention me with");
+    expect(posts[0]!.thread_ts).toBe("9.9");
+  });
+
+  it("DM 'queue' warns when SocialAuto is unconfigured", async () => {
+    isSocialAutoConfigured.mockResolvedValue(false);
+    const body = eventBody({ type: "message", channel: "D9", user: "U1", text: "queue" });
+    mockVerify.mockResolvedValue({ ok: true, body: JSON.stringify(body) });
+    await POST(makeRequest(body));
+    await settle();
+    expect(sentPostBodies()[0]!.text).toContain("isn't configured");
+  });
+});

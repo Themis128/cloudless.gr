@@ -296,3 +296,35 @@ describe("GET/POST /api/admin/delivery/projects/[id]/time", () => {
     expect(res.status).toBe(400);
   });
 });
+
+
+describe("GET/POST /api/admin/delivery/projects — action tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("POST 400s on an unknown action", async () => {
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "bogus" }),
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Unknown action");
+  });
+
+  it("POST 500s when the action handler throws", async () => {
+    mockCreateProject.mockRejectedValueOnce(new Error("d1 down"));
+    const { POST } = await import("@/app/api/admin/delivery/projects/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects", {
+        method: "POST",
+        body: JSON.stringify({ action: "create", name: "Retainer" }),
+      })
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Project action failed");
+  });
+});

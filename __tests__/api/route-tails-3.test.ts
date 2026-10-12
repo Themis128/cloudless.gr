@@ -3,7 +3,7 @@
  * (ping matrix), esp32 route (LAN guard + proxies), auth/activate (redirect +
  * OTP + HTTP-D1 fallback), lib/appflowy-faqs (mapping/sort/filter paths).
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const rm = vi.hoisted(() => ({
@@ -639,5 +639,36 @@ describe("appflowy-testimonials lib", () => {
     expect(await getAllTestimonialsAdmin()).toHaveLength(2);
     m.afViews.mockRejectedValueOnce(new Error("down"));
     expect((await getAllTestimonialsAdmin())[0].name).toBe("Static T");
+  });
+});
+
+
+describe("esp32 route — LAN guard tails", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("GET + PUT return offline 404 when ALERT_API is a private LAN address", async () => {
+    vi.stubEnv("ALERT_API_URL", "http://192.168.1.50:8080");
+    vi.resetModules();
+    const mod = await import("@/app/api/admin/esp32/route");
+    const res = await mod.GET(req("/x?action=devices"));
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.offline).toBe(true);
+    expect(data.error).toContain("not reachable");
+    const put = await mod.PUT(req("/x?device_id=d1", { method: "PUT", body: "{}" }));
+    expect(put.status).toBe(404);
+    expect((await put.json()).offline).toBe(true);
+  });
+
+  it("malformed ALERT_API_URL is not treated as private — falls through to proxy", async () => {
+    vi.stubEnv("ALERT_API_URL", ":::not-a-url");
+    vi.resetModules();
+    const mod = await import("@/app/api/admin/esp32/route");
+    mockFetch.mockRejectedValueOnce(new Error("net"));
+    const res = await mod.GET(req("/x?action=config&device_id=d1"));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("Pi unreachable");
   });
 });

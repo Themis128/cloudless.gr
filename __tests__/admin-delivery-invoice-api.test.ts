@@ -280,3 +280,53 @@ describe("POST /api/admin/delivery/projects/[id]/invoice", () => {
     expect(res.status).toBe(500);
   });
 });
+
+
+describe("POST /api/admin/delivery/projects/[id]/invoice — tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({});
+    mockGetProject.mockResolvedValue({ bound: true, project });
+    mockListUnbilled.mockResolvedValue({
+      bound: true,
+      entries: [
+        {
+          id: "te_1",
+          projectId: "ap_abc",
+          userId: null,
+          workDate: "2026-08-14",
+          minutes: 90,
+          billable: true,
+          description: "Landing",
+          stripeInvoiceId: null,
+          createdAt: 1,
+        },
+      ],
+    });
+    mockResolveCustomer.mockResolvedValue("cus_1");
+    mockSetCustomer.mockResolvedValue(true);
+    mockMarkInvoiced.mockResolvedValue(1);
+  });
+
+  it("500s when Stripe draft creation returns null", async () => {
+    mockCreateDraft.mockResolvedValueOnce(null);
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to create Stripe draft");
+  });
+
+  it("500s when invoice creation throws", async () => {
+    mockCreateDraft.mockRejectedValueOnce(new Error("stripe down"));
+    const { POST } = await import("@/app/api/admin/delivery/projects/[id]/invoice/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/delivery/projects/ap_abc/invoice", { method: "POST" }),
+      { params: Promise.resolve({ id: "ap_abc" }) }
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Invoice creation failed");
+  });
+});

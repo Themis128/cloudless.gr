@@ -75,7 +75,11 @@ vi.mock("@/lib/stripe", () => ({
 }));
 
 class MockSlackClient {
+  static instances: MockSlackClient[] = [];
   post = vi.fn().mockResolvedValue(undefined);
+  constructor() {
+    MockSlackClient.instances.push(this);
+  }
 }
 vi.mock("@/lib/slack-notify", () => ({
   SlackClient: MockSlackClient,
@@ -114,6 +118,38 @@ describe("GET /api/cron/slack-digest", () => {
     const res = await GET(req("http://localhost/api/cron/slack-digest"));
     const data = await res.json();
     expect(data.ok).toBe(true);
+  });
+
+  it("posts the Sentry-unavailable warning when error counts are null", async () => {
+    mockIsCronAuthorized.mockResolvedValue(true);
+    mockListRecentCheckoutSessions.mockResolvedValue({ orders: [], hasMore: false });
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockGetErrorCounts.mockResolvedValue(null);
+    mockGetTopErrors.mockResolvedValue([]);
+    MockSlackClient.instances.length = 0;
+    const { GET } = await import("@/app/api/cron/slack-digest/route");
+    const res = await GET(req("http://localhost/api/cron/slack-digest"));
+    expect(res.status).toBe(200);
+    const texts = MockSlackClient.instances.flatMap((c) =>
+      c.post.mock.calls.map(([p]) => (p as { text?: string }).text ?? "")
+    );
+    expect(texts.some((t) => t.includes("Sentry unavailable"))).toBe(true);
+  });
+
+  it("posts the all-clear message when there are no unresolved issues", async () => {
+    mockIsCronAuthorized.mockResolvedValue(true);
+    mockListRecentCheckoutSessions.mockResolvedValue({ orders: [], hasMore: false });
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockGetErrorCounts.mockResolvedValue({ total: 0, fatal: 0, error: 0, warning: 0 });
+    mockGetTopErrors.mockResolvedValue([]);
+    MockSlackClient.instances.length = 0;
+    const { GET } = await import("@/app/api/cron/slack-digest/route");
+    const res = await GET(req("http://localhost/api/cron/slack-digest"));
+    expect(res.status).toBe(200);
+    const texts = MockSlackClient.instances.flatMap((c) =>
+      c.post.mock.calls.map(([p]) => (p as { text?: string }).text ?? "")
+    );
+    expect(texts.some((t) => t.includes("no unresolved issues"))).toBe(true);
   });
 });
 
