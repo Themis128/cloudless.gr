@@ -140,7 +140,7 @@ describe("renderDigest edges", () => {
       previous: { ...base, spendEur: 12, clicks: 8 },
     });
     const t = text(blocks);
-    expect(t).toContain("€10.00 (-€2.00)");
+    expect(t).toContain("€10.00 (€-2.00)");
     expect(t).toContain("*Clicks:* 5 (-3)");
     expect(t).toContain("*Impressions:* 100");
   });
