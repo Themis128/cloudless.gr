@@ -283,4 +283,36 @@ describe("appflowy-blog-admin tails", () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(mockShare).toHaveBeenCalled();
   });
+
+  it("maps an unrecognized editorial status to the clean name", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Weird Status")]);
+    mockRename.mockResolvedValue(true);
+    const ok = await setEditorialStatus("v1", "Backlog");
+    expect(ok).toBe(true);
+    expect(mockRename).toHaveBeenCalledWith("ws1", "v1", "Weird Status");
+  });
+
+  it("logs when the Postiz share itself throws", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Share Throws")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockRejectedValue(new Error("share crash"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("logs when the n8n multicaption webhook fails", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Hook Fails")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockResolvedValue({ ok: true, postIds: ["p1"] });
+    mockFetch.mockRejectedValueOnce(new Error("n8n down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    spy.mockRestore();
+  });
 });

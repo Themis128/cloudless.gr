@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   KumaDnsCoalescer,
   formatDnsFlapSlack,
@@ -157,5 +157,30 @@ describe("singleton helpers", () => {
     const c = getKumaDnsCoalescer();
     c.ingest(dnsDownEvent("mon-z"));
     resetKumaDnsCoalescerForTests(); // should not throw
+  });
+});
+
+describe("KumaDnsCoalescer tails", () => {
+  it("flushes the buffered batch when an event with a different status arrives", () => {
+    const flushed: CoalesceFlush[] = [];
+    const clock = makeClock();
+    const c = new KumaDnsCoalescer(60_000, clock, (f) => flushed.push(f));
+    c.ingest(dnsDownEvent("m1"));
+    c.ingest(dnsUpEvent("m2"));
+    expect(flushed).toHaveLength(1);
+    expect(flushed[0].status).toBe("DOWN");
+  });
+
+  it("clears the recent-DNS-down memory after 4x the window", () => {
+    const flushed: CoalesceFlush[] = [];
+    const clock = makeClock();
+    const c = new KumaDnsCoalescer(1000, clock, (f) => flushed.push(f));
+    c.ingest(dnsDownEvent("api"));
+    clock.tick(1001); // flush DOWN; 4x-window memory starts here
+    clock.tick(4001);
+    // After expiry a plain UP is no longer coalesced.
+    flushed.length = 0;
+    const result = c.ingest({ name: "api", status: "UP", msg: "OK" });
+    expect(result.action).toBe("passthrough");
   });
 });

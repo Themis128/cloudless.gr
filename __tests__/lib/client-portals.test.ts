@@ -12,6 +12,9 @@ import {
   newDeliverable,
   newPaymentLink,
   type ClientPortal,
+  tokenMatches as _tm,
+  findPortalByToken,
+  writePortals,
 } from "@/lib/client-portals";
 
 describe("DEFAULT_PORTAL_TOKEN_TTL_DAYS", () => {
@@ -107,5 +110,28 @@ describe("newPaymentLink", () => {
   it("rounds amountCents", () => {
     const p = newPaymentLink({ label: "Invoice", url: "https://stripe.com", amountCents: 5000.7 });
     expect(p.amountCents).toBe(5001);
+  });
+});
+
+describe("client-portals tails", () => {
+  it("tokenMatches returns false on non-string input", () => {
+    expect(tokenMatches(undefined as unknown as string, "abc")).toBe(false);
+  });
+
+  it("findPortalByToken treats an expired token as absent", async () => {
+    const portal: ClientPortal = {
+      id: "p1",
+      clientName: "Acme",
+      token: "tok-expired",
+      expiresAt: "2020-01-01T00:00:00Z",
+      createdAt: "2019-01-01T00:00:00Z",
+      steps: [],
+      deliverables: [],
+      paymentLinks: [],
+      comments: [],
+    };
+    await writePortals([portal]);
+    expect(await findPortalByToken("tok-expired")).toBeNull();
+    await writePortals([]);
   });
 });

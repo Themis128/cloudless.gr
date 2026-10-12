@@ -277,4 +277,17 @@ describe("views/search/update", () => {
     expect(await mod.updateViewName("w", "v", "x")).toBe(false);
     await expect(mod.getDocument("w", "v")).rejects.toMatchObject({ name: "AppFlowyNotConfiguredError" });
   });
+
+  it("drops short latin runs that fail every inclusion filter", async () => {
+    cfgSecret();
+    // "tiny" is a 4-char printable run: not skipped, not an id (needs 6+),
+    // not a CMS field, and too short for the sentence branch -> filtered out.
+    const blob = Buffer.from("tiny");
+    mockFetch.mockResolvedValueOnce(
+      json({ data: { data: { encoded_collab: blob.toString("base64") } } })
+    );
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toBe("");
+  });
 });

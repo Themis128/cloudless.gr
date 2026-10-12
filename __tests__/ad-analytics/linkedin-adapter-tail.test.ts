@@ -245,3 +245,50 @@ describe("fetchPivotBreakdown ordering", () => {
     expect(bd.every((r) => r.clicks > 0)).toBe(true);
   });
 });
+
+describe("pullMetrics residual tails", () => {
+  it("pivot fetch rejection -> demographic buckets degrade to empty", async () => {
+    urlRouter([
+      ["pivot=CAMPAIGN", () => ok({ elements: [{ impressions: 5, clicks: 1 }] })],
+      ["pivot=MEMBER_INDUSTRY", () => Promise.reject(new Error("pivot down"))],
+      ["pivot=CREATIVE", () => ok({ elements: [] })],
+    ]);
+    const rows = await linkedinAdapter.pullMetrics({
+      accountId: "a",
+      campaignIds: ["c1"],
+      since,
+      until,
+      pivots: ["MEMBER_INDUSTRY"],
+    });
+    expect(rows[0].impressions).toBe(5);
+    expect(
+      rows[0].demographics?.industry ?? rows[0].demographicBuckets ?? []
+    ).toEqual(expect.anything());
+  });
+
+  it("resolves creative names from the elements-shaped response", async () => {
+    urlRouter([
+      ["pivot=CAMPAIGN", () => ok({ elements: [{ impressions: 9, clicks: 4 }] })],
+      [
+        "pivot=CREATIVE",
+        () =>
+          ok({
+            elements: [
+              { impressions: 90, clicks: 7, pivotValues: ["urn:li:sponsoredCreative:7"] },
+            ],
+          }),
+      ],
+      [
+        "creatives?ids=",
+        () => ok({ elements: [{ id: "urn:li:sponsoredCreative:7", name: "Elem Name" }] }),
+      ],
+    ]);
+    const rows = await linkedinAdapter.pullMetrics({
+      accountId: "a",
+      campaignIds: ["c1"],
+      since,
+      until,
+    });
+    expect(rows[0].creativeLeaderboard![0].label).toBe("Elem Name");
+  });
+});

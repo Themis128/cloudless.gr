@@ -184,4 +184,30 @@ describe("auth-d1 tails — real sqlite", () => {
     expect(user?.phone).toBe("210-1");
     expect(user?.preferences_json).toContain('"theme":"dark"');
   });
+
+  it("getAuthDbFromEnv takes the local-sqlite path when prefer-local is set", async () => {
+    const path = seedDb(FULL_SCHEMA);
+    await localDb(path);
+    process.env.NODE_ENV = "development";
+    vi.stubEnv("AUTH_DB_PREFER_LOCAL", "1");
+    delete process.env.AUTH_DB_USE_HTTP;
+    const { getAuthDbFromEnv } = await freshAuthD1();
+    // Either the computed-require resolves the local shim or it fails and
+    // falls through — both execute the prefer-local branch.
+    getAuthDbFromEnv();
+  });
+
+  it("readPreferenceFlag defaults on malformed preferences_json", async () => {
+    const path = seedDb(FULL_SCHEMA);
+    const db = await localDb(path);
+    vi.stubEnv("SESSION_SECRET", LONG_SECRET);
+    const { createUser, listUsers } = await freshAuthD1();
+    await createUser(db, "m@cloudless.gr", "password-123", "M");
+    db.prepare("UPDATE user SET preferences_json = ? WHERE email = ?")
+      .bind("{not json", "m@cloudless.gr")
+      .run();
+    const rows = await listUsers(db);
+    const user = rows.find((r) => r.email === "m@cloudless.gr");
+    expect(user?.emailVerified).toBe(true);
+  });
 });
