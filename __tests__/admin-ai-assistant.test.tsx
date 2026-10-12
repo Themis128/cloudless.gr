@@ -174,3 +174,65 @@ describe("ai-assistant — populated interactions", () => {
     expect(c.textContent).toContain("Admin AI is not configured");
   });
 });
+
+describe("ai-assistant — remaining tails", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("strategy renders structured platform/budget/headline sections", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("Campaign Strategy"));
+    const form = c.querySelector("form") as HTMLFormElement;
+    fireEvent.change(form.querySelector("textarea")!, { target: { value: "b" } });
+
+    routes["/api/admin/ai/campaign"] = {
+      strategy: {
+        campaign_objective: "Awareness",
+        recommended_platforms: ["linkedin", "meta"],
+        budget_split: { linkedin: 60, meta: 40 },
+        timeline: "4 weeks",
+        copy_suggestions: { headline: ["Save big", "Move to cloud"] },
+      },
+    };
+    await submit(form);
+    expect(c.textContent).toContain("Recommended Platforms");
+    expect(c.textContent).toContain("linkedin");
+    expect(c.textContent).toContain("Budget Split");
+    expect(c.textContent).toContain("60%");
+    expect(c.textContent).toContain("Headline Suggestions");
+    expect(c.textContent).toContain("1. Save big");
+    expect(c.textContent).toContain("4 weeks");
+
+    // 503 → not-configured guidance
+    routes["/api/admin/ai/campaign"] = okJson({}, 503);
+    await submit(form);
+    expect(c.textContent).toContain("Admin AI is not configured");
+  });
+
+  it("copy surfaces a rejected fetch as the error message", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("Ad Copy"));
+    const form = c.querySelector("form") as HTMLFormElement;
+    routes["/api/admin/ai/copy"] = () => Promise.reject(new Error("copy api down"));
+    await submit(form);
+    expect(c.textContent).toContain("copy api down");
+
+    // 503 → not-configured guidance
+    routes["/api/admin/ai/copy"] = okJson({}, 503);
+    await submit(form);
+    expect(c.textContent).toContain("Admin AI is not configured");
+  });
+
+  it("strategy renders the raw text fallback when the model emits non-JSON", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("Campaign Strategy"));
+    const form = c.querySelector("form") as HTMLFormElement;
+    fireEvent.change(form.querySelector("textarea")!, { target: { value: "b" } });
+    routes["/api/admin/ai/campaign"] = {
+      strategy: { raw: "Phase 1: audit. Phase 2: launch." },
+    };
+    await submit(form);
+    expect(c.textContent).toContain("Phase 1: audit. Phase 2: launch.");
+  });
+});

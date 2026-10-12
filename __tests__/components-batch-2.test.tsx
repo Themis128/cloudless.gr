@@ -70,7 +70,7 @@ import ChatWidget from "@/components/ChatWidget";
 import TierTable from "@/components/TierTable";
 import NeonCursor from "@/components/NeonCursor";
 import CookieConsent from "@/components/CookieConsent";
-import { CookieConsentProvider } from "@/context/CookieConsentContext";
+import { CookieConsentProvider, useCookieConsent } from "@/context/CookieConsentContext";
 import WaitingRoomClient from "@/app/portal/waiting/WaitingRoomClient";
 
 const click = async (el: Element) => {
@@ -126,6 +126,32 @@ describe("ChatWidget", () => {
 
     // suggestions gone after first turn
     expect(c!.textContent).not.toContain("How much does it cost?");
+  });
+
+  it("renders markdown tables and bold in assistant messages", async () => {
+    let c: HTMLElement | undefined;
+    await act(async () => {
+      c = render(<ChatWidget />).container;
+    });
+    await click(screen.getByLabelText("Open chat assistant"));
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        sse([
+          'data: {"text":"| Plan | Price |\\n|---|---|\\n| **Pro** | 99 |\\n"}\n',
+          "data: [DONE]\n",
+        ]),
+        { status: 200 }
+      )
+    );
+    const input = c!.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "pricing?" } });
+    await click(screen.getByText("Send"));
+    expect(c!.querySelector("table")).toBeTruthy();
+    expect(c!.querySelector("thead")).toBeTruthy();
+    expect(c!.querySelector("th")!.textContent).toContain("Plan");
+    expect(c!.querySelector("td")!.textContent).toContain("Pro");
+    expect(c!.querySelector("strong")!.textContent).toBe("Pro");
   });
 
   it("non-ok response → unavailable message; fetch throw → connection error", async () => {
@@ -355,6 +381,69 @@ describe("CookieConsent", () => {
     expect(c.textContent).toContain("Your cookies, your choice");
     await click(screen.getByText("Reject optional"));
     expect(c.textContent).not.toContain("Your cookies, your choice");
+  });
+
+  it("traps Tab focus inside the settings modal and auto-focuses the first control", async () => {
+    await renderConsent();
+    await click(screen.getByText("Customise"));
+    // rAF auto-focus lands on the first focusable element
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+    const modal = document.querySelector('[role="dialog"]') ?? document.body;
+    const focusables = modal.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusables[0] as HTMLElement;
+    const last = focusables[focusables.length - 1] as HTMLElement;
+
+    // Shift+Tab on first wraps to last
+    first.focus();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    });
+    expect(document.activeElement).toBe(last);
+
+    // Tab on last wraps to first
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "Tab" });
+    });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("malformed consent cookie falls back to defaults; hook throws outside the provider", async () => {
+    document.cookie = "cookieConsent=" + encodeURIComponent("{bad json") + "; path=/";
+    const c = await renderConsent();
+    // hasConsented=false → banner shows with default preferences
+    expect(c.textContent).toContain("Your cookies, your choice");
+
+    const Probe = () => {
+      const ctx = useCookieConsent();
+      return <div>{String(ctx.hasConsented)}</div>;
+    };
+    expect(() => render(<Probe />)).toThrow(
+      "useCookieConsent must be used within CookieConsentProvider"
+    );
+  });
+
+  it("openSettings from context renders the settings panel even when the banner is gone", async () => {
+    const Opener = () => {
+      const { openSettings } = useCookieConsent();
+      return <button onClick={openSettings}>open</button>;
+    };
+    await act(async () => {
+      render(
+        <CookieConsentProvider>
+          <Opener />
+          <CookieConsent />
+        </CookieConsentProvider>
+      );
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1100);
+    });
+    await click(screen.getByText("open"));
+    expect(document.body.textContent).toContain("Cookie Preferences");
   });
 });
 
