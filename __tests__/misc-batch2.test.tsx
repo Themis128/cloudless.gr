@@ -237,6 +237,68 @@ describe("ServiceWorkerRegistration", () => {
     fireEvent(window, evt);
     await act(async () => { await Promise.resolve(); });
     expect(container.textContent).toMatch(/install|app/i);
-    // second event within the TTL → still no re-prompt for a dismissed banner
+  });
+
+  it("unregisters stale workers outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const unregister = vi.fn(async () => true);
+    Object.defineProperty(navigator, "serviceWorker", {
+      value: {
+        register: vi.fn(),
+        getRegistrations: vi.fn(async () => [{ unregister }]),
+      },
+      configurable: true,
+    });
+    render(<ServiceWorkerRegistration />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(unregister).toHaveBeenCalledOnce();
+  });
+
+  it("install accepts hide the banner; dismiss persists the TTL", async () => {
+    const { container, getByText } = render(<ServiceWorkerRegistration />);
+    const prompt = vi.fn(async () => {});
+    const evt = new Event("beforeinstallprompt");
+    Object.assign(evt, {
+      preventDefault: vi.fn(),
+      prompt,
+      userChoice: Promise.resolve({ outcome: "accepted" }),
+    });
+    fireEvent(window, evt);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(container.textContent).toMatch(/install/i);
+
+    await act(async () => fireEvent.click(getByText("Install")));
+    expect(prompt).toHaveBeenCalledOnce();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(container.textContent ?? "").not.toMatch(/Install Cloudless/);
+
+    // prompt again → dismiss writes the TTL key and hides the banner
+    const evt2 = new Event("beforeinstallprompt");
+    Object.assign(evt2, {
+      preventDefault: vi.fn(),
+      prompt: vi.fn(),
+      userChoice: Promise.resolve({ outcome: "dismissed" }),
+    });
+    fireEvent(window, evt2);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => fireEvent.click(getByText("Not now")));
+    expect(localStorage.getItem("pwa-install-dismissed")).toBeTruthy();
+
+    // a third prompt inside the TTL is suppressed entirely
+    const evt3 = new Event("beforeinstallprompt");
+    Object.assign(evt3, { preventDefault: vi.fn(), prompt: vi.fn() });
+    fireEvent(window, evt3);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(container.textContent ?? "").not.toMatch(/Install Cloudless/);
   });
 });

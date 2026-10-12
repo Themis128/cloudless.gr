@@ -230,3 +230,24 @@ describe("register() runtime dispatch", () => {
     expect(m.slackDeployNotify).not.toHaveBeenCalled();
   });
 });
+
+describe("fireDeployNotification tails", () => {
+  it("warns when slackDeployNotify rejects", async () => {
+    vi.resetModules();
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_APP_VERSION = "9.9.9-test";
+    m.slackDeployNotify.mockRejectedValue(new Error("slack down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { registerNode } = await import("@/instrumentation.node");
+    await registerNode();
+    await Promise.resolve();
+    expect(m.slackDeployNotify).toHaveBeenCalledWith(
+      expect.objectContaining({ version: "9.9.9-test", status: "succeeded" })
+    );
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("slackDeployNotify failed"),
+      expect.any(Error)
+    );
+    warn.mockRestore();
+  });
+});

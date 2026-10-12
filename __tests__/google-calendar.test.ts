@@ -344,3 +344,44 @@ describe("google-calendar.ts", () => {
     });
   });
 });
+
+describe("google-calendar tails", () => {
+  it("a busy window removes only the overlapping slots", async () => {
+    // Fixed weekday: 2026-06-15 Monday, Athens summer UTC+3 → 09:00 = 06:00Z
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-06-15T05:00:00Z"));
+      vi.stubEnv("GOOGLE_CALENDAR_ID", "primary");
+      // Busy 09:00–10:00 Athens = 06:00–07:00 UTC → removes the first two slots
+      const busy = [{ start: "2026-06-15T06:00:00Z", end: "2026-06-15T07:00:00Z" }];
+      vi.mocked(globalThis.fetch)
+        .mockResolvedValueOnce(mockAuthOk())
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ calendars: { primary: { busy } } }), { status: 200 })
+        );
+
+      const { getAvailableSlots } = await importGcal();
+      const slots = await getAvailableSlots(1);
+      const starts = slots.map((s) => s.start);
+      expect(starts).not.toContain("2026-06-15T06:00:00.000Z");
+      expect(starts).not.toContain("2026-06-15T06:30:00.000Z");
+      expect(starts).toContain("2026-06-15T07:00:00.000Z"); // 10:00 Athens free again
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("bookConsultation returns null when the request throws", async () => {
+    vi.mocked(globalThis.fetch)
+      .mockResolvedValueOnce(mockAuthOk())
+      .mockRejectedValueOnce(new Error("network down"));
+    const { bookConsultation } = await importGcal();
+    const result = await bookConsultation({
+      name: "Test User",
+      email: TEST_EMAIL,
+      start: "2026-05-10T09:00:00Z",
+      end: "2026-05-10T09:30:00Z",
+    });
+    expect(result).toBeNull();
+  });
+});
