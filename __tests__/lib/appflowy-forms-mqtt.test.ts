@@ -210,14 +210,6 @@ describe("appflowy-forms", () => {
   });
 });
 
-
-async function clientAt(i: number) {
-  await vi.waitFor(() => {
-    if (mqttFake.clients.length <= i) throw new Error("no client yet");
-  });
-  return mqttFake.clients[i];
-}
-
 describe("mqtt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -257,7 +249,7 @@ describe("mqtt", () => {
 
   it("reads the retained message and disconnects", async () => {
     const p = readLatestAlertStatus();
-    const c = await clientAt(0);
+    const c = mqttFake.clients[0];
     c.emit("connect");
     expect(c.subscribe).toHaveBeenCalledWith(
       "homelab/alerts/status",
@@ -276,17 +268,17 @@ describe("mqtt", () => {
 
   it("returns null on bad JSON / client error / subscribe error", async () => {
     const p1 = readLatestAlertStatus();
-    const c1 = await clientAt(0);
+    const c1 = mqttFake.clients[0];
     c1.emit("connect");
     c1.emit("message", "homelab/alerts/status", Buffer.from("{bad"));
     expect(await p1).toBeNull();
 
     const p2 = readLatestAlertStatus();
-    (await clientAt(1)).emit("error", new Error("conn refused"));
+    mqttFake.clients[1].emit("error", new Error("conn refused"));
     expect(await p2).toBeNull();
 
     const p3 = readLatestAlertStatus();
-    const c3 = await clientAt(2);
+    const c3 = mqttFake.clients[2];
     c3.subscribe.mockImplementation(
       (_t: string, _o: unknown, cb?: (e?: Error) => void) =>
         cb?.(new Error("sub fail"))
@@ -305,7 +297,6 @@ describe("mqtt", () => {
     cfg.values = { MQTT_USERNAME: "u", MQTT_PASSWORD: "p" };
     resetMqttCache();
     const p = readLatestAlertStatus();
-    await clientAt(0);
     const { connect } = await import("mqtt");
     expect(connect).toHaveBeenCalledWith(
       "mqtt://mosquitto.monitoring.svc.cluster.local:1883",
@@ -317,7 +308,7 @@ describe("mqtt", () => {
 
   it("publishes with retain on the status topic, ts default", async () => {
     const p = publishAlertStatus({ severity: "warning", count: 2 });
-    const c = await clientAt(0);
+    const c = mqttFake.clients[0];
     c.emit("connect");
     expect(c.publish).toHaveBeenCalledWith(
       "homelab/alerts/status",
@@ -335,7 +326,7 @@ describe("mqtt", () => {
       { severity: "info", count: 1, ts: 7 },
       { topic: "homelab/alerts/event" }
     );
-    const c1 = await clientAt(0);
+    const c1 = mqttFake.clients[0];
     c1.emit("connect");
     expect(c1.publish.mock.calls[0][2]).toEqual({ qos: 1, retain: false });
     const body1 = JSON.parse(c1.publish.mock.calls[0][1] as string);
@@ -343,7 +334,7 @@ describe("mqtt", () => {
     expect(await p1).toEqual({ ok: true });
 
     const p2 = publishAlertStatus({ severity: "ok", count: 0 });
-    const c2 = await clientAt(1);
+    const c2 = mqttFake.clients[1];
     c2.publish.mockImplementation(
       (_t: string, _m: string, _o: unknown, cb?: (e?: Error) => void) =>
         cb?.(new Error("pub fail"))
@@ -352,7 +343,7 @@ describe("mqtt", () => {
     expect(await p2).toEqual({ ok: false, error: "pub fail" });
 
     const p3 = publishAlertStatus({ severity: "ok", count: 0 });
-    (await clientAt(2)).emit("error", new Error("boom"));
+    mqttFake.clients[2].emit("error", new Error("boom"));
     expect(await p3).toEqual({ ok: false, error: "boom" });
 
     const p4 = publishAlertStatus({ severity: "ok", count: 0 }, { timeoutMs: 20 });
