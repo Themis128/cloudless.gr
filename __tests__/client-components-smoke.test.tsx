@@ -73,7 +73,7 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/context/AuthContext", () => ({
   useAuth: () => ({
-    user: null,
+    user: hoisted.authUser,
     isAdmin: false,
     isLoading: false,
     configError: null,
@@ -102,7 +102,10 @@ const okJson = (body: unknown = GENERIC_BODY) =>
     headers: { "Content-Type": "application/json" },
   });
 
-const hoisted = vi.hoisted(() => ({ routes: [] as [string, unknown][] }));
+const hoisted = vi.hoisted(() => ({
+  routes: [] as [string, unknown][],
+  authUser: null as null | { email: string; name?: string },
+}));
 
 const routedFetch = async (input: RequestInfo | URL) => {
   const url = typeof input === "string" ? input : input.url;
@@ -146,6 +149,7 @@ async function renderPage(el: React.ReactElement): Promise<void> {
 describe("client components — smoke render", () => {
   beforeEach(() => {
     hoisted.routes = [];
+    hoisted.authUser = null;
     vi.stubGlobal("fetch", vi.fn(routedFetch));
     Element.prototype.scrollIntoView = vi.fn();
     // jsdom lacks matchMedia — reduced-motion hooks subscribe to it.
@@ -194,6 +198,19 @@ describe("client components — smoke render", () => {
 
   it("portal waiting room", async () => {
     await renderPage(<WaitingRoomClient />);
+  });
+
+  it("portal waiting room — authenticated user sees the all-set panel", async () => {
+    hoisted.authUser = { email: "ada@b.co", name: "Ada" };
+    hoisted.routes = [
+      ["/api/portal/me", { status: "none", email: "ada@b.co", name: "Ada" }],
+    ];
+    let container: HTMLElement | undefined;
+    await React.act(async () => {
+      ({ container } = render(<WaitingRoomClient />));
+    });
+    // The useEffect fires /api/portal/me → status "none" → signed-in panel.
+    expect(container!.textContent).toContain("signed in");
   });
 
   it("ChatWidget", async () => {

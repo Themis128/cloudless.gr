@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 
 /**
  * Tail coverage for src/lib/integrations.ts — the D1-fallback catch paths
@@ -19,6 +19,11 @@ import {
 } from "@/lib/integrations";
 
 describe("integrations.ts tails", () => {
+  beforeEach(() => {
+    mockGetConfig.mockReset();
+    vi.unstubAllEnvs();
+  });
+
   it("getIntegrationsAsync falls back to env-only config when the D1 lookup throws", async () => {
     mockGetConfig.mockRejectedValue(new Error("d1 down"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

@@ -7,8 +7,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getLocalAuthDb, resetLocalAuthDbCache } from "@/lib/auth-db-local";
 
-const d1ScanDir = join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
-
 describe("getLocalAuthDb", () => {
   const envSnapshot = {
     NODE_ENV: process.env.NODE_ENV,
@@ -28,11 +26,8 @@ describe("getLocalAuthDb", () => {
       rmSync(dir, { recursive: true, force: true });
       dir = "";
     }
-    rmSync(join(process.cwd(), ".wrangler/state/v3/d1"), {
-      recursive: true,
-      force: true,
-    });
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   it("opens a wrangler-style sqlite and answers SELECT 1", async () => {
@@ -180,17 +175,25 @@ describe("getLocalAuthDb", () => {
     );
   });
 
-  it("scans .wrangler D1 dirs when no override is set", () => {
+  it("scans .wrangler D1 dirs when no override is set", async () => {
     process.env.NODE_ENV = "development";
-    dir = d1ScanDir;
-    mkdirSync(d1ScanDir, { recursive: true });
-    writeFileSync(join(d1ScanDir, "metadata.sqlite"), "x"); // skipped by name
-    writeFileSync(join(d1ScanDir, "b.sqlite"), "x"); // picked by scan
+    // Scan dirs are resolved from process.cwd() at module load — point cwd at a
+    // throwaway root so the test never touches a developer's real .wrangler D1.
+    dir = mkdtempSync(join(tmpdir(), "cloudless-cwd-"));
+    const scanDir = join(dir, ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
+    mkdirSync(scanDir, { recursive: true });
+    writeFileSync(join(scanDir, "metadata.sqlite"), "x"); // skipped by name
+    writeFileSync(join(scanDir, "b.sqlite"), "x"); // picked by scan
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
+    vi.resetModules();
+    const { getLocalAuthDb: freshGetLocalAuthDb } = await import(
+      "@/lib/auth-db-local"
+    );
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = getLocalAuthDb();
+    const db = freshGetLocalAuthDb();
     expect(db).not.toBeNull();
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining(join(d1ScanDir, "b.sqlite"))
+      expect.stringContaining(join(scanDir, "b.sqlite"))
     );
   });
 });

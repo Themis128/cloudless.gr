@@ -123,6 +123,8 @@ describe("auth D1 routes", () => {
     it("marks verified through the HTTP-D1 fallback", async () => {
       vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "acct");
       vi.stubEnv("CLOUDFLARE_API_TOKEN", "tok");
+      // Real D1 UPDATE → meta.changes=1 even though results[] stays empty.
+      vi.stubGlobal("fetch", vi.fn(async () => d1Body([{ id: "u1" }])));
       const res = await confirmPost(
         req(CONFIRM, { email: "A@B.c ", code: "123456", token: "t" })
       );
@@ -141,11 +143,9 @@ describe("auth D1 routes", () => {
       const res = await confirmPost(
         req(CONFIRM, { email: "a@b.c", code: "123456", token: "t" })
       );
-      // markEmailVerified swallows db errors → changes=0 → `|| true` → still true;
-      // but a fetch-level failure returns success:false → run() success:false → still
-      // returns true per the `|| true` tail. Either way the response is 200 or 500 —
-      // the meaningful assertion is the fallback path executed.
-      expect([200, 500]).toContain(res.status);
+      // Fallback run() reports success:false → meta.changes=0 → markEmailVerified
+      // returns false → the route surfaces a real 500 instead of faking success.
+      expect(res.status).toBe(500);
     });
 
     it("uses the bound db when present", async () => {

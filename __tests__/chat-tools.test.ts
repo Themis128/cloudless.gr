@@ -154,6 +154,7 @@ describe("chat-tools.runTool book_slot", () => {
   const SLOT = { start: "2026-06-03T11:00:00.000Z", end: "2026-06-03T11:30:00.000Z" };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     process.env.CAL_API_KEY = "cal_live_test_key";
     mockGetAvailableSlots.mockResolvedValue([SLOT]);
     mockBookConsultation.mockResolvedValue({ meetLink: "https://meet.google.com/abc" });

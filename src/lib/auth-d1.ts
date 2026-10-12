@@ -745,7 +745,7 @@ export async function markEmailVerified(db: AuthDatabase, email: string): Promis
       )
       .bind(email)
       .run();
-    return (res.meta?.changes ?? 0) > 0 || true;
+    return (res.meta?.changes ?? 0) > 0;
   } catch {
     return false;
   }

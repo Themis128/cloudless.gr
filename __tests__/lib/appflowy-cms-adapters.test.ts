@@ -21,6 +21,7 @@ vi.mock("@/lib/appflowy", () => ({
 import * as blog from "@/lib/appflowy-blog";
 import * as docs from "@/lib/appflowy-docs";
 import * as studies from "@/lib/appflowy-case-studies";
+import * as services from "@/lib/appflowy-services";
 import { staticCaseStudies } from "@/lib/cms-static";
 
 const view = (name: string, id = name, edited = "2026-01-02T00:00:00.000Z") => ({
@@ -220,5 +221,71 @@ describe("appflowy-case-studies", () => {
     configured([view("[CaseStudy] Live", "v1")]);
     const live = await studies.getAllCaseStudiesAdmin();
     expect(live[0].slug).toBe("live");
+  });
+});
+
+describe("appflowy-services", () => {
+  const MD = [
+    "**Slug**: cloud-audit",
+    "**Description**: Find the waste",
+    "**Price**: From €1,500",
+    "**Category**: audit",
+    "**Features**: feature one; feature two; feature three",
+    "**CTA**: Book an audit",
+    "**Icon**: 🔍",
+    "**StripePriceId**: price_123",
+  ].join("\n");
+
+  it("returns [] when not configured or no workspace exists", async () => {
+    m.isAppFlowyConfigured.mockResolvedValue(false);
+    expect(await services.getServices()).toEqual([]);
+    m.isAppFlowyConfigured.mockResolvedValue(true);
+    m.listAllWorkspaces.mockResolvedValue([]);
+    expect(await services.getServices()).toEqual([]);
+    m.listAllWorkspaces.mockRejectedValue(new Error("ws"));
+    expect(await services.getServices()).toEqual([]);
+  });
+
+  it("maps every markdown field onto the CloudlessService shape", async () => {
+    configured([
+      view("[Service] Cloud Audit", "v1"),
+      view("[Blog] not a service", "v2"),
+    ]);
+    m.extractDocText.mockResolvedValue(MD);
+    const all = await services.getServices();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toEqual({
+      id: "v1",
+      slug: "cloud-audit",
+      name: "Cloud Audit",
+      description: "Find the waste",
+      price: "From €1,500",
+      category: "audit",
+      features: ["feature one", "feature two", "feature three"],
+      cta: "Book an audit",
+      icon: "🔍",
+      stripePriceId: "price_123",
+    });
+  });
+
+  it("falls back to slugified name, consulting category, and default CTA/icon", async () => {
+    configured([view("[Service] Managed Edge!", "v1")]);
+    const all = await services.getServices();
+    expect(all[0].slug).toBe("managed-edge");
+    expect(all[0].category).toBe("consulting");
+    expect(all[0].cta).toBe("Contact us");
+    expect(all[0].icon).toBe("⚡");
+    expect(all[0].features).toEqual([]);
+    expect(all[0].stripePriceId).toBeUndefined();
+  });
+
+  it("tolerates a per-doc failure and outer view-listing throws", async () => {
+    configured([view("[Service] X", "v1")]);
+    m.getDocument.mockRejectedValue(new Error("doc"));
+    const all = await services.getServices();
+    expect(all[0].name).toBe("X");
+    expect(all[0].slug).toBe("x");
+    m.listAllViewsDeep.mockRejectedValue(new Error("views"));
+    expect(await services.getServices()).toEqual([]);
   });
 });
