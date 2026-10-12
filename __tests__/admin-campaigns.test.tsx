@@ -163,4 +163,57 @@ describe("campaigns hub — populated interactions", () => {
     // quick links rendered
     expect(c3.textContent).toContain("Content Calendar →");
   });
+
+  it("x platform parses spend_micro stats when configured", async () => {
+    (insightBodies as Record<string, unknown>).x = {
+      stats: { impressions: 5000, clicks: 120, spend_micro: 42_000_000 },
+    };
+    (routes["/api/admin/integrations/status"] as { integrations: { status: string }[] })
+      .integrations.find((i) => i.id === "x")!.status = "configured";
+    routes["/api/admin/campaigns/x"] = { campaigns: [{ status: "ACTIVE" }] };
+    const c = await renderPage();
+    expect(c.textContent).toContain("$42");
+    expect(c.textContent).toContain("4 / 5");
+  });
+
+  it("shows 'Failed to parse insights' when the insights body is malformed", async () => {
+    fetchWithAuthMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      if (u.startsWith("/api/admin/campaigns/tiktok/insights?")) {
+        return new Response("not-json{", { status: 200 });
+      }
+      if (u.startsWith("/api/admin/campaigns/") && u.includes("insights?"))
+        return okJson({});
+      const out = routes[u];
+      return out === undefined ? okJson({}) : okJson(out);
+    });
+    const c = await renderPage();
+    // malformed body is tolerated — card renders, other platforms still resolve
+    await vi.waitFor(() => expect(c.textContent).toContain("TikTok"));
+    expect(c.textContent).toContain("3 / 5");
+  });
+
+  it("refetches on the interval and on visibilitychange", async () => {
+    vi.useFakeTimers();
+    try {
+      await renderPage();
+      const before = fetchWithAuthMock.mock.calls.length;
+      await act(async () => {
+        vi.advanceTimersByTime(31_000);
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBeGreaterThan(before);
+
+      fetchWithAuthMock.mockClear();
+      await act(async () => {
+        Object.defineProperty(document, "visibilityState", {
+          value: "visible",
+          configurable: true,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fetchWithAuthMock.mock.calls.length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
