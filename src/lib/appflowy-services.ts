@@ -15,8 +15,7 @@
 import {
   listAllWorkspaces,
   listAllViewsDeep,
-  getDocument,
-  extractDocText,
+  fetchViewMarkdownMap,
   isAppFlowyConfigured,
 } from "./appflowy";
 import type { CloudlessService, ServiceCategory } from "./cms-static";
@@ -63,16 +62,10 @@ export async function getServices(): Promise<CloudlessService[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const serviceViews = views.filter((v) => isServicePage(v.name));
-    const services: CloudlessService[] = await Promise.all(
-      serviceViews.map(async (view) => {
+    const docs = await fetchViewMarkdownMap(workspaceId, serviceViews);
+    const services: CloudlessService[] = serviceViews.map((view) => {
         const title = stripPrefix(view.name);
-        let markdown = "";
-        try {
-          const doc = await getDocument(workspaceId, view.view_id);
-          markdown = await extractDocText(doc);
-        } catch {
-          markdown = "";
-        }
+        const markdown = docs.get(view.view_id) ?? "";
 
         const category = (parseField(markdown, "Category") || "consulting") as ServiceCategory;
         const featuresRaw = parseField(markdown, "Features");
@@ -93,8 +86,7 @@ export async function getServices(): Promise<CloudlessService[]> {
           icon: parseField(markdown, "Icon") || "⚡",
           stripePriceId: parseField(markdown, "StripePriceId") || undefined,
         });
-      })
-    );
+      });
 
     return services;
   } catch {

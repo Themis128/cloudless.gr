@@ -15,6 +15,18 @@ vi.mock("@/lib/appflowy", () => ({
   isAppFlowyConfigured: (...a: unknown[]) => mockConfigured(...a),
   listAllWorkspaces: (...a: unknown[]) => mockWorkspaces(...a),
   listAllViewsDeep: (...a: unknown[]) => mockViews(...a),
+  fetchViewMarkdownMap: async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await mockExtract(await mockGetDoc(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    ),
   getDocument: (...a: unknown[]) => mockGetDoc(...a),
   extractDocText: (...a: unknown[]) => mockExtract(...a),
   markdownToHtml: (...a: unknown[]) => mockHtml(...a),

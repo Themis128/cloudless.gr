@@ -2,7 +2,21 @@ import { describe, it, expect, vi } from "vitest";
 
 const mockListAllWorkspaces = vi.fn().mockResolvedValue([]);
 const mockListAllViewsDeep = vi.fn().mockResolvedValue([]);
+const mockGetDoc = vi.fn().mockResolvedValue(null);
+const mockExtract = vi.fn().mockResolvedValue("");
 vi.mock("@/lib/appflowy", () => ({
+  fetchViewMarkdownMap: async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await mockExtract(await mockGetDoc(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    ),
   isAppFlowyConfigured: vi.fn().mockResolvedValue(false),
   listWorkspaceViews: vi.fn().mockResolvedValue([]),
   listAllWorkspaces: (...a: unknown[]) => mockListAllWorkspaces(...a),

@@ -16,6 +16,18 @@ const isAppFlowyConfigured = vi.fn();
 vi.mock("@/lib/appflowy", () => ({
   listAllWorkspaces: (...a: unknown[]) => listAllWorkspaces(...a),
   listAllViewsDeep: (...a: unknown[]) => listAllViewsDeep(...a),
+  fetchViewMarkdownMap: async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await extractDocText(await getDocument(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    ),
   getDocument: (...a: unknown[]) => getDocument(...a),
   extractDocText: (...a: unknown[]) => extractDocText(...a),
   isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfigured(...a),

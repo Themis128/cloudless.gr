@@ -14,6 +14,7 @@ import {
   listAllViewsDeep,
   getDocument,
   extractDocText,
+  fetchViewMarkdownMap,
   isAppFlowyConfigured,
 } from "./appflowy";
 
@@ -153,13 +154,13 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
     const views = await listAllViewsDeep(workspaceId);
     const projectViews = views.filter((v) => isProjectPage(v.name));
 
-    const projects: Project[] = (
-      await Promise.all(
-        projectViews.map(async (view) => {
+    const docs = await fetchViewMarkdownMap(workspaceId, projectViews);
+    const projects: Project[] = projectViews
+      .map((view) => {
           try {
-            const doc = await getDocument(workspaceId, view.view_id);
-            const text = await extractDocText(doc);
-            const fields = parseProjectFields(text);
+            const markdown = docs.get(view.view_id);
+            if (markdown === null || markdown === undefined) return null;
+            const fields = parseProjectFields(markdown);
 
             if (statusFilter && fields.status !== statusFilter) return null;
 
@@ -182,8 +183,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             return null;
           }
         })
-      )
-    ).filter((p): p is Project => p !== null);
+      .filter((p): p is Project => p !== null);
 
     // Sort by priority (Critical first) then by name
     const priorityOrder: Record<ProjectPriority, number> = {
@@ -285,13 +285,13 @@ export async function listTasks(filters?: {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = (
-      await Promise.all(
-        taskViews.map(async (view) => {
+    const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
+    const tasks: Task[] = taskViews
+      .map((view) => {
           try {
-            const doc = await getDocument(workspaceId, view.view_id);
-            const text = await extractDocText(doc);
-            const fields = parseTaskFields(text);
+            const markdown = docs.get(view.view_id);
+            if (markdown === null || markdown === undefined) return null;
+            const fields = parseTaskFields(markdown);
 
             if (filters?.status && fields.status !== filters.status) return null;
             if (filters?.project && fields.project !== filters.project) return null;
@@ -316,8 +316,7 @@ export async function listTasks(filters?: {
             return null;
           }
         })
-      )
-    ).filter((t): t is Task => t !== null);
+      .filter((t): t is Task => t !== null);
 
     // Sort by status then priority
     const statusOrder: Record<TaskStatus, number> = {
@@ -417,13 +416,13 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = (
-      await Promise.all(
-        taskViews.map(async (view) => {
+    const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
+    const tasks: Task[] = taskViews
+      .map((view) => {
           try {
-            const doc = await getDocument(workspaceId, view.view_id);
-            const text = await extractDocText(doc);
-            const fields = parseTaskFields(text);
+            const markdown = docs.get(view.view_id);
+            if (markdown === null || markdown === undefined) return null;
+            const fields = parseTaskFields(markdown);
 
             if (fields.sprint !== sprintName && fields.project !== sprintName) return null;
 
@@ -446,8 +445,7 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
             return null;
           }
         })
-      )
-    ).filter((t): t is Task => t !== null);
+      .filter((t): t is Task => t !== null);
 
     return tasks;
   } catch (err) {

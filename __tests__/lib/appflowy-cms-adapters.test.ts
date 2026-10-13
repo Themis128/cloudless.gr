@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   getDocument: vi.fn(),
   extractDocText: vi.fn(),
   markdownToHtml: vi.fn(),
+  fetchViewMarkdownMap: vi.fn(),
 }));
 
 vi.mock("@/lib/appflowy", () => ({
@@ -16,6 +17,7 @@ vi.mock("@/lib/appflowy", () => ({
   getDocument: m.getDocument,
   extractDocText: m.extractDocText,
   markdownToHtml: m.markdownToHtml,
+  fetchViewMarkdownMap: m.fetchViewMarkdownMap,
 }));
 
 import * as blog from "@/lib/appflowy-blog";
@@ -36,6 +38,19 @@ function configured(views: ReturnType<typeof view>[]) {
   m.listAllViewsDeep.mockResolvedValue(views);
   m.getDocument.mockResolvedValue({ data: {} });
   m.extractDocText.mockResolvedValue("");
+  m.fetchViewMarkdownMap.mockImplementation(async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await m.extractDocText(await m.getDocument(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    )
+  );
   m.markdownToHtml.mockResolvedValue("<p>x</p>");
 }
 

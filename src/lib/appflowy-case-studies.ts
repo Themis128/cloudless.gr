@@ -8,8 +8,7 @@
 import {
   listAllWorkspaces,
   listAllViewsDeep,
-  getDocument,
-  extractDocText,
+  fetchViewMarkdownMap,
   markdownToHtml,
   isAppFlowyConfigured,
 } from "./appflowy";
@@ -113,22 +112,14 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const caseViews = views.filter((v) => isCaseStudyPage(v.name));
-    const caseStudies: CaseStudy[] = await Promise.all(
-      caseViews.map(async (view) => {
-        let markdown = "";
-        try {
-          const doc = await getDocument(workspaceId, view.view_id);
-          markdown = await extractDocText(doc);
-        } catch {
-          markdown = "";
-        }
-        return mapMarkdownToCaseStudy(
-          view.view_id,
-          stripPrefix(view.name),
-          markdown,
-          view.last_edited_time
-        );
-      })
+    const docs = await fetchViewMarkdownMap(workspaceId, caseViews);
+    const caseStudies: CaseStudy[] = caseViews.map((view) =>
+      mapMarkdownToCaseStudy(
+        view.view_id,
+        stripPrefix(view.name),
+        docs.get(view.view_id) ?? "",
+        view.last_edited_time
+      )
     );
 
     return caseStudies.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -150,14 +141,10 @@ export async function getCaseStudyBySlug(slug: string): Promise<CaseStudyWithCon
 
   try {
     const views = await listAllViewsDeep(workspaceId);
-    for (const view of views.filter((v) => isCaseStudyPage(v.name))) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
+    const caseViews = views.filter((v) => isCaseStudyPage(v.name));
+    const docs = await fetchViewMarkdownMap(workspaceId, caseViews);
+    for (const view of caseViews) {
+      const markdown = docs.get(view.view_id) ?? "";
       const mapped = mapMarkdownToCaseStudy(
         view.view_id,
         stripPrefix(view.name),
@@ -187,22 +174,14 @@ export async function getAllCaseStudiesAdmin(): Promise<CaseStudy[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const caseViews = views.filter((v) => isCaseStudyPage(v.name));
-    const caseStudies: CaseStudy[] = await Promise.all(
-      caseViews.map(async (view) => {
-        let markdown = "";
-        try {
-          const doc = await getDocument(workspaceId, view.view_id);
-          markdown = await extractDocText(doc);
-        } catch {
-          markdown = "";
-        }
-        return mapMarkdownToCaseStudy(
-          view.view_id,
-          stripPrefix(view.name),
-          markdown,
-          view.last_edited_time
-        );
-      })
+    const docs = await fetchViewMarkdownMap(workspaceId, caseViews);
+    const caseStudies: CaseStudy[] = caseViews.map((view) =>
+      mapMarkdownToCaseStudy(
+        view.view_id,
+        stripPrefix(view.name),
+        docs.get(view.view_id) ?? "",
+        view.last_edited_time
+      )
     );
 
     return caseStudies.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
