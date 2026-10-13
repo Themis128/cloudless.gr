@@ -93,27 +93,28 @@ export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: AppFlowyFaq[] = [];
+    const faqs: AppFlowyFaq[] = (
+      await Promise.all(
+        faqViews.map(async (view) => {
+          let markdown = "";
+          try {
+            const doc = await getDocument(workspaceId, view.view_id);
+            markdown = await extractDocText(doc);
+          } catch {
+            markdown = "";
+          }
 
-    for (const view of faqViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
+          const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
 
-      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
-
-      // Filter by published status for public API
-      if (!mapped.published) continue;
-
-      if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
-        continue;
-      }
-      faqs.push(mapped);
-    }
+          // Filter by published status for public API
+          if (!mapped.published) return null;
+          if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
+            return null;
+          }
+          return mapped;
+        })
+      )
+    ).filter((f): f is AppFlowyFaq => f !== null);
 
     // Sort by order, then by last edited time
     return faqs.sort((a, b) => {
@@ -155,21 +156,20 @@ export async function getAllFaqsAdmin(): Promise<AppFlowyFaq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: AppFlowyFaq[] = [];
+    const faqs: AppFlowyFaq[] = await Promise.all(
+      faqViews.map(async (view) => {
+        let markdown = "";
+        try {
+          const doc = await getDocument(workspaceId, view.view_id);
+          markdown = await extractDocText(doc);
+        } catch {
+          markdown = "";
+        }
 
-    for (const view of faqViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-
-      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
-      // Admin version: no filtering by published or locale
-      faqs.push(mapped);
-    }
+        // Admin version: no filtering by published or locale
+        return mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
+      })
+    );
 
     // Sort by order, then by last edited time
     return faqs.sort((a, b) => {

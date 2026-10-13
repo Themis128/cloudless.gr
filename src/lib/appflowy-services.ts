@@ -63,38 +63,38 @@ export async function getServices(): Promise<CloudlessService[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const serviceViews = views.filter((v) => isServicePage(v.name));
-    const services: CloudlessService[] = [];
+    const services: CloudlessService[] = await Promise.all(
+      serviceViews.map(async (view) => {
+        const title = stripPrefix(view.name);
+        let markdown = "";
+        try {
+          const doc = await getDocument(workspaceId, view.view_id);
+          markdown = await extractDocText(doc);
+        } catch {
+          markdown = "";
+        }
 
-    for (const view of serviceViews) {
-      const title = stripPrefix(view.name);
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-
-      const category = (parseField(markdown, "Category") || "consulting") as ServiceCategory;
-      const featuresRaw = parseField(markdown, "Features");
-      services.push({
-        id: view.view_id,
-        slug: parseField(markdown, "Slug") || slugify(title),
-        name: title,
-        description: parseField(markdown, "Description") || "",
-        price: parseField(markdown, "Price") || "",
-        category,
-        features: featuresRaw
-          ? featuresRaw
-              .split(/[;\n]/)
-              .map((f) => f.trim())
-              .filter(Boolean)
-          : [],
-        cta: parseField(markdown, "CTA") || "Contact us",
-        icon: parseField(markdown, "Icon") || "⚡",
-        stripePriceId: parseField(markdown, "StripePriceId") || undefined,
-      });
-    }
+        const category = (parseField(markdown, "Category") || "consulting") as ServiceCategory;
+        const featuresRaw = parseField(markdown, "Features");
+        return ({
+          id: view.view_id,
+          slug: parseField(markdown, "Slug") || slugify(title),
+          name: title,
+          description: parseField(markdown, "Description") || "",
+          price: parseField(markdown, "Price") || "",
+          category,
+          features: featuresRaw
+            ? featuresRaw
+                .split(/[;\n]/)
+                .map((f) => f.trim())
+                .filter(Boolean)
+            : [],
+          cta: parseField(markdown, "CTA") || "Contact us",
+          icon: parseField(markdown, "Icon") || "⚡",
+          stripePriceId: parseField(markdown, "StripePriceId") || undefined,
+        });
+      })
+    );
 
     return services;
   } catch {

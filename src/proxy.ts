@@ -262,6 +262,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = generateNonce();
   const pathname = request.nextUrl.pathname;
 
+  // Dotfile probes (/.env, /.git/config, /.aws/credentials, ...) must not
+  // fall through to the app catch-all, which would serve the 200 homepage
+  // and register a Sentry "Potential Security Risk" event for every scan.
+  if (pathname.split("/").some((segment) => segment.startsWith(".") && segment.length > 1)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   // Skip HTTPS redirect for health checks (internal NodePort calls)
   if (pathname === "/api/health" || pathname.endsWith("/api/health")) {
     if (pathname.startsWith("/api/")) {

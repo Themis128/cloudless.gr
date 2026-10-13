@@ -179,3 +179,13 @@ describe("proxy protected routes access", () => {
     }
   });
 });
+
+describe("proxy dotfile probes", () => {
+  it.each(["/.env", "/.git/config", "/v1/.env", "/.aws/credentials", "/foo/.hidden/x"])(
+    "returns 404 for %s",
+    async (path) => {
+      const response = await proxy(makeRequest(path));
+      expect(response.status).toBe(404);
+    }
+  );
+});

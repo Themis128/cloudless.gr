@@ -153,16 +153,17 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
     const views = await listAllViewsDeep(workspaceId);
     const projectViews = views.filter((v) => isProjectPage(v.name));
 
-    const projects: Project[] = [];
-    for (const view of projectViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseProjectFields(text);
+    const projects: Project[] = (
+      await Promise.all(
+        projectViews.map(async (view) => {
+          try {
+            const doc = await getDocument(workspaceId, view.view_id);
+            const text = await extractDocText(doc);
+            const fields = parseProjectFields(text);
 
-        if (statusFilter && fields.status !== statusFilter) continue;
+            if (statusFilter && fields.status !== statusFilter) return null;
 
-        projects.push({
+            return {
           id: view.view_id,
           name: fields.name || stripProjectPrefix(view.name),
           status: fields.status || "Planning",
@@ -175,12 +176,14 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
           budget: fields.budget ?? null,
           progress: fields.progress || 0,
           tags: fields.tags || [],
-          url: "",
-        });
-      } catch {
-        // Skip failed documents
-      }
-    }
+              url: "",
+            };
+          } catch {
+            return null;
+          }
+        })
+      )
+    ).filter((p): p is Project => p !== null);
 
     // Sort by priority (Critical first) then by name
     const priorityOrder: Record<ProjectPriority, number> = {
@@ -282,18 +285,19 @@ export async function listTasks(filters?: {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = [];
-    for (const view of taskViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseTaskFields(text);
+    const tasks: Task[] = (
+      await Promise.all(
+        taskViews.map(async (view) => {
+          try {
+            const doc = await getDocument(workspaceId, view.view_id);
+            const text = await extractDocText(doc);
+            const fields = parseTaskFields(text);
 
-        if (filters?.status && fields.status !== filters.status) continue;
-        if (filters?.project && fields.project !== filters.project) continue;
-        if (filters?.assignee && fields.assignee !== filters.assignee) continue;
+            if (filters?.status && fields.status !== filters.status) return null;
+            if (filters?.project && fields.project !== filters.project) return null;
+            if (filters?.assignee && fields.assignee !== filters.assignee) return null;
 
-        tasks.push({
+            return {
           id: view.view_id,
           task: fields.task || stripTaskPrefix(view.name),
           status: fields.status || "Backlog",
@@ -306,12 +310,14 @@ export async function listTasks(filters?: {
           description: fields.description || "",
           labels: fields.labels || [],
           sprint: fields.sprint || "",
-          url: "",
-        });
-      } catch {
-        // Skip failed documents
-      }
-    }
+              url: "",
+            };
+          } catch {
+            return null;
+          }
+        })
+      )
+    ).filter((t): t is Task => t !== null);
 
     // Sort by status then priority
     const statusOrder: Record<TaskStatus, number> = {
@@ -411,15 +417,17 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = [];
-    for (const view of taskViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseTaskFields(text);
+    const tasks: Task[] = (
+      await Promise.all(
+        taskViews.map(async (view) => {
+          try {
+            const doc = await getDocument(workspaceId, view.view_id);
+            const text = await extractDocText(doc);
+            const fields = parseTaskFields(text);
 
-        if (fields.sprint === sprintName || fields.project === sprintName) {
-          tasks.push({
+            if (fields.sprint !== sprintName && fields.project !== sprintName) return null;
+
+            return {
             id: view.view_id,
             task: fields.task || stripTaskPrefix(view.name),
             status: fields.status || "Backlog",
@@ -432,13 +440,14 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
             description: fields.description || "",
             labels: fields.labels || [],
             sprint: fields.sprint || "",
-            url: "",
-          });
-        }
-      } catch {
-        // Skip failed documents
-      }
-    }
+              url: "",
+            };
+          } catch {
+            return null;
+          }
+        })
+      )
+    ).filter((t): t is Task => t !== null);
 
     return tasks;
   } catch (err) {

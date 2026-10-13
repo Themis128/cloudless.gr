@@ -108,19 +108,20 @@ export async function getPosts(): Promise<AppFlowyPost[]> {
     const views = await listAllViewsDeep(workspaceId);
     const blogViews = views.filter((v) => isBlogPage(v.name));
 
-    const posts: AppFlowyPost[] = [];
-    for (const view of blogViews) {
-      const base = mapViewToPost(view);
-      let html = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        html = await markdownToHtml(text);
-      } catch {
-        html = "";
-      }
-      posts.push({ ...base, html });
-    }
+    const posts: AppFlowyPost[] = await Promise.all(
+      blogViews.map(async (view) => {
+        const base = mapViewToPost(view);
+        let html = "";
+        try {
+          const doc = await getDocument(workspaceId, view.view_id);
+          const text = await extractDocText(doc);
+          html = await markdownToHtml(text);
+        } catch {
+          html = "";
+        }
+        return { ...base, html };
+      })
+    );
 
     return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {

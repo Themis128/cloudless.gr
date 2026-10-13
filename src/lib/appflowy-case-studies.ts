@@ -113,25 +113,23 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const caseViews = views.filter((v) => isCaseStudyPage(v.name));
-    const caseStudies: CaseStudy[] = [];
-
-    for (const view of caseViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-      caseStudies.push(
-        mapMarkdownToCaseStudy(
+    const caseStudies: CaseStudy[] = await Promise.all(
+      caseViews.map(async (view) => {
+        let markdown = "";
+        try {
+          const doc = await getDocument(workspaceId, view.view_id);
+          markdown = await extractDocText(doc);
+        } catch {
+          markdown = "";
+        }
+        return mapMarkdownToCaseStudy(
           view.view_id,
           stripPrefix(view.name),
           markdown,
           view.last_edited_time
-        )
-      );
-    }
+        );
+      })
+    );
 
     return caseStudies.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {
@@ -189,25 +187,23 @@ export async function getAllCaseStudiesAdmin(): Promise<CaseStudy[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const caseViews = views.filter((v) => isCaseStudyPage(v.name));
-    const caseStudies: CaseStudy[] = [];
-
-    for (const view of caseViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-      caseStudies.push(
-        mapMarkdownToCaseStudy(
+    const caseStudies: CaseStudy[] = await Promise.all(
+      caseViews.map(async (view) => {
+        let markdown = "";
+        try {
+          const doc = await getDocument(workspaceId, view.view_id);
+          markdown = await extractDocText(doc);
+        } catch {
+          markdown = "";
+        }
+        return mapMarkdownToCaseStudy(
           view.view_id,
           stripPrefix(view.name),
           markdown,
           view.last_edited_time
-        )
-      );
-    }
+        );
+      })
+    );
 
     return caseStudies.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {
