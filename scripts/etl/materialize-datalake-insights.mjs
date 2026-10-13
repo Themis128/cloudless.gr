@@ -20,6 +20,17 @@ const DOMAINS = [
   { domain: "revenue", sections: ["stripe_revenue", "acquisition_funnel", "attribution"] },
   { domain: "crm_funnel", sections: ["espocrm_funnel", "social_leads"] },
   { domain: "ads", sections: ["linkedin_ads", "linkedin_ads_audience", "ads_funnel"] },
+  {
+    domain: "social",
+    sections: [
+      "social_engagement",
+      "social_monetization",
+      "social_outliers",
+      "social_recommendations",
+      "telegram_funnel",
+      "social_leads",
+    ],
+  },
   { domain: "ops_errors", sections: ["top_errors"] },
   {
     domain: "executive",
@@ -30,6 +41,8 @@ const DOMAINS = [
       "social_leads",
       "linkedin_ads",
       "ads_funnel",
+      "social_engagement",
+      "social_monetization",
       "top_errors",
       "acquisition_funnel",
       "attribution",
