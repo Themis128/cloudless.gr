@@ -237,8 +237,10 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
 - **push/PR CI** — test/lint/coverage gates. `concurrency` with
   `cancel-in-progress: true` (latest commit wins, older runs are waste) and
   `timeout-minutes: 30`. Exception: notification workflows
-  (`slack-github-notify`) serialize with `false` — each run carries a
-  distinct event message, so cancelling would drop Slack posts.
+  (`slack-github-notify`) carry NO concurrency group at all — each run posts
+  a distinct event message, and any group drops events (GitHub keeps only
+  one pending run per group and replaces it on each new arrival, so even
+  `cancel-in-progress: false` loses burst notifications).
 - **push-fired ops** (`fix-*`, `k3s-*`, `cluster-*`, `*-restore`, probes) —
   stateful Pi/cluster mutations triggered via the self-referencing
   `on.push.paths` pattern above. `concurrency` serializes them with
