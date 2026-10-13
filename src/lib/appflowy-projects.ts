@@ -115,6 +115,39 @@ function parseTaskFields(text: string): Partial<Task> {
   };
 }
 
+function fieldsToTask(view: { view_id: string; name: string }, fields: Partial<Task>): Task {
+  return {
+    id: view.view_id,
+    task: fields.task || stripTaskPrefix(view.name),
+    status: fields.status || "Backlog",
+    priority: fields.priority || "Medium",
+    assignee: fields.assignee || "",
+    project: fields.project || "",
+    dueDate: fields.dueDate || "",
+    estimate: fields.estimate || "",
+    type: fields.type || "",
+    description: fields.description || "",
+    labels: fields.labels || [],
+    sprint: fields.sprint || "",
+    url: "",
+  };
+}
+
+function mapTaskViews(
+  docs: Map<string, string | null>,
+  taskViews: { view_id: string; name: string }[],
+  keep: (fields: Partial<Task>) => boolean
+): Task[] {
+  return taskViews
+    .map((view) => {
+      const markdown = docs.get(view.view_id);
+      if (markdown === null || markdown === undefined) return null;
+      const fields = parseTaskFields(markdown);
+      return keep(fields) ? fieldsToTask(view, fields) : null;
+    })
+    .filter((t): t is Task => t !== null);
+}
+
 function isProjectPage(name: string): boolean {
   return /^\[Project\]\s/i.test(name);
 }
@@ -286,37 +319,12 @@ export async function listTasks(filters?: {
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
     const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
-    const tasks: Task[] = taskViews
-      .map((view) => {
-          try {
-            const markdown = docs.get(view.view_id);
-            if (markdown === null || markdown === undefined) return null;
-            const fields = parseTaskFields(markdown);
-
-            if (filters?.status && fields.status !== filters.status) return null;
-            if (filters?.project && fields.project !== filters.project) return null;
-            if (filters?.assignee && fields.assignee !== filters.assignee) return null;
-
-            return {
-          id: view.view_id,
-          task: fields.task || stripTaskPrefix(view.name),
-          status: fields.status || "Backlog",
-          priority: fields.priority || "Medium",
-          assignee: fields.assignee || "",
-          project: fields.project || "",
-          dueDate: fields.dueDate || "",
-          estimate: fields.estimate || "",
-          type: fields.type || "",
-          description: fields.description || "",
-          labels: fields.labels || [],
-          sprint: fields.sprint || "",
-              url: "",
-            };
-          } catch {
-            return null;
-          }
-        })
-      .filter((t): t is Task => t !== null);
+    const tasks: Task[] = mapTaskViews(docs, taskViews, (fields) => {
+      if (filters?.status && fields.status !== filters.status) return false;
+      if (filters?.project && fields.project !== filters.project) return false;
+      if (filters?.assignee && fields.assignee !== filters.assignee) return false;
+      return true;
+    });
 
     // Sort by status then priority
     const statusOrder: Record<TaskStatus, number> = {
@@ -417,35 +425,11 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
     const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
-    const tasks: Task[] = taskViews
-      .map((view) => {
-          try {
-            const markdown = docs.get(view.view_id);
-            if (markdown === null || markdown === undefined) return null;
-            const fields = parseTaskFields(markdown);
-
-            if (fields.sprint !== sprintName && fields.project !== sprintName) return null;
-
-            return {
-            id: view.view_id,
-            task: fields.task || stripTaskPrefix(view.name),
-            status: fields.status || "Backlog",
-            priority: fields.priority || "Medium",
-            assignee: fields.assignee || "",
-            project: fields.project || "",
-            dueDate: fields.dueDate || "",
-            estimate: fields.estimate || "",
-            type: fields.type || "",
-            description: fields.description || "",
-            labels: fields.labels || [],
-            sprint: fields.sprint || "",
-              url: "",
-            };
-          } catch {
-            return null;
-          }
-        })
-      .filter((t): t is Task => t !== null);
+    const tasks: Task[] = mapTaskViews(
+      docs,
+      taskViews,
+      (fields) => fields.sprint === sprintName || fields.project === sprintName
+    );
 
     return tasks;
   } catch (err) {

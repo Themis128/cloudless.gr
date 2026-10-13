@@ -83,6 +83,16 @@ function mapMarkdownToFaq(
   };
 }
 
+function sortFaqs(faqs: AppFlowyFaq[]): AppFlowyFaq[] {
+  // Sort by order, then by last edited time
+  return faqs.sort((a, b) => {
+    const orderA = a.order ?? 999999;
+    const orderB = b.order ?? 999999;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+  });
+}
+
 export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   if (!(await isAppFlowyConfigured())) return [];
 
@@ -110,13 +120,7 @@ export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
       })
       .filter((f): f is AppFlowyFaq => f !== null);
 
-    // Sort by order, then by last edited time
-    return faqs.sort((a, b) => {
-      const orderA = a.order ?? 999999;
-      const orderB = b.order ?? 999999;
-      if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-    });
+    return sortFaqs(faqs);
   } catch {
     return [];
   }
@@ -156,13 +160,7 @@ export async function getAllFaqsAdmin(): Promise<AppFlowyFaq[]> {
       mapMarkdownToFaq(view.view_id, view.name, docs.get(view.view_id) ?? "", view.last_edited_time)
     );
 
-    // Sort by order, then by last edited time
-    return faqs.sort((a, b) => {
-      const orderA = a.order ?? 999999;
-      const orderB = b.order ?? 999999;
-      if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-    });
+    return sortFaqs(faqs);
   } catch {
     // Convert staticFaqs to AppFlowyFaq format with required fields
     return staticFaqs.map((f) => ({
