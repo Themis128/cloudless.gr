@@ -175,6 +175,12 @@ describe("proxy protected routes access", () => {
 });
 
 describe("proxy dotfile probes", () => {
+  it("still allows .well-known paths through to page handling", async () => {
+    const response = await proxy(makeRequest("/api/.well-known/assetlinks.json"));
+    expect(response.status).not.toBe(404);
+  });
+
+
   it.each(["/.env", "/.git/config", "/v1/.env", "/.aws/credentials", "/foo/.hidden/x"])(
     "returns 404 for %s",
     async (path) => {

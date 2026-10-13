@@ -265,7 +265,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Dotfile probes (/.env, /.git/config, /.aws/credentials, ...) must not
   // fall through to the app catch-all, which would serve the 200 homepage
   // and register a Sentry "Potential Security Risk" event for every scan.
-  if (pathname.split("/").some((segment) => segment.startsWith(".") && segment.length > 1)) {
+  if (
+    pathname
+      .split("/")
+      .some((segment) => segment.startsWith(".") && segment.length > 1 && segment !== ".well-known")
+  ) {
     return new NextResponse(null, { status: 404 });
   }
 
