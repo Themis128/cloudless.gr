@@ -71,7 +71,7 @@ describe("listEditorialPosts", () => {
   it("filters to editorial prefixes and maps fields", async () => {
     mockViews.mockResolvedValue([
       view("v1", "[Draft] My Post"),
-      view("v2", "Plain published"),           // no prefix → skipped
+      view("v2", "Plain published"), // no prefix → skipped
       view("v3", "[Review] Second", "2026-10-05"),
       view("v4", "[Archived] Old"),
     ]);
@@ -146,10 +146,7 @@ describe("findEditorialPost", () => {
   });
 
   it("skips unreadable docs while scanning and returns null when nothing matches", async () => {
-    mockViews.mockResolvedValue([
-      view("v1", "[Draft] Broken"),
-      view("v2", "[Draft] Working"),
-    ]);
+    mockViews.mockResolvedValue([view("v1", "[Draft] Broken"), view("v2", "[Draft] Working")]);
     mockGetDoc.mockImplementation(async (_w: string, id: string) => {
       if (id === "v1") throw new Error("gone");
       return {};
@@ -208,11 +205,115 @@ describe("setEditorialStatus", () => {
 
     await new Promise((r) => setTimeout(r, 10));
     expect(mockShare).toHaveBeenCalledWith(
-      expect.objectContaining({ pageId: "v1", title: "My Post", url: "https://cloudless.gr/en/blog/my-post" })
+      expect.objectContaining({
+        pageId: "v1",
+        title: "My Post",
+        url: "https://cloudless.gr/en/blog/my-post",
+      })
     );
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/webhook/postiz-ai-multicaption"),
       expect.objectContaining({ method: "POST" })
     );
+  });
+});
+
+describe("appflowy-blog-admin tails", () => {
+  it("returns [] when the workspace listing throws", async () => {
+    mockWorkspaces.mockRejectedValueOnce(new Error("workspace api down"));
+    await expect(listEditorialPosts()).resolves.toEqual([]);
+  });
+
+  it("maps every editorial prefix to its status", async () => {
+    mockViews.mockResolvedValue([
+      view("v1", "[Review] Alpha"),
+      view("v2", "[Draft] Beta"),
+      view("v3", "[Archived] Gamma"),
+    ]);
+    const posts = await listEditorialPosts();
+    const byId = Object.fromEntries(posts.map((p) => [p.id, p.status]));
+    expect(byId).toMatchObject({
+      v1: "In Review",
+      v2: "Draft",
+      v3: "Archived",
+    });
+  });
+
+  it("leaves an unrecognized view name untouched on rename", async () => {
+    mockViews.mockResolvedValue([view("v1", "Bare Title")]);
+    mockRename.mockResolvedValue(true);
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    expect(mockRename).toHaveBeenCalledWith("ws1", "v1", "Bare Title");
+  });
+
+  it("fires the Postiz share + n8n webhook when publishing", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] My Post")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockResolvedValue({ ok: true, postIds: ["p1", "p2"] });
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    // triggerBlogSocialShare is fire-and-forget — flush microtasks.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockShare).toHaveBeenCalledWith(
+      expect.objectContaining({ pageId: "v1", title: "My Post" })
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/webhook/postiz-ai-multicaption"),
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("still shares when the doc read fails inside triggerBlogSocialShare", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Doc Broken")]);
+    mockRename.mockResolvedValue(true);
+    mockGetDoc.mockRejectedValueOnce(new Error("doc fetch 500"));
+    mockShare.mockResolvedValue({ skipped: "no channels" });
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockShare).toHaveBeenCalled();
+  });
+
+  it("logs the share failure branch without rejecting the status flip", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Review] Fail Post")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockResolvedValue({ ok: false, error: "postiz offline" });
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockShare).toHaveBeenCalled();
+  });
+
+  it("maps an unrecognized editorial status to the clean name", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Weird Status")]);
+    mockRename.mockResolvedValue(true);
+    const ok = await setEditorialStatus("v1", "Backlog");
+    expect(ok).toBe(true);
+    expect(mockRename).toHaveBeenCalledWith("ws1", "v1", "Weird Status");
+  });
+
+  it("logs when the Postiz share itself throws", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Share Throws")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockRejectedValue(new Error("share crash"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("logs when the n8n multicaption webhook fails", async () => {
+    mockViews.mockResolvedValue([view("v1", "[Draft] Hook Fails")]);
+    mockRename.mockResolvedValue(true);
+    mockShare.mockResolvedValue({ ok: true, postIds: ["p1"] });
+    mockFetch.mockRejectedValueOnce(new Error("n8n down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ok = await setEditorialStatus("v1", "Published");
+    expect(ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    spy.mockRestore();
   });
 });

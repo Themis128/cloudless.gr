@@ -1,279 +1,195 @@
 /**
- * AuthContext tests — covers the real AuthProvider component rendered via
- * @testing-library/react in jsdom.
+ * AuthContext provider tests — session check paths, e2e bypass, sign in/out,
+ * forgot-password, profile update retry, preferences merge.
  *
- * AuthContext uses Cognito via next-auth. On mount it calls
- * GET /api/auth/session and sets user/isAdmin from the response.
+ * @vitest-environment jsdom
  */
-
-import { render, screen, waitFor, act, cleanup } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
+
+(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-// ── Top-level mocks ───────────────────────────────────────────────────────────
+const pending: { p?: Promise<unknown> } = {};
 
-// Mock next-auth/react so signIn/signOut/getSession don't call the network.
-vi.mock("next-auth/react", () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
-  getSession: vi.fn().mockResolvedValue(null),
-  signIn: vi.fn(),
-  signOut: vi.fn(),
-  useSession: vi.fn().mockReturnValue({ data: null, status: "unauthenticated" }),
-}));
-
-// Prevent any indirect next-intl calls
-vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
-
-// ── Consumer components ───────────────────────────────────────────────────────
-
-function AuthStatus() {
-  const { user, isLoading, configError } = useAuth();
-  if (isLoading) return <div>loading</div>;
-  if (configError) return <div data-testid="config-error">{configError}</div>;
-  if (user) return <div data-testid="user">{user.username}</div>;
-  return <div data-testid="no-user">signed-out</div>;
+function Probe() {
+  const auth = useAuth();
+  const track = (p: Promise<unknown>) => {
+    pending.p = p;
+    p.catch(() => {});
+  };
+  return (
+    <div>
+      <span data-testid="user">{auth.user ? auth.user.email ?? auth.user.username : "anon"}</span>
+      <span data-testid="admin">{String(auth.isAdmin)}</span>
+      <span data-testid="loading">{String(auth.isLoading)}</span>
+      <span data-testid="name">{auth.user?.name ?? "-"}</span>
+      <span data-testid="theme">{auth.user?.preferences.theme ?? "-"}</span>
+      <button data-testid="in" onClick={() => track(auth.signIn("a@b.com", "pw"))}>in</button>
+      <button data-testid="out" onClick={() => track(auth.signOut())}>out</button>
+      <button data-testid="forgot" onClick={() => track(auth.forgotPassword("a@b.com"))}>forgot</button>
+      <button data-testid="prof" onClick={() => track(auth.updateProfile({ name: "New" }))}>prof</button>
+      <button data-testid="prefs" onClick={() => track(auth.updatePreferences({ theme: "light" }))}>prefs</button>
+      <button data-testid="refresh" onClick={() => track(auth.refreshProfile())}>refresh</button>
+    </div>
+  );
 }
 
-function AdminStatus() {
-  const { isAdmin, isLoading } = useAuth();
-  if (isLoading) return <div>loading</div>;
-  return <div data-testid="admin">{String(isAdmin)}</div>;
-}
+const flush = () => act(async () => { await Promise.resolve(); });
+const jsonRes = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), { status, headers });
 
 function renderAuth() {
   return render(
     <AuthProvider>
-      <AuthStatus />
+      <Probe />
     </AuthProvider>
   );
 }
 
-function renderAuthAdmin() {
-  return render(
-    <AuthProvider>
-      <AdminStatus />
-    </AuthProvider>
-  );
-}
+const okSession = (user: unknown, isAdmin = false) =>
+  jsonRes({ user: user ?? undefined, isAdmin });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+describe("AuthContext", () => {
+  const origFetch = globalThis.fetch;
+  let fetchMock: ReturnType<typeof vi.fn>;
 
-function jwtSegment(obj: unknown): string {
-  return btoa(JSON.stringify(obj)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-function makeSessionResponse(
-  user: {
-    id?: string;
-    email?: string;
-    name?: string;
-    groups?: string[];
-    roles?: string[];
-  } | null
-) {
-  return Promise.resolve(
-    new Response(JSON.stringify(user ? { user } : null), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })
-  );
-}
-
-// ── Setup ─────────────────────────────────────────────────────────────────────
-
-beforeEach(() => {
-  vi.resetAllMocks();
-  // Default: unauthenticated
-  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-    if (String(input).includes("/api/auth/session")) {
-      return makeSessionResponse(null);
-    }
-    return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-  });
-});
-
-afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-});
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-describe("AuthProvider — no active session", () => {
-  it("renders signed-out state when /api/auth/session returns null", async () => {
-    await act(async () => {
-      renderAuth();
-    });
-    await waitFor(() => screen.getByTestId("no-user"));
-    expect(screen.getByTestId("no-user").textContent).toBe("signed-out");
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+    document.cookie = "e2e_admin=; max-age=0";
   });
 
-  it("configError is always null (single provider, no config needed)", async () => {
-    await act(async () => {
-      renderAuth();
-    });
-    await waitFor(() => screen.getByTestId("no-user"));
-    expect(screen.queryByTestId("config-error")).toBeNull();
+  afterEach(() => {
+    cleanup();
+    globalThis.fetch = origFetch;
   });
 
-  it("isLoading starts true then becomes false", async () => {
-    await act(async () => {
-      renderAuth();
-    });
-    await waitFor(() => screen.getByTestId("no-user"));
-    expect(screen.queryByText("loading")).toBeNull();
-  });
-
-  it("isAdmin is false when no session", async () => {
-    await act(async () => {
-      renderAuthAdmin();
-    });
-    await waitFor(() => screen.getByTestId("admin"));
-    expect(screen.getByTestId("admin").textContent).toBe("false");
-  });
-});
-
-describe("AuthProvider — authenticated session", () => {
-  it("sets user from /api/auth/session response", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      if (String(input).includes("/api/auth/session")) {
-        return makeSessionResponse({ id: "user-123", email: "t@cloudless.gr" });
-      }
-      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-    });
-
-    await act(async () => {
-      renderAuth();
-    });
-
-    await waitFor(() => screen.getByTestId("user"));
-    expect(screen.getByTestId("user").textContent).toBe("user-123");
-  });
-
-  it("isAdmin=true when session user has groups: ['admin']", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      if (String(input).includes("/api/auth/session")) {
-        return makeSessionResponse({
-          id: "admin-1",
-          email: "admin@cloudless.gr",
-          groups: ["admin"],
-        });
-      }
-      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-    });
-
-    await act(async () => {
-      renderAuthAdmin();
-    });
-
-    await waitFor(() => screen.getByTestId("admin"));
+  it("e2e_admin cookie bypass sets admin user without fetching", async () => {
+    document.cookie = "e2e_admin=1";
+    renderAuth();
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("e2e-admin@cloudless.test");
     expect(screen.getByTestId("admin").textContent).toBe("true");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("isAdmin=true when session user has groups: ['admin']", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      if (String(input).includes("/api/auth/session")) {
-        return makeSessionResponse({
-          id: "role-admin",
-          groups: ["admin"],
-        });
-      }
-      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-    });
-
-    await act(async () => {
-      renderAuthAdmin();
-    });
-
-    await waitFor(() => screen.getByTestId("admin"));
+  it("populates user from session and enriches profile in background", async () => {
+    fetchMock
+      .mockResolvedValueOnce(okSession({ id: "u1", email: "a@b.com", groups: ["admin"] }))
+      .mockResolvedValueOnce(jsonRes({ name: "Pat", company: "Acme" }));
+    renderAuth();
+    await flush();
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("a@b.com");
     expect(screen.getByTestId("admin").textContent).toBe("true");
+    expect(screen.getByTestId("name").textContent).toBe("Pat");
+    expect(screen.getByTestId("loading").textContent).toBe("false");
   });
 
-  it("isAdmin=false when groups does not include 'admin'", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      if (String(input).includes("/api/auth/session")) {
-        return makeSessionResponse({ id: "user-1", groups: ["viewer"] });
-      }
-      return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-    });
-
-    await act(async () => {
-      renderAuthAdmin();
-    });
-
-    await waitFor(() => screen.getByTestId("admin"));
-    expect(screen.getByTestId("admin").textContent).toBe("false");
-  });
-});
-
-describe("AuthProvider — error handling", () => {
-  it("renders signed-out when fetch throws", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
-
-    await act(async () => {
-      renderAuth();
-    });
-
-    await waitFor(() => screen.getByTestId("no-user"));
+  it("treats non-ok session and non-JSON bodies as logged out", async () => {
+    fetchMock.mockResolvedValueOnce(jsonRes({}, 401));
+    const { unmount } = renderAuth();
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("anon");
+    unmount();
+    fetchMock.mockResolvedValueOnce(new Response("<html>challenge</html>", { status: 200 }));
+    renderAuth();
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("anon");
   });
 
-  it("renders signed-out when /api/auth/session returns non-ok", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 500 }));
-
-    await act(async () => {
-      renderAuth();
-    });
-
-    await waitFor(() => screen.getByTestId("no-user"));
-  });
-});
-
-describe("AuthContext — JWT decode utility (contract tests)", () => {
-  it("getCurrentUser mock resolves with the expected shape", async () => {
-    const mockGetCurrentUser = vi.fn().mockResolvedValue({
-      username: "themis@cloudless.gr",
-      signInDetails: { loginId: "themis@cloudless.gr" },
-    });
-    const result = await mockGetCurrentUser();
-    expect(result.username).toBe("themis@cloudless.gr");
-    expect(result.signInDetails.loginId).toBe("themis@cloudless.gr");
+  it("clears the session on RefreshTokenError", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonRes({ error: "RefreshTokenError" }))
+      .mockResolvedValueOnce(jsonRes({}));
+    renderAuth();
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("anon");
+    const del = fetchMock.mock.calls.find((c) => (c[1] as { method?: string })?.method === "DELETE");
+    expect(del?.[0]).toBe("/api/auth/session");
   });
 
-  it("groups claim in idToken is extracted correctly by decode logic", () => {
-    const idTokenStr = [jwtSegment({}), jwtSegment({ groups: ["admin"], sub: "abc" }), "sig"].join(
-      "."
+  it("signIn sets user + admin, throws on failure", async () => {
+    fetchMock.mockResolvedValueOnce(jsonRes({})); // checkAuth: no user
+    renderAuth();
+    await flush();
+    fetchMock
+      .mockResolvedValueOnce(jsonRes({ ok: true, isAdmin: true, user: { id: "u9", email: "a@b.com" } }))
+      .mockResolvedValueOnce(jsonRes({ name: "P" }));
+    await act(async () => { screen.getByTestId("in").click(); });
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("a@b.com");
+    expect(screen.getByTestId("admin").textContent).toBe("true");
+    fetchMock.mockResolvedValueOnce(jsonRes({ error: "bad creds" }, 401));
+    await act(async () => { screen.getByTestId("in").click(); });
+    await expect(pending.p).rejects.toThrow("bad creds");
+  });
+
+  it("signOut clears state and DELETEs the session", async () => {
+    document.cookie = "e2e_admin=1";
+    renderAuth();
+    await flush();
+    fetchMock.mockResolvedValueOnce(jsonRes({}));
+    await act(async () => { screen.getByTestId("out").click(); });
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("anon");
+  });
+
+  it("forgotPassword throws the API error on non-ok", async () => {
+    fetchMock.mockResolvedValueOnce(jsonRes({}));
+    renderAuth();
+    await flush();
+    fetchMock.mockResolvedValueOnce(jsonRes({ error: "rate limited" }, 429));
+    await act(async () => { screen.getByTestId("forgot").click(); });
+    await expect(pending.p).rejects.toThrow("rate limited");
+    fetchMock.mockResolvedValueOnce(jsonRes({}));
+    await act(async () => { screen.getByTestId("forgot").click(); }); // resolves silently
+  });
+
+  it("updateProfile retries once on 502 without x-served-by, then throws", async () => {
+    document.cookie = "e2e_admin=1";
+    renderAuth();
+    await flush();
+    // first 502 → retried → success
+    fetchMock
+      .mockResolvedValueOnce(new Response("{}", { status: 502 }))
+      .mockResolvedValueOnce(jsonRes({}));
+    await act(async () => { screen.getByTestId("prof").click(); });
+    await flush();
+    expect(fetchMock.mock.calls.filter((c) => c[0] === "/api/user/profile")).toHaveLength(2);
+    expect(screen.getByTestId("name").textContent).toBe("New");
+    // aws-fallback header → no retry → throws
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "bad" }), {
+        status: 502,
+        headers: { "x-served-by": "aws-fallback" },
+      })
     );
-
-    const base64Url = idTokenStr.split(".")[1];
-    const base64 = base64Url.replaceAll("-", "+").replaceAll("/", "_");
-    const payload = JSON.parse(
-      decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.codePointAt(0)!.toString(16)).slice(-2))
-          .join("")
-      )
-    ) as Record<string, unknown>;
-
-    const groups = (payload["groups"] as string[]) ?? [];
-    expect(groups).toContain("admin");
+    await act(async () => { screen.getByTestId("prof").click(); });
+    await expect(pending.p).rejects.toThrow("bad");
   });
 
-  it("isAdmin=false when idToken has no groups claim", () => {
-    const idTokenStr = [jwtSegment({}), jwtSegment({ sub: "xyz" }), "sig"].join(".");
-    const base64Url = idTokenStr.split(".")[1];
-    const base64 = base64Url.replaceAll("-", "+").replaceAll("/", "_");
-    const payload = JSON.parse(
-      decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.codePointAt(0)!.toString(16)).slice(-2))
-          .join("")
-      )
-    ) as Record<string, unknown>;
+  it("updatePreferences merges into user state and tolerates fetch failure", async () => {
+    document.cookie = "e2e_admin=1";
+    renderAuth();
+    await flush();
+    fetchMock.mockRejectedValueOnce(new Error("net"));
+    await act(async () => { screen.getByTestId("prefs").click(); });
+    await flush();
+    expect(screen.getByTestId("theme").textContent).toBe("light");
+  });
 
-    const groups = (payload["groups"] as string[] | undefined) ?? [];
-    expect(groups).not.toContain("admin");
+  it("refreshProfile re-runs checkAuth", async () => {
+    fetchMock.mockResolvedValueOnce(jsonRes({}));
+    renderAuth();
+    await flush();
+    fetchMock.mockResolvedValueOnce(okSession({ id: "u2", email: "b@c.com" }));
+    fetchMock.mockResolvedValueOnce(jsonRes({}));
+    await act(async () => { screen.getByTestId("refresh").click(); });
+    await flush();
+    expect(screen.getByTestId("user").textContent).toBe("b@c.com");
   });
 });

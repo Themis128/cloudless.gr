@@ -190,6 +190,111 @@ describe("GET /api/admin/integrations/status", () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
   });
 
+  it("surfaces ping-level degraded/error states per service", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      ESPOCRM_BASE_URL: "https://espo.test",
+      ESPOCRM_API_KEY: "k",
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("espo.test")) {
+        return Promise.resolve({ ok: false, status: 401, json: async () => ({}) });
+      }
+      if (u.includes("slack.com")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: false, error: "invalid_auth" }),
+        });
+      }
+      if (u.includes("api.notion.com")) {
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+      }
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => [],
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const byId = Object.fromEntries(
+      data.integrations.map((i: { id: string }) => [i.id, i])
+    ) as Record<string, { status: string; message?: string }>;
+    expect(byId["espocrm"].status).toBe("degraded");
+    expect(byId["espocrm"].message).toContain("401");
+    expect(byId["slack"].status).toBe("degraded");
+    expect(byId["slack"].message).toContain("invalid_auth");
+    expect(byId["notion"].status).toBe("error");
+    expect(byId["postiz"].status).toBe("configured");
+  });
+
+  it("flags Postiz ≥500 as error and notes the missing /groups endpoint", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("/api/public/v1/groups")) {
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      }
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({ ok: false, status: 503, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const postiz = data.integrations.find((i: { id: string }) => i.id === "postiz");
+    expect(postiz.status).toBe("error");
+    expect(postiz.message).toContain("503");
+  });
+
+  it("marks Postiz degraded on non-OK non-5xx and error when unreachable", async () => {
+    getConfigMock.mockResolvedValueOnce({
+      ...baseConfig,
+      POSTIZ_API_URL: "https://postiz.test",
+      POSTIZ_API_KEY: "p",
+    });
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("postiz.test")) {
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, team: "Cloudless" }),
+      });
+    });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const res = await GET(makeRequest());
+    const data = await res.json();
+    const postiz = data.integrations.find((i: { id: string }) => i.id === "postiz");
+    expect(postiz.status).toBe("degraded");
+    expect(postiz.message).toContain("404");
+  });
+
   it("summary counts match integrations statuses", async () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
@@ -199,5 +304,96 @@ describe("GET /api/admin/integrations/status", () => {
       summary.total
     );
     expect(summary.total).toBe(integrations.length);
+  });
+});
+
+describe("live ping tails", () => {
+  const liveCfg = {
+    ...baseConfig,
+    ESPOCRM_BASE_URL: "https://crm.cloudless.gr",
+    ESPOCRM_API_KEY: "espo-key",
+    POSTIZ_API_URL: "https://postiz.cloudless.gr",
+    POSTIZ_API_KEY: "postiz-key",
+    APPFLOWY_API_URL: "https://appflowy.cloudless.gr",
+    N8N_API_URL: "https://n8n.cloudless.gr",
+    N8N_API_KEY: "n8n-key",
+  };
+
+  const byId = (data: { integrations: { id: string }[] }, id: string) =>
+    data.integrations.find((i: { id: string }) => i.id === id);
+
+  const routeFetch = (map: Record<string, () => Response | Promise<Response>>) => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      for (const [frag, fn] of Object.entries(map)) {
+        if (url.includes(frag)) return fn();
+      }
+      return new Response("{}", { status: 200 });
+    });
+  };
+
+  beforeEach(() => {
+    getConfigMock.mockResolvedValue({ ...liveCfg });
+  });
+
+  it("network failures map every live ping to a Connection failed error", async () => {
+    fetchMock.mockRejectedValue(new Error("dns"));
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const data = await (await GET(makeRequest())).json();
+    for (const id of ["stripe", "espocrm", "slack", "notion", "postiz", "appflowy", "n8n", "meta"]) {
+      expect(byId(data, id).status).toBe("error");
+      expect(byId(data, id).message).toContain("Connection failed");
+    }
+  });
+
+  it("401/403 responses map to per-service degraded messages", async () => {
+    routeFetch({ "": () => new Response("{}", { status: 401 }) });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const data = await (await GET(makeRequest())).json();
+    expect(byId(data, "espocrm").message).toBe("API key rejected (401).");
+    expect(byId(data, "postiz").message).toBe("API key rejected (401).");
+    expect(byId(data, "stripe").message).toBe("Secret key rejected.");
+    expect(byId(data, "meta").message).toBe("Access token rejected by Graph API.");
+    expect(byId(data, "n8n").status).toBe("degraded");
+  });
+
+  it("non-ok upstream responses surface per-service errors", async () => {
+    routeFetch({
+      "slack.com": () =>
+        new Response(JSON.stringify({ ok: false, error: "account_inactive" }), { status: 200 }),
+      "api.notion.com": () => new Response("{}", { status: 500 }),
+      "crm.cloudless.gr": () => new Response("{}", { status: 500 }),
+      "appflowy.cloudless.gr": () => new Response("{}", { status: 502 }),
+      "n8n.cloudless.gr": () => new Response("{}", { status: 503 }),
+      "integrations": () => new Response("{}", { status: 503 }),
+      "graph.facebook.com": () => new Response("{}", { status: 500 }),
+    });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const data = await (await GET(makeRequest())).json();
+    expect(byId(data, "slack")).toMatchObject({ status: "degraded", message: "account_inactive" });
+    expect(byId(data, "notion").message).toBe("API returned 500");
+    expect(byId(data, "espocrm").message).toBe("API returned 500");
+    expect(byId(data, "appflowy").message).toBe("health returned 502");
+    expect(byId(data, "n8n").message).toBe("API returned 503");
+    expect(byId(data, "postiz").message).toContain("pod/container may be down");
+    expect(byId(data, "meta").message).toBe("Graph API returned 500");
+  });
+
+  it("Postiz without /groups reports the free-text picker note; disabled Meta account is degraded", async () => {
+    routeFetch({
+      "/groups": () => new Response("{}", { status: 404 }),
+      "postiz.cloudless.gr": () => new Response("[]", { status: 200 }),
+      "graph.facebook.com": () =>
+        new Response(
+          JSON.stringify({ account_status: 2, disable_reason: 1, name: "Cloudless Ads" }),
+          { status: 200 }
+        ),
+    });
+    const { GET } = await import("@/app/api/admin/integrations/status/route");
+    const data = await (await GET(makeRequest())).json();
+    expect(byId(data, "postiz").status).toBe("configured");
+    expect(byId(data, "postiz").message).toContain("doesn't expose `/groups`");
+    expect(byId(data, "meta").status).toBe("degraded");
+    expect(byId(data, "meta").message).toContain("Ad account: Cloudless Ads DISABLED");
   });
 });

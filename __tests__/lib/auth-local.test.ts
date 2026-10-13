@@ -1,121 +1,143 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { hashPassword, verifyPassword, createUser, getUserByEmail } from "@/lib/auth-local";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  hashPassword,
+  verifyPassword,
+  createUser,
+  getUserByEmail,
+  createSession,
+  getUserBySession,
+  deleteSession,
+  isAdmin,
+} from "@/lib/auth-local";
 
-// Minimal D1Database mock — only the `prepare` chain we use
-function makeD1Mock(firstResult: unknown = null) {
-  const stmt = {
-    bind: vi.fn().mockReturnThis(),
-    run: vi.fn().mockResolvedValue({}),
-    first: vi.fn().mockResolvedValue(firstResult),
+type Row = Record<string, unknown>;
+
+function fakeD1(rows: Record<string, Row> = {}, opts: { throwOn?: string[] } = {}) {
+  const calls: { sql: string; args: unknown[] }[] = [];
+  const tables = rows;
+  const db = {
+    calls,
+    tables,
+    prepare(sql: string) {
+      return {
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (opts.throwOn?.includes("run")) throw new Error("d1 run");
+            calls.push({ sql, args });
+            const m = sql.match(/INSERT INTO (\w+)/);
+            if (m) {
+              tables[m[1]] = tables[m[1]] ?? {};
+              tables[m[1]][String(args[0])] = { args };
+            }
+            if (sql.startsWith("DELETE FROM sessions")) {
+              delete tables.sessions?.[String(args[0])];
+            }
+            return { success: true };
+          },
+          first: async () => {
+            if (opts.throwOn?.includes("first")) throw new Error("d1 first");
+            calls.push({ sql, args });
+            if (sql.includes("FROM users WHERE email")) {
+              const u = Object.values(tables.users ?? {}).find(
+                (r) => (r.args as unknown[])[1] === args[0]
+              );
+              if (!u) return null;
+              const a = u.args as unknown[];
+              return { id: a[0], email: a[1], passwordHash: a[2], name: a[3] };
+            }
+            if (sql.includes("JOIN sessions")) {
+              const s = tables.sessions?.[String(args[0])];
+              if (!s) return null;
+              const uid = (s.args as unknown[])[1];
+              const u = tables.users?.[String(uid)];
+              if (!u) return null;
+              const a = u.args as unknown[];
+              return { id: a[0], email: a[1] };
+            }
+            if (sql.includes("isAdmin FROM users")) {
+              return tables.users?.[String(args[0])] ? { isAdmin: true } : null;
+            }
+            return null;
+          },
+        }),
+      };
+    },
   };
-  return { prepare: vi.fn().mockReturnValue(stmt), stmt };
+  return db;
 }
 
-describe("hashPassword", () => {
-  it("returns a 64-char hex SHA-256 digest", async () => {
-    const h = await hashPassword("hunter2");
-    expect(h).toHaveLength(64);
-    expect(h).toMatch(/^[0-9a-f]+$/);
-  });
-
-  it("is deterministic", async () => {
-    const h1 = await hashPassword("hello");
-    const h2 = await hashPassword("hello");
-    expect(h1).toBe(h2);
-  });
-
-  it("produces different digests for different inputs", async () => {
-    const h1 = await hashPassword("hello");
-    const h2 = await hashPassword("world");
-    expect(h1).not.toBe(h2);
-  });
-
-  it("empty string hashes without error", async () => {
-    const h = await hashPassword("");
-    expect(h).toHaveLength(64);
+describe("password hashing", () => {
+  it("hashes and verifies via SHA-256", async () => {
+    const h = await hashPassword("s3cret");
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    expect(await verifyPassword("s3cret", h)).toBe(true);
+    expect(await verifyPassword("wrong", h)).toBe(false);
   });
 });
 
-describe("verifyPassword", () => {
-  it("returns true for matching password and hash", async () => {
-    const hash = await hashPassword("correct-horse");
-    expect(await verifyPassword("correct-horse", hash)).toBe(true);
+describe("D1 user/session store", () => {
+  let db: ReturnType<typeof fakeD1>;
+  beforeEach(() => {
+    db = fakeD1();
   });
 
-  it("returns false for wrong password", async () => {
-    const hash = await hashPassword("correct-horse");
-    expect(await verifyPassword("wrong-horse", hash)).toBe(false);
-  });
-
-  it("is case-sensitive", async () => {
-    const hash = await hashPassword("Password");
-    expect(await verifyPassword("password", hash)).toBe(false);
-  });
-});
-
-describe("createUser", () => {
-  it("returns a user with the correct email (lowercased)", async () => {
-    const { db } = makeD1Mock() as { db: ReturnType<typeof makeD1Mock>["stmt"] & { prepare: ReturnType<typeof vi.fn> } };
-    const { stmt } = makeD1Mock();
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof createUser>[0];
-    const { user, error } = await createUser(mockDb, "Test@Example.COM", "pass");
+  it("createUser inserts a lowercased user and returns it", async () => {
+    const { user, error } = await createUser(db as never, "A@B.CO", "pw", "Ann");
     expect(error).toBeUndefined();
-    expect(user.email).toBe("test@example.com");
-  });
-
-  it("stores a hashed password, not the plain text", async () => {
-    const { stmt } = makeD1Mock();
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof createUser>[0];
-    await createUser(mockDb, "a@b.com", "mysecret");
-    // bind(userId, email, passwordHash, name, now, now) — 3rd arg is the hash
-    const bindArgs = stmt.bind.mock.calls[0];
-    expect(bindArgs[2]).not.toBe("mysecret");
-    expect(bindArgs[2]).toHaveLength(64); // SHA-256 hex
-  });
-
-  it("returns an error object when db.run throws", async () => {
-    const stmt = {
-      bind: vi.fn().mockReturnThis(),
-      run: vi.fn().mockRejectedValue(new Error("UNIQUE constraint")),
-    };
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof createUser>[0];
-    const { error } = await createUser(mockDb, "dup@example.com", "pass");
-    expect(error).toBe("Failed to create user");
-  });
-
-  it("sets emailVerified to false by default", async () => {
-    const { stmt } = makeD1Mock();
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof createUser>[0];
-    const { user } = await createUser(mockDb, "x@y.com", "pass");
+    expect(user.email).toBe("a@b.co");
     expect(user.emailVerified).toBe(false);
-  });
-});
-
-describe("getUserByEmail", () => {
-  it("returns the user when found", async () => {
-    const fakeUser = { id: "u1", email: "a@b.com", emailVerified: true };
-    const { stmt } = makeD1Mock(fakeUser);
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof getUserByEmail>[0];
-    const result = await getUserByEmail(mockDb, "A@B.com");
-    expect(result).toEqual(fakeUser);
-    // email should have been lowercased before query
-    expect(stmt.bind.mock.calls[0][0]).toBe("a@b.com");
+    expect(db.calls[0].sql).toContain("INSERT INTO users");
   });
 
-  it("returns null when not found", async () => {
-    const { stmt } = makeD1Mock(null);
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof getUserByEmail>[0];
-    const result = await getUserByEmail(mockDb, "nobody@example.com");
-    expect(result).toBeNull();
+  it("createUser reports the error instead of throwing", async () => {
+    const bad = fakeD1({}, { throwOn: ["run"] });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { error } = await createUser(bad as never, "a@b.c", "pw");
+    expect(error).toBe("Failed to create user");
+    spy.mockRestore();
   });
 
-  it("returns null on db error", async () => {
-    const stmt = {
-      bind: vi.fn().mockReturnThis(),
-      first: vi.fn().mockRejectedValue(new Error("DB down")),
-    };
-    const mockDb = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as Parameters<typeof getUserByEmail>[0];
-    const result = await getUserByEmail(mockDb, "x@y.com");
-    expect(result).toBeNull();
+  it("getUserByEmail finds the user and returns null on miss/throw", async () => {
+    await createUser(db as never, "A@B.CO", "pw");
+    expect((await getUserByEmail(db as never, "a@b.co"))?.email).toBe("a@b.co");
+    expect(await getUserByEmail(db as never, "no@b.co")).toBeNull();
+    const bad = fakeD1({}, { throwOn: ["first"] });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await getUserByEmail(bad as never, "a@b.co")).toBeNull();
+    spy.mockRestore();
+  });
+
+  it("createSession/getUserBySession/deleteSession round-trip", async () => {
+    const { user } = await createUser(db as never, "a@b.co", "pw");
+    const sid = await createSession(db as never, user.id);
+    expect(sid).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await getUserBySession(db as never, sid))?.id).toBe(user.id);
+    await deleteSession(db as never, sid);
+    expect(await getUserBySession(db as never, sid)).toBeNull();
+  });
+
+  it("createSession throws when the insert fails", async () => {
+    const bad = fakeD1({}, { throwOn: ["run"] });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(createSession(bad as never, "u1")).rejects.toThrow("Failed to create session");
+    spy.mockRestore();
+  });
+
+  it("getUserBySession/deleteSession tolerate db errors", async () => {
+    const bad = fakeD1({}, { throwOn: ["first", "run"] });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await getUserBySession(bad as never, "s")).toBeNull();
+    await deleteSession(bad as never, "s"); // swallowed
+    spy.mockRestore();
+  });
+
+  it("isAdmin reads the flag and defaults false on miss/throw", async () => {
+    const { user } = await createUser(db as never, "a@b.co", "pw");
+    expect(await isAdmin(db as never, user.id)).toBe(true);
+    expect(await isAdmin(db as never, "ghost")).toBe(false);
+    const bad = fakeD1({}, { throwOn: ["first"] });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await isAdmin(bad as never, user.id)).toBe(false);
+    spy.mockRestore();
   });
 });

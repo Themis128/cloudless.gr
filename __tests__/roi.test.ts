@@ -185,4 +185,24 @@ describe("buildRoiSummary", () => {
     expect((await buildRoiSummary(9999)).windowDays).toBe(365);
     expect((await buildRoiSummary(-5)).windowDays).toBe(1);
   });
+
+
+  it("falls back to an empty channel when a collector rejects", async () => {
+    mockLinkedInConfigured.mockResolvedValue(true);
+    mockLinkedInInsights.mockRejectedValue(new Error("linkedin api down"));
+    mockTikTokConfigured.mockResolvedValue(true);
+    mockTikTokInsights.mockRejectedValue(new Error("tiktok 5xx"));
+    mockXConfigured.mockResolvedValue(true);
+    mockXStats.mockRejectedValue(new Error("x quota"));
+    mockMetaConfigured.mockResolvedValue(true);
+    mockMetaInsights.mockRejectedValue(new Error("meta token expired"));
+
+    const summary = await buildRoiSummary(30);
+    const failed = ["linkedin", "tiktok", "x", "meta"];
+    for (const ch of summary.channels.filter((c) => failed.includes(c.channel))) {
+      expect(ch.spendCents).toBe(0);
+      expect(ch.impressions).toBe(0);
+    }
+    expect(summary.totals.spendCents).toBe(0);
+  });
 });

@@ -16,6 +16,18 @@ const isAppFlowyConfigured = vi.fn();
 vi.mock("@/lib/appflowy", () => ({
   listAllWorkspaces: (...a: unknown[]) => listAllWorkspaces(...a),
   listAllViewsDeep: (...a: unknown[]) => listAllViewsDeep(...a),
+  fetchViewMarkdownMap: async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await extractDocText(await getDocument(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    ),
   getDocument: (...a: unknown[]) => getDocument(...a),
   extractDocText: (...a: unknown[]) => extractDocText(...a),
   isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfigured(...a),
@@ -23,7 +35,15 @@ vi.mock("@/lib/appflowy", () => ({
 
 import * as projects from "@/lib/appflowy-projects";
 
-const WS = [{ workspace_id: "ws1", workspace_name: "Main", owner_uid: 1, member_count: 1, created_at: "2026" }];
+const WS = [
+  {
+    workspace_id: "ws1",
+    workspace_name: "Main",
+    owner_uid: 1,
+    member_count: 1,
+    created_at: "2026",
+  },
+];
 
 function docText(text: string) {
   getDocument.mockResolvedValueOnce({ text });
@@ -31,8 +51,17 @@ function docText(text: string) {
 }
 
 function projectDoc(name: string, extra: Record<string, string> = {}) {
-  const fields = { Name: name, Status: "In Progress", Priority: "Medium", Type: "Client", Owner: "Ana", ...extra };
-  return Object.entries(fields).map(([k, v]) => `**${k}**: ${v}`).join("\n");
+  const fields = {
+    Name: name,
+    Status: "In Progress",
+    Priority: "Medium",
+    Type: "Client",
+    Owner: "Ana",
+    ...extra,
+  };
+  return Object.entries(fields)
+    .map(([k, v]) => `**${k}**: ${v}`)
+    .join("\n");
 }
 
 function taskDoc(fields: Record<string, string>) {
@@ -42,7 +71,13 @@ function taskDoc(fields: Record<string, string>) {
 }
 
 beforeEach(() => {
-  for (const m of [listAllWorkspaces, listAllViewsDeep, getDocument, extractDocText, isAppFlowyConfigured]) {
+  for (const m of [
+    listAllWorkspaces,
+    listAllViewsDeep,
+    getDocument,
+    extractDocText,
+    isAppFlowyConfigured,
+  ]) {
     m.mockReset();
   }
   isAppFlowyConfigured.mockResolvedValue(true);
@@ -85,12 +120,29 @@ describe("listProjects", () => {
       { view_id: "p3", name: "[Task] not a project", type: "document" },
       { view_id: "p4", name: "plain doc", type: "document" },
     ]);
-    docText(projectDoc("Zeta", { Priority: "Low", Status: "Planning", Budget: "5000", Progress: "40", Tags: "a, b" }));
+    docText(
+      projectDoc("Zeta", {
+        Priority: "Low",
+        Status: "Planning",
+        Budget: "5000",
+        Progress: "40",
+        Tags: "a, b",
+      })
+    );
     docText(projectDoc("Alpha", { Priority: "Critical", Status: "In Progress" }));
     const out = await projects.listProjects();
     expect(out.map((p) => p.name)).toEqual(["Alpha", "Zeta"]);
     const zeta = out[1]!;
-    expect(zeta).toMatchObject({ id: "p1", status: "Planning", priority: "Low", type: "Client", owner: "Ana", budget: 5000, progress: 40, tags: ["a", "b"] });
+    expect(zeta).toMatchObject({
+      id: "p1",
+      status: "Planning",
+      priority: "Low",
+      type: "Client",
+      owner: "Ana",
+      budget: 5000,
+      progress: 40,
+      tags: ["a", "b"],
+    });
 
     // status filter
     listAllViewsDeep.mockResolvedValue([
@@ -112,7 +164,13 @@ describe("listProjects", () => {
     getDocument.mockRejectedValueOnce(new Error("bad doc"));
     const out = await projects.listProjects();
     expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ name: "From Title", status: "Planning", priority: "Medium", type: "Internal", budget: null });
+    expect(out[0]).toMatchObject({
+      name: "From Title",
+      status: "Planning",
+      priority: "Medium",
+      type: "Internal",
+      budget: null,
+    });
   });
 
   it("returns [] when the views fetch fails", async () => {
@@ -125,7 +183,13 @@ describe("getProject", () => {
   it("maps a document to a Project and returns null on errors", async () => {
     docText(projectDoc("Dash", { Status: "Completed", Priority: "High", DueDate: "2026-12-01" }));
     const p = await projects.getProject("p9");
-    expect(p).toMatchObject({ id: "p9", name: "Dash", status: "Completed", priority: "High", dueDate: "2026-12-01" });
+    expect(p).toMatchObject({
+      id: "p9",
+      name: "Dash",
+      status: "Completed",
+      priority: "High",
+      dueDate: "2026-12-01",
+    });
     getDocument.mockRejectedValueOnce(new Error("x"));
     expect(await projects.getProject("p9")).toBeNull();
   });
@@ -138,21 +202,47 @@ describe("listTasks + filters + summary", () => {
       { view_id: "t2", name: "[Task] Ship feat", type: "document" },
       { view_id: "t3", name: "[Project] not a task", type: "document" },
     ]);
-    docText(taskDoc({ Task: "Fix bug", Status: "Done", Priority: "High", Assignee: "Ana", Project: "P1", Sprint: "S1", Labels: "x, y", Estimate: "S", Type: "Bug" }));
-    docText(taskDoc({ Task: "Ship feat", Status: "In Progress", Priority: "Urgent", Assignee: "Bo", Project: "P2" }));
+    docText(
+      taskDoc({
+        Task: "Fix bug",
+        Status: "Done",
+        Priority: "High",
+        Assignee: "Ana",
+        Project: "P1",
+        Sprint: "S1",
+        Labels: "x, y",
+        Estimate: "S",
+        Type: "Bug",
+      })
+    );
+    docText(
+      taskDoc({
+        Task: "Ship feat",
+        Status: "In Progress",
+        Priority: "Urgent",
+        Assignee: "Bo",
+        Project: "P2",
+      })
+    );
     const all = await projects.listTasks();
     expect(all.map((t) => t.task)).toEqual(["Ship feat", "Fix bug"]); // In Progress < Done
     expect(all[1]).toMatchObject({ labels: ["x", "y"], estimate: "S", type: "Bug", sprint: "S1" });
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Status: "Done", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ status: "Backlog" })).toEqual([]);
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ project: "P1", assignee: "Ana" })).toHaveLength(1);
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ project: "OTHER" })).toEqual([]);
   });
@@ -263,5 +353,62 @@ describe("bulk + overdue + dashboard", () => {
     expect(dash!.summary["To Do"]).toBe(1);
     expect(dash!.summary.Done).toBe(1);
     expect(dash!.overdueTasks.map((t) => t.task)).toEqual(["one"]);
+  });
+});
+
+describe("tails — stub writes, name sort, move catch", () => {
+  it("createProject/updateProjectStatus/updateProjectProgress/createTask warn-and-return when configured", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await projects.createProject({ name: "New" })).toBeNull();
+    expect(await projects.updateProjectStatus("p1", "Completed")).toBe(false);
+    expect(await projects.updateProjectProgress("p1", 50)).toBe(false);
+    expect(await projects.createTask({ task: "T" })).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would create project"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would update status"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would update progress"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Would create task"));
+    warn.mockRestore();
+  });
+
+  it("sorts same-priority projects alphabetically", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "pz", name: "[Project] Zulu", type: "document" },
+      { view_id: "pa", name: "[Project] Alpha", type: "document" },
+    ]);
+    docText(projectDoc("Zulu", { Priority: "Medium" }));
+    docText(projectDoc("Alpha", { Priority: "Medium" }));
+    const out = await projects.listProjects();
+    expect(out.map((p) => p.name)).toEqual(["Alpha", "Zulu"]);
+  });
+
+  it("strips the [Task] prefix from the view name when the doc has no Task field", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Deploy hook", type: "document" },
+    ]);
+    docText(taskDoc({ Status: "Done" })); // no Task field -> falls back to view name
+    const out = await projects.listTasks();
+    expect(out[0]?.task).toBe("Deploy hook");
+  });
+
+  it("rolloverSprintTasks logs a move failure and keeps counting", async () => {
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Left over", type: "document" },
+    ]);
+    docText(taskDoc({ Task: "Left over", Status: "In Progress", Sprint: "S1" }));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi
+      .spyOn(console, "warn")
+      .mockImplementationOnce(() => {
+        throw new Error("warn broke");
+      })
+      .mockImplementation(() => {});
+    const moved = await projects.rolloverSprintTasks("S1", "S2");
+    expect(moved).toBe(0);
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("[AppFlowy Tasks] Failed to move task:"),
+      "warn broke"
+    );
+    warn.mockRestore();
+    err.mockRestore();
   });
 });

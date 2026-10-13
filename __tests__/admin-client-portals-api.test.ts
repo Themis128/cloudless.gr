@@ -378,6 +378,83 @@ describe("PATCH /api/admin/client-portals", () => {
     expect(data.portal.steps[0].id).toBe("step-2");
   });
 
+  it("re-setting a step to non-completed clears completedAt", async () => {
+    const { PATCH } = await import("@/app/api/admin/client-portals/route");
+    await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: ACTION_UPDATE_STEP,
+          stepId: STEP_ID,
+          status: "completed",
+        }),
+      })
+    );
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: ACTION_UPDATE_STEP,
+          stepId: STEP_ID,
+          status: "in-progress",
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    const step = data.portal.steps.find((s: { id: string }) => s.id === STEP_ID);
+    expect(step.status).toBe("in-progress");
+    expect(step.completedAt).toBeUndefined();
+  });
+
+  it("re-setting a payment link to non-paid clears paidAt", async () => {
+    const { PATCH } = await import("@/app/api/admin/client-portals/route");
+    const add = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "add-payment-link",
+          label: "Invoice 1",
+          url: "https://pay.example/i1",
+          amountCents: 5000,
+          currency: "EUR",
+        }),
+      })
+    );
+    const added = await add.json();
+    const linkId = added.portal.paymentLinks[0].id;
+    const paid = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "update-payment-link",
+          paymentLinkId: linkId,
+          status: "paid",
+        }),
+      })
+    );
+    expect((await paid.json()).portal.paymentLinks[0].paidAt).toBeDefined();
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "update-payment-link",
+          paymentLinkId: linkId,
+          status: "pending",
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const link = (await res.json()).portal.paymentLinks[0];
+    expect(link.status).toBe("pending");
+    expect(link.paidAt).toBeUndefined();
+  });
+
   it("returns 404 for unknown portal token", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
     const res = await PATCH(

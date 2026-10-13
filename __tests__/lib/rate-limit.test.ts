@@ -77,3 +77,30 @@ describe("resetRateLimitStore", () => {
     expect(after.ok).toBe(true);
   });
 });
+
+describe("maybePrune", () => {
+  it("evicts expired keys and trims live ones once the prune interval passes", async () => {
+    const { vi } = await import("vitest");
+    vi.useFakeTimers();
+    try {
+      const t0 = Date.now();
+      vi.setSystemTime(t0);
+      rateLimit("stale-ip", 5, 60_000);
+      vi.setSystemTime(t0 + 50_000);
+      rateLimit("live-ip", 5, 60_000);
+
+      // Cross the 60s prune interval; window is 60s → stale-ip expires,
+      // live-ip survives with a trimmed timestamp list.
+      vi.setSystemTime(t0 + 61_000);
+      const r = rateLimit("probe", 5, 60_000);
+      expect(r.ok).toBe(true);
+
+      // stale-ip was evicted entirely → fresh budget again.
+      const stale = rateLimit("stale-ip", 5, 60_000);
+      expect(stale.ok).toBe(true);
+      if (stale.ok) expect(stale.remaining).toBe(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -69,4 +69,42 @@ describe("POST /api/crm/contact", () => {
     expect(data.contactId).toBe("contact_123");
     expect(upsertContactMock).toHaveBeenCalledTimes(1);
   });
+
+
+  it("returns 500 when upsert resolves with no contact id", async () => {
+    upsertContactMock.mockResolvedValueOnce(null);
+    const { POST } = await import("@/app/api/crm/contact/route");
+    const response = await POST(
+      new Request("http://localhost:4500/api/crm/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "hello@cloudless.gr" }),
+      })
+    );
+    expect(response.status).toBe(500);
+    expect((await response.json()).error).toBe("Failed to create contact.");
+  });
+
+  it("returns 500 on an unexpected upsert throw and maps integration errors", async () => {
+    const { POST } = await import("@/app/api/crm/contact/route");
+    const req = () =>
+      new Request("http://localhost:4500/api/crm/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "hello@cloudless.gr" }),
+      });
+
+    upsertContactMock.mockRejectedValueOnce(new Error("espocrm exploded"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    let res = await POST(req());
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("CRM operation failed.");
+    spy.mockRestore();
+
+    // a mapped integration error short-circuits to its own response
+    const { IntegrationNotConfiguredError } = await import("@/lib/integrations");
+    upsertContactMock.mockRejectedValueOnce(new IntegrationNotConfiguredError(["ESPOCRM_URL"]));
+    res = await POST(req());
+    expect(res.status).toBe(503);
+  });
 });

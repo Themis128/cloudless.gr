@@ -185,3 +185,65 @@ describe("Admin Pipeline API routes", () => {
     });
   });
 });
+
+
+describe("Admin Pipeline API — error tails", () => {
+  const params = Promise.resolve({ id: "deal_1" });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
+    isHubSpotConfiguredMock.mockResolvedValue(true);
+  });
+
+  it("board 500s when getDealsByStage throws", async () => {
+    getDealsByStageMock.mockRejectedValueOnce(new Error("espo down"));
+    const { GET } = await import("@/app/api/admin/pipeline/board/route");
+    const res = await GET(makeGet("/api/admin/pipeline/board"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to fetch pipeline board.");
+  });
+
+  it("stats 500s when getPipelineStats throws", async () => {
+    getPipelineStatsMock.mockRejectedValueOnce(new Error("espo down"));
+    const { GET } = await import("@/app/api/admin/pipeline/stats/route");
+    const res = await GET(makeGet("/api/admin/pipeline/stats"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to fetch pipeline stats.");
+  });
+
+  it("move 500s when moveDealStage throws", async () => {
+    moveDealStageMock.mockRejectedValueOnce(new Error("espo down"));
+    const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/move/route");
+    const res = await POST(
+      makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }),
+      { params }
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to move deal.");
+  });
+
+  it("notes GET/POST 503 when EspoCRM is not configured", async () => {
+    isHubSpotConfiguredMock.mockResolvedValue(false);
+    const { GET, POST } = await import("@/app/api/admin/pipeline/deals/[id]/notes/route");
+    const getRes = await GET(makeGet("/api/admin/pipeline/deals/deal_1/notes"), { params });
+    expect(getRes.status).toBe(503);
+    expect((await getRes.json()).error).toBe("EspoCRM not configured.");
+    const postRes = await POST(
+      makePost("/api/admin/pipeline/deals/deal_1/notes", { body: "hi" }),
+      { params }
+    );
+    expect(postRes.status).toBe(503);
+  });
+
+  it("notes POST 500s when createNote returns null", async () => {
+    createNoteMock.mockResolvedValueOnce(null);
+    const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/notes/route");
+    const res = await POST(
+      makePost("/api/admin/pipeline/deals/deal_1/notes", { body: "hi" }),
+      { params }
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to create note.");
+  });
+});

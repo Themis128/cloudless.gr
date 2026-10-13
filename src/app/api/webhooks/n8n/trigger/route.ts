@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     // Graceful — operator hasn't created the workflow yet OR didn't write the
     // ID to SSM. We don't want to fail callers' core path over a missing
     // automation; return 204 No Content so they treat it as "noop".
-    return NextResponse.json({ ok: false, skipped: "no workflow ID configured" }, { status: 204 });
+    return new NextResponse(null, { status: 204 });
   }
 
   try {

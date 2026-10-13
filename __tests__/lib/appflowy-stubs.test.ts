@@ -22,10 +22,7 @@ vi.mock("@/lib/appflowy", () => ({
 // ---------------------------------------------------------------------------
 // appflowy-cache
 // ---------------------------------------------------------------------------
-import {
-  invalidateCache,
-  invalidateCacheKeys,
-} from "@/lib/appflowy-cache";
+import { invalidateCache, invalidateCacheKeys } from "@/lib/appflowy-cache";
 
 describe("appflowy-cache", () => {
   beforeEach(() => {
@@ -41,9 +38,7 @@ describe("appflowy-cache", () => {
   it("invalidateCache: warns when configured", async () => {
     mockIsConfigured.mockResolvedValue(true);
     await invalidateCache();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("invalidateCache called")
-    );
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("invalidateCache called"));
   });
 
   it("invalidateCacheKeys: skips when not configured", async () => {
@@ -104,10 +99,7 @@ describe("appflowy-esp32", () => {
     };
     const result = await createESP32Alert(alert);
     expect(result).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Would create alert"),
-      alert
-    );
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Would create alert"), alert);
   });
 });
 
@@ -243,9 +235,7 @@ describe("appflowy-analytics", () => {
     it("warns and returns true when configured", async () => {
       mockIsConfigured.mockResolvedValue(true);
       await expect(createWeeklyRollup()).resolves.toBe(true);
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining("weekly rollup")
-      );
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("weekly rollup"));
     });
   });
 
@@ -268,11 +258,7 @@ describe("appflowy-analytics", () => {
     it("uses default 90 days", async () => {
       mockIsConfigured.mockResolvedValue(true);
       await archiveOldEvents();
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.anything(),
-        90,
-        "days"
-      );
+      expect(console.warn).toHaveBeenCalledWith(expect.anything(), 90, "days");
     });
   });
 });

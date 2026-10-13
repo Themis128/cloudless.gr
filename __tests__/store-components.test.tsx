@@ -297,6 +297,61 @@ describe("CartSlideOver", () => {
 
     fetchSpy.mockRestore();
   });
+
+  it("clears the cart and redirects on a successful checkout", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/x" }), { status: 200 })
+    );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("Your cart is empty")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
+
+  it("surfaces the API error when checkout fails", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 })
+    );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("Stripe not configured")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
+
+  it("warns and disables checkout on a mixed subscription + one-time cart", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <AddToCartButton product={mockRecurringProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    // The recurring product's CTA reads "Subscribe".
+    fireEvent.click(view.getByText("Subscribe"));
+    expect(view.getByText(/can't be purchased together/)).toBeTruthy();
+    const checkout = view.getByText("Checkout") as HTMLButtonElement;
+    expect(checkout.disabled).toBe(true);
+    fireEvent.click(checkout);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
 });
 
 // ──────────────────────────────────────────
@@ -642,5 +697,166 @@ describe("CartSlideOver — Mobile", () => {
       el.className.includes("rounded-lg")
     );
     expect(hasRoundedLg).toBe(true);
+  });
+});
+
+describe("StoreGrid tails", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("feature preview opens on hover and via the Includes toggle", () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const card = container.querySelector('[data-testid="product-card"]')!;
+    fireEvent.mouseEnter(card);
+    const includesBtn = card.querySelector('button[aria-expanded]')!;
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(includesBtn.textContent).toBe("Hide");
+    fireEvent.mouseLeave(card);
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("false");
+
+    // touch path — toggle button
+    fireEvent.click(includesBtn);
+    expect(includesBtn.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("Add to Cart on a card adds the item and opens the drawer", async () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const addBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent === "Add to Cart"
+    )!;
+    fireEvent.click(addBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem("cloudless-cart") ?? "").toContain('"id"')
+    );
+  });
+
+  it("authoritative empty semantic result → empty state → Clear filters resets", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ query: "zzz", source: "api", hits: [] }),
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      const { container } = render(
+        <Wrapper>
+          <StoreGrid />
+        </Wrapper>
+      );
+      const search = container.querySelector('input[type="text"]')!;
+      fireEvent.change(search, { target: { value: "zzz" } });
+      await waitFor(
+        () => expect(container.textContent).toContain("No products match your search"),
+        { timeout: 1500 }
+      );
+      fireEvent.click(within(container).getByText("Clear filters"));
+      expect(container.textContent).not.toContain("No products match your search");
+      expect((search as HTMLInputElement).value).toBe("");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("sorts by price-desc and name-asc", () => {
+    const { container } = render(
+      <Wrapper>
+        <StoreGrid />
+      </Wrapper>
+    );
+    const select = container.querySelector("select")!;
+    fireEvent.change(select, { target: { value: "price-desc" } });
+    const desc = container.querySelectorAll('a[href^="/store/"]');
+    expect(desc[0]?.getAttribute("href")).not.toBe("/store/phy-tshirt");
+    fireEvent.change(select, { target: { value: "name-asc" } });
+    const names = Array.from(container.querySelectorAll('[data-testid="product-card"] h3')).map(
+      (h) => h.textContent ?? ""
+    );
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+  });
+});
+
+describe("CartSlideOver — checkout tails", () => {
+  it("blocks checkout for a mixed subscription + one-time cart", async () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockRecurringProduct} />
+        <AddToCartButton product={mockDigitalProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Subscribe"));
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() =>
+      expect(
+        view.getByText(/can't be purchased together/i)
+      ).toBeTruthy()
+    );
+  });
+
+  it("surfaces the API error message when checkout fails", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "card declined upstream" }), { status: 400 })
+      );
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() => expect(view.getByText("card declined upstream")).toBeTruthy());
+    fetchSpy.mockRestore();
+  });
+
+  it("shows the generic error when checkout throws", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("offline"));
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() =>
+      expect(view.getByText(/Checkout failed\. Please try again\./)).toBeTruthy()
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("decrements quantity and removes the item at zero", () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockDigitalProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getByText("Add to Cart"));
+    fireEvent.click(view.getByText("+"));
+    expect(view.getByText("Cart (2)")).toBeTruthy();
+    fireEvent.click(view.getByText("-"));
+    expect(view.getByText("Cart (1)")).toBeTruthy();
+    fireEvent.click(view.getByText("-"));
+    expect(view.getByText("Your cart is empty")).toBeTruthy();
   });
 });

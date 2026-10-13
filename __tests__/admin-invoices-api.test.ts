@@ -185,3 +185,70 @@ describe("GET/POST /api/admin/invoices", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("POST /api/admin/invoices — tail branches", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetStripe.mockResolvedValue({
+      invoices: { finalizeInvoice: mockFinalize, sendInvoice: mockSend },
+    });
+  });
+
+  const post = (body: unknown) =>
+    import("@/app/api/admin/invoices/route").then(({ POST }) =>
+      POST(
+        adminReq("http://localhost/api/admin/invoices", {
+          method: "POST",
+          body: typeof body === "string" ? body : JSON.stringify(body),
+        })
+      )
+    );
+
+  it("GET 500 when listing throws", async () => {
+    mockListRecentInvoices.mockRejectedValueOnce(new Error("stripe down"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { GET } = await import("@/app/api/admin/invoices/route");
+    const res = await GET(adminReq("http://localhost/api/admin/invoices"));
+    expect(res.status).toBe(500);
+    spy.mockRestore();
+  });
+
+  it("400 on invalid JSON and 503 when stripe unconfigured", async () => {
+    expect((await post("not json{{")).status).toBe(400);
+    mockGetStripe.mockResolvedValueOnce(null);
+    expect((await post({ action: "create" })).status).toBe(503);
+  });
+
+  it("400 on malformed customerId and missing email", async () => {
+    const res = await post({ action: "create", customerId: "bogus", description: "x", amountCents: 100 });
+    expect(res.status).toBe(400);
+    const res2 = await post({ action: "create", email: "not-an-email", description: "x", amountCents: 100 });
+    expect(res2.status).toBe(400);
+  });
+
+  it("500 when customer resolution and draft creation fail", async () => {
+    mockResolveCustomer.mockResolvedValueOnce(null);
+    const res = await post({ action: "create", email: "a@b.co", description: "x", amountCents: 100 });
+    expect(res.status).toBe(500);
+
+    mockResolveCustomer.mockResolvedValueOnce("cus_ok");
+    mockCreateDraft.mockResolvedValueOnce(null);
+    const res2 = await post({ action: "create", email: "a@b.co", description: "x", amountCents: 100 });
+    expect(res2.status).toBe(500);
+  });
+
+  it("400 on malformed invoiceId and unknown action", async () => {
+    const res = await post({ action: "finalize", invoiceId: "bad id!" });
+    expect(res.status).toBe(400);
+    const res2 = await post({ action: "explode", invoiceId: "in_abc" });
+    expect(res2.status).toBe(400);
+  });
+
+  it("500 when a stripe action throws", async () => {
+    mockFinalize.mockRejectedValueOnce(new Error("stripe err"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await post({ action: "finalize", invoiceId: "in_abc" });
+    expect(res.status).toBe(500);
+    spy.mockRestore();
+  });
+});

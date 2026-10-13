@@ -125,4 +125,33 @@ describe("scrubBreadcrumb", () => {
     const out = scrubBreadcrumb({ category: "console", message: "hi" });
     expect(out?.message).toBe("hi");
   });
+
+
+  it("redacts a string query_string", () => {
+    const out = scrubEvent(
+      event({
+        request: { query_string: "token=abc123secret&id=42" },
+      }),
+      HINT
+    );
+    expect(out?.request?.query_string).toBe("token=[REDACTED]&id=42");
+  });
+
+  it("redacts sensitive entries in an array query_string", () => {
+    const out = scrubEvent(
+      event({
+        request: {
+          query_string: [
+            ["api_key", "sk-live-1234567890abcdef"],
+            ["page", "2"],
+            ["sig", "a]longtokenlookingstring123456789"],
+          ],
+        },
+      }),
+      HINT
+    );
+    const qs = out?.request?.query_string as [string, string][];
+    expect(qs[0]).toEqual(["api_key", "[REDACTED]"]);
+    expect(qs[1]).toEqual(["page", "2"]);
+  });
 });

@@ -14,6 +14,10 @@ import {
   createChannel,
   setChannelTopic,
   joinChannel,
+  getChannelInfo,
+  setChannelPurpose,
+  renameChannel,
+  archiveChannel,
   ensureChannel,
   ensureAllChannels,
 } from "@/lib/slack-admin";
@@ -132,5 +136,47 @@ describe("ensureAllChannels", () => {
   it("throws when SLACK_BOT_TOKEN is not configured", async () => {
     mockGetCfg.mockResolvedValue({ SLACK_BOT_TOKEN: undefined });
     await expect(ensureAllChannels()).rejects.toThrow("SLACK_BOT_TOKEN is not configured");
+  });
+});
+
+describe("channel admin error branches", () => {
+  it("getChannelInfo throws when conversations.info fails", async () => {
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: false, error: "channel_not_found" }));
+    await expect(getChannelInfo("C_MISSING", "xoxb-test")).rejects.toThrow(
+      "conversations.info: channel_not_found"
+    );
+  });
+
+  it("getChannelInfo throws when the channel payload is missing", async () => {
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: true }));
+    await expect(getChannelInfo("C1", "xoxb-test")).rejects.toThrow("conversations.info:");
+  });
+
+  it("setChannelPurpose throws on API error", async () => {
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: false, error: "not_in_channel" }));
+    await expect(setChannelPurpose("C1", "topic", "xoxb-test")).rejects.toThrow(
+      "conversations.setPurpose: not_in_channel"
+    );
+  });
+
+  it("renameChannel throws on API error and on missing channel payload", async () => {
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: false, error: "name_taken" }));
+    await expect(renameChannel("C1", "renamed", "xoxb-test")).rejects.toThrow(
+      "conversations.rename: name_taken"
+    );
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: true }));
+    await expect(renameChannel("C1", "renamed", "xoxb-test")).rejects.toThrow(
+      "conversations.rename:"
+    );
+  });
+
+  it("archiveChannel tolerates already_archived but throws on other errors", async () => {
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: false, error: "already_archived" }));
+    await expect(archiveChannel("C1", "xoxb-test")).resolves.toBeUndefined();
+
+    mockFetch.mockReturnValueOnce(jsonResp({ ok: false, error: "restricted_action" }));
+    await expect(archiveChannel("C1", "xoxb-test")).rejects.toThrow(
+      "conversations.archive: restricted_action"
+    );
   });
 });

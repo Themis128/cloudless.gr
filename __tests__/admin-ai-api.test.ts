@@ -198,6 +198,34 @@ describe("POST /api/admin/ai/campaign", () => {
   });
 });
 
+describe("POST /api/admin/ai/campaign — catch tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withWorkersAiEnv();
+    getConfigMock.mockResolvedValue({});
+  });
+
+  it("providers all failing without Gemini maps AdminAiNotConfigured", async () => {
+    fetchMock.mockRejectedValue(new Error("workers ai down"));
+    const { POST } = await import("@/app/api/admin/ai/campaign/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/campaign", { brief: "Promote AI tool" })
+    );
+    expect(res.status).toBe(503);
+  });
+
+  it("a non-config error inside generation → 500", async () => {
+    process.env.GEMINI_API_KEY = "k";
+    fetchMock.mockRejectedValue(new Error("everything down"));
+    const { POST } = await import("@/app/api/admin/ai/campaign/route");
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/campaign", { brief: "Promote AI tool" })
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("AI generation failed.");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/ai/copy
 // ---------------------------------------------------------------------------

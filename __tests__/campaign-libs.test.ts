@@ -241,3 +241,53 @@ describe("google-ads.ts", () => {
     expect(await listGoogleCampaigns()).toEqual([]);
   });
 });
+
+describe("linkedin.ts — tails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    mockGetConfig.mockResolvedValue({
+      LINKEDIN_ACCESS_TOKEN: "tok",
+      LINKEDIN_AD_ACCOUNT_ID: "512642510",
+      LINKEDIN_ORGANIZATION_URN: "urn:li:org:123",
+    });
+  });
+
+  it("getLinkedInInsights returns the zero shape when fetch rejects", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("linkedin down"));
+    const { getLinkedInInsights } = await import("@/lib/campaigns/linkedin");
+    expect(await getLinkedInInsights("2026-10-01", "2026-10-08")).toEqual({
+      impressions: 0,
+      clicks: 0,
+      costInLocalCurrency: "0",
+      conversions: 0,
+    });
+  });
+
+  it("resumeLinkedInCampaign reports the API error body on non-ok", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => "Invalid campaign id",
+    });
+    const { resumeLinkedInCampaign } = await import("@/lib/campaigns/linkedin");
+    const res = await resumeLinkedInCampaign("urn:li:sponsoredCampaign:1");
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe("400: Invalid campaign id");
+  });
+
+  it("setLinkedInCampaignBudget reports the API error on non-ok and on throw", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => "Forbidden",
+    });
+    const { setLinkedInCampaignBudget } = await import("@/lib/campaigns/linkedin");
+    const denied = await setLinkedInCampaignBudget("urn:li:sponsoredCampaign:1", 25);
+    expect(denied).toEqual({ ok: false, error: "403: Forbidden" });
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("conn reset"));
+    const thrown = await setLinkedInCampaignBudget("urn:li:sponsoredCampaign:1", 25);
+    expect(thrown).toEqual({ ok: false, error: "conn reset" });
+  });
+});

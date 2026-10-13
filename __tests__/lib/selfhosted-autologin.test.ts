@@ -4,7 +4,12 @@ vi.mock("@/lib/ssm-config", () => ({
   getConfig: vi.fn().mockResolvedValue({}),
 }));
 
-import { isInternalOnlyBaseUrl, publicUrlForApp } from "@/lib/selfhosted-autologin";
+import {
+  isInternalOnlyBaseUrl,
+  publicUrlForApp,
+  getAutologinUrl,
+  type SelfhostedApp,
+} from "@/lib/selfhosted-autologin";
 
 describe("isInternalOnlyBaseUrl", () => {
   it("returns false for empty string", () => {
@@ -62,5 +67,44 @@ describe("publicUrlForApp", () => {
   it("returns the fallback for cloudless.gr subdomains (uses known public map)", () => {
     const url = publicUrlForApp("grafana", "https://grafana.cloudless.gr");
     expect(typeof url).toBe("string");
+  });
+});
+
+describe("autologin tails", () => {
+  it("isInternalOnlyBaseUrl falls back to the cluster regex on unparseable input", () => {
+    expect(isInternalOnlyBaseUrl("api.svc.cluster.local")).toBe(true);
+    expect(isInternalOnlyBaseUrl("not a url at all")).toBe(false);
+  });
+
+  it("publicUrlForApp returns the fallback for unparseable configured URLs", () => {
+    const url = publicUrlForApp("kuma", "http://[bad");
+    expect(url).not.toContain("[bad");
+  });
+
+  it("publicUrlForApp returns the fallback for unknown external hosts", () => {
+    const url = publicUrlForApp("grafana", "https://grafana.evil.example");
+    expect(url).not.toContain("evil.example");
+  });
+
+  it("espocrm autologin embeds URL-encoded credentials when configured", async () => {
+    const { getConfig } = await import("@/lib/ssm-config");
+    vi.mocked(getConfig).mockResolvedValueOnce({
+      ESPOCRM_BASE_URL: "https://crm.cloudless.gr",
+      ESPOCRM_API_USER: "admin+ops@cloudless.gr",
+      ESPOCRM_API_PASSWORD: "p@ss:w0rd",
+    });
+    const result = await getAutologinUrl("espocrm");
+    expect(result.hasToken).toBe(true);
+    expect(result.url).toBe(
+      `https://${encodeURIComponent("admin+ops@cloudless.gr")}:${encodeURIComponent("p@ss:w0rd")}@crm.cloudless.gr/`
+    );
+  });
+
+  it("throws for an unknown app identifier", async () => {
+    const { getConfig } = await import("@/lib/ssm-config");
+    vi.mocked(getConfig).mockResolvedValueOnce({});
+    await expect(getAutologinUrl("bogus" as SelfhostedApp)).rejects.toThrow(
+      "Unknown self-hosted app"
+    );
   });
 });

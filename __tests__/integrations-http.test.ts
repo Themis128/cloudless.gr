@@ -228,3 +228,31 @@ describe("isIntegrationError", () => {
     expect(isIntegrationError(null)).toBe(false);
   });
 });
+
+describe("integrationFetch retry exhaustion", () => {
+  const originalFetch = globalThis.fetch;
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("rethrows the last network error after max retries", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("conn refused"));
+    const promise = integrationFetch("test", "https://example.test/x", { maxRetries: 2 });
+    const assertion = expect(promise).rejects.toThrow("conn refused");
+    await vi.runAllTimersAsync();
+    await assertion;
+  });
+
+  it("throws max-retries-exceeded when every attempt 500s", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ err: "x" }, 500));
+    const promise = integrationFetch("test", "https://example.test/x", { maxRetries: 1 });
+    const assertion = expect(promise).rejects.toThrow("HTTP 500");
+    await vi.runAllTimersAsync();
+    await assertion;
+  });
+});

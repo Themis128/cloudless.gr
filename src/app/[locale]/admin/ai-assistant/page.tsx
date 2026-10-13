@@ -98,8 +98,10 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate strategy");
-      const data = (await res.json()) as { strategy?: string };
-      setStrategy(data.strategy ? { strategy: data.strategy } : null);
+      const data = (await res.json()) as {
+        strategy?: Record<string, unknown>;
+      };
+      setStrategy(data.strategy ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {

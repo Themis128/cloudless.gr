@@ -1,5 +1,10 @@
 import { APP_TIMEZONE } from "@/lib/timezone";
 
+export interface BlogPostFaq {
+  question: string;
+  answer: string;
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -8,6 +13,8 @@ export interface BlogPost {
   readTime: string;
   category: "Cloud" | "Serverless" | "Analytics" | "AI Marketing";
   content: string;
+  /** Optional FAQ pairs rendered on the page and emitted as FAQPage JSON-LD. */
+  faqs?: BlogPostFaq[];
 }
 
 export const posts: BlogPost[] = [
@@ -45,14 +52,22 @@ If you're building a new product today, start serverless by default. Use Cloudfl
   },
   {
     slug: "cloud-cost-optimization-guide",
-    title: "AWS Cost Optimization for Startups: 5 Mistakes Costing You 30–40% More",
+    title: "IT Cost Optimization Guide: 5 AWS Mistakes Costing You 30–40%",
     excerpt:
-      "Most startups overspend on AWS by 30–40%. These five cloud cost mistakes are easy to fix — here's how to cut your bill without sacrificing performance.",
+      "A practical IT cost optimization guide for startups: the five AWS and cloud cost mistakes that inflate your bill 30–40%, and how to cut cloud costs without sacrificing performance.",
     date: "2026-03-21",
-    readTime: "7 min read",
+    readTime: "8 min read",
     category: "Cloud",
     content: `
-Cloud computing promises cost savings, but without governance it can become a money pit. Here are five mistakes we see constantly.
+IT cost optimization is the practice of reducing what you spend on technology — cloud compute, storage, networking, and SaaS — without slowing the business down. For most startups it means one thing: your cloud bill is 30–40% higher than it needs to be.
+
+Cloud computing promises cost savings, but without governance it becomes a money pit. This guide covers what IT cost optimization actually means, the five AWS mistakes we see most often, and a framework to cut cloud costs this quarter.
+
+## What is IT cost optimization?
+
+IT cost optimization is the continuous process of matching your technology spend to actual business value. It is not a one-time cost-cutting exercise — it is a discipline that combines usage visibility, right-sizing, pricing-model selection, and architectural choices so you pay only for what delivers results.
+
+Done well, it answers three questions: where is the money going, which spend is wasted, and what changes reduce cost without hurting performance or reliability.
 
 ## 1. Running instances 24/7 for 9-to-5 workloads
 
@@ -74,10 +89,47 @@ Data transfer between regions, to the internet, and even between AZs adds up fas
 
 If you can't attribute costs to teams or projects, you can't optimize them. Implement a tagging policy on day one: at minimum, tag by environment, team, and project.
 
+## How to cut cloud costs: a 4-step framework
+
+- **Measure first.** Export 90 days of billing data and break it down by service, environment, and team. You cannot reduce AWS costs you cannot see — most startups find 20–30% of spend has no clear owner.
+- **Kill the waste.** Delete idle instances, orphaned volumes, old snapshots, and forgotten load balancers. This is pure savings with zero risk — typically 10–20% of the bill.
+- **Right-size and reprice.** Match instance sizes to real utilization, then pick the cheapest pricing model that fits: commitments for baseline load, per-request or spot for variable load.
+- **Architect for cost.** Move suitable workloads to per-request platforms like Cloudflare Workers, cache aggressively at the edge, and design out data-transfer charges. Architectural fixes compound where tuning stops.
+
+Run this loop quarterly — not once. Cloud environments drift back toward waste as teams ship.
+
+## IT cost optimization services: when to get help
+
+Internal teams can handle the first two steps. Bring in IT cost optimization services when you need architectural changes — workload migration, edge caching strategy, or a re-platform to serverless — where the savings are largest but the execution risk is real.
+
+A good engagement is short and measurable: a spend audit, a prioritized savings roadmap, and implementation support for the top items. We helped [TechFlow reduce their AWS bill by 42%](/case-studies/techflow-aws-cost-reduction) in 8 weeks using exactly this approach.
+
 ## The fix is simpler than you think
 
-A structured cost review — even once a quarter — can save 30% or more. We helped [TechFlow reduce their AWS bill by 42%](/case-studies/techflow-aws-cost-reduction) in just 8 weeks using these exact strategies. We offer free audit calls to help startups identify their biggest savings opportunities.
+A structured cost review — even once a quarter — can save 30% or more. We offer free audit calls to help startups identify their biggest savings opportunities and decide which of them are worth fixing first.
     `.trim(),
+    faqs: [
+      {
+        question: "What is IT cost optimization?",
+        answer:
+          "IT cost optimization is the continuous process of reducing technology spend — cloud compute, storage, networking, and SaaS — while preserving performance and reliability. It combines usage visibility, right-sizing, pricing-model selection, and architecture changes so you pay only for what delivers business value.",
+      },
+      {
+        question: "How much can a startup save with cloud cost optimization?",
+        answer:
+          "Most startups we audit overspend by 30–40% on cloud. Quick wins like deleting idle resources and scheduling dev environments typically recover 10–20% within weeks; architectural changes like per-request platforms can push savings to 40% or more.",
+      },
+      {
+        question: "How do I cut cloud costs without hurting performance?",
+        answer:
+          "Start with pure waste — idle instances, orphaned volumes, untagged spend — then right-size to real utilization and pick cheaper pricing models for baseline load. Keep performance-critical paths untouched and validate each change with real latency and error metrics.",
+      },
+      {
+        question: "How often should we review cloud spend?",
+        answer:
+          "Quarterly at minimum. Cloud environments drift back toward waste as teams ship, so a recurring review — measure, kill waste, right-size, re-architect — keeps savings compounding instead of evaporating.",
+      },
+    ],
   },
   {
     slug: "ai-marketing-small-business",

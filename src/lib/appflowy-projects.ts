@@ -14,6 +14,7 @@ import {
   listAllViewsDeep,
   getDocument,
   extractDocText,
+  fetchViewMarkdownMap,
   isAppFlowyConfigured,
 } from "./appflowy";
 
@@ -114,6 +115,39 @@ function parseTaskFields(text: string): Partial<Task> {
   };
 }
 
+function fieldsToTask(view: { view_id: string; name: string }, fields: Partial<Task>): Task {
+  return {
+    id: view.view_id,
+    task: fields.task || stripTaskPrefix(view.name),
+    status: fields.status || "Backlog",
+    priority: fields.priority || "Medium",
+    assignee: fields.assignee || "",
+    project: fields.project || "",
+    dueDate: fields.dueDate || "",
+    estimate: fields.estimate || "",
+    type: fields.type || "",
+    description: fields.description || "",
+    labels: fields.labels || [],
+    sprint: fields.sprint || "",
+    url: "",
+  };
+}
+
+function mapTaskViews(
+  docs: Map<string, string | null>,
+  taskViews: { view_id: string; name: string }[],
+  keep: (fields: Partial<Task>) => boolean
+): Task[] {
+  return taskViews
+    .map((view) => {
+      const markdown = docs.get(view.view_id);
+      if (markdown === null || markdown === undefined) return null;
+      const fields = parseTaskFields(markdown);
+      return keep(fields) ? fieldsToTask(view, fields) : null;
+    })
+    .filter((t): t is Task => t !== null);
+}
+
 function isProjectPage(name: string): boolean {
   return /^\[Project\]\s/i.test(name);
 }
@@ -153,34 +187,36 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
     const views = await listAllViewsDeep(workspaceId);
     const projectViews = views.filter((v) => isProjectPage(v.name));
 
-    const projects: Project[] = [];
-    for (const view of projectViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseProjectFields(text);
+    const docs = await fetchViewMarkdownMap(workspaceId, projectViews);
+    const projects: Project[] = projectViews
+      .map((view) => {
+        try {
+          const markdown = docs.get(view.view_id);
+          if (markdown === null || markdown === undefined) return null;
+          const fields = parseProjectFields(markdown);
 
-        if (statusFilter && fields.status !== statusFilter) continue;
+          if (statusFilter && fields.status !== statusFilter) return null;
 
-        projects.push({
-          id: view.view_id,
-          name: fields.name || stripProjectPrefix(view.name),
-          status: fields.status || "Planning",
-          priority: fields.priority || "Medium",
-          type: fields.type || "Internal",
-          owner: fields.owner || "",
-          startDate: fields.startDate || "",
-          dueDate: fields.dueDate || "",
-          description: fields.description || "",
-          budget: fields.budget ?? null,
-          progress: fields.progress || 0,
-          tags: fields.tags || [],
-          url: "",
-        });
-      } catch {
-        // Skip failed documents
-      }
-    }
+          return {
+            id: view.view_id,
+            name: fields.name || stripProjectPrefix(view.name),
+            status: fields.status || "Planning",
+            priority: fields.priority || "Medium",
+            type: fields.type || "Internal",
+            owner: fields.owner || "",
+            startDate: fields.startDate || "",
+            dueDate: fields.dueDate || "",
+            description: fields.description || "",
+            budget: fields.budget ?? null,
+            progress: fields.progress || 0,
+            tags: fields.tags || [],
+            url: "",
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((p): p is Project => p !== null);
 
     // Sort by priority (Critical first) then by name
     const priorityOrder: Record<ProjectPriority, number> = {
@@ -282,36 +318,13 @@ export async function listTasks(filters?: {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = [];
-    for (const view of taskViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseTaskFields(text);
-
-        if (filters?.status && fields.status !== filters.status) continue;
-        if (filters?.project && fields.project !== filters.project) continue;
-        if (filters?.assignee && fields.assignee !== filters.assignee) continue;
-
-        tasks.push({
-          id: view.view_id,
-          task: fields.task || stripTaskPrefix(view.name),
-          status: fields.status || "Backlog",
-          priority: fields.priority || "Medium",
-          assignee: fields.assignee || "",
-          project: fields.project || "",
-          dueDate: fields.dueDate || "",
-          estimate: fields.estimate || "",
-          type: fields.type || "",
-          description: fields.description || "",
-          labels: fields.labels || [],
-          sprint: fields.sprint || "",
-          url: "",
-        });
-      } catch {
-        // Skip failed documents
-      }
-    }
+    const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
+    const tasks: Task[] = mapTaskViews(docs, taskViews, (fields) => {
+      if (filters?.status && fields.status !== filters.status) return false;
+      if (filters?.project && fields.project !== filters.project) return false;
+      if (filters?.assignee && fields.assignee !== filters.assignee) return false;
+      return true;
+    });
 
     // Sort by status then priority
     const statusOrder: Record<TaskStatus, number> = {
@@ -411,34 +424,12 @@ export async function getSprintTasks(sprintName: string): Promise<Task[]> {
     const views = await listAllViewsDeep(workspaceId);
     const taskViews = views.filter((v) => isTaskPage(v.name));
 
-    const tasks: Task[] = [];
-    for (const view of taskViews) {
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        const fields = parseTaskFields(text);
-
-        if (fields.sprint === sprintName || fields.project === sprintName) {
-          tasks.push({
-            id: view.view_id,
-            task: fields.task || stripTaskPrefix(view.name),
-            status: fields.status || "Backlog",
-            priority: fields.priority || "Medium",
-            assignee: fields.assignee || "",
-            project: fields.project || "",
-            dueDate: fields.dueDate || "",
-            estimate: fields.estimate || "",
-            type: fields.type || "",
-            description: fields.description || "",
-            labels: fields.labels || [],
-            sprint: fields.sprint || "",
-            url: "",
-          });
-        }
-      } catch {
-        // Skip failed documents
-      }
-    }
+    const docs = await fetchViewMarkdownMap(workspaceId, taskViews);
+    const tasks: Task[] = mapTaskViews(
+      docs,
+      taskViews,
+      (fields) => fields.sprint === sprintName || fields.project === sprintName
+    );
 
     return tasks;
   } catch (err) {

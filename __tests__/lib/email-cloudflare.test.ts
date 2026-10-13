@@ -97,3 +97,43 @@ describe("sendEmailCloudflare", () => {
     expect(body.headers["List-Unsubscribe"]).toContain("cloudless.gr");
   });
 });
+
+describe("sendEmailCloudflare error tails", () => {
+  const opts = { to: "u@x.dev", subject: "s", html: "<p>x</p>", text: "x" };
+
+  it("throws the API error message on an unsuccessful response", async () => {
+    process.env.CLOUDFLARE_ACCOUNT_ID = "acct123";
+    process.env.CLOUDFLARE_EMAIL_API_TOKEN = "token-abc";
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ success: false, errors: [{ message: "bad token" }] }),
+    });
+    await expect(sendEmailCloudflare(opts)).rejects.toThrow("bad token");
+  });
+
+  it("falls back to the HTTP status when errors[] is absent", async () => {
+    process.env.CLOUDFLARE_ACCOUNT_ID = "acct123";
+    process.env.CLOUDFLARE_EMAIL_API_TOKEN = "token-abc";
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ success: false }),
+    });
+    await expect(sendEmailCloudflare(opts)).rejects.toThrow("HTTP 500");
+  });
+
+  it("throws on permanent bounces in the result", async () => {
+    process.env.CLOUDFLARE_ACCOUNT_ID = "acct123";
+    process.env.CLOUDFLARE_EMAIL_API_TOKEN = "token-abc";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        result: { permanent_bounces: ["bounce@x.dev"] },
+      }),
+    });
+    await expect(sendEmailCloudflare(opts)).rejects.toThrow("permanent bounce");
+  });
+});

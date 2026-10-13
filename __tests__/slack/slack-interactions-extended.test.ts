@@ -392,3 +392,32 @@ describe("view_submission: deploy-confirm-modal", () => {
     expect(deployPost![1].body as string).toContain("U777");
   });
 });
+
+
+describe("view_submission: create-ticket-modal — tails", () => {
+  let POST: (req: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const mod = await import("@/app/api/slack/interactions/route");
+    POST = mod.POST;
+  });
+
+  it("logs the error when the async ticket post rejects", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // A signed-but-malformed payload carrying a non-string field value makes
+    // slackEscape throw inside postTicketAsync — the fire-and-forget .catch
+    // must log it while the route still ACKs 200.
+    const payload = ticketSubmission({ email: 42 as unknown as string });
+    verifyOk(payload);
+    const res = await POST(makeRequest(payload));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(errSpy).toHaveBeenCalledWith(
+      "[Slack Interactions] create-ticket-modal error:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
+  });
+});

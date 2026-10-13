@@ -238,3 +238,171 @@ describe("POST /api/webhooks/stripe", () => {
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
   });
 });
+
+vi.mock("@sentry/nextjs", () => ({
+  captureException: vi.fn(),
+  flush: vi.fn(async () => true),
+  withScope: vi.fn((cb: (s: { setTag: (k: string, v: string) => void }) => void) =>
+    cb({ setTag: vi.fn() })
+  ),
+}));
+
+import { sendPurchaseEvent } from "@/lib/meta-capi";
+import { associateDealWithContact } from "@/lib/espocrm";
+
+describe("stripe webhook — tail branches", () => {
+  const evt = (type: string, object: unknown, id = "evt_tail") => ({
+    type,
+    id,
+    data: { object },
+  });
+
+  it("checkout.session.completed with campaign+tier metadata", async () => {
+    constructEventMock.mockReturnValueOnce(
+      evt("checkout.session.completed", {
+        id: "cs_1",
+        payment_status: "paid",
+        mode: "payment",
+        customer_email: "b@x.dev",
+        amount_total: 9900,
+        currency: "eur",
+        metadata: { campaign: "shop-online", tier: "launch", utm_source: "li" },
+      })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    expect(notifyTeamMock).toHaveBeenCalled();
+  });
+
+  it("espo deal failure is swallowed", async () => {
+    vi.mocked(associateDealWithContact).mockRejectedValueOnce(new Error("espo down"));
+    constructEventMock.mockReturnValueOnce(
+      evt("checkout.session.completed", {
+        id: "cs_2",
+        payment_status: "paid",
+        mode: "payment",
+        customer_email: "b@x.dev",
+        amount_total: 100,
+        currency: "eur",
+        metadata: {},
+      })
+    );
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    spy.mockRestore();
+  });
+
+  it("Meta CAPI failure is swallowed", async () => {
+    vi.mocked(sendPurchaseEvent).mockRejectedValueOnce(new Error("capi down"));
+    constructEventMock.mockReturnValueOnce(
+      evt("checkout.session.completed", {
+        id: "cs_3",
+        payment_status: "paid",
+        mode: "payment",
+        customer_email: "b@x.dev",
+        amount_total: 100,
+        currency: "eur",
+        metadata: {},
+      })
+    );
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    spy.mockRestore();
+  });
+
+  it("subscription deleted/created/updated notify team", async () => {
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    for (const type of [
+      "customer.subscription.deleted",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+    ] as const) {
+      constructEventMock.mockReturnValueOnce(
+        evt(type, { id: `sub_${type}`, status: "active" }, `evt_${type}`)
+      );
+      const res = await POST(makeRequest("{}", "sig"));
+      expect(res.status).toBe(200);
+    }
+    expect(notifyTeamMock).toHaveBeenCalledWith(
+      expect.stringContaining("Cancelled"),
+      expect.any(String)
+    );
+  });
+
+  it("invoice.payment_succeeded logs and returns 200", async () => {
+    constructEventMock.mockReturnValueOnce(
+      evt("invoice.payment_succeeded", { id: "in_1", amount_paid: 5000 })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+  });
+
+  it("invoice.payment_failed with object customer id", async () => {
+    constructEventMock.mockReturnValueOnce(
+      evt("invoice.payment_failed", {
+        id: "in_2",
+        customer: { id: "cus_obj" },
+        customer_email: "b@x.dev",
+        amount_due: 100,
+        currency: "eur",
+      })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+  });
+
+  it("unhandled event types just warn", async () => {
+    constructEventMock.mockReturnValueOnce(evt("charge.dispute.created", { id: "dp_1" }));
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+  });
+
+  it("swallows markStripeEventFailed + markStripeEventProcessed errors", async () => {
+    markStripeEventProcessedMock.mockRejectedValueOnce(new Error("mark down"));
+    constructEventMock.mockReturnValueOnce(
+      evt("invoice.payment_succeeded", { id: "in_9", amount_paid: 1 })
+    );
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    spy.mockRestore();
+
+    notifyTeamMock.mockRejectedValueOnce(new Error("mail down"));
+    markStripeEventFailedMock.mockRejectedValueOnce(new Error("mark fail"));
+    constructEventMock.mockReturnValueOnce(
+      evt("customer.subscription.deleted", { id: "sub_x", status: "canceled" }, "evt_sub_fail")
+    );
+    const res2 = await POST(makeRequest("{}", "sig"));
+    expect(res2.status).toBe(500);
+  });
+
+  it("reports to Sentry on handler error when DSN set + flushes on success", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://dsn";
+    notifyTeamMock.mockRejectedValueOnce(new Error("mail down"));
+    constructEventMock.mockReturnValueOnce(
+      evt("customer.subscription.deleted", { id: "sub_y", status: "canceled" }, "evt_sentry")
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(500);
+    const sentry = await import("@sentry/nextjs");
+    expect(vi.mocked(sentry.captureException)).toHaveBeenCalled();
+
+    constructEventMock.mockReturnValueOnce(
+      evt("invoice.payment_succeeded", { id: "in_10", amount_paid: 1 }, "evt_flush")
+    );
+    const res2 = await POST(makeRequest("{}", "sig"));
+    expect(res2.status).toBe(200);
+    expect(vi.mocked(sentry.flush)).toHaveBeenCalledWith(2000);
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+  });
+});

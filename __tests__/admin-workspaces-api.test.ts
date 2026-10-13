@@ -271,3 +271,126 @@ describe("DELETE /api/admin/workspaces", () => {
     expect(data.ok).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tail branches — optional fields, PATCH clears, store failures, audit catches
+// ---------------------------------------------------------------------------
+describe("workspaces route — tail branches", () => {
+  beforeEach(async () => {
+    await writeJsonConfig(WORKSPACES_CONFIG_KEY, [
+      { ...MOCK_WS, postizGroupId: "pg-1", notionTag: "client" },
+    ]);
+  });
+
+  it("POST persists postizGroupId and notionTag", async () => {
+    const { POST } = await import("@/app/api/admin/workspaces/route");
+    const res = await POST(
+      adminReq(WORKSPACES_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          name: "New Client",
+          postizGroupId: "pg-2",
+          notionTag: "tag-2",
+        }),
+      })
+    );
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.workspace.postizGroupId).toBe("pg-2");
+    expect(data.workspace.notionTag).toBe("tag-2");
+  });
+
+  it("PATCH updates fields and clears postizGroupId/notionTag", async () => {
+    const { PATCH } = await import("@/app/api/admin/workspaces/route");
+    const res = await PATCH(
+      adminReq(WORKSPACES_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          id: MOCK_WS.id,
+          name: "Renamed Workspace",
+          description: "new desc",
+          adminEmails: ["a@x.co"],
+          postizGroupId: "",
+          notionTag: "",
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.workspace.name).toBe("Renamed Workspace");
+    expect(data.workspace.slug).toBe("renamed-workspace");
+    expect(data.workspace.postizGroupId).toBeUndefined();
+    expect(data.workspace.notionTag).toBeUndefined();
+  });
+
+  it("PATCH 400/404 on missing id and unknown workspace", async () => {
+    const { PATCH } = await import("@/app/api/admin/workspaces/route");
+    const noId = await PATCH(
+      adminReq(WORKSPACES_URL, { method: "PATCH", body: JSON.stringify({ name: "x" }) })
+    );
+    expect(noId.status).toBe(400);
+    const missing = await PATCH(
+      adminReq(WORKSPACES_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ id: "nope", name: "x" }),
+      })
+    );
+    expect(missing.status).toBe(404);
+  });
+
+  it("POST 503 when the workspace store write fails", async () => {
+    const ws = await import("@/lib/workspace-server");
+    const spy = vi
+      .spyOn(ws, "writeWorkspaces")
+      .mockRejectedValueOnce(new Error("d1 down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/admin/workspaces/route");
+    const res = await POST(
+      adminReq(WORKSPACES_URL, {
+        method: "POST",
+        body: JSON.stringify({ name: "Failing Store" }),
+      })
+    );
+    expect(res.status).toBe(503);
+    spy.mockRestore();
+    errSpy.mockRestore();
+  });
+
+  it("audit failures are swallowed on create/update/delete", async () => {
+    const audit = await import("@/lib/workspace-audit");
+    const auditSpy = vi
+      .spyOn(audit, "auditWorkspaceEvent")
+      .mockRejectedValue(new Error("audit down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { POST, PATCH, DELETE } = await import("@/app/api/admin/workspaces/route");
+    const created = await POST(
+      adminReq(WORKSPACES_URL, {
+        method: "POST",
+        body: JSON.stringify({ name: "Audit Fail" }),
+      })
+    );
+    expect(created.status).toBe(201);
+
+    const patched = await PATCH(
+      adminReq(WORKSPACES_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ id: MOCK_WS.id, description: "d" }),
+      })
+    );
+    expect(patched.status).toBe(200);
+
+    const deleted = await DELETE(
+      adminReq(WORKSPACES_URL, {
+        method: "DELETE",
+        body: JSON.stringify({ id: MOCK_WS.id }),
+      })
+    );
+    expect(deleted.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(errSpy).toHaveBeenCalledWith("[workspaces audit]", expect.any(Error))
+    );
+    auditSpy.mockRestore();
+    errSpy.mockRestore();
+  });
+});

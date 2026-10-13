@@ -169,3 +169,88 @@ describe("GET /api/portal/[token]", () => {
     });
   });
 });
+
+describe("GET /api/portal/[token] tails", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetJsonConfigMemory();
+    await writeJsonConfig("CLIENT_PORTALS_JSON", [MOCK_PORTAL]);
+    mockCustomersList.mockResolvedValue({ data: [{ id: "cus_test" }] });
+    mockInvoicesList.mockResolvedValue({ data: [] });
+    mockSubsList.mockResolvedValue({ data: [] });
+  });
+
+  const call = async () => {
+    const { GET } = await import("@/app/api/portal/[token]/route");
+    return GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+  };
+
+  it("maps subscription items with product-name, nickname, and defaults", async () => {
+    mockSubsList.mockResolvedValue({
+      data: [
+        {
+          id: "sub_named",
+          status: "active",
+          cancel_at_period_end: false,
+          current_period_end: 1750000000,
+          items: { data: [{ price: { product: { name: "Analytics Pro" }, unit_amount: 9900, currency: "eur", recurring: { interval: "month" } } }] },
+        },
+        {
+          id: "sub_nick",
+          status: "trialing",
+          cancel_at_period_end: true,
+          items: { data: [{ price: { nickname: "Starter Nick", unit_amount: 1900 } }] },
+        },
+        {
+          id: "sub_empty",
+          status: "canceled",
+          items: { data: [] },
+        },
+      ],
+    });
+    const res = await call();
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.subscriptions.map((s: { id: string }) => s.id)).toEqual([
+      "sub_named",
+      "sub_nick",
+      "sub_empty",
+    ]);
+    expect(data.subscriptions[0]).toMatchObject({ planName: "Analytics Pro", amount: 9900, interval: "month", currentPeriodEnd: 1750000000 });
+    expect(data.subscriptions[1]).toMatchObject({ planName: "Starter Nick", currency: "EUR" });
+    expect(data.subscriptions[2]).toMatchObject({ planName: "Plan", amount: 0 });
+  });
+
+  it("returns empty invoices/subscriptions when the Stripe lookup throws", async () => {
+    mockCustomersList.mockRejectedValue(new Error("stripe down"));
+    const res = await call();
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.invoices).toEqual([]);
+    expect(data.subscriptions).toEqual([]);
+  });
+
+  it("returns only client-owned AppFlowy projects when configured", async () => {
+    const appflowy = await import("@/lib/appflowy");
+    vi.mocked(appflowy.isAppFlowyConfigured).mockResolvedValue(true);
+    vi.doMock("@/lib/appflowy-projects", () => ({
+      listProjects: vi.fn().mockResolvedValue([
+        { id: "p1", name: "Acme site", type: "Client", owner: "acme@example.com" },
+        { id: "p2", name: "Other", type: "Client", owner: "other@example.com" },
+        { id: "p3", name: "Internal", type: "Internal", owner: "acme@example.com" },
+      ]),
+    }));
+    vi.resetModules();
+    const { writeJsonConfig: writeFresh } = await import("@/lib/app-config-json");
+    await writeFresh("CLIENT_PORTALS_JSON", [MOCK_PORTAL]);
+    const { GET } = await import("@/app/api/portal/[token]/route");
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.projects.map((p: { id: string }) => p.id)).toEqual(["p1"]);
+    vi.doUnmock("@/lib/appflowy-projects");
+    vi.resetModules();
+  });
+});

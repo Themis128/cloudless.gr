@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   parseAttribution,
   sanitizeAttribution,
   formatAttribution,
   parseAttributionField,
+  captureAttribution,
+  getStoredAttribution,
   ATTRIBUTION_STORAGE_KEY,
 } from "@/lib/lead-attribution";
 
@@ -170,5 +172,57 @@ describe("parseAttributionField (CLOUDLESS-GR-8)", () => {
       ok: false,
       error: "Invalid attribution value.",
     });
+  });
+});
+
+describe("captureAttribution / getStoredAttribution", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("persists first-touch attribution from UTM params", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/en/contact?utm_source=newsletter&utm_medium=email&utm_campaign=launch"
+    );
+    captureAttribution();
+    const stored = getStoredAttribution();
+    expect(stored?.utmSource).toBe("newsletter");
+    expect(stored?.utmMedium).toBe("email");
+    expect(stored?.utmCampaign).toBe("launch");
+  });
+
+  it("does not overwrite an existing first touch", () => {
+    window.sessionStorage.setItem(
+      ATTRIBUTION_STORAGE_KEY,
+      JSON.stringify({ utmSource: "first" })
+    );
+    window.history.replaceState({}, "", "/?utm_source=second");
+    captureAttribution();
+    expect(getStoredAttribution()?.utmSource).toBe("first");
+  });
+
+  it("writes nothing when the page has no attribution signal", () => {
+    window.history.replaceState({}, "", "/en/store");
+    captureAttribution();
+    expect(window.sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY)).toBeNull();
+  });
+
+  it("getStoredAttribution returns null on corrupt stored JSON", () => {
+    window.sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, "{bad json");
+    expect(getStoredAttribution()).toBeNull();
+  });
+
+  it("captureAttribution swallows storage errors", () => {
+    const spy = vi
+      .spyOn(window.sessionStorage, "getItem")
+      .mockImplementation(() => {
+        throw new Error("denied");
+      });
+    window.history.replaceState({}, "", "/?utm_source=x");
+    expect(() => captureAttribution()).not.toThrow();
+    spy.mockRestore();
   });
 });

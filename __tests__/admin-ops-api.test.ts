@@ -58,6 +58,58 @@ describe("GET /api/admin/ops/monitor", () => {
     expect(res.status).toBe(400);
     delete process.env.ALERT_API_URL;
   });
+
+  it("forwards whitelisted query params and returns upstream JSON", async () => {
+    adminOk();
+    process.env.ALERT_API_URL = "https://alert-api.example.com";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, pods: 12 }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("@/app/api/admin/ops/monitor/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=alerts&severity=critical&resource2=x")
+    );
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data).toEqual({ ok: true, pods: 12 });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/alerts?severity=critical");
+    vi.unstubAllGlobals();
+    delete process.env.ALERT_API_URL;
+  });
+
+  it("passes through upstream non-OK statuses with the error text", async () => {
+    adminOk();
+    process.env.ALERT_API_URL = "https://alert-api.example.com";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("boom", { status: 502 }))
+    );
+    const { GET } = await import("@/app/api/admin/ops/monitor/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
+    );
+    const data = await res.json();
+    expect(res.status).toBe(502);
+    expect(data.error).toContain("502");
+    vi.unstubAllGlobals();
+    delete process.env.ALERT_API_URL;
+  });
+
+  it("returns 503 offline when the alert API is unreachable", async () => {
+    adminOk();
+    process.env.ALERT_API_URL = "https://alert-api.example.com";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("dns fail")));
+    const { GET } = await import("@/app/api/admin/ops/monitor/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
+    );
+    const data = await res.json();
+    expect(res.status).toBe(503);
+    expect(data.offline).toBe(true);
+    vi.unstubAllGlobals();
+    delete process.env.ALERT_API_URL;
+  });
 });
 
 // ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────

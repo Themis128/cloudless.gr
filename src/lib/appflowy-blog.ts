@@ -12,9 +12,8 @@
 import {
   listAllWorkspaces,
   listAllViewsDeep,
-  getDocument,
-  extractDocText,
   markdownToHtml,
+  fetchViewMarkdownMap,
 } from "./appflowy";
 import { isAppFlowyConfigured } from "./appflowy";
 
@@ -108,19 +107,16 @@ export async function getPosts(): Promise<AppFlowyPost[]> {
     const views = await listAllViewsDeep(workspaceId);
     const blogViews = views.filter((v) => isBlogPage(v.name));
 
-    const posts: AppFlowyPost[] = [];
-    for (const view of blogViews) {
-      const base = mapViewToPost(view);
-      let html = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        const text = await extractDocText(doc);
-        html = await markdownToHtml(text);
-      } catch {
-        html = "";
-      }
-      posts.push({ ...base, html });
-    }
+    const docs = await fetchViewMarkdownMap(workspaceId, blogViews);
+    const posts: AppFlowyPost[] = await Promise.all(
+      blogViews.map(async (view) => {
+        const markdown = docs.get(view.view_id);
+        return {
+          ...mapViewToPost(view),
+          html: markdown == null ? "" : await markdownToHtml(markdown),
+        };
+      })
+    );
 
     return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {

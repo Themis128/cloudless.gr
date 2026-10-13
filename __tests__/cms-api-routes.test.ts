@@ -119,6 +119,34 @@ describe("GET /api/faqs", () => {
     expect(data.every((f: { category: string }) => f.category === "Billing")).toBe(true);
   });
 
+  it("filters static faqs by locale membership", async () => {
+    const { GET } = await import("@/app/api/faqs/route");
+    const res = await GET(new Request("http://localhost/api/faqs?locale=el"));
+    const data = await res.json();
+    // f1 has no locale restriction; f2 is en-only → only f1 remains.
+    expect(data.map((f: { id: string }) => f.id)).toEqual(["f1"]);
+  });
+
+  it("falls back to filtered static faqs when AppFlowy returns empty", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFaqsByCategory.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/faqs/route");
+    const res = await GET(new Request("http://localhost/api/faqs?category=Billing"));
+    const data = await res.json();
+    expect(data.map((f: { id: string }) => f.id)).toEqual(["f2"]);
+    expect(res.headers.get("x-cms-source")).toBe("static");
+  });
+
+  it("returns static faqs when the AppFlowy fetch throws", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFaqs.mockRejectedValue(new Error("cms 500"));
+    const { GET } = await import("@/app/api/faqs/route");
+    const res = await GET(new Request("http://localhost/api/faqs"));
+    const data = await res.json();
+    expect(data).toHaveLength(2);
+    expect(res.headers.get("x-cms-source")).toBe("static");
+  });
+
   it("returns AppFlowy array when configured", async () => {
     mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
     mockGetAppFlowyFaqs.mockResolvedValue([{ id: "f3", question: "Q3", answer: "A3" }]);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { DEFAULT_FLAGS } from "@/lib/ab-flags";
 import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
@@ -206,5 +206,64 @@ describe("POST /api/admin/ab-tests (reset)", () => {
       })
     );
     expect(res.status).toBe(400);
+  });
+});
+
+
+describe("/api/admin/ab-tests — persist failure tails", () => {
+  const brokenDb = {
+    prepare: () => ({
+      bind: () => ({
+        run: () => Promise.reject(new Error("d1 down")),
+        first: () => Promise.resolve(null),
+      }),
+    }),
+  };
+
+  beforeEach(() => {
+    resetJsonConfigMemory();
+  });
+
+  afterEach(() => {
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+  });
+
+  it("PATCH returns the updated flags with a warning when persist fails", async () => {
+    (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = brokenDb;
+    const { PATCH } = await import("@/app/api/admin/ab-tests/route");
+    const res = await PATCH(
+      adminReq(ABTEST_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ id: "hero-cta", enabled: true }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.warning).toContain("not persisted");
+    expect(Array.isArray(data.flags)).toBe(true);
+  });
+
+  it("POST reset returns defaults with a warning when persist fails", async () => {
+    (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = brokenDb;
+    const { POST } = await import("@/app/api/admin/ab-tests/route");
+    const res = await POST(
+      adminReq(ABTEST_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "reset" }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.warning).toContain("not persisted");
+    expect(data.flags).toEqual(DEFAULT_FLAGS);
+  });
+
+  it("POST returns 400 on malformed JSON", async () => {
+    const { POST } = await import("@/app/api/admin/ab-tests/route");
+    const res = await POST(
+      adminReq(ABTEST_URL, { method: "POST", body: "{not-json" })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid input");
   });
 });

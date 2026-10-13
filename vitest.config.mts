@@ -117,14 +117,14 @@ export default defineConfig({
       ],
       // Ratchet thresholds: set a few points below the current measured
       // coverage so CI fails on a regression but tolerates normal variance.
-      // Measured 2026-10-11: lines 40.6 / stmts 39.65 / funcs 36.22 /
-      // branches 33.73 (content-webhook + slack-commands-extra batches).
+      // Measured 2026-10-12: lines 69.61 / stmts 71.94 / funcs 59.27 /
+      // branches 59.36 (admin-pages smoke + 117-route + lib batches).
       // Raise these as coverage improves; never lower them.
       thresholds: {
-        lines: 40,
-        functions: 36,
-        branches: 33,
-        statements: 39,
+        lines: 68,
+        functions: 57,
+        branches: 57,
+        statements: 70,
       },
     },
   },
