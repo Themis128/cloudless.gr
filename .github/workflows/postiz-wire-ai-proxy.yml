@@ -4,6 +4,9 @@ name: Wire Postiz AI Proxy
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   wire:
     # Pi self-hosted runner is already on the tailnet — kubectl reaches

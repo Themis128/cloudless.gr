@@ -16,8 +16,13 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   fix:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}

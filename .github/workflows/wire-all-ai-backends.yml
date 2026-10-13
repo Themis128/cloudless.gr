@@ -10,6 +10,9 @@ name: Wire All AI Backends
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   wire:
     runs-on: [self-hosted, omv, pi, build]

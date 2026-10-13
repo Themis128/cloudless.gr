@@ -230,6 +230,34 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
     `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
 
+## GitHub Actions conventions (enforced since 2026-10-13)
+
+~190 workflows live in `.github/workflows/`. Three trigger families:
+
+- **push/PR CI** — test/lint/coverage gates. `concurrency` with
+  `cancel-in-progress: true` (latest commit wins, older runs are waste) and
+  `timeout-minutes: 30`.
+- **push-fired ops** (`fix-*`, `k3s-*`, `cluster-*`, `*-restore`, probes) —
+  stateful Pi/cluster mutations triggered via the self-referencing
+  `on.push.paths` pattern above. `concurrency` serializes them with
+  `cancel-in-progress: false` — never cancel a remediation mid-run — and
+  `timeout-minutes: 60` so a hung ssh/kubectl can't hold a runner slot.
+- **deploys** (`deploy-*`, `sst-*`, `*-rollout`) — `cancel-in-progress: false`,
+  `timeout-minutes: 120` (ARM image builds are slow).
+- **dispatch-only** = manual ops runbooks (tailscale-*, restore-*,
+  token rotation). Intentionally not on a schedule — do not add triggers.
+
+Other rules:
+
+- Every workflow declares `permissions:` — default `contents: read`, jobs opt
+  into more (`issues: write` for issue-382 reporters, `pull-requests: write`
+  for PR commenters). `pull_request_target` is labeler-only.
+- Third-party actions (non-`actions/*`/`docker/*`) are pinned to full commit
+  SHA with a `# vX.Y.Z` comment. First-party `actions/*` may keep version tags;
+  dependabot (`github_actions` ecosystem) tracks both.
+- `.lock.yml` files are gh-aw compiled output — never edit them by hand;
+  edit the `.md` source and recompile.
+
 ## Operator skills (read SKILL.md before touching the stack)
 
 Three operator manuals live under `skills/`. Each one is the canonical

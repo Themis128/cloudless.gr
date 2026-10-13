@@ -8,8 +8,13 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   automerge:
+    timeout-minutes: 30
     name: Auto-merge patch/minor
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'

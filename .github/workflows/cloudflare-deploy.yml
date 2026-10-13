@@ -47,6 +47,7 @@ concurrency:
 
 jobs:
   deploy:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
       contents: read

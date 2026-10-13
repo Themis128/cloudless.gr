@@ -7,6 +7,9 @@ name: Wire Chatbot NVIDIA Proxy
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   wire:
     runs-on: [self-hosted, omv, pi, build]

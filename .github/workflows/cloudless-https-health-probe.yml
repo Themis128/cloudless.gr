@@ -48,6 +48,10 @@ env:
   # Same NodePort Cloudflare Tunnel terminates on (prod origin).
   TS_ORIGIN_NODEPORT: '30300'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   probe-primary:
     name: Probe PRIMARY (cloudless.gr via Cloudflare → Workers → Tunnel)
