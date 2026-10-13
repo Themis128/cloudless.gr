@@ -94,8 +94,19 @@ export async function sendEmail(options: {
   };
 
   if (isCloudflareEmailConfigured()) {
-    await sendEmailCloudflare(payload);
-    return;
+    try {
+      await sendEmailCloudflare(payload);
+      return;
+    } catch (err) {
+      // 10203 "sending_disabled" = account/zone not onboarded for Email
+      // Sending (gated feature) or token lacks the scope — not retryable on
+      // this transport, so degrade to Resend instead of 500ing the request.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("sending_disabled") || !isResendConfigured()) {
+        throw err;
+      }
+      console.warn("[email] Cloudflare Email sending_disabled — falling back to Resend");
+    }
   }
 
   if (isResendConfigured()) {
