@@ -4,8 +4,7 @@ const m = vi.hoisted(() => ({
   configured: vi.fn(async () => true),
   workspaces: vi.fn(async () => [{ workspace_id: "ws1" }]),
   views: vi.fn(async () => []),
-  getDoc: vi.fn(async () => ({})),
-  extract: vi.fn(async () => ""),
+  fetchMd: vi.fn(async () => new Map<string, string | null>()),
   mdToHtml: vi.fn(async () => "<p>x</p>"),
 }));
 
@@ -13,8 +12,7 @@ vi.mock("@/lib/appflowy", () => ({
   isAppFlowyConfigured: m.configured,
   listAllWorkspaces: m.workspaces,
   listAllViewsDeep: m.views,
-  getDocument: m.getDoc,
-  extractDocText: m.extract,
+  fetchViewMarkdownMap: m.fetchMd,
   markdownToHtml: m.mdToHtml,
 }));
 
@@ -48,7 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.configured.mockResolvedValue(true);
   m.workspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
-  m.extract.mockResolvedValue(MD);
+  m.fetchMd.mockResolvedValue(new Map());
 });
 
 describe("getCaseStudies", () => {
@@ -64,8 +62,10 @@ describe("getCaseStudies", () => {
       view("v2", "[CaseStudy] Older"),
       view("v3", "Not a case study"),
     ]);
-    m.extract.mockResolvedValueOnce("**Date**: 2026-10-10") // newer
-      .mockResolvedValueOnce("**Date**: 2026-01-01");
+    m.fetchMd.mockResolvedValue(new Map([
+      ["v1", "**Date**: 2026-10-10"],
+      ["v2", "**Date**: 2026-01-01"],
+    ]));
     const out = await getCaseStudies();
     expect(out).toHaveLength(2);
     expect(out[0].slug).toBe("newer"); // date desc
@@ -74,6 +74,7 @@ describe("getCaseStudies", () => {
 
   it("maps markdown fields incl. metrics, tags, featured", async () => {
     m.views.mockResolvedValue([view("v1", "[CaseStudy] Acme")]);
+    m.fetchMd.mockResolvedValue(new Map([["v1", MD]]));
     const [cs] = await getCaseStudies();
     expect(cs.slug).toBe("acme-migration");
     expect(cs.client).toBe("Acme");
@@ -84,9 +85,9 @@ describe("getCaseStudies", () => {
     ]);
   });
 
-  it("doc fetch failure → empty-markdown fallback; listAllViewsDeep throw → []", async () => {
+  it("null doc → empty-markdown fallback; listAllViewsDeep throw → []", async () => {
     m.views.mockResolvedValue([view("v1", "[CaseStudy] X")]);
-    m.getDoc.mockRejectedValueOnce(new Error("doc down"));
+    m.fetchMd.mockResolvedValue(new Map([["v1", null]]));
     const [cs] = await getCaseStudies();
     expect(cs.title).toBe("X");
 
@@ -103,13 +104,15 @@ describe("getCaseStudies", () => {
 describe("getFeaturedCaseStudies + getCaseStudyBySlug", () => {
   it("featured filter", async () => {
     m.views.mockResolvedValue([view("v1", "[CaseStudy] A")]);
+    m.fetchMd.mockResolvedValue(new Map([["v1", MD]]));
     expect(await getFeaturedCaseStudies()).toHaveLength(1);
-    m.extract.mockResolvedValue("**Featured**: no");
+    m.fetchMd.mockResolvedValue(new Map([["v1", "**Featured**: no"]]));
     expect(await getFeaturedCaseStudies()).toHaveLength(0);
   });
 
   it("bySlug returns html; not found → null; unconfigured → null", async () => {
     m.views.mockResolvedValue([view("v1", "[CaseStudy] A")]);
+    m.fetchMd.mockResolvedValue(new Map([["v1", MD]]));
     const hit = await getCaseStudyBySlug("acme-migration");
     expect(hit?.html).toBe("<p>x</p>");
     expect(await getCaseStudyBySlug("nope")).toBeNull();
@@ -125,6 +128,7 @@ describe("getAllCaseStudiesAdmin", () => {
     m.views.mockRejectedValueOnce(new Error("down"));
     expect(await getAllCaseStudiesAdmin()).toBe(staticCaseStudies);
     m.views.mockResolvedValue([view("v1", "[CaseStudy] A")]);
+    m.fetchMd.mockResolvedValue(new Map([["v1", MD]]));
     expect(await getAllCaseStudiesAdmin()).toHaveLength(1);
   });
 });
