@@ -124,7 +124,12 @@ describe("listAllViewsDeep fallbacks", () => {
         children: [
           { view_id: "p1", name: "Page", layout: 0 },
           { view_id: "p1", name: "Page", layout: 0 }, // dup
-          { view_id: "f1", name: "Sub", has_children: true, children: [{ view_id: "p2", name: "Deep" }] },
+          {
+            view_id: "f1",
+            name: "Sub",
+            has_children: true,
+            children: [{ view_id: "p2", name: "Deep" }],
+          },
         ],
       },
     };
@@ -176,9 +181,7 @@ describe("getDocument + collab extraction", () => {
   it("extracts CMS fields from encoded_collab bytes (array)", async () => {
     cfgSecret();
     const blob = Buffer.from(`Title**Name**: Acme Corp' stuff **Slug**: acme-corp'`);
-    mockFetch.mockResolvedValueOnce(
-      json({ data: { data: { encoded_collab: Array.from(blob) } } })
-    );
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
     const mod = await import("@/lib/appflowy");
     const doc = (await mod.getDocument("w", "v")) as { text: string };
     expect(doc.text).toContain("**Name**: Acme Corp");
@@ -252,7 +255,9 @@ describe("views/search/update", () => {
     vi.resetModules();
     const mod2 = await import("@/lib/appflowy");
     cfgSecret();
-    await expect(mod2.searchDocuments("w9", "q")).rejects.toMatchObject({ name: "AppFlowyApiError" });
+    await expect(mod2.searchDocuments("w9", "q")).rejects.toMatchObject({
+      name: "AppFlowyApiError",
+    });
   });
 
   it("updateViewName PATCHes and reports failures", async () => {
@@ -275,7 +280,9 @@ describe("views/search/update", () => {
   it("throws AppFlowyNotConfiguredError through the whole surface", async () => {
     const mod = await import("@/lib/appflowy");
     expect(await mod.updateViewName("w", "v", "x")).toBe(false);
-    await expect(mod.getDocument("w", "v")).rejects.toMatchObject({ name: "AppFlowyNotConfiguredError" });
+    await expect(mod.getDocument("w", "v")).rejects.toMatchObject({
+      name: "AppFlowyNotConfiguredError",
+    });
   });
 
   it("drops short latin runs that fail every inclusion filter", async () => {

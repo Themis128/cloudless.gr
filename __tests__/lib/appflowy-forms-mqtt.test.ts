@@ -41,13 +41,8 @@ vi.mock("mqtt", async () => {
           (c.handlers[ev] ??= []).push(cb);
           return c;
         },
-        subscribe: vi.fn((_t: string, _o: unknown, cb?: (e?: Error) => void) =>
-          cb?.()
-        ),
-        publish: vi.fn(
-          (_t: string, _m: string, _o: unknown, cb?: (e?: Error) => void) =>
-            cb?.()
-        ),
+        subscribe: vi.fn((_t: string, _o: unknown, cb?: (e?: Error) => void) => cb?.()),
+        publish: vi.fn((_t: string, _m: string, _o: unknown, cb?: (e?: Error) => void) => cb?.()),
         end: vi.fn(),
         emit(ev: string, ...args: unknown[]) {
           for (const cb of c.handlers[ev] ?? []) cb(...args);
@@ -59,11 +54,7 @@ vi.mock("mqtt", async () => {
   };
 });
 
-import {
-  saveSubmission,
-  listSubmissions,
-  updateSubmissionStatus,
-} from "@/lib/appflowy-forms";
+import { saveSubmission, listSubmissions, updateSubmissionStatus } from "@/lib/appflowy-forms";
 import {
   isMqttConfigured,
   readLatestAlertStatus,
@@ -210,7 +201,6 @@ describe("appflowy-forms", () => {
   });
 });
 
-
 async function clientAt(i: number) {
   await vi.waitFor(() => {
     if (mqttFake.clients.length <= i) throw new Error("no client yet");
@@ -265,11 +255,7 @@ describe("mqtt", () => {
       expect.any(Function)
     );
     c.emit("message", "other/topic", Buffer.from("{}"));
-    c.emit(
-      "message",
-      "homelab/alerts/status",
-      Buffer.from('{"severity":"ok","count":0}')
-    );
+    c.emit("message", "homelab/alerts/status", Buffer.from('{"severity":"ok","count":0}'));
     expect(await p).toEqual({ severity: "ok", count: 0 });
     expect(c.end).toHaveBeenCalled();
   });
@@ -287,9 +273,8 @@ describe("mqtt", () => {
 
     const p3 = readLatestAlertStatus();
     const c3 = await clientAt(2);
-    c3.subscribe.mockImplementation(
-      (_t: string, _o: unknown, cb?: (e?: Error) => void) =>
-        cb?.(new Error("sub fail"))
+    c3.subscribe.mockImplementation((_t: string, _o: unknown, cb?: (e?: Error) => void) =>
+      cb?.(new Error("sub fail"))
     );
     c3.emit("connect");
     expect(await p3).toBeNull();
@@ -344,9 +329,8 @@ describe("mqtt", () => {
 
     const p2 = publishAlertStatus({ severity: "ok", count: 0 });
     const c2 = await clientAt(1);
-    c2.publish.mockImplementation(
-      (_t: string, _m: string, _o: unknown, cb?: (e?: Error) => void) =>
-        cb?.(new Error("pub fail"))
+    c2.publish.mockImplementation((_t: string, _m: string, _o: unknown, cb?: (e?: Error) => void) =>
+      cb?.(new Error("pub fail"))
     );
     c2.emit("connect");
     expect(await p2).toEqual({ ok: false, error: "pub fail" });

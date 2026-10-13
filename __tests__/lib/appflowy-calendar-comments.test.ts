@@ -7,11 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ---------------------------------------------------------------------------
 // appflowy-calendar
 // ---------------------------------------------------------------------------
-import {
-  getCalendarEvents,
-  getPostizGroups,
-  syncCalendarEvents,
-} from "@/lib/appflowy-calendar";
+import { getCalendarEvents, getPostizGroups, syncCalendarEvents } from "@/lib/appflowy-calendar";
 
 describe("appflowy-calendar", () => {
   beforeEach(() => {
@@ -52,8 +48,6 @@ describe("appflowy-comments", () => {
   it("addComment warns and returns false", async () => {
     const result = await addComment("page-1", "Hello!");
     expect(result).toBe(false);
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Would add comment (stub)")
-    );
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Would add comment (stub)"));
   });
 });

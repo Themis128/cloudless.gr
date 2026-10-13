@@ -515,6 +515,28 @@ export async function extractDocText(doc: unknown): Promise<string> {
   }
 }
 
+/**
+ * Fetch and extract document markdown for many views concurrently.
+ * Failed documents resolve to null — callers decide whether to keep
+ * the view with empty markdown or skip it entirely.
+ */
+export async function fetchViewMarkdownMap(
+  workspaceId: string,
+  views: AppFlowyView[]
+): Promise<Map<string, string | null>> {
+  const entries = await Promise.all(
+    views.map(async (view) => {
+      try {
+        const doc = await getDocument(workspaceId, view.view_id);
+        return [view.view_id, await extractDocText(doc)] as const;
+      } catch {
+        return [view.view_id, null] as const;
+      }
+    })
+  );
+  return new Map(entries);
+}
+
 export async function markdownToHtml(markdown: string): Promise<string> {
   return markdown
     .replace(/^# (.*$)/gm, "<h1>$1</h1>")

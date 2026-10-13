@@ -88,6 +88,18 @@ vi.mock("@/lib/appflowy", () => ({
   listAllViewsDeep: m.afViews,
   getDocument: m.afDoc,
   extractDocText: m.afText,
+  fetchViewMarkdownMap: async (_ws: string, views: { view_id: string }[]) =>
+    new Map(
+      await Promise.all(
+        views.map(async (v) => {
+          try {
+            return [v.view_id, await m.afText(await m.afDoc(_ws, v.view_id))] as const;
+          } catch {
+            return [v.view_id, null] as const;
+          }
+        })
+      )
+    ),
 }));
 vi.mock("@/lib/cms-static", () => ({
   staticFaqs: [{ id: "s1", question: "SQ", answer: "SA", category: "general", locales: [] }],

@@ -13,8 +13,7 @@
 import {
   listAllWorkspaces,
   listAllViewsDeep,
-  getDocument,
-  extractDocText,
+  fetchViewMarkdownMap,
   isAppFlowyConfigured,
 } from "./appflowy";
 import { staticFaqs, type Faq, type FaqCategory } from "./cms-static";
@@ -84,6 +83,16 @@ function mapMarkdownToFaq(
   };
 }
 
+function sortFaqs(faqs: AppFlowyFaq[]): AppFlowyFaq[] {
+  // Sort by order, then by last edited time
+  return faqs.sort((a, b) => {
+    const orderA = a.order ?? 999999;
+    const orderB = b.order ?? 999999;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+  });
+}
+
 export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   if (!(await isAppFlowyConfigured())) return [];
 
@@ -93,35 +102,25 @@ export async function getFaqs(locale?: string): Promise<AppFlowyFaq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: AppFlowyFaq[] = [];
+    const docs = await fetchViewMarkdownMap(workspaceId, faqViews);
+    const faqs: AppFlowyFaq[] = faqViews
+      .map((view) => {
+        const mapped = mapMarkdownToFaq(
+          view.view_id,
+          view.name,
+          docs.get(view.view_id) ?? "",
+          view.last_edited_time
+        );
+        // Filter by published status for public API
+        if (!mapped.published) return null;
+        if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
+          return null;
+        }
+        return mapped;
+      })
+      .filter((f): f is AppFlowyFaq => f !== null);
 
-    for (const view of faqViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-
-      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
-
-      // Filter by published status for public API
-      if (!mapped.published) continue;
-
-      if (locale && mapped.locales.length > 0 && !mapped.locales.includes(locale)) {
-        continue;
-      }
-      faqs.push(mapped);
-    }
-
-    // Sort by order, then by last edited time
-    return faqs.sort((a, b) => {
-      const orderA = a.order ?? 999999;
-      const orderB = b.order ?? 999999;
-      if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-    });
+    return sortFaqs(faqs);
   } catch {
     return [];
   }
@@ -155,29 +154,13 @@ export async function getAllFaqsAdmin(): Promise<AppFlowyFaq[]> {
   try {
     const views = await listAllViewsDeep(workspaceId);
     const faqViews = views.filter((v) => isFaqPage(v.name));
-    const faqs: AppFlowyFaq[] = [];
+    const docs = await fetchViewMarkdownMap(workspaceId, faqViews);
+    // Admin version: no filtering by published or locale
+    const faqs: AppFlowyFaq[] = faqViews.map((view) =>
+      mapMarkdownToFaq(view.view_id, view.name, docs.get(view.view_id) ?? "", view.last_edited_time)
+    );
 
-    for (const view of faqViews) {
-      let markdown = "";
-      try {
-        const doc = await getDocument(workspaceId, view.view_id);
-        markdown = await extractDocText(doc);
-      } catch {
-        markdown = "";
-      }
-
-      const mapped = mapMarkdownToFaq(view.view_id, view.name, markdown, view.last_edited_time);
-      // Admin version: no filtering by published or locale
-      faqs.push(mapped);
-    }
-
-    // Sort by order, then by last edited time
-    return faqs.sort((a, b) => {
-      const orderA = a.order ?? 999999;
-      const orderB = b.order ?? 999999;
-      if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-    });
+    return sortFaqs(faqs);
   } catch {
     // Convert staticFaqs to AppFlowyFaq format with required fields
     return staticFaqs.map((f) => ({
