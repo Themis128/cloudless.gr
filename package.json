@@ -240,7 +240,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "project-mcp": "^3.3.0",
     "prompt-to-asset": "^0.5.1",
-    "sst": "^4.0.0",
+    "sst": "^4.17.2",
     "stock-images-mcp": "^1.0.0",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.23.15",
