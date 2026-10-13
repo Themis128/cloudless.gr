@@ -14,17 +14,29 @@
 
 export function socialEngagement(insights) {
 	if (!insights?.platforms) return null;
+	// Key order is load-bearing downstream: the insights materializer feeds
+	// the LLM each row's FIRST keys only (extractMetrics slice(0,6), pack
+	// rows capped at 12) — the honest-confidence fields must lead.
 	return Object.entries(insights.platforms)
 		.map(([platform, p]) => ({
 			platform,
-			focus_tier: p.focus_tier ?? null,
 			confidence: p.confidence ?? null,
 			posts: p.posts ?? 0,
-			impressions: p.impressions ?? 0,
 			engagement: p.engagement ?? 0,
-			avg_er_pct: p.avg_engagement_rate ?? 0,
 			// Wilson 95% lower bound — the honest ER floor for small samples
 			er_wilson_low_pct: p.avg_engagement_rate_wilson_low ?? null,
+			// z-scores are the trustable momentum signal — raw % alone
+			// over-reads small samples (4→2 is -50% but noise)
+			momentum_7d_engagement_z: p.momentum_7d_engagement_z ?? null,
+			// Theil–Sen slope (median pairwise) — survives bad endpoint scrapes
+			follower_slope_per_day: p.follower_growth?.slope_per_day ?? null,
+			// learned best windows (null when sample/margin insufficient —
+			// dead-night scheduler artifacts are already excluded upstream)
+			best_hour_athens: p.best_hour_athens?.[0] ?? null,
+			focus_tier: p.focus_tier ?? null,
+			impressions: p.impressions ?? 0,
+			avg_er_pct: p.avg_engagement_rate ?? 0,
+			momentum_7d_pct: p.momentum_7d_engagement_pct ?? null,
 			median_er_pct: p.median_engagement_rate ?? 0,
 			median_eng_per_post: p.median_engagement_per_post ?? 0,
 			// shrunk rates: empirical-Bayes pull toward platform mean so a
@@ -37,21 +49,12 @@ export function socialEngagement(insights) {
 				(p.er_by_followers_pct == null
 					? "below_min_followers_50"
 					: "no_benchmark_for_platform"),
-			momentum_7d_pct: p.momentum_7d_engagement_pct ?? null,
-			// z-scores are the trustable momentum signal — raw % alone
-			// over-reads small samples (4→2 is -50% but noise)
-			momentum_7d_engagement_z: p.momentum_7d_engagement_z ?? null,
 			momentum_7d_impressions_z: p.momentum_7d_impressions_z ?? null,
 			momentum_significant:
 				Math.abs(p.momentum_7d_engagement_z ?? 0) >= 1.645,
 			engagement_7d: p.engagement_7d ?? 0,
 			followers: p.follower_growth?.current ?? null,
 			follower_net: p.follower_growth?.net ?? null,
-			// Theil–Sen slope (median pairwise) — survives bad endpoint scrapes
-			follower_slope_per_day: p.follower_growth?.slope_per_day ?? null,
-			// learned best windows (null when sample/margin insufficient —
-			// dead-night scheduler artifacts are already excluded upstream)
-			best_hour_athens: p.best_hour_athens?.[0] ?? null,
 			best_weekday_athens: p.best_weekday_athens?.[0] ?? null,
 			best_hour_sample: p.best_hour_sample ?? 0,
 			counter_resets: p.data_quality?.counter_resets ?? 0,
@@ -112,16 +115,16 @@ export function socialMonetization(gates) {
 		return {
 			platform: g.platform ?? null,
 			handle: g.username ?? g.account_id ?? null,
-			account_type: g.account_type ?? null,
-			followers: g.followers ?? null,
-			// Theil–Sen slope upstream — already robust to bad scrapes
-			follower_slope_per_day: g.gain_per_day ?? null,
 			program: g.program ?? null,
-			// funnel role for accounts without a creator program
-			role: g.role ?? null,
 			criteria_met: criteria.filter((c) => c.met === true).length,
 			criteria_total: criteria.length,
+			// Theil–Sen slope upstream — already robust to bad scrapes
+			follower_slope_per_day: g.gain_per_day ?? null,
 			criteria_unknown: criteria.filter((c) => c.met == null).length,
+			account_type: g.account_type ?? null,
+			followers: g.followers ?? null,
+			// funnel role for accounts without a creator program
+			role: g.role ?? null,
 			evaluated_at: g.evaluated_at ?? null,
 			error: g.error ?? null,
 		};

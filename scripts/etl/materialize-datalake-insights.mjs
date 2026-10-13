@@ -78,7 +78,17 @@ function sectionPack(gold, sectionNames) {
     packs.push({
       section: name,
       rowCount: section.rowCount ?? section.rows?.length ?? 0,
-      rows: (section.rows ?? []).slice(0, 15),
+      // Bound row width as well as count — wide sections (social_engagement
+      // rows carry ~25 fields) would otherwise blow the prompt budget and
+      // truncate the sections after them. First-12-keys convention: section
+      // transforms order their highest-signal fields first.
+      rows: (section.rows ?? [])
+        .slice(0, 15)
+        .map((r) =>
+          r && typeof r === "object" && !Array.isArray(r)
+            ? Object.fromEntries(Object.entries(r).slice(0, 12))
+            : r
+        ),
     });
   }
   return packs;
@@ -212,7 +222,7 @@ Metrics:
 ${JSON.stringify(metrics, null, 2)}
 
 Section packs (truncated):
-${JSON.stringify(packs, null, 2).slice(0, 6000)}
+${JSON.stringify(packs, null, 2).slice(0, 8000)}
 `;
 }
 
