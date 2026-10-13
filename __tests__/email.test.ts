@@ -118,6 +118,48 @@ describe("email.ts", () => {
         sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
       ).rejects.toThrow("CF email failure");
     });
+
+    it("falls back to Resend on sending_disabled when Resend is configured", async () => {
+      const { isResendConfigured } = await import("@/lib/email-resend");
+      vi.mocked(isResendConfigured).mockReturnValue(true);
+      mockSendEmailCloudflare.mockRejectedValueOnce(
+        new Error("email.sending.error.email.sending_disabled")
+      );
+      const { sendEmail } = await import("@/lib/email");
+      await sendEmail({
+        to: "user@example.com",
+        subject: "Contact",
+        html: "<p>hi</p>",
+        text: "hi",
+      });
+      expect(mockSendEmailCloudflare).toHaveBeenCalledOnce();
+      expect(mockSendEmailResend).toHaveBeenCalledOnce();
+      expect(mockSendEmailResend).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "user@example.com", subject: "Contact" })
+      );
+    });
+
+    it("rethrows sending_disabled when Resend is not configured", async () => {
+      mockSendEmailCloudflare.mockRejectedValueOnce(
+        new Error("email.sending.error.email.sending_disabled")
+      );
+      const { sendEmail } = await import("@/lib/email");
+      await expect(
+        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
+      ).rejects.toThrow("sending_disabled");
+      expect(mockSendEmailResend).not.toHaveBeenCalled();
+    });
+
+    it("does not fall back to Resend for non-sending_disabled CF errors", async () => {
+      const { isResendConfigured } = await import("@/lib/email-resend");
+      vi.mocked(isResendConfigured).mockReturnValue(true);
+      mockSendEmailCloudflare.mockRejectedValueOnce(new Error("Cloudflare Email HTTP 500"));
+      const { sendEmail } = await import("@/lib/email");
+      await expect(
+        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
+      ).rejects.toThrow("Cloudflare Email HTTP 500");
+      expect(mockSendEmailResend).not.toHaveBeenCalled();
+    });
   });
 
   describe("sendOrderConfirmation()", () => {
