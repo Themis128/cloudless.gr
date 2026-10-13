@@ -1005,6 +1005,8 @@ async function main() {
 		"lake/socialauto-ads/snapshots.json",
 		"lake/socialauto-ads/daily.json",
 		"lake/socialauto-ads/demographics.json",
+		"lake/socialauto-telegram/channels.json",
+		"lake/socialauto-monetization/gates.json",
 		"lake/linkedin-ads/demographics.parquet",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",

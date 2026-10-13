@@ -41,8 +41,6 @@ const DOMAINS = [
       "social_leads",
       "linkedin_ads",
       "ads_funnel",
-      "social_engagement",
-      "social_monetization",
       "top_errors",
       "acquisition_funnel",
       "attribution",

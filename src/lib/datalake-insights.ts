@@ -78,8 +78,6 @@ export const INSIGHT_SECTION_MAP: Record<string, string[]> = {
     "top_keywords",
     "espocrm_funnel",
     "linkedin_ads",
-    "social_engagement",
-    "social_monetization",
     "top_errors",
     "acquisition_funnel",
     "attribution",
