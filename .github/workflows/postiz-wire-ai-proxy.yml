@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  issues: write  # report step posts results via issues.createComment
 
 jobs:
   wire:

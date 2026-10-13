@@ -292,10 +292,6 @@ jobs:
           name: sbom
           path: sbom.json
           retention-days: 30
-      - name: Supply chain monitoring (informational placeholder)
-        run: |
-          echo "Supply chain monitoring step - to be implemented with Endor SCPM or similar"
-          echo "For now, this documents where supply chain monitoring would be integrated"
       - name: Scan licenses with pnpm licenses
         run: |
           pnpm licenses ls --json > licenses.json

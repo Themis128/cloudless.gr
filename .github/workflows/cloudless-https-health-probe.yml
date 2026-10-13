@@ -49,7 +49,7 @@ env:
   TS_ORIGIN_NODEPORT: '30300'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:

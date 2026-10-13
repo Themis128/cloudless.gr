@@ -2,7 +2,8 @@ name: k3s recover — restart from Pi runner (no Tailscale needed)
 
 # Use when the k3s API is unreachable from ubuntu-latest (Tailscale OAuth failure
 # or API timeout). This job runs directly on the Pi self-hosted runner which
-# already has local access to k3s. Trigger by pushing a change to this file.
+# already has local access to k3s. Trigger by pushing a change to this file
+# with `[k3s-recover]` in the commit message (or use workflow_dispatch).
 #
 # Requires: Pi runner with `[self-hosted, omv, pi, build]` labels and NOPASSWD sudo.
 
@@ -18,12 +19,16 @@ permissions:
   issues: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
   recover:
     name: Restart k3s and recover cloudless-app
+    # Push-trigger is the documented runbook mechanism, but CI PRs also touch
+    # this file — require an explicit [k3s-recover] marker in the commit
+    # message so a hardening merge cannot fire a production restart.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[k3s-recover]')
     runs-on: [self-hosted, omv, pi, build]
     timeout-minutes: 10
     env:

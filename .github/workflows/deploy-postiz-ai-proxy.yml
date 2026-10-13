@@ -19,9 +19,10 @@ on:
 
 permissions:
   contents: read
+  issues: write  # report step posts results via issues.createComment
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
