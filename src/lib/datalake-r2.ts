@@ -65,6 +65,7 @@ export const SECTION_ORDER = [
   "social_engagement",
   "social_outliers",
   "social_recommendations",
+  "social_monetization",
   "social_leads",
   "social_attribution",
   "appflowy_activity",

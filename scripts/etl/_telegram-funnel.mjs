@@ -44,10 +44,12 @@ export function telegramFunnel(channels, events, followers) {
 
 	const now = Date.now();
 
-	// member-count series → latest value + net deltas vs 7d/30d baselines
-	const series = [...foll].sort(
-		(a, b) => new Date(a.captured_at) - new Date(b.captured_at)
-	);
+	// member-count series → latest value + net deltas vs 7d/30d baselines.
+	// Zero readings are failed scrapes, not real counts — drop them before
+	// any delta or slope math (a 0 would read as a mass exodus).
+	const series = [...foll]
+		.filter((s) => Number(s.followers) > 0)
+		.sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at));
 	const atOrBefore = (t) => {
 		let v = null;
 		for (const s of series) {
@@ -62,6 +64,29 @@ export function telegramFunnel(channels, events, followers) {
 		return base == null ? null : members - base;
 	};
 
+	// Theil–Sen slope: median of all pairwise followers/day slopes over the
+	// snapshot window. Robust where a net delta isn't — one corrupted scrape
+	// at a window edge can't flip the trend sign.
+	const theilSenPerDay = () => {
+		if (series.length < 2) return null;
+		const slopes = [];
+		for (let i = 0; i < series.length; i++) {
+			for (let j = i + 1; j < series.length; j++) {
+				const dt =
+					(new Date(series[j].captured_at) - new Date(series[i].captured_at)) /
+					DAY_MS;
+				if (dt <= 0) continue;
+				slopes.push((series[j].followers - series[i].followers) / dt);
+			}
+		}
+		if (!slopes.length) return null;
+		slopes.sort((a, b) => a - b);
+		const mid = slopes.length >> 1;
+		const med =
+			slopes.length % 2 ? slopes[mid] : (slopes[mid - 1] + slopes[mid]) / 2;
+		return Math.round(med * 100) / 100;
+	};
+
 	const joins30 = countWithin(evs, "member_joined", 30, now);
 	const leaves30 = countWithin(evs, "member_left", 30, now);
 	const posts30 = countWithin(evs, "channel_post", 30, now);
@@ -73,6 +98,7 @@ export function telegramFunnel(channels, events, followers) {
 		{ metric: "members", value: members },
 		{ metric: "member_net_7d", value: netDelta(7) },
 		{ metric: "member_net_30d", value: netDelta(30) },
+		{ metric: "member_slope_per_day", value: theilSenPerDay() },
 		{ metric: "joins_30d", value: joins30.length },
 		{ metric: "leaves_30d", value: leaves30.length },
 		{
