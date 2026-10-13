@@ -9,9 +9,14 @@ on:
     paths:
     - .github/workflows/copilot-setup-steps.yml
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # The job MUST be called 'copilot-setup-steps' to be recognized by GitHub Copilot Agent
   copilot-setup-steps:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     # Set minimal permissions for setup steps

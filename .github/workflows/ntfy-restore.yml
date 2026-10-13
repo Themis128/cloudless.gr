@@ -26,6 +26,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   restore:
     runs-on: ubuntu-latest

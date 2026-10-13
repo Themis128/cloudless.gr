@@ -3,6 +3,9 @@ name: Tailscale relogin omv-ha
 on:
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   relogin:
     runs-on: [self-hosted, omv, pi]

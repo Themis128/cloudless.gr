@@ -7,6 +7,10 @@ name: Wire Ollama Fallback
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write  # report step posts results via issues.createComment
+
 jobs:
   wire:
     runs-on: [self-hosted, omv, pi, build]

@@ -23,8 +23,19 @@ on:
         required: false
         default: ""
 
+permissions:
+  contents: read
+
+# No concurrency group on purpose: every trigger carries a distinct Slack
+# message. A group would drop events — GitHub keeps only one pending run per
+# group and replaces it on each new arrival, so merge bursts (several
+# workflow_run completions on master) would still lose notifications even
+# with cancel-in-progress: false. Parallel notify runs are safe; the job is
+# idempotent per event.
+
 jobs:
   notify:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +65,7 @@ jobs:
 
       - name: Post to Slack
         if: steps.msg.outputs.payload != ''
-        uses: slackapi/slack-github-action@v4.0.0
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}

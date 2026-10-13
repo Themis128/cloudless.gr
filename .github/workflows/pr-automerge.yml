@@ -48,6 +48,7 @@ concurrency:
 
 jobs:
   arm-pr:
+    timeout-minutes: 60
     name: Arm squash auto-merge
     if: |
       github.event_name == 'pull_request' &&
@@ -140,6 +141,7 @@ jobs:
         echo "Armed squash auto-merge for $PR_URL"
 
   refresh-open:
+    timeout-minutes: 60
     name: Refresh open PRs after main push
     if: |
       github.event_name == 'push' ||
@@ -193,6 +195,7 @@ jobs:
         done
 
   refresh-one:
+    timeout-minutes: 60
     name: Refresh single PR (dispatch)
     if: github.event_name == 'workflow_dispatch' && inputs.pr_number != ''
     runs-on: ubuntu-latest
