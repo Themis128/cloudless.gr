@@ -244,7 +244,7 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
   `timeout-minutes: 60` so a hung ssh/kubectl can't hold a runner slot.
 - **deploys** (`deploy-*`, `sst-*`, `*-rollout`) — `cancel-in-progress: false`,
   `timeout-minutes: 120` (ARM image builds are slow).
-- **dispatch-only** = manual ops runbooks (tailscale-*, restore-*,
+- **dispatch-only** = manual ops runbooks (`tailscale-*`, `restore-*`,
   token rotation). Intentionally not on a schedule — do not add triggers.
 
 Other rules:
