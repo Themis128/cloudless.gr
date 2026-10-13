@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { downloadCsvFile, rowsToCsv } from "@/lib/csv-export";
 import { InsightPanel } from "@/components/admin/InsightPanel";
@@ -446,6 +446,10 @@ export default function DatalakeDashboardPage() {
           columns: [],
         };
         return (
+          <Fragment key={s.section}>
+            {s.section === "social_engagement" && (
+              <InsightPanel domain="social" />
+            )}
           <section
             key={s.section}
             className="rounded-lg"
@@ -553,6 +557,7 @@ export default function DatalakeDashboardPage() {
               )}
             </div>
           </section>
+          </Fragment>
         );
       })}
     </div>
