@@ -236,7 +236,9 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
 
 - **push/PR CI** — test/lint/coverage gates. `concurrency` with
   `cancel-in-progress: true` (latest commit wins, older runs are waste) and
-  `timeout-minutes: 30`.
+  `timeout-minutes: 30`. Exception: notification workflows
+  (`slack-github-notify`) serialize with `false` — each run carries a
+  distinct event message, so cancelling would drop Slack posts.
 - **push-fired ops** (`fix-*`, `k3s-*`, `cluster-*`, `*-restore`, probes) —
   stateful Pi/cluster mutations triggered via the self-referencing
   `on.push.paths` pattern above. `concurrency` serializes them with
