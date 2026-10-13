@@ -28,12 +28,7 @@ vi.mock("@/lib/appflowy", () => ({
   searchDocuments: mockSearchDocuments,
 }));
 
-import {
-  searchPages,
-  searchDatabases,
-  listUsers,
-  getDatabaseSchema,
-} from "@/lib/appflowy-search";
+import { searchPages, searchDatabases, listUsers, getDatabaseSchema } from "@/lib/appflowy-search";
 
 beforeEach(() => {
   mockIsConfigured.mockReset().mockResolvedValue(true);

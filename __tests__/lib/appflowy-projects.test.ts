@@ -35,7 +35,15 @@ vi.mock("@/lib/appflowy", () => ({
 
 import * as projects from "@/lib/appflowy-projects";
 
-const WS = [{ workspace_id: "ws1", workspace_name: "Main", owner_uid: 1, member_count: 1, created_at: "2026" }];
+const WS = [
+  {
+    workspace_id: "ws1",
+    workspace_name: "Main",
+    owner_uid: 1,
+    member_count: 1,
+    created_at: "2026",
+  },
+];
 
 function docText(text: string) {
   getDocument.mockResolvedValueOnce({ text });
@@ -43,8 +51,17 @@ function docText(text: string) {
 }
 
 function projectDoc(name: string, extra: Record<string, string> = {}) {
-  const fields = { Name: name, Status: "In Progress", Priority: "Medium", Type: "Client", Owner: "Ana", ...extra };
-  return Object.entries(fields).map(([k, v]) => `**${k}**: ${v}`).join("\n");
+  const fields = {
+    Name: name,
+    Status: "In Progress",
+    Priority: "Medium",
+    Type: "Client",
+    Owner: "Ana",
+    ...extra,
+  };
+  return Object.entries(fields)
+    .map(([k, v]) => `**${k}**: ${v}`)
+    .join("\n");
 }
 
 function taskDoc(fields: Record<string, string>) {
@@ -54,7 +71,13 @@ function taskDoc(fields: Record<string, string>) {
 }
 
 beforeEach(() => {
-  for (const m of [listAllWorkspaces, listAllViewsDeep, getDocument, extractDocText, isAppFlowyConfigured]) {
+  for (const m of [
+    listAllWorkspaces,
+    listAllViewsDeep,
+    getDocument,
+    extractDocText,
+    isAppFlowyConfigured,
+  ]) {
     m.mockReset();
   }
   isAppFlowyConfigured.mockResolvedValue(true);
@@ -97,12 +120,29 @@ describe("listProjects", () => {
       { view_id: "p3", name: "[Task] not a project", type: "document" },
       { view_id: "p4", name: "plain doc", type: "document" },
     ]);
-    docText(projectDoc("Zeta", { Priority: "Low", Status: "Planning", Budget: "5000", Progress: "40", Tags: "a, b" }));
+    docText(
+      projectDoc("Zeta", {
+        Priority: "Low",
+        Status: "Planning",
+        Budget: "5000",
+        Progress: "40",
+        Tags: "a, b",
+      })
+    );
     docText(projectDoc("Alpha", { Priority: "Critical", Status: "In Progress" }));
     const out = await projects.listProjects();
     expect(out.map((p) => p.name)).toEqual(["Alpha", "Zeta"]);
     const zeta = out[1]!;
-    expect(zeta).toMatchObject({ id: "p1", status: "Planning", priority: "Low", type: "Client", owner: "Ana", budget: 5000, progress: 40, tags: ["a", "b"] });
+    expect(zeta).toMatchObject({
+      id: "p1",
+      status: "Planning",
+      priority: "Low",
+      type: "Client",
+      owner: "Ana",
+      budget: 5000,
+      progress: 40,
+      tags: ["a", "b"],
+    });
 
     // status filter
     listAllViewsDeep.mockResolvedValue([
@@ -124,7 +164,13 @@ describe("listProjects", () => {
     getDocument.mockRejectedValueOnce(new Error("bad doc"));
     const out = await projects.listProjects();
     expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ name: "From Title", status: "Planning", priority: "Medium", type: "Internal", budget: null });
+    expect(out[0]).toMatchObject({
+      name: "From Title",
+      status: "Planning",
+      priority: "Medium",
+      type: "Internal",
+      budget: null,
+    });
   });
 
   it("returns [] when the views fetch fails", async () => {
@@ -137,7 +183,13 @@ describe("getProject", () => {
   it("maps a document to a Project and returns null on errors", async () => {
     docText(projectDoc("Dash", { Status: "Completed", Priority: "High", DueDate: "2026-12-01" }));
     const p = await projects.getProject("p9");
-    expect(p).toMatchObject({ id: "p9", name: "Dash", status: "Completed", priority: "High", dueDate: "2026-12-01" });
+    expect(p).toMatchObject({
+      id: "p9",
+      name: "Dash",
+      status: "Completed",
+      priority: "High",
+      dueDate: "2026-12-01",
+    });
     getDocument.mockRejectedValueOnce(new Error("x"));
     expect(await projects.getProject("p9")).toBeNull();
   });
@@ -150,21 +202,47 @@ describe("listTasks + filters + summary", () => {
       { view_id: "t2", name: "[Task] Ship feat", type: "document" },
       { view_id: "t3", name: "[Project] not a task", type: "document" },
     ]);
-    docText(taskDoc({ Task: "Fix bug", Status: "Done", Priority: "High", Assignee: "Ana", Project: "P1", Sprint: "S1", Labels: "x, y", Estimate: "S", Type: "Bug" }));
-    docText(taskDoc({ Task: "Ship feat", Status: "In Progress", Priority: "Urgent", Assignee: "Bo", Project: "P2" }));
+    docText(
+      taskDoc({
+        Task: "Fix bug",
+        Status: "Done",
+        Priority: "High",
+        Assignee: "Ana",
+        Project: "P1",
+        Sprint: "S1",
+        Labels: "x, y",
+        Estimate: "S",
+        Type: "Bug",
+      })
+    );
+    docText(
+      taskDoc({
+        Task: "Ship feat",
+        Status: "In Progress",
+        Priority: "Urgent",
+        Assignee: "Bo",
+        Project: "P2",
+      })
+    );
     const all = await projects.listTasks();
     expect(all.map((t) => t.task)).toEqual(["Ship feat", "Fix bug"]); // In Progress < Done
     expect(all[1]).toMatchObject({ labels: ["x", "y"], estimate: "S", type: "Bug", sprint: "S1" });
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Status: "Done", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ status: "Backlog" })).toEqual([]);
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ project: "P1", assignee: "Ana" })).toHaveLength(1);
 
-    listAllViewsDeep.mockResolvedValue([{ view_id: "t1", name: "[Task] Fix bug", type: "document" }]);
+    listAllViewsDeep.mockResolvedValue([
+      { view_id: "t1", name: "[Task] Fix bug", type: "document" },
+    ]);
     docText(taskDoc({ Task: "Fix bug", Assignee: "Ana", Project: "P1" }));
     expect(await projects.listTasks({ project: "OTHER" })).toEqual([]);
   });

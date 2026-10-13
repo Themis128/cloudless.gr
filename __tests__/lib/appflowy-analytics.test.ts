@@ -12,9 +12,7 @@ import { trackEvent, getAnalyticsSummary, createWeeklyRollup } from "@/lib/appfl
 
 describe("appflowy-analytics (not configured)", () => {
   it("trackEvent returns true (no-op) when AppFlowy is not configured", async () => {
-    expect(
-      await trackEvent({ type: "page_view", userId: "u1", properties: {} })
-    ).toBe(true);
+    expect(await trackEvent({ type: "page_view", userId: "u1", properties: {} })).toBe(true);
   });
 
   it("getAnalyticsSummary returns zeroed summary", async () => {
@@ -27,4 +25,3 @@ describe("appflowy-analytics (not configured)", () => {
     expect(await createWeeklyRollup()).toBe(true);
   });
 });
-

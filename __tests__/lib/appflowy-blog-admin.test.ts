@@ -71,7 +71,7 @@ describe("listEditorialPosts", () => {
   it("filters to editorial prefixes and maps fields", async () => {
     mockViews.mockResolvedValue([
       view("v1", "[Draft] My Post"),
-      view("v2", "Plain published"),           // no prefix → skipped
+      view("v2", "Plain published"), // no prefix → skipped
       view("v3", "[Review] Second", "2026-10-05"),
       view("v4", "[Archived] Old"),
     ]);
@@ -146,10 +146,7 @@ describe("findEditorialPost", () => {
   });
 
   it("skips unreadable docs while scanning and returns null when nothing matches", async () => {
-    mockViews.mockResolvedValue([
-      view("v1", "[Draft] Broken"),
-      view("v2", "[Draft] Working"),
-    ]);
+    mockViews.mockResolvedValue([view("v1", "[Draft] Broken"), view("v2", "[Draft] Working")]);
     mockGetDoc.mockImplementation(async (_w: string, id: string) => {
       if (id === "v1") throw new Error("gone");
       return {};
@@ -208,7 +205,11 @@ describe("setEditorialStatus", () => {
 
     await new Promise((r) => setTimeout(r, 10));
     expect(mockShare).toHaveBeenCalledWith(
-      expect.objectContaining({ pageId: "v1", title: "My Post", url: "https://cloudless.gr/en/blog/my-post" })
+      expect.objectContaining({
+        pageId: "v1",
+        title: "My Post",
+        url: "https://cloudless.gr/en/blog/my-post",
+      })
     );
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/webhook/postiz-ai-multicaption"),

@@ -50,9 +50,7 @@ beforeEach(() => {
   mockWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
   mockViews.mockResolvedValue([caseView("v1", "[CaseStudy] Acme Migration")]);
   mockGetDoc.mockResolvedValue({});
-  mockExtract.mockResolvedValue(
-    "**Slug**: acme-migration\n**Client**: Acme\n**Industry**: SaaS"
-  );
+  mockExtract.mockResolvedValue("**Slug**: acme-migration\n**Client**: Acme\n**Industry**: SaaS");
   mockHtml.mockResolvedValue("<p>html</p>");
 });
 

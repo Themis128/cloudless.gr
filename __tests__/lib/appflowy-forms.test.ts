@@ -34,9 +34,7 @@ describe("appflowy-forms tails", () => {
     (appflowy.isAppFlowyConfigured as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true);
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     await expect(updateSubmissionStatus("p1", "In Review")).resolves.toBe(false);
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining("Would update status")
-    );
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("Would update status"));
     spy.mockRestore();
   });
 });

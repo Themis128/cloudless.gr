@@ -41,7 +41,15 @@ function tokenOk(token = "tok-1") {
 }
 
 function workspaceBody(n = 2) {
-  return { data: Array.from({ length: n }, (_, i) => ({ workspace_id: `w${i}`, workspace_name: `W${i}`, owner_uid: i, member_count: 1, created_at: "2026" })) };
+  return {
+    data: Array.from({ length: n }, (_, i) => ({
+      workspace_id: `w${i}`,
+      workspace_name: `W${i}`,
+      owner_uid: i,
+      member_count: 1,
+      created_at: "2026",
+    })),
+  };
 }
 
 beforeEach(() => {
@@ -78,7 +86,10 @@ describe("config + health", () => {
   it("getAppFlowySummary reports unconfigured without fetching", async () => {
     const m = await load({});
     expect(await m.getAppFlowySummary()).toEqual({
-      configured: false, healthy: false, workspaceCount: 0, userCount: 0,
+      configured: false,
+      healthy: false,
+      workspaceCount: 0,
+      userCount: 0,
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });
@@ -94,9 +105,7 @@ describe("auth: GoTrue user token + service JWT", () => {
     await m.listAllUsers();
     await m.listAllUsers(); // second call reuses the cached token
 
-    const tokenCalls = mockFetch.mock.calls.filter((c) =>
-      String(c[0]).includes("/gotrue/token"),
-    );
+    const tokenCalls = mockFetch.mock.calls.filter((c) => String(c[0]).includes("/gotrue/token"));
     expect(tokenCalls).toHaveLength(1);
     expect(String(tokenCalls[0]![0])).toBe(`${BASE}/gotrue/token?grant_type=password`);
     const init = tokenCalls[0]![1] as RequestInit;
@@ -124,7 +133,8 @@ describe("auth: GoTrue user token + service JWT", () => {
     await m.listAllUsers();
     const auth = (mockFetch.mock.calls[0]![1] as RequestInit).headers as Record<string, string>;
     const [head, body, sig] = auth.Authorization.replace("Bearer ", "").split(".");
-    const dec = (s: string) => JSON.parse(Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+    const dec = (s: string) =>
+      JSON.parse(Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
     expect(dec(head).alg).toBe("HS256");
     expect(dec(body).role).toBe("supabase_admin");
     expect(sig).toMatch(/^[A-Za-z0-9_-]+$/);
@@ -134,9 +144,7 @@ describe("auth: GoTrue user token + service JWT", () => {
 describe("workspaces / users / views", () => {
   it("listAllWorkspaces uses the user API then caches for 60s", async () => {
     const m = await load(USER_CFG);
-    mockFetch
-      .mockResolvedValueOnce(tokenOk())
-      .mockResolvedValueOnce(jsonRes(workspaceBody(3)));
+    mockFetch.mockResolvedValueOnce(tokenOk()).mockResolvedValueOnce(jsonRes(workspaceBody(3)));
     const ws = await m.listAllWorkspaces();
     expect(ws).toHaveLength(3);
     mockFetch.mockClear();
@@ -159,13 +167,16 @@ describe("workspaces / users / views", () => {
       view: { view_id: "root", name: "Root", layout: 1 },
       children: [
         { view_id: "v1", name: "Doc A" },
-        { view_id: "v2", name: "Folder", has_children: true, children: [{ view_id: "v3", name: "Deep" }] },
+        {
+          view_id: "v2",
+          name: "Folder",
+          has_children: true,
+          children: [{ view_id: "v3", name: "Deep" }],
+        },
         { view_id: "v1", name: "Doc A" },
       ],
     };
-    mockFetch
-      .mockResolvedValueOnce(tokenOk())
-      .mockResolvedValueOnce(jsonRes({ data: tree }));
+    mockFetch.mockResolvedValueOnce(tokenOk()).mockResolvedValueOnce(jsonRes({ data: tree }));
     const views = await m.listAllViewsDeep("w1");
     expect(views.map((v) => v.view_id).sort()).toEqual(["root", "v1", "v2", "v3"]);
     expect(views.find((v) => v.view_id === "v2")!.type).toBe("folder");
@@ -190,9 +201,17 @@ describe("workspaces / users / views", () => {
   it("searchDocuments filters by name and returns [] unconfigured", async () => {
     const m = await load(USER_CFG);
     expect(await m.searchDocuments("w", "  ")).toEqual([]);
-    mockFetch
-      .mockResolvedValueOnce(tokenOk())
-      .mockResolvedValueOnce(jsonRes({ data: { view: { view_id: "r", name: "R" }, children: [{ view_id: "x", name: "Guide A" }, { view_id: "y", name: "Other" }] } }));
+    mockFetch.mockResolvedValueOnce(tokenOk()).mockResolvedValueOnce(
+      jsonRes({
+        data: {
+          view: { view_id: "r", name: "R" },
+          children: [
+            { view_id: "x", name: "Guide A" },
+            { view_id: "y", name: "Other" },
+          ],
+        },
+      })
+    );
     const hits = await m.searchDocuments("w-s", "guide");
     expect(hits.map((v) => v.view_id)).toEqual(["x"]);
   });
@@ -212,10 +231,17 @@ describe("documents + collab extraction", () => {
   it("getDocument extracts CMS fields from encoded_collab bytes", async () => {
     const m = await load(USER_CFG);
     // CRDT dump shape: **Key**: value' — the value runs until a ' terminator.
-    const collab = Buffer.from("\x00binary**Name**: Cloud Guide'junk**Summary**: A short sum'pad", "latin1");
+    const collab = Buffer.from(
+      "\x00binary**Name**: Cloud Guide'junk**Summary**: A short sum'pad",
+      "latin1"
+    );
     mockFetch
       .mockResolvedValueOnce(tokenOk())
-      .mockResolvedValueOnce(jsonRes({ data: { view: { view_id: "v", name: "V" }, data: { encoded_collab: Array.from(collab) } } }));
+      .mockResolvedValueOnce(
+        jsonRes({
+          data: { view: { view_id: "v", name: "V" }, data: { encoded_collab: Array.from(collab) } },
+        })
+      );
     const doc = (await m.getDocument("w", "v")) as { text: string };
     expect(doc.text).toContain("**Name**: Cloud Guide");
     expect(doc.text).toContain("**Summary**: A short sum");
@@ -225,7 +251,18 @@ describe("documents + collab extraction", () => {
     const m = await load(USER_CFG);
     mockFetch
       .mockResolvedValueOnce(tokenOk())
-      .mockResolvedValueOnce(jsonRes({ data: { data: { encoded_collab: Buffer.from("paragraph noisy 1234abcd This is a long readable sentence worth keeping", "latin1").toString("base64") } } }));
+      .mockResolvedValueOnce(
+        jsonRes({
+          data: {
+            data: {
+              encoded_collab: Buffer.from(
+                "paragraph noisy 1234abcd This is a long readable sentence worth keeping",
+                "latin1"
+              ).toString("base64"),
+            },
+          },
+        })
+      );
     const doc = (await m.getDocument("w", "v2")) as { text: string };
     expect(doc.text).toContain("This is a long readable sentence worth keeping");
 
@@ -268,7 +305,10 @@ describe("writes", () => {
     expect(res?.view_id).toBe("new-1");
     const createCall = mockFetch.mock.calls[1]!;
     expect(String(createCall[0])).toContain("/api/workspace/w/page-view");
-    expect(JSON.parse((createCall[1] as RequestInit).body as string)).toMatchObject({ layout: 0, name: "P" });
+    expect(JSON.parse((createCall[1] as RequestInit).body as string)).toMatchObject({
+      layout: 0,
+      name: "P",
+    });
     // Cache invalidated → next listAllViewsDeep fetches again
     mockFetch.mockResolvedValueOnce(jsonRes({ data: { view: { view_id: "x2", name: "X2" } } }));
     await m.listAllViewsDeep("w");

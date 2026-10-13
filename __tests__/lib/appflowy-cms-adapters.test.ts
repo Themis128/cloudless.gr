@@ -38,18 +38,22 @@ function configured(views: ReturnType<typeof view>[]) {
   m.listAllViewsDeep.mockResolvedValue(views);
   m.getDocument.mockResolvedValue({ data: {} });
   m.extractDocText.mockResolvedValue("");
-  m.fetchViewMarkdownMap.mockImplementation(async (_ws: string, views: { view_id: string }[]) =>
-    new Map(
-      await Promise.all(
-        views.map(async (v) => {
-          try {
-            return [v.view_id, await m.extractDocText(await m.getDocument(_ws, v.view_id))] as const;
-          } catch {
-            return [v.view_id, null] as const;
-          }
-        })
+  m.fetchViewMarkdownMap.mockImplementation(
+    async (_ws: string, views: { view_id: string }[]) =>
+      new Map(
+        await Promise.all(
+          views.map(async (v) => {
+            try {
+              return [
+                v.view_id,
+                await m.extractDocText(await m.getDocument(_ws, v.view_id)),
+              ] as const;
+            } catch {
+              return [v.view_id, null] as const;
+            }
+          })
+        )
       )
-    )
   );
   m.markdownToHtml.mockResolvedValue("<p>x</p>");
 }
@@ -101,7 +105,7 @@ describe("appflowy-blog", () => {
     expect(await blog.getTags()).toEqual([]);
     expect((await blog.getPostsByCategory("Cloud")).length).toBe(2);
     expect(await blog.getPostsByTag("x")).toEqual([]);
-    expect((await blog.searchPosts("alpha"))).toHaveLength(1);
+    expect(await blog.searchPosts("alpha")).toHaveLength(1);
     expect((await blog.getRelatedPosts((await blog.getPosts())[0])).length).toBe(1);
   });
 });
@@ -189,9 +193,7 @@ describe("appflowy-case-studies", () => {
       view("Other page", "v3"),
     ]);
     m.getDocument.mockImplementation(async (_ws: string, id: string) => ({ id }));
-    m.extractDocText.mockImplementation(async (doc: { id: string }) =>
-      doc.id === "v1" ? MD : ""
-    );
+    m.extractDocText.mockImplementation(async (doc: { id: string }) => (doc.id === "v1" ? MD : ""));
     const all = await studies.getCaseStudies();
     expect(all).toHaveLength(2);
     const acme = all.find((c) => c.slug === "acme-win")!;
@@ -262,10 +264,7 @@ describe("appflowy-services", () => {
   });
 
   it("maps every markdown field onto the CloudlessService shape", async () => {
-    configured([
-      view("[Service] Cloud Audit", "v1"),
-      view("[Blog] not a service", "v2"),
-    ]);
+    configured([view("[Service] Cloud Audit", "v1"), view("[Blog] not a service", "v2")]);
     m.extractDocText.mockResolvedValue(MD);
     const all = await services.getServices();
     expect(all).toHaveLength(1);

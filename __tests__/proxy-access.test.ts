@@ -101,9 +101,7 @@ describe("proxy protected routes access", () => {
     });
     mockIsAdmin.mockResolvedValue(true);
 
-    const adminResponse = await proxy(
-      makeRequest("/en/admin", "session_token=d1-session-id")
-    );
+    const adminResponse = await proxy(makeRequest("/en/admin", "session_token=d1-session-id"));
     expect(adminResponse.status).toBe(200);
     expect(adminResponse.headers.get("location")).toBeNull();
 
@@ -123,9 +121,7 @@ describe("proxy protected routes access", () => {
     });
     mockIsAdmin.mockResolvedValue(false);
 
-    const adminResponse = await proxy(
-      makeRequest("/en/admin", "session_token=d1-session-id")
-    );
+    const adminResponse = await proxy(makeRequest("/en/admin", "session_token=d1-session-id"));
     expect(adminResponse.status).toBe(307);
     expect(adminResponse.headers.get("location")).toContain("/en/dashboard");
 
@@ -140,9 +136,7 @@ describe("proxy protected routes access", () => {
     mockGetAuthDbFromEnv.mockReturnValue({ prepare: vi.fn() });
     mockGetUserBySession.mockResolvedValue(null);
 
-    const dashboard = await proxy(
-      makeRequest("/en/dashboard", "session_token=expired-or-forged")
-    );
+    const dashboard = await proxy(makeRequest("/en/dashboard", "session_token=expired-or-forged"));
     expect(dashboard.status).toBe(307);
     expect(dashboard.headers.get("location")).toContain("/en/auth/login");
   });

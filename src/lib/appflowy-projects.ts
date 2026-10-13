@@ -190,32 +190,32 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
     const docs = await fetchViewMarkdownMap(workspaceId, projectViews);
     const projects: Project[] = projectViews
       .map((view) => {
-          try {
-            const markdown = docs.get(view.view_id);
-            if (markdown === null || markdown === undefined) return null;
-            const fields = parseProjectFields(markdown);
+        try {
+          const markdown = docs.get(view.view_id);
+          if (markdown === null || markdown === undefined) return null;
+          const fields = parseProjectFields(markdown);
 
-            if (statusFilter && fields.status !== statusFilter) return null;
+          if (statusFilter && fields.status !== statusFilter) return null;
 
-            return {
-          id: view.view_id,
-          name: fields.name || stripProjectPrefix(view.name),
-          status: fields.status || "Planning",
-          priority: fields.priority || "Medium",
-          type: fields.type || "Internal",
-          owner: fields.owner || "",
-          startDate: fields.startDate || "",
-          dueDate: fields.dueDate || "",
-          description: fields.description || "",
-          budget: fields.budget ?? null,
-          progress: fields.progress || 0,
-          tags: fields.tags || [],
-              url: "",
-            };
-          } catch {
-            return null;
-          }
-        })
+          return {
+            id: view.view_id,
+            name: fields.name || stripProjectPrefix(view.name),
+            status: fields.status || "Planning",
+            priority: fields.priority || "Medium",
+            type: fields.type || "Internal",
+            owner: fields.owner || "",
+            startDate: fields.startDate || "",
+            dueDate: fields.dueDate || "",
+            description: fields.description || "",
+            budget: fields.budget ?? null,
+            progress: fields.progress || 0,
+            tags: fields.tags || [],
+            url: "",
+          };
+        } catch {
+          return null;
+        }
+      })
       .filter((p): p is Project => p !== null);
 
     // Sort by priority (Critical first) then by name
