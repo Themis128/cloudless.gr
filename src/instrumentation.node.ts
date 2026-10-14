@@ -63,12 +63,14 @@ function bindLocalAuthDb(): void {
     const { getLocalAuthDb } = require(spec) as {
       getLocalAuthDb?: () => AuthDbBinding | null;
     };
+    /* v8 ignore start -- bundlers (webpack/vitest) compile the computed require into a throwing empty context, so this success path only runs in plain-node dev graphs */
     const local = getLocalAuthDb?.();
     if (local && typeof local.prepare === "function") {
       bindAuthDb(local);
       console.warn(`${LOG_PREFIX} AUTH_DB bound (local D1)`);
       return;
     }
+    /* v8 ignore stop */
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(`${LOG_PREFIX} Local D1 adapter unavailable (${msg}) — continuing without sqlite`);

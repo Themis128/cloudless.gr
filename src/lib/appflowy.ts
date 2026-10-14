@@ -124,6 +124,7 @@ async function resolveBearerToken(cfg: AppFlowyConfig): Promise<string> {
   const userToken = await getUserAccessToken(cfg);
   if (userToken) return userToken;
   if (cfg.jwtSecret) return signServiceJwt(cfg.jwtSecret);
+  /* v8 ignore next -- unreachable: getAppFlowyConfig guarantees jwtSecret or email+password */
   throw new AppFlowyNotConfiguredError();
 }
 
@@ -393,11 +394,8 @@ function extractStringsFromCollab(encoded: unknown): string {
   if (Array.isArray(encoded)) {
     blob = Buffer.from(encoded as number[]);
   } else if (typeof encoded === "string") {
-    try {
-      blob = Buffer.from(encoded, "base64");
-    } catch {
-      blob = Buffer.from(encoded, "utf8");
-    }
+    // Buffer.from(str, "base64") never throws — invalid input decodes leniently.
+    blob = Buffer.from(encoded, "base64");
   } else if (Buffer.isBuffer(encoded)) {
     blob = encoded;
   } else {
