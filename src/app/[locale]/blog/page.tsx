@@ -67,6 +67,16 @@ function categoryCountsFromPosts(posts: ListingPost[]): Record<string, number> {
   return counts;
 }
 
+function tagCountsFromPosts(posts: ListingPost[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      counts[tag] = (counts[tag] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
 export default async function BlogPage({ searchParams }: { searchParams: SearchParams }) {
   const locale = await getServerLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
@@ -88,11 +98,11 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
     category: p.category || "Cloud",
     author: "",
     coverImage: "",
-    tags: [] as string[],
+    tags: p.tags ?? [],
   }));
 
   const categoryCounts = categoryCountsFromPosts(allPosts);
-  const tagCounts: Record<string, number> = {};
+  const tagCounts = tagCountsFromPosts(allPosts);
 
   // Apply filters
   let filteredPosts = allPosts;

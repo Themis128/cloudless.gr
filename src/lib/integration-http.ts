@@ -181,7 +181,6 @@ export async function integrationFetchWithMeta<T = unknown>(
 
   const started = Date.now();
   let retries = 0;
-  let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const reqInit: RequestInit = {
@@ -196,7 +195,6 @@ export async function integrationFetchWithMeta<T = unknown>(
     try {
       res = await fetch(url, reqInit);
     } catch (err) {
-      lastError = err;
       // Network error or abort — backoff and retry unless we're at the limit
       if (attempt < maxRetries) {
         retries++;
@@ -224,7 +222,6 @@ export async function integrationFetchWithMeta<T = unknown>(
   // Exhausted retries on 429/5xx — fall through to throw
   const latencyMs = Date.now() - started;
   await breadcrumb(integration, url, 0, latencyMs, retries);
-  if (lastError) throw lastError;
   throw new Error(`${integration}: max retries (${maxRetries}) exceeded on ${url}`);
 }
 
