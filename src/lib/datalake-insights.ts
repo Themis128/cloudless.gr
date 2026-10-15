@@ -12,6 +12,7 @@ export const INSIGHT_DOMAINS = [
   "revenue",
   "crm_funnel",
   "ads",
+  "social",
   "ops_errors",
   "executive",
   "orchestration",
@@ -63,6 +64,14 @@ export const INSIGHT_SECTION_MAP: Record<string, string[]> = {
   revenue: ["stripe_revenue", "acquisition_funnel", "attribution"],
   crm_funnel: ["espocrm_funnel"],
   ads: ["linkedin_ads"],
+  social: [
+    "social_engagement",
+    "social_monetization",
+    "social_outliers",
+    "social_recommendations",
+    "telegram_funnel",
+    "social_leads",
+  ],
   ops_errors: ["top_errors"],
   executive: [
     "stripe_revenue",

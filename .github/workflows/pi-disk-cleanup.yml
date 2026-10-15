@@ -22,8 +22,13 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   cleanup:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       ISSUE: ${{ github.event.inputs.issue || '382' }}

@@ -109,6 +109,14 @@ export default defineConfig({
         "src/app/**/layout.tsx",
         "src/**/types.ts",
         "src/**/index.ts",
+        // Pure re-export barrels / type-only interfaces — zero executable
+        // statements (0/0), same as index.ts/types.ts above.
+        "src/lib/auth-utils.ts",
+        "src/lib/ses-suppression.ts",
+        "src/lib/ad-analytics/adapters/ad-platform.ts",
+        "src/lib/ad-analytics/channels/notification.ts",
+        "src/app/api/auth/register-d1/route.ts",
+        "src/app/[locale]/cookies/page.tsx",
         // src/agents/ uses TS class patterns the V8 coverage provider
         // cannot parse (PARSE_ERROR during getCoverageMapForUncoveredFiles).
         // Agent tests are already excluded from the test runner (redis dep);

@@ -11,8 +11,13 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   diagnose:
+    timeout-minutes: 30
     runs-on: [self-hosted, omv, pi, build]
     env:
       GH_TOKEN: ${{ github.token }}

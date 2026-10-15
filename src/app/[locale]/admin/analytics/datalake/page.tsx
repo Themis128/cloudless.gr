@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { downloadCsvFile, rowsToCsv } from "@/lib/csv-export";
 import { InsightPanel } from "@/components/admin/InsightPanel";
@@ -204,11 +204,16 @@ const SECTION_META: Record<
       { key: "impressions", label: "Impressions", format: "int" },
       { key: "engagement", label: "Engagement", format: "int" },
       { key: "median_eng_per_post", label: "Med/post", format: "decimal" },
+      { key: "er_wilson_low_pct", label: "ER floor %", format: "decimal" },
       { key: "er_by_followers_pct", label: "ER/foll %", format: "decimal" },
       { key: "benchmark_verdict", label: "Benchmark" },
       { key: "momentum_7d_pct", label: "7d %", format: "decimal" },
+      { key: "momentum_7d_engagement_z", label: "z", format: "decimal" },
+      { key: "best_hour_athens", label: "Best hr", format: "int" },
       { key: "followers", label: "Followers", format: "int" },
       { key: "follower_net", label: "Net", format: "int" },
+      { key: "follower_slope_per_day", label: "Slope/d", format: "decimal" },
+      { key: "counter_resets", label: "Resets", format: "int" },
       { key: "data_warnings", label: "Warnings" },
     ],
   },
@@ -232,6 +237,22 @@ const SECTION_META: Record<
       { key: "type", label: "Type" },
       { key: "platform", label: "Platform" },
       { key: "text", label: "Recommendation" },
+    ],
+  },
+  social_monetization: {
+    title: "Social monetization gates",
+    subtitle:
+      "Gold: creator-program eligibility per active account (lake/socialauto-monetization/gates.json).",
+    columns: [
+      { key: "platform", label: "Platform" },
+      { key: "handle", label: "Account" },
+      { key: "program", label: "Program" },
+      { key: "role", label: "Role" },
+      { key: "followers", label: "Followers", format: "int" },
+      { key: "follower_slope_per_day", label: "Slope/d", format: "decimal" },
+      { key: "criteria_met", label: "Met", format: "int" },
+      { key: "criteria_total", label: "Of", format: "int" },
+      { key: "criteria_unknown", label: "?", format: "int" },
     ],
   },
   social_leads: {
@@ -425,113 +446,116 @@ export default function DatalakeDashboardPage() {
           columns: [],
         };
         return (
-          <section
-            key={s.section}
-            className="rounded-lg"
-            style={{
-              border: "1px solid var(--border-subtle)",
-              background: "var(--surface-raised)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <header
-              className="flex items-end justify-between gap-3 px-5 py-4"
-              style={{ borderBottom: "1px solid var(--border-subtle)" }}
+          <Fragment key={s.section}>
+            {s.section === "social_engagement" && <InsightPanel domain="social" />}
+            <section
+              key={s.section}
+              className="rounded-lg"
+              style={{
+                border: "1px solid var(--border-subtle)",
+                background: "var(--surface-raised)",
+                boxShadow: "var(--shadow-sm)",
+              }}
             >
-              <div>
-                <h2 className="text-base font-semibold">{meta.title}</h2>
-                <p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>
-                  {meta.subtitle}
-                </p>
-              </div>
-              <div
-                className="flex items-center gap-3 text-xs"
-                style={{ color: "var(--ink-muted)" }}
+              <header
+                className="flex items-end justify-between gap-3 px-5 py-4"
+                style={{ borderBottom: "1px solid var(--border-subtle)" }}
               >
-                {s.error ? "error" : `${s.rowCount ?? s.rows?.length ?? 0} rows`}
-                {s.fromCache && !s.error && (
-                  <span
-                    className="rounded px-1.5 py-0.5"
-                    style={{ background: "var(--surface-subtle)" }}
-                  >
-                    gold
-                  </span>
-                )}
-                {!s.error && (s.rows?.length ?? 0) > 0 && meta.columns.length > 0 && (
-                  <button
-                    type="button"
-                    className="rounded-md px-2 py-1 font-mono disabled:opacity-50"
-                    style={{
-                      border: "1px solid var(--border-strong)",
-                      background: "var(--surface-subtle)",
-                      color: "var(--ink-primary)",
-                    }}
-                    onClick={() => {
-                      const csv = rowsToCsv(meta.columns, s.rows ?? []);
-                      const day = (data?.generated_at ?? new Date().toISOString()).slice(0, 10);
-                      downloadCsvFile(`datalake-${s.section}-${day}.csv`, csv);
-                    }}
-                  >
-                    Download CSV
-                  </button>
-                )}
-              </div>
-            </header>
-            <div className="p-2">
-              {s.error ? (
-                <div
-                  className="rounded p-3 text-xs"
-                  style={{
-                    background: "rgb(181 110 0 / 0.08)",
-                    color: "var(--warning)",
-                  }}
-                >
-                  <strong>Section unavailable.</strong> Run the source ETL then{" "}
-                  <code>etl-materialize-snapshots</code>. Detail:{" "}
-                  <code className="break-all">{s.error}</code>
+                <div>
+                  <h2 className="text-base font-semibold">{meta.title}</h2>
+                  <p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>
+                    {meta.subtitle}
+                  </p>
                 </div>
-              ) : s.rows && s.rows.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead
-                      className="text-left text-xs tracking-wide uppercase"
+                <div
+                  className="flex items-center gap-3 text-xs"
+                  style={{ color: "var(--ink-muted)" }}
+                >
+                  {s.error ? "error" : `${s.rowCount ?? s.rows?.length ?? 0} rows`}
+                  {s.fromCache && !s.error && (
+                    <span
+                      className="rounded px-1.5 py-0.5"
+                      style={{ background: "var(--surface-subtle)" }}
+                    >
+                      gold
+                    </span>
+                  )}
+                  {!s.error && (s.rows?.length ?? 0) > 0 && meta.columns.length > 0 && (
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 font-mono disabled:opacity-50"
                       style={{
-                        borderBottom: "1px solid var(--border-subtle)",
-                        color: "var(--ink-muted)",
+                        border: "1px solid var(--border-strong)",
+                        background: "var(--surface-subtle)",
+                        color: "var(--ink-primary)",
+                      }}
+                      onClick={() => {
+                        const csv = rowsToCsv(meta.columns, s.rows ?? []);
+                        const day = (data?.generated_at ?? new Date().toISOString()).slice(0, 10);
+                        downloadCsvFile(`datalake-${s.section}-${day}.csv`, csv);
                       }}
                     >
-                      <tr>
-                        {meta.columns.map((c) => (
-                          <th key={c.key} className="px-3 py-2 font-medium">
-                            {c.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {s.rows.map((row, i) => (
-                        <tr
-                          key={i}
-                          className="last:border-0"
-                          style={{ borderBottom: "1px solid var(--border-subtle)" }}
-                        >
+                      Download CSV
+                    </button>
+                  )}
+                </div>
+              </header>
+              <div className="p-2">
+                {s.error ? (
+                  <div
+                    className="rounded p-3 text-xs"
+                    style={{
+                      background: "rgb(181 110 0 / 0.08)",
+                      color: "var(--warning)",
+                    }}
+                  >
+                    <strong>Section unavailable.</strong> Run the source ETL then{" "}
+                    <code>etl-materialize-snapshots</code>. Detail:{" "}
+                    <code className="break-all">{s.error}</code>
+                  </div>
+                ) : s.rows && s.rows.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead
+                        className="text-left text-xs tracking-wide uppercase"
+                        style={{
+                          borderBottom: "1px solid var(--border-subtle)",
+                          color: "var(--ink-muted)",
+                        }}
+                      >
+                        <tr>
                           {meta.columns.map((c) => (
-                            <td key={c.key} className="px-3 py-2 tabular-nums">
-                              {fmt(row[c.key], c.format)}
-                            </td>
+                            <th key={c.key} className="px-3 py-2 font-medium">
+                              {c.label}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-4 text-sm" style={{ color: "var(--ink-muted)" }}>
-                  No data yet.
-                </div>
-              )}
-            </div>
-          </section>
+                      </thead>
+                      <tbody>
+                        {s.rows.map((row, i) => (
+                          <tr
+                            key={i}
+                            className="last:border-0"
+                            style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                          >
+                            {meta.columns.map((c) => (
+                              <td key={c.key} className="px-3 py-2 tabular-nums">
+                                {fmt(row[c.key], c.format)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 text-sm" style={{ color: "var(--ink-muted)" }}>
+                    No data yet.
+                  </div>
+                )}
+              </div>
+            </section>
+          </Fragment>
         );
       })}
     </div>

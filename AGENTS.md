@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Tech Stack
 
-- **Framework:** Next.js 16.3.0 (App Router, React 19.2.8, Turbopack)
+- **Framework:** Next.js 15.5.x (App Router, React 19, Turbopack)
 - **Styling:** Tailwind CSS 4 with `@theme inline` custom tokens
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll
@@ -129,6 +129,7 @@ AppFlowy (`src/lib/appflowy-*.ts`, admin routes under `src/app/api/admin/appflow
   - Failed systemd units: clears stale flags, resets/restarts wedged units (one per day), reports persistent failures.
   - Stuck k3s pods: deletes CrashLoopBackOff, bad-image, or Pending>30m pods for controller recreation.
   - Root disk pressure: triggers journal vacuum and docker prune at 85% usage.
+  - Docker containers stuck `unhealthy`: restarts them (per-container daily budget) — Docker marks the state but never acts on it. Runs standalone via `--docker-health` from the 10-min `/etc/cron.d/nas-docker-health` entry, so container outages self-heal in minutes.
   - Tailscale: restarts tailscaled if status check fails.
 - State is tracked in `/var/lib/nas-auto-remediate/state.json` (per-unit daily restart budget).
 - Each remediation pass is isolated—one failing checker does not abort the run.

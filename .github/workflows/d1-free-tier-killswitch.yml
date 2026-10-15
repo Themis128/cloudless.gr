@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   flip:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       MODE: ${{ github.event.inputs.mode || 'kill' }}

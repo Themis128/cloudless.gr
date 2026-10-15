@@ -51,7 +51,8 @@
     "ctaSecondary": "Leistungen ansehen",
     "microCopy1": "Keine Verpflichtung. Umsetzbare Erkenntnisse in 30 Min.",
     "microCopy2": "Transparente Preise. Kein Lock-in.",
-    "terminalTitle": "cloudless-cli v2.0"
+    "terminalTitle": "cloudless-cli v2.0",
+    "cockpitCaption": "Eine typische Woche auf unserem eigenen Stack — diese Website läuft auf der Infrastruktur, die wir für Kunden bauen."
   },
   "stats": {
     "uptime": "Uptime SLA",
@@ -72,7 +73,7 @@
     "bio": "— Zertifizierter Cloud-Architekt (Cloudflare) mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr für Inhaber gegründet, die von Agenturen und Freelancern enttäuscht wurden — fester Umfang, klare Sprache, Technologie, die endlich hält, was sie verspricht.",
     "badgeAws": "Cloudflare-zertifiziert",
     "badgeOss": "Open-Source-Contributor",
-    "badgeCapacity": "Noch 5 Plätze frei für Q2 2026"
+    "badgeCapacity": "Wir nehmen neue Kunden an — begrenzte Plätze"
   },
   "servicesSection": {
     "label": "[ UNSERE LEISTUNGEN ]",
@@ -558,5 +559,17 @@
     "audience3": "Griechenland zuerst, EU-Reichweite — das Publikum, dessen Conversion unser Paid-Test bewiesen hat",
     "fitTitle": "Ehrlicher Fit-Check",
     "fitBody": "Wir sind ein wachsender Nischen-Account, keine Reichweitenmaschine — und wir tun nicht so, als wären wir es. Wenn Sie eine Million Impressionen brauchen, sind wir es nicht. Wenn Sie eine glaubwürdige Stimme brauchen, die einem engagierten technischen Publikum sagt, dass Ihr Produkt wirklich funktioniert — das ist der Deal. Jeder gesponserte Beitrag ist klar gekennzeichnet."
+  },
+  "process": {
+    "label": "[ DIE METHODE MIT FESTEM UMFANG ]",
+    "title": "Vom ersten Anruf zu",
+    "titleHighlight": "ersten Ergebnissen",
+    "titleEnd": "in 14 Tagen",
+    "step1Title": "Kostenloses Audit",
+    "step1Desc": "30-minütiges Gespräch. Wir prüfen Infrastruktur und Marketing, finden Quick Wins und liefern einen konkreten Aktionsplan — unverbindlich.",
+    "step2Title": "Umfang wählen",
+    "step2Desc": "Ein Service oder das Bundle mit 30% Ersparnis. Wir stimmen Deliverables, Zeitplan und die Definition von „fertig“ ab, bevor irgendetwas beginnt.",
+    "step3Title": "Ergebnisse in 14 Tagen",
+    "step3Desc": "Wir starten sofort. Messbarer Fortschritt in zwei Wochen — Kostensenkung, live Infrastruktur, erste Kampagnendaten. Wir arbeiten, bis Sie sie sehen."
   }
 }

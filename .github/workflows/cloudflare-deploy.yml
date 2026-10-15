@@ -42,11 +42,12 @@ on:
 # One deploy at a time — parallel runs would race on the D1 migration lock
 # and on the cloudless2 script tag in ECR-equivalent (Workers script upload).
 concurrency:
-  group: cloudflare-deploy-${{ github.ref }}
+  group: cloudflare-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
+    timeout-minutes: 120
     runs-on: ubuntu-latest
     permissions:
       contents: read

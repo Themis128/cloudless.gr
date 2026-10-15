@@ -97,6 +97,17 @@ function mapViewToPost(view: {
   };
 }
 
+/** Parse the CMS `**Tags**: a, b` metadata line out of extracted markdown. */
+function parseMarkdownTags(markdown: string | null | undefined): string[] {
+  if (!markdown) return [];
+  const m = /\*\*Tags\*\*:\s*([^\n]+)/.exec(markdown);
+  if (!m?.[1]) return [];
+  return m[1]
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 export async function getPosts(): Promise<AppFlowyPost[]> {
   if (!(await isAppFlowyConfigured())) return [];
 
@@ -113,6 +124,7 @@ export async function getPosts(): Promise<AppFlowyPost[]> {
         const markdown = docs.get(view.view_id);
         return {
           ...mapViewToPost(view),
+          tags: parseMarkdownTags(markdown),
           html: markdown == null ? "" : await markdownToHtml(markdown),
         };
       })

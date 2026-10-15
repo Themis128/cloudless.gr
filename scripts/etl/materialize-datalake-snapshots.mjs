@@ -10,6 +10,12 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { BUCKET, r2Put, r2Get, r2List } from "./_r2-config.mjs";
 import { telegramFunnel } from "./_telegram-funnel.mjs";
+import {
+	socialEngagement,
+	socialOutliers,
+	socialRecommendations,
+	socialMonetization,
+} from "./_social-sections.mjs";
 
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
 const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
@@ -457,73 +463,6 @@ function richestInsights(candidates) {
 	)[0];
 }
 
-function socialEngagement(insights) {
-	if (!insights?.platforms) return null;
-	return Object.entries(insights.platforms)
-		.map(([platform, p]) => ({
-			platform,
-			focus_tier: p.focus_tier ?? null,
-			confidence: p.confidence ?? null,
-			posts: p.posts ?? 0,
-			impressions: p.impressions ?? 0,
-			engagement: p.engagement ?? 0,
-			avg_er_pct: p.avg_engagement_rate ?? 0,
-			median_er_pct: p.median_engagement_rate ?? 0,
-			median_eng_per_post: p.median_engagement_per_post ?? 0,
-			er_by_followers_pct: p.er_by_followers_pct ?? null,
-			benchmark_verdict:
-				p.benchmark?.verdict ??
-				(p.er_by_followers_pct == null
-					? "below_min_followers_50"
-					: "no_benchmark_for_platform"),
-			momentum_7d_pct: p.momentum_7d_engagement_pct ?? null,
-			engagement_7d: p.engagement_7d ?? 0,
-			followers: p.follower_growth?.current ?? null,
-			follower_net: p.follower_growth?.net ?? null,
-			data_warnings: (p.data_warnings || []).join("; ") || "none",
-		}))
-		.sort((a, b) => (b.engagement || 0) - (a.engagement || 0));
-}
-
-function socialOutliers(insights) {
-	if (!insights?.platforms) return null;
-	const rows = [];
-	for (const [platform, p] of Object.entries(insights.platforms)) {
-		for (const o of p.outliers || []) {
-			rows.push({
-				platform,
-				post_id: o.post_id ?? null,
-				kind: o.kind,
-				engagement: o.engagement ?? 0,
-				engagement_rate: o.engagement_rate ?? 0,
-				platform_median: o.platform_median_engagement ?? null,
-			});
-		}
-		const a = p.follower_growth?.anomaly;
-		if (a) {
-			rows.push({
-				platform,
-				post_id: null,
-				kind: "follower_anomaly",
-				engagement: a.delta,
-				engagement_rate: null,
-				platform_median: null,
-			});
-		}
-	}
-	return rows.sort((a, b) => Math.abs(b.engagement) - Math.abs(a.engagement));
-}
-
-function socialRecommendations(insights) {
-	if (!insights?.recommendations) return null;
-	return insights.recommendations.map((r) => ({
-		type: r.type ?? null,
-		priority: r.priority ?? null,
-		platform: r.platform ?? null,
-		text: String(r.text ?? "").slice(0, 500),
-	}));
-}
-
 function socialLeads(leads) {
 	if (!leads) return null;
 	const bySource = new Map();
@@ -962,6 +901,7 @@ async function main() {
 	const saAccountEvents = await safeJson("lake/socialauto-account-events/events.json");
 	const saFollowers = await safeJson("lake/socialauto-followers/followers.json");
 	const saTgChannels = await safeJson("lake/socialauto-telegram/channels.json");
+	const saMonetization = await safeJson("lake/socialauto-monetization/gates.json");
 
 	let saInsights = null;
 	try {
@@ -995,6 +935,11 @@ async function main() {
 		saInsights
 			? sectionOk("social_recommendations", socialRecommendations(saInsights))
 			: sectionErr("social_recommendations", "missing socialauto insights")
+	);
+	sections.push(
+		saMonetization
+			? sectionOk("social_monetization", socialMonetization(saMonetization))
+			: sectionErr("social_monetization", "missing monetization gates json")
 	);
 	sections.push(
 		saLeads
@@ -1060,6 +1005,8 @@ async function main() {
 		"lake/socialauto-ads/snapshots.json",
 		"lake/socialauto-ads/daily.json",
 		"lake/socialauto-ads/demographics.json",
+		"lake/socialauto-telegram/channels.json",
+		"lake/socialauto-monetization/gates.json",
 		"lake/linkedin-ads/demographics.parquet",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",

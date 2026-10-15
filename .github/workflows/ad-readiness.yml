@@ -28,8 +28,13 @@ permissions:
   pull-requests: write
   actions: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-secrets:
+    timeout-minutes: 30
     name: Verify ad secrets are configured
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
