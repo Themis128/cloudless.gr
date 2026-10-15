@@ -361,9 +361,7 @@ export default function CloudCockpit() {
             unit: "%",
             color: T.ok,
             sub: (
-              <span style={{ fontSize: 10, color: T.textDim }}>
-                typical week · representative
-              </span>
+              <span style={{ fontSize: 10, color: T.textDim }}>typical week · representative</span>
             ),
           },
         ].map(({ label, value, unit, color, sub }) => (
