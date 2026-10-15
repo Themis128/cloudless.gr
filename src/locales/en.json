@@ -51,7 +51,8 @@
     "ctaSecondary": "View Services",
     "microCopy1": "No commitment. Actionable insights in 30 minutes.",
     "microCopy2": "Transparent pricing. No lock-in.",
-    "terminalTitle": "cloudless-cli v2.0"
+    "terminalTitle": "cloudless-cli v2.0",
+    "cockpitCaption": "A typical week on our own stack — this site runs on the infrastructure we build for clients."
   },
   "stats": {
     "uptime": "Uptime SLA",
@@ -72,7 +73,7 @@
     "bio": "— Cloudflare Certified Cloud Architect, 8+ years building serverless infrastructure and growth systems. I started cloudless.gr for owners who got burned by agencies and freelancers — fixed scope, plain language, technology that finally does what it promised.",
     "badgeAws": "Cloudflare Certified",
     "badgeOss": "Open-Source Contributor",
-    "badgeCapacity": "Now accepting 5 clients for Q3 2026"
+    "badgeCapacity": "Now accepting new clients — limited slots"
   },
   "servicesSection": {
     "label": "[ WHAT WE DO ]",
@@ -558,5 +559,17 @@
     "audience3": "Greece-first with EU reach — the audience our paid test already proved converts",
     "fitTitle": "Honest fit check",
     "fitBody": "We're a growing niche account, not a reach machine — and we won't pretend otherwise. If you need a million impressions, we're not it. If you need a credible voice telling an engaged technical audience that your product actually works, that's the deal on the table. Every sponsored piece is clearly disclosed."
+  },
+  "process": {
+    "label": "[ THE FIXED-SCOPE METHOD ]",
+    "title": "From first call to",
+    "titleHighlight": "first results",
+    "titleEnd": "in 14 days",
+    "step1Title": "Free Audit",
+    "step1Desc": "30-minute call. We review your infrastructure and marketing, identify quick wins, and give you a concrete action plan — no commitment required.",
+    "step2Title": "Choose your scope",
+    "step2Desc": "Pick one service or bundle all four for 30% savings. We align on deliverables, timeline, and what 'done' looks like before any work starts.",
+    "step3Title": "Results in 14 days",
+    "step3Desc": "We kick off immediately. Measurable progress within two weeks — cost savings, live infrastructure, first campaign data. We keep working until you see it."
   }
 }

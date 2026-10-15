@@ -39,6 +39,7 @@ function mapAppFlowyListingPost(post: AppFlowyPost): BlogPost {
     readTime: post.readTime || "5 min read",
     category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
     content: "",
+    tags: post.tags,
   };
 }
 
@@ -58,6 +59,7 @@ function mapAppFlowyPost(post: AppFlowyPost): BlogPost {
     readTime: post.readTime || "5 min read",
     category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
     content: stripHtml(post.html || ""),
+    tags: post.tags,
   };
 }
 

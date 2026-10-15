@@ -6,8 +6,6 @@
  * interactive login for the unified admin user.
  */
 
-const CF_ACCESS_ISSUER = "https://api.cloudflare.com/client/v4/accounts";
-
 interface AccessTokenPayload {
   email: string;
   name?: string;
@@ -24,32 +22,6 @@ interface VerifiedAccess {
   email: string;
   name?: string;
   valid: boolean;
-}
-
-/**
- * Get the Cloudflare Access public keys for JWT verification
- */
-async function _getAccessKeys(): Promise<Map<string, string>> {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  if (!accountId) {
-    throw new Error("CLOUDFLARE_ACCOUNT_ID not configured");
-  }
-
-  const jwksUrl = `${CF_ACCESS_ISSUER}/${accountId}/access/certs`;
-  const res = await fetch(jwksUrl);
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Access JWKS: ${res.status}`);
-  }
-
-  const { keys } = (await res.json()) as { keys: Array<{ kid: string; n: string; alg: string }> };
-  const keyMap = new Map<string, string>();
-
-  for (const key of keys) {
-    keyMap.set(key.kid, key.n);
-  }
-
-  return keyMap;
 }
 
 /**

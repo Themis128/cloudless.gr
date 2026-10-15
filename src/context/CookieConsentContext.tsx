@@ -31,9 +31,11 @@ function readConsentCookie(): {
   preferences: CookiePreferences;
 } {
   // Safe for SSR - returns defaults if document is not available
+  /* v8 ignore start -- SSR-only guard: document always exists in the jsdom test env */
   if (typeof document === "undefined") {
     return { hasConsented: false, preferences: defaultPreferences };
   }
+  /* v8 ignore stop */
 
   const value = document.cookie
     .split("; ")
@@ -105,11 +107,15 @@ function consentReducer(state: ConsentState, action: ConsentAction): ConsentStat
     case "SET_SETTINGS_VISIBLE":
       return { ...state, settingsVisible: action.payload };
     case "SET_PREFERENCES":
-      return { ...state, preferences: action.payload };
+      // SET_PREFERENCES only fires via persist() — an active consent decision —
+      // so hasConsented becomes true in-session, not only after next hydrate.
+      return { ...state, hasConsented: true, preferences: action.payload };
+    /* v8 ignore start -- MOUNT is never dispatched and default is unreachable: the action union is exhaustive */
     case "MOUNT":
       return { ...state, mounted: true };
     default:
       return state;
+    /* v8 ignore stop */
   }
 }
 

@@ -51,7 +51,8 @@
     "ctaSecondary": "Voir les Services",
     "microCopy1": "Sans engagement. Des conseils concrets en 30 minutes.",
     "microCopy2": "Tarifs transparents. Sans lock-in.",
-    "terminalTitle": "cloudless-cli v2.0"
+    "terminalTitle": "cloudless-cli v2.0",
+    "cockpitCaption": "Une semaine typique sur notre propre infrastructure — ce site tourne sur l’architecture que nous construisons pour nos clients."
   },
   "stats": {
     "uptime": "SLA Disponibilité",
@@ -72,7 +73,7 @@
     "bio": "— Architecte Cloud certifié Cloudflare, plus de 8 ans d'expérience en infrastructure serverless et systèmes de croissance. J'ai fondé cloudless.gr pour les dirigeants déçus par les agences et les freelancers — périmètre fixe, langage clair, une technologie qui tient enfin ses promesses.",
     "badgeAws": "Certifié Cloudflare",
     "badgeOss": "Contributeur Open-Source",
-    "badgeCapacity": "5 places disponibles pour Q2 2026"
+    "badgeCapacity": "Nouveaux clients acceptés — places limitées"
   },
   "servicesSection": {
     "label": "[ NOS SERVICES ]",
@@ -558,5 +559,17 @@
     "audience3": "Grèce d'abord, portée UE — l'audience dont notre test payant a prouvé la conversion",
     "fitTitle": "Test d'adéquation honnête",
     "fitBody": "Nous sommes un compte de niche en croissance, pas une machine à portée — et nous ne prétendrons pas le contraire. Si vous avez besoin d'un million d'impressions, ce n'est pas nous. Si vous avez besoin d'une voix crédible disant à une audience technique engagée que votre produit fonctionne vraiment, c'est l'accord sur la table. Chaque contenu sponsorisé est clairement indiqué."
+  },
+  "process": {
+    "label": "[ LA MÉTHODE À PÉRIMÈTRE FIXE ]",
+    "title": "Du premier appel aux",
+    "titleHighlight": "premiers résultats",
+    "titleEnd": "en 14 jours",
+    "step1Title": "Audit gratuit",
+    "step1Desc": "Appel de 30 minutes. Nous examinons votre infrastructure et votre marketing, identifions les gains rapides et vous remettons un plan d’action concret — sans engagement.",
+    "step2Title": "Choisissez votre périmètre",
+    "step2Desc": "Un seul service ou le bundle complet à -30%. Nous alignons livrables, calendrier et la définition de « terminé » avant tout démarrage.",
+    "step3Title": "Résultats en 14 jours",
+    "step3Desc": "Nous démarrons immédiatement. Progrès mesurable en deux semaines — économies, infrastructure en production, premières données de campagne. Nous continuons jusqu’à ce que vous les voyiez."
   }
 }

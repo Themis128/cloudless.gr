@@ -109,16 +109,9 @@ export async function searchDatabases(query: string, limit = 20): Promise<Search
  */
 export async function listUsers(): Promise<Array<{ id: string; name: string; email: string }>> {
   if (!(await isAppFlowyConfigured())) return [];
-
-  try {
-    // AppFlowy doesn't have a direct users API in our client
-    // This would come from the workspace members
-    return [];
-  } catch (err) {
-    const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
-    console.error("[AppFlowy Search] listUsers error:", msg);
-    return [];
-  }
+  // AppFlowy doesn't have a direct users API in our client
+  // This would come from the workspace members
+  return [];
 }
 
 /**

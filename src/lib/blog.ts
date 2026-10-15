@@ -15,6 +15,8 @@ export interface BlogPost {
   content: string;
   /** Optional FAQ pairs rendered on the page and emitted as FAQPage JSON-LD. */
   faqs?: BlogPostFaq[];
+  /** Optional free-form tags (CMS `**Tags**: a, b` field) — drives list filter/sidebar. */
+  tags?: string[];
 }
 
 export const posts: BlogPost[] = [
