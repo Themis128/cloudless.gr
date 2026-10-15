@@ -344,6 +344,15 @@ export default async function Home({
             {/* Right — Grafana dashboard */}
             <div className="animate-fade-in-up hidden delay-200 lg:block">
               <CloudCockpit />
+              <p
+                className="mt-3 text-center font-mono text-xs"
+                style={{ color: "var(--ink-muted)" }}
+              >
+                {t(
+                  "hero.cockpitCaption",
+                  "A typical week on our own stack — this site runs on the infrastructure we build for clients."
+                )}
+              </p>
             </div>
           </div>
         </div>
@@ -418,7 +427,7 @@ export default async function Home({
                 className="mb-3 font-mono text-xs font-medium tracking-[0.3em] uppercase"
                 style={{ color: "var(--accent)" }}
               >
-                {t("process.label", "[ HOW IT WORKS ]")}
+                {t("process.label", "[ THE FIXED-SCOPE METHOD ]")}
               </p>
               <h2
                 className="font-heading text-2xl font-bold md:text-3xl"
