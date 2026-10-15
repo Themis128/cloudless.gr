@@ -49,8 +49,12 @@ spec:
 
               # Read omv's config via nsenter. NOTE: the ingress entries are
               # indented ("  - hostname:"), so anchor on the dash, not col 0.
+              # `grep -c` prints the count AND exits 1 on zero matches, so
+              # `|| echo` appends a second line and breaks the comparison —
+              # head -n1 keeps the first value, defaults handle empties.
               OMV_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml || echo 0)
+                grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null | head -n1)
+              OMV_COUNT=${OMV_COUNT:-0}
 
               # Read omv-ha's config over SSH. Path: LAN, not tailnet —
               # omv-ha's tailnet session is unreliable (its IP re-mapped on
@@ -60,7 +64,9 @@ spec:
               HA_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
                 ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
                     -o ConnectTimeout=10 tbaltzakis@192.168.1.130 \
-                    "sudo -n grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml" 2>/dev/null || echo unreachable)
+                    "sudo -n grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null || echo 0" \
+                    2>/dev/null | head -n1)
+              HA_COUNT=${HA_COUNT:-unreachable}
 
               echo "omv=$OMV_COUNT omv-ha=$HA_COUNT"
 
