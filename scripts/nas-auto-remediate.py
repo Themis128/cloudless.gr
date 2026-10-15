@@ -83,7 +83,10 @@ def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
         out = _text_or_decode(e.stdout)
         err = _text_or_decode(e.stderr)
         return subprocess.CompletedProcess(
-            list(args), 124, out, f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else "")
+            list(args),
+            124,
+            out,
+            f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else ""),
         )
 
 
