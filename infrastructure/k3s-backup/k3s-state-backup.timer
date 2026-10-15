@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly k3s datastore backup
+
+[Timer]
+OnCalendar=hourly
+OnBootSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

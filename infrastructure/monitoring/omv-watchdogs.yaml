@@ -128,8 +128,11 @@ spec:
                 cpu: 200m
                 memory: 128Mi
 ---
-# omv-backup-verify — every 6h, confirms the k3s etcd snapshot on
-# /srv/.../Backups/k3s-db/ is fresh (< 2h old).
+# omv-backup-verify — every 6h, confirms the k3s datastore backup on
+# /srv/.../Backups/k3s-db/ is fresh (< 2h old). Datastore is SQLite/kine —
+# files are produced hourly by k3s-state-backup.timer (see
+# infrastructure/k3s-backup/), NOT by etcd snapshots (cluster migrated off
+# etcd 2026-07-22).
 #
 # Originally (pre-2026-06-21) this watchdog grep'd journalctl for tag
 # `nas-backup`, but that systemd unit was disabled May 1 (renamed
@@ -197,14 +200,14 @@ spec:
                 find "$SNAPSHOT_DIR" -type f -printf '%T@ %p\n' 2>/dev/null \
                 | sort -nr | head -1 || true)
               if [ -z "$NEWEST" ]; then
-                BODY=":rotating_light: *k3s etcd snapshot directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
+                BODY=":rotating_light: *k3s datastore backup directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
               else
                 MTIME=$(printf '%s' "$NEWEST" | awk '{print $1}' | cut -d. -f1)
                 NOW=$(date +%s)
                 AGE_H=$(( (NOW - MTIME) / 3600 ))
                 if [ $AGE_H -gt $MAX_AGE_HOURS ]; then
                   LATEST_FILE=$(printf '%s' "$NEWEST" | cut -d' ' -f2-)
-                  BODY=":warning: *k3s etcd snapshot is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check the hourly snapshot cron on omv-main."
+                  BODY=":warning: *k3s datastore backup is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check k3s-state-backup.timer on omv."
                 else
                   echo "[${STAMP}] backup healthy: newest snapshot ${AGE_H}h old"
                   exit 0

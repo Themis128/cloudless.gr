@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup k3s SQLite datastore (state.db) + server config to NAS mount
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/k3s-state-backup.sh
+TimeoutStartSec=10min
