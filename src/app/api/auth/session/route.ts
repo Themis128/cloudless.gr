@@ -95,7 +95,7 @@ function getHttpAuthDbFallback(): AuthDatabase | null {
         if (col) {
           return ((row as Record<string, unknown>)[col] ?? null) as T;
         }
-        /* v8 ignore stop */
+        /* v8 ignore stop -- app-api-auth-session */
         return row as T;
       },
     };

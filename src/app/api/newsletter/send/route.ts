@@ -16,7 +16,7 @@ function secretsMatch(provided: string | null, expected: string): boolean {
   } catch {
     return false;
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-newsletter-send */
 }
 
 // The publisher script renders this token into the newsletter footer; the

@@ -215,7 +215,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
           /* v8 ignore start -- unreachable: parseProjectFields/stripProjectPrefix cannot throw */
         } catch {
           return null;
-          /* v8 ignore stop */
+          /* v8 ignore stop -- lib-appflowy-projects */
         }
       })
       .filter((p): p is Project => p !== null);

@@ -112,7 +112,7 @@ export async function verifySlackRequest(
     /* v8 ignore start -- unreachable: lengths are equal-checked above; Buffer.from(utf8) cannot throw */
   } catch {
     return { ok: false, reason: "Signature comparison failed" };
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-slack-verify */
   }
 
   // Reject replays — same valid signature seen more than once within the window

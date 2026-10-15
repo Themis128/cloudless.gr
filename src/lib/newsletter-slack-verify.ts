@@ -71,7 +71,7 @@ export async function verifyNewsletterSlackRequest(
     /* v8 ignore start -- unreachable: lengths are equal-checked above; Buffer.from(utf8) cannot throw */
   } catch {
     return { ok: false, reason: "Signature comparison failed" };
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-newsletter-slack-verify */
   }
 
   if (isReplay(signature)) {

@@ -59,7 +59,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
-  /* v8 ignore start -- readFirstExisting swallows per-path read failures
+    /* v8 ignore start -- readFirstExisting swallows per-path read failures
      and NextResponse(buffer) can't throw for a valid Buffer; nothing in
      this try block can throw. */
   } catch {

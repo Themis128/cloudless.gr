@@ -55,5 +55,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-agents-counter-agent-default */
 }

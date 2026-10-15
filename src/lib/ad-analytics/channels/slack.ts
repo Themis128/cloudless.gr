@@ -75,7 +75,7 @@ function toBlockKit(block: NotificationBlock): SlackBlockKitBlock {
     /* v8 ignore start -- unreachable: NotificationBlock.type is a 5-member union, all cased */
     default:
       return { type: "section", text: { type: "mrkdwn", text: block.text ?? "" } };
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-ad-analytics-channels-slack */
   }
 }
 

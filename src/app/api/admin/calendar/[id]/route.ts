@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       { status: 502 }
     );
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-admin-calendar-id */
   if (!item) {
     return NextResponse.json({ error: "Item not found." }, { status: 404 });
   }

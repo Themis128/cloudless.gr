@@ -39,7 +39,7 @@ function deriveDay(row: AnalyticsRow): string | undefined {
   if (typeof row.stripeCreatedAt === "number") {
     return toDayString(new Date(row.stripeCreatedAt * 1000));
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- lib-stripe-analytics-read */
 
   if (typeof row.receivedAt === "number") {
     return toDayString(new Date(row.receivedAt));

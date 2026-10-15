@@ -80,7 +80,7 @@ function isProdLeakedOrigin(origin: string): boolean {
     /* v8 ignore start -- unreachable: origin always comes from nextUrl.origin, a valid URL */
   } catch {
     return false;
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-canonical-origin */
   }
 }
 

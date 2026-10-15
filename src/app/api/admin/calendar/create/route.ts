@@ -42,6 +42,6 @@ export async function POST(request: NextRequest) {
       { status: 502 }
     );
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-admin-calendar-create */
   return NextResponse.json({ item }, { status: 201 });
 }

@@ -38,7 +38,7 @@ export async function readJsonConfig<T>(key: string, fallback: T): Promise<T> {
   } catch {
     return fallback;
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- lib-app-config-json */
 }
 
 export async function writeJsonConfig(

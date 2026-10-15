@@ -401,7 +401,7 @@ export async function POST(request: Request) {
       .catch((err) => {
         console.error("[Contact] Background allSettled error:", err);
       });
-    /* v8 ignore stop */
+    /* v8 ignore stop -- app-api-contact */
 
     trackEvent({
       event: "contact_submit",

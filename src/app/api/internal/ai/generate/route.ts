@@ -58,7 +58,7 @@ function secretsMatch(provided: string | null, expected: string): boolean {
   } catch {
     return false;
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-internal-ai-generate */
 }
 
 async function callCloudflare(

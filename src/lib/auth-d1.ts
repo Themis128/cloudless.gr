@@ -467,7 +467,7 @@ export async function consumePasswordResetToken(
   if (!user) {
     return { success: false, error: "Invalid or expired reset token" };
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- lib-auth-d1 */
 
   const passwordHash = await hashPassword(newPassword);
 

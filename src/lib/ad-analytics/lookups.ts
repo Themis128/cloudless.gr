@@ -201,6 +201,6 @@ export function resolvePivotLabel(pivot: DemographicPivot, urnOrId: string): str
     /* v8 ignore start -- unreachable: DemographicPivot is a 4-member union, all cased */
     default:
       return tail;
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-ad-analytics-lookups */
   }
 }

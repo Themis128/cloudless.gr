@@ -79,7 +79,7 @@ function isAccessRedirect(res: Response): boolean {
     /* v8 ignore start -- unreachable: new URL(anyString, validBase) never throws */
   } catch {
     return false;
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-socialauto-public-leads */
   }
 }
 

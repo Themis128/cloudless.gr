@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   if (!priceMatch) {
     return NextResponse.json({ error: "Tier has no one-off price" }, { status: 400 });
   }
-  /* v8 ignore stop */
+  /* v8 ignore stop -- app-api-checkout */
   const amountCents = parseInt(priceMatch, 10) * 100;
 
   const stripe = await getStripe();

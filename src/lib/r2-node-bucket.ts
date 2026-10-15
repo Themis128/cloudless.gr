@@ -37,7 +37,7 @@ function toBodyInit(
   if (body instanceof Blob) return body;
   if (typeof ReadableStream !== "undefined" && body instanceof ReadableStream) return body;
   if (body instanceof ArrayBuffer) return body;
-  /* v8 ignore stop */
+  /* v8 ignore stop -- lib-r2-node-bucket */
   if (ArrayBuffer.isView(body)) {
     return bytesToArrayBuffer(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
   }

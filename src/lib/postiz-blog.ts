@@ -58,7 +58,7 @@ function platformUtmSource(platform: "linkedin" | "x" | "meta" | "tiktok"): stri
     /* v8 ignore start -- unreachable: platform is typed "linkedin"|"x"|"meta"|"tiktok", all cased */
     default:
       return "social";
-    /* v8 ignore stop */
+    /* v8 ignore stop -- lib-postiz-blog */
   }
 }
 
