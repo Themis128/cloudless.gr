@@ -229,13 +229,28 @@ describe("createTimeEntry", () => {
     queues.push({ first: { id: "ap_1" } }); // exists check
     queues.push({ run: { success: true, meta: { changes: 1 } } }); // insert
     queues.push({ run: { success: true, meta: { changes: 1 } } }); // touch
-    const e = await createTimeEntry({ ...base, billable: false, description: " d ", userId: " u " });
+    const e = await createTimeEntry({
+      ...base,
+      billable: false,
+      description: " d ",
+      userId: " u ",
+    });
     expect(e).not.toBeNull();
     expect(e!.id).toMatch(/^te_/);
     expect(e!.billable).toBe(false);
     expect(e!.description).toBe("d");
     expect(seenSql[1]).toContain("INSERT INTO time_entry");
     expect(seenSql[2]).toContain("UPDATE agency_project SET updated_at");
+  });
+
+  it("warns and returns null when the insert throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    queues.push({ first: { id: "ap_1" } }); // exists check
+    queues.push({ throw: new Error("D1 write fail") }); // insert run() throws
+    const e = await createTimeEntry(base);
+    expect(e).toBeNull();
+    expect(warn).toHaveBeenCalledWith("[agency-projects-d1] create time failed:", "D1 write fail");
+    warn.mockRestore();
   });
 });
 

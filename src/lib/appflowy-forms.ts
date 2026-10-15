@@ -46,15 +46,6 @@ export interface SubmissionRecord {
   url: string;
 }
 
-function _slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 function parseContactFields(text: string): Partial<SubmissionRecord> {
   const fields: Record<string, string> = {};
   const lines = text.split("\n");

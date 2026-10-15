@@ -138,6 +138,27 @@ describe("page.updated", () => {
     );
   });
 
+  it("swallows an n8n multicaption fetch rejection", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("n8n down"));
+    const res = await POST(
+      req(
+        base({
+          slug: "launch-post",
+          data: { status: "Published", title: "Launch", locale: "en" },
+        })
+      )
+    );
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0)); // let the .catch microtask run
+  });
+
+  it("ignores an unrecognised database value (switch default)", async () => {
+    const res = await POST(req(base({ database: "not-a-db" as never })));
+    expect(res.status).toBe(200);
+    expect(invalidateCache).not.toHaveBeenCalled();
+  });
+
   it.each(["docs", "testimonials", "case-studies", "services", "faqs"])(
     "invalidates the %s cache and revalidates the sitemap",
     async (database) => {

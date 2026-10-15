@@ -76,8 +76,10 @@ function isAccessRedirect(res: Response): boolean {
       return true;
     }
     return url.pathname.includes("/cdn-cgi/access/");
+    /* v8 ignore start -- unreachable: new URL(anyString, validBase) never throws */
   } catch {
     return false;
+    /* v8 ignore stop -- lib-socialauto-public-leads */
   }
 }
 

@@ -152,6 +152,15 @@ describe("n8n routes", () => {
       ).status
     ).toBe(502);
 
+    // Non-N8nApiError propagates (the route rethrows unknown failures)
+    n8n.triggerWorkflowByWebhookPath.mockRejectedValue(new Error("socket hangup"));
+    await expect(
+      triggerPost(
+        new NextRequest(`${N}/workflows/w1/trigger`, { method: "POST" }),
+        { params: Promise.resolve({ id: "w1" }) }
+      )
+    ).rejects.toThrow("socket hangup");
+
     n8n.isN8nConfigured.mockResolvedValue(false);
     expect(
       (
@@ -161,6 +170,15 @@ describe("n8n routes", () => {
         )
       ).status
     ).toBe(503);
+
+    // Non-N8nApiError propagates to the framework (unhandled)
+    n8n.isN8nConfigured.mockResolvedValue(true);
+    n8n.triggerWorkflowByWebhookPath.mockRejectedValue(new Error("worker crash"));
+    await expect(
+      triggerPost(new NextRequest(`${N}/workflows/w1/trigger`, { method: "POST" }), {
+        params: Promise.resolve({ id: "w1" }),
+      })
+    ).rejects.toThrow("worker crash");
   });
 });
 

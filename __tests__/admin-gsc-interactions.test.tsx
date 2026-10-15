@@ -51,7 +51,10 @@ describe("gsc admin — populated interactions", () => {
   beforeEach(() => {
     routes = {};
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -62,9 +65,23 @@ describe("gsc admin — populated interactions", () => {
   it("sitemaps — list with pending/error/active, submit, delete, load error", async () => {
     routes["GET /api/admin/gsc/sitemaps"] = {
       sitemaps: [
-        { path: "/sitemap.xml", lastSubmitted: "2026-01-01", lastDownloaded: "2026-01-02", isPending: false, isSitemapsIndex: false, type: "sitemap", warnings: "1" },
+        {
+          path: "/sitemap.xml",
+          lastSubmitted: "2026-01-01",
+          lastDownloaded: "2026-01-02",
+          isPending: false,
+          isSitemapsIndex: false,
+          type: "sitemap",
+          warnings: "1",
+        },
         { path: "/news.xml", isPending: true, isSitemapsIndex: false, type: "sitemap" },
-        { path: "/bad.xml", isPending: false, isSitemapsIndex: false, type: "sitemap", errors: "3" },
+        {
+          path: "/bad.xml",
+          isPending: false,
+          isSitemapsIndex: false,
+          type: "sitemap",
+          errors: "3",
+        },
       ],
     };
     const c = await renderPage(); // sitemaps is the default tab
@@ -157,7 +174,10 @@ describe("gsc admin — populated interactions", () => {
     expect(c.textContent).toContain("Article — 1 item");
 
     // sparse result — no idx → fallback text; error path
-    routes["POST /api/admin/gsc/inspect"] = { url: "u", inspectionResult: { inspectionStatus: "OK" } };
+    routes["POST /api/admin/gsc/inspect"] = {
+      url: "u",
+      inspectionResult: { inspectionStatus: "OK" },
+    };
     fireEvent.submit(c.querySelector("form")!);
     await act(async () => {});
     expect(c.textContent).toContain("No index status data returned.");
@@ -175,7 +195,12 @@ describe("gsc admin — populated interactions", () => {
       url: "u",
       inspectionResult: {
         inspectionStatus: "OK",
-        indexStatusResult: { verdict: "NEUTRAL", coverageState: "x", robotsTxtState: "y", pageFetchState: "z" },
+        indexStatusResult: {
+          verdict: "NEUTRAL",
+          coverageState: "x",
+          robotsTxtState: "y",
+          pageFetchState: "z",
+        },
         mobileUsabilityResult: { verdict: "PASS", issues: [] },
         richResultsResult: { verdict: "NEUTRAL", detectedItems: [] },
       },
@@ -222,7 +247,11 @@ describe("gsc admin — populated interactions", () => {
             { url: "https://cloudless.gr/dead" },
           ],
         },
-        { category: "server_error", pageCount: 1, sampleUrls: [{ url: "https://x/err", crawlState: "ERR" }] },
+        {
+          category: "server_error",
+          pageCount: 1,
+          sampleUrls: [{ url: "https://x/err", crawlState: "ERR" }],
+        },
         { category: "unknown_cat", pageCount: 2, sampleUrls: [] },
         { category: "ok", pageCount: 42, sampleUrls: [] },
       ],
@@ -245,5 +274,43 @@ describe("gsc admin — populated interactions", () => {
     routes["GET /api/admin/gsc/crawl-stats"] = new Response("x", { status: 502 });
     await click(screen.getByText("Refresh"));
     expect(c.textContent).toContain("Failed to load: HTTP 502");
+  });
+});
+
+describe("gsc admin — verdict fallback styling", () => {
+  beforeEach(() => {
+    routes = {};
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("renders the gray ⚪ fallback for unrecognized verdicts", async () => {
+    const c = await renderPage();
+    await click(screen.getByText("URL Inspection"));
+    routes["POST /api/admin/gsc/inspect"] = {
+      url: "u",
+      inspectionResult: {
+        inspectionStatus: "OK",
+        indexStatusResult: {
+          verdict: "VERDICT_UNSPECIFIED",
+          coverageState: "x",
+          robotsTxtState: "y",
+          pageFetchState: "z",
+        },
+      },
+    };
+    const input = c.querySelector("input[type='url']") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "https://x" } });
+    fireEvent.submit(c.querySelector("form")!);
+    await act(async () => {});
+    expect(c.textContent).toContain("⚪ VERDICT_UNSPECIFIED");
   });
 });

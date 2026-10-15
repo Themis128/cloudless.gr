@@ -77,8 +77,10 @@ function isProdLeakedOrigin(origin: string): boolean {
     )
       return false;
     return isInternalHostname(hostname);
+    /* v8 ignore start -- unreachable: origin always comes from nextUrl.origin, a valid URL */
   } catch {
     return false;
+    /* v8 ignore stop -- lib-canonical-origin */
   }
 }
 

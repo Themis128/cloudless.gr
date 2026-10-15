@@ -14,7 +14,7 @@ import { GET } from "@/app/api/admin/audits/latest/route";
 const req = () => new NextRequest("http://x/api/admin/audits/latest");
 
 /** Minimal zip with one entry (deflate or stored) — matches extractJsonFromZip. */
-function buildZip(name: string, content: string, method: 0 | 8 = 8): Buffer {
+function buildZip(name: string, content: string, method: number = 8): Buffer {
   const data = method === 8 ? deflateRawSync(content) : Buffer.from(content);
   const nameBuf = Buffer.from(name);
   const lh = Buffer.alloc(30);
@@ -128,5 +128,21 @@ describe("GET /api/admin/audits/latest", () => {
 
     mockFetch.mockReset().mockResolvedValue(ghJson({}, false, 500, "ISE"));
     expect((await GET(req())).status).toBe(500);
+  });
+
+  it("entry with an unsupported compression method → 502", async () => {
+    mockFetch
+      .mockResolvedValueOnce(ghJson({ workflow_runs: [{ id: 7 }] }))
+      .mockResolvedValueOnce(
+        ghJson({
+          artifacts: [{ id: 1, name: "audits-dashboard-1", archive_download_url: "u" }],
+        })
+      )
+      // method 12 (BZIP2) — neither stored nor deflate → extractor returns null
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => buildZip("dashboard.json", "{}", 12),
+      });
+    expect((await GET(req())).status).toBe(502);
   });
 });

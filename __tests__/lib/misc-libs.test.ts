@@ -111,9 +111,11 @@ describe("nlp language", () => {
     expect(detectLeadLocale("", "en")).toBe("en");
     expect(detectLeadLocale("Καλημέρα θέλω βοήθεια")).toBe("el");
     expect(detectLeadLocale("I need a quote for the project")).toBe("en");
-    // match() without /g counts only the first Greek char → stopword vote decides
+    // /g regex counts every Greek char: 4/16 = 25% > 15% threshold → "el".
+    // Greek-char count <3 and ratio <15% → English stopword vote decides.
     expect(detectLeadLocale("θέλω προσφορά και τιμή please")).toBe("el");
-    expect(detectLeadLocale("θέλω and the for")).toBe("en");
+    expect(detectLeadLocale("θέλω and the for")).toBe("el");
+    expect(detectLeadLocale("θ and the for of to in")).toBe("en");
     expect(detectLeadLocale("hello")).toBe("en");
     expect(detectLeadLocale("xyzzy plugh", "el")).toBe("el"); // tie → pageLocale
   });

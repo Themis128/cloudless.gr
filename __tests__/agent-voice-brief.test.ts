@@ -43,7 +43,9 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
   });
 
   it("returns the narrative when the agent emits emit_brief on the first turn", async () => {
-    callWorkersAiChatMock.mockResolvedValueOnce('{"tool":"emit_brief","args":{"narrative":"Quiet week so far."}}');
+    callWorkersAiChatMock.mockResolvedValueOnce(
+      '{"tool":"emit_brief","args":{"narrative":"Quiet week so far."}}'
+    );
     parseWorkersAiToolCallMock.mockReturnValueOnce({
       name: "emit_brief",
       args: { narrative: "Quiet week so far." },
@@ -146,7 +148,9 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
   });
 
   it("uses the provided dateLabel verbatim in the initial user message", async () => {
-    callWorkersAiChatMock.mockResolvedValueOnce('{"tool":"emit_brief","args":{"narrative":"Brief."}}');
+    callWorkersAiChatMock.mockResolvedValueOnce(
+      '{"tool":"emit_brief","args":{"narrative":"Brief."}}'
+    );
     parseWorkersAiToolCallMock.mockReturnValueOnce({
       name: "emit_brief",
       args: { narrative: "Brief." },
@@ -163,5 +167,35 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
   it("propagates Workers AI infrastructure errors to the caller", async () => {
     callWorkersAiChatMock.mockRejectedValueOnce(new Error("ThrottlingException"));
     await expect(runVoiceBriefAgent()).rejects.toThrow(/ThrottlingException/);
+  });
+
+  it("formats pipeline stats when EspoCRM returns data", async () => {
+    fetchPipelineMetricsMock.mockResolvedValueOnce({ totalDeals: 4, totalValueEuros: 9500 });
+    callWorkersAiChatMock
+      .mockResolvedValueOnce('{"tool":"get_pipeline_stats","args":{}}')
+      .mockResolvedValueOnce('{"tool":"emit_brief","args":{"narrative":"Brief."}}');
+    parseWorkersAiToolCallMock
+      .mockReturnValueOnce({ name: "get_pipeline_stats", args: {} })
+      .mockReturnValueOnce({ name: "emit_brief", args: { narrative: "Brief." } });
+
+    const r = await runVoiceBriefAgent();
+    const pipe = r.sources.find((s) => s.name === "get_pipeline_stats");
+    expect(pipe?.status).toBe("ok");
+    expect(pipe?.detail).toMatch(/4 open deals.*9,500|9500/);
+  });
+
+  it("formats email metrics when EspoCRM returns data", async () => {
+    fetchEmailMetricsMock.mockResolvedValueOnce({ totalContacts: 1200 });
+    callWorkersAiChatMock
+      .mockResolvedValueOnce('{"tool":"get_email_metrics","args":{}}')
+      .mockResolvedValueOnce('{"tool":"emit_brief","args":{"narrative":"Brief."}}');
+    parseWorkersAiToolCallMock
+      .mockReturnValueOnce({ name: "get_email_metrics", args: {} })
+      .mockReturnValueOnce({ name: "emit_brief", args: { narrative: "Brief." } });
+
+    const r = await runVoiceBriefAgent();
+    const email = r.sources.find((s) => s.name === "get_email_metrics");
+    expect(email?.status).toBe("ok");
+    expect(email?.detail).toMatch(/1,200 subscribers/);
   });
 });

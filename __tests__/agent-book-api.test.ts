@@ -28,6 +28,7 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
+    if (token === "user-no-email") return { ...plainUser, email: undefined };
     // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
@@ -327,6 +328,29 @@ describe("POST /api/agent/book", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(mockSlackBookingNotify).toHaveBeenCalled();
     expect(mockSendBookingConfirmation).toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/agent/book no-email claim", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockReturnValue({ ok: true, remaining: 10 });
+  });
+
+  it("400s when the authenticated token has no email claim", async () => {
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(
+      new NextRequest("http://localhost/api/agent/book", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer user-no-email",
+        },
+        body: JSON.stringify({ action: "propose" }),
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("email claim");
   });
 });
 

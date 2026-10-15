@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGetIntegrations, mockInvalidateContacts, mockInvalidateLists } =
-  vi.hoisted(() => ({
-    mockGetIntegrations: vi.fn(),
-    mockInvalidateContacts: vi.fn(),
-    mockInvalidateLists: vi.fn(),
-  }));
+const { mockGetIntegrations, mockInvalidateContacts, mockInvalidateLists } = vi.hoisted(() => ({
+  mockGetIntegrations: vi.fn(),
+  mockInvalidateContacts: vi.fn(),
+  mockInvalidateLists: vi.fn(),
+}));
 
 vi.mock("@/lib/integrations", () => ({
   getIntegrationsAsync: mockGetIntegrations,
@@ -92,8 +91,8 @@ describe("espoFetch retry + config", () => {
 describe("findContactByEmail via upsertContact", () => {
   it("creates when no contact found", async () => {
     mockFetch
-      .mockResolvedValueOnce(listResp([]))   // equals search
-      .mockResolvedValueOnce(listResp([]))   // textFilter fallback
+      .mockResolvedValueOnce(listResp([])) // equals search
+      .mockResolvedValueOnce(listResp([])) // textFilter fallback
       .mockResolvedValueOnce(jsonResponse({ id: "new1" }, 201)); // POST
     const { upsertContact } = await lib();
     const id = await upsertContact({ email: "a@b.co", firstname: "A" });
@@ -101,8 +100,7 @@ describe("findContactByEmail via upsertContact", () => {
     const [url, init] = mockFetch.mock.calls[2];
     expect(url).toBe("https://espo.example/api/v1/Contact");
     expect(init.method).toBe("POST");
-    expect((init.headers as Record<string, string>)["X-Skip-Duplicate-Check"])
-      .toBe("true");
+    expect((init.headers as Record<string, string>)["X-Skip-Duplicate-Check"]).toBe("true");
     const body = JSON.parse(String(init.body));
     expect(body.emailAddress).toBe("a@b.co");
     expect(body.lastName).toBe("a"); // falls back to local part
@@ -123,8 +121,8 @@ describe("findContactByEmail via upsertContact", () => {
 
   it("tries base email for +alias addresses", async () => {
     mockFetch
-      .mockResolvedValueOnce(listResp([]))       // alias: equals miss
-      .mockResolvedValueOnce(listResp([]))       // alias: textFilter miss
+      .mockResolvedValueOnce(listResp([])) // alias: equals miss
+      .mockResolvedValueOnce(listResp([])) // alias: textFilter miss
       .mockResolvedValueOnce(listResp([{ id: "base1" }])) // base: equals hit
       .mockResolvedValueOnce(jsonResponse({ id: "base1" }));
     const { upsertContact } = await lib();
@@ -137,8 +135,7 @@ describe("findContactByEmail via upsertContact", () => {
       .mockResolvedValueOnce(listResp([]))
       .mockResolvedValueOnce(listResp([]))
       // POST → 409 with a conflict array containing our email
-      .mockResolvedValueOnce(
-        jsonResponse([{ id: "dup9", emailAddress: "a@b.co" }], 409))
+      .mockResolvedValueOnce(jsonResponse([{ id: "dup9", emailAddress: "a@b.co" }], 409))
       .mockResolvedValueOnce(jsonResponse({ id: "dup9" })); // PUT
     const { upsertContact } = await lib();
     const id = await upsertContact({ email: "a@b.co" });
@@ -150,8 +147,7 @@ describe("findContactByEmail via upsertContact", () => {
     mockFetch
       .mockResolvedValueOnce(listResp([]))
       .mockResolvedValueOnce(listResp([]))
-      .mockResolvedValueOnce(
-        jsonResponse([{ id: "dupX", emailAddress: "other@x" }], 409))
+      .mockResolvedValueOnce(jsonResponse([{ id: "dupX", emailAddress: "other@x" }], 409))
       // conflict email search after 409: equals + textFilter both miss
       .mockResolvedValueOnce(listResp([]))
       .mockResolvedValueOnce(listResp([]))
@@ -165,12 +161,12 @@ describe("findContactByEmail via upsertContact", () => {
     mockFetch
       .mockResolvedValueOnce(listResp([]))
       .mockResolvedValueOnce(listResp([]))
-      .mockResolvedValueOnce(
-        new Response('{"error":"phoneNumber is not valid"}', { status: 400 }))
+      .mockResolvedValueOnce(new Response('{"error":"phoneNumber is not valid"}', { status: 400 }))
       .mockResolvedValueOnce(jsonResponse({ id: "ph1" }, 201));
     const { upsertContact } = await lib();
     const id = await upsertContact({
-      email: "a@b.co", phone: "+30 210 123 4567",
+      email: "a@b.co",
+      phone: "+30 210 123 4567",
     });
     expect(id).toBe("ph1");
     const retry = JSON.parse(String(mockFetch.mock.calls[3][1].body));
@@ -223,12 +219,9 @@ describe("newsletter status", () => {
   });
 
   it("unknown email + unsubscribe is a no-op true", async () => {
-    mockFetch
-      .mockResolvedValueOnce(listResp([]))
-      .mockResolvedValueOnce(listResp([]));
+    mockFetch.mockResolvedValueOnce(listResp([])).mockResolvedValueOnce(listResp([]));
     const { setNewsletterStatus } = await lib();
-    expect(await setNewsletterStatus("a@b.co", "newsletter_unsubscribed"))
-      .toBe(true);
+    expect(await setNewsletterStatus("a@b.co", "newsletter_unsubscribed")).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -242,12 +235,14 @@ describe("newsletter status", () => {
   });
 
   it("lists only leadSource=Email addresses, deduped", async () => {
-    mockFetch.mockResolvedValueOnce(listResp([
-      { emailAddress: "a@b.co" },
-      { emailAddress: "a@b.co" },
-      { emailAddress: null },
-      { emailAddress: "c@d.co" },
-    ]));
+    mockFetch.mockResolvedValueOnce(
+      listResp([
+        { emailAddress: "a@b.co" },
+        { emailAddress: "a@b.co" },
+        { emailAddress: null },
+        { emailAddress: "c@d.co" },
+      ])
+    );
     const { listNewsletterSubscribers } = await lib();
     expect(await listNewsletterSubscribers()).toEqual(["a@b.co", "c@d.co"]);
     const [url] = mockFetch.mock.calls[0];
@@ -305,8 +300,11 @@ describe("companies / deals / pipelines", () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ id: "d1" }, 201));
     const { createDeal, updateDeal } = await lib();
     const id = await createDeal({
-      dealname: "X", dealstage: "Prospecting", amount: 100,
-      closedate: "2026-12-01", source: "contact_form",
+      dealname: "X",
+      dealstage: "Prospecting",
+      amount: 100,
+      closedate: "2026-12-01",
+      source: "contact_form",
     } as never);
     expect(id).toBe("d1");
     const body = JSON.parse(String(mockFetch.mock.calls[0][1].body));
@@ -314,7 +312,8 @@ describe("companies / deals / pipelines", () => {
 
     mockFetch.mockResolvedValueOnce(jsonResponse({ id: "d1" }));
     const out = await updateDeal("d1", {
-      dealname: "Y", dealstage: "Qualification",
+      dealname: "Y",
+      dealstage: "Qualification",
       closedate: "2026-12-15T00:00:00Z",
     } as never);
     expect(out).toEqual({ id: "d1" });
@@ -359,5 +358,28 @@ describe("misc exports", () => {
 
     mockFetch.mockResolvedValueOnce(jsonResponse({}, 404));
     expect(await getContact("missing")).toBeNull();
+  });
+});
+
+describe("mapLeadSource + listCompanies tail", () => {
+  it("maps newsletter_unsubscribed to Espo leadSource Email", async () => {
+    mockFetch
+      .mockResolvedValueOnce(listResp([])) // equals search miss
+      .mockResolvedValueOnce(listResp([])) // textFilter miss
+      .mockResolvedValueOnce(jsonResponse({ id: "c9" }, 201)); // POST /Contact
+    const { upsertContact } = await lib();
+    const id = await upsertContact({
+      email: "u@n.co",
+      lead_source: "newsletter_unsubscribed",
+    } as never);
+    expect(id).toBe("c9");
+    const body = JSON.parse(String(mockFetch.mock.calls[2][1].body));
+    expect(body.leadSource).toBe("Email");
+  });
+
+  it("listCompanies returns [] when the Account list payload has no list", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ total: 0 }));
+    const { listCompanies } = await lib();
+    await expect(listCompanies()).resolves.toEqual([]);
   });
 });

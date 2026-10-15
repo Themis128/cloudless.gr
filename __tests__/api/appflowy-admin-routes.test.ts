@@ -372,6 +372,17 @@ describe("appflowy analytics + comments", () => {
     ).toBe(500);
   });
 
+  it("comments GET+POST: 503 when AppFlowy unconfigured", async () => {
+    appflowy.isAppFlowyConfigured.mockResolvedValue(false);
+    expect(
+      (await commentsGet(new NextRequest(`${B}/comments?page_id=p`))).status
+    ).toBe(503);
+    expect(
+      (await commentsPost(post(`${B}/comments`, { pageId: "p", text: "t" })))
+        .status
+    ).toBe(503);
+  });
+
   it("comments POST: validation, add, 500 on failure", async () => {
     expect(
       (await commentsPost(post(`${B}/comments`, {}))).status

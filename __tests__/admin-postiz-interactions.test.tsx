@@ -88,12 +88,20 @@ function defaultRoutes() {
     ["GET", "postiz/integrations", okJson({ integrations: INTEGRATIONS })],
     ["GET", "postiz/posts/bulk", okJson({})],
     ["GET", "postiz/posts", okJson({ posts: POSTS })],
-    ["GET", "postiz/analytics", okJson({
-      metrics: [
-        { label: "Followers", data: [{ total: "10", date: "2026-11-14" }], percentageChange: 12.5 },
-        { label: "Likes", data: [{ total: "3", date: "2026-11-14" }], percentageChange: -4.2 },
-      ],
-    })],
+    [
+      "GET",
+      "postiz/analytics",
+      okJson({
+        metrics: [
+          {
+            label: "Followers",
+            data: [{ total: "10", date: "2026-11-14" }],
+            percentageChange: 12.5,
+          },
+          { label: "Likes", data: [{ total: "3", date: "2026-11-14" }], percentageChange: -4.2 },
+        ],
+      }),
+    ],
     ["GET", "postiz/slot", okJson({ date: "2026-11-20T09:00:00.000Z" })],
     ["POST", "postiz/upload-file", okJson({ id: "f1", path: "/uploads/f1.png" })],
     ["POST", "postiz/upload", okJson({ id: "u1", path: "/uploads/u1.png" })],
@@ -123,7 +131,10 @@ describe("postiz admin — populated interactions", () => {
   beforeEach(() => {
     defaultRoutes();
     vi.stubGlobal("fetch", vi.fn(routedFetch));
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -307,8 +318,7 @@ describe("postiz admin — populated interactions", () => {
     vi.useFakeTimers({ now: new Date("2026-11-05T00:00:00Z"), toFake: ["Date"] });
     const c = await renderPage();
     await click(screen.getByText("calendar"));
-    const monthLabel = () =>
-      c.querySelector(".flex.items-center.gap-2 > span")!.textContent;
+    const monthLabel = () => c.querySelector(".flex.items-center.gap-2 > span")!.textContent;
     expect(monthLabel()).toContain("November 2026");
     expect(c.textContent).toContain("content p-q".slice(0, 18));
     // step forward past December wraps year
@@ -342,8 +352,8 @@ describe("postiz admin — populated interactions", () => {
     await click(screen.getByText("Schedule all"));
     // success → onPosted() switches to schedule tab (feedback unmounts with BulkTab)
 
-    const bulkCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
-      ([u]) => String(u).includes("posts/bulk")
+    const bulkCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([u]) =>
+      String(u).includes("posts/bulk")
     );
     const items = JSON.parse(String(bulkCall![1].body)).items;
     expect(items).toHaveLength(2); // empty line filtered
@@ -408,7 +418,10 @@ describe("postiz admin tails", () => {
   beforeEach(() => {
     defaultRoutes();
     vi.stubGlobal("fetch", vi.fn(routedFetch));
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -454,9 +467,7 @@ describe("postiz admin tails", () => {
       "something-new",
     ].map((id) => intg(`i-${id}`, id));
     routes = routes.map(([m, f, o]): [string, string, (() => Response) | Response] =>
-      f === "postiz/integrations" && m === "GET"
-        ? [m, f, okJson({ integrations: all })]
-        : [m, f, o]
+      f === "postiz/integrations" && m === "GET" ? [m, f, okJson({ integrations: all })] : [m, f, o]
     );
     const c = await renderPage();
 
@@ -480,7 +491,10 @@ describe("postiz admin tails", () => {
         p.settings,
       ])
     );
-    expect(byType.get("i-linkedin")).toMatchObject({ __type: "linkedin", post_as_images_carousel: false });
+    expect(byType.get("i-linkedin")).toMatchObject({
+      __type: "linkedin",
+      post_as_images_carousel: false,
+    });
     expect(byType.get("i-linkedin-page")).toMatchObject({ __type: "linkedin-page" });
     expect(byType.get("i-instagram")).toMatchObject({ __type: "instagram", post_type: "post" });
     expect(byType.get("i-instagram-standalone")).toMatchObject({ __type: "instagram-standalone" });
@@ -515,5 +529,41 @@ describe("postiz admin tails", () => {
       });
     });
     expect(c.textContent).toContain("File upload failed: 413");
+  });
+});
+
+describe("postiz admin — residual branches", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(routedFetch));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("posts endpoint 503 → NotConfigured gate", async () => {
+    routes = [
+      ["GET", "postiz/integrations", okJson({ integrations: INTEGRATIONS })],
+      ["GET", "postiz/posts", new Response("x", { status: 503 })],
+    ];
+    const c = await renderPage();
+    expect(c.textContent).toContain("SocialAuto not configured");
+  });
+
+  it("analytics channel select switches the seeded channel", async () => {
+    defaultRoutes();
+    await renderPage();
+    await click(screen.getByText("analytics"));
+    const sel = document.getElementById("postiz-analytics-channel") as HTMLSelectElement;
+    expect(sel).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(sel, { target: { value: "i-yt" } });
+    });
+    expect(sel.value).toBe("i-yt");
   });
 });

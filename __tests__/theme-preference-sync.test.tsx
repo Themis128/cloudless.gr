@@ -132,4 +132,21 @@ describe("ThemePreferenceSync", () => {
     unmount();
     expect(media.removeEventListener).toHaveBeenCalledWith("change", expect.any(Function));
   });
+
+  it("reacts to a cross-tab storage event for the theme key", async () => {
+    usePathnameMock.mockReturnValue("/en/services");
+    useAuthMock.mockReturnValue({ user: null } as never);
+    window.localStorage.setItem(STORAGE_KEY, "dark");
+    render(<ThemePreferenceSync />);
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    });
+
+    // Simulate another tab flipping the stored pref to light.
+    window.localStorage.setItem(STORAGE_KEY, "light");
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    });
+  });
 });

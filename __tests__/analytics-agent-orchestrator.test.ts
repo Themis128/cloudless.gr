@@ -94,6 +94,31 @@ describe("analytics-agent-orchestrator", () => {
     });
   });
 
+  it("returns null-report when AI JSON lacks executiveSummary/keyInsights", async () => {
+    generateAdminAiTextMock.mockResolvedValue({
+      text: JSON.stringify({ keyInsights: [], nextMoves: [], executiveSummary: "" }),
+      provider: "workers-ai",
+    });
+    const { runAnalyticsAgentOrchestration } = await import("@/lib/analytics-agent-orchestrator");
+
+    const result = await runAnalyticsAgentOrchestration({
+      snapshot: {
+        windowDays: 14,
+        generatedAt: "2026-05-03T12:00:00.000Z",
+        totals: { events: 4, revenueMinor: 8000, processed: 3, failed: 1 },
+        byCategory: {},
+        byStatus: { processed: 3 },
+        byCurrency: { eur: 8000 },
+        dailyTrend: [],
+      },
+      connectors: [],
+      goals: [],
+    });
+    // parse failure → report null → falls back to the deterministic report
+    expect(result).toBeDefined();
+    expect(result.workflow.some((w) => w.step === "collect_data")).toBe(true);
+  });
+
   it("falls back to deterministic insights when AI returns invalid JSON", async () => {
     generateAdminAiTextMock.mockResolvedValue({ text: "not json", provider: "workers-ai" });
     const { runAnalyticsAgentOrchestration } = await import("@/lib/analytics-agent-orchestrator");

@@ -263,7 +263,7 @@ describe("reports pdf", () => {
       sections: [
         {
           title: "Traffic",
-          data: { page_views: 1234, note: null, meta: { a: 1 } },
+          data: { page_views: 1234, note: null, meta: { a: 1 }, label: "steady <b>" },
           insights: "good <b>",
         },
       ],
@@ -278,6 +278,7 @@ describe("reports pdf", () => {
     expect(html).toContain("1,234");
     expect(html).toContain("N/A");
     expect(html).toContain('"a": 1');
+    expect(html).toContain("steady &lt;b&gt;");
     expect(html).toContain("good &lt;b&gt;");
     expect(res.headers.get("Content-Disposition")).toBe(
       'inline; filename="report-r1.html"'

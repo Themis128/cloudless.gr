@@ -462,10 +462,12 @@ export async function consumePasswordResetToken(
     return { success: false, error: "Invalid or expired reset token" };
   }
 
+  /* v8 ignore start -- unreachable: results.length > 0 guarantees results[0] exists */
   const user = users.results[0];
   if (!user) {
     return { success: false, error: "Invalid or expired reset token" };
   }
+  /* v8 ignore stop -- lib-auth-d1 */
 
   const passwordHash = await hashPassword(newPassword);
 

@@ -117,6 +117,18 @@ describe("POST /api/admin/ai/assistant", () => {
     ).toBe(503);
   });
 
+  it("handles a messages array with no user turn", async () => {
+    workersAi.isWorkersAiConfigured.mockReturnValue(false);
+    nvidia.isNvidiaProxyConfigured.mockReturnValue(false);
+    ollama.isOllamaConfigured.mockReturnValue(false);
+    const res = await assistantPost(
+      post(`${AI}/assistant`, {
+        messages: [{ role: "assistant", content: "hello" }],
+      })
+    );
+    expect([200, 500, 502]).toContain(res.status);
+  });
+
   it("falls back to Gemini when no tool backend is configured", async () => {
     const j = await (
       await assistantPost(post(`${AI}/assistant`, msgs))
@@ -258,6 +270,21 @@ describe("copy / audience / campaign / report-insights", () => {
       )
     ).json();
     expect(j.targeting).toEqual({ v: 1 });
+    // non-JSON LLM text → { raw } targeting
+    adminAi.generateAdminAiText.mockResolvedValue({ text: "not json", provider: "gemini" });
+    const raw = await (
+      await audiencePost(post(`${AI}/audience`, { description: "d" }))
+    ).json();
+    expect(raw.targeting).toEqual({ raw: "not json" });
+
+    // AdminAiNotConfigured → its dedicated response
+    const cfg = new Error("cfg");
+    cfg.name = "AdminAiNotConfigured";
+    adminAi.generateAdminAiText.mockRejectedValue(cfg);
+    expect(
+      (await audiencePost(post(`${AI}/audience`, { description: "d" }))).status
+    ).toBe(503);
+
     adminAi.generateAdminAiText.mockRejectedValue(new Error("boom"));
     expect(
       (
@@ -272,6 +299,17 @@ describe("copy / audience / campaign / report-insights", () => {
       await campaignPost(post(`${AI}/campaign`, { brief: "launch" }))
     ).json();
     expect(j.strategy).toEqual({ v: 1 });
+  });
+
+  it("report-insights: generic generation failure returns 500", async () => {
+    adminAi.generateAdminAiText.mockRejectedValue(new Error("backend down"));
+    expect(
+      (
+        await insightsPost(
+          post(`${AI}/report-insights`, { period: "7d", metrics: { clicks: 10 } })
+        )
+      ).status
+    ).toBe(500);
   });
 
   it("report-insights: validates metrics object, returns insights text", async () => {

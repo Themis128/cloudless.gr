@@ -39,9 +39,14 @@ describe("GET/PUT /api/admin/config", () => {
 
   it("returns 503 when AUTH_DB is not bound", async () => {
     getAuthDbFromEnvMock.mockReturnValue(null);
-    const { GET } = await import("@/app/api/admin/config/route");
+    const { GET, PUT } = await import("@/app/api/admin/config/route");
     const res = await GET(makeRequest("GET"));
     expect(res.status).toBe(503);
+    const put = await PUT(
+      makeRequest("PUT", { key: "KUMA_STATUS_PAGE_SLUG", value: "x" })
+    );
+    expect(put.status).toBe(503);
+    expect((await put.json()).error).toBe("AUTH_DB not bound");
   });
 
   it("lists config keys without values", async () => {

@@ -77,7 +77,15 @@ const portal = (extra: Record<string, unknown> = {}) => ({
     { id: "d2", title: "Report", status: "draft", createdAt: "t", updatedAt: "t" },
   ],
   paymentLinks: [
-    { id: "p1", label: "Deposit", url: "https://pay.example/x", amountCents: 5000, currency: "EUR", status: "open", createdAt: "t" },
+    {
+      id: "p1",
+      label: "Deposit",
+      url: "https://pay.example/x",
+      amountCents: 5000,
+      currency: "EUR",
+      status: "open",
+      createdAt: "t",
+    },
     { id: "p2", label: "Balance", url: "https://pay.example/y", status: "paid", createdAt: "t" },
   ],
   ...extra,
@@ -105,7 +113,10 @@ describe("client-portals admin — populated interactions", () => {
     portals = [];
     pendingClients = [];
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
     Object.assign(navigator, { clipboard: { writeText: vi.fn() } });
   });
   afterEach(() => {
@@ -218,18 +229,26 @@ describe("client-portals admin — populated interactions", () => {
     const selects = c.querySelectorAll("select");
     fireEvent.change(selects[1], { target: { value: "blocked" } });
     await act(async () => {});
-    expect(patchCalls().some((b) => b.action === "update-step" && b.stepId === "s2" && b.status === "blocked")).toBe(true);
+    expect(
+      patchCalls().some(
+        (b) => b.action === "update-step" && b.stepId === "s2" && b.status === "blocked"
+      )
+    ).toBe(true);
 
     // add comment on s1 (expanded)
     const commentArea = c.querySelector("textarea[placeholder*='Add an update']")!;
     fireEvent.change(commentArea, { target: { value: "progress note" } });
     await click(screen.getByText("Send"));
-    expect(patchCalls().some((b) => b.action === "add-comment" && b.text === "progress note")).toBe(true);
+    expect(patchCalls().some((b) => b.action === "add-comment" && b.text === "progress note")).toBe(
+      true
+    );
 
     // delete comment
     const delComment = c.querySelector("button[title='Delete comment']")!;
     await click(delComment);
-    expect(patchCalls().some((b) => b.action === "delete-comment" && b.commentId === "cm1")).toBe(true);
+    expect(patchCalls().some((b) => b.action === "delete-comment" && b.commentId === "cm1")).toBe(
+      true
+    );
 
     // expand s2 header via keyboard Enter (covers keyDown path) then add step
     const stepHeaders = c.querySelectorAll("[aria-expanded]");
@@ -262,11 +281,15 @@ describe("client-portals admin — populated interactions", () => {
     const dSelect = screen.getByLabelText("Status of Design doc");
     fireEvent.change(dSelect, { target: { value: "approved" } });
     await act(async () => {});
-    expect(patchCalls().some((b) => b.action === "update-deliverable" && b.status === "approved")).toBe(true);
+    expect(
+      patchCalls().some((b) => b.action === "update-deliverable" && b.status === "approved")
+    ).toBe(true);
 
     // delete deliverable
     await click(screen.getByLabelText("Delete Design doc"));
-    expect(patchCalls().some((b) => b.action === "delete-deliverable" && b.deliverableId === "d1")).toBe(true);
+    expect(
+      patchCalls().some((b) => b.action === "delete-deliverable" && b.deliverableId === "d1")
+    ).toBe(true);
 
     // add deliverable (title only → url undefined)
     fireEvent.change(c.querySelector("input[placeholder='Deliverable title…']")!, {
@@ -274,14 +297,20 @@ describe("client-portals admin — populated interactions", () => {
     });
     const addBtns = screen.getAllByText("+ Add");
     await click(addBtns[1]); // deliverable (0 = step, 1 = deliverable, 2 = payment)
-    expect(patchCalls().some((b) => b.action === "add-deliverable" && b.title === "New deliv")).toBe(true);
+    expect(
+      patchCalls().some((b) => b.action === "add-deliverable" && b.title === "New deliv")
+    ).toBe(true);
 
     // payment link status + delete
     fireEvent.change(screen.getByLabelText("Status of Deposit"), { target: { value: "void" } });
     await act(async () => {});
-    expect(patchCalls().some((b) => b.action === "update-payment-link" && b.status === "void")).toBe(true);
+    expect(
+      patchCalls().some((b) => b.action === "update-payment-link" && b.status === "void")
+    ).toBe(true);
     await click(screen.getByLabelText("Delete Balance"));
-    expect(patchCalls().some((b) => b.action === "delete-payment-link" && b.paymentLinkId === "p2")).toBe(true);
+    expect(
+      patchCalls().some((b) => b.action === "delete-payment-link" && b.paymentLinkId === "p2")
+    ).toBe(true);
 
     // add payment link with amount parse (12.34 → 1234 cents)
     fireEvent.change(c.querySelector("input[placeholder*='Label (e.g. Deposit']")!, {
@@ -299,7 +328,11 @@ describe("client-portals admin — populated interactions", () => {
   it("reports toggle + token lifecycle badges/extend/rotate", async () => {
     portals = [
       portal({ token: "tok-exp", label: "Expired", expiresAt: "2000-01-01T00:00:00Z" }),
-      portal({ token: "tok-soon", label: "Soon", expiresAt: new Date(Date.now() + 5 * 864e5).toISOString() }),
+      portal({
+        token: "tok-soon",
+        label: "Soon",
+        expiresAt: new Date(Date.now() + 5 * 864e5).toISOString(),
+      }),
       portal({ token: "tok-none", label: "NoExp", expiresAt: undefined }),
       portal(),
     ];
@@ -310,7 +343,9 @@ describe("client-portals admin — populated interactions", () => {
 
     // reports toggle
     await click(screen.getByLabelText(/Monthly status email/));
-    expect(patchCalls().some((b) => b.action === "set-reports-enabled" && b.enabled === true)).toBe(true);
+    expect(patchCalls().some((b) => b.action === "set-reports-enabled" && b.enabled === true)).toBe(
+      true
+    );
 
     // extend + rotate
     await click(screen.getByText("Extend +90d"));
@@ -331,7 +366,15 @@ describe("client-portals admin — populated interactions", () => {
 
   it("pending clients — waiting filter, approve, decline, error", async () => {
     pendingClients = [
-      { email: "w@x.co", name: "Waiter", plan: "bundle", planLabel: "Bundle", status: "waiting", submittedAt: "2026-01-01T00:00:00Z", notes: "hi" },
+      {
+        email: "w@x.co",
+        name: "Waiter",
+        plan: "bundle",
+        planLabel: "Bundle",
+        status: "waiting",
+        submittedAt: "2026-01-01T00:00:00Z",
+        notes: "hi",
+      },
       { email: "a@x.co", name: "Done", plan: "cloud", status: "approved", submittedAt: "t" },
     ];
     const c = await renderPage();
@@ -395,7 +438,10 @@ describe("client-portals admin tails", () => {
       return okJson({}, 404);
     });
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
     Object.assign(navigator, { clipboard: { writeText: vi.fn() } });
   });
   afterEach(() => {
@@ -454,9 +500,9 @@ describe("client-portals admin tails", () => {
     const c = await renderPage();
     // PendingClients short-circuits to null on empty clients — the catch ran
     // (its setError is unreachable UI), and the fetch really happened.
-    expect(
-      fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("pending-clients"))
-    ).toBe(true);
+    expect(fetchWithAuthMock.mock.calls.some(([u]) => String(u).includes("pending-clients"))).toBe(
+      true
+    );
 
     await click(c.querySelector("[aria-expanded]")!);
     const urlInput = screen.getByPlaceholderText(/Figma, staging, doc/);
@@ -465,9 +511,7 @@ describe("client-portals admin tails", () => {
   });
 
   it("decline + revoke rejections surface their error banners", async () => {
-    pendingClients = [
-      { email: "w@x.co", plan: "cloud", status: "waiting", submittedAt: "t" },
-    ];
+    pendingClients = [{ email: "w@x.co", plan: "cloud", status: "waiting", submittedAt: "t" }];
     portals = [portal()];
     fetchWithAuthMock.mockImplementation(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
@@ -489,5 +533,51 @@ describe("client-portals admin tails", () => {
 
     await click(screen.getByText("Revoke"));
     expect(c.textContent).toContain("Failed to revoke portal");
+  });
+});
+
+describe("client-portals — residual branches", () => {
+  beforeEach(() => {
+    portals = [portal()];
+    pendingClients = [];
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
+    Object.assign(navigator, { clipboard: { writeText: vi.fn() } });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("step accordion click toggles expansion; status select stops propagation", async () => {
+    const c = await renderPage();
+    // expand the portal card, then click a step header (not keyboard)
+    await click(c.querySelector("[aria-expanded]")!);
+    const stepHeaders = c.querySelectorAll("[aria-expanded]");
+    const s2Header = Array.from(stepHeaders).find((h) => h.textContent?.includes("Build"))!;
+    await click(s2Header);
+    expect(s2Header.getAttribute("aria-expanded")).toBe("true");
+
+    // clicking the status select must not collapse the row
+    const sel = c.querySelector("select")!;
+    await click(sel);
+    expect(s2Header.getAttribute("aria-expanded")).toBe("true");
+
+    // Open Portal link stopPropagation — row stays expanded
+    await click(screen.getByText("Open Portal"));
+    expect(c.querySelector("[aria-expanded]")).toBeTruthy();
+  });
+
+  it("rotate token aborts when confirm is declined", async () => {
+    (globalThis.confirm as ReturnType<typeof vi.fn>).mockReturnValue(false);
+    await renderPage();
+    await click(screen.getByText("Acme Portal").closest("[aria-expanded]")!);
+    const rotateBtn = screen.getByText(/Rotate/);
+    await click(rotateBtn);
+    expect(patchCalls().some((b) => b.action === "rotate-token")).toBe(false);
   });
 });

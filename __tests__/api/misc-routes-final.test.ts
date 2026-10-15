@@ -7,14 +7,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-const auth = vi.hoisted(() => ({ ok: true }));
+const auth = vi.hoisted(() => ({
+  ok: true,
+  user: { sub: "u1" } as { sub?: string },
+}));
 vi.mock("@/lib/api-auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-auth")>();
   return {
     ...actual,
     requireAuth: vi.fn(async () =>
       auth.ok
-        ? { ok: true, user: { sub: "u1" } }
+        ? { ok: true, user: auth.user }
         : { ok: false, response: NextResponse.json({ error: "no" }, { status: 401 }) }
     ),
   };
@@ -326,6 +329,18 @@ describe("products/recommendations", () => {
     expect(j2.count).toBe(1);
     expect(j2.recommendations[0].name).toBe("Cloud Audit");
 
+    // Equal keyword scores fall back to name ordering in the comparator
+    libs.getProducts.mockResolvedValue([
+      { name: "Zeta Cloud", description: "hosting", category: "cloud" },
+      { name: "Alpha Cloud", description: "hosting", category: "cloud" },
+    ]);
+    const tie = await (await post({ context: "hosting cloud" })).json();
+    expect(tie.count).toBe(2);
+    expect(tie.recommendations.map((r: { name: string }) => r.name)).toEqual([
+      "Alpha Cloud",
+      "Zeta Cloud",
+    ]);
+
     expect((await post({})).status).toBe(400);
 
     libs.getProducts.mockRejectedValue(new Error("store down"));
@@ -416,6 +431,10 @@ describe("user delete", () => {
     auth.ok = false;
     expect((await del()).status).toBe(401);
     auth.ok = true;
+
+    auth.user = {};
+    expect((await del()).status).toBe(400);
+    auth.user = { sub: "u1" };
 
     libs.getAuthDbFromEnv.mockReturnValue(null);
     expect((await del()).status).toBe(503);

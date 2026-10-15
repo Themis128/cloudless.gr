@@ -167,6 +167,21 @@ describe("linkedin-cap", () => {
       })
     );
 
+  it("503s when the module loaded without LINKEDIN_ACCESS_TOKEN", async () => {
+    vi.resetModules();
+    delete process.env.LINKEDIN_ACCESS_TOKEN;
+    const { POST } = await import("@/app/api/admin/linkedin-cap/route");
+    const res = await POST(
+      new Request("http://x/api/admin/linkedin-cap", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eventId: "e1" }),
+      })
+    );
+    expect(res.status).toBe(503);
+    vi.resetModules();
+  });
+
   it("400s without eventId; 503s without token; forwards conversion", async () => {
     expect((await cap({})).status).toBe(400);
 

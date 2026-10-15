@@ -134,6 +134,25 @@ describe("POST /api/slack/inbound-email", () => {
     expect(dup.duplicate).toBe(true);
   });
 
+  it("evicts expired message_ids from the dedup map on the next insert", async () => {
+    const first = { message_id: `mid-${Date.now()}-ttl`, from: "a@b", subject: "s", text: "t" };
+    expect((await inboundEmail(emailReq(first))).status).toBe(200);
+    // Advance the clock past SEEN_TTL_MS (6h) so the entry expires.
+    vi.setSystemTime(Date.now() + 7 * 60 * 60 * 1000);
+    try {
+      const res = await inboundEmail(
+        emailReq({ message_id: `mid-${Date.now()}-new`, from: "c@d", subject: "s", text: "t" })
+      );
+      expect(res.status).toBe(200);
+      // The expired id no longer dedups.
+      expect((await inboundEmail(emailReq(first))).status).toBe(200);
+      const dup = await (await inboundEmail(emailReq(first))).json();
+      expect(dup.duplicate).toBe(true);
+    } finally {
+      vi.setSystemTime(vi.getRealSystemTime());
+    }
+  });
+
   it("suppresses bulk mail without a Slack post", async () => {
     hoisted.classify = { cls: "bulk", channel: "#bulk", score: -1, reasons: [] };
     const j = await (await inboundEmail(emailReq({ from: "n@x" }))).json();

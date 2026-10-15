@@ -60,9 +60,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 function mockScheduleFetch(postBody: unknown = [{ id: "p1" }], postStatus = 200) {
   mockFetch.mockImplementation((url: string) => {
     if (String(url).includes("/integrations")) {
-      return Promise.resolve(
-        jsonResponse([{ id: "fb", name: "FB", identifier: "facebook" }])
-      );
+      return Promise.resolve(jsonResponse([{ id: "fb", name: "FB", identifier: "facebook" }]));
     }
     return Promise.resolve(jsonResponse(postBody, postStatus));
   });
@@ -190,7 +188,11 @@ describe("schedulePost", () => {
     mockScheduleFetch([{ id: "a" }, { id: "b" }]);
     const result = await schedulePost({ content: "hi", integrationIds: ["fb", "ig"] });
     const body = lastPostBody() as {
-      posts: Array<{ integration: { id: string }; value: Array<{ content: string }>; settings: { __type: string } }>;
+      posts: Array<{
+        integration: { id: string };
+        value: Array<{ content: string }>;
+        settings: { __type: string };
+      }>;
     };
     expect(body.posts).toHaveLength(2);
     expect(body.posts[0].integration.id).toBe("fb");
@@ -210,6 +212,54 @@ describe("schedulePost", () => {
     mockFetch.mockRejectedValue(new Error("down"));
     const result = await schedulePost({ content: "hi", integrationIds: ["fb"] });
     expect(result.ok).toBe(false);
+  });
+
+  it.each([
+    ["linkedin", { __type: "linkedin", post_as_images_carousel: false }],
+    ["linkedin-page", { __type: "linkedin-page", post_as_images_carousel: false }],
+    ["instagram", { __type: "instagram", post_type: "post" }],
+    ["instagram-standalone", { __type: "instagram-standalone", post_type: "post" }],
+    ["x", { __type: "x", who_can_reply_post: "everyone" }],
+  ])("maps identifier %s to its typed settings", async (identifier, expected) => {
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("/integrations")) {
+        return Promise.resolve(jsonResponse([{ id: "ch1", name: "CH", identifier }]));
+      }
+      return Promise.resolve(jsonResponse([{ id: "p1" }]));
+    });
+    await schedulePost({ content: "hi", integrationIds: ["ch1"] });
+    const body = lastPostBody() as { posts: Array<{ settings: Record<string, unknown> }> };
+    expect(body.posts[0].settings).toMatchObject(expected);
+  });
+
+  it("maps tiktok identifier to the full DIRECT_POST settings block", async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("/integrations")) {
+        return Promise.resolve(jsonResponse([{ id: "tt", name: "TT", identifier: "tiktok" }]));
+      }
+      return Promise.resolve(jsonResponse([{ id: "p1" }]));
+    });
+    await schedulePost({ content: "hi", integrationIds: ["tt"] });
+    const body = lastPostBody() as { posts: Array<{ settings: Record<string, unknown> }> };
+    expect(body.posts[0].settings).toMatchObject({
+      __type: "tiktok",
+      content_posting_method: "DIRECT_POST",
+      privacy_level: "PUBLIC_TO_EVERYONE",
+    });
+  });
+
+  it("falls back to {__type: identifier} for unknown channels", async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("/integrations")) {
+        return Promise.resolve(
+          jsonResponse([{ id: "th", name: "Threads", identifier: "threads" }])
+        );
+      }
+      return Promise.resolve(jsonResponse([{ id: "p1" }]));
+    });
+    await schedulePost({ content: "hi", integrationIds: ["th"] });
+    const body = lastPostBody() as { posts: Array<{ settings: { __type: string } }> };
+    expect(body.posts[0].settings.__type).toBe("threads");
   });
 });
 

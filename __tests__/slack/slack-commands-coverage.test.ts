@@ -589,6 +589,13 @@ describe("slash-command tail branches", () => {
     expect(viewsOpen).toBeDefined();
   });
 
+  it("/cloudless-deploy still returns 200 when views.open rejects", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("slack api down"));
+    const res = await POST(cmd("/cloudless-deploy"));
+    expect(res.status).toBe(200);
+    await flush();
+  });
+
   it("/cloudless-ads status posts the throw message when the API rejects", async () => {
     mockLiveCampaigns.mockReturnValue([
       { slug: "boost", adPlatforms: [{ platform: "linkedin", campaignIds: ["907100946"] }], startsAt: "2026-09-24" },

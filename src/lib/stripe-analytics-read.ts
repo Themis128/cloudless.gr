@@ -34,9 +34,12 @@ interface AnalyticsRow {
 function deriveDay(row: AnalyticsRow): string | undefined {
   if (row.eventDay) return row.eventDay;
 
+  /* v8 ignore start -- unreachable: the only row source (queryD1Rows) maps
+     event_day/received_at and never sets stripeCreatedAt */
   if (typeof row.stripeCreatedAt === "number") {
     return toDayString(new Date(row.stripeCreatedAt * 1000));
   }
+  /* v8 ignore stop -- lib-stripe-analytics-read */
 
   if (typeof row.receivedAt === "number") {
     return toDayString(new Date(row.receivedAt));

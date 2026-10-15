@@ -125,6 +125,38 @@ describe("/newsletter-slack/commands router", () => {
   });
 });
 
+describe("rate limit", () => {
+  it("returns 429 once the sliding window is full", async () => {
+    // A unique x-forwarded-for isolates this test's key from the rest of the file.
+    let n = 0;
+    const mkReq = () => {
+      n += 1; // unique signature per request — replay protection dedups identical ones
+      const ts = Math.floor(Date.now() / 1000);
+      const params = new URLSearchParams({
+        token: "verify", team_id: "T1", team_domain: "test", channel_id: "C1",
+        channel_name: "test", user_id: "URL", user_name: "t",
+        command: "/newsletter-help", text: "",
+        response_url: "https://hooks.slack.com/commands/T1/1/abc",
+        trigger_id: `1.1.abc${n}`, api_app_id: "A1", is_enterprise_install: "false",
+      });
+      const body = params.toString();
+      return new Request("http://localhost/api/newsletter-slack/commands", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "x-forwarded-for": "10.99.99.99",
+          "x-slack-request-timestamp": String(ts),
+          "x-slack-signature": sign(body, ts),
+        },
+        body,
+      });
+    };
+    let last = 0;
+    for (let i = 0; i < 61; i++) last = (await POST(mkReq())).status;
+    expect(last).toBe(429);
+  });
+});
+
 describe("ops allowlist gating", () => {
   // The router reads SLACK_OPS_USERS at module import time, so we can't
   // re-test the populated-allowlist path here without dynamic re-imports.

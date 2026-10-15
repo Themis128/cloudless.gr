@@ -187,6 +187,7 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
         // Generic "Acknowledge" button — stamps the original message so the
         // whole channel sees who claimed the alert. No server-side state.
         if (payload.response_url) {
+          /* v8 ignore next 3 -- unreachable: acknowledgeAsync only awaits postResponseUrl, which swallows fetch errors */
           acknowledgeAsync(payload.response_url, payload.user.id, payload.message).catch((err) =>
             console.error("[Slack Interactions] slack_ack failed:", err)
           );
@@ -197,6 +198,7 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
       case "refresh_orders": {
         // Post updated order data to the response_url
         if (payload.response_url) {
+          /* v8 ignore next 3 -- unreachable: refreshOrdersAsync wraps its whole body in try/catch */
           refreshOrdersAsync(payload.response_url).catch((err) =>
             console.error("[Slack Interactions] refresh_orders failed:", err)
           );
@@ -735,6 +737,7 @@ async function socialautoActionAsync(
         : `:unlock: <@${userId}> released the browser orchestrator lock.`;
       break;
     }
+    /* v8 ignore next 2 -- unreachable: dispatch only calls this for the 5 cased action ids */
     default:
       text = `:question: Unknown SocialAuto action \`${actionId}\`.`;
   }

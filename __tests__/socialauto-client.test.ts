@@ -49,9 +49,13 @@ beforeEach(async () => {
 });
 
 const ACCOUNT = {
-  id: "a1", platform: "instagram", account_id: "ig-1",
-  username: "cloudless.gr", display_name: "Cloudless",
-  avatar_url: "https://x/pic.png", status: "active",
+  id: "a1",
+  platform: "instagram",
+  account_id: "ig-1",
+  username: "cloudless.gr",
+  display_name: "Cloudless",
+  avatar_url: "https://x/pic.png",
+  status: "active",
 };
 
 describe("accounts → integrations", () => {
@@ -60,21 +64,22 @@ describe("accounts → integrations", () => {
     const { listAccountsAsIntegrations } = await loadLib();
     const out = await listAccountsAsIntegrations();
     expect(out[0]).toMatchObject({
-      id: "a1", name: "Cloudless", identifier: "instagram",
-      picture: "https://x/pic.png", disabled: false,
+      id: "a1",
+      name: "Cloudless",
+      identifier: "instagram",
+      picture: "https://x/pic.png",
+      disabled: false,
     });
   });
 
   it("falls back to username, marks non-active disabled", async () => {
-    mockLoginThen(jsonResponse([
-      { ...ACCOUNT, display_name: null, status: "revoked" },
-    ]));
+    mockLoginThen(jsonResponse([{ ...ACCOUNT, display_name: null, status: "revoked" }]));
     const { listAccounts, listAccountsAsIntegrations } = await loadLib();
     expect((await listAccounts())[0].status).toBe("revoked");
 
-    mockFetch.mockResolvedValueOnce(jsonResponse([
-      { ...ACCOUNT, display_name: null, status: "revoked" },
-    ]));
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse([{ ...ACCOUNT, display_name: null, status: "revoked" }])
+    );
     const out = await listAccountsAsIntegrations(); // token cached — no login
     expect(out[0].name).toBe("cloudless.gr");
     expect(out[0].disabled).toBe(true);
@@ -83,33 +88,56 @@ describe("accounts → integrations", () => {
 
 describe("listPostsInWindow", () => {
   const post = (over: Record<string, unknown>) => ({
-    id: "p1", status: "published", content_text: "hello",
-    scheduled_at: null, published_at: "2026-10-10T12:00:00Z",
-    created_at: "2026-10-01T00:00:00Z", media_ids: [],
+    id: "p1",
+    status: "published",
+    content_text: "hello",
+    scheduled_at: null,
+    published_at: "2026-10-10T12:00:00Z",
+    created_at: "2026-10-01T00:00:00Z",
+    media_ids: [],
     targets: [
-      { social_account_id: "a1", platform: "instagram", username: "ig",
-        status: "done", platform_url: "https://ig/p/1" },
-      { social_account_id: "a2", platform: "threads", username: null,
-        status: "done", platform_url: null },
+      {
+        social_account_id: "a1",
+        platform: "instagram",
+        username: "ig",
+        status: "done",
+        platform_url: "https://ig/p/1",
+      },
+      {
+        social_account_id: "a2",
+        platform: "threads",
+        username: null,
+        status: "done",
+        platform_url: null,
+      },
     ],
     ...over,
   });
 
   function mockAllPosts(lists: Record<string, unknown[]>) {
     mockFetch.mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }));
-    for (const s of ["scheduled", "published", "failed", "draft",
-                     "approved", "review", "publishing"]) {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ posts: lists[s] ?? [], total: 0 }));
+    for (const s of [
+      "scheduled",
+      "published",
+      "failed",
+      "draft",
+      "approved",
+      "review",
+      "publishing",
+    ]) {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ posts: lists[s] ?? [], total: 0 }));
     }
   }
 
   it("explodes posts per target, maps states, sorts by date", async () => {
     mockAllPosts({
-      published: [post({}), post({ id: "p2", status: "weird",
-                                  published_at: "2026-10-09T00:00:00Z", targets: [] })],
-      failed: [post({ id: "p3", status: "failed",
-                     published_at: "2026-10-11T00:00:00Z", targets: [] })],
+      published: [
+        post({}),
+        post({ id: "p2", status: "weird", published_at: "2026-10-09T00:00:00Z", targets: [] }),
+      ],
+      failed: [
+        post({ id: "p3", status: "failed", published_at: "2026-10-11T00:00:00Z", targets: [] }),
+      ],
     });
     const { listPostsInWindow } = await loadLib();
     const out = await listPostsInWindow("2026-10-01", "2026-10-12");
@@ -129,12 +157,12 @@ describe("listPostsInWindow", () => {
     // one status errors → catch returns empty list for it
     mockFetch.mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }));
     mockFetch.mockRejectedValueOnce(new Error("net down"));
-    for (const _s of ["published", "failed", "draft", "approved",
-                      "review", "publishing"]) {
+    for (const _s of ["published", "failed", "draft", "approved", "review", "publishing"]) {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ posts: [
-          { ...post({}), published_at: "2026-12-31T00:00:00Z", targets: [] },
-        ] }));
+        jsonResponse({
+          posts: [{ ...post({}), published_at: "2026-12-31T00:00:00Z", targets: [] }],
+        })
+      );
     }
     const { listPostsInWindow } = await loadLib();
     const out = await listPostsInWindow("2026-10-01", "2026-10-12");
@@ -146,10 +174,12 @@ describe("create / update / delete posts", () => {
   const body = {
     type: "schedule",
     date: "2026-10-12T09:00:00Z",
-    posts: [{
-      integration: { id: "a1" },
-      value: [{ content: "hi", image: [{ id: "m1" }] }],
-    }],
+    posts: [
+      {
+        integration: { id: "a1" },
+        value: [{ content: "hi", image: [{ id: "m1" }] }],
+      },
+    ],
   };
 
   it("creates a scheduled post from the Postiz body", async () => {
@@ -173,12 +203,9 @@ describe("create / update / delete posts", () => {
   });
 
   it("type=now publish failure propagates", async () => {
-    mockLoginThen(jsonResponse({ id: "p9" }),
-                  jsonResponse({ detail: "no media" }, 422));
+    mockLoginThen(jsonResponse({ id: "p9" }), jsonResponse({ detail: "no media" }, 422));
     const { createPostFromBody } = await loadLib();
-    await expect(
-      createPostFromBody({ ...body, type: "now" } as never)
-    ).rejects.toThrow("422");
+    await expect(createPostFromBody({ ...body, type: "now" } as never)).rejects.toThrow("422");
   });
 
   it("type=draft posts with null scheduled_at", async () => {
@@ -212,10 +239,14 @@ describe("create / update / delete posts", () => {
 
 describe("media upload", () => {
   it("uploads multipart and returns UploadedFile", async () => {
-    mockLoginThen(jsonResponse({
-      id: "m1", filename: null, storage_path: "s/m1.png",
-      public_url: "https://cdn/m1.png",
-    }));
+    mockLoginThen(
+      jsonResponse({
+        id: "m1",
+        filename: null,
+        storage_path: "s/m1.png",
+        public_url: "https://cdn/m1.png",
+      })
+    );
     const { uploadFileToSocialAuto } = await loadLib();
     const out = await uploadFileToSocialAuto(new Blob(["x"]), "orig.png");
     expect(out).toEqual({ id: "m1", name: "orig.png", path: "https://cdn/m1.png" });
@@ -224,9 +255,14 @@ describe("media upload", () => {
   });
 
   it("falls back to storage_path without public_url", async () => {
-    mockLoginThen(jsonResponse({
-      id: "m1", filename: "f.png", storage_path: "s/f.png", public_url: null,
-    }));
+    mockLoginThen(
+      jsonResponse({
+        id: "m1",
+        filename: "f.png",
+        storage_path: "s/f.png",
+        public_url: null,
+      })
+    );
     const { uploadFileToSocialAuto } = await loadLib();
     expect((await uploadFileToSocialAuto(new Blob(["x"]), "f.png")).path).toBe("s/f.png");
   });
@@ -235,12 +271,14 @@ describe("media upload", () => {
     // source fetch (no auth) — fake Response so blob() stays in the jsdom realm
     mockFetch
       .mockResolvedValueOnce({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         blob: async () => new Blob(["imgbytes"]),
       } as Response)
       .mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }))
-      .mockResolvedValueOnce(jsonResponse({ id: "m", filename: "x.png",
-                                            storage_path: "p", public_url: null }));
+      .mockResolvedValueOnce(
+        jsonResponse({ id: "m", filename: "x.png", storage_path: "p", public_url: null })
+      );
     const { uploadFromUrlToSocialAuto } = await loadLib();
     const out = await uploadFromUrlToSocialAuto("https://cdn.example/x.png?v=2");
     expect(out.name).toBe("x.png");
@@ -249,20 +287,25 @@ describe("media upload", () => {
   it("uploadFromUrl rejects on source fetch failure", async () => {
     mockFetch.mockResolvedValueOnce(new Response("nf", { status: 404 }));
     const { uploadFromUrlToSocialAuto } = await loadLib();
-    await expect(
-      uploadFromUrlToSocialAuto("https://cdn.example/gone.png")
-    ).rejects.toThrow("404");
+    await expect(uploadFromUrlToSocialAuto("https://cdn.example/gone.png")).rejects.toThrow("404");
   });
 });
 
 describe("analytics + ops helpers", () => {
   it("maps account metrics to PostizAnalyticsMetric shape", async () => {
-    mockLoginThen(jsonResponse({
-      account_id: "a1", platform: "instagram", username: "ig",
-      followers: 120, posts_count: 9, total_impressions: 5000,
-      total_engagement: 321, avg_engagement_rate: 6.421,
-      impressions_change_pct: 12.5,
-    }));
+    mockLoginThen(
+      jsonResponse({
+        account_id: "a1",
+        platform: "instagram",
+        username: "ig",
+        followers: 120,
+        posts_count: 9,
+        total_impressions: 5000,
+        total_engagement: 321,
+        avg_engagement_rate: 6.421,
+        impressions_change_pct: 12.5,
+      })
+    );
     const { getChannelAnalytics } = await loadLib();
     const metrics = await getChannelAnalytics("a1", 30);
     expect(metrics).toHaveLength(5);
@@ -293,14 +336,12 @@ describe("analytics + ops helpers", () => {
     mockLoginThen(jsonResponse({}));
     const { retryQueueItem } = await loadLib();
     expect(await retryQueueItem("q1")).toEqual({ ok: true });
-    expect((mockFetch.mock.calls[1] as [string])[0]).toContain(
-      "/publishing/queue/q1/retry");
+    expect((mockFetch.mock.calls[1] as [string])[0]).toContain("/publishing/queue/q1/retry");
 
     mockLoginThen(jsonResponse({}));
     const { cancelQueueItem } = await loadLib();
     expect(await cancelQueueItem("q2")).toEqual({ ok: true });
-    expect((mockFetch.mock.calls[2] as [string])[0]).toContain(
-      "/publishing/queue/q2/cancel");
+    expect((mockFetch.mock.calls[2] as [string])[0]).toContain("/publishing/queue/q2/cancel");
   });
 
   it("queue item errors return detail body", async () => {
@@ -345,7 +386,8 @@ describe("auth/token internals", () => {
 
   it("adds CF Access service-token headers when configured", async () => {
     mockGetConfig.mockResolvedValue({
-      ...CONFIGURED, SOCIALAUTO_SERVICE_TOKEN: "cid:csec",
+      ...CONFIGURED,
+      SOCIALAUTO_SERVICE_TOKEN: "cid:csec",
     });
     mockLoginThen(jsonResponse([ACCOUNT]));
     const { listAccounts } = await loadLib();
@@ -362,8 +404,7 @@ describe("auth/token internals", () => {
   });
 
   it("non-JSON login body surfaces as missing-token error", async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response("<html>cf access</html>", { status: 200 }));
+    mockFetch.mockResolvedValueOnce(new Response("<html>cf access</html>", { status: 200 }));
     const { listAccounts } = await loadLib();
     await expect(listAccounts()).rejects.toThrow("access_token");
   });
@@ -379,20 +420,20 @@ describe("shared route helpers", () => {
   it("createBodyInvalidDetail / invalidCreateBodyResponse", async () => {
     const { createBodyInvalidDetail, invalidCreateBodyResponse } = await loadLib();
     expect(createBodyInvalidDetail(null)).toBe("type and posts[] are required");
-    expect(createBodyInvalidDetail({ type: "draft", posts: [] } as never))
-      .toBe("type and posts[] are required");
-    expect(createBodyInvalidDetail({ type: "draft", posts: [{}] } as never))
-      .toBeNull();
+    expect(createBodyInvalidDetail({ type: "draft", posts: [] } as never)).toBe(
+      "type and posts[] are required"
+    );
+    expect(createBodyInvalidDetail({ type: "draft", posts: [{}] } as never)).toBeNull();
     const res = invalidCreateBodyResponse(null);
     expect(res?.status).toBe(400);
-    expect(invalidCreateBodyResponse({ type: "draft", posts: [{}] } as never))
-      .toBeNull();
+    expect(invalidCreateBodyResponse({ type: "draft", posts: [{}] } as never)).toBeNull();
   });
 
   it("readJsonBody returns 400 response on bad JSON", async () => {
     const { readJsonBody } = await loadLib();
     const req = new NextRequest("https://x/api", {
-      method: "POST", body: "{bad json",
+      method: "POST",
+      body: "{bad json",
       headers: { "Content-Type": "application/json" },
     });
     const out = await readJsonBody(req);
@@ -400,15 +441,15 @@ describe("shared route helpers", () => {
     expect((out as NextResponse).status).toBe(400);
 
     const good = new NextRequest("https://x/api", {
-      method: "POST", body: JSON.stringify({ a: 1 }),
+      method: "POST",
+      body: JSON.stringify({ a: 1 }),
       headers: { "Content-Type": "application/json" },
     });
     expect(await readJsonBody(good)).toEqual({ a: 1 });
   });
 
   it("saErrorToResponse maps error classes", async () => {
-    const { saErrorToResponse, SocialAutoApiError,
-            SocialAutoNotConfiguredError } = await loadLib();
+    const { saErrorToResponse, SocialAutoApiError, SocialAutoNotConfiguredError } = await loadLib();
     expect(saErrorToResponse(new SocialAutoNotConfiguredError()).status).toBe(503);
     expect(saErrorToResponse(new SocialAutoApiError(429, "slow")).status).toBe(429);
     expect(saErrorToResponse(new SocialAutoApiError(500, "x")).status).toBe(502);
@@ -421,18 +462,33 @@ describe("shared route helpers", () => {
       response: NextResponse.json({ error: "forbidden" }, { status: 403 }),
     });
     const { saAdminRoute, SocialAutoApiError } = await loadLib();
-    const handler = saAdminRoute(async () =>
-      NextResponse.json({ ok: true }));
-    const res = await handler(
-      new NextRequest("https://x"), { params: Promise.resolve({}) });
+    const handler = saAdminRoute(async () => NextResponse.json({ ok: true }));
+    const res = await handler(new NextRequest("https://x"), { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
 
     mockRequireAdmin.mockResolvedValue({ ok: true });
     const throwing = saAdminRoute(async () => {
       throw new SocialAutoApiError(500, "boom");
     });
-    const res2 = await throwing(
-      new NextRequest("https://x"), { params: Promise.resolve({}) });
+    const res2 = await throwing(new NextRequest("https://x"), { params: Promise.resolve({}) });
     expect(res2.status).toBe(502);
+  });
+});
+
+describe("socialauto jwtExpiryMs fallback", () => {
+  it("malformed access_token falls back to default TTL and still works", async () => {
+    mockGetConfig.mockResolvedValue(CONFIGURED);
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ access_token: "not-a-real-jwt" }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const { cancelQueueItem } = await loadLib();
+    const r = await cancelQueueItem("q-malformed");
+    expect(r.ok).toBe(true);
+    // Second call reuses the cached (fallback-TTL) token — no second login.
+    mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const r2 = await cancelQueueItem("q-malformed-2");
+    expect(r2.ok).toBe(true);
+    const logins = mockFetch.mock.calls.filter(([u]) => String(u).includes("/auth/login"));
+    expect(logins).toHaveLength(1);
   });
 });

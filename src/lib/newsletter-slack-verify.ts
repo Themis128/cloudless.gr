@@ -68,8 +68,10 @@ export async function verifyNewsletterSlackRequest(
     if (!timingSafeEqual(sigBuffer, expectedBuffer)) {
       return { ok: false, reason: "Signature mismatch" };
     }
+    /* v8 ignore start -- unreachable: lengths are equal-checked above; Buffer.from(utf8) cannot throw (newsletter slack verify) */
   } catch {
     return { ok: false, reason: "Signature comparison failed" };
+    /* v8 ignore stop -- lib-newsletter-slack-verify */
   }
 
   if (isReplay(signature)) {

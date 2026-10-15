@@ -76,6 +76,16 @@ describe("Blog API dual-run fallbacks", () => {
     expect(response.headers.get("x-blog-source")).toBe("static");
   });
 
+  it("GET /api/blog/posts falls back to static when CMS returns empty", async () => {
+    isAppFlowyConfiguredMock.mockResolvedValue(true);
+    getBlogPostsWithSourceMock.mockResolvedValueOnce({ posts: [], source: "appflowy" });
+    const { GET } = await import("@/app/api/blog/posts/route");
+    const response = await GET();
+    const data = await response.json();
+    expect(data.source).toBe("static");
+    expect(data.fallbackReason).toBe("cms-empty");
+  });
+
   it("GET /api/blog/[slug] falls back to static when blog-source fetch throws", async () => {
     isAppFlowyConfiguredMock.mockResolvedValue(true);
     getBlogPostBySlugMock.mockRejectedValueOnce(new Error("cms timeout"));

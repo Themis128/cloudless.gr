@@ -145,6 +145,16 @@ describe("GET /api/cron/postiz-sync", () => {
     const res = await postizSync(req(SYNC));
     expect(res.status).toBe(200);
   });
+
+  it("swallows notifyPostErrored failures on ERROR posts", async () => {
+    postiz.listPosts.mockResolvedValue([{ id: "p2", state: "ERROR" }]);
+    calendar.getCalendarItems.mockResolvedValue([
+      { id: "i2", status: "scheduled", postizPostIds: ["p2"] },
+    ]);
+    slack.notifyPostErrored.mockRejectedValue(new Error("slack dead"));
+    const res = await postizSync(req(SYNC));
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("GET /api/cron/email-digest", () => {

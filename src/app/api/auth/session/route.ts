@@ -91,9 +91,11 @@ function getHttpAuthDbFallback(): AuthDatabase | null {
         const allResult = await this.all<T>();
         if (!allResult.results.length) return null;
         const row = allResult.results[0];
+        /* v8 ignore start -- dead in this module: auth-d1 callers always call first() without a column selector */
         if (col) {
           return ((row as Record<string, unknown>)[col] ?? null) as T;
         }
+        /* v8 ignore stop -- app-api-auth-session */
         return row as T;
       },
     };

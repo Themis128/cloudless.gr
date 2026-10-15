@@ -300,7 +300,9 @@ describe("CartSlideOver", () => {
 
   it("clears the cart and redirects on a successful checkout", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/x" }), { status: 200 })
+      new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/x" }), {
+        status: 200,
+      })
     );
     const { container } = render(
       <Wrapper>
@@ -316,9 +318,11 @@ describe("CartSlideOver", () => {
   });
 
   it("surfaces the API error when checkout fails", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 })
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 })
+      );
     const { container } = render(
       <Wrapper>
         <AddToCartButton product={mockProduct} />
@@ -606,10 +610,9 @@ describe("StoreGrid", () => {
 
     const addButtons = within(container).getAllByText("Add to Cart");
     for (const btn of addButtons) {
-      expect(
-        btn.className.includes("min-h-11"),
-        "Add to Cart button missing min-h-11 (44px)"
-      ).toBe(true);
+      expect(btn.className.includes("min-h-11"), "Add to Cart button missing min-h-11 (44px)").toBe(
+        true
+      );
     }
   });
 
@@ -625,6 +628,31 @@ describe("StoreGrid", () => {
       expect(btn.className.includes("active:"), "Add to Cart button missing active: state").toBe(
         true
       );
+    }
+  });
+
+  it("treats an authoritative empty hits list as no results (no local fallback)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ query: "audit", source: "meilisearch", hits: [] }),
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      const { container } = render(
+        <Wrapper>
+          <StoreGrid />
+        </Wrapper>
+      );
+      const view = within(container);
+      const search = container.querySelector('input[type="text"]')!;
+      fireEvent.change(search, { target: { value: "audit" } });
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(view.getByText("No products match your search.")).toBeTruthy()
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 });
@@ -713,7 +741,7 @@ describe("StoreGrid tails", () => {
     );
     const card = container.querySelector('[data-testid="product-card"]')!;
     fireEvent.mouseEnter(card);
-    const includesBtn = card.querySelector('button[aria-expanded]')!;
+    const includesBtn = card.querySelector("button[aria-expanded]")!;
     expect(includesBtn.getAttribute("aria-expanded")).toBe("true");
     expect(includesBtn.textContent).toBe("Hide");
     fireEvent.mouseLeave(card);
@@ -734,9 +762,7 @@ describe("StoreGrid tails", () => {
       (b) => b.textContent === "Add to Cart"
     )!;
     fireEvent.click(addBtn);
-    await waitFor(() =>
-      expect(localStorage.getItem("cloudless-cart") ?? "").toContain('"id"')
-    );
+    await waitFor(() => expect(localStorage.getItem("cloudless-cart") ?? "").toContain('"id"'));
   });
 
   it("authoritative empty semantic result → empty state → Clear filters resets", async () => {
@@ -798,11 +824,7 @@ describe("CartSlideOver — checkout tails", () => {
     fireEvent.click(view.getByText("Subscribe"));
     fireEvent.click(view.getByText("Add to Cart"));
     fireEvent.click(view.getByText("Checkout"));
-    await waitFor(() =>
-      expect(
-        view.getByText(/can't be purchased together/i)
-      ).toBeTruthy()
-    );
+    await waitFor(() => expect(view.getByText(/can't be purchased together/i)).toBeTruthy());
   });
 
   it("surfaces the API error message when checkout fails", async () => {
@@ -825,9 +847,7 @@ describe("CartSlideOver — checkout tails", () => {
   });
 
   it("shows the generic error when checkout throws", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockRejectedValue(new Error("offline"));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
     const { container } = render(
       <Wrapper>
         <AddToCartButton product={mockProduct} />
@@ -858,5 +878,32 @@ describe("CartSlideOver — checkout tails", () => {
     expect(view.getByText("Cart (1)")).toBeTruthy();
     fireEvent.click(view.getByText("-"));
     expect(view.getByText("Your cart is empty")).toBeTruthy();
+  });
+});
+
+describe("CartSlideOver — mixed cart", () => {
+  it("rejects checkout when the cart mixes subscription and one-time items", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <AddToCartButton product={mockRecurringProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+    fireEvent.click(view.getAllByText("Add to Cart")[0]);
+    fireEvent.click(view.getByText("Subscribe"));
+    expect(view.getByText("Cart (2)")).toBeTruthy();
+
+    fireEvent.click(view.getByText("Checkout"));
+    await waitFor(() =>
+      expect(
+        view.getByText(/Subscriptions and one-time items can't be purchased together/)
+      ).toBeTruthy()
+    );
+    // The guard must fire before any network call is attempted.
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

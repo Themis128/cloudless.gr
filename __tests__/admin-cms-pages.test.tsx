@@ -189,7 +189,10 @@ describe.each(SPECS)("cms $name — CRUD", (spec) => {
   beforeEach(() => {
     routes = { [spec.route]: { [spec.listKey]: [spec.item] } };
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -264,7 +267,10 @@ describe.each(SPECS)("cms $name — CRUD", (spec) => {
   });
 
   it("confirm-cancel skips delete", async () => {
-    vi.stubGlobal("confirm", vi.fn(() => false));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => false)
+    );
     let c: HTMLElement | undefined;
     await act(async () => {
       c = render(<spec.Page />).container;
@@ -293,7 +299,10 @@ describe("cms services — delete failure tail", () => {
       "/api/admin/appflowy/services?pageId=s1": okJson({ error: "gone" }, 500),
     };
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -336,7 +345,10 @@ describe("cms case-studies — field tails", () => {
       },
     };
     fetchWithAuthMock.mockClear();
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     cleanup();
@@ -398,5 +410,66 @@ describe("cms case-studies — field tails", () => {
     await click(screen.getByText("Archive"));
     await flush();
     expect(c.textContent).toContain("HTTP 500");
+  });
+});
+
+describe("testimonials — residual branches", () => {
+  const ROUTE = "/api/admin/appflowy/testimonials";
+  const item = {
+    id: "t1",
+    name: "Nikos",
+    quote: "Great work",
+    company: "Acme",
+    role: "CTO",
+    rating: 5,
+    featured: true,
+    published: true,
+  };
+
+  beforeEach(() => {
+    routes = { [ROUTE]: { testimonials: [item] } };
+    fetchWithAuthMock.mockClear();
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true)
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("archive failure surfaces the delete error", async () => {
+    let c!: HTMLElement;
+    await act(async () => {
+      c = render(<AdminTestimonialsPage />).container;
+    });
+    routes[`${ROUTE}?pageId=t1`] = okJson({ error: "boom" }, 500);
+    await click(screen.getByText("Archive"));
+    await flush();
+    expect(c.textContent).toContain("HTTP 500");
+  });
+
+  it("featured/published checkboxes toggle the form state", async () => {
+    let c!: HTMLElement;
+    await act(async () => {
+      c = render(<AdminTestimonialsPage />).container;
+    });
+    await click(screen.getByText("Edit"));
+    const checks = c.querySelectorAll("input[type='checkbox']");
+    expect(checks.length).toBe(2);
+    // featured + published start checked (item has both true)
+    await act(async () => {
+      fireEvent.click(checks[0]);
+      fireEvent.click(checks[1]);
+    });
+    await click(screen.getByText("Save Changes"));
+    const patch = fetchWithAuthMock.mock.calls.find(
+      ([u, i]) => String(u).startsWith(ROUTE) && i?.method === "PATCH"
+    );
+    const body = JSON.parse(String(patch![1]!.body));
+    expect(body.featured).toBe(false);
+    expect(body.published).toBe(false);
   });
 });

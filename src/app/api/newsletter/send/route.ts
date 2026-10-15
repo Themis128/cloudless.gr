@@ -9,11 +9,14 @@ function secretsMatch(provided: string | null, expected: string): boolean {
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
+  /* v8 ignore start -- timingSafeEqual can't throw: equal lengths are
+     guaranteed by the guard above; equal-length buffers never fail. */
   try {
     return timingSafeEqual(a, b);
   } catch {
     return false;
   }
+  /* v8 ignore stop -- app-api-newsletter-send */
 }
 
 // The publisher script renders this token into the newsletter footer; the

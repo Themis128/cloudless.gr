@@ -34,10 +34,7 @@ function resetD1Mocks() {
   d1IsAdminMock.mockReset();
 }
 
-function mockD1User(
-  user: { id: string; email: string; name?: string | null },
-  admin = false,
-) {
+function mockD1User(user: { id: string; email: string; name?: string | null }, admin = false) {
   getAuthDbFromEnvMock.mockReturnValue({ prepare: vi.fn() });
   getUserBySessionMock.mockResolvedValue({
     id: user.id,
@@ -149,7 +146,7 @@ describe("api-auth.ts (D1-only)", () => {
         isAdmin({
           sub: "u",
           realm_access: { roles: ["offline_access", "admin"] },
-        } as never),
+        } as never)
       ).toBe(false);
     });
 
@@ -159,7 +156,7 @@ describe("api-auth.ts (D1-only)", () => {
         isAdmin({
           sub: "u",
           "cognito:groups": ["users", "admin"],
-        } as never),
+        } as never)
       ).toBe(false);
     });
   });
@@ -308,4 +305,24 @@ describe("requireAuth E2E_ADMIN_TOKEN bypass (test-only)", () => {
     delete process.env.NEXT_PUBLIC_E2E;
     delete process.env.E2E_ADMIN_TOKEN;
   });
+});
+it("bypasses auth for /api/checkout when NEXT_PUBLIC_E2E=1", async () => {
+  vi.resetModules();
+  process.env.NEXT_PUBLIC_E2E = "1";
+  const { requireAuth } = await import("@/lib/api-auth");
+  const req = new NextRequest("http://localhost/api/checkout", { method: "GET" });
+  const result = await requireAuth(req);
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.user.sub).toBe("e2e-test");
+  delete process.env.NEXT_PUBLIC_E2E;
+});
+
+it("does NOT bypass /api/checkout for other methods", async () => {
+  vi.resetModules();
+  process.env.NEXT_PUBLIC_E2E = "1";
+  const { requireAuth } = await import("@/lib/api-auth");
+  const req = new NextRequest("http://localhost/api/checkout", { method: "DELETE" });
+  const result = await requireAuth(req);
+  expect(result.ok).toBe(false);
+  delete process.env.NEXT_PUBLIC_E2E;
 });

@@ -131,6 +131,17 @@ describe("campaigns routes", () => {
     ).toBe(500);
   });
 
+  it("meta/insights: 503 when Meta Ads is not configured", async () => {
+    metaAds.isMetaAdsConfigured.mockResolvedValue(false);
+    const { GET } = await import(
+      "@/app/api/admin/campaigns/meta/insights/route"
+    );
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/campaigns/meta/insights")
+    );
+    expect(res.status).toBe(503);
+  });
+
   it("meta/insights: passes date range", async () => {
     metaAds.isMetaAdsConfigured.mockResolvedValue(true);
     metaAds.getMetaInsights.mockResolvedValue({ spend: 10 });

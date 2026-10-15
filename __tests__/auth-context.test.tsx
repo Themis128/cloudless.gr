@@ -89,6 +89,17 @@ describe("AuthContext", () => {
     expect(screen.getByTestId("loading").textContent).toBe("false");
   });
 
+  it("keeps the base user when profile enrichment fetch rejects", async () => {
+    fetchMock
+      .mockResolvedValueOnce(okSession({ id: "u8", email: "a@b.com" }))
+      .mockRejectedValueOnce(new Error("profile api down")); // /api/user/profile
+    renderAuth();
+    await flush();
+    // enrichment failed → base session user retained, no crash
+    expect(screen.getByTestId("user").textContent).toBe("a@b.com");
+    expect(screen.getByTestId("loading").textContent).toBe("false");
+  });
+
   it("treats non-ok session and non-JSON bodies as logged out", async () => {
     fetchMock.mockResolvedValueOnce(jsonRes({}, 401));
     const { unmount } = renderAuth();

@@ -49,6 +49,14 @@ async function post(body: unknown, raw = false) {
   return { res, data: (await res.json()) as Record<string, unknown> };
 }
 
+describe("GET /api/playbook-lead", () => {
+  it("returns 405 — POST only", async () => {
+    const { GET } = await import("@/app/api/playbook-lead/route");
+    const res = await GET();
+    expect(res.status).toBe(405);
+  });
+});
+
 describe("POST /api/playbook-lead", () => {
   beforeEach(() => {
     vi.clearAllMocks();

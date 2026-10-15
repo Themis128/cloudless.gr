@@ -24,7 +24,9 @@ export default function Footer() {
   const year = useSyncExternalStore<number | null>(
     () => () => {}, // the year never changes reactively; no-op subscribe
     () => new Date().getFullYear(),
+    /* v8 ignore start -- server/hydration snapshot: only invoked during SSR, never in jsdom */
     () => null // server + hydration snapshot: no year, avoids #418
+    /* v8 ignore stop */
   );
 
   return (

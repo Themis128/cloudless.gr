@@ -38,7 +38,10 @@ const fetchMock = vi.mocked(fetchWithAuth);
 const useAuthMock = vi.mocked(useAuth);
 const okJson = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const flush = () => act(async () => { await Promise.resolve(); });
+const flush = () =>
+  act(async () => {
+    await Promise.resolve();
+  });
 
 const user = { email: "u@x.dev", name: "Pat", preferences: {} };
 
@@ -197,5 +200,27 @@ describe("dashboard consultations page", () => {
     const { container: c2 } = render(<ConsultationsPage />);
     await flush();
     expect(c2.textContent).toMatch(/not configured|configured/i);
+  });
+});
+
+describe("dashboard pages — unauthenticated user", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthMock.mockReturnValue({ user: null, isLoading: false } as never);
+  });
+  afterEach(() => cleanup());
+
+  it("consultations page skips the fetch and renders empty state", async () => {
+    const { container } = render(<ConsultationsPage />);
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(container).toBeTruthy();
+  });
+
+  it("purchases page skips the fetch and renders empty state", async () => {
+    const { container } = render(<PurchasesPage />);
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(container).toBeTruthy();
   });
 });

@@ -116,6 +116,21 @@ describe("blog", () => {
     expect((await res3.json())).toHaveLength(3);
     expect(res3.headers.get("x-blog-source")).toBe("static");
   });
+
+  it("applies ?limit on the AppFlowy path and on the error-fallback path", async () => {
+    libs.isAppFlowyConfigured.mockResolvedValue(true);
+    libs.getBlogPostsWithSource.mockResolvedValue({
+      posts: [{ slug: "a" }, { slug: "b" }, { slug: "c" }],
+      source: "appflowy",
+    });
+    const res = await blogGet(new NextRequest("http://x/api/blog?limit=1"));
+    expect(await res.json()).toEqual([{ slug: "a" }]);
+
+    libs.getBlogPostsWithSource.mockRejectedValue(new Error("af down"));
+    const res2 = await blogGet(new NextRequest("http://x/api/blog?limit=1"));
+    expect((await res2.json())).toHaveLength(1);
+    expect(res2.headers.get("x-blog-source")).toBe("static");
+  });
 });
 
 describe("chat-ai", () => {
@@ -212,6 +227,14 @@ describe("comfyui", () => {
 });
 
 describe("config", () => {
+  it("returns config without auth in non-production Node env", async () => {
+    // covers isWorkersEnvironment() — caches undefined here
+    vi.stubEnv("NODE_ENV", "test");
+    const res = await configGet(new NextRequest("http://x/api/config"));
+    expect(res.status).toBe(200);
+  });
+
+
   it("prod-auth gate; key lookup; masked secrets; full config", async () => {
     const prevEnv = process.env.NODE_ENV;
     const saved: Record<string, string | undefined> = {};

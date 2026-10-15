@@ -143,6 +143,20 @@ describe("POST /api/newsletter-slack/events", () => {
     expect(JSON.parse(posts[0][1].body as string).channel).toBe("C1");
   });
 
+  it("warns when views.publish returns ok:false and swallows postMessage failures", async () => {
+    // views.publish → { ok: false } hits the warn arm; postMessage fetch
+    // rejection hits the .catch arm.
+    mockFetch.mockImplementation((url: unknown) =>
+      String(url).includes("views.publish")
+        ? Promise.resolve(new Response(JSON.stringify({ ok: false, error: "bad_view" }), { status: 200 }))
+        : Promise.reject(new Error("net down"))
+    );
+    await POST(eventReq({ type: "event_callback", event: { type: "app_home_opened", user: "U1" } }));
+    await POST(eventReq({ type: "event_callback", event: { type: "app_mention", user: "U1", channel: "C1" } }));
+    await flush();
+    expect(mockFetch).toHaveBeenCalled();
+  });
+
   it("ignores bot loopbacks, channel messages, and unknown types", async () => {
     await POST(eventReq({ type: "event_callback", event: { type: "app_mention", bot_id: "B1", channel: "C1" } }));
     await POST(eventReq({ type: "event_callback", event: { type: "message", user: "U1", channel: "C_public" } }));

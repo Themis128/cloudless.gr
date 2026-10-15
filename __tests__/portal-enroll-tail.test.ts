@@ -82,6 +82,16 @@ describe("POST /api/portal/enroll tails", () => {
     });
   });
 
+  it("returns 400 when the authed user has no email claim", async () => {
+    mockRequireVerifiedAuth.mockResolvedValue({
+      ok: true,
+      user: { email: undefined, email_verified: true },
+    });
+    const { POST } = await import("@/app/api/portal/enroll/route");
+    const res = await POST(req({ plan: "bundle" }));
+    expect(res.status).toBe(400);
+  });
+
   it("sanitizes forbidden names and strips control chars from notes", async () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
     const res = await POST(

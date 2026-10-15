@@ -59,8 +59,11 @@ function makeRequest(body: unknown, token = TOKEN) {
   return { request, params: Promise.resolve({ token }) };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  // real in-memory limiter — reset so per-test request counts stay isolated
+  const { resetRateLimitStore } = await import("@/lib/rate-limit");
+  resetRateLimitStore();
   mockReadPortals.mockResolvedValue([makePortal()]);
   mockWritePortals.mockResolvedValue(undefined);
   mockSlackPost.mockResolvedValue(true);
@@ -87,6 +90,17 @@ describe("POST /api/portal/[token]/deliverables", () => {
       const res = await POST(request, { params });
       expect(res.status).toBe(400);
     }
+  });
+
+  it("rejects an unparseable JSON body with 400", async () => {
+    const request = new NextRequest(`http://localhost/api/portal/${TOKEN}/deliverables`, {
+      method: "POST",
+      body: "{broken",
+      headers: { "Content-Type": "application/json" },
+    });
+    const res = await POST(request, { params: Promise.resolve({ token: TOKEN }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid request body");
   });
 
   it("returns 404 for unknown portals", async () => {

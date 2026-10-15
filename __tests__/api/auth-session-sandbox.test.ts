@@ -38,9 +38,7 @@ vi.mock("@/lib/auth-d1", async (importOriginal) => {
         : { user: { email: "u@x" }, session: { expires_at: "2099" } }
     ),
     createUser: vi.fn(async () =>
-      hoisted.createError
-        ? { error: hoisted.createError }
-        : { user: { id: "u1", email: "u@x" } }
+      hoisted.createError ? { error: hoisted.createError } : { user: { id: "u1", email: "u@x" } }
     ),
   };
 });
@@ -59,9 +57,7 @@ function d1Fetch(routes: { sql: RegExp; results: unknown[] }[]) {
     return new Response(
       JSON.stringify({
         success: true,
-        result: [
-          { results: hit?.results ?? [], success: true, meta: { changes: 1 } },
-        ],
+        result: [{ results: hit?.results ?? [], success: true, meta: { changes: 1 } }],
       }),
       { status: 200, headers: { "content-type": "application/json" } }
     );
@@ -95,9 +91,7 @@ describe("GET /api/auth/session", () => {
 
   it("clears the cookie when the session is gone", async () => {
     useHttpFallback([{ sql: /FROM session/, results: [] }]);
-    const res = await GET(
-      new NextRequest(SESSION, { headers: { cookie: "session_token=abc" } })
-    );
+    const res = await GET(new NextRequest(SESSION, { headers: { cookie: "session_token=abc" } }));
     expect((await res.json()).user).toBeNull();
     expect(res.headers.get("set-cookie")).toContain("session_token=");
   });
@@ -107,9 +101,7 @@ describe("GET /api/auth/session", () => {
       { sql: /FROM session/, results: [{ user_id: "u1" }] },
       {
         sql: /FROM user WHERE id/,
-        results: [
-          { id: "u1", email: "e@x", name: "N", company: "C", phone: "P" },
-        ],
+        results: [{ id: "u1", email: "e@x", name: "N", company: "C", phone: "P" }],
       },
       { sql: /FROM user_role/, results: [{ role: "admin" }] },
     ]);
@@ -126,10 +118,48 @@ describe("GET /api/auth/session", () => {
       "fetch",
       vi.fn(async () => new Response("boom", { status: 500 }))
     );
-    const res = await GET(
-      new NextRequest(SESSION, { headers: { cookie: "session_token=abc" } })
-    );
+    const res = await GET(new NextRequest(SESSION, { headers: { cookie: "session_token=abc" } }));
     expect((await res.json()).user).toBeNull();
+  });
+
+  it("returns user:null when D1 responds with a valid-JSON error body", async () => {
+    useHttpFallback([]);
+    // res.ok=false but body parses → the fallback stmt hits its own
+    // success:false guard rather than a thrown res.json() parse error.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: false, errors: [{ code: 7500 }] }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          })
+      )
+    );
+    const res = await GET(new NextRequest(SESSION, { headers: { cookie: "session_token=abc" } }));
+    expect((await res.json()).user).toBeNull();
+  });
+
+  it("DELETE still clears the cookie when the D1 run() call fails", async () => {
+    useHttpFallback([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: false }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
+      )
+    );
+    const res = await DELETE(
+      new NextRequest(SESSION, {
+        method: "DELETE",
+        headers: { cookie: "session_token=abc" },
+      })
+    );
+    expect((await res.json()).ok).toBe(true);
+    expect(res.headers.get("set-cookie")).toContain("session_token=");
   });
 
   it("HEAD returns a bare 200", async () => {
@@ -209,11 +239,15 @@ describe("/api/auth/sandbox", () => {
     expect((await post({ action: "nope" })).status).toBe(400);
   });
 
+  it("test-register: missing password → 400", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const res = await post({ action: "test-register", payload: { email: "a@b.c" } });
+    expect(res.status).toBe(400);
+  });
+
   it("test-password returns the strength result with masked pw", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    const j = await (
-      await post({ action: "test-password", payload: { password: "weak" } })
-    ).json();
+    const j = await (await post({ action: "test-password", payload: { password: "weak" } })).json();
     expect(j.action).toBe("test-password");
     expect(j.password).toBe("***");
     expect(j.valid).toBe(false);
@@ -221,9 +255,7 @@ describe("/api/auth/sandbox", () => {
 
   it("test-login: missing fields → 400, bad creds → 401, ok → session", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    expect(
-      (await post({ action: "test-login", payload: { email: "a@b" } })).status
-    ).toBe(400);
+    expect((await post({ action: "test-login", payload: { email: "a@b" } })).status).toBe(400);
 
     hoisted.authError = "Invalid credentials";
     expect(

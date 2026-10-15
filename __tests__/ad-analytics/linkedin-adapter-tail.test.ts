@@ -14,8 +14,7 @@ vi.stubGlobal("fetch", libs.fetch);
 import { linkedinAdapter } from "@/lib/ad-analytics/adapters/linkedin";
 
 const ok = (body: unknown) => ({ ok: true, json: async () => body, status: 200 }) as Response;
-const bad = (status = 500) =>
-  ({ ok: false, status, text: async () => "err body" }) as Response;
+const bad = (status = 500) => ({ ok: false, status, text: async () => "err body" }) as Response;
 
 /** Dispatch fake fetch by URL substring. */
 function urlRouter(map: Array<[string, () => Promise<Response> | Response]>) {
@@ -81,8 +80,24 @@ describe("pullMetrics enrichment", () => {
             ],
           }),
       ],
-      ["creatives?ids=", () => ok({ results: { "urn:li:sponsoredCreative:99": { name: "Hero" } } })],
-      ["pivot=CAMPAIGN", () => ok({ elements: [{ impressions: 10, clicks: 2, costInLocalCurrency: "5.5", externalWebsiteConversions: 1 }] })],
+      [
+        "creatives?ids=",
+        () => ok({ results: { "urn:li:sponsoredCreative:99": { name: "Hero" } } }),
+      ],
+      [
+        "pivot=CAMPAIGN",
+        () =>
+          ok({
+            elements: [
+              {
+                impressions: 10,
+                clicks: 2,
+                costInLocalCurrency: "5.5",
+                externalWebsiteConversions: 1,
+              },
+            ],
+          }),
+      ],
     ]);
     const rows = await linkedinAdapter.pullMetrics({
       accountId: "a",
@@ -129,9 +144,7 @@ describe("pullMetrics enrichment", () => {
         "pivot=CREATIVE",
         () =>
           ok({
-            elements: [
-              { impressions: 50, clicks: 3, pivotValues: ["no-colon-urn"] },
-            ],
+            elements: [{ impressions: 50, clicks: 3, pivotValues: ["no-colon-urn"] }],
           }),
       ],
       ["creatives?ids=", () => Promise.reject(new Error("names down"))],
@@ -144,6 +157,31 @@ describe("pullMetrics enrichment", () => {
     });
     expect(rows[0].impressions).toBe(0);
     expect(rows[0].creativeLeaderboard![0].label).toBe("Creative no-colon-urn");
+  });
+
+  it("sorts the creative leaderboard by clicks descending", async () => {
+    urlRouter([
+      ["pivot=CAMPAIGN", () => ok({ elements: [{ impressions: 10, clicks: 2 }] })],
+      [
+        "pivot=CREATIVE",
+        () =>
+          ok({
+            elements: [
+              { impressions: 50, clicks: 1, pivotValues: ["urn:li:sponsoredCreative:1"] },
+              { impressions: 50, clicks: 9, pivotValues: ["urn:li:sponsoredCreative:2"] },
+              { impressions: 50, clicks: 5, pivotValues: ["urn:li:sponsoredCreative:3"] },
+            ],
+          }),
+      ],
+      ["creatives?ids=", () => ok({ results: {} })],
+    ]);
+    const rows = await linkedinAdapter.pullMetrics({
+      accountId: "a",
+      campaignIds: ["c1"],
+      since,
+      until,
+    });
+    expect(rows[0].creativeLeaderboard!.map((c) => c.creativeId)).toEqual(["2", "3", "1"]);
   });
 });
 
@@ -261,9 +299,9 @@ describe("pullMetrics residual tails", () => {
       pivots: ["MEMBER_INDUSTRY"],
     });
     expect(rows[0].impressions).toBe(5);
-    expect(
-      rows[0].demographics?.industry ?? rows[0].demographicBuckets ?? []
-    ).toEqual(expect.anything());
+    expect(rows[0].demographics?.industry ?? rows[0].demographicBuckets ?? []).toEqual(
+      expect.anything()
+    );
   });
 
   it("resolves creative names from the elements-shaped response", async () => {
@@ -273,9 +311,7 @@ describe("pullMetrics residual tails", () => {
         "pivot=CREATIVE",
         () =>
           ok({
-            elements: [
-              { impressions: 90, clicks: 7, pivotValues: ["urn:li:sponsoredCreative:7"] },
-            ],
+            elements: [{ impressions: 90, clicks: 7, pivotValues: ["urn:li:sponsoredCreative:7"] }],
           }),
       ],
       [

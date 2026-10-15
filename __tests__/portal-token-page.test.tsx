@@ -51,31 +51,94 @@ const DATA = {
       name: "Kickoff",
       status: "completed",
       completedAt: new Date(Date.now() - 3 * 864e5).toISOString(),
-      comments: [{ id: "c1", author: "PM", text: "done", createdAt: new Date(Date.now() - 3600e3).toISOString() }],
+      comments: [
+        {
+          id: "c1",
+          author: "PM",
+          text: "done",
+          createdAt: new Date(Date.now() - 3600e3).toISOString(),
+        },
+      ],
     },
     { id: "s2", name: "Build", status: "in-progress", comments: [] },
     { id: "s3", name: "Blocked step", status: "blocked", comments: [] },
     { id: "s4", name: "Ship", status: "pending", comments: [] },
   ],
   deliverables: [
-    { id: "d1", title: "Design", url: "https://f.example/d", description: "figma", status: "in_review" },
+    {
+      id: "d1",
+      title: "Design",
+      url: "https://f.example/d",
+      description: "figma",
+      status: "in_review",
+    },
     { id: "d2", title: "Report", status: "approved", clientComment: "thanks" },
     { id: "d3", title: "Fix", status: "changes_requested", clientComment: "pls change" },
   ],
   paymentLinks: [
-    { id: "p1", label: "Deposit", url: "https://pay/x", amountCents: 5000, currency: "EUR", status: "open" },
+    {
+      id: "p1",
+      label: "Deposit",
+      url: "https://pay/x",
+      amountCents: 5000,
+      currency: "EUR",
+      status: "open",
+    },
     { id: "p2", label: "Balance", url: "https://pay/y", status: "paid" },
     { id: "p3", label: "Voided", url: "https://pay/z", status: "void" },
   ],
   projects: [{ id: "pr1", name: "Migration", status: "active", progress: 55 }],
   invoices: [
-    { id: "in_1234567890", number: "INV-1", amount: 50000, currency: "EUR", status: "paid", created: 1735689600, pdfUrl: "https://pdf/1" },
-    { id: "in_abcd", number: null, amount: 100, currency: "EUR", status: "paid", created: 1735689600, pdfUrl: null },
+    {
+      id: "in_1234567890",
+      number: "INV-1",
+      amount: 50000,
+      currency: "EUR",
+      status: "paid",
+      created: 1735689600,
+      pdfUrl: "https://pdf/1",
+    },
+    {
+      id: "in_abcd",
+      number: null,
+      amount: 100,
+      currency: "EUR",
+      status: "paid",
+      created: 1735689600,
+      pdfUrl: null,
+    },
   ],
   subscriptions: [
-    { id: "sub1", status: "active", planName: "Cloud Plan", amount: 9900, currency: "EUR", interval: "mo", currentPeriodEnd: 1767225600, cancelAtPeriodEnd: false },
-    { id: "sub2", status: "trialing", planName: "Trial", amount: 0, currency: "EUR", interval: "mo", currentPeriodEnd: 1767225600, cancelAtPeriodEnd: true },
-    { id: "sub3", status: "past_due", planName: "Old", amount: 500, currency: "EUR", interval: "mo", currentPeriodEnd: 1767225600, cancelAtPeriodEnd: false },
+    {
+      id: "sub1",
+      status: "active",
+      planName: "Cloud Plan",
+      amount: 9900,
+      currency: "EUR",
+      interval: "mo",
+      currentPeriodEnd: 1767225600,
+      cancelAtPeriodEnd: false,
+    },
+    {
+      id: "sub2",
+      status: "trialing",
+      planName: "Trial",
+      amount: 0,
+      currency: "EUR",
+      interval: "mo",
+      currentPeriodEnd: 1767225600,
+      cancelAtPeriodEnd: true,
+    },
+    {
+      id: "sub3",
+      status: "past_due",
+      planName: "Old",
+      amount: 500,
+      currency: "EUR",
+      interval: "mo",
+      currentPeriodEnd: 1767225600,
+      cancelAtPeriodEnd: false,
+    },
   ],
 };
 
@@ -137,7 +200,12 @@ describe("portal/[token] page — populated interactions", () => {
   it("step expand/collapse, comments render, reply posts", async () => {
     routes["GET /api/portal/tok1"] = DATA;
     routes["POST /api/portal/tok1/comments"] = okJson({
-      comment: { id: "c-new", author: "Client", text: "my reply", createdAt: new Date().toISOString() },
+      comment: {
+        id: "c-new",
+        author: "Client",
+        text: "my reply",
+        createdAt: new Date().toISOString(),
+      },
     });
     const c = await renderPage();
 
@@ -156,7 +224,9 @@ describe("portal/[token] page — populated interactions", () => {
     fireEvent.change(reply, { target: { value: "my reply" } });
     fireEvent.submit(reply.closest("form")!);
     await act(async () => {});
-    const postCall = fetchMock.mock.calls.find(([u, i]) => String(u).includes("comments") && i?.method === "POST");
+    const postCall = fetchMock.mock.calls.find(
+      ([u, i]) => String(u).includes("comments") && i?.method === "POST"
+    );
     expect(JSON.parse(String(postCall![1].body))).toMatchObject({ stepId: "s1", text: "my reply" });
     // onSent pushes into the step object + setExpanded(same-id) bails, so the
     // parent list doesn't re-render — collapse + re-expand shows the reply.
@@ -174,8 +244,13 @@ describe("portal/[token] page — populated interactions", () => {
 
     // approve
     await click(screen.getByText("Approve ✓"));
-    const approveCall = fetchMock.mock.calls.find(([u, i]) => String(u).includes("deliverables") && i?.method === "POST");
-    expect(JSON.parse(String(approveCall![1].body))).toMatchObject({ deliverableId: "d1", action: "approve" });
+    const approveCall = fetchMock.mock.calls.find(
+      ([u, i]) => String(u).includes("deliverables") && i?.method === "POST"
+    );
+    expect(JSON.parse(String(approveCall![1].body))).toMatchObject({
+      deliverableId: "d1",
+      action: "approve",
+    });
     // status updated → badge flips
     expect(c.textContent).not.toContain("Awaiting your review");
 
@@ -187,19 +262,34 @@ describe("portal/[token] page — populated interactions", () => {
     cleanup();
     const c2 = await renderPage();
     await click(screen.getByText("Request changes"));
-    const area = c2.querySelector("textarea[placeholder*='What would you like']") as HTMLTextAreaElement;
+    const area = c2.querySelector(
+      "textarea[placeholder*='What would you like']"
+    ) as HTMLTextAreaElement;
     fireEvent.change(area, { target: { value: "needs work" } });
     routes["POST /api/portal/tok1/deliverables"] = okJson({
-      deliverable: { id: "d9", title: "Doc", status: "changes_requested", clientComment: "needs work" },
+      deliverable: {
+        id: "d9",
+        title: "Doc",
+        status: "changes_requested",
+        clientComment: "needs work",
+      },
     });
     await click(screen.getByText("Send change request"));
-    const reqCall = fetchMock.mock.calls.filter(([u, i]) => String(u).includes("deliverables") && i?.method === "POST").pop();
-    expect(JSON.parse(String(reqCall![1].body))).toMatchObject({ action: "request_changes", comment: "needs work" });
+    const reqCall = fetchMock.mock.calls
+      .filter(([u, i]) => String(u).includes("deliverables") && i?.method === "POST")
+      .pop();
+    expect(JSON.parse(String(reqCall![1].body))).toMatchObject({
+      action: "request_changes",
+      comment: "needs work",
+    });
     expect(c2.textContent).toContain("Changes requested");
 
     // error path
     cleanup();
-    routes["GET /api/portal/tok1"] = { ...DATA, deliverables: [{ id: "d8", title: "D8", status: "in_review" }] };
+    routes["GET /api/portal/tok1"] = {
+      ...DATA,
+      deliverables: [{ id: "d8", title: "D8", status: "in_review" }],
+    };
     routes["POST /api/portal/tok1/deliverables"] = okJson({ error: "bad input" }, 400);
     const c3 = await renderPage();
     await click(screen.getByText("Approve ✓"));
@@ -209,5 +299,58 @@ describe("portal/[token] page — populated interactions", () => {
     routes["POST /api/portal/tok1/deliverables"] = () => Promise.reject(new Error("net"));
     await click(screen.getByText("Approve ✓"));
     expect(c3.textContent).toContain("Could not reach the server");
+  });
+});
+
+describe("portal/[token] — residual branches", () => {
+  beforeEach(() => {
+    routes = {};
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockClear();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("renders long-form date for comments older than a week", async () => {
+    routes["GET /api/portal/tok1"] = {
+      ...DATA,
+      steps: [
+        {
+          id: "s1",
+          name: "Kickoff",
+          status: "in-progress",
+          comments: [
+            {
+              id: "c-old",
+              author: "PM",
+              text: "ancient update",
+              createdAt: new Date(Date.now() - 10 * 864e5).toISOString(),
+            },
+          ],
+        },
+      ],
+    };
+    const c = await renderPage();
+    // in-progress step auto-expands → the ≥7d comment formats via toLocaleDateString
+    expect(c.textContent).toContain("ancient update");
+    const expected = new Date(Date.now() - 10 * 864e5).toLocaleDateString("en-IE", {
+      day: "numeric",
+      month: "short",
+      timeZone: "Europe/Athens",
+    });
+    expect(c.textContent).toContain(expected);
+  });
+
+  it("request-changes panel cancels back to the action buttons", async () => {
+    routes["GET /api/portal/tok1"] = DATA;
+    const c = await renderPage();
+    await click(screen.getByText("Request changes"));
+    expect(c.textContent).toContain("Send change request");
+    await click(screen.getByText("Cancel"));
+    expect(c.textContent).not.toContain("Send change request");
+    expect(c.textContent).toContain("Request changes");
   });
 });
