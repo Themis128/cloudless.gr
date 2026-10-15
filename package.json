@@ -8,6 +8,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "dev": "python3 scripts/dev-server.py",
     "dev:local-auth": "AUTH_DB_PREFER_LOCAL=1 python3 scripts/dev-server.py",
     "dev:raw": "AUTH_DB_PREFER_LOCAL=1 next dev -p 4000 --hostname localhost",
