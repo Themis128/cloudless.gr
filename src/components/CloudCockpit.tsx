@@ -62,23 +62,6 @@ const T = {
   danger: "#f87171",
 };
 
-function LiveDot({ color = T.ok }: { color?: string }) {
-  return (
-    <span style={{ position: "relative", display: "inline-flex", width: 6, height: 6 }}>
-      <span
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: color,
-          borderRadius: 999,
-          animation: "cc-ping 2.4s cubic-bezier(0,0,0.2,1) infinite",
-        }}
-      />
-      <span style={{ position: "absolute", inset: 0, background: color, borderRadius: 999 }} />
-    </span>
-  );
-}
-
 function TimeSeries() {
   const series = useMemo(
     () => ({
@@ -297,8 +280,6 @@ export default function CloudCockpit() {
         boxShadow: "var(--shadow-lg)",
       }}
     >
-      <style>{`@keyframes cc-ping { 75%,100%{ transform:scale(2.6);opacity:0 } }`}</style>
-
       {/* Top bar */}
       <div
         style={{
@@ -326,16 +307,16 @@ export default function CloudCockpit() {
           </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={chip}>Last 24h ▾</span>
+          <span style={chip}>Typical week</span>
           <span
             style={{
               ...chip,
-              background: "rgba(52,211,153,0.10)",
-              borderColor: "rgba(52,211,153,0.35)",
-              color: T.ok,
+              background: "rgba(34,211,230,0.10)",
+              borderColor: "rgba(34,211,230,0.35)",
+              color: T.accent,
             }}
           >
-            <LiveDot /> LIVE
+            REPRESENTATIVE
           </span>
         </div>
       </div>
@@ -358,27 +339,19 @@ export default function CloudCockpit() {
             unit: "ms",
             color: T.accent,
             sub: (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 10,
-                  color: T.ok,
-                }}
-              >
-                ▼ −18% · 24h
+              <span style={{ fontSize: 10, color: T.textDim }}>
+                edge → origin · api.cloudless.gr
               </span>
             ),
           },
           {
-            label: "Uptime · 30d",
-            value: "99.987",
+            label: "Uptime SLO",
+            value: "99.9",
             unit: "%",
             color: T.ok,
             sub: (
               <span style={{ fontSize: 10, color: T.textDim, fontVariantNumeric: "tabular-nums" }}>
-                SLO 99.9% · target met
+                contractual target
               </span>
             ),
           },
@@ -388,16 +361,8 @@ export default function CloudCockpit() {
             unit: "%",
             color: T.ok,
             sub: (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 10,
-                  color: T.ok,
-                }}
-              >
-                ▼ −40% · week
+              <span style={{ fontSize: 10, color: T.textDim }}>
+                typical week · representative
               </span>
             ),
           },
