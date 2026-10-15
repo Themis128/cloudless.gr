@@ -47,25 +47,34 @@ spec:
               set -e
               apk add --no-cache util-linux curl openssh-client jq >/dev/null 2>&1
 
-              # Read omv's config via nsenter
+              # Read omv's config via nsenter. NOTE: the ingress entries are
+              # indented ("  - hostname:"), so anchor on the dash, not col 0.
+              # `grep -c` prints the count AND exits 1 on zero matches, so
+              # `|| echo` appends a second line and breaks the comparison —
+              # head -n1 keeps the first value, defaults handle empties.
               OMV_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                grep -c '^- hostname:' /etc/cloudflared/config.yml || echo 0)
+                grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null | head -n1)
+              OMV_COUNT=${OMV_COUNT:-0}
 
-              # Read omv-ha's config over SSH (uses tailnet IP).
-              # The omv-ha SSH key is mounted from the existing
-              # cluster-alerts-secret (if it has SSH_PRIVATE_KEY)
-              # OR we can use ssh-keyscan + tailscale tailnet trust.
-              # Simplest: ssh from omv as root using its existing
-              # known_hosts to omv-ha (Tailnet IP 100.111.222.92).
+              # Read omv-ha's config over SSH. Path: LAN, not tailnet —
+              # omv-ha's tailnet session is unreliable (its IP re-mapped on
+              # re-auth, breaking the old root@100.111.222.92 hop). omv's root
+              # has an ed25519 key authorized for tbaltzakis@omv-ha; the file
+              # is root-owned there so read via passwordless sudo.
+              # Remote prints: count on success, "0\nUNREADABLE" on zero-match
+              # (head -n1 keeps the 0), "UNREADABLE" on grep/sudo error, "" on
+              # ssh failure — anything unreadable reports as unreachable.
               HA_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
                 ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
-                    -o ConnectTimeout=10 root@100.111.222.92 \
-                    "grep -c '^- hostname:' /etc/cloudflared/config.yml" 2>/dev/null || echo unreachable)
+                    -o ConnectTimeout=10 tbaltzakis@192.168.1.130 \
+                    "sudo -n grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null || echo UNREADABLE" \
+                    2>/dev/null | head -n1)
+              case "$HA_COUNT" in ""|UNREADABLE) HA_COUNT=unreachable;; esac
 
               echo "omv=$OMV_COUNT omv-ha=$HA_COUNT"
 
               if [ "$HA_COUNT" = "unreachable" ]; then
-                MSG=":warning: cloudflared-drift-check could not reach omv-ha over SSH (Tailnet 100.111.222.92). omv has $OMV_COUNT ingress hostnames; omv-ha unknown. Check tailnet + SSH config."
+                MSG=":warning: cloudflared-drift-check could not reach omv-ha over SSH (LAN 192.168.1.130). omv has $OMV_COUNT ingress hostnames; omv-ha unknown. Check omv-ha LAN + SSH config."
               elif [ "$OMV_COUNT" != "$HA_COUNT" ]; then
                 MSG=":rotating_light: cloudflared CONFIG DRIFT detected. omv has $OMV_COUNT ingress hostnames, omv-ha has $HA_COUNT. Public hostnames missing from one node will 404 ~50% of the time. Remediate: skills/cloudflare-tunnel-ops/SKILL.md \"Sync omv-ha to match omv\"."
               else
