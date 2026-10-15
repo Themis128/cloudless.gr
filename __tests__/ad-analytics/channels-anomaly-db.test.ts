@@ -226,6 +226,8 @@ describe("anomaly-log D1 paths", () => {
     });
     expect(db.prepare).toHaveBeenCalledTimes(1);
 
+    // re-enable the write budget so the insert actually runs (and fails)
+    libs.allowDiscretionaryD1Write.mockReturnValue(true);
     const badDb = fakeDb({ run: async () => Promise.reject(new Error("d1")) });
     libs.getAuthDbFromEnv.mockReturnValue(badDb);
     await expect(

@@ -152,6 +152,29 @@ describe("POST /api/analytics/track", () => {
     expect(trackEvent).toHaveBeenCalled();
   });
 
+  it("returns ok without tracking when the consent cookie is malformed", async () => {
+    const { POST } = await import("@/app/api/analytics/track/route");
+    const res = await POST(
+      post("http://x/api/analytics/track", { event: "page_view" }, { cookie: "cookieConsent=%%%bad" })
+    );
+    expect(res.status).toBe(200);
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("funnel event with no session_id normalizes to the noop sink", async () => {
+    const { POST } = await import("@/app/api/analytics/track/route");
+    const res = await POST(
+      post(
+        "http://x/api/analytics/track",
+        { event: "search_query" },
+        { cookie: `cookieConsent=${encodeURIComponent(JSON.stringify({ analytics: true }))}` }
+      )
+    );
+    const data = await res.json();
+    expect(data).toEqual({ ok: true, sink: "noop" });
+    expect(recordFunnel).not.toHaveBeenCalled();
+  });
+
   it("routes funnel events to the D1 funnel sink", async () => {
     const { POST } = await import("@/app/api/analytics/track/route");
     const cookie = `cookieConsent=${encodeURIComponent(JSON.stringify({ analytics: true }))}`;

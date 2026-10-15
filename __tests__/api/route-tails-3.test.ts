@@ -315,6 +315,31 @@ describe("integrations/status route", () => {
     expect(byId.postiz.message).toContain("pod/container may be down");
     expect(byId.espocrm.status).toBe("not_configured");
   });
+
+  it("survives a groups-probe rejection and reports an active Meta account", async () => {
+    m.getConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://postiz", POSTIZ_API_KEY: "pk",
+      META_AD_ACCOUNT_ID: "act_1", META_ACCESS_TOKEN: "mt", META_PIXEL_ID: "px",
+    });
+    m.normalizeMetaId.mockReturnValue("act_1");
+    m.metaGraphUrl.mockReturnValue("https://graph.facebook.com/v21/act_1");
+    mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/public/v1/groups")) throw new Error("reset");
+      if (url.includes("postiz")) return new Response("{}", { status: 200 });
+      if (url.includes("graph.facebook"))
+        return json({ account_status: 1, name: "Main Acct" });
+      return new Response("{}", { status: 200 });
+    });
+    const res = await statusRoute.GET(req("/x"));
+    const body = await res.json();
+    const byId = Object.fromEntries(body.integrations.map((i: { id: string }) => [i.id, i]));
+    expect(byId.postiz.status).toBe("configured");
+    expect(byId.meta).toMatchObject({
+      status: "configured",
+      message: "Ad account: Main Acct",
+    });
+  });
 });
 
 describe("esp32 route", () => {
@@ -672,6 +697,11 @@ describe("esp32 route — LAN guard tails", () => {
     const put = await mod.PUT(req("/x?device_id=d1", { method: "PUT", body: "{}" }));
     expect(put.status).toBe(404);
     expect((await put.json()).offline).toBe(true);
+    const post = await mod.POST(
+      req("/x?action=command&device_id=d1", { method: "POST", body: "{}" })
+    );
+    expect(post.status).toBe(404);
+    expect((await post.json()).offline).toBe(true);
   });
 
   it("malformed ALERT_API_URL is not treated as private — falls through to proxy", async () => {

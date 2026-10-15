@@ -198,7 +198,9 @@ export function resolvePivotLabel(pivot: DemographicPivot, urnOrId: string): str
       // Surface the raw id for now; a follow-up can wire LinkedIn's
       // `/standardizedTitles` lookup behind the same function signature.
       return `Title #${tail}`;
+    /* v8 ignore start -- unreachable: DemographicPivot is a 4-member union, all cased */
     default:
       return tail;
+    /* v8 ignore stop */
   }
 }

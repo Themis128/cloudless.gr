@@ -53,9 +53,11 @@ function formatDate(iso: string) {
       year: "numeric",
       timeZone: "Europe/Athens",
     });
+    /* v8 ignore start -- unreachable: toLocale* renders Invalid Date rather than throwing */
   } catch {
     return iso;
   }
+  /* v8 ignore stop */
 }
 
 function isOverdue(dueDate: string, status: string): boolean {

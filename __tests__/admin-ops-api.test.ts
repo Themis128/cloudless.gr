@@ -110,16 +110,67 @@ describe("GET /api/admin/ops/monitor", () => {
     vi.unstubAllGlobals();
     delete process.env.ALERT_API_URL;
   });
+
+  it("treats an unparseable ALERT_API_URL as public and forwards upstream", async () => {
+    adminOk();
+    process.env.ALERT_API_URL = ":::not a url";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("@/app/api/admin/ops/monitor/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
+    );
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    delete process.env.ALERT_API_URL;
+  });
 });
 
 // ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────
 
 const mockIsSentryConfigured = vi.fn();
 const mockUpdateIssueStatus = vi.fn();
+const mockGetUnresolvedIssues = vi.fn();
+const mockVerifySentryToken = vi.fn();
 vi.mock("@/lib/sentry", () => ({
   isSentryConfigured: (...a: unknown[]) => mockIsSentryConfigured(...a),
   updateIssueStatus: (...a: unknown[]) => mockUpdateIssueStatus(...a),
+  getUnresolvedIssues: (...a: unknown[]) => mockGetUnresolvedIssues(...a),
+  verifySentryToken: (...a: unknown[]) => mockVerifySentryToken(...a),
 }));
+
+describe("GET /api/admin/ops/errors", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  it("returns an empty list in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    adminOk();
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.issues).toEqual([]);
+    expect(j.total).toBe(0);
+  });
+
+  it("503s with auth_rejected when the Sentry token is rejected", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockGetUnresolvedIssues.mockResolvedValue(null);
+    mockVerifySentryToken.mockResolvedValue({ status: "rejected", message: "bad scope" });
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(503);
+    expect((await res.json()).code).toBe("auth_rejected");
+  });
+});
 
 describe("PUT /api/admin/ops/errors/[id]", () => {
   beforeEach(() => {
@@ -154,6 +205,38 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
       { params: Promise.resolve({ id: "abc" }) }
     );
     expect(res.status).toBe(503);
+  });
+
+  it("returns 400 for a malformed JSON body", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(true);
+    const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: "{not-json",
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Invalid JSON/);
+  });
+
+  it("returns 502 when the Sentry update fails", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockUpdateIssueStatus.mockResolvedValue(null);
+    const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: JSON.stringify({ status: "resolved" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
+    expect(res.status).toBe(502);
   });
 
   it("returns 400 for invalid status", async () => {

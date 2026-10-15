@@ -172,6 +172,15 @@ describe("GET /api/admin/campaigns/google", () => {
     expect(data.campaigns).toHaveLength(2);
     expect(data.total).toBe(2);
   });
+
+  it("returns 500 when the campaigns call fails", async () => {
+    googleConfiguredMock.mockResolvedValueOnce(true);
+    googleCampaignsMock.mockRejectedValueOnce(new Error("api down"));
+    const { GET } = await import("@/app/api/admin/campaigns/google/route");
+    const res = await GET(adminReq("http://localhost/api/admin/campaigns/google"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/Failed to fetch Google Ads/);
+  });
 });
 
 describe("GET /api/admin/campaigns/google/insights", () => {
@@ -229,6 +238,14 @@ describe("GET /api/admin/campaigns/linkedin", () => {
     expect(res.status).toBe(200);
     expect(data.campaigns).toHaveLength(1);
   });
+  it("returns 500 when the campaigns call fails", async () => {
+    linkedinConfiguredMock.mockResolvedValueOnce(true);
+    linkedinCampaignsMock.mockRejectedValueOnce(new Error("api down"));
+    const { GET } = await import("@/app/api/admin/campaigns/linkedin/route");
+    const res = await GET(adminReq("http://localhost/api/admin/campaigns/linkedin"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/Failed to fetch LinkedIn/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -261,6 +278,14 @@ describe("GET /api/admin/campaigns/tiktok", () => {
     expect(res.status).toBe(200);
     expect(data.campaigns).toHaveLength(1);
   });
+  it("returns 500 when the campaigns call fails", async () => {
+    tiktokConfiguredMock.mockResolvedValueOnce(true);
+    tiktokCampaignsMock.mockRejectedValueOnce(new Error("api down"));
+    const { GET } = await import("@/app/api/admin/campaigns/tiktok/route");
+    const res = await GET(adminReq("http://localhost/api/admin/campaigns/tiktok"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/Failed to fetch TikTok/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -292,5 +317,13 @@ describe("GET /api/admin/campaigns/x", () => {
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.campaigns).toHaveLength(1);
+  });
+  it("returns 500 when the campaigns call fails", async () => {
+    xConfiguredMock.mockResolvedValueOnce(true);
+    xCampaignsMock.mockRejectedValueOnce(new Error("api down"));
+    const { GET } = await import("@/app/api/admin/campaigns/x/route");
+    const res = await GET(adminReq("http://localhost/api/admin/campaigns/x"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/Failed to fetch X/);
   });
 });

@@ -31,13 +31,17 @@ function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 function toBodyInit(
   body: ArrayBuffer | ArrayBufferView | string | Blob | ReadableStream
 ): BodyInit {
+  /* v8 ignore start -- unreachable: the sole caller (put) always passes
+     bodyToBytes() output, which is a Uint8Array → isView branch only. */
   if (typeof body === "string") return body;
   if (body instanceof Blob) return body;
   if (typeof ReadableStream !== "undefined" && body instanceof ReadableStream) return body;
   if (body instanceof ArrayBuffer) return body;
+  /* v8 ignore stop */
   if (ArrayBuffer.isView(body)) {
     return bytesToArrayBuffer(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
   }
+  /* v8 ignore next -- unreachable: isView is exhaustive for the put() input */
   throw new TypeError("Unsupported R2 put body type");
 }
 

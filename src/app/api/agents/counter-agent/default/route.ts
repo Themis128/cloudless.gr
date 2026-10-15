@@ -50,7 +50,10 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
     }
+    /* v8 ignore start -- defensive: the switch body only does Map get/set
+       and NextResponse.json(number) — none of which can throw. */
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
+  /* v8 ignore stop */
 }

@@ -76,6 +76,7 @@ function getStatusFromName(name: string): AppFlowyBlogStatus | "" {
   if (/^\[Review\]\s/i.test(name)) return "In Review";
   if (/^\[Draft\]\s/i.test(name)) return "Draft";
   if (/^\[Archived\]\s/i.test(name)) return "Archived";
+  /* v8 ignore next -- unreachable: callers only pass names matching isEditorialPage's same 3 prefixes */
   return "";
 }
 

@@ -152,6 +152,7 @@ export class SlackClient {
       if (ok) return true;
       throw new Error("Slack webhook request failed");
     }
+    /* v8 ignore next -- unreachable: post() returns early when !token && !webhookUrl */
     return null;
   }
 

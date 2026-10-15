@@ -80,6 +80,16 @@ describe("GET /api/services", () => {
     expect(data.source).toBe("static");
     expect(data.fallbackReason).toBe("cms-error");
   });
+  it("static fallback with category filter when AppFlowy returns empty", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyServices.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/services/route");
+    const res = await GET(new Request("http://localhost/api/services?category=Marketing"));
+    const data = await res.json();
+    expect(data.source).toBe("static");
+    expect(data.fallbackReason).toBe("cms-empty");
+    expect(data.services).toHaveLength(1);
+  });
 });
 
 const mockGetAppFlowyFaqs = vi.fn();
@@ -165,6 +175,15 @@ describe("GET /api/faqs", () => {
     await GET(new Request("http://localhost/api/faqs?category=General"));
     expect(mockGetAppFlowyFaqsByCategory).toHaveBeenCalledWith("General", undefined);
   });
+  it("static locale filter when AppFlowy returns empty", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFaqs.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/faqs/route");
+    const res = await GET(new Request("http://localhost/api/faqs?locale=el"));
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+    expect(res.headers.get("x-cms-source")).toBe("static");
+  });
 });
 
 const mockGetAppFlowyTestimonials = vi.fn();
@@ -222,6 +241,17 @@ describe("GET /api/testimonials", () => {
     await GET(new Request("http://localhost/api/testimonials?featured=true"));
     expect(mockGetAppFlowyFeatured).toHaveBeenCalled();
   });
+
+  it("static featured fallback when AppFlowy featured returns empty", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFeatured.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/testimonials/route");
+    const res = await GET(new Request("http://localhost/api/testimonials?featured=true"));
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].featured).toBe(true);
+    expect(res.headers.get("x-cms-source")).toBe("static");
+  });
 });
 
 const mockGetAppFlowyCaseStudies = vi.fn();
@@ -264,6 +294,14 @@ describe("GET /api/case-studies", () => {
     expect(Array.isArray(data)).toBe(true);
     expect(data).toHaveLength(1);
     expect(res.headers.get("x-cms-source")).toBe("appflowy");
+  });
+  it("static featured fallback when AppFlowy featured returns empty", async () => {
+    mockIsAppFlowyCmsConfigured.mockResolvedValue(true);
+    mockGetAppFlowyFeaturedCs.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/case-studies/route");
+    const res = await GET(new Request("http://localhost/api/case-studies?featured=true"));
+    const data = await res.json();
+    expect(res.headers.get("x-cms-source")).toBe("static");
   });
 });
 
@@ -369,6 +407,16 @@ describe("GET /api/docs", () => {
     const data = await res.json();
     expect(data.source).toBe("static");
     expect(data.fallbackReason).toBe("cms-error");
+  });
+  it("returns cms-empty fallback when AppFlowy docs list is empty", async () => {
+    mockIsAppFlowyConfigured.mockResolvedValue(true);
+    mockGetAppFlowyDocs.mockResolvedValue([]);
+    mockGroupAppFlowyDocs.mockResolvedValue({});
+    const { GET } = await import("@/app/api/docs/route");
+    const res = await GET();
+    const data = await res.json();
+    expect(data.source).toBe("static");
+    expect(data.fallbackReason).toBe("cms-empty");
   });
 });
 

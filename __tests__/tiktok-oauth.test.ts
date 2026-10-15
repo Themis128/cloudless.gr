@@ -188,6 +188,27 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
     const body = await res.text();
     expect(body).toContain("Invalid auth_code");
   });
+
+  it("returns 503 HTML when TikTok app credentials are missing", async () => {
+    getConfigMock.mockResolvedValueOnce({ TIKTOK_APP_ID: "", TIKTOK_APP_SECRET: "" });
+    const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
+    const res = await GET(makeCallbackRequest({ auth_code: "c", state: "s" }));
+    expect(res.status).toBe(503);
+    expect(await res.text()).toContain("not configured");
+  });
+
+  it("returns 502 HTML when the token-exchange request throws", async () => {
+    const { createHmac } = await import("crypto");
+    const sig = createHmac("sha256", baseConfig.TIKTOK_APP_SECRET)
+      .update("n789")
+      .digest("hex")
+      .slice(0, 16);
+    fetchMock.mockRejectedValueOnce(new Error("dns fail"));
+    const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
+    const res = await GET(makeCallbackRequest({ auth_code: "c", state: `n789.${sig}` }));
+    expect(res.status).toBe(502);
+    expect(await res.text()).toContain("Token exchange request failed");
+  });
 });
 
 // ── verifyActiveCampaignToken ─────────────────────────────────────────────────

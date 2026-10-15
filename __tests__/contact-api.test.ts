@@ -254,7 +254,8 @@ describe("POST /api/contact — tail branches", () => {
 
   it("reads Meta click ids when marketing consent is set", async () => {
     const cookie =
-      "cookieConsent=" + encodeURIComponent(JSON.stringify({ marketing: true })) +
+      "cookieConsent=" +
+      encodeURIComponent(JSON.stringify({ marketing: true })) +
       "; _fbp=fb.1.x; _fbc=fb.1.y";
     const res = await POST2(post(validBody, { cookie }));
     expect(res.status).toBe(200);
@@ -328,5 +329,32 @@ describe("sendAdminEmail + catch branches", () => {
     });
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
     spy.mockRestore();
+  });
+});
+
+describe("turnstile enforcement", () => {
+  let POST: (request: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    const mod = await import("@/app/api/contact/route");
+    POST = mod.POST;
+  });
+
+  it("returns 403 when Turnstile is configured and the token is missing", async () => {
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "secret-key");
+    const request = new Request("http://localhost/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Themis",
+        email: "themis@test.com",
+        message: "I need an audit",
+      }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(403);
+    const data = await response.json();
+    expect(data.error).toContain("Turnstile");
+    vi.unstubAllEnvs();
   });
 });

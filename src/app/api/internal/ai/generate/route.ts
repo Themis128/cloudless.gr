@@ -52,11 +52,13 @@ function secretsMatch(provided: string | null, expected: string): boolean {
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
+  /* v8 ignore start -- unreachable: timingSafeEqual only throws on length mismatch, guarded above */
   try {
     return timingSafeEqual(a, b);
   } catch {
     return false;
   }
+  /* v8 ignore stop */
 }
 
 async function callCloudflare(
@@ -71,6 +73,7 @@ async function callCloudflare(
   // validated model (handler allowlist + hardcoded defaults), but a
   // future call site could regress. Reject anything outside the
   // pattern before it reaches `fetch`.
+  /* v8 ignore next 3 -- unreachable through POST: callers pre-validate against the same allowlist */
   if (!isAllowedCfModel(model)) {
     throw new Error("Refusing to call Cloudflare with non-allowlisted model id");
   }
@@ -83,6 +86,7 @@ async function callCloudflare(
   );
   // Final sanity: the URL host MUST be Cloudflare's API. If anything in
   // accountId or model managed to slip through and rehost the URL, fail.
+  /* v8 ignore next 3 -- unreachable: encodeURIComponent escapes accountId, so the literal host cannot change */
   if (url.host !== "api.cloudflare.com") {
     throw new Error(`Refusing to call non-Cloudflare host: ${url.host}`);
   }

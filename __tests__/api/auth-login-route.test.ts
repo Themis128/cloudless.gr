@@ -66,6 +66,18 @@ describe("POST /api/auth/login", () => {
     expect((await res.json()).error).toBe("Email is required");
   });
 
+  it("400 with generic message on a non-JSON body", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{not valid json",
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid request body");
+  });
+
   it("503 when the auth DB is not configured", async () => {
     mockGetDb.mockReturnValue(null);
     const res = await POST(req({ email: "a@b.c", password: "p" }));

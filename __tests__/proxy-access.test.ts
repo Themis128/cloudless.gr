@@ -180,7 +180,6 @@ describe("proxy dotfile probes", () => {
     expect(response.status).not.toBe(404);
   });
 
-
   it.each(["/.env", "/.git/config", "/v1/.env", "/.aws/credentials", "/foo/.hidden/x"])(
     "returns 404 for %s",
     async (path) => {
@@ -188,4 +187,27 @@ describe("proxy dotfile probes", () => {
       expect(response.status).toBe(404);
     }
   );
+});
+
+describe("proxy — non-locale protected paths and error fallback", () => {
+  beforeEach(() => {
+    mockGetToken.mockResolvedValue(null);
+    mockGetAuthDbFromEnv.mockReturnValue(null);
+    mockGetUserBySession.mockReset();
+    mockIsAdmin.mockReset();
+  });
+
+  it("redirects unauthenticated /dashboard.php (dot path skips locale rewrite) to bare /auth/login", async () => {
+    const response = await proxy(makeRequest("/dashboard.php"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/auth/login");
+    expect(response.headers.get("location")).toContain("redirect=%2Fdashboard.php");
+  });
+
+  it("falls back to login redirect when getToken throws", async () => {
+    mockGetToken.mockRejectedValue(new Error("jwt boom"));
+    const response = await proxy(makeRequest("/en/dashboard", "authjs.session-token=tok"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/en/auth/login");
+  });
 });

@@ -236,6 +236,13 @@ describe("GET /api/portal/me", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns status: none when the token carries no email claim", async () => {
+    const { GET } = await import("@/app/api/portal/me/route");
+    const res = await GET(authReq(PORTAL_ME_URL, { email: "" }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("none");
+  });
+
   it("returns status: none when user has no pending entry", async () => {
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL));
@@ -424,6 +431,36 @@ describe("POST /api/admin/pending-clients (approve)", () => {
     });
     expect(data.portal.steps.length).toBeGreaterThan(0);
     expect(typeof data.token).toBe("string");
+  });
+
+  it("uses custom stepNames and tolerates a welcome-email failure", async () => {
+    await seedPendingClients([
+      {
+        email: "steps@x.com",
+        name: "Steps",
+        plan: PLAN_CLOUD,
+        status: STATUS_WAITING,
+        submittedAt: new Date().toISOString(),
+      },
+    ]);
+    await writeJsonConfig(PORTALS_CONFIG_KEY, []);
+    mockSendEmail.mockRejectedValueOnce(new Error("smtp down"));
+    const { POST } = await import("@/app/api/admin/pending-clients/route");
+    const res = await POST(
+      authReq(PENDING_URL, {
+        method: "POST",
+        admin: true,
+        body: JSON.stringify({ email: "steps@x.com", stepNames: ["Kickoff", "Build"] }),
+      })
+    );
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.portal.steps.map((st: { name: string }) => st.name)).toEqual([
+      "Kickoff",
+      "Build",
+    ]);
+    // the notification failure is caught and logged, not propagated
+    await new Promise((r) => setTimeout(r, 0));
   });
 
   it("returns 409 when client already approved", async () => {

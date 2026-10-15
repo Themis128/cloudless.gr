@@ -74,7 +74,7 @@ describe("request envelope", () => {
     const { checkSlackRateLimit } = await import("@/lib/slack-rate-limit");
     (checkSlackRateLimit as ReturnType<typeof vi.fn>).mockReturnValueOnce(false);
     mockVerify.mockResolvedValue({ ok: true, body: "payload={}" });
-    expect((await POST(req({})) ).status).toBe(429);
+    expect((await POST(req({}))).status).toBe(429);
 
     const raw = () => new Request("http://x/", { method: "POST" });
     mockVerify.mockResolvedValue({ ok: true, body: "nopayload=1" });
@@ -224,5 +224,43 @@ describe("replyEphemeral edges", () => {
     mockFetch.mockRejectedValueOnce(new Error("net down"));
     await POST(req(act("home_send")));
     await flush(); // no throw
+  });
+});
+
+describe("deferred handler error callbacks", () => {
+  it("logs home_send handler rejections", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFind.mockRejectedValue(new Error("appflowy down"));
+    await POST(req(act("home_send")));
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith(
+      "[NewsletterSlack interactions] home_send error:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
+  });
+
+  it("logs home_unpublish handler rejections", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFind.mockRejectedValue(new Error("appflowy down"));
+    await POST(req(act("home_unpublish")));
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith(
+      "[NewsletterSlack interactions] home_unpublish error:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
+  });
+
+  it("logs home_rerun_draft handler rejections", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockDispatch.mockRejectedValue(new Error("github down"));
+    await POST(req(act("home_rerun_draft")));
+    await flush();
+    expect(errSpy).toHaveBeenCalledWith(
+      "[NewsletterSlack interactions] home_rerun_draft error:",
+      expect.any(Error)
+    );
+    errSpy.mockRestore();
   });
 });

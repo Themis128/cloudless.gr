@@ -71,6 +71,19 @@ describe("POST /api/portal/[token]/comments", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 400 on a malformed JSON body", async () => {
+    mockFindPortalByToken.mockResolvedValue(makePortal());
+    const { POST } = await import("@/app/api/portal/[token]/comments/route");
+    const req = new NextRequest(`http://localhost/api/portal/${VALID_TOKEN}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+    const res = await POST(req, { params: Promise.resolve({ token: VALID_TOKEN }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid JSON");
+  });
+
   it("returns 400 when stepId missing", async () => {
     mockFindPortalByToken.mockResolvedValue(makePortal());
     const { POST } = await import("@/app/api/portal/[token]/comments/route");

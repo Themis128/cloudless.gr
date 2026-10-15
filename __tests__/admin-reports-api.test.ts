@@ -270,3 +270,55 @@ describe("Admin Reports API routes", () => {
     });
   });
 });
+
+describe("generateInsights anthropic call", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
+    isHubSpotConfiguredMock.mockResolvedValue(true);
+    isActiveCampaignConfiguredMock.mockResolvedValue(false);
+    getPipelineStatsMock.mockResolvedValue({ totalDeals: 5 });
+    getConfigMock.mockResolvedValue({ ANTHROPIC_API_KEY: "test-key" });
+    buildGoldGscReportSectionMock.mockResolvedValue(null);
+    buildGoldStripeReportSectionMock.mockResolvedValue(null);
+    await clearReports();
+  });
+
+  it("attaches Claude insights text to the section", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ content: [{ text: "Pipeline grew 40%." }] }), { status: 200 })
+      );
+    const { POST } = await import("@/app/api/admin/reports/generate/route");
+    const res = await POST(
+      makePost("/api/admin/reports/generate", {
+        clientName: "Acme",
+        dateStart: "2026-04-01",
+        dateEnd: "2026-04-30",
+        includeSections: ["pipeline"],
+      })
+    );
+    expect(res.status).toBe(201);
+    const { report } = await res.json();
+    expect(report.sections[0].insights).toBe("Pipeline grew 40%.");
+    fetchSpy.mockRestore();
+  });
+
+  it("returns empty insights when the Anthropic call throws", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+    const { POST } = await import("@/app/api/admin/reports/generate/route");
+    const res = await POST(
+      makePost("/api/admin/reports/generate", {
+        clientName: "Acme",
+        dateStart: "2026-04-01",
+        dateEnd: "2026-04-30",
+        includeSections: ["pipeline"],
+      })
+    );
+    expect(res.status).toBe(201);
+    const { report } = await res.json();
+    expect(report.sections[0].insights).toBe("");
+    fetchSpy.mockRestore();
+  });
+});

@@ -89,9 +89,12 @@ export async function GET(request: NextRequest) {
 
   // Parse price from "€890" / "€1.800" / "€2.900" → cents
   const priceMatch = tierData.oneOff?.replace(/[^0-9]/g, "");
+  /* v8 ignore start -- defensive: every tier in data/campaigns.ts sets a
+     oneOff price; only reachable if a future tier omits it. */
   if (!priceMatch) {
     return NextResponse.json({ error: "Tier has no one-off price" }, { status: 400 });
   }
+  /* v8 ignore stop */
   const amountCents = parseInt(priceMatch, 10) * 100;
 
   const stripe = await getStripe();

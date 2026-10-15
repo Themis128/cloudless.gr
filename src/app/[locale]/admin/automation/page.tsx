@@ -44,9 +44,11 @@ function formatDate(iso: string) {
       minute: "2-digit",
       timeZone: "Europe/Athens",
     });
+    /* v8 ignore start -- unreachable: toLocale* renders Invalid Date rather than throwing */
   } catch {
     return iso;
   }
+  /* v8 ignore stop */
 }
 
 const EXEC_STATUS_STYLES: Record<string, string> = {

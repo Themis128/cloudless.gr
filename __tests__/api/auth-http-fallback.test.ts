@@ -14,6 +14,7 @@ const isAdmin = vi.fn();
 const checkFailedAttempts = vi.fn();
 const logSessionActivity = vi.fn();
 const createUser = vi.fn();
+const createPasswordResetToken = vi.fn();
 const markEmailVerified = vi.fn();
 const validateSessionSecret = vi.fn();
 const validatePasswordStrength = vi.fn();
@@ -26,6 +27,7 @@ vi.mock("@/lib/auth-d1", () => ({
   checkFailedAttempts: (...a: unknown[]) => checkFailedAttempts(...a),
   logSessionActivity: (...a: unknown[]) => logSessionActivity(...a),
   createUser: (...a: unknown[]) => createUser(...a),
+  createPasswordResetToken: (...a: unknown[]) => createPasswordResetToken(...a),
   markEmailVerified: (...a: unknown[]) => markEmailVerified(...a),
   validateSessionSecret: (...a: unknown[]) => validateSessionSecret(...a),
   validatePasswordStrength: (...a: unknown[]) => validatePasswordStrength(...a),
@@ -180,6 +182,21 @@ describe("activate route HTTP D1 fallback", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/en/auth/login?activated=1");
   });
+
+  it("HTTP stmt returns its non-ok fallbacks for all/run", async () => {
+    fetchMock.mockImplementation(async () =>
+      new Response(JSON.stringify({ success: false }), { status: 500 })
+    );
+    markEmailVerified.mockImplementation(async (db: unknown) => {
+      const stmt = (db as D1).prepare("SELECT 1") as Stmt;
+      expect(await stmt.bind().all()).toEqual({ results: [], success: false });
+      expect(await stmt.bind().run()).toEqual({ success: false, meta: { changes: 0 } });
+      return false;
+    });
+    const { GET } = await import("@/app/api/auth/activate/route");
+    const res = await GET(new NextRequest("https://x/api/auth/activate?email=a@b.c&token=t"));
+    expect(res.headers.get("location")).toContain("activated=error");
+  });
 });
 
 describe("confirm route HTTP D1 fallback", () => {
@@ -197,6 +214,46 @@ describe("confirm route HTTP D1 fallback", () => {
       })
     );
     expect((await res.json()).ok).toBe(true);
+  });
+
+  it("HTTP stmt all() returns its non-ok fallback", async () => {
+    fetchMock.mockImplementation(async () =>
+      new Response(JSON.stringify({ success: false }), { status: 500 })
+    );
+    markEmailVerified.mockImplementation(async (db: unknown) => {
+      const stmt = (db as D1).prepare("SELECT 1") as Stmt;
+      expect(await stmt.bind().all()).toEqual({ results: [], success: false });
+      return false;
+    });
+    const { POST } = await import("@/app/api/auth/confirm/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "a@b.c", code: "123456", token: "tok" }),
+      })
+    );
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("reset-password route HTTP D1 fallback", () => {
+  it("HTTP stmt first(col) returns null for a missing column", async () => {
+    createPasswordResetToken.mockImplementation(async (db: unknown) => {
+      const stmt = (db as D1).prepare("SELECT 1") as Stmt;
+      const bound = stmt.bind();
+      expect(await bound.first<string>("nonexistent_col")).toBeNull();
+      return {};
+    });
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "a@b.c" }),
+      })
+    );
+    expect(res.status).not.toBe(503);
   });
 });
 

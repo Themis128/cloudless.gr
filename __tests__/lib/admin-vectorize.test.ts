@@ -13,11 +13,18 @@ vi.mock("@/lib/workers-ai-client", () => ({
   callWorkersAiEmbed: mockCallWorkersAiEmbed,
 }));
 
+const { mockGetFaqs, mockGetDocs } = vi.hoisted(() => ({
+  mockGetFaqs: vi.fn(),
+  mockGetDocs: vi.fn(),
+}));
+vi.mock("@/lib/appflowy-faqs", () => ({ getFaqs: mockGetFaqs }));
+vi.mock("@/lib/appflowy-docs", () => ({ getDocs: mockGetDocs }));
+
 import {
   isAdminVectorizeConfigured,
   upsertAdminVectors,
   queryAdminVectorize,
-  type AdminVectorHit,
+  syncAppFlowyToVectorize,
 } from "@/lib/admin-vectorize";
 
 type MockFetch = ReturnType<typeof vi.fn>;
@@ -26,6 +33,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   mockIsWorkersAiConfigured.mockReset().mockReturnValue(true);
   mockCallWorkersAiEmbed.mockReset().mockResolvedValue([0.1, 0.2, 0.3]);
+  mockGetFaqs.mockReset().mockResolvedValue([]);
+  mockGetDocs.mockReset().mockResolvedValue([]);
   delete process.env.CLOUDFLARE_ACCOUNT_ID;
   delete process.env.CLOUDFLARE_API_TOKEN;
   delete process.env.CLOUDFLARE_VECTORIZE_INDEX;
@@ -135,7 +144,11 @@ describe("queryAdminVectorize", () => {
         Promise.resolve({
           result: {
             matches: [
-              { id: "faq:1", score: 0.95, metadata: { title: "My FAQ", text: "Answer here", source: "appflowy-faq" } },
+              {
+                id: "faq:1",
+                score: 0.95,
+                metadata: { title: "My FAQ", text: "Answer here", source: "appflowy-faq" },
+              },
             ],
           },
         }),
@@ -192,5 +205,23 @@ describe("queryAdminVectorize", () => {
     const hits = await queryAdminVectorize("test");
     expect(hits[0].title).toBe("orphan-id");
     expect(hits[0].source).toBe("cms");
+  });
+});
+
+describe("syncAppFlowyToVectorize source catches", () => {
+  it("warns and continues when FAQ and docs syncs throw", async () => {
+    setupEnv();
+    mockGetFaqs.mockRejectedValue(new Error("faqs down"));
+    mockGetDocs.mockRejectedValue(new Error("docs down"));
+    const r = await syncAppFlowyToVectorize();
+    expect(r.upserted).toBe(0);
+    expect(console.warn).toHaveBeenCalledWith(
+      "[admin-vectorize] FAQ sync skipped:",
+      expect.any(Error)
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      "[admin-vectorize] Docs sync skipped:",
+      expect.any(Error)
+    );
   });
 });

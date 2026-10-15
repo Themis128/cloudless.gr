@@ -32,11 +32,13 @@ export async function readJsonConfig<T>(key: string, fallback: T): Promise<T> {
   }
   const raw = memory.get(key);
   if (!raw) return fallback;
+  /* v8 ignore start -- unreachable: memory map only stores JSON.stringify output */
   try {
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
   }
+  /* v8 ignore stop */
 }
 
 export async function writeJsonConfig(

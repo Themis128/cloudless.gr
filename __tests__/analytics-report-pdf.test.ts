@@ -195,4 +195,14 @@ describe("analytics-report-pdf.renderAnalyticsReportPdf", () => {
     const bytes = await renderAnalyticsReportPdf({ result: r });
     expect(bytes.length).toBeGreaterThan(100);
   });
+
+  it("overflows to a second page with many keyInsights items", async () => {
+    const r = buildResult();
+    r.report.keyInsights = Array.from(
+      { length: 120 },
+      (_, i) => `Insight ${i}: revenue moved materially this period`
+    );
+    const bytes = await renderAnalyticsReportPdf({ result: r });
+    expect(bytes.length).toBeGreaterThan(100);
+  });
 });

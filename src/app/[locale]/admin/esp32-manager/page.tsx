@@ -97,9 +97,11 @@ function fmtTs(iso?: string): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleTimeString(undefined, { timeZone: "Europe/Athens" });
+    /* v8 ignore start -- unreachable: toLocale* renders Invalid Date rather than throwing */
   } catch {
     return iso;
   }
+  /* v8 ignore stop */
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────

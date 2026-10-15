@@ -77,6 +77,26 @@ describe("forwardPlaybookLead", () => {
     expect(r).toEqual({ ok: true, delivery: "email", playbookUrl: PUBLIC_PLAYBOOK_URL });
   });
 
+  it("3xx to a non-Access URL is not treated as an Access bounce", async () => {
+    // covers isAccessRedirect's pathname fallback — plain external redirect → upstream_error
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 302, headers: { location: "https://login.example.com/x" } })
+    );
+    const r = await post();
+    expect(r).toEqual({ ok: false, reason: "upstream_error", status: 302 });
+  });
+
+  it("3xx to /cdn-cgi/access/ path on any host → access_denied", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://social.cloudless.gr/cdn-cgi/access/login" },
+      })
+    );
+    const r = await post();
+    expect(r).toEqual({ ok: false, reason: "access_denied", status: 302 });
+  });
+
   it("Access redirect (3xx to cloudflareaccess) → access_denied", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("", { status: 302, headers: { location: "https://x.cloudflareaccess.com/cdn-cgi/access/" } })

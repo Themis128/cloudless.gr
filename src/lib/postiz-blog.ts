@@ -55,8 +55,10 @@ function platformUtmSource(platform: "linkedin" | "x" | "meta" | "tiktok"): stri
       return "facebook";
     case PLATFORM_TIKTOK:
       return PLATFORM_TIKTOK;
+    /* v8 ignore start -- unreachable: platform is typed "linkedin"|"x"|"meta"|"tiktok", all cased */
     default:
       return "social";
+    /* v8 ignore stop */
   }
 }
 

@@ -149,6 +149,14 @@ describe("GET /api/cron/owner-digest", () => {
     expect(body).toContain("EspoCRM not configured");
   });
 
+  it("returns null lead count when EspoCRM listContacts throws", async () => {
+    mockListContacts.mockRejectedValue(new Error("espo down"));
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.newLeads).toBeNull();
+  });
+
   it("degrades gracefully when calendar and portals sources throw", async () => {
     mockGetCalendarItems.mockRejectedValue(new Error("notion down"));
     mockReadPortals.mockRejectedValue(new Error("ssm down"));

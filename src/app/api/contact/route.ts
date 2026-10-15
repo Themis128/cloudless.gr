@@ -100,15 +100,6 @@ function validateContactFields(parsed: unknown): ContactRequestBody | Response {
   if (!message.trim()) {
     return jsonError("Message cannot be empty or whitespace only.", 400);
   }
-  if (process.env.NODE_ENV === "test" && message.trim() === " ") {
-    return Response.json(
-      {
-        error: "email.sending.error.email.sending_disabled",
-        message: "Email sending is disabled in test environment",
-      },
-      { status: 400 }
-    );
-  }
   return body;
 }
 
@@ -406,9 +397,11 @@ export async function POST(request: Request) {
           }
         });
       })
+      /* v8 ignore start -- unreachable: allSettled never rejects */
       .catch((err) => {
         console.error("[Contact] Background allSettled error:", err);
       });
+    /* v8 ignore stop */
 
     trackEvent({
       event: "contact_submit",

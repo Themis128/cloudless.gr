@@ -23,6 +23,7 @@ vi.mock("@/lib/api-auth", async (importOriginal) => {
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (token === "test-admin-session") return adminUser;
     if (token === "test-user-session") return plainUser;
+    if (token === "user-no-email") return { ...plainUser, email: undefined };
     // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
     if (token.startsWith("user-session:")) {
       const email = token.slice("user-session:".length) || "user@cloudless.gr";
@@ -111,6 +112,16 @@ describe("GET /api/user/consultations", () => {
     const { GET } = await import("@/app/api/user/consultations/route");
     const res = await GET(unauthReq());
     expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when the session carries no email claim", async () => {
+    const { GET } = await import("@/app/api/user/consultations/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/user/consultations", {
+        headers: { authorization: "Bearer user-no-email" },
+      })
+    );
+    expect(res.status).toBe(400);
   });
 
   it("returns empty list with configured:false when Google Calendar is not configured", async () => {

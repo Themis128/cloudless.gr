@@ -173,6 +173,40 @@ describe("GET /api/admin/orders", () => {
     expect(data.orders[0].email).toBe("buyer@test.com");
     expect(data.orders[0].amount).toBe(99);
     expect(data.subscriptions).toHaveLength(0);
+
+    // subscriptions with live plan data exercise the mapping branch
+    stripeMock.subscriptions.list.mockResolvedValue({
+      data: [
+        {
+          id: "sub_1",
+          customer: "cus_1",
+          status: "active",
+          items: {
+            data: [
+              {
+                price: {
+                  nickname: "Pro",
+                  id: "price_1",
+                  unit_amount: 4900,
+                  currency: "eur",
+                  recurring: { interval: "year" },
+                },
+              },
+            ],
+          },
+          current_period_end: Math.floor(Date.now() / 1000) + 86400,
+        },
+      ],
+    });
+    const res2 = await GET(adminReq("http://localhost/api/admin/orders"));
+    const data2 = await res2.json();
+    expect(data2.subscriptions).toHaveLength(1);
+    expect(data2.subscriptions[0]).toMatchObject({
+      id: "sub_1",
+      plan: "Pro",
+      amount: 49,
+      interval: "year",
+    });
   });
 
   it("returns 500 when Stripe throws", async () => {

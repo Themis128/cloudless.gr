@@ -1,6 +1,6 @@
 import type { LeadIntent, LeadNlpLocale } from "./types";
 
-const GREEK_LETTER_RE = /[\u0370-\u03FF\u1F00-\u1FFF]/;
+const GREEK_LETTER_RE = /[\u0370-\u03FF\u1F00-\u1FFF]/g;
 
 const EL_STOPWORDS = [
   "και",

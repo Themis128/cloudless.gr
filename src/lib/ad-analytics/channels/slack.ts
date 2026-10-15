@@ -72,8 +72,10 @@ function toBlockKit(block: NotificationBlock): SlackBlockKitBlock {
       // The abstraction doesn't yet describe buttons. Render as a plain
       // section until a caller needs richer interactivity.
       return { type: "section", text: { type: "mrkdwn", text: block.text ?? "" } };
+    /* v8 ignore start -- unreachable: NotificationBlock.type is a 5-member union, all cased */
     default:
       return { type: "section", text: { type: "mrkdwn", text: block.text ?? "" } };
+    /* v8 ignore stop */
   }
 }
 

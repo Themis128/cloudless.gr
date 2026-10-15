@@ -73,9 +73,11 @@ describe("getCostSummary Cloudflare-first", () => {
   it("falls back to R2 cost.json when D1 has no rows", async () => {
     (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = makeDb([]);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    (globalThis as {
-      __DATALAKE_BUCKET__?: { get: (key: string) => Promise<unknown> };
-    }).__DATALAKE_BUCKET__ = {
+    (
+      globalThis as {
+        __DATALAKE_BUCKET__?: { get: (key: string) => Promise<unknown> };
+      }
+    ).__DATALAKE_BUCKET__ = {
       get: async (key: string) => {
         if (key !== "lake/aws-cost/cost.json") return null;
         return {
@@ -101,5 +103,27 @@ describe("getCostSummary Cloudflare-first", () => {
     expect(summary.yesterday).toBe(3.1);
     expect(summary.topServices[0].service).toBe("AmazonS3");
     expect(summary.lastEtlAt).toBe("2026-07-29T12:00:00.000Z");
+  });
+
+  it("warns and falls through when D1 and R2 both throw", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // D1 prepare throws synchronously → loadFromD1 rejects → warn + fallthrough.
+    (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = {
+      prepare() {
+        throw new Error("D1 gone");
+      },
+    };
+    // R2 bucket.get throws → warn + fallthrough.
+    (globalThis as { __DATALAKE_BUCKET__?: unknown }).__DATALAKE_BUCKET__ = {
+      get: async () => {
+        throw new Error("R2 gone");
+      },
+    };
+    const { getCostSummary } = await import("@/lib/cost-analytics");
+    const summary = await getCostSummary();
+    expect(summary.total_30d).toBe(0);
+    expect(warn).toHaveBeenCalledWith("[cost-analytics] D1 read failed:", "D1 gone");
+    expect(warn).toHaveBeenCalledWith("[cost-analytics] R2 read failed:", "R2 gone");
+    warn.mockRestore();
   });
 });

@@ -82,9 +82,11 @@ function fmtDate(iso?: string): string {
       dateStyle: "medium",
       timeStyle: "short",
     });
+    /* v8 ignore start -- unreachable: toLocale* renders Invalid Date rather than throwing */
   } catch {
     return iso;
   }
+  /* v8 ignore stop */
 }
 
 function verdictColor(verdict: string): string {

@@ -128,6 +128,20 @@ describe("prepareOrchestration", () => {
     );
   });
 
+  it("no live_llm param + no cache + AI configured flips to the live path", async () => {
+    m.getInsight.mockResolvedValue(null); // no cached insight
+    m.isAdminAiConfiguredAsync.mockResolvedValue(true);
+    m.runOrch.mockResolvedValueOnce({
+      report: { executiveSummary: "live" },
+      workflow: [],
+    });
+    const out = await prepareOrchestration(req({}), "fail");
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.data.source).toBe("live_llm");
+    expect(m.runOrch).toHaveBeenCalled();
+  });
+
   it("503s on live_llm when AI is not configured", async () => {
     m.isAdminAiConfiguredAsync.mockResolvedValue(false);
     const out = await prepareOrchestration(req({ live_llm: true }), "fail");

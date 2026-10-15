@@ -140,3 +140,12 @@ describe("POST /api/track", () => {
     expect(res.status).toBe(429);
   });
 });
+
+describe("GET /api/track", () => {
+  it("returns 200 ok (coverage probe)", async () => {
+    const { GET } = await import("@/app/api/track/route");
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});

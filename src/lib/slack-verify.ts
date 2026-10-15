@@ -109,8 +109,10 @@ export async function verifySlackRequest(
     if (!timingSafeEqual(sigBuffer, expectedBuffer)) {
       return { ok: false, reason: "Signature mismatch" };
     }
+    /* v8 ignore start -- unreachable: lengths are equal-checked above; Buffer.from(utf8) cannot throw */
   } catch {
     return { ok: false, reason: "Signature comparison failed" };
+    /* v8 ignore stop */
   }
 
   // Reject replays — same valid signature seen more than once within the window
