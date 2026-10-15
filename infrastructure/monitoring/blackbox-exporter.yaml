@@ -408,3 +408,55 @@ spec:
       annotations:
         summary: Tunnel edge down for {{ $labels.app }}
         description: '{{ $labels.instance }} failed blackbox tunnel probe for 5+ minutes.'
+---
+# Nextcloud workspace (plain-docker on omv, published via omv-cloudless tunnel)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: tunnel-cloud
+  namespace: monitoring
+  labels: {release: kube-prom, scope: tunnel}
+spec:
+  jobName: tunnel-cloud
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static: [https://cloud.cloudless.gr/status.php]
+      labels: {app: nextcloud, scope: tunnel}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: selfhosted-intravox
+  namespace: monitoring
+  labels: {release: kube-prom}
+spec:
+  jobName: selfhosted-intravox
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static: [https://cloud.cloudless.gr/apps/intravox/api/health]
+      labels: {app: intravox, scope: selfhosted}
+---
+# Nextcloud 35 native OpenMetrics endpoint. /metrics is IP-allowlisted via
+# openmetrics_allowed_clients (config.php) — the pod's scrape arrives at the
+# docker-published port 11000 NAT'd as 172.18.0.1 (docker bridge), so that
+# bridge CIDR must stay allowed alongside the pod/LAN CIDRs.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: nextcloud-metrics
+  namespace: monitoring
+  labels: {release: kube-prom}
+spec:
+  staticConfigs:
+    - targets: ["192.168.1.200:11000"]
+      labels: {app: nextcloud, scope: selfhosted}
+  metricsPath: /metrics
+  scrapeInterval: 60s
