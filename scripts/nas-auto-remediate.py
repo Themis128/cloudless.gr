@@ -17,6 +17,7 @@ Fixes from health log automatically:
   7. tailscale down → restart tailscaled (it is the access path)
 """
 
+import fcntl
 import json
 import re
 import shutil
@@ -144,7 +145,10 @@ def load_state() -> dict:
 def save_state(state: dict) -> None:
     try:
         STATE.parent.mkdir(parents=True, exist_ok=True)
-        STATE.write_text(json.dumps(state))
+        # tmp + replace so a killed pass never leaves a torn state.json
+        tmp = STATE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state))
+        tmp.replace(STATE)
     except OSError:
         pass
 
@@ -462,6 +466,17 @@ def fix_tailscale() -> None:
 
 
 def main() -> None:
+    # Serialize passes: the 10-min docker-health cron and the daily pass can
+    # overlap, and every checker read-modify-writes state.json. Non-blocking —
+    # an overlapping invocation skips rather than racing the file.
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = (STATE.parent / ".remediate.lock").open("w")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        log("another nas-auto-remediate pass is running — skipping")
+        return
+
     # `--docker-health` runs only the container-health pass — cron fires it
     # every 10 min so an unhealthy container self-heals in minutes, not on
     # the next daily run.
