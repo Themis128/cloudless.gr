@@ -11,13 +11,17 @@ Fixes from health log automatically:
      so controllers recreate them (wedged-pod recovery)
   5. root disk pressure → vacuum journal + prune dangling docker
      layers when / crosses the threshold
-  6. tailscale down → restart tailscaled (it is the access path)
+  6. docker containers stuck 'unhealthy' → restart once/day each
+     (Docker marks the state but never acts on it); also runnable
+     standalone via --docker-health from a frequent cron entry
+  7. tailscale down → restart tailscaled (it is the access path)
 """
 
 import json
 import re
 import shutil
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -369,6 +373,65 @@ def fix_disk() -> None:
     log(f"disk: / now at {int(st2.used * 100 / st2.total)}%")
 
 
+def fix_docker_health() -> None:
+    """Restart containers stuck 'unhealthy' — Docker marks the state but
+    never acts on it, so a crash-looping-but-up container (observed:
+    nextcloud Apache segfault loop, 2026-10-07→15) sits dead for days.
+    Same per-day restart budget as systemd units."""
+    r = run("docker", "ps", "--filter", "health=unhealthy", "--format", "{{.Names}}")
+    names = [n.strip() for n in r.stdout.splitlines() if n.strip()]
+    if not names:
+        log("docker-health: no unhealthy containers")
+        return
+
+    state = load_state()
+    today = time.strftime("%Y-%m-%d")
+    restarts = state.setdefault("container_restarts", {})
+    restarted, persistent, warming = [], [], []
+
+    for name in names:
+        insp = run(
+            "docker",
+            "inspect",
+            name,
+            "--format",
+            "{{.State.StartedAt}}",
+        )
+        try:
+            started = datetime.fromisoformat(
+                insp.stdout.strip().replace("Z", "+00:00")
+            ).timestamp()
+        except ValueError:
+            started = 0.0
+        if started and (time.time() - started) < 300:
+            warming.append(name)
+            continue
+        key = f"{name}:{today}"
+        if restarts.get(key, 0) >= MAX_SERVICE_RESTARTS_PER_DAY:
+            persistent.append(name)
+            continue
+        rr = run("docker", "restart", name)
+        restarts[key] = restarts.get(key, 0) + 1
+        if rr.returncode == 0:
+            restarted.append(name)
+            log(f"docker-health: restarted unhealthy container {name}")
+        else:
+            persistent.append(name)
+            log(
+                f"docker-health: restart of {name} FAILED rc={rr.returncode}: "
+                f"{rr.stderr.strip()[:200]}"
+            )
+
+    save_state(state)
+    if warming:
+        log(f"docker-health: skipped recently-started (grace 5m): {', '.join(warming)}")
+    if persistent:
+        log(
+            "docker-health: PERSISTENT unhealthy containers need attention: "
+            + ", ".join(persistent)
+        )
+
+
 def fix_tailscale() -> None:
     r = run("tailscale", "status")
     if r.returncode == 0 and r.stdout.strip():
@@ -380,8 +443,26 @@ def fix_tailscale() -> None:
 
 
 def main() -> None:
+    # `--docker-health` runs only the container-health pass — cron fires it
+    # every 10 min so an unhealthy container self-heals in minutes, not on
+    # the next daily run.
+    if "--docker-health" in sys.argv[1:]:
+        try:
+            fix_docker_health()
+        except Exception as exc:
+            log(f"fix_docker_health: unexpected error: {exc}")
+        return
+
     log("===== nas-auto-remediate start =====")
-    for fn in (fix_minio, fix_backup, fix_failed_units, fix_stuck_pods, fix_disk, fix_tailscale):
+    for fn in (
+        fix_minio,
+        fix_backup,
+        fix_failed_units,
+        fix_stuck_pods,
+        fix_disk,
+        fix_docker_health,
+        fix_tailscale,
+    ):
         try:
             fn()
         except Exception as exc:  # remediation must never kill the pass
