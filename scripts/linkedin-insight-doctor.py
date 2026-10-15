@@ -152,9 +152,16 @@ else:
     warn("skipped — install + auth gh CLI to enable")
 
 
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
 def fetch(url: str, timeout: int = 15) -> str:
     try:
-        return urllib.request.urlopen(url, timeout=timeout).read().decode("utf-8", errors="replace")
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        return urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8", errors="replace")
     except Exception:
         return ""
 
@@ -167,7 +174,7 @@ if not html:
     errors += 1
 else:
     ok(f"fetched {campaign_url}")
-    chunks = sorted(set(re.findall(r"/_next/static/chunks/[a-zA-Z0-9_-]+\.js", html)))
+    chunks = sorted(set(re.findall(r"/_next/static/chunks/[^\"\s\\]+\.js", html)))
     if not chunks:
         warn("no JS chunks discovered in HTML (Next.js render unusual)")
         warnings += 1
