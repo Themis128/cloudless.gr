@@ -61,12 +61,15 @@ spec:
               # re-auth, breaking the old root@100.111.222.92 hop). omv's root
               # has an ed25519 key authorized for tbaltzakis@omv-ha; the file
               # is root-owned there so read via passwordless sudo.
+              # Remote prints: count on success, "0\nUNREADABLE" on zero-match
+              # (head -n1 keeps the 0), "UNREADABLE" on grep/sudo error, "" on
+              # ssh failure — anything unreadable reports as unreachable.
               HA_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
                 ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
                     -o ConnectTimeout=10 tbaltzakis@192.168.1.130 \
-                    "sudo -n grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null || echo 0" \
+                    "sudo -n grep -cE '[[:space:]]+- hostname:' /etc/cloudflared/config.yml 2>/dev/null || echo UNREADABLE" \
                     2>/dev/null | head -n1)
-              HA_COUNT=${HA_COUNT:-unreachable}
+              case "$HA_COUNT" in ""|UNREADABLE) HA_COUNT=unreachable;; esac
 
               echo "omv=$OMV_COUNT omv-ha=$HA_COUNT"
 
