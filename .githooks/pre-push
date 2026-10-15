@@ -16,9 +16,18 @@ done
 [ "$blocked" = 0 ] && exit 0
 
 cur="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo '<branch>')"
-cat >&2 <<MSG
+if [ "$cur" = "main" ] || [ "$cur" = "master" ]; then
+  cat >&2 <<MSG
+[pre-push] this repo merges via PR + required checks. Instead:
+[pre-push]   git switch -c <feature-branch>
+[pre-push]   git push -u origin <feature-branch>
+[pre-push]   gh pr create --fill
+MSG
+else
+  cat >&2 <<MSG
 [pre-push] this repo merges via PR + required checks. Instead:
 [pre-push]   git push -u origin $cur
 [pre-push]   gh pr create --fill
 MSG
+fi
 exit 1
