@@ -115,6 +115,17 @@ nextConfig.rewrites = async () => ({
   fallback: [],
 });
 
+// Pricing lives on the services page — bare /pricing (and locale variants)
+// were dead ends (307 → /en/pricing → 404).
+nextConfig.redirects = async () => [
+  { source: "/pricing", destination: "/services", permanent: true },
+  {
+    source: "/:locale(en|el|fr|de)/pricing",
+    destination: "/:locale/services",
+    permanent: true,
+  },
+];
+
 const configured = withNextIntl(nextConfig) as NextConfig & {
   experimental?: Record<string, unknown>;
 };

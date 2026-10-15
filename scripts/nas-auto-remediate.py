@@ -11,13 +11,18 @@ Fixes from health log automatically:
      so controllers recreate them (wedged-pod recovery)
   5. root disk pressure → vacuum journal + prune dangling docker
      layers when / crosses the threshold
-  6. tailscale down → restart tailscaled (it is the access path)
+  6. docker containers stuck 'unhealthy' → restart once/day each
+     (Docker marks the state but never acts on it); also runnable
+     standalone via --docker-health from a frequent cron entry
+  7. tailscale down → restart tailscaled (it is the access path)
 """
 
+import fcntl
 import json
 import re
 import shutil
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -64,8 +69,26 @@ def log(msg: str) -> None:
         pass
 
 
-def run(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(list(args), capture_output=True, text=True)
+def _text_or_decode(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        return value.decode(errors="replace")
+    return value or ""
+
+
+def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(list(args), capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        # TimeoutExpired keeps raw bytes even with text=True — decode so
+        # downstream `stdout + stderr` concatenation cannot TypeError.
+        out = _text_or_decode(e.stdout)
+        err = _text_or_decode(e.stderr)
+        return subprocess.CompletedProcess(
+            list(args),
+            124,
+            out,
+            f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else ""),
+        )
 
 
 def find_health_script() -> Path | None:
@@ -122,7 +145,10 @@ def load_state() -> dict:
 def save_state(state: dict) -> None:
     try:
         STATE.parent.mkdir(parents=True, exist_ok=True)
-        STATE.write_text(json.dumps(state))
+        # tmp + replace so a killed pass never leaves a torn state.json
+        tmp = STATE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state))
+        tmp.replace(STATE)
     except OSError:
         pass
 
@@ -188,7 +214,7 @@ def fix_backup() -> None:
         age = 999
     if age > 25:
         log(f"backup: log {age}h stale - re-running nas-backup")
-        r = run("/usr/local/sbin/nas-backup")
+        r = run("/usr/local/sbin/nas-backup", timeout=3600)
         try:
             with LOG.open("a") as f:
                 f.write(r.stdout + r.stderr)
@@ -359,14 +385,74 @@ def fix_disk() -> None:
         log(f"disk: / at {pct}% (< {DISK_WARN_PCT}%), ok")
         return
     log(f"disk: / at {pct}% >= {DISK_WARN_PCT}% — vacuuming journal + pruning dangling docker")
-    r1 = run("journalctl", "--vacuum-time=14d")
+    r1 = run("journalctl", "--vacuum-time=14d", timeout=600)
     log(f"disk: journal vacuum rc={r1.returncode}")
-    r2 = run("docker", "system", "prune", "-f")
+    r2 = run("docker", "system", "prune", "-f", timeout=600)
     log(
         f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})"
     )
     st2 = shutil.disk_usage("/")
     log(f"disk: / now at {int(st2.used * 100 / st2.total)}%")
+
+
+def fix_docker_health() -> None:
+    """Restart containers stuck 'unhealthy' — Docker marks the state but
+    never acts on it, so a crash-looping-but-up container (observed:
+    nextcloud Apache segfault loop, 2026-10-07→15) sits dead for days.
+    Same per-day restart budget as systemd units."""
+    r = run("docker", "ps", "--filter", "health=unhealthy", "--format", "{{.Names}}")
+    if r.returncode != 0:
+        log(f"docker-health: docker ps failed rc={r.returncode}: {r.stderr.strip()[:200]}")
+        return
+    names = [n.strip() for n in r.stdout.splitlines() if n.strip()]
+    if not names:
+        log("docker-health: no unhealthy containers")
+        return
+
+    state = load_state()
+    today = time.strftime("%Y-%m-%d")
+    restarts = state.setdefault("container_restarts", {})
+    restarted, persistent, warming = [], [], []
+
+    for name in names:
+        insp = run(
+            "docker",
+            "inspect",
+            name,
+            "--format",
+            "{{.State.StartedAt}}",
+        )
+        try:
+            started = datetime.fromisoformat(insp.stdout.strip().replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            started = 0.0
+        if started and (time.time() - started) < 300:
+            warming.append(name)
+            continue
+        key = f"{name}:{today}"
+        if restarts.get(key, 0) >= MAX_SERVICE_RESTARTS_PER_DAY:
+            persistent.append(name)
+            continue
+        rr = run("docker", "restart", name)
+        restarts[key] = restarts.get(key, 0) + 1
+        if rr.returncode == 0:
+            restarted.append(name)
+            log(f"docker-health: restarted unhealthy container {name}")
+        else:
+            persistent.append(name)
+            log(
+                f"docker-health: restart of {name} FAILED rc={rr.returncode}: "
+                f"{rr.stderr.strip()[:200]}"
+            )
+
+    save_state(state)
+    if warming:
+        log(f"docker-health: skipped recently-started (grace 5m): {', '.join(warming)}")
+    if persistent:
+        log(
+            "docker-health: PERSISTENT unhealthy containers need attention: "
+            + ", ".join(persistent)
+        )
 
 
 def fix_tailscale() -> None:
@@ -379,9 +465,46 @@ def fix_tailscale() -> None:
     log(f"tailscale: restart rc={rr.returncode}")
 
 
+def _lock(nonblocking: bool):
+    """Serialize passes — every checker read-modify-writes state.json, and the
+    10-min docker-health cron can overlap the daily run. Returns the open lock
+    file: the caller MUST keep the reference for the run's duration — if the
+    object is garbage-collected, the fd closes and the lock is released."""
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    fd = (STATE.parent / ".remediate.lock").open("w")
+    fcntl.flock(fd, fcntl.LOCK_EX | (fcntl.LOCK_NB if nonblocking else 0))
+    return fd
+
+
 def main() -> None:
+    # `--docker-health` runs only the container-health pass — cron fires it
+    # every 10 min so an unhealthy container self-heals in minutes, not on
+    # the next daily run. Non-blocking: skipping one cycle is harmless.
+    if "--docker-health" in sys.argv[1:]:
+        try:
+            _lock_held = _lock(nonblocking=True)
+        except BlockingIOError:
+            return
+        try:
+            fix_docker_health()
+        except Exception as exc:
+            log(f"fix_docker_health: unexpected error: {exc}")
+        return
+
+    # The daily pass BLOCKS until an in-flight cron check releases the lock —
+    # it must never silently skip an entire remediation run.
+    _lock_held = _lock(nonblocking=False)
+
     log("===== nas-auto-remediate start =====")
-    for fn in (fix_minio, fix_backup, fix_failed_units, fix_stuck_pods, fix_disk, fix_tailscale):
+    for fn in (
+        fix_minio,
+        fix_backup,
+        fix_failed_units,
+        fix_stuck_pods,
+        fix_disk,
+        fix_docker_health,
+        fix_tailscale,
+    ):
         try:
             fn()
         except Exception as exc:  # remediation must never kill the pass
