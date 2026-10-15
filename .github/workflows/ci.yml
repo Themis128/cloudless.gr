@@ -72,6 +72,9 @@ on:
         # also gate the required "Build" check — without this, a
         # workers-only edit stays BLOCKED forever.
       - workers/**
+        # Git hooks PRs (pre-commit/pre-push guards) also gate the required
+        # checks — a .githooks-only edit stays BLOCKED forever without this.
+      - .githooks/**
 
 concurrency:
   group: ci-${{ github.head_ref }}
