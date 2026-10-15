@@ -68,8 +68,13 @@ def log(msg: str) -> None:
         pass
 
 
-def run(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(list(args), capture_output=True, text=True)
+def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(list(args), capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        return subprocess.CompletedProcess(
+            list(args), 124, e.stdout or "", f"timeout after {timeout}s"
+        )
 
 
 def find_health_script() -> Path | None:
