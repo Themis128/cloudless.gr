@@ -17,6 +17,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation, notifyTeam } from "@/lib/email";
+import { escapeHtml } from "@/lib/escape-html";
 import { recordNotification } from "@/lib/admin-notifications";
 import {
   MIN_DAYS_AHEAD,
@@ -271,11 +272,13 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
   notifyTeam(
     `New consultation booked — ${name}`,
     [
-      `<p><strong>Name:</strong> ${name}</p>`,
-      `<p><strong>Email:</strong> ${email}</p>`,
-      `<p><strong>Slot:</strong> ${slotLabel}</p>`,
-      meetLink ? `<p><strong>Google Meet:</strong> <a href="${meetLink}">${meetLink}</a></p>` : "",
-      notes ? `<p><strong>Notes:</strong> ${notes}</p>` : "",
+      `<p><strong>Name:</strong> ${escapeHtml(name)}</p>`,
+      `<p><strong>Email:</strong> ${escapeHtml(email)}</p>`,
+      `<p><strong>Slot:</strong> ${escapeHtml(slotLabel)}</p>`,
+      meetLink
+        ? `<p><strong>Google Meet:</strong> <a href="${escapeHtml(meetLink)}">${escapeHtml(meetLink)}</a></p>`
+        : "",
+      notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : "",
     ]
       .filter(Boolean)
       .join("\n")
