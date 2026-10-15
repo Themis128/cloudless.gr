@@ -68,12 +68,25 @@ def log(msg: str) -> None:
         pass
 
 
+def _text_or_decode(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        return value.decode(errors="replace")
+    return value or ""
+
+
 def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(list(args), capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as e:
+        # TimeoutExpired keeps raw bytes even with text=True — decode so
+        # downstream `stdout + stderr` concatenation cannot TypeError.
+        out = _text_or_decode(e.stdout)
+        err = _text_or_decode(e.stderr)
         return subprocess.CompletedProcess(
-            list(args), 124, e.stdout or "", f"timeout after {timeout}s"
+            list(args),
+            124,
+            out,
+            f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else ""),
         )
 
 
@@ -384,6 +397,9 @@ def fix_docker_health() -> None:
     nextcloud Apache segfault loop, 2026-10-07→15) sits dead for days.
     Same per-day restart budget as systemd units."""
     r = run("docker", "ps", "--filter", "health=unhealthy", "--format", "{{.Names}}")
+    if r.returncode != 0:
+        log(f"docker-health: docker ps failed rc={r.returncode}: {r.stderr.strip()[:200]}")
+        return
     names = [n.strip() for n in r.stdout.splitlines() if n.strip()]
     if not names:
         log("docker-health: no unhealthy containers")
