@@ -12,7 +12,7 @@ describe("SOCIAL_ACCOUNTS", () => {
       "threads",
       "tiktok",
       "x",
-      "github",
+      "credly",
       "whatsapp",
       "telegram",
     ]);
