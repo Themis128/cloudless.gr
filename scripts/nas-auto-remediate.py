@@ -465,27 +465,35 @@ def fix_tailscale() -> None:
     log(f"tailscale: restart rc={rr.returncode}")
 
 
-def main() -> None:
-    # Serialize passes: the 10-min docker-health cron and the daily pass can
-    # overlap, and every checker read-modify-writes state.json. Non-blocking —
-    # an overlapping invocation skips rather than racing the file.
+def _lock(nonblocking: bool):
+    """Serialize passes — every checker read-modify-writes state.json, and the
+    10-min docker-health cron can overlap the daily run. Returns the open lock
+    file: the caller MUST keep the reference for the run's duration — if the
+    object is garbage-collected, the fd closes and the lock is released."""
     STATE.parent.mkdir(parents=True, exist_ok=True)
-    lock_fd = (STATE.parent / ".remediate.lock").open("w")
-    try:
-        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        log("another nas-auto-remediate pass is running — skipping")
-        return
+    fd = (STATE.parent / ".remediate.lock").open("w")
+    fcntl.flock(fd, fcntl.LOCK_EX | (fcntl.LOCK_NB if nonblocking else 0))
+    return fd
 
+
+def main() -> None:
     # `--docker-health` runs only the container-health pass — cron fires it
     # every 10 min so an unhealthy container self-heals in minutes, not on
-    # the next daily run.
+    # the next daily run. Non-blocking: skipping one cycle is harmless.
     if "--docker-health" in sys.argv[1:]:
+        try:
+            _lock_held = _lock(nonblocking=True)
+        except BlockingIOError:
+            return
         try:
             fix_docker_health()
         except Exception as exc:
             log(f"fix_docker_health: unexpected error: {exc}")
         return
+
+    # The daily pass BLOCKS until an in-flight cron check releases the lock —
+    # it must never silently skip an entire remediation run.
+    _lock_held = _lock(nonblocking=False)
 
     log("===== nas-auto-remediate start =====")
     for fn in (
