@@ -564,19 +564,7 @@ export default async function Home({
                   >
                     ↗ {t("credibility.badgeAws", "AWS Certified")}
                   </a>
-                  <a
-                    href="https://github.com/Themis128"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors duration-200"
-                    style={{
-                      background: "color-mix(in srgb, var(--accent) 8%, transparent)",
-                      borderColor: "color-mix(in srgb, var(--accent) 20%, transparent)",
-                      color: "var(--accent)",
-                    }}
-                  >
-                    ↗ {t("credibility.badgeOss", "Open-Source Contributor")}
-                  </a>
+
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]"
                     style={{
