@@ -83,10 +83,7 @@ def run(*args: str, timeout: int = 120) -> subprocess.CompletedProcess:
         out = _text_or_decode(e.stdout)
         err = _text_or_decode(e.stderr)
         return subprocess.CompletedProcess(
-            list(args),
-            124,
-            out,
-            f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else ""),
+            list(args), 124, out, f"timeout after {timeout}s" + (f": {err.strip()[:200]}" if err else "")
         )
 
 
@@ -210,7 +207,7 @@ def fix_backup() -> None:
         age = 999
     if age > 25:
         log(f"backup: log {age}h stale - re-running nas-backup")
-        r = run("/usr/local/sbin/nas-backup")
+        r = run("/usr/local/sbin/nas-backup", timeout=3600)
         try:
             with LOG.open("a") as f:
                 f.write(r.stdout + r.stderr)
@@ -381,9 +378,9 @@ def fix_disk() -> None:
         log(f"disk: / at {pct}% (< {DISK_WARN_PCT}%), ok")
         return
     log(f"disk: / at {pct}% >= {DISK_WARN_PCT}% — vacuuming journal + pruning dangling docker")
-    r1 = run("journalctl", "--vacuum-time=14d")
+    r1 = run("journalctl", "--vacuum-time=14d", timeout=600)
     log(f"disk: journal vacuum rc={r1.returncode}")
-    r2 = run("docker", "system", "prune", "-f")
+    r2 = run("docker", "system", "prune", "-f", timeout=600)
     log(
         f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})"
     )
