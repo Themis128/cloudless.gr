@@ -338,3 +338,123 @@ data:
         }
       ]
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-nextcloud
+  namespace: monitoring
+  labels: {grafana_dashboard: '1'}
+data:
+  nextcloud.json: |
+    {
+      "title": "Nextcloud (cloud.cloudless.gr)",
+      "uid": "nextcloud-omv",
+      "tags": ["nextcloud", "selfhosted", "cloudless"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "60s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Version / Install",
+          "id": 1,
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "nextcloud_instance_info",
+            "legendFormat": "{{full_version}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "textMode": "name" }
+        },
+        {
+          "type": "stat",
+          "title": "Maintenance mode",
+          "id": 2,
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [{
+            "expr": "nextcloud_maintenance",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": {"text": "off", "color": "green"}, "1": {"text": "ON", "color": "red"} } }] }, "overrides": [] }
+        },
+        {
+          "type": "stat",
+          "title": "Users",
+          "id": 3,
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "targets": [{
+            "expr": "nextcloud_users",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "type": "stat",
+          "title": "Active sessions (5m)",
+          "id": 4,
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [{
+            "expr": "sum(nextcloud_active_sessions)",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Active sessions",
+          "id": 5,
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 4 },
+          "targets": [{
+            "expr": "nextcloud_active_sessions",
+            "legendFormat": "sessions",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Shares",
+          "id": 6,
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 4 },
+          "targets": [{
+            "expr": "sum(nextcloud_shares)",
+            "legendFormat": "shares",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Talk calls in progress",
+          "id": 7,
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 11 },
+          "targets": [{
+            "expr": "nextcloud_talk_active_calls",
+            "legendFormat": "calls",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Background jobs",
+          "id": 8,
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 11 },
+          "targets": [{
+            "expr": "sum(nextcloud_running_jobs)",
+            "legendFormat": "jobs",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        }
+      ]
+    }
