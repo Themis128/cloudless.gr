@@ -70,6 +70,11 @@
     ".kiro/**",
     // .cline/** is local Cline agent context/rules — not shipped product docs.
     ".cline/**",
+    // .github/agents/agentic-workflows.md and .github/skills/agentic-workflows/
+    // are regenerated verbatim by `gh aw upgrade` — upstream gh-aw content we
+    // don't author; lint issues belong upstream.
+    ".github/agents/agentic-workflows.md",
+    ".github/skills/agentic-workflows/**",
     "logs_failed.md",
     "**/*logs*.md",
     "CHANGELOG.md",
