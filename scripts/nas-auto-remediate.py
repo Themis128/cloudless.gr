@@ -398,9 +398,7 @@ def fix_docker_health() -> None:
             "{{.State.StartedAt}}",
         )
         try:
-            started = datetime.fromisoformat(
-                insp.stdout.strip().replace("Z", "+00:00")
-            ).timestamp()
+            started = datetime.fromisoformat(insp.stdout.strip().replace("Z", "+00:00")).timestamp()
         except ValueError:
             started = 0.0
         if started and (time.time() - started) < 300:
