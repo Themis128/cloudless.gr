@@ -2,9 +2,10 @@
 description: "Daily report on recent repository activity, delivered as an issue. Summarizes new issues, pull requests merged, and any open blockers."
 on:
   schedule:
-    # Explicit off-peak slot (02:23 UTC) — "daily" scattered into the same
-    # window as the other Copilot agents and CI, tripping Copilot API 429s.
-    - cron: "23 2 * * *"
+    # Mon/Wed/Fri at off-peak 02:23 UTC — daily kept tripping Copilot API
+    # 429s (account-level quota, seen 2026-10-15/16); 3x/week keeps the
+    # report useful while cutting quota burn ~57%.
+    - cron: "23 2 * * 1,3,5"
   workflow_dispatch:
 permissions:
   contents: read
