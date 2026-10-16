@@ -188,17 +188,21 @@ spec:
               value: '2'
             - name: SNAPSHOT_DIR
               value:
-                /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db
+                /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db/snapshots
+            - name: SNAPSHOT_GLOB
+              value: k3s-state-*.db
             command:
             - /bin/sh
             - -c
             - |
               set -eo pipefail
               STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-              # Newest file under SNAPSHOT_DIR via nsenter (host fs).
+              # Newest state.db backup under SNAPSHOT_DIR via nsenter
+              # (host fs). Scoped to k3s-state-*.db — config .enc archives
+              # must not mask a datastore outage.
               NEWEST=$(nsenter --target 1 --mount --uts --ipc --net --pid \
-                find "$SNAPSHOT_DIR" -type f -printf '%T@ %p\n' 2>/dev/null \
-                | sort -nr | head -1 || true)
+                find "$SNAPSHOT_DIR" -type f -name "$SNAPSHOT_GLOB" \
+                -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -1 || true)
               if [ -z "$NEWEST" ]; then
                 BODY=":rotating_light: *k3s datastore backup directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
               else
