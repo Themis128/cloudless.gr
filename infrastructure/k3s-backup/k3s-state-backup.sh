@@ -33,6 +33,7 @@ KEYFILE="/root/.k3s-backup-key"
 KEEP=48   # 48 hourly state.db backups + 48 config tars
 STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 TS="$(date -u '+%Y%m%d-%H%M%S')"
+RC=0
 
 {
   echo "[${STAMP}] === k3s-state-backup start ==="
@@ -50,6 +51,7 @@ TS="$(date -u '+%Y%m%d-%H%M%S')"
   else
     rm -f "${TMP_DB}"
     echo "[${STAMP}] ERROR: state.db backup failed integrity check — no file produced"
+    RC=1
   fi
 
   # 2) Config/identity material — encrypted before it touches disk as .enc.
@@ -60,7 +62,8 @@ TS="$(date -u '+%Y%m%d-%H%M%S')"
           -out "${DST}/k3s-server-config-${TS}.tar.gz.enc"
     echo "[${STAMP}] server config -> k3s-server-config-${TS}.tar.gz.enc (aes-256-cbc)"
   else
-    echo "[${STAMP}] WARN: ${KEYFILE} missing — skipping config backup (no plaintext fallback)"
+    echo "[${STAMP}] ERROR: ${KEYFILE} missing — skipping config backup (no plaintext fallback)"
+    RC=1
   fi
 
   # 3) Off-site sync -> Cloudflare R2 datalake-bucket/k3s-state/
@@ -69,12 +72,13 @@ TS="$(date -u '+%Y%m%d-%H%M%S')"
       --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
       --max-age 2h --s3-upload-cutoff 64M --transfers 2 --low-level-retries 3 \
       --log-level INFO --log-file "${LOG}.rclone" \
-      || echo "[${STAMP}] WARN: rclone off-site sync failed"
+      || { echo "[${STAMP}] ERROR: rclone off-site sync failed"; RC=1; }
   fi
 
   # 4) Retention.
   ls -1t "${DST}"/k3s-state-*.db 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -f
   ls -1t "${DST}"/k3s-server-config-*.enc 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -f
 
-  echo "[${STAMP}] === k3s-state-backup done ==="
+  echo "[${STAMP}] === k3s-state-backup done (rc=${RC}) ==="
+  exit "${RC}"
 } >> "${LOG}" 2>&1
