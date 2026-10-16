@@ -35,6 +35,7 @@ STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 TS="$(date -u '+%Y%m%d-%H%M%S')"
 RC=0
 BACKUP_OK=0
+ENC_OK=0
 UPLOAD_OK=0
 
 {
@@ -63,6 +64,7 @@ UPLOAD_OK=0
     if tar -czf - -C "${DATA_DIR}" cred tls manifests token agent-token etc 2>/dev/null \
         | openssl enc -aes-256-cbc -pbkdf2 -salt -pass "file:${KEYFILE}" \
             -out "${DST}/k3s-server-config-${TS}.tar.gz.enc"; then
+      ENC_OK=1
       echo "[${STAMP}] server config -> k3s-server-config-${TS}.tar.gz.enc (aes-256-cbc)"
     else
       rm -f "${DST}/k3s-server-config-${TS}.tar.gz.enc"
@@ -84,16 +86,25 @@ UPLOAD_OK=0
       --log-level INFO --log-file "${LOG}.rclone" \
       && UPLOAD_OK=1 \
       || { echo "[${STAMP}] ERROR: rclone off-site sync failed"; RC=1; }
-    # Remote prune is gated on a fresh local backup AND a successful
-    # upload this run — otherwise a local outage or persistent upload
-    # failure would drain the off-site copy when it is needed most.
+    # Remote prune is gated per artifact on a fresh local backup AND a
+    # successful upload this run — a local outage, persistent upload
+    # failure, or a failed config tar must never drain the off-site copy
+    # of the artifact that did not get replaced.
     if [ "${BACKUP_OK}" = "1" ] && [ "${UPLOAD_OK}" = "1" ]; then
       rclone delete "r2:datalake-bucket/k3s-state" \
-        --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
-        --min-age 48h --log-level INFO --log-file "${LOG}.rclone" \
-        || { echo "[${STAMP}] ERROR: rclone remote prune failed"; RC=1; }
+        --include "k3s-state-*.db" --min-age 48h \
+        --log-level INFO --log-file "${LOG}.rclone" \
+        || { echo "[${STAMP}] ERROR: rclone remote prune (.db) failed"; RC=1; }
     else
-      echo "[${STAMP}] NOTE: remote prune skipped — no fresh local backup this run"
+      echo "[${STAMP}] NOTE: remote .db prune skipped — no fresh uploaded backup"
+    fi
+    if [ "${ENC_OK}" = "1" ] && [ "${UPLOAD_OK}" = "1" ]; then
+      rclone delete "r2:datalake-bucket/k3s-state" \
+        --include "k3s-server-config-*.enc" --min-age 48h \
+        --log-level INFO --log-file "${LOG}.rclone" \
+        || { echo "[${STAMP}] ERROR: rclone remote prune (.enc) failed"; RC=1; }
+    else
+      echo "[${STAMP}] NOTE: remote .enc prune skipped — no fresh uploaded config archive"
     fi
   else
     echo "[${STAMP}] ERROR: rclone not found — no off-site copy possible"
