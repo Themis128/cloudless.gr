@@ -1,3 +1,11 @@
+> **SUPERSEDED 2026-10-15** — the omv cluster migrated to the
+> **SQLite/kine datastore** on 2026-07-22 (`data/server/db/state.db`).
+> k3s ignores every `etcd-snapshot-*` key on SQLite; nothing in this
+> directory has produced a file since Jul 22. The live backup pipeline is
+> **`infrastructure/k3s-backup/`** (`k3s-state-backup.timer`, hourly
+> `sqlite3 .backup`). Keep this directory for the R2 credentials layout
+> and historical context only.
+
 # etcd backup — k3s snapshot pipeline (local NAS + Cloudflare R2 Free)
 
 Three files glued together so the `omv-backup-verify` watchdog
