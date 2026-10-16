@@ -77,10 +77,30 @@ jobs:
           sudo grep -E '^root\s*:' /etc/aliases
 
           # The real redirect lives in recipient_canonical (OMV notification
-          # recipient): root/admin/@omv.localdomain were rewritten to Gmail.
+          # recipient). OMV regenerates postfix files from its config DB on
+          # updates — update BOTH so the change survives regeneration.
+          echo "=== OMV config DB: notification recipient ==="
+          if command -v omv-confdbadm >/dev/null 2>&1; then
+            sudo omv-confdbadm read conf.system.notification.email 2>/dev/null \
+              | grep -iE 'recipient|primaryemail' || true
+            # Update the OMV-side source of truth (accepts JSON on stdin or
+            # positional 'conf.system.notification.email' + json).
+            sudo omv-confdbadm update conf.system.notification.email \
+              "{\"recipient\":\"$TARGET\"}" 2>/dev/null \
+              && echo "omv-confdbadm: recipient -> $TARGET" \
+              || echo "WARN: omv-confdbadm update failed — file-level fix only (may be overwritten on OMV regen)"
+          else
+            echo "(omv-confdbadm not found — file-level fix only)"
+          fi
+
           echo "=== /etc/postfix/recipient_canonical: -> $TARGET ==="
           if [ -f /etc/postfix/recipient_canonical ]; then
             sudo sed -i -E "s|themis\.baltzakis@gmail\.com|$TARGET|g" /etc/postfix/recipient_canonical
+            # Fail loudly if the rewrite did not take (sed exits 0 on no-match).
+            if ! sudo grep -q "$TARGET" /etc/postfix/recipient_canonical; then
+              echo "::error::recipient_canonical still lacks $TARGET after rewrite"
+              exit 1
+            fi
             sudo postmap /etc/postfix/recipient_canonical
             sudo grep -vE '^\s*(#|$)' /etc/postfix/recipient_canonical
           else
