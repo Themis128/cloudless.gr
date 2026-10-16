@@ -63,19 +63,31 @@ jobs:
             || sudo tail -25 /var/log/mail.log 2>/dev/null \
             || echo "(no postfix log found)"
 
-      - name: Apply root alias -> target
+      - name: Apply root delivery -> target
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
-          echo "Setting root alias -> $TARGET"
+          echo "=== /etc/aliases: root -> $TARGET ==="
           if sudo grep -qE '^root\s*:' /etc/aliases; then
             sudo sed -i -E "s|^root\s*:.*|root: $TARGET|" /etc/aliases
           else
             echo "root: $TARGET" | sudo tee -a /etc/aliases
           fi
           sudo newaliases
-          echo "=== effective root alias now ==="
           sudo grep -E '^root\s*:' /etc/aliases
+
+          # The real redirect lives in recipient_canonical (OMV notification
+          # recipient): root/admin/@omv.localdomain were rewritten to Gmail.
+          echo "=== /etc/postfix/recipient_canonical: -> $TARGET ==="
+          if [ -f /etc/postfix/recipient_canonical ]; then
+            sudo sed -i -E "s|themis\.baltzakis@gmail\.com|$TARGET|g" /etc/postfix/recipient_canonical
+            sudo postmap /etc/postfix/recipient_canonical
+            sudo grep -vE '^\s*(#|$)' /etc/postfix/recipient_canonical
+          else
+            echo "(no recipient_canonical file — nothing to fix)"
+          fi
+          echo "=== reload postfix ==="
+          sudo systemctl reload postfix || sudo postfix reload || true
 
       - name: Send verification mail to root
         if: env.APPLY == 'true'
