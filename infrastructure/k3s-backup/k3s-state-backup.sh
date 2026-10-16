@@ -35,6 +35,7 @@ STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 TS="$(date -u '+%Y%m%d-%H%M%S')"
 RC=0
 BACKUP_OK=0
+UPLOAD_OK=0
 
 {
   echo "[${STAMP}] === k3s-state-backup start ==="
@@ -81,11 +82,12 @@ BACKUP_OK=0
       --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
       --max-age 2h --s3-upload-cutoff 64M --transfers 2 --low-level-retries 3 \
       --log-level INFO --log-file "${LOG}.rclone" \
+      && UPLOAD_OK=1 \
       || { echo "[${STAMP}] ERROR: rclone off-site sync failed"; RC=1; }
-    # Remote prune is gated on this run producing a fresh local backup —
-    # otherwise a >48h local outage would drain the off-site copy just
-    # when it is needed most.
-    if [ "${BACKUP_OK}" = "1" ]; then
+    # Remote prune is gated on a fresh local backup AND a successful
+    # upload this run — otherwise a local outage or persistent upload
+    # failure would drain the off-site copy when it is needed most.
+    if [ "${BACKUP_OK}" = "1" ] && [ "${UPLOAD_OK}" = "1" ]; then
       rclone delete "r2:datalake-bucket/k3s-state" \
         --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
         --min-age 48h --log-level INFO --log-file "${LOG}.rclone" \
@@ -98,9 +100,11 @@ BACKUP_OK=0
     RC=1
   fi
 
-  # 4) Retention.
-  ls -1t "${DST}"/k3s-state-*.db 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -f
-  ls -1t "${DST}"/k3s-server-config-*.enc 2>/dev/null | tail -n +$((KEEP+1)) | xargs -r rm -f
+  # 4) Retention (find is exit-safe on empty dirs; ls+pipefail is not).
+  find "${DST}" -maxdepth 1 -name 'k3s-state-*.db' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn | tail -n +$((KEEP+1)) | cut -d' ' -f2- | xargs -r rm -f
+  find "${DST}" -maxdepth 1 -name 'k3s-server-config-*.enc' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn | tail -n +$((KEEP+1)) | cut -d' ' -f2- | xargs -r rm -f
 
   echo "[${STAMP}] === k3s-state-backup done (rc=${RC}) ==="
   exit "${RC}"
