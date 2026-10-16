@@ -57,10 +57,15 @@ RC=0
   # 2) Config/identity material — encrypted before it touches disk as .enc.
   #    The plaintext tar exists only as openssl's stdin.
   if [ -f "${KEYFILE}" ]; then
-    tar -czf - -C "${DATA_DIR}" cred tls manifests token agent-token etc 2>/dev/null \
-      | openssl enc -aes-256-cbc -pbkdf2 -salt -pass "file:${KEYFILE}" \
-          -out "${DST}/k3s-server-config-${TS}.tar.gz.enc"
-    echo "[${STAMP}] server config -> k3s-server-config-${TS}.tar.gz.enc (aes-256-cbc)"
+    if tar -czf - -C "${DATA_DIR}" cred tls manifests token agent-token etc 2>/dev/null \
+        | openssl enc -aes-256-cbc -pbkdf2 -salt -pass "file:${KEYFILE}" \
+            -out "${DST}/k3s-server-config-${TS}.tar.gz.enc"; then
+      echo "[${STAMP}] server config -> k3s-server-config-${TS}.tar.gz.enc (aes-256-cbc)"
+    else
+      rm -f "${DST}/k3s-server-config-${TS}.tar.gz.enc"
+      echo "[${STAMP}] ERROR: config tar pipeline failed — partial .enc removed"
+      RC=1
+    fi
   else
     echo "[${STAMP}] ERROR: ${KEYFILE} missing — skipping config backup (no plaintext fallback)"
     RC=1
