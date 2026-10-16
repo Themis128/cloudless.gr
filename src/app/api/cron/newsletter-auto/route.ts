@@ -84,11 +84,23 @@ async function listExistingArticles(): Promise<ExistingArticle[]> {
       try {
         const parsed = JSON.parse(await item.text()) as { title?: string };
         if (parsed.title) {
-          articles.push({ slug: obj.key.split("/").pop()!.replace(/\.json$/, ""), title: parsed.title });
+          articles.push({
+            slug: obj.key
+              .split("/")
+              .pop()!
+              .replace(/\.json$/, ""),
+            title: parsed.title,
+          });
         }
       } catch {
         // unreadable object — still dedupe on the slug stem below
-        articles.push({ slug: obj.key.split("/").pop()!.replace(/\.json$/, ""), title: "" });
+        articles.push({
+          slug: obj.key
+            .split("/")
+            .pop()!
+            .replace(/\.json$/, ""),
+          title: "",
+        });
       }
     }
     return articles;
