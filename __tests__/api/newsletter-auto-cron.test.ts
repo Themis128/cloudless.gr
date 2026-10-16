@@ -31,7 +31,11 @@ const ARTICLE = JSON.stringify({
   title: "Cloud Wins", excerpt: "An excerpt.", category: "Serverless",
   contentHTML: "<p>Body</p>",
 });
-const bucket = { put: vi.fn(async () => {}), get: vi.fn() };
+const bucket = {
+  put: vi.fn(async () => {}),
+  get: vi.fn(),
+  list: vi.fn(async () => ({ objects: [] })),
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -95,5 +99,37 @@ describe("GET /api/cron/newsletter-auto", () => {
       String(c[0]).includes("articles/"))!;
     expect(JSON.parse(articlePut[1]).category).toBe("Cloud");
     expect(bucket.put.mock.calls.filter((c) => String(c[0]).includes("covers/"))).toHaveLength(0);
+  });
+
+  it("duplicate title vs existing articles → retried once, then 409, nothing saved", async () => {
+    bucket.list.mockResolvedValue({
+      objects: [{ key: "newsletter/articles/2026-10-12-cloud-wins.json" }],
+    });
+    bucket.get.mockResolvedValue({ text: async () => JSON.stringify({ title: "Cloud Wins" }) });
+    // Both attempts return the duplicate title.
+    const r = await GET(req());
+    expect(r.status).toBe(409);
+    expect(m.aiChat).toHaveBeenCalledTimes(2);
+    expect(
+      bucket.put.mock.calls.filter((c) => String(c[0]).includes("articles/"))
+    ).toHaveLength(0);
+    expect(m.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("first attempt duplicate, retry fresh → saves the fresh article", async () => {
+    bucket.list.mockResolvedValue({
+      objects: [{ key: "newsletter/articles/2026-10-12-cloud-wins.json" }],
+    });
+    bucket.get.mockResolvedValue({ text: async () => JSON.stringify({ title: "Cloud Wins" }) });
+    m.aiChat
+      .mockResolvedValueOnce(ARTICLE) // "Cloud Wins" — dup
+      .mockResolvedValueOnce(JSON.stringify({
+        title: "Zero-Trust on a Budget", excerpt: "E", category: "Cloud",
+        contentHTML: "<p>x</p>",
+      }));
+    const body = await (await GET(req())).json();
+    expect(body.ok).toBe(true);
+    expect(m.aiChat).toHaveBeenCalledTimes(2);
+    expect(body.slug).toContain("zero-trust-on-a-budget");
   });
 });
