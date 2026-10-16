@@ -34,6 +34,7 @@ KEEP=48   # 48 hourly state.db backups + 48 config tars
 STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 TS="$(date -u '+%Y%m%d-%H%M%S')"
 RC=0
+BACKUP_OK=0
 
 {
   echo "[${STAMP}] === k3s-state-backup start ==="
@@ -47,6 +48,7 @@ RC=0
   if sqlite3 "${DATA_DIR}/db/state.db" ".backup '${TMP_DB}'" \
      && [ "$(sqlite3 "${TMP_DB}" 'PRAGMA integrity_check;' 2>/dev/null)" = "ok" ]; then
     mv "${TMP_DB}" "${DST}/k3s-state-${TS}.db"
+    BACKUP_OK=1
     echo "[${STAMP}] state.db -> k3s-state-${TS}.db $(stat -c %s "${DST}/k3s-state-${TS}.db") bytes (integrity ok)"
   else
     rm -f "${TMP_DB}"
@@ -80,10 +82,17 @@ RC=0
       --max-age 2h --s3-upload-cutoff 64M --transfers 2 --low-level-retries 3 \
       --log-level INFO --log-file "${LOG}.rclone" \
       || { echo "[${STAMP}] ERROR: rclone off-site sync failed"; RC=1; }
-    rclone delete "r2:datalake-bucket/k3s-state" \
-      --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
-      --min-age 48h --log-level INFO --log-file "${LOG}.rclone" \
-      || { echo "[${STAMP}] ERROR: rclone remote prune failed"; RC=1; }
+    # Remote prune is gated on this run producing a fresh local backup —
+    # otherwise a >48h local outage would drain the off-site copy just
+    # when it is needed most.
+    if [ "${BACKUP_OK}" = "1" ]; then
+      rclone delete "r2:datalake-bucket/k3s-state" \
+        --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
+        --min-age 48h --log-level INFO --log-file "${LOG}.rclone" \
+        || { echo "[${STAMP}] ERROR: rclone remote prune failed"; RC=1; }
+    else
+      echo "[${STAMP}] NOTE: remote prune skipped — no fresh local backup this run"
+    fi
   else
     echo "[${STAMP}] ERROR: rclone not found — no off-site copy possible"
     RC=1
