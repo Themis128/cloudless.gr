@@ -81,14 +81,19 @@ jobs:
           # updates — update BOTH so the change survives regeneration.
           echo "=== OMV config DB: notification recipient ==="
           if command -v omv-confdbadm >/dev/null 2>&1; then
-            sudo omv-confdbadm read conf.system.notification.email 2>/dev/null \
-              | grep -iE 'recipient|primaryemail' || true
-            # Update the OMV-side source of truth (accepts JSON on stdin or
-            # positional 'conf.system.notification.email' + json).
-            sudo omv-confdbadm update conf.system.notification.email \
-              "{\"recipient\":\"$TARGET\"}" 2>/dev/null \
-              && echo "omv-confdbadm: recipient -> $TARGET" \
-              || echo "WARN: omv-confdbadm update failed — file-level fix only (may be overwritten on OMV regen)"
+            # Read-modify-write the FULL config object — a partial JSON
+            # payload risks wiping sibling fields (password, smarthost) if
+            # update has replace semantics.
+            CFG_JSON=$(sudo omv-confdbadm read conf.system.notification.email --prettify 2>/dev/null || true)
+            echo "$CFG_JSON" | grep -iE 'recipient|primaryemail' || true
+            if [ -n "$CFG_JSON" ]; then
+              NEW_JSON=$(printf '%s' "$CFG_JSON" | TARGET="$TARGET" python3 -c 'import json,sys,os; cfg=json.load(sys.stdin); cfg["primaryemail"]=os.environ["TARGET"]; print(json.dumps(cfg))')
+              sudo omv-confdbadm update conf.system.notification.email "$NEW_JSON" 2>/dev/null \
+                && echo "omv-confdbadm: primaryemail -> $TARGET (full-object update)" \
+                || echo "WARN: omv-confdbadm update failed — file-level fix only (may be overwritten on OMV regen)"
+            else
+              echo "WARN: could not read notification.email config"
+            fi
           else
             echo "(omv-confdbadm not found — file-level fix only)"
           fi
