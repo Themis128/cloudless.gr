@@ -1,0 +1,101 @@
+name: omv mail alias — root delivery target
+
+# Inspects (and optionally fixes) where omv's local system mail goes.
+# System mail (anacron, apticron, apt-listchanges, monit, cron output) is
+# addressed to root and resolved through /etc/aliases + postfix generic
+# maps on the omv host. Runs directly on the omv self-hosted runner.
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — aliases, postconf, recent
+#                          postfix logs. No changes.
+#   apply=true:            sets `root: <alias_target>` in /etc/aliases,
+#                          runs newaliases, sends a verification mail.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply the alias change (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+      alias_target:
+        description: 'Address root mail should be delivered to'
+        required: false
+        type: string
+        default: 'tbaltzakis@cloudless.gr'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  mail-alias:
+    name: omv root mail alias
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 10
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+      TARGET: ${{ inputs.alias_target || 'tbaltzakis@cloudless.gr' }}
+    steps:
+      - name: Dump current mail routing state
+        run: |
+          set -uo pipefail
+          echo "=== /etc/aliases (effective) ==="
+          sudo grep -vE '^\s*(#|$)' /etc/aliases 2>/dev/null || echo "(no /etc/aliases)"
+          echo
+          echo "=== alias_maps / alias_database ==="
+          postconf -h alias_maps alias_database 2>/dev/null || true
+          echo
+          echo "=== postconf -n (routing-relevant) ==="
+          postconf -n 2>/dev/null | grep -E '^(myorigin|mydestination|myhostname|relayhost|alias_maps|virtual_alias|sender_canonical|recipient_canonical|smtp_generic|masquerade|inet_interfaces|smtp_sasl)' || true
+          echo
+          echo "=== generic/canonical maps ==="
+          for f in /etc/postfix/generic /etc/postfix/canonical /etc/postfix/sender_canonical /etc/postfix/recipient_canonical; do
+            if [ -f "$f" ]; then
+              echo "--- $f"
+              sudo grep -vE '^\s*(#|$)' "$f" || true
+            fi
+          done
+          echo
+          echo "=== recent postfix log (last 25 lines) ==="
+          sudo journalctl -u postfix --since '-24h' --no-pager 2>/dev/null | tail -25 \
+            || sudo tail -25 /var/log/mail.log 2>/dev/null \
+            || echo "(no postfix log found)"
+
+      - name: Apply root alias -> target
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          echo "Setting root alias -> $TARGET"
+          if sudo grep -qE '^root\s*:' /etc/aliases; then
+            sudo sed -i -E "s|^root\s*:.*|root: $TARGET|" /etc/aliases
+          else
+            echo "root: $TARGET" | sudo tee -a /etc/aliases
+          fi
+          sudo newaliases
+          echo "=== effective root alias now ==="
+          sudo grep -E '^root\s*:' /etc/aliases
+
+      - name: Send verification mail to root
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          echo "omv mail-alias test $(date -u +%FT%TZ) — root now aliases to $TARGET" \
+            | sudo sendmail -t root || true
+          sleep 5
+          echo "=== queue + last delivery ==="
+          sudo mailq | tail -5
+          sudo journalctl -u postfix --since '-2m' --no-pager 2>/dev/null | tail -12 \
+            || sudo tail -12 /var/log/mail.log 2>/dev/null || true
+
+      - name: Post result to tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### omv mail-alias — $(date -u +%F\ %T)Z"
+            echo "**Mode:** $([ "$APPLY" = "true" ] && echo APPLY || echo DIAG) | **Target:** $TARGET"
+            echo "**Job:** ${{ job.status }} — [run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          } | gh issue comment 382 --repo Themis128/cloudless.gr --body-file - || true
