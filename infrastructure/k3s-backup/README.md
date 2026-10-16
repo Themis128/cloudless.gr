@@ -47,6 +47,14 @@ endpoint `fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`).
   the encrypted tar.
 - rclone remote `r2` is configured at `/root/.config/rclone/rclone.conf`;
   R2 credentials live in `.env` on the host — never commit them.
+- Remote objects are pruned `--min-age 48h` each run so off-site storage
+  mirrors the 48-file local retention instead of growing unbounded.
+- **Key escrow:** a second copy of `/root/.k3s-backup-key` lives on omv-ha
+  (`192.168.1.130:/root/.k3s-backup-key`, 0600) so the `.enc` files in R2
+  remain recoverable if the omv disk dies. Also keep a copy in your
+  password manager — without the key the encrypted tars are unrecoverable.
+- Any failure (`integrity_check`, missing key, rclone missing/sync/prune
+  error) exits non-zero so the systemd unit records a real failure.
 
 ### Retired
 

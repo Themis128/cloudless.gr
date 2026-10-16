@@ -71,13 +71,22 @@ RC=0
     RC=1
   fi
 
-  # 3) Off-site sync -> Cloudflare R2 datalake-bucket/k3s-state/
+  # 3) Off-site sync -> Cloudflare R2 datalake-bucket/k3s-state/, then
+  #    prune remote objects older than the retention window so off-site
+  #    storage stays bounded like the local copy.
   if command -v rclone >/dev/null 2>&1; then
     rclone copy "${DST}" "r2:datalake-bucket/k3s-state" \
       --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
       --max-age 2h --s3-upload-cutoff 64M --transfers 2 --low-level-retries 3 \
       --log-level INFO --log-file "${LOG}.rclone" \
       || { echo "[${STAMP}] ERROR: rclone off-site sync failed"; RC=1; }
+    rclone delete "r2:datalake-bucket/k3s-state" \
+      --include "k3s-state-*.db" --include "k3s-server-config-*.enc" \
+      --min-age 48h --log-level INFO --log-file "${LOG}.rclone" \
+      || { echo "[${STAMP}] ERROR: rclone remote prune failed"; RC=1; }
+  else
+    echo "[${STAMP}] ERROR: rclone not found — no off-site copy possible"
+    RC=1
   fi
 
   # 4) Retention.
