@@ -59,9 +59,10 @@ def stamp() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def log(msg: str) -> None:
+def log(msg: str, *, quiet: bool = False) -> None:
     line = f"[{stamp()}] {msg}"
-    print(line)
+    if not quiet:
+        print(line)
     try:
         with LOG.open("a") as f:
             f.write(line + "\n")
@@ -406,7 +407,9 @@ def fix_docker_health() -> None:
         return
     names = [n.strip() for n in r.stdout.splitlines() if n.strip()]
     if not names:
-        log("docker-health: no unhealthy containers")
+        # quiet: healthy runs go to the log file only — stdout would make
+        # the */10 cron mail every clean check.
+        log("docker-health: no unhealthy containers", quiet=True)
         return
 
     state = load_state()
