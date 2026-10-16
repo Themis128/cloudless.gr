@@ -39,7 +39,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: '382'
-      APPLY_UPDATES: ${{ github.event.inputs.apply == true }}
+      APPLY_UPDATES: ${{ format('{0}', inputs.apply) == 'true' || format('{0}', github.event.inputs.apply) == 'true' }}
       PKG_FILTER: ${{ github.event.inputs.packages || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
