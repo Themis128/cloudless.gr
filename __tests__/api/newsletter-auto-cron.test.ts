@@ -21,17 +21,25 @@ vi.mock("@/lib/admin-notifications", () => ({ recordNotification: m.recordNotif 
 vi.mock("@/lib/r2-client", () => ({ getDataLakeBucketFromEnv: m.getBucket }));
 vi.mock("@/lib/newsletter-cover", () => ({ fetchNewsletterCover: m.fetchCover }));
 vi.mock("@/lib/slack-notify", () => ({
-  SlackClient: class { post = m.slackPost; },
+  SlackClient: class {
+    post = m.slackPost;
+  },
 }));
 
 import { GET } from "@/app/api/cron/newsletter-auto/route";
 
 const req = () => new NextRequest("http://x/api/cron/newsletter-auto");
 const ARTICLE = JSON.stringify({
-  title: "Cloud Wins", excerpt: "An excerpt.", category: "Serverless",
+  title: "Cloud Wins",
+  excerpt: "An excerpt.",
+  category: "Serverless",
   contentHTML: "<p>Body</p>",
 });
-const bucket = { put: vi.fn(async () => {}), get: vi.fn() };
+const bucket = {
+  put: vi.fn(async () => {}),
+  get: vi.fn(),
+  list: vi.fn(async () => ({ objects: [] })),
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,11 +79,14 @@ describe("GET /api/cron/newsletter-auto", () => {
     expect(body.sent).toBe(2);
     expect(body.slug).toMatch(/^\d{4}-\d{2}-\d{2}-cloud-wins$/);
     expect(bucket.put).toHaveBeenCalledWith(
-      expect.stringContaining("newsletter/articles/"), expect.any(String)
+      expect.stringContaining("newsletter/articles/"),
+      expect.any(String)
     );
     // cover uploaded too
     expect(bucket.put).toHaveBeenCalledWith(
-      expect.stringContaining("newsletter/covers/"), expect.any(Uint8Array), expect.any(Object)
+      expect.stringContaining("newsletter/covers/"),
+      expect.any(Uint8Array),
+      expect.any(Object)
     );
     expect(m.sendEmail).toHaveBeenCalledTimes(2);
     expect(m.recordNotif).toHaveBeenCalled();
@@ -84,16 +95,54 @@ describe("GET /api/cron/newsletter-auto", () => {
 
   it("email failure counted; invalid category → Cloud; no cover → no cover put", async () => {
     m.sendEmail.mockRejectedValueOnce(new Error("smtp"));
-    m.aiChat.mockResolvedValueOnce(JSON.stringify({
-      title: "T", excerpt: "E", category: "bogus", contentHTML: "<p>x</p>",
-    }));
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({
+        title: "T",
+        excerpt: "E",
+        category: "bogus",
+        contentHTML: "<p>x</p>",
+      })
+    );
     m.fetchCover.mockResolvedValueOnce(null);
     const body = await (await GET(req())).json();
     expect(body.sent).toBe(1);
     expect(body.failed).toBe(1);
-    const articlePut = bucket.put.mock.calls.find((c) =>
-      String(c[0]).includes("articles/"))!;
+    const articlePut = bucket.put.mock.calls.find((c) => String(c[0]).includes("articles/"))!;
     expect(JSON.parse(articlePut[1]).category).toBe("Cloud");
     expect(bucket.put.mock.calls.filter((c) => String(c[0]).includes("covers/"))).toHaveLength(0);
+  });
+
+  it("duplicate title vs existing articles → retried once, then 409, nothing saved", async () => {
+    bucket.list.mockResolvedValue({
+      objects: [{ key: "newsletter/articles/2026-10-12-cloud-wins.json" }],
+    });
+    bucket.get.mockResolvedValue({ text: async () => JSON.stringify({ title: "Cloud Wins" }) });
+    // Both attempts return the duplicate title.
+    const r = await GET(req());
+    expect(r.status).toBe(409);
+    expect(m.aiChat).toHaveBeenCalledTimes(2);
+    expect(bucket.put.mock.calls.filter((c) => String(c[0]).includes("articles/"))).toHaveLength(0);
+    expect(m.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("first attempt duplicate, retry fresh → saves the fresh article", async () => {
+    bucket.list.mockResolvedValue({
+      objects: [{ key: "newsletter/articles/2026-10-12-cloud-wins.json" }],
+    });
+    bucket.get.mockResolvedValue({ text: async () => JSON.stringify({ title: "Cloud Wins" }) });
+    m.aiChat
+      .mockResolvedValueOnce(ARTICLE) // "Cloud Wins" — dup
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          title: "Zero-Trust on a Budget",
+          excerpt: "E",
+          category: "Cloud",
+          contentHTML: "<p>x</p>",
+        })
+      );
+    const body = await (await GET(req())).json();
+    expect(body.ok).toBe(true);
+    expect(m.aiChat).toHaveBeenCalledTimes(2);
+    expect(body.slug).toContain("zero-trust-on-a-budget");
   });
 });

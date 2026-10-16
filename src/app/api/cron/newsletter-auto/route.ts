@@ -65,6 +65,78 @@ function extractJson(text: string): unknown {
   }
 }
 
+interface ExistingArticle {
+  slug: string;
+  title: string;
+}
+
+/** Titles + slug stems of articles already stored under newsletter/articles/.
+ *  Used to steer generation away from repeats and to reject duplicates. */
+async function listExistingArticles(): Promise<ExistingArticle[]> {
+  const bucket = getDataLakeBucketFromEnv();
+  if (!bucket) return [];
+  try {
+    const listed = await bucket.list({ prefix: "newsletter/articles/" });
+    const articles: ExistingArticle[] = [];
+    for (const obj of listed.objects ?? []) {
+      const item = await bucket.get(obj.key);
+      if (!item) continue;
+      try {
+        const parsed = JSON.parse(await item.text()) as { title?: string };
+        if (parsed.title) {
+          articles.push({
+            slug: obj.key
+              .split("/")
+              .pop()!
+              .replace(/\.json$/, ""),
+            title: parsed.title,
+          });
+        }
+      } catch {
+        // unreadable object — still dedupe on the slug stem below
+        articles.push({
+          slug: obj.key
+            .split("/")
+            .pop()!
+            .replace(/\.json$/, ""),
+          title: "",
+        });
+      }
+    }
+    return articles;
+  } catch (err) {
+    console.error("[newsletter-auto] existing-article list failed:", err);
+    return [];
+  }
+}
+
+function titleTokens(title: string): Set<string> {
+  return new Set(
+    slugify(title)
+      .split("-")
+      .filter((t) => t.length > 2)
+  );
+}
+
+/** Jaccard similarity between title token sets; also compares the slug stem
+ *  (slug minus the date prefix) so identical AI titles are caught even when
+ *  only the date differs. Returns true when the article is a duplicate. */
+function isDuplicateTitle(title: string, existing: ExistingArticle[]): boolean {
+  const stem = slugify(title);
+  const tokens = titleTokens(title);
+  for (const e of existing) {
+    const existingStem = e.slug.replace(/^\d{4}-\d{2}-\d{2}-/, "");
+    if (stem === existingStem) return true;
+    if (e.title) {
+      const et = titleTokens(e.title);
+      const inter = [...tokens].filter((t) => et.has(t)).length;
+      const union = new Set([...tokens, ...et]).size;
+      if (union > 0 && inter / union >= 0.6) return true;
+    }
+  }
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) {
     return new Response("Unauthorized", { status: 401 });
@@ -74,31 +146,62 @@ export async function GET(request: NextRequest) {
   const system = `You are the Cloudless.gr newsletter editor. Each Monday at 09:00 Athens you write one article about cloudless.gr services, news, updates, or offers. Return ONLY valid JSON in this exact shape, no markdown, no prose:
 {"title":"string","excerpt":"string","category":"Cloud|Serverless|Analytics|AI Marketing","readTime":"string","contentHTML":"string"}
 The contentHTML must be a single string of well-formed HTML containing only <p>, <h2>, <ul>, <li>, <a>, and <strong> tags.`;
-  const user = `Write this week's newsletter article. Date: ${today}. Make it relevant to www.cloudless.gr services and offers.`;
 
-  let raw: string;
-  try {
-    raw = await callWorkersAiChat(
-      [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      { maxTokens: 2500 }
-    );
-  } catch (err) {
-    console.error("[newsletter-auto] AI generation failed:", err);
-    return Response.json({ error: "AI generation failed" }, { status: 502 });
-  }
+  const existing = await listExistingArticles();
+  const avoid = existing
+    .filter((e) => e.title)
+    .map((e) => `- ${e.title}`)
+    .join("\n");
 
-  const parsed = extractJson(raw) as {
+  const buildUser = (extra: string) =>
+    `Write this week's newsletter article. Date: ${today}. Make it relevant to www.cloudless.gr services and offers.\n` +
+    `Articles already published — you MUST pick a genuinely different topic and title, never a retitle or date-bump of these:\n${avoid || "- (none)"}${extra}`;
+
+  interface GeneratedArticle {
     title?: string;
     excerpt?: string;
     category?: string;
     readTime?: string;
     contentHTML?: string;
-  } | null;
+  }
+  let parsed: GeneratedArticle | null = null;
+  let raw = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      raw = await callWorkersAiChat(
+        [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: buildUser(
+              attempt === 0
+                ? ""
+                : `\nYour previous attempt "${parsed?.title ?? ""}" was rejected as a duplicate of an existing article. Choose a completely different subject.`
+            ),
+          },
+        ],
+        { maxTokens: 2500 }
+      );
+    } catch (err) {
+      console.error("[newsletter-auto] AI generation failed:", err);
+      return Response.json({ error: "AI generation failed" }, { status: 502 });
+    }
 
-  if (!parsed || !parsed.title || !parsed.excerpt || !parsed.contentHTML) {
+    parsed = extractJson(raw) as GeneratedArticle | null;
+    if (!parsed || !parsed.title || !parsed.excerpt || !parsed.contentHTML) {
+      return Response.json({ error: "AI did not return a usable article" }, { status: 502 });
+    }
+    if (!isDuplicateTitle(parsed.title, existing)) break;
+    if (attempt === 1) {
+      console.warn(`[newsletter-auto] rejected duplicate title after retry: ${parsed.title}`);
+      return Response.json(
+        { error: "duplicate article rejected", title: parsed.title },
+        { status: 409 }
+      );
+    }
+  }
+
+  if (!parsed?.title || !parsed.excerpt || !parsed.contentHTML) {
     return Response.json({ error: "AI did not return a usable article" }, { status: 502 });
   }
 
