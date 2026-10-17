@@ -153,8 +153,10 @@ describe("admin/monitor — status rendering fallbacks", () => {
       "text-red-400"
     );
     expect(c.textContent).toContain("Recently Resolved (12)");
-    expect(c.textContent).toContain("CODE_10");
-    expect(c.textContent).not.toContain("CODE_11");
+    // Exact-text matches (CODE_100 is also on the page, so no substring checks).
+    for (let i = 1; i <= 10; i++) expect(screen.getByText(`CODE_${i}`)).toBeTruthy();
+    expect(screen.queryByText("CODE_11")).toBeNull();
+    expect(screen.queryByText("CODE_12")).toBeNull();
   });
 });
 
