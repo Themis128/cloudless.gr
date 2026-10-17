@@ -40,7 +40,9 @@ jobs:
   apply-pending:
     name: omv pending config changes
     runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 15
+    # applyChanges + up to 10 min of isDirty polling must fit inside the job
+    # timeout so diagnostics/annotations still run when the queue is slow.
+    timeout-minutes: 25
     env:
       APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
     steps:
