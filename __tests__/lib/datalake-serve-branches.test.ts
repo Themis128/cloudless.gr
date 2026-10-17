@@ -272,9 +272,27 @@ describe("getStripeSnapshotFromLake", () => {
       ["", 0, 0],
     ]);
     expect(s.totals).toEqual({ events: 6, revenueMinor: 1550, processed: 6, failed: 0 });
-    // byCategory counts `count ?? events` (orders is not an alias there)
-    expect(s.byCategory).toEqual({ store: { events: 2, revenueMinor: 1550 } });
+    // byCategory uses the same count/orders/events aliases as dailyTrend
+    expect(s.byCategory).toEqual({ store: { events: 3, revenueMinor: 1550 } });
     expect(s.windowDays).toBe(14);
+  });
+
+  it("per-category event counts add up to the totals for orders-only parquet rows", async () => {
+    dash(
+      section("stripe_revenue", [
+        { day: "2026-10-01", revenue: 20, orders: 4, category: "store" },
+        { day: "2026-10-02", revenue: 5, orders: 1, category: "consulting" },
+        { day: "2026-10-03", revenue: 7, events: 2, category: "store" },
+      ])
+    );
+    const s = await getStripeSnapshotFromLake();
+    expect(s.byCategory).toEqual({
+      store: { events: 6, revenueMinor: 2700 },
+      consulting: { events: 1, revenueMinor: 500 },
+    });
+    const catEvents = Object.values(s.byCategory).reduce((n, c) => n + c.events, 0);
+    expect(catEvents).toBe(s.totals.events);
+    expect(s.totals.events).toBe(7);
   });
 
   it("returns an empty snapshot with the section error", async () => {
