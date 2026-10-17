@@ -222,17 +222,19 @@ function OverviewTab({
   web,
   setTab,
   tabs,
+  rangeLabel,
 }: {
   readonly snapshot: SeoSnapshot | null;
   readonly web: WebAnalytics | null;
   readonly setTab: (tab: Tab) => void;
   readonly tabs: { id: Tab; label: string }[];
+  readonly rangeLabel: string;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <p className="mb-3 font-mono text-xs text-slate-500">
-          Last 28 days · Google Search Console
+          {rangeLabel} · Google Search Console
         </p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
@@ -534,7 +536,18 @@ export default function AdminAnalyticsPage() {
     if (currentError) return <ErrorState msg={currentError} />;
     switch (tab) {
       case "overview":
-        return <OverviewTab snapshot={snapshot} web={web} setTab={setTab} tabs={TABS} />;
+        return (
+          <OverviewTab
+            snapshot={snapshot}
+            web={web}
+            setTab={setTab}
+            tabs={TABS}
+            rangeLabel={
+              RANGE_PRESETS.find((p) => p.days === days)?.label ??
+              `Last ${days} days`
+            }
+          />
+        );
       case "keywords":
         return <KeywordsTab keywords={keywords} />;
       case "pages":
