@@ -59,7 +59,16 @@ function persistDays(days: number) {
 }
 
 function presetForDays(days: number): RangePreset {
-  return RANGE_PRESETS.find((p) => p.days === days) ?? DEFAULT_RANGE;
+  // A stored value outside the presets (still within loadStoredDays' 1–730
+  // bounds) is what gets fetched, so label the chip with it rather than
+  // falling back to the default preset's name.
+  return (
+    RANGE_PRESETS.find((p) => p.days === days) ?? {
+      id: `custom-${days}d`,
+      label: `Last ${days} days`,
+      days,
+    }
+  );
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -213,17 +222,19 @@ function OverviewTab({
   web,
   setTab,
   tabs,
+  rangeLabel,
 }: {
   readonly snapshot: SeoSnapshot | null;
   readonly web: WebAnalytics | null;
   readonly setTab: (tab: Tab) => void;
   readonly tabs: { id: Tab; label: string }[];
+  readonly rangeLabel: string;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <p className="mb-3 font-mono text-xs text-slate-500">
-          Last 28 days · Google Search Console
+          {rangeLabel} · Google Search Console
         </p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard
@@ -525,13 +536,24 @@ export default function AdminAnalyticsPage() {
     if (currentError) return <ErrorState msg={currentError} />;
     switch (tab) {
       case "overview":
-        return <OverviewTab snapshot={snapshot} web={web} setTab={setTab} tabs={TABS} />;
+        return (
+          <OverviewTab
+            snapshot={snapshot}
+            web={web}
+            setTab={setTab}
+            tabs={TABS}
+            rangeLabel={
+              RANGE_PRESETS.find((p) => p.days === days)?.label ??
+              `Last ${days} days`
+            }
+          />
+        );
       case "keywords":
         return <KeywordsTab keywords={keywords} />;
       case "pages":
         return <PagesTab pages={pages} />;
       case "history":
-        return <HistoryTab history={history} />;
+        return <HistoryTab history={history} weeks={historyWeeks} />;
       case "ctr":
         return <CtrTab opportunities={opportunities} />;
     }
@@ -783,7 +805,13 @@ function PagesTab({ pages }: { readonly pages: PageRow[] }) {
 
 // ─── History Tab ──────────────────────────────────────────────────────────────
 
-function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
+function HistoryTab({
+  history,
+  weeks,
+}: {
+  readonly history: HistoryPoint[];
+  readonly weeks: number;
+}) {
   if (history.length === 0) {
     return (
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
@@ -796,14 +824,14 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-          <p className="mb-1 font-mono text-xs text-slate-500">Clicks (16 weeks)</p>
+          <p className="mb-1 font-mono text-xs text-slate-500">Clicks ({weeks} weeks)</p>
           <p className="font-heading text-neon-magenta mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.clicks ?? 0), 0).toLocaleString()}
           </p>
           <Sparkline data={history} field="clicks" />
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-          <p className="mb-1 font-mono text-xs text-slate-500">Impressions (16 weeks)</p>
+          <p className="mb-1 font-mono text-xs text-slate-500">Impressions ({weeks} weeks)</p>
           <p className="font-heading text-neon-cyan mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.impressions ?? 0), 0).toLocaleString()}
           </p>
