@@ -70,44 +70,51 @@ interface ExistingArticle {
   title: string;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function articleSlugFromKey(key: string): string {
+  return (key.split("/").pop() ?? key).replace(/\.json$/, "");
+}
+
 /** Titles + slug stems of articles already stored under newsletter/articles/.
- *  Used to steer generation away from repeats and to reject duplicates. */
-async function listExistingArticles(): Promise<ExistingArticle[]> {
+ *  Used to steer generation away from repeats and to reject duplicates.
+ *  Returns null when the list cannot be fetched (or R2 is not bound) so the
+ *  caller fails closed instead of publishing with dedupe silently bypassed. */
+async function listExistingArticles(): Promise<ExistingArticle[] | null> {
   const bucket = getDataLakeBucketFromEnv();
-  if (!bucket) return [];
+  if (!bucket) return null;
+  let listed: Awaited<ReturnType<typeof bucket.list>>;
   try {
-    const listed = await bucket.list({ prefix: "newsletter/articles/" });
-    const articles: ExistingArticle[] = [];
-    for (const obj of listed.objects ?? []) {
-      const item = await bucket.get(obj.key);
-      if (!item) continue;
-      try {
-        const parsed = JSON.parse(await item.text()) as { title?: string };
-        if (parsed.title) {
-          articles.push({
-            slug: obj.key
-              .split("/")
-              .pop()!
-              .replace(/\.json$/, ""),
-            title: parsed.title,
-          });
-        }
-      } catch {
-        // unreadable object — still dedupe on the slug stem below
-        articles.push({
-          slug: obj.key
-            .split("/")
-            .pop()!
-            .replace(/\.json$/, ""),
-          title: "",
-        });
-      }
-    }
-    return articles;
+    listed = await bucket.list({ prefix: "newsletter/articles/" });
   } catch (err) {
     console.error("[newsletter-auto] existing-article list failed:", err);
-    return [];
+    return null;
   }
+  const articles: ExistingArticle[] = [];
+  for (const obj of listed.objects ?? []) {
+    const slug = articleSlugFromKey(obj.key);
+    try {
+      const item = await bucket.get(obj.key);
+      if (!item) continue;
+      const parsed = JSON.parse(await item.text()) as { title?: string };
+      articles.push({ slug, title: parsed.title ?? "" });
+    } catch {
+      // unreadable object — still dedupe on the slug stem
+      articles.push({ slug, title: "" });
+    }
+  }
+  return articles;
 }
 
 function titleTokens(title: string): Set<string> {
@@ -148,6 +155,12 @@ export async function GET(request: NextRequest) {
 The contentHTML must be a single string of well-formed HTML containing only <p>, <h2>, <ul>, <li>, <a>, and <strong> tags.`;
 
   const existing = await listExistingArticles();
+  if (!existing) {
+    return Response.json(
+      { error: "Could not list existing articles; refusing to publish without dedupe" },
+      { status: 503 }
+    );
+  }
   const avoid = existing
     .filter((e) => e.title)
     .map((e) => `- ${e.title}`)
@@ -188,7 +201,14 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
     }
 
     parsed = extractJson(raw) as GeneratedArticle | null;
-    if (!parsed || !parsed.title || !parsed.excerpt || !parsed.contentHTML) {
+    // Model output is untyped JSON: require non-empty strings so slugify /
+    // escapeHtml can't throw after the article is already saved.
+    if (
+      !parsed ||
+      !isNonEmptyString(parsed.title) ||
+      !isNonEmptyString(parsed.excerpt) ||
+      !isNonEmptyString(parsed.contentHTML)
+    ) {
       return Response.json({ error: "AI did not return a usable article" }, { status: 502 });
     }
     if (!isDuplicateTitle(parsed.title, existing)) break;
@@ -247,9 +267,9 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
   const subject = `${today} — ${article.title}`;
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
-      ${coverUrl ? `<img src="${coverUrl}" alt="${article.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")}" style="width:100%;border-radius:12px;margin-bottom:24px;" />` : ""}
-      <h1 style="color: #00fff5; margin-top: 0;">${article.title}</h1>
-      <p style="color: #a0a0a0;">${article.excerpt}</p>
+      ${coverUrl ? `<img src="${coverUrl}" alt="${escapeHtml(article.title)}" style="width:100%;border-radius:12px;margin-bottom:24px;" />` : ""}
+      <h1 style="color: #00fff5; margin-top: 0;">${escapeHtml(article.title)}</h1>
+      <p style="color: #a0a0a0;">${escapeHtml(article.excerpt)}</p>
       <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
       ${article.html}
       <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
