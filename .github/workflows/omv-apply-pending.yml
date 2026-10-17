@@ -26,6 +26,12 @@ on:
         type: boolean
         default: false
 
+# Two dispatches on the same host must never overlap — concurrent
+# applyChanges calls race on the same dirtymodules/salt state.
+concurrency:
+  group: omv-apply-pending-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -57,8 +63,15 @@ jobs:
           set -euo pipefail
           sudo omv-rpc -u admin 'Config' 'applyChanges' '{"modules": [], "force": false}'
           echo
-          echo "=== Config.isDirty after apply (expect false) ==="
-          RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}')
+          # applyChanges spawns module deploys; isDirty can lag — poll until
+          # OMV reports clean (up to ~4 min) instead of checking once.
+          echo "=== Config.isDirty after apply (polling, expect false) ==="
+          RESULT=""
+          for i in $(seq 1 48); do
+            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}')
+            if [ "$RESULT" = "false" ]; then break; fi
+            sleep 5
+          done
           echo "$RESULT"
           if [ "$RESULT" != "false" ]; then
             echo "::error::OMV still reports pending changes after applyChanges"
