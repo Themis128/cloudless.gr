@@ -133,3 +133,41 @@ describe("upsertContact — failed follow-up updates are logged", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 });
+
+describe("upsertContact — existing contact found by email", () => {
+  const emailHit = (id: string) => {
+    mockFetch.mockResolvedValueOnce(listResp([{ id, emailAddress: "new@x.co" }]));
+  };
+
+  it("retries the PUT without the phone when EspoCRM rejects phoneNumber", async () => {
+    const { upsertContact } = await import("@/lib/espocrm");
+    emailHit("ex1");
+    mockFetch
+      .mockResolvedValueOnce(new Response('{"field":"phoneNumber"}', { status: 400 }))
+      .mockResolvedValueOnce(json({ id: "ex1" }));
+    expect(await upsertContact(withPhone)).toBe("ex1");
+    expect(puts()).toHaveLength(2);
+    expect(puts()[0].body.phoneNumber).toBe("+302101234567");
+    expect(puts()[1].url).toBe("https://espo.example/api/v1/Contact/ex1");
+    expect(puts()[1].body).toMatchObject({ emailAddress: "new@x.co", firstName: "New" });
+    expect(puts()[1].body.phoneNumber).toBeUndefined();
+  });
+
+  it("logs a non-phone update failure without retrying", async () => {
+    const { upsertContact } = await import("@/lib/espocrm");
+    emailHit("ex2");
+    mockFetch.mockResolvedValueOnce(new Response('{"field":"lastName"}', { status: 400 }));
+    expect(await upsertContact(withPhone)).toBe("ex2");
+    expect(puts()).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("a successful update makes a single PUT and logs nothing", async () => {
+    const { upsertContact } = await import("@/lib/espocrm");
+    emailHit("ex3");
+    mockFetch.mockResolvedValueOnce(json({ id: "ex3" }));
+    expect(await upsertContact(withPhone)).toBe("ex3");
+    expect(puts()).toHaveLength(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
