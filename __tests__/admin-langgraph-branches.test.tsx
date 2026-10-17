@@ -1,7 +1,7 @@
 /**
  * LangGraph admin page branch tests: api() error-body fallbacks, non-Error
  * rejections in the store panel / stream / resume, missing response fields,
- * SSE edge lines (non-data lines, non-string chunks, trailing partial line,
+ * SSE edge lines (non-data lines, non-string chunks, events split across reads,
  * missing stream body), send/resume guards, thread switch/delete edges and
  * the runs-panel unmount guard.
  *
@@ -127,13 +127,14 @@ describe("langgraph admin — branch coverage", () => {
     expect(c.textContent).toContain("socket closed");
   });
 
-  it("messages-mode SSE ignores non-data lines, non-string chunks and parses a trailing line", async () => {
+  it("messages-mode SSE ignores non-data lines, non-string chunks and reassembles a split event", async () => {
     routes["stream-run"] = sse([
       "event: metadata\n",
       "data: \n",
       'data: [{"content":42}]\n',
       "data: []\n",
-      // final event arrives without a trailing newline, split across chunks
+      // one event split across two reads: the partial line is carried in the
+      // buffer until its newline arrives
       'data: [{"content":"tail ',
       'reply"}]\n',
       'data: {"type":"interrupt"}\n',
@@ -253,6 +254,7 @@ describe("langgraph admin — branch coverage", () => {
       'data: {"not":"array"}\n',
       'data: [{"content":7}]\n',
       "data: {broken\n",
+      // one event split across three reads (buffer carry-over)
       'data: [{"content":"resumed ',
       'tail"}]',
       "\n",
