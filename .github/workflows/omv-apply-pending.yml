@@ -1,0 +1,80 @@
+name: omv apply pending config changes
+
+# Applies OpenMediaVault's pending configuration changes — the web UI banner
+# "The configuration has been changed. You must apply the changes" — without
+# logging into the UI. Pending modules live in
+# /var/lib/openmediavault/dirtymodules.json and each is deployed via
+# `omv-salt deploy run <module>`. Runs directly on the omv self-hosted runner.
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — lists dirty modules and the
+#                          pending config diff. No changes.
+#   apply=true:            runs `omv-salt deploy run` for every dirty module,
+#                          then re-dumps state (should be empty on success).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Deploy all dirty modules (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply-pending:
+    name: omv pending config changes
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+    steps:
+      - name: Dump dirty modules
+        run: |
+          set -uo pipefail
+          DIRTY=/var/lib/openmediavault/dirtymodules.json
+          echo "=== $DIRTY ==="
+          if [ -f "$DIRTY" ]; then
+            sudo cat "$DIRTY"
+          else
+            echo "(no dirtymodules.json — nothing pending)"
+          fi
+          echo
+          echo "=== omv-confdbadm dirty list (if available) ==="
+          for c in omv-confdbadm /usr/sbin/omv-confdbadm; do
+            if sudo "$c" --help >/dev/null 2>&1; then
+              sudo "$c" read --prettify conf.system.notification.email 2>/dev/null | head -20 || true
+              break
+            fi
+          done
+
+      - name: Deploy each dirty module
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          DIRTY=/var/lib/openmediavault/dirtymodules.json
+          SALT=""
+          for c in omv-salt /usr/sbin/omv-salt /usr/local/sbin/omv-salt; do
+            if sudo "$c" --version >/dev/null 2>&1 || sudo "$c" --help >/dev/null 2>&1; then
+              SALT="$c"; break
+            fi
+          done
+          if [ -z "$SALT" ]; then
+            echo "::error::omv-salt not found on PATH"
+            exit 1
+          fi
+          if [ ! -f "$DIRTY" ]; then
+            echo "nothing pending"
+            exit 0
+          fi
+          MODULES=$(sudo python3 -c 'import json; print(" ".join(json.load(open("/var/lib/openmediavault/dirtymodules.json"))))')
+          echo "dirty modules: $MODULES"
+          for m in $MODULES; do
+            echo "=== deploy: $m ==="
+            sudo "$SALT" deploy run "$m"
+          done
+          echo "=== post-deploy dirtymodules.json ==="
+          sudo cat "$DIRTY" 2>/dev/null || echo "(cleared)"
