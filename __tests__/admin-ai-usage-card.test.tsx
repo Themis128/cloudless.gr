@@ -117,26 +117,34 @@ describe("AdminAiUsageCard", () => {
     expect(c.textContent).toBe("AI status unavailable: Failed to load");
   });
 
-  it("ignores results that arrive after unmount", async () => {
+  it("late results after unmount run through the cancelled guard without rendering or throwing", async () => {
+    // React 19 no longer warns on setState after unmount, so instead of a
+    // console.error spy this checks that the late promise chain really ran
+    // (the body was read, the rejection was handled) and changed nothing.
     let resolveOk!: (r: Response) => void;
     let rejectErr!: (e: unknown) => void;
     fetchWithAuthMock
       .mockReturnValueOnce(new Promise<Response>((r) => (resolveOk = r)))
       .mockReturnValueOnce(new Promise<Response>((_, j) => (rejectErr = j)));
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const late = json(payload(true));
+    const jsonSpy = vi.spyOn(late, "json");
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
 
     const a = render(<AdminAiUsageCard />);
     const b = render(<AdminAiUsageCard />);
     a.unmount();
     b.unmount();
     await act(async () => {
-      resolveOk(json(payload(true)));
+      resolveOk(late);
       rejectErr(new Error("late"));
     });
     await act(async () => {});
-    // no state updates on unmounted components → React logs nothing
-    expect(errSpy).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(jsonSpy).toHaveBeenCalledTimes(1);
+    expect(unhandled).not.toHaveBeenCalled();
     expect(document.body.textContent).toBe("");
-    errSpy.mockRestore();
+    process.off("unhandledRejection", unhandled);
   });
 });
