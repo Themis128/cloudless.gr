@@ -125,14 +125,14 @@ export default defineConfig({
       ],
       // Ratchet thresholds: set a few points below the current measured
       // coverage so CI fails on a regression but tolerates normal variance.
-      // Measured 2026-10-12: lines 69.61 / stmts 71.94 / funcs 59.27 /
-      // branches 59.36 (admin-pages smoke + 117-route + lib batches).
+      // Measured 2026-10-17 (full suite, Node 22): lines 99.63 / stmts 97.07 /
+      // funcs 95.10 / branches 86.93.
       // Raise these as coverage improves; never lower them.
       thresholds: {
-        lines: 68,
-        functions: 57,
-        branches: 57,
-        statements: 70,
+        lines: 99,
+        functions: 94,
+        branches: 85,
+        statements: 96,
       },
     },
   },
