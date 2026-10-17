@@ -42,15 +42,20 @@ const KEYWORDS = [
   { keyword: "cloud consulting", clicks: 100, impressions: 5000, ctr: 2.0, position: 8.5 },
   { keyword: "null fields", clicks: null, impressions: null, ctr: null, position: null },
 ];
-const PAGES = [
-  { page: "/services", clicks: 50, impressions: 2000, ctr: 12.5, position: 2.5 },
-];
+const PAGES = [{ page: "/services", clicks: 50, impressions: 2000, ctr: 12.5, position: 2.5 }];
 const HISTORY = [
   { date: "2026-01-05", clicks: 10, impressions: 400, ctr: 2.5, position: 9.1 },
   { date: "2026-01-12", clicks: 20, impressions: 600, ctr: 3.3, position: 7.4 },
 ];
 const OPPS = [
-  { keyword: "easy win", position: 15.2, impressions: 9000, ctr: 0.5, clicks: 45, potentialClicks: 300 },
+  {
+    keyword: "easy win",
+    position: 15.2,
+    impressions: 9000,
+    ctr: 0.5,
+    clicks: 45,
+    potentialClicks: 300,
+  },
 ];
 
 function seedRoutes() {
@@ -163,9 +168,7 @@ describe("admin analytics — populated interactions", () => {
     await click(screen.getByText("Last 7 days"));
     expect(window.localStorage.getItem("admin:analytics:days")).toBe("7");
     expect(c.textContent).toContain("Reset to default");
-    const calls7 = fetchWithAuthMock.mock.calls.filter(([u]) =>
-      String(u).includes("days=7")
-    );
+    const calls7 = fetchWithAuthMock.mock.calls.filter(([u]) => String(u).includes("days=7"));
     expect(calls7.length).toBeGreaterThan(0);
 
     // reset → back to 28d
@@ -179,9 +182,7 @@ describe("admin analytics — populated interactions", () => {
     routes["/api/admin/analytics/web?days=90"] = { analytics: WEB };
     cleanup();
     await renderPage();
-    const calls90 = fetchWithAuthMock.mock.calls.filter(([u]) =>
-      String(u).includes("days=90")
-    );
+    const calls90 = fetchWithAuthMock.mock.calls.filter(([u]) => String(u).includes("days=90"));
     expect(calls90.length).toBeGreaterThan(0);
   });
 });

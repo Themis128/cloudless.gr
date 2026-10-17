@@ -542,10 +542,7 @@ export default function AdminAnalyticsPage() {
             web={web}
             setTab={setTab}
             tabs={TABS}
-            rangeLabel={
-              RANGE_PRESETS.find((p) => p.days === days)?.label ??
-              `Last ${days} days`
-            }
+            rangeLabel={RANGE_PRESETS.find((p) => p.days === days)?.label ?? `Last ${days} days`}
           />
         );
       case "keywords":
