@@ -106,7 +106,7 @@ jobs:
           # config.xml — OMV regenerates postfix maps FROM this file, so a
           # correct primaryemail here survives regeneration.
           if [ -f /etc/openmediavault/config.xml ]; then
-            sudo TARGET="$TARGET" python3 -c 'import os,re; p="/etc/openmediavault/config.xml"; s=open(p).read(); new,n=re.subn(r"(<primaryemail>)[^<]*(</primaryemail>)", r"\g<1>"+os.environ["TARGET"]+r"\g<2>", s); open(p,"w").write(new) if n else None; print(f"config.xml: primaryemail -> {os.environ[\"TARGET\"]} ({n} replacement)" if n else "config.xml: no <primaryemail> element found")'
+            sudo TARGET="$TARGET" python3 -c 'import os,re; p="/etc/openmediavault/config.xml"; s=open(p).read(); t=os.environ["TARGET"]; new,n=re.subn(r"(<primaryemail>)[^<]*(</primaryemail>)", r"\g<1>"+t+r"\g<2>", s); open(p,"w").write(new) if n else None; print(("config.xml: primaryemail -> %s (%d replacement)" % (t,n)) if n else "config.xml: no <primaryemail> element found")'
           fi
 
           echo "=== /etc/postfix/recipient_canonical: -> $TARGET ==="
