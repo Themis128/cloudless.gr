@@ -179,6 +179,10 @@ async function findContactByEmail(email: string): Promise<string | null> {
   if (plusIdx > 0 && atIdx > plusIdx) {
     candidates.push(email.slice(0, plusIdx) + email.slice(atIdx));
   }
+  // A failed lookup is not evidence of absence — if every search errored,
+  // callers must not treat the result as "contact not found" (that would
+  // mask a CRM outage as a clean miss / no-op).
+  let sawOk = false;
   for (const candidate of candidates) {
     // Try searchParams JSON format
     const searchParams = JSON.stringify({
@@ -194,6 +198,7 @@ async function findContactByEmail(email: string): Promise<string | null> {
     });
     const res = await espoFetch(`/Contact?searchParams=${encodeURIComponent(searchParams)}`);
     if (res.ok) {
+      sawOk = true;
       const data = (await res.json()) as { list: { id: string }[]; total: number };
       if (data.list?.[0]) return data.list[0].id;
     }
@@ -205,6 +210,7 @@ async function findContactByEmail(email: string): Promise<string | null> {
     });
     const textRes = await espoFetch(`/Contact?searchParams=${encodeURIComponent(textParams)}`);
     if (textRes.ok) {
+      sawOk = true;
       const data = (await textRes.json()) as {
         list: { id: string; emailAddress?: string }[];
         total: number;
@@ -213,6 +219,9 @@ async function findContactByEmail(email: string): Promise<string | null> {
       const match = data.list?.find((c) => c.emailAddress === candidate);
       if (match) return match.id;
     }
+  }
+  if (!sawOk) {
+    throw new Error("EspoCRM contact lookup failed — no search returned OK");
   }
   return null;
 }

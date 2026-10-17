@@ -8,7 +8,7 @@
  * Same harness as espocrm-tail.test.ts: integrations + cache faked, real
  * espocrm.ts, fetch stubbed.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGetIntegrations } = vi.hoisted(() => ({ mockGetIntegrations: vi.fn() }));
 
@@ -50,6 +50,12 @@ beforeEach(() => {
     ESPOCRM_BASE_URL: "https://espo.example",
     ESPOCRM_API_KEY: "k",
   });
+});
+
+// Spies (e.g. console.error silencers) must restore even when an assertion
+// throws — otherwise a failed test leaks a muted console into the next one.
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const bad = (status = 400) => new Response("nope", { status });
@@ -183,6 +189,15 @@ describe("findContactByEmail fallbacks (via setNewsletterStatus)", () => {
     mockGetIntegrations.mockResolvedValue({});
     expect(await setNewsletterStatus("ghost@x.co", "newsletter_signup")).toBe(false);
   });
+
+  it("lookup failures are not masked as unknown-email no-ops", async () => {
+    const { setNewsletterStatus } = await lib();
+    // Every search errors → we cannot know whether the contact exists, so
+    // unsubscribe must report failure, not a fake no-op success.
+    mockFetch.mockResolvedValue(bad());
+    expect(await setNewsletterStatus("ghost@x.co", "newsletter_unsubscribed")).toBe(false);
+    expect(await setNewsletterStatus("ghost@x.co", "newsletter_signup")).toBe(false);
+  });
 });
 
 describe("upsertContact edge paths", () => {
@@ -225,7 +240,6 @@ describe("upsertContact edge paths", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await upsertContact({ ...contact, phone: "+30 210 1234567" })).toBeNull();
     expect(mockFetch).toHaveBeenCalledTimes(3);
-    vi.restoreAllMocks();
   });
 
   it("phone retry hitting a non-JSON 409 resolves via email search", async () => {
