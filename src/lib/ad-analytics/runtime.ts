@@ -37,6 +37,19 @@ import { emailChannel } from "./channels/email";
 import { renderConversionBlocks, renderDigest, renderAnomalyBlocks } from "./digest";
 import { bookmarkKeyOf, getBookmarkStore } from "./bookmarks";
 import { evaluateAnomalies, findingDedupKey, type AnomalyFinding } from "./anomaly";
+
+/**
+ * Earliest `since` LinkedIn's adAnalytics accepts for performance data.
+ * LinkedIn retains it for 10 years and rejects earlier starts with
+ * `400 DATE_TOO_EARLY` (which the adapter turns into null). Out-of-daily-
+ * retention starts are rounded down to the month boundary, so step to the
+ * first day of the following month to stay strictly inside the limit.
+ * https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/ads-reporting
+ */
+export function linkedInRetentionStart(now: Date): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear() - 10, now.getUTCMonth() + 1, 1));
+  return d.toISOString().slice(0, 10);
+}
 import { recordAnomalyEvents } from "./anomaly-log";
 
 /**
@@ -321,6 +334,20 @@ export async function runScheduledPoll(opts?: {
             totalSpend = lifetime.reduce((acc, m) => acc + m.spendEur, 0);
           }
           for (const m of metrics) m.lifetimeSpendEur = totalSpend;
+          // Conservative bound for the credit line: all-time account
+          // spend (as far back as LinkedIn's 10-year retention allows). Pre-window spend may still have drawn the shared credit
+          // (LinkedIn never exposes the credit activation date), so the
+          // "€ left" figure must not silently exclude it.
+          if (adapter.pullAccountSpendEur) {
+            const allTime = await adapter.pullAccountSpendEur({
+              accountId: platformConfig.accountId,
+              since: linkedInRetentionStart(now),
+              until: now,
+            });
+            if (allTime !== null && allTime !== undefined) {
+              for (const m of metrics) m.creditSpendEur = allTime;
+            }
+          }
         } catch (err) {
           console.error("[ad-analytics/runtime] lifetime spend fetch failed:", err);
         }
@@ -493,6 +520,7 @@ export function aggregateCampaignMetrics(rows: AdMetrics[]): AdMetrics {
     cpcEur: clicks > 0 ? spendEur / clicks : undefined,
     cpaEur: conversions > 0 ? spendEur / conversions : undefined,
     lifetimeSpendEur: rows.find((r) => r.lifetimeSpendEur !== undefined)?.lifetimeSpendEur,
+    creditSpendEur: rows.find((r) => r.creditSpendEur !== undefined)?.creditSpendEur,
     demographics: hasDemographics ? demographics : undefined,
     creativeLeaderboard: creativeLeaderboard.length ? creativeLeaderboard : undefined,
     campaignBreakdown: rows.map((r) => ({

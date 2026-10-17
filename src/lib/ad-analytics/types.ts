@@ -164,6 +164,11 @@ export interface AdMetrics {
    *  config carries `pacing`. Account-level (all campaigns drain the same
    *  credit), so identical on each campaign's row. */
   lifetimeSpendEur?: number;
+  /** All-time spend across ALL campaigns — the conservative bound for the
+   *  promo-credit line. Spend before `pacing.adsStartAt` may still have
+   *  drained the shared credit (activation date isn't in the API), so the
+   *  credit check uses this while pace math keeps the windowed figure. */
+  creditSpendEur?: number;
   /** Per-creative leaderboard for the window (pivot=CREATIVE) — which ad
    *  variant is pulling the clicks. Sorted by clicks desc. */
   creativeLeaderboard?: Array<{
