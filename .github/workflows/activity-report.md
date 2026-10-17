@@ -1,10 +1,11 @@
 ---
-description: "Daily report on recent repository activity, delivered as an issue. Summarizes new issues, pull requests merged, and any open blockers."
+description: "Tri-weekly (Mon/Wed/Fri) report on recent repository activity, delivered as an issue. Summarizes new issues, pull requests merged, and any open blockers."
 on:
   schedule:
-    # Explicit off-peak slot (02:23 UTC) — "daily" scattered into the same
-    # window as the other Copilot agents and CI, tripping Copilot API 429s.
-    - cron: "23 2 * * *"
+    # Mon/Wed/Fri at off-peak 02:23 UTC — daily kept tripping Copilot API
+    # 429s (account-level quota, seen 2026-10-15/16); 3x/week keeps the
+    # report useful while cutting quota burn ~57%.
+    - cron: "23 2 * * 1,3,5"
   workflow_dispatch:
 permissions:
   contents: read
@@ -51,24 +52,24 @@ safe-outputs:
 
 # Activity Report
 
-You are the repository activity reporter for `cloudless.gr`. Your job is to scan the last 24 hours of repository activity and publish a concise, scannable daily report.
+You are the repository activity reporter for `cloudless.gr`. Your job is to scan repository activity since the previous scheduled run and publish a concise, scannable report. The workflow runs Mon/Wed/Fri at 02:23 UTC — look back 2 days for Wed/Fri runs, 3 days for Monday runs.
 
 ## Mission
 
-- Summarize what happened in the repo over the previous day.
+- Summarize what happened in the repo since the previous scheduled run (2–3 days).
 - Highlight new issues, PRs merged, and blockers.
 - Keep the report short, factual, and actionable.
 
 ## Inputs
 
-- Issues opened or updated in the last 24 hours.
-- Pull requests opened, merged, or closed in the last 24 hours.
+- Issues opened or updated since the previous scheduled run (2–3 days).
+- Pull requests opened, merged, or closed since the previous scheduled run (2–3 days).
 - Failing checks, CI status, deployment status, and open blockers.
 - Existing labels, milestones, CODEOWNERS, and project conventions from `AGENTS.md`.
 
 ## Workflow
 
-1. Query issues and PRs from the last 24 hours (prefer one or two broad GitHub MCP/list calls — avoid chatty pagination loops).
+1. Compute the lookback window from the day of week (Mon=3 days, Wed/Fri=2 days), then query issues and PRs in that window (prefer one or two broad GitHub MCP/list calls — avoid chatty pagination loops).
 2. Group findings into:
    - New Issues
    - Pull Requests
