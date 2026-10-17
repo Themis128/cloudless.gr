@@ -80,22 +80,33 @@ jobs:
           # recipient). OMV regenerates postfix files from its config DB on
           # updates — update BOTH so the change survives regeneration.
           echo "=== OMV config DB: notification recipient ==="
-          if command -v omv-confdbadm >/dev/null 2>&1; then
+          # omv-confdbadm lives in /usr/sbin — the runner's non-root PATH
+          # may not include it, so probe explicit paths too.
+          CONFDB=""
+          for c in omv-confdbadm /usr/sbin/omv-confdbadm /usr/local/sbin/omv-confdbadm; do
+            if sudo "$c" --help >/dev/null 2>&1; then CONFDB="$c"; break; fi
+          done
+          if [ -n "$CONFDB" ]; then
+            echo "using $CONFDB"
             # Read-modify-write the FULL config object — a partial JSON
             # payload risks wiping sibling fields (password, smarthost) if
             # update has replace semantics.
-            CFG_JSON=$(sudo omv-confdbadm read conf.system.notification.email --prettify 2>/dev/null || true)
+            CFG_JSON=$(sudo "$CONFDB" read conf.system.notification.email --prettify 2>/dev/null || true)
             echo "$CFG_JSON" | grep -iE 'recipient|primaryemail' || true
             if [ -n "$CFG_JSON" ]; then
               NEW_JSON=$(printf '%s' "$CFG_JSON" | TARGET="$TARGET" python3 -c 'import json,sys,os; cfg=json.load(sys.stdin); cfg["primaryemail"]=os.environ["TARGET"]; print(json.dumps(cfg))')
-              sudo omv-confdbadm update conf.system.notification.email "$NEW_JSON" 2>/dev/null \
-                && echo "omv-confdbadm: primaryemail -> $TARGET (full-object update)" \
-                || echo "WARN: omv-confdbadm update failed — file-level fix only (may be overwritten on OMV regen)"
+              sudo "$CONFDB" update conf.system.notification.email "$NEW_JSON" 2>/dev/null \
+                && echo "confdb: primaryemail -> $TARGET (full-object update)" \
+                || echo "WARN: confdb update failed — falling back to config.xml"
             else
               echo "WARN: could not read notification.email config"
             fi
-          else
-            echo "(omv-confdbadm not found — file-level fix only)"
+          fi
+          # Durable fallback when confdbadm is unusable: update the master
+          # config.xml — OMV regenerates postfix maps FROM this file, so a
+          # correct primaryemail here survives regeneration.
+          if [ -f /etc/openmediavault/config.xml ]; then
+            sudo TARGET="$TARGET" python3 -c 'import os,re; p="/etc/openmediavault/config.xml"; s=open(p).read(); new,n=re.subn(r"(<primaryemail>)[^<]*(</primaryemail>)", r"\g<1>"+os.environ["TARGET"]+r"\g<2>", s); open(p,"w").write(new) if n else None; print(f"config.xml: primaryemail -> {os.environ[\"TARGET\"]} ({n} replacement)" if n else "config.xml: no <primaryemail> element found")'
           fi
 
           echo "=== /etc/postfix/recipient_canonical: -> $TARGET ==="
