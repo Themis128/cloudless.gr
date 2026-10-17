@@ -223,7 +223,10 @@ async function findContactByEmail(email: string): Promise<string | null> {
  * rejected update (4xx/5xx or transport error) is logged instead of being
  * silently dropped.
  */
-async function updateConflictContact(id: string, body: Record<string, unknown>): Promise<void> {
+async function updateConflictContact(
+  id: string,
+  body: Record<string, unknown>
+): Promise<{ ok: boolean; detail: string }> {
   const res = await espoFetch(`/Contact/${id}`, {
     method: "PUT",
     body: JSON.stringify(body),
@@ -239,7 +242,9 @@ async function updateConflictContact(id: string, body: Record<string, unknown>):
       res.status,
       detail.slice(0, 300)
     );
+    return { ok: false, detail };
   }
+  return { ok: !!res, detail: "" };
 }
 
 export async function upsertContact(contact: EspoContact): Promise<string | null> {
@@ -254,10 +259,17 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
     // EspoCRM has no upsert primitive — search first, then POST or PATCH.
     const existingId = await findContactByEmail(contact.email);
     if (existingId) {
-      await espoFetch(`/Contact/${existingId}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      // Check the update like the 409 paths do: a returning contact whose
+      // phone fails EspoCRM's validator gets a 400 — retry once without it
+      // rather than silently keeping stale data.
+      const updated = await updateConflictContact(existingId, payload);
+      if (!updated.ok && updated.detail.includes("phoneNumber")) {
+        const noPhone = toEspoContactPayload(contact, false);
+        await updateConflictContact(
+          existingId,
+          accountId ? { ...noPhone, accountId, accountName: undefined } : noPhone
+        );
+      }
       void invalidateEspoContactCaches(existingId);
       return existingId;
     }
