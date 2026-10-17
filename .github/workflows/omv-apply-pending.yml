@@ -2,15 +2,20 @@ name: omv apply pending config changes
 
 # Applies OpenMediaVault's pending configuration changes — the web UI banner
 # "The configuration has been changed. You must apply the changes" — without
-# logging into the UI. Pending modules live in
-# /var/lib/openmediavault/dirtymodules.json and each is deployed via
-# `omv-salt deploy run <module>`. Runs directly on the omv self-hosted runner.
+# logging into the UI. Uses the same RPC as the UI's Apply button
+# (`omv-rpc Config applyChanges`, engined/rpc/config.inc), which deploys every
+# dirty module AND clears /var/lib/openmediavault/dirtymodules.json, so the
+# banner and pending-changes notifications go away. Runs directly on the omv
+# self-hosted runner.
+#
+# Never print config values here: the repo is public and OMV config contains
+# secrets (e.g. the SMTP relay password).
 #
 # Trigger: workflow_dispatch.
-#   apply=false (default): diagnostics only — lists dirty modules and the
-#                          pending config diff. No changes.
-#   apply=true:            runs `omv-salt deploy run` for every dirty module,
-#                          then re-dumps state (should be empty on success).
+#   apply=false (default): diagnostics only — lists dirty module names and
+#                          Config.isDirty. No changes.
+#   apply=true:            calls Config.applyChanges (same as the UI Apply
+#                          button), then re-checks Config.isDirty.
 
 on:
   workflow_dispatch:
@@ -32,49 +37,30 @@ jobs:
     env:
       APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
     steps:
-      - name: Dump dirty modules
+      - name: Show pending (dirty) modules
         run: |
           set -uo pipefail
           DIRTY=/var/lib/openmediavault/dirtymodules.json
-          echo "=== $DIRTY ==="
-          if [ -f "$DIRTY" ]; then
+          echo "=== $DIRTY (module names only) ==="
+          if sudo test -f "$DIRTY"; then
             sudo cat "$DIRTY"
           else
             echo "(no dirtymodules.json — nothing pending)"
           fi
           echo
-          echo "=== omv-confdbadm dirty list (if available) ==="
-          for c in omv-confdbadm /usr/sbin/omv-confdbadm; do
-            if sudo "$c" --help >/dev/null 2>&1; then
-              sudo "$c" read --prettify conf.system.notification.email 2>/dev/null | head -20 || true
-              break
-            fi
-          done
+          echo "=== Config.isDirty ==="
+          sudo omv-rpc -u admin 'Config' 'isDirty' '{}'
 
-      - name: Deploy each dirty module
+      - name: Apply pending changes (Config.applyChanges, same as UI Apply)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
-          DIRTY=/var/lib/openmediavault/dirtymodules.json
-          SALT=""
-          for c in omv-salt /usr/sbin/omv-salt /usr/local/sbin/omv-salt; do
-            if sudo "$c" --version >/dev/null 2>&1 || sudo "$c" --help >/dev/null 2>&1; then
-              SALT="$c"; break
-            fi
-          done
-          if [ -z "$SALT" ]; then
-            echo "::error::omv-salt not found on PATH"
+          sudo omv-rpc -u admin 'Config' 'applyChanges' '{"modules": [], "force": false}'
+          echo
+          echo "=== Config.isDirty after apply (expect false) ==="
+          RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}')
+          echo "$RESULT"
+          if [ "$RESULT" != "false" ]; then
+            echo "::error::OMV still reports pending changes after applyChanges"
             exit 1
           fi
-          if [ ! -f "$DIRTY" ]; then
-            echo "nothing pending"
-            exit 0
-          fi
-          MODULES=$(sudo python3 -c 'import json; print(" ".join(json.load(open("/var/lib/openmediavault/dirtymodules.json"))))')
-          echo "dirty modules: $MODULES"
-          for m in $MODULES; do
-            echo "=== deploy: $m ==="
-            sudo "$SALT" deploy run "$m"
-          done
-          echo "=== post-deploy dirtymodules.json ==="
-          sudo cat "$DIRTY" 2>/dev/null || echo "(cleared)"
