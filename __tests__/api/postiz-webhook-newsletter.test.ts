@@ -48,7 +48,9 @@ vi.mock("@/lib/slack-notify", () => ({
   }),
 }));
 
-const r2 = vi.hoisted(() => ({ bucket: null as { put: ReturnType<typeof vi.fn> } | null }));
+const r2 = vi.hoisted(() => ({
+  bucket: null as { put: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn> } | null,
+}));
 vi.mock("@/lib/r2-client", () => ({
   getDataLakeBucketFromEnv: vi.fn(() => r2.bucket),
 }));
@@ -211,7 +213,11 @@ describe("GET /api/cron/newsletter-auto", () => {
     notifs.recordNotification.mockResolvedValue(undefined);
     slackPost.mockResolvedValue(true);
     cover.fetchNewsletterCover.mockResolvedValue({ buffer: new Uint8Array([1]) });
-    r2.bucket = { put: vi.fn(async () => undefined) };
+    // No articles published yet — the route lists them for dedupe first.
+    r2.bucket = {
+      put: vi.fn(async () => undefined),
+      list: vi.fn(async () => ({ objects: [] })),
+    };
   });
 
   it("401s when unauthorized", async () => {
