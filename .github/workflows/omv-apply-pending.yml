@@ -26,10 +26,11 @@ on:
         type: boolean
         default: false
 
-# Two dispatches on the same host must never overlap — concurrent
-# applyChanges calls race on the same dirtymodules/salt state.
+# OMV mutations on this host must never overlap — not just two dispatches of
+# this workflow, but ANY OMV-mutating workflow (mail aliases, etc.) racing on
+# the same dirtymodules/salt state. Shared group name on purpose.
 concurrency:
-  group: omv-apply-pending-${{ github.ref }}
+  group: omv-host-mutation
   cancel-in-progress: false
 
 permissions:
@@ -64,16 +65,20 @@ jobs:
           sudo omv-rpc -u admin 'Config' 'applyChanges' '{"modules": [], "force": false}'
           echo
           # applyChanges spawns module deploys; isDirty can lag — poll until
-          # OMV reports clean (up to ~4 min) instead of checking once.
+          # OMV reports clean (up to ~10 min, inside the 15-min job timeout)
+          # instead of checking once. `|| true` keeps a transient omv-rpc
+          # failure from killing the poll loop under `set -e`.
           echo "=== Config.isDirty after apply (polling, expect false) ==="
           RESULT=""
-          for i in $(seq 1 48); do
-            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}')
+          for i in $(seq 1 120); do
+            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}' 2>&1 || true)
             if [ "$RESULT" = "false" ]; then break; fi
             sleep 5
           done
-          echo "$RESULT"
+          echo "last isDirty result: $RESULT"
           if [ "$RESULT" != "false" ]; then
-            echo "::error::OMV still reports pending changes after applyChanges"
+            echo "=== dirtymodules.json (module names only) ==="
+            sudo cat /var/lib/openmediavault/dirtymodules.json || true
+            echo "::error::OMV still reports pending changes after applyChanges (waited ~10min)"
             exit 1
           fi
