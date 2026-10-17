@@ -61,11 +61,22 @@ describe("GET /api/cron/newsletter-auto", () => {
     expect((await GET(req())).status).toBe(502);
     m.aiChat.mockResolvedValueOnce(JSON.stringify({ title: "t" })); // missing excerpt+html
     expect((await GET(req())).status).toBe(502);
+    // non-string fields from the model are rejected before anything is saved
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({ title: "T", excerpt: ["not", "a", "string"], contentHTML: "<p>x</p>" })
+    );
+    expect((await GET(req())).status).toBe(502);
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({ title: 42, excerpt: "E", contentHTML: "<p>x</p>" })
+    );
+    expect((await GET(req())).status).toBe(502);
+    expect(bucket.put).not.toHaveBeenCalled();
   });
 
-  it("no R2 bucket → 503; bucket.put throws → 500", async () => {
+  it("no R2 bucket → 503 before any AI call; bucket.put throws → 500", async () => {
     m.getBucket.mockReturnValue(null);
     expect((await GET(req())).status).toBe(503);
+    expect(m.aiChat).not.toHaveBeenCalled();
     m.getBucket.mockReturnValue(bucket);
     bucket.put.mockRejectedValue(new Error("r2 down"));
     expect((await GET(req())).status).toBe(500);
@@ -144,5 +155,55 @@ describe("GET /api/cron/newsletter-auto", () => {
     expect(body.ok).toBe(true);
     expect(m.aiChat).toHaveBeenCalledTimes(2);
     expect(body.slug).toContain("zero-trust-on-a-budget");
+  });
+
+  it("existing-article list fails → 503, fails closed: nothing generated, saved or mailed", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    bucket.list.mockRejectedValueOnce(new Error("r2 list down"));
+    const r = await GET(req());
+    expect(r.status).toBe(503);
+    expect(m.aiChat).not.toHaveBeenCalled();
+    expect(bucket.put).not.toHaveBeenCalled();
+    expect(m.sendEmail).not.toHaveBeenCalled();
+    err.mockRestore();
+  });
+
+  it("unreadable or title-less stored articles still dedupe on the slug stem", async () => {
+    bucket.list.mockResolvedValue({
+      objects: [
+        { key: "newsletter/articles/2026-10-05-cloud-wins.json" },
+        { key: "newsletter/articles/2026-10-12-other.json" },
+      ],
+    });
+    bucket.get
+      .mockRejectedValueOnce(new Error("get failed")) // cloud-wins: unreadable
+      .mockResolvedValueOnce({ text: async () => "{}" }); // other: no title
+    const r = await GET(req());
+    expect(r.status).toBe(409);
+    expect(m.aiChat).toHaveBeenCalledTimes(2);
+  });
+
+  it("HTML-escapes the AI title and excerpt in the email (only contentHTML is raw)", async () => {
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({
+        title: 'Cloud <script>alert(1)</script> & "Edge"',
+        excerpt: "<img src=x onerror=alert(1)> it's",
+        category: "Cloud",
+        contentHTML: "<p>Body</p>",
+      })
+    );
+    const body = await (await GET(req())).json();
+    expect(body.ok).toBe(true);
+    const html = (m.sendEmail.mock.calls[0] as unknown as [{ html: string; text: string }])[0].html;
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain(
+      '<h1 style="color: #00fff5; margin-top: 0;">Cloud &lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;Edge&quot;</h1>'
+    );
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt; it&#39;s</p>");
+    expect(html).toContain(
+      'alt="Cloud &lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;Edge&quot;"'
+    );
+    expect(html).toContain("<p>Body</p>");
   });
 });
