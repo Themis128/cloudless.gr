@@ -140,12 +140,12 @@ describe("esp32-manager — branch tails", () => {
     expect(c.textContent).not.toContain("✗ Save failed");
   });
 
-  it("OTA without a version omits it from the request", async () => {
+  it("OTA with a whitespace-only version omits it from the request", async () => {
     routes["/api/admin/esp32?action=ota"] = { ok: true };
     const c = await renderPage();
     await click(screen.getByText("OTA Update"));
     fireEvent.change(c.querySelector("input[type='url']")!, {
-      target: { value: "  http://192.168.1.10/fw.bin  " },
+      target: { value: "http://192.168.1.10/fw.bin" },
     });
     fireEvent.change(c.querySelector("input[placeholder='e.g. 4.1']")!, {
       target: { value: "   " },
