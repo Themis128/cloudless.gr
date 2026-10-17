@@ -79,6 +79,10 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
 function articleSlugFromKey(key: string): string {
   return (key.split("/").pop() ?? key).replace(/\.json$/, "");
 }
@@ -197,7 +201,14 @@ The contentHTML must be a single string of well-formed HTML containing only <p>,
     }
 
     parsed = extractJson(raw) as GeneratedArticle | null;
-    if (!parsed || !parsed.title || !parsed.excerpt || !parsed.contentHTML) {
+    // Model output is untyped JSON: require non-empty strings so slugify /
+    // escapeHtml can't throw after the article is already saved.
+    if (
+      !parsed ||
+      !isNonEmptyString(parsed.title) ||
+      !isNonEmptyString(parsed.excerpt) ||
+      !isNonEmptyString(parsed.contentHTML)
+    ) {
       return Response.json({ error: "AI did not return a usable article" }, { status: 502 });
     }
     if (!isDuplicateTitle(parsed.title, existing)) break;

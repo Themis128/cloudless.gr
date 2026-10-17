@@ -61,6 +61,16 @@ describe("GET /api/cron/newsletter-auto", () => {
     expect((await GET(req())).status).toBe(502);
     m.aiChat.mockResolvedValueOnce(JSON.stringify({ title: "t" })); // missing excerpt+html
     expect((await GET(req())).status).toBe(502);
+    // non-string fields from the model are rejected before anything is saved
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({ title: "T", excerpt: ["not", "a", "string"], contentHTML: "<p>x</p>" })
+    );
+    expect((await GET(req())).status).toBe(502);
+    m.aiChat.mockResolvedValueOnce(
+      JSON.stringify({ title: 42, excerpt: "E", contentHTML: "<p>x</p>" })
+    );
+    expect((await GET(req())).status).toBe(502);
+    expect(bucket.put).not.toHaveBeenCalled();
   });
 
   it("no R2 bucket → 503 before any AI call; bucket.put throws → 500", async () => {
