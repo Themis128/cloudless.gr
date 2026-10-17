@@ -71,7 +71,7 @@ jobs:
           echo "=== Config.isDirty after apply (polling, expect false) ==="
           RESULT=""
           for i in $(seq 1 120); do
-            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}' 2>&1 || true)
+            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}' 2>/dev/null || true)
             if [ "$RESULT" = "false" ]; then break; fi
             sleep 5
           done
