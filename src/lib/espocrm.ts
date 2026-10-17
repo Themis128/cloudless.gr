@@ -179,7 +179,13 @@ async function findContactByEmail(email: string): Promise<string | null> {
   if (plusIdx > 0 && atIdx > plusIdx) {
     candidates.push(email.slice(0, plusIdx) + email.slice(atIdx));
   }
+  // A failed lookup is not evidence of absence — a candidate whose searches
+  // all errored was never actually checked, so callers must not treat the
+  // result as "contact not found" (that would mask a CRM outage or a
+  // per-candidate HTTP error as a clean miss / no-op).
+  let allChecked = true;
   for (const candidate of candidates) {
+    let candidateOk = false;
     // Try searchParams JSON format
     const searchParams = JSON.stringify({
       maxSize: 5,
@@ -194,6 +200,7 @@ async function findContactByEmail(email: string): Promise<string | null> {
     });
     const res = await espoFetch(`/Contact?searchParams=${encodeURIComponent(searchParams)}`);
     if (res.ok) {
+      candidateOk = true;
       const data = (await res.json()) as { list: { id: string }[]; total: number };
       if (data.list?.[0]) return data.list[0].id;
     }
@@ -205,6 +212,7 @@ async function findContactByEmail(email: string): Promise<string | null> {
     });
     const textRes = await espoFetch(`/Contact?searchParams=${encodeURIComponent(textParams)}`);
     if (textRes.ok) {
+      candidateOk = true;
       const data = (await textRes.json()) as {
         list: { id: string; emailAddress?: string }[];
         total: number;
@@ -213,6 +221,10 @@ async function findContactByEmail(email: string): Promise<string | null> {
       const match = data.list?.find((c) => c.emailAddress === candidate);
       if (match) return match.id;
     }
+    if (!candidateOk) allChecked = false;
+  }
+  if (!allChecked) {
+    throw new Error("EspoCRM contact lookup failed — not every candidate returned OK");
   }
   return null;
 }
@@ -309,8 +321,14 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         void invalidateEspoContactCaches(match.id);
         return match.id;
       }
-      // 409 body didn't have our contact — try email search as fallback
-      const conflictId = await findContactByEmail(contact.email);
+      // 409 body didn't have our contact — try email search as fallback.
+      // A lookup failure must not abort the conflict resolution below.
+      let conflictId: string | null = null;
+      try {
+        conflictId = await findContactByEmail(contact.email);
+      } catch {
+        // Lookup incomplete — fall through to the conflictContacts fallback
+      }
       if (conflictId) {
         await updateConflictContact(conflictId, payload);
         void invalidateEspoContactCaches(conflictId);
