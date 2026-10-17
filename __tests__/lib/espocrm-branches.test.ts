@@ -162,11 +162,25 @@ describe("findContactByEmail fallbacks (via setNewsletterStatus)", () => {
     expect(lastBody()).toEqual({ leadSource: "Other" });
   });
 
-  it("tries the +alias-stripped address when both lookups miss, then creates", async () => {
+  it("fails instead of guessing when an exact-address lookup errors", async () => {
     const { setNewsletterStatus } = await lib();
     mockFetch
       .mockResolvedValueOnce(bad()) // exact: searchParams !ok
       .mockResolvedValueOnce(bad()) // exact: textFilter !ok
+      .mockResolvedValueOnce(listResp([])) // base: searchParams miss
+      .mockResolvedValueOnce(listResp([])) // base: textFilter miss
+      .mockResolvedValueOnce(json({ id: "new" }));
+    // The exact address was never checked — an errored lookup is not a miss,
+    // so the status update must not create a duplicate contact.
+    expect(await setNewsletterStatus("a+promo@x.co", "newsletter_signup")).toBe(false);
+    expect(mockFetch.mock.calls.length).toBeLessThan(5);
+  });
+
+  it("tries the +alias-stripped address when both lookups miss, then creates", async () => {
+    const { setNewsletterStatus } = await lib();
+    mockFetch
+      .mockResolvedValueOnce(listResp([])) // exact: searchParams miss
+      .mockResolvedValueOnce(listResp([])) // exact: textFilter miss
       .mockResolvedValueOnce(listResp([])) // base: searchParams miss
       .mockResolvedValueOnce(listResp([])) // base: textFilter miss
       .mockResolvedValueOnce(json({ id: "new" }));
