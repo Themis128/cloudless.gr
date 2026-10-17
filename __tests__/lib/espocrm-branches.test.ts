@@ -59,7 +59,7 @@ const contact = { email: "new@x.co", firstname: "New", lastname: "Person" };
 describe("espoFetch", () => {
   it("returns the last retryable response once retries are exhausted (no Retry-After)", async () => {
     const { listLeads } = await lib();
-    mockFetch.mockResolvedValue(bad(503));
+    mockFetch.mockImplementation(async () => bad(503));
     expect(await listLeads(5)).toEqual([]);
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
@@ -115,10 +115,11 @@ describe("list helpers degrade to [] on non-ok or list-less responses", () => {
 
   it("contact links hit the right sub-resource and skip invalid ids without a request", async () => {
     const l = await lib();
-    mockFetch.mockResolvedValue(listResp([{ id: "x" }]));
-    await l.listContactOpportunities("c1");
-    await l.listContactCases("c1");
-    await l.listContactNotes("c1");
+    // fresh Response per call — a shared instance's body can only be read once
+    mockFetch.mockImplementation(async () => listResp([{ id: "x" }]));
+    expect(await l.listContactOpportunities("c1")).toEqual([{ id: "x" }]);
+    expect(await l.listContactCases("c1")).toEqual([{ id: "x" }]);
+    expect(await l.listContactNotes("c1")).toEqual([{ id: "x" }]);
     const paths = mockFetch.mock.calls.map((c) => String(c[0]).split("/api/v1")[1]);
     expect(paths).toEqual([
       "/Contact/c1/opportunities?maxSize=100",
