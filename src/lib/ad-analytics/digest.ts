@@ -275,7 +275,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     // the tracked campaign's lifetime cap cannot bound this projection —
     // capping it here would suppress the warning while sibling campaigns
     // drain the same credit. The cap is informational only.
-    const projectedEnd = spent + pacePerDay * daysLeft;
+    const projectedEnd = creditSpent + pacePerDay * daysLeft;
     warn = projectedEnd > p.creditEur;
     if (warn) {
       const daysToDeplete = remaining / pacePerDay;
@@ -300,7 +300,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   }
 
   return (
-    `${warn ? "⚠️ " : ""}*Credit:* €${spent.toFixed(2)} / ` +
+    `${warn ? "⚠️ " : ""}*Credit:* €${creditSpent.toFixed(2)} / ` +
     `€${p.creditEur.toFixed(2)} — *€${remaining.toFixed(2)}* left ${tail}`
   );
 }
