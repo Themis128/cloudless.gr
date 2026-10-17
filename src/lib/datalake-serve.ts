@@ -438,9 +438,12 @@ export async function getStripeSnapshotFromLake(windowDays = 30): Promise<{
 }> {
   const section = await getGoldSection(SECTION_STRIPE_REVENUE);
   const rows = section?.rows ?? [];
+  // One event-count rule for every aggregate, so the per-category totals add
+  // up to the daily-trend totals whichever column alias the parquet uses.
+  const rowEvents = (r: (typeof rows)[number]) => Number(r.count ?? r.orders ?? r.events) || 0;
   const dailyTrend = rows.map((r) => {
     const amountMajor = Number(r.revenue ?? r.amount) || 0;
-    const events = Number(r.count ?? r.orders ?? r.events) || 0;
+    const events = rowEvents(r);
     return {
       day: String(r.day ?? r.date ?? r.period ?? ""),
       revenueMinor: Math.round(amountMajor * 100),
@@ -463,7 +466,7 @@ export async function getStripeSnapshotFromLake(windowDays = 30): Promise<{
     if (r.category == null) continue;
     const cat = String(r.category);
     const cur = byCategory[cat] ?? { events: 0, revenueMinor: 0 };
-    cur.events += Number(r.count ?? r.events) || 0;
+    cur.events += rowEvents(r);
     cur.revenueMinor += Math.round((Number(r.revenue ?? r.amount) || 0) * 100);
     byCategory[cat] = cur;
   }

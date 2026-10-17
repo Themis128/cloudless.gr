@@ -227,7 +227,7 @@ describe("getKpiFromLake + getStripeSnapshotFromLake", () => {
     const out = await getStripeSnapshotFromLake();
     expect(out.totals.revenueMinor).toBe(1600);
     expect(out.totals.events).toBe(6);
-    expect(out.byCategory.plan.events).toBe(2); // orders not counted in byCategory
+    expect(out.byCategory.plan.events).toBe(3); // count + orders, same aliases as dailyTrend
     expect(out.dailyTrend[0].day).toBe("2026-10-01");
   });
 });
