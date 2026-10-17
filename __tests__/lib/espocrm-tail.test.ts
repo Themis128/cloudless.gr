@@ -235,6 +235,39 @@ describe("upsertContact", () => {
     expect(err).toHaveBeenCalledWith(expect.stringContaining("create failed"), 400, "boom");
     err.mockRestore();
   });
+
+  it("with a phone, a non-phone create failure still logs the EspoCRM error body", async () => {
+    // Regression: the body was read for the phoneNumber check and then read
+    // again for the log, which yielded "" on the already-consumed Response.
+    const { upsertContact } = await lib();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    emailMiss();
+    mockFetch.mockResolvedValueOnce(new Response('{"error":"lastName required"}', { status: 400 }));
+    expect(await upsertContact({ ...contact, phone: "+302101234567" })).toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(3); // no phone-less retry
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("create failed"),
+      400,
+      '{"error":"lastName required"}'
+    );
+    err.mockRestore();
+  });
+
+  it("phone retry that fails without a 409 logs the retry's own error body", async () => {
+    const { upsertContact } = await lib();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    emailMiss();
+    mockFetch
+      .mockResolvedValueOnce(new Response("phoneNumber bad", { status: 400 }))
+      .mockResolvedValueOnce(new Response("retry exploded", { status: 422 }));
+    expect(await upsertContact({ ...contact, phone: "+302101234567" })).toBeNull();
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("create failed"),
+      422,
+      "retry exploded"
+    );
+    err.mockRestore();
+  });
 });
 
 describe("misc error branches", () => {
