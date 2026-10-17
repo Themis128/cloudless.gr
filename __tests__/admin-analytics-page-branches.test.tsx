@@ -135,8 +135,8 @@ describe("admin analytics — branch coverage", () => {
     // all-zero clicks → flat line on the baseline; flat impressions → same
     expect(lines[0].getAttribute("points")).toBe("0.0,48.0 240.0,48.0");
     expect(lines[1].getAttribute("points")).toBe("0.0,48.0 240.0,48.0");
-    expect(screen.getByText("Clicks (16 weeks)").nextElementSibling!.textContent).toBe("0");
-    expect(screen.getByText("Impressions (16 weeks)").nextElementSibling!.textContent).toBe(
+    expect(screen.getByText("Clicks (8 weeks)").nextElementSibling!.textContent).toBe("0");
+    expect(screen.getByText("Impressions (8 weeks)").nextElementSibling!.textContent).toBe(
       (1000).toLocaleString()
     );
     // newest week first, so the all-null first week is the last row
@@ -157,8 +157,8 @@ describe("admin analytics — branch coverage", () => {
     };
     const c = await renderPage();
     await openTab("History");
-    expect(screen.getByText("Clicks (16 weeks)").nextElementSibling!.textContent).toBe("6");
-    expect(screen.getByText("Impressions (16 weeks)").nextElementSibling!.textContent).toBe("0");
+    expect(screen.getByText("Clicks (8 weeks)").nextElementSibling!.textContent).toBe("6");
+    expect(screen.getByText("Impressions (8 weeks)").nextElementSibling!.textContent).toBe("0");
     expect(rows(c).map((tr) => cells(tr)[2].textContent)).toEqual(["0", "0"]);
   });
 

@@ -122,7 +122,7 @@ describe("admin analytics — populated interactions", () => {
     expect(c.textContent).toContain("12.5%");
 
     await click(screen.getByText("History"));
-    expect(c.textContent).toContain("Clicks (16 weeks)");
+    expect(c.textContent).toContain("Clicks (8 weeks)");
     expect(c.textContent).toContain("Weekly Breakdown");
     expect(c.textContent).toContain("5 Jan"); // en-IE → day-first
     expect(c.querySelector("polyline")).toBeTruthy();

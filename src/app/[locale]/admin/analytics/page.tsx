@@ -553,7 +553,7 @@ export default function AdminAnalyticsPage() {
       case "pages":
         return <PagesTab pages={pages} />;
       case "history":
-        return <HistoryTab history={history} />;
+        return <HistoryTab history={history} weeks={historyWeeks} />;
       case "ctr":
         return <CtrTab opportunities={opportunities} />;
     }
@@ -805,7 +805,13 @@ function PagesTab({ pages }: { readonly pages: PageRow[] }) {
 
 // ─── History Tab ──────────────────────────────────────────────────────────────
 
-function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
+function HistoryTab({
+  history,
+  weeks,
+}: {
+  readonly history: HistoryPoint[];
+  readonly weeks: number;
+}) {
   if (history.length === 0) {
     return (
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-12 text-center">
@@ -818,14 +824,14 @@ function HistoryTab({ history }: { readonly history: HistoryPoint[] }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-          <p className="mb-1 font-mono text-xs text-slate-500">Clicks (16 weeks)</p>
+          <p className="mb-1 font-mono text-xs text-slate-500">Clicks ({weeks} weeks)</p>
           <p className="font-heading text-neon-magenta mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.clicks ?? 0), 0).toLocaleString()}
           </p>
           <Sparkline data={history} field="clicks" />
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-5">
-          <p className="mb-1 font-mono text-xs text-slate-500">Impressions (16 weeks)</p>
+          <p className="mb-1 font-mono text-xs text-slate-500">Impressions ({weeks} weeks)</p>
           <p className="font-heading text-neon-cyan mb-3 text-2xl font-bold">
             {history.reduce((s, h) => s + (h.impressions ?? 0), 0).toLocaleString()}
           </p>
