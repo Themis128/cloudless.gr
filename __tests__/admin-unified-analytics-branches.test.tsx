@@ -267,7 +267,6 @@ describe("admin analytics/unified — branch tails", () => {
     fetchMock.mockImplementation((url: string) =>
       url.includes("/roi") ? Promise.resolve(roiRes) : unified.promise
     );
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const view = render(<UnifiedAnalyticsPage />);
     view.unmount();
     await act(async () => {
@@ -275,12 +274,12 @@ describe("admin analytics/unified — branch tails", () => {
       await unified.promise;
       await new Promise((r) => setTimeout(r, 0));
     });
-    // The load runs to completion (the ROI body is still read) but no state
-    // update is attempted on the unmounted component.
+    // React 19 is silent about post-unmount state updates, so the guard has
+    // no visible output; this proves the load still ran to the end of the
+    // cancelled path (both bodies read, nothing refetched, nothing rendered).
     expect(roiJson).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(errSpy).not.toHaveBeenCalled();
-    errSpy.mockRestore();
+    expect(view.container.innerHTML).toBe("");
   });
 
   it("ignores a failure that arrives after unmount", async () => {
@@ -288,14 +287,19 @@ describe("admin analytics/unified — branch tails", () => {
     fetchMock.mockImplementation((url: string) =>
       url.includes("/roi") ? Promise.resolve(okJson(ROI)) : unified.promise
     );
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const view = render(<UnifiedAnalyticsPage />);
     view.unmount();
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
     await act(async () => {
       unified.reject(new Error("late"));
       await unified.promise.catch(() => {});
+      await new Promise((r) => setTimeout(r, 0));
     });
-    expect(errSpy).not.toHaveBeenCalled();
-    errSpy.mockRestore();
+    process.off("unhandledRejection", unhandled);
+    // The late failure is caught inside load() (no unhandled rejection) and
+    // the unmounted page renders nothing.
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(view.container.innerHTML).toBe("");
   });
 });
