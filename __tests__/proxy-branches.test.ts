@@ -114,11 +114,28 @@ describe("proxy — unprefixed (dotted) protected paths use the bare destination
 describe("proxy — client IP fallback", () => {
   it("a blank forwarded-for is rate-limited under the shared 'unknown' key", async () => {
     const proxy = await loadProxy();
+    // A literal "unknown" client IP and a blank first forwarded-for hop must
+    // land in the same bucket; with no `|| "unknown"` fallback the blank one
+    // would get its own "" bucket and Remaining would restart at 99.
+    const literal = { headers: { "x-forwarded-for": "unknown" } };
     const blank = { headers: { "x-forwarded-for": " , 10.0.0.1" } };
+    const first = await proxy(req("/api/health", literal));
+    expect(first.headers.get("X-RateLimit-Limit")).toBe("100");
+    expect(first.headers.get("X-RateLimit-Remaining")).toBe("99");
     const api = await proxy(req("/api/health", blank));
-    expect(api.headers.get("X-RateLimit-Limit")).toBe("100");
+    expect(api.headers.get("X-RateLimit-Remaining")).toBe("98");
+
+    // Page routes charge the same bucket: use up the rest of the 100 with
+    // "unknown" requests, then a blank forwarded-for page hit is refused.
+    for (let i = 0; i < 98; i += 1) {
+      const r = await proxy(req("/en/store", literal));
+      expect(r.status).toBe(200);
+    }
     const page = await proxy(req("/en/store", blank));
-    expect(page.status).toBe(200);
+    expect(page.status).toBe(429);
+    // a real client IP is unaffected
+    const other = await proxy(req("/en/store"));
+    expect(other.status).toBe(200);
   });
 });
 
