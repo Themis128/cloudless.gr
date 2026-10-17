@@ -321,6 +321,20 @@ export async function runScheduledPoll(opts?: {
             totalSpend = lifetime.reduce((acc, m) => acc + m.spendEur, 0);
           }
           for (const m of metrics) m.lifetimeSpendEur = totalSpend;
+          // Conservative bound for the credit line: all-time account
+          // spend. Pre-window spend may still have drawn the shared credit
+          // (LinkedIn never exposes the credit activation date), so the
+          // "€ left" figure must not silently exclude it.
+          if (adapter.pullAccountSpendEur) {
+            const allTime = await adapter.pullAccountSpendEur({
+              accountId: platformConfig.accountId,
+              since: "1970-01-01",
+              until: now,
+            });
+            if (allTime !== null && allTime !== undefined) {
+              for (const m of metrics) m.creditSpendEur = allTime;
+            }
+          }
         } catch (err) {
           console.error("[ad-analytics/runtime] lifetime spend fetch failed:", err);
         }
@@ -493,6 +507,7 @@ export function aggregateCampaignMetrics(rows: AdMetrics[]): AdMetrics {
     cpcEur: clicks > 0 ? spendEur / clicks : undefined,
     cpaEur: conversions > 0 ? spendEur / conversions : undefined,
     lifetimeSpendEur: rows.find((r) => r.lifetimeSpendEur !== undefined)?.lifetimeSpendEur,
+    creditSpendEur: rows.find((r) => r.creditSpendEur !== undefined)?.creditSpendEur,
     demographics: hasDemographics ? demographics : undefined,
     creativeLeaderboard: creativeLeaderboard.length ? creativeLeaderboard : undefined,
     campaignBreakdown: rows.map((r) => ({
