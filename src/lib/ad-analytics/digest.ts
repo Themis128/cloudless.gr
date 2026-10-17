@@ -246,7 +246,12 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   const spent = opts.current.lifetimeSpendEur;
   if (!p || typeof spent !== "number") return null;
 
-  const remaining = p.creditEur - spent;
+  // `creditSpent` is all-time account spend — the conservative bound for
+  // "credit left" (pre-window spend may still have drained it; the API
+  // never exposes the credit activation date). `spent` stays windowed so
+  // the burn-rate pace matches the campaign's elapsed days.
+  const creditSpent = opts.current.creditSpendEur ?? spent;
+  const remaining = p.creditEur - creditSpent;
   // Burn rate = lifetime account spend ÷ elapsed campaign days — a stable
   // per-day figure. (Previously this divided the ~15-min inter-poll delta
   // by the full window length and extrapolated — a €18.80/hr burst read
@@ -270,7 +275,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
     // the tracked campaign's lifetime cap cannot bound this projection —
     // capping it here would suppress the warning while sibling campaigns
     // drain the same credit. The cap is informational only.
-    const projectedEnd = spent + pacePerDay * daysLeft;
+    const projectedEnd = creditSpent + pacePerDay * daysLeft;
     warn = projectedEnd > p.creditEur;
     if (warn) {
       const daysToDeplete = remaining / pacePerDay;
@@ -295,7 +300,7 @@ function renderPacingLine(opts: RenderDigestOpts): string | null {
   }
 
   return (
-    `${warn ? "⚠️ " : ""}*Credit:* €${spent.toFixed(2)} / ` +
+    `${warn ? "⚠️ " : ""}*Credit:* €${creditSpent.toFixed(2)} / ` +
     `€${p.creditEur.toFixed(2)} — *€${remaining.toFixed(2)}* left ${tail}`
   );
 }
