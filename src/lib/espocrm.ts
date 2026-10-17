@@ -217,6 +217,31 @@ async function findContactByEmail(email: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * PUT our payload onto a contact that EspoCRM reported as a duplicate. The
+ * contact already exists, so upsertContact still returns its id, but a
+ * rejected update (4xx/5xx or transport error) is logged instead of being
+ * silently dropped.
+ */
+async function updateConflictContact(id: string, body: Record<string, unknown>): Promise<void> {
+  const res = await espoFetch(`/Contact/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  }).catch((err: unknown) => {
+    console.warn("[EspoCRM] upsertContact: follow-up update errored for", id, err);
+    return null;
+  });
+  if (res && !res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.warn(
+      "[EspoCRM] upsertContact: follow-up update failed for",
+      id,
+      res.status,
+      detail.slice(0, 300)
+    );
+  }
+}
+
 export async function upsertContact(contact: EspoContact): Promise<string | null> {
   try {
     // Resolve Account id before building payload so the Contact links to a real
@@ -268,20 +293,14 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         (c) => c.emailAddress === contact.email || c.emailAddress === baseEmail
       );
       if (match) {
-        await espoFetch(`/Contact/${match.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }).catch(() => {});
+        await updateConflictContact(match.id, payload);
         void invalidateEspoContactCaches(match.id);
         return match.id;
       }
       // 409 body didn't have our contact — try email search as fallback
       const conflictId = await findContactByEmail(contact.email);
       if (conflictId) {
-        await espoFetch(`/Contact/${conflictId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }).catch(() => {});
+        await updateConflictContact(conflictId, payload);
         void invalidateEspoContactCaches(conflictId);
         return conflictId;
       }
@@ -290,10 +309,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       // 409 array and update it with our data (including the new email).
       if (conflictContacts[0]?.id) {
         const dup = conflictContacts[0];
-        await espoFetch(`/Contact/${dup.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }).catch(() => {});
+        await updateConflictContact(dup.id, payload);
         void invalidateEspoContactCaches(dup.id);
         return dup.id;
       }
@@ -330,23 +346,19 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           } catch {
             // Not JSON — fall through
           }
-          // Use the first contact from the 409 array
+          // Use the first contact from the 409 array. Update it with the
+          // phone-less payload: the original one was just rejected for its
+          // phone number and would fail the same validation on PUT.
           if (retryContacts[0]?.id) {
             const dup = retryContacts[0];
-            await espoFetch(`/Contact/${dup.id}`, {
-              method: "PUT",
-              body: JSON.stringify(payload),
-            }).catch(() => {});
+            await updateConflictContact(dup.id, retryPayload);
             void invalidateEspoContactCaches(dup.id);
             return dup.id;
           }
           // Fallback to email search
           const conflictId = await findContactByEmail(contact.email);
           if (conflictId) {
-            await espoFetch(`/Contact/${conflictId}`, {
-              method: "PUT",
-              body: JSON.stringify(payload),
-            }).catch(() => {});
+            await updateConflictContact(conflictId, retryPayload);
             void invalidateEspoContactCaches(conflictId);
             return conflictId;
           }
