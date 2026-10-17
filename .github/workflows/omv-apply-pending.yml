@@ -1,0 +1,86 @@
+name: omv apply pending config changes
+
+# Applies OpenMediaVault's pending configuration changes — the web UI banner
+# "The configuration has been changed. You must apply the changes" — without
+# logging into the UI. Uses the same RPC as the UI's Apply button
+# (`omv-rpc Config applyChanges`, engined/rpc/config.inc), which deploys every
+# dirty module AND clears /var/lib/openmediavault/dirtymodules.json, so the
+# banner and pending-changes notifications go away. Runs directly on the omv
+# self-hosted runner.
+#
+# Never print config values here: the repo is public and OMV config contains
+# secrets (e.g. the SMTP relay password).
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — lists dirty module names and
+#                          Config.isDirty. No changes.
+#   apply=true:            calls Config.applyChanges (same as the UI Apply
+#                          button), then re-checks Config.isDirty.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Deploy all dirty modules (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+
+# OMV mutations on this host must never overlap — not just two dispatches of
+# this workflow, but ANY OMV-mutating workflow (mail aliases, etc.) racing on
+# the same dirtymodules/salt state. Shared group name on purpose.
+concurrency:
+  group: omv-host-mutation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply-pending:
+    name: omv pending config changes
+    runs-on: [self-hosted, omv, pi]
+    # applyChanges + up to 10 min of isDirty polling must fit inside the job
+    # timeout so diagnostics/annotations still run when the queue is slow.
+    timeout-minutes: 25
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+    steps:
+      - name: Show pending (dirty) modules
+        run: |
+          set -uo pipefail
+          DIRTY=/var/lib/openmediavault/dirtymodules.json
+          echo "=== $DIRTY (module names only) ==="
+          if sudo test -f "$DIRTY"; then
+            sudo cat "$DIRTY"
+          else
+            echo "(no dirtymodules.json — nothing pending)"
+          fi
+          echo
+          echo "=== Config.isDirty ==="
+          sudo omv-rpc -u admin 'Config' 'isDirty' '{}'
+
+      - name: Apply pending changes (Config.applyChanges, same as UI Apply)
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          sudo omv-rpc -u admin 'Config' 'applyChanges' '{"modules": [], "force": false}'
+          echo
+          # applyChanges spawns module deploys; isDirty can lag — poll until
+          # OMV reports clean (up to ~10 min, inside the 15-min job timeout)
+          # instead of checking once. `|| true` keeps a transient omv-rpc
+          # failure from killing the poll loop under `set -e`.
+          echo "=== Config.isDirty after apply (polling, expect false) ==="
+          RESULT=""
+          for i in $(seq 1 120); do
+            RESULT=$(sudo omv-rpc -u admin 'Config' 'isDirty' '{}' 2>/dev/null || true)
+            if [ "$RESULT" = "false" ]; then break; fi
+            sleep 5
+          done
+          echo "last isDirty result: $RESULT"
+          if [ "$RESULT" != "false" ]; then
+            echo "=== dirtymodules.json (module names only) ==="
+            sudo cat /var/lib/openmediavault/dirtymodules.json || true
+            echo "::error::OMV still reports pending changes after applyChanges (waited ~10min)"
+            exit 1
+          fi
