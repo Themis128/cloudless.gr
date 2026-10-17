@@ -303,12 +303,16 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       );
       return null;
     }
+    // A Response body can only be read once: keep the text of the failed
+    // create so the final error log still has it after the phone check.
+    let createErrBody: string | undefined;
     if (!create.ok && contact.phone) {
       // Retry without phone — EspoCRM's phone validator is strict and may
       // reject numbers that are technically valid but don't match its
       // expected format. The contact is more important than the phone.
-      const errBody = await create.text().catch(() => "");
-      if (errBody.includes("phoneNumber")) {
+      createErrBody = await create.text().catch(() => "");
+      if (createErrBody.includes("phoneNumber")) {
+        createErrBody = undefined; // `create` is replaced by the retry below
         const retryPayload = toEspoContactPayload(contact, false);
         if (accountId) Object.assign(retryPayload, { accountId, accountName: undefined });
         create = await espoFetch("/Contact", {
@@ -355,7 +359,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       }
     }
     if (!create.ok) {
-      const errBody = await create.text().catch(() => "");
+      const errBody = createErrBody ?? (await create.text().catch(() => ""));
       console.error("[EspoCRM] upsertContact create failed:", create.status, errBody.slice(0, 300));
       return null;
     }
