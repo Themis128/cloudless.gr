@@ -59,7 +59,16 @@ function persistDays(days: number) {
 }
 
 function presetForDays(days: number): RangePreset {
-  return RANGE_PRESETS.find((p) => p.days === days) ?? DEFAULT_RANGE;
+  // A stored value outside the presets (still within loadStoredDays' 1–730
+  // bounds) is what gets fetched, so label the chip with it rather than
+  // falling back to the default preset's name.
+  return (
+    RANGE_PRESETS.find((p) => p.days === days) ?? {
+      id: `custom-${days}d`,
+      label: `Last ${days} days`,
+      days,
+    }
+  );
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

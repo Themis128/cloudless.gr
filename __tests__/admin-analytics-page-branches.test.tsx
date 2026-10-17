@@ -3,7 +3,7 @@
  * admin-analytics-page.test.tsx: null-heavy rows in every table, the colour
  * thresholds for position and CTR, flat or all-null sparklines, payloads with
  * missing keys, a failed web request, non-Error rejections, and a stored day
- * count that matches no preset.
+ * count that matches no preset (labelled with its own value).
  *
  * @vitest-environment jsdom
  */
@@ -203,11 +203,16 @@ describe("admin analytics — branch coverage", () => {
     expect(c.textContent).toContain("Failed to load keywords");
   });
 
-  it("a stored day count outside the presets is used but labelled with the default preset", async () => {
+  it("a stored day count outside the presets is fetched and labelled with its own value", async () => {
     window.localStorage.setItem("admin:analytics:days", "45");
     await renderPage();
     const urls = fetchWithAuthMock.mock.calls.map(([u]) => String(u));
     expect(urls).toContain("/api/admin/analytics/seo?days=45");
-    expect(screen.getByLabelText("Clear Last 28 days filter")).toBeTruthy();
+    expect(screen.getByLabelText("Clear Last 45 days filter")).toBeTruthy();
+    expect(screen.queryByLabelText("Clear Last 28 days filter")).toBeNull();
+    // clearing returns to the default preset
+    await act(async () => fireEvent.click(screen.getByLabelText("Clear Last 45 days filter")));
+    expect(window.localStorage.getItem("admin:analytics:days")).toBe("28");
+    expect(screen.queryByLabelText(/^Clear .* filter$/)).toBeNull();
   });
 });
