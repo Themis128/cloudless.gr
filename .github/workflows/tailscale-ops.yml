@@ -63,7 +63,7 @@ jobs:
         env:
           TS_TOKEN: ${{ steps.tok.outputs.token }}
         run: |
-          etag=$(sed 's/[Ee]tag: *//' /tmp/acl.etag | tr -d '"')
+          etag=$(sed 's/[Ee]tag: *//' /tmp/acl.etag)
           echo "Applying ops/tailnet-policy.hujson (If-Match: $etag)"
           python3 - <<'PY'
           # strip comments -> plain JSON for the API
@@ -102,8 +102,11 @@ jobs:
                   print(f"PRUNE {dev['hostname']} id={dev['id']} offline {age}d")
                   open('/tmp/prune.txt','a').write(dev['id']+'\n')
           PY
+          fail=0
           while read -r id; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
               "https://api.tailscale.com/api/v2/device/$id" -H "Authorization: Bearer $TS_TOKEN")
             echo "delete $id -> $code"
+            case "$code" in 200|204|404) ;; *) fail=1 ;; esac
           done < /tmp/prune.txt 2>/dev/null || echo "nothing to prune"
+          [ "$fail" = "0" ]
