@@ -29,6 +29,7 @@ on:
         # Root-level config that affects build/lint/quality gates.
         # Without these, PRs editing only these files hang on the required
         # "Build" check because CI never triggers.
+      - ops/**
       - .codacy/**
       - .sonarcloud.properties
       - .eslintrc*
