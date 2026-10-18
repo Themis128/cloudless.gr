@@ -18,12 +18,19 @@ CAPI, deduped by a shared `event_id`.
 - `src/lib/meta-pixel.ts` — browser-side `trackPixelEvent`
 - `meta-account-runbook.md` — phase-by-phase activation steps
 
-**Status:** code is **staged but not wired**. Activated when:
+**Status:** code is **fully wired** (verified 2026-10-18) — activation is
+env-only:
 
-1. Pixel exists in Events Manager → ID in `NEXT_PUBLIC_META_PIXEL_ID`.
-2. CAPI access token generated → `META_CAPI_ACCESS_TOKEN`.
-3. `<Script>` base init added to `src/app/layout.tsx` (Phase C.5 of runbook).
-4. `sendLeadEvent` called from `src/app/api/contact/route.ts` after SES send (C.6).
+- `ConsentGatedPixel` mounted in `src/app/[locale]/layout.tsx` (consent-gated,
+  supersedes the runbook's bare `<Script>` step).
+- `sendLeadEvent` fires in `src/app/api/contact/route.ts` with a server-side
+  `eventId` returned to the client for browser+server dedup.
+- `trackPixelEvent` used by `ContactFormSection` + subscribe route.
+- Remaining gate: `NEXT_PUBLIC_META_PIXEL_ID` + `META_CAPI_ACCESS_TOKEN` in
+  `cloudless-secrets` (k8s Secret → pod env). Synced by the
+  `sync-contact-pipeline-secrets.yml` workflow (keys added in PR #2216);
+  dataset = `449603679599068` (Meta's Nov-12 on-device measurement rollout
+  only applies to datasets already sending events).
 
 The Instagram business account ID is currently **blocked by an unrelated ad
 policy violation on portfolio 1558125105019725** — see `project_instagram_blocker.md`.
