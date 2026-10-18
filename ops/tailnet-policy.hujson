@@ -283,11 +283,10 @@
       "accept": [
         "tag:k8s:443",
         "tag:pi:22",
-        "tag:k8s:80"
-      ],
-      "deny": [
         "tag:pi:6443",
-        "tag:k8s:30700"
+        "tag:k8s:30700",
+        "tag:ci:22",
+        "tag:app-connector:53"
       ]
     },
     {
