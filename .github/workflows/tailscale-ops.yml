@@ -40,13 +40,13 @@ jobs:
         env:
           TS_TOKEN: ${{ steps.tok.outputs.token }}
         run: |
-          curl -sS -D /tmp/acl.hdr https://api.tailscale.com/api/v2/tailnet/-/acl \
+          curl -fsS -D /tmp/acl.hdr https://api.tailscale.com/api/v2/tailnet/-/acl \
             -H "Authorization: Bearer $TS_TOKEN" > /tmp/acl.hujson
           grep -i '^etag' /tmp/acl.hdr | tr -d '\r' > /tmp/acl.etag || true
           echo "=== CURRENT POLICY ($(cat /tmp/acl.etag)) ==="
           cat /tmp/acl.hujson
           echo "=== DEVICES ==="
-          curl -sS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
+          curl -fsS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
             -H "Authorization: Bearer $TS_TOKEN" > /tmp/devices.json
           python3 - <<'PY'
           import json,datetime
@@ -86,7 +86,7 @@ jobs:
           TS_TOKEN: ${{ steps.tok.outputs.token }}
           DAYS: ${{ inputs.prune_stale_days }}
         run: |
-          curl -sS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
+          curl -fsS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
             -H "Authorization: Bearer $TS_TOKEN" > /tmp/devices.json
           rm -f /tmp/prune.txt
           python3 - <<'PY'
