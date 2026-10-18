@@ -33,6 +33,7 @@ jobs:
           code=$(tail -1 <<<"$resp"); body=$(sed '$d' <<<"$resp")
           [ "$code" = "200" ] || { echo "oauth failed http=$code" >&2; exit 1; }
           tok=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])' <<<"$body")
+          echo "::add-mask::$tok"
           echo "token=$tok" >> "$GITHUB_OUTPUT"
       - name: Audit — current policy + devices
         if: inputs.action == 'audit' || inputs.action == 'apply'
@@ -87,6 +88,7 @@ jobs:
         run: |
           curl -sS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
             -H "Authorization: Bearer $TS_TOKEN" > /tmp/devices.json
+          rm -f /tmp/prune.txt
           python3 - <<'PY'
           import json,datetime
           d=json.load(open('/tmp/devices.json'))
