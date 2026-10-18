@@ -819,11 +819,19 @@ export interface LeadData {
   orderId?: string | null;
   /** EspoCRM Lead.source enum value (Web Site / Email / Cold Call / Other / etc). */
   source?: string;
-  /** UTM source (e.g., "linkedin") — appended to description for reporting. */
+  /** UTM source (e.g., "linkedin") — appended to description for reporting and
+   *  written to the Lead's native utmSource custom field. */
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
   utmContent?: string;
+  utmTerm?: string;
+  /** Which gated asset captured the lead (e.g. "12-automation-checklist") —
+   *  stored on the native leadMagnet custom field. */
+  leadMagnet?: string;
+  /** TargetList display names to enrol the lead into on ingest (resolved to
+   *  ids at write time; missing lists are skipped, never created). */
+  targetListNames?: string[];
 }
 
 /**
@@ -838,6 +846,26 @@ export interface LeadData {
  * Returns the new Lead id, or null on failure. Never throws — safe to call
  * fire-and-forget from a request handler.
  */
+/** Resolve TargetList display names → ids. Unknown names are skipped so an
+ *  ingest never fails (or silently creates lists) over a typo. */
+async function resolveTargetListIds(names: string[]): Promise<string[]> {
+  const ids: string[] = [];
+  for (const name of names) {
+    const params = JSON.stringify({
+      maxSize: 1,
+      select: ["id"],
+      where: [{ type: "equals", attribute: "name", value: name }],
+    });
+    const res = await espoFetch(`/TargetList?searchParams=${encodeURIComponent(params)}`);
+    if (res.ok) {
+      const data = (await res.json()) as { list?: { id: string }[] };
+      const row = data.list?.[0];
+      if (row?.id) ids.push(row.id);
+    }
+  }
+  return ids;
+}
+
 export async function createLead(data: LeadData): Promise<string | null> {
   try {
     const descLines = [
@@ -849,6 +877,8 @@ export async function createLead(data: LeadData): Promise<string | null> {
       data.utmMedium && `utm_medium: ${data.utmMedium}`,
       data.utmCampaign && `utm_campaign: ${data.utmCampaign}`,
       data.utmContent && `utm_content: ${data.utmContent}`,
+      data.utmTerm && `utm_term: ${data.utmTerm}`,
+      data.leadMagnet && `lead_magnet: ${data.leadMagnet}`,
     ].filter(Boolean);
     const payload: Record<string, unknown> = {
       emailAddress: data.emailAddress,
@@ -858,7 +888,20 @@ export async function createLead(data: LeadData): Promise<string | null> {
       source: data.source ?? "Web Site",
       status: "New",
       description: descLines.length ? descLines.join("\n") : undefined,
+      // Native custom fields (deployed via custom entityDefs, 2026-10) —
+      // the same values stay in description for back-compat with
+      // `countLeadsForCampaign` and description-line lead scoring.
+      utmSource: data.utmSource,
+      utmMedium: data.utmMedium,
+      utmCampaign: data.utmCampaign,
+      utmContent: data.utmContent,
+      utmTerm: data.utmTerm,
+      leadMagnet: data.leadMagnet,
     };
+    const targetListIds = data.targetListNames?.length
+      ? await resolveTargetListIds(data.targetListNames)
+      : [];
+    if (targetListIds.length) payload.targetListsIds = targetListIds;
     // Dedup: if a Lead with this email already exists, update it instead of
     // creating a second record. EspoCRM has no unique-email constraint on Lead.
     const leadSearchParams = JSON.stringify({
@@ -877,9 +920,24 @@ export async function createLead(data: LeadData): Promise<string | null> {
       const dupData = (await dupSearch.json()) as { list: { id: string }[] };
       const existing = dupData.list[0];
       if (existing) {
+        // targetListsIds is set-replacing and NOT selectable via searchParams —
+        // read current memberships through the relation endpoint, then union
+        // so a re-ingest doesn't drop lists the lead already belongs to.
+        if (targetListIds.length) {
+          const rel = await espoFetch(`/Lead/${existing.id}/targetLists?select=id`);
+          const current = rel.ok
+            ? (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map(
+                (r) => r.id
+              )
+            : [];
+          payload.targetListsIds = [...new Set([...current, ...targetListIds])];
+        }
+        // Never regress status on a re-ingest — an In Process / Converted
+        // lead keeps its stage.
+        const { status: _status, ...updatePayload } = payload;
         await espoFetch(`/Lead/${existing.id}`, {
           method: "PUT",
-          body: JSON.stringify(payload),
+          body: JSON.stringify(updatePayload),
         });
         return existing.id;
       }

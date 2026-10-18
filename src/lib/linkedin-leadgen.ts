@@ -204,7 +204,7 @@ export function toEspoLeadDataFromLeadGen(opts: {
     firstName: mapped.firstName,
     lastName: mapped.lastName,
     phoneNumber: mapped.phone,
-    source: "Other",
+    source: "LinkedIn Lead Gen",
     campaignSlug,
     orderId: responseId ? `li-leadgen-${responseId}` : null,
     description: descLines.join("\n"),
