@@ -16,6 +16,11 @@ permissions:
 strict: false
 engine: copilot
 model: gpt-4.1
+# Bound runaway turns — the same 429-quota starvation pattern that hit
+# documentation-updater (2026-09-27). Account-level Copilot quota is shared
+# with IDE usage, so cap each run before retries burn the window.
+max-turns: 40
+max-ai-credits: 150
 models:
   default-ai-credits-pricing:
     input: 0.10
