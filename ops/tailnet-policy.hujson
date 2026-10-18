@@ -279,11 +279,11 @@
   ],
   "tests": [
     {
-      "src": "autogroup:member",
+      "src": "Themis128@github",
       "accept": [
         "tag:k8s:443",
         "tag:pi:22",
-        "autogroup:self:8083"
+        "tag:k8s:80"
       ],
       "deny": [
         "tag:pi:6443",
@@ -298,17 +298,16 @@
         "tag:pi:30700"
       ],
       "deny": [
-        "tag:k8s:22",
-        "tag:app-connector:22"
+        "tag:k8s:22"
       ]
     },
     {
       "src": "tag:k8s",
       "accept": [
-        "tag:pi:6443"
+        "tag:pi:6443",
+        "tag:pi:22"
       ],
       "deny": [
-        "tag:app-connector:22",
         "tag:ci:22"
       ]
     },
@@ -319,16 +318,6 @@
       ],
       "deny": [
         "tag:k8s:22"
-      ]
-    },
-    {
-      "src": "autogroup:admin",
-      "accept": [
-        "tag:k8s:22",
-        "tag:pi:6443",
-        "tag:k8s:30700",
-        "tag:ci:22",
-        "tag:app-connector:53"
       ]
     }
   ]
