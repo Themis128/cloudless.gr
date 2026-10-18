@@ -1,0 +1,112 @@
+name: Tailscale ops (audit / apply ACL / prune stale nodes)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'audit (read-only) | apply (push ops/tailnet-policy.hujson) | prune (delete offline nodes)'
+        required: true
+        default: audit
+        type: choice
+        options: [audit, apply, prune]
+      prune_stale_days:
+        description: 'for action=prune: delete user-owned nodes offline longer than N days (tagged devices are never touched)'
+        required: false
+        default: '30'
+
+permissions:
+  contents: read
+
+jobs:
+  ops:
+    runs-on: [self-hosted, omv, pi]
+    env:
+      TS_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+      TS_SEC: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mint OAuth token
+        id: tok
+        run: |
+          resp=$(curl -sS -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/oauth/token \
+            -d "grant_type=client_credentials" -u "$TS_ID:$TS_SEC")
+          code=$(tail -1 <<<"$resp"); body=$(sed '$d' <<<"$resp")
+          [ "$code" = "200" ] || { echo "oauth failed http=$code" >&2; exit 1; }
+          tok=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])' <<<"$body")
+          echo "::add-mask::$tok"
+          echo "token=$tok" >> "$GITHUB_OUTPUT"
+      - name: Audit — current policy + devices
+        if: inputs.action == 'audit' || inputs.action == 'apply'
+        env:
+          TS_TOKEN: ${{ steps.tok.outputs.token }}
+        run: |
+          curl -fsS -D /tmp/acl.hdr https://api.tailscale.com/api/v2/tailnet/-/acl \
+            -H "Authorization: Bearer $TS_TOKEN" > /tmp/acl.hujson
+          grep -i '^etag' /tmp/acl.hdr | tr -d '\r' > /tmp/acl.etag || true
+          echo "=== CURRENT POLICY ($(cat /tmp/acl.etag)) ==="
+          cat /tmp/acl.hujson
+          echo "=== DEVICES ==="
+          curl -fsS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
+            -H "Authorization: Bearer $TS_TOKEN" > /tmp/devices.json
+          python3 - <<'PY'
+          import json,datetime
+          d=json.load(open('/tmp/devices.json'))
+          now=datetime.datetime.now(datetime.timezone.utc)
+          for dev in d.get('devices',[]):
+              seen=dev.get('lastSeen','')
+              try: age=(now-datetime.datetime.fromisoformat(seen.replace('Z','+00:00'))).days
+              except Exception: age=-1
+              print(f"{dev.get('id','')[:12]:14} {dev.get('hostname',''):20} tags={dev.get('tags',[])} lastSeen={age}d ago addrs={dev.get('addresses',[])}")
+          PY
+      - name: Apply — push ops/tailnet-policy.hujson
+        if: inputs.action == 'apply'
+        env:
+          TS_TOKEN: ${{ steps.tok.outputs.token }}
+        run: |
+          etag=$(sed 's/[Ee]tag: *//' /tmp/acl.etag)
+          echo "Applying ops/tailnet-policy.hujson (If-Match: $etag)"
+          python3 - <<'PY'
+          # strip comments -> plain JSON for the API
+          import re,json
+          raw=open('ops/tailnet-policy.hujson').read()
+          raw=re.sub(r'//[^\n]*','',raw)
+          raw=re.sub(r'/\*.*?\*/','',raw,flags=re.S)
+          raw=re.sub(r',(\s*[}\]])',r'\1',raw)  # trailing commas
+          json.loads(raw)  # validate
+          open('/tmp/policy.json','w').write(raw)
+          PY
+          code=$(curl -sS -o /tmp/acl-resp.json -w '%{http_code}' -X POST \
+            https://api.tailscale.com/api/v2/tailnet/-/acl \
+            -H "Authorization: Bearer $TS_TOKEN" -H 'Content-Type: application/json' \
+            ${etag:+-H "If-Match: $etag"} --data-binary @/tmp/policy.json)
+          echo "apply http=$code"; cat /tmp/acl-resp.json; [ "$code" = "200" ]
+      - name: Prune — delete stale untagged user nodes
+        if: inputs.action == 'prune'
+        env:
+          TS_TOKEN: ${{ steps.tok.outputs.token }}
+          DAYS: ${{ inputs.prune_stale_days }}
+        run: |
+          curl -fsS "https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all" \
+            -H "Authorization: Bearer $TS_TOKEN" > /tmp/devices.json
+          rm -f /tmp/prune.txt
+          python3 - <<'PY'
+          import json,datetime
+          d=json.load(open('/tmp/devices.json'))
+          now=datetime.datetime.now(datetime.timezone.utc)
+          days=int(__import__('os').environ['DAYS'])
+          for dev in d.get('devices',[]):
+              if dev.get('tags'): continue  # never touch tagged infra
+              try: age=(now-datetime.datetime.fromisoformat(dev['lastSeen'].replace('Z','+00:00'))).days
+              except Exception: continue
+              if age>days:
+                  print(f"PRUNE {dev['hostname']} id={dev['id']} offline {age}d")
+                  open('/tmp/prune.txt','a').write(dev['id']+'\n')
+          PY
+          fail=0
+          while read -r id; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
+              "https://api.tailscale.com/api/v2/device/$id" -H "Authorization: Bearer $TS_TOKEN")
+            echo "delete $id -> $code"
+            case "$code" in 200|204|404) ;; *) fail=1 ;; esac
+          done < /tmp/prune.txt 2>/dev/null || echo "nothing to prune"
+          [ "$fail" = "0" ]
