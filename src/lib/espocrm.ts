@@ -431,6 +431,31 @@ export async function listNewsletterSubscribers(): Promise<string[]> {
   }
 }
 
+/** Count active newsletter subscribers — Contacts with leadSource=Email,
+ * the same convention listNewsletterSubscribers/setNewsletterStatus use.
+ * Returns null on upstream failure so callers can distinguish "zero
+ * subscribers" from "EspoCRM unreachable" (matters for cache layers: a
+ * genuine 0 may be cached, a failure must not be). */
+export async function countNewsletterSubscribers(): Promise<number | null> {
+  try {
+    const res = await espoFetch(
+      `/Contact?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "leadSource",
+          "where[0][value]": "Email",
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { total: number };
+    return data.total ?? 0;
+  } catch {
+    return null;
+  }
+}
+
 /** Flip a contact's newsletter state. Maps to leadSource = Email / Other. */
 export async function setNewsletterStatus(
   email: string,
@@ -988,6 +1013,29 @@ export async function createLead(data: LeadData): Promise<string | null> {
  * thousands, promote campaign to a dedicated `cCampaignSlug` custom field
  * on Lead and index it.
  */
+/** Count Leads with an exact EspoCRM `source` value (e.g. "Newsletter").
+ * Used for honest social-proof counters — returns 0 on any failure so pages
+ * degrade to hiding the counter rather than showing a fake number. */
+export async function countLeadsBySource(source: string): Promise<number> {
+  try {
+    const res = await espoFetch(
+      `/Lead?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "source",
+          "where[0][value]": source,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (!res.ok) return 0;
+    const data = (await res.json()) as { total: number };
+    return data.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function countLeadsForCampaign(campaignSlug: string): Promise<number> {
   try {
     const res = await espoFetch(
