@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import ChecklistSignup from "@/components/ChecklistSignup";
 
 export const metadata: Metadata = {
   title: "Cloudless — Links & Free Resources",
@@ -101,26 +102,47 @@ export default function LinksPage() {
         </p>
 
         <nav className="mt-8 flex w-full flex-col gap-3">
-          {LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className={`group flex min-h-[56px] w-full flex-col justify-center rounded-xl border px-5 py-3 transition-colors ${
-                l.accent
-                  ? "border-neon-cyan/60 bg-neon-cyan/10 hover:bg-neon-cyan/20"
-                  : "bg-void-light/50 hover:border-neon-cyan/50 border-slate-800"
-              }`}
-            >
-              <span className="flex items-center justify-between text-[15px] font-medium text-white">
-                {l.label}
-                <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
-                  →
+          {LINKS.map((l) =>
+            l.href === "/automation-checklist.pdf" ? (
+              <div
+                key={l.label}
+                className="bg-void-light/50 rounded-xl border border-slate-800 px-5 py-3"
+              >
+                <a
+                  href={l.href}
+                  className="group flex min-h-[40px] w-full flex-col justify-center transition-colors"
+                >
+                  <span className="flex items-center justify-between text-[15px] font-medium text-white">
+                    {l.label}
+                    <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </span>
+                  <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
+                </a>
+                <ChecklistSignup />
+              </div>
+            ) : (
+              <a
+                key={l.label}
+                href={l.href}
+                {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className={`group flex min-h-[56px] w-full flex-col justify-center rounded-xl border px-5 py-3 transition-colors ${
+                  l.accent
+                    ? "border-neon-cyan/60 bg-neon-cyan/10 hover:bg-neon-cyan/20"
+                    : "bg-void-light/50 hover:border-neon-cyan/50 border-slate-800"
+                }`}
+              >
+                <span className="flex items-center justify-between text-[15px] font-medium text-white">
+                  {l.label}
+                  <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
                 </span>
-              </span>
-              <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
-            </a>
-          ))}
+                <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
+              </a>
+            )
+          )}
         </nav>
 
         <p className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
