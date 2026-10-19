@@ -76,7 +76,11 @@ export function extractLeadgenChanges(payload: unknown): MetaLeadgenChange[] {
   const out: MetaLeadgenChange[] = [];
   for (const entry of body.entry) {
     for (const change of entry?.changes ?? []) {
-      if (change?.field === "leadgen" && change.value?.leadgen_id) {
+      if (
+        change?.field === "leadgen" &&
+        change.value?.leadgen_id &&
+        LEADGEN_ID_RE.test(change.value.leadgen_id)
+      ) {
         out.push(change.value);
       }
     }
@@ -84,11 +88,15 @@ export function extractLeadgenChanges(payload: unknown): MetaLeadgenChange[] {
   return out;
 }
 
+/** Meta object ids are numeric — reject anything else before it reaches a URL. */
+const LEADGEN_ID_RE = /^\d{1,32}$/;
+
 /** Fetch one lead's answers via the Graph API (Page access token). */
 export async function fetchLeadgenLead(
   leadgenId: string,
   pageAccessToken: string
 ): Promise<MetaLeadgenLead | null> {
+  if (!LEADGEN_ID_RE.test(leadgenId)) return null;
   const url = new URL(`${META_GRAPH_API_BASE}/${leadgenId}`);
   url.searchParams.set(
     "fields",

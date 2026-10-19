@@ -57,7 +57,7 @@ function leadgenPayload(over: Record<string, unknown> = {}) {
         changes: [
           {
             field: "leadgen",
-            value: { leadgen_id: "lg-1", page_id: "page-1", form_id: "form-9", ...over },
+            value: { leadgen_id: "8800112233", page_id: "page-1", form_id: "form-9", ...over },
           },
         ],
       },
@@ -66,7 +66,7 @@ function leadgenPayload(over: Record<string, unknown> = {}) {
 }
 
 const GRAPH_LEAD = {
-  id: "lg-1",
+  id: "8800112233",
   form_id: "form-9",
   ad_id: "ad-3",
   campaign_name: "Checklist Q4",
@@ -150,10 +150,12 @@ describe("POST leadgen processing", () => {
     const res = await POST(post(body, sign(body)));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.results).toEqual([{ ok: true, espocrm_lead_id: "lead-1", leadgen_id: "lg-1" }]);
+    expect(data.results).toEqual([
+      { ok: true, espocrm_lead_id: "lead-1", leadgen_id: "8800112233" },
+    ]);
 
     const [url] = vi.mocked(fetch).mock.calls[0] as [URL];
-    expect(String(url)).toContain("/lg-1");
+    expect(String(url)).toContain("/8800112233");
     expect(String(url)).toContain(`access_token=${PAGE_TOKEN}`);
 
     const lead = mockCreateLead.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -182,7 +184,7 @@ describe("POST leadgen processing", () => {
       "fetch",
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ id: "lg-1", field_data: [{ name: "phone", values: ["1"] }] }),
+        json: async () => ({ id: "8800112233", field_data: [{ name: "phone", values: ["1"] }] }),
       }))
     );
     res = await POST(post(leadgenPayload(), sign(leadgenPayload())));
@@ -195,7 +197,7 @@ describe("meta-leadgen mapping", () => {
   it("splits full_name, prefers explicit first/last, maps IG platform + organic", () => {
     const explicit = toEspoLeadDataFromMeta(
       {
-        id: "lg-2",
+        id: "8800112244",
         platform: "ig",
         is_organic: true,
         field_data: [
@@ -205,7 +207,7 @@ describe("meta-leadgen mapping", () => {
           { name: "full_name", values: ["Dr Grace Hopper"] },
         ],
       },
-      { leadgen_id: "lg-2" }
+      { leadgen_id: "8800112244" }
     );
     expect(explicit?.firstName).toBe("Grace");
     expect(explicit?.lastName).toBe("Hopper");
@@ -214,11 +216,11 @@ describe("meta-leadgen mapping", () => {
     expect(String(explicit?.description)).toContain("Organic lead");
 
     const split = toEspoLeadDataFromMeta(
-      { id: "lg-3", field_data: [{ name: "email", values: ["x@y.z"] }] },
-      { leadgen_id: "lg-3", form_id: "f1" }
+      { id: "8800112255", field_data: [{ name: "email", values: ["x@y.z"] }] },
+      { leadgen_id: "8800112255", form_id: "f1" }
     );
     expect(split?.campaignSlug).toBe("meta-lead-f1");
-    expect(split?.orderId).toBe("meta-leadgen-lg-3");
+    expect(split?.orderId).toBe("meta-leadgen-8800112255");
   });
 });
 
@@ -244,10 +246,10 @@ describe("verifyHubSignature / extractLeadgenChanges", () => {
             { field: "leadgen", value: {} },
           ],
         },
-        { changes: [{ field: "leadgen", value: { leadgen_id: "lg-9" } }] },
+        { changes: [{ field: "leadgen", value: { leadgen_id: "8800112266" } }] },
       ],
     });
-    expect(changes).toEqual([{ leadgen_id: "lg-9" }]);
+    expect(changes).toEqual([{ leadgen_id: "8800112266" }]);
   });
 
   it("fetchLeadgenLead returns null on HTTP error and network failure", async () => {
@@ -255,7 +257,7 @@ describe("verifyHubSignature / extractLeadgenChanges", () => {
       "fetch",
       vi.fn(async () => ({ ok: false, status: 403 }))
     );
-    expect(await fetchLeadgenLead("lg-x", "tok")).toBeNull();
+    expect(await fetchLeadgenLead("8800112277", "tok")).toBeNull();
 
     vi.stubGlobal(
       "fetch",
@@ -263,6 +265,6 @@ describe("verifyHubSignature / extractLeadgenChanges", () => {
         throw new Error("network");
       })
     );
-    expect(await fetchLeadgenLead("lg-x", "tok")).toBeNull();
+    expect(await fetchLeadgenLead("8800112277", "tok")).toBeNull();
   });
 });
