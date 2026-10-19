@@ -126,6 +126,8 @@ interface AppConfig {
   META_CAPI_ACCESS_TOKEN: string;
   META_ACCESS_TOKEN: string;
   META_PAGE_ID: string;
+  META_APP_SECRET: string;
+  META_LEADS_VERIFY_TOKEN: string;
   GITHUB_TOKEN: string;
   CRON_SECRET: string;
   ANTHROPIC_API_KEY: string;
@@ -247,6 +249,8 @@ function buildConfigFromEnv(): AppConfig {
     META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN || "",
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
+    META_APP_SECRET: process.env.META_APP_SECRET || "",
+    META_LEADS_VERIFY_TOKEN: process.env.META_LEADS_VERIFY_TOKEN || "",
     GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
