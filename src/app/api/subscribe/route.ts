@@ -1,6 +1,6 @@
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { setNewsletterStatus } from "@/lib/espocrm";
+import { setNewsletterStatus, createLead } from "@/lib/espocrm";
 import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
@@ -32,7 +32,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email, turnstileToken } = parsed as { email?: string; turnstileToken?: string };
+    const { email, turnstileToken, magnet } = parsed as {
+      email?: string;
+      turnstileToken?: string;
+      /** Optional lead-magnet slug (e.g. "12-automation-checklist") — when a
+       *  gated download drives the signup, the subscriber also lands as a
+       *  Lead so the magnet→CRM funnel is measurable. */
+      magnet?: string;
+    };
 
     const turnstile = await verifyTurnstileToken(turnstileToken, ip);
     if (!turnstile.ok) {
@@ -52,6 +59,20 @@ export async function POST(request: Request) {
     // EspoCRM outage never fails the subscriber; team-notify and Slack
     // provide a manual fallback path.
     await setNewsletterStatus(email, "newsletter_signup");
+
+    if (typeof magnet === "string" && magnet.trim()) {
+      const magnetSlug = magnet.trim().slice(0, 120);
+      createLead({
+        emailAddress: email,
+        source: "Lead Magnet",
+        leadMagnet: magnetSlug,
+        utmSource: "website",
+        utmMedium: "lead_magnet",
+        utmCampaign: magnetSlug,
+        targetListNames: ["Checklist downloaders"],
+        description: `Lead magnet download: ${magnetSlug}`,
+      }).catch(() => {});
+    }
 
     notifyTeam(
       `[Newsletter] New subscriber: ${email.slice(0, 80)}`,

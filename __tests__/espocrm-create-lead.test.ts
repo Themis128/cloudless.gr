@@ -56,5 +56,67 @@ describe("EspoCRM createLead", () => {
     expect(String(body.description)).toContain("Campaign: socialauto-facebook_messenger");
     expect(String(body.description)).toContain("utm_source: socialauto");
   });
+
+  it("writes UTM and lead-magnet values to the native custom fields", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ list: [] })) // dedup search
+        .mockResolvedValueOnce(jsonResponse({ id: "list-1" })) // TargetList lookup
+        .mockResolvedValueOnce(jsonResponse({ id: "lead-1" })) // create
+    );
+
+    const id = await createLead({
+      emailAddress: "magnet@example.com",
+      source: "Lead Magnet",
+      leadMagnet: "12-automation-checklist",
+      utmSource: "website",
+      utmMedium: "lead_magnet",
+      utmCampaign: "12-automation-checklist",
+      utmContent: "links-page",
+      utmTerm: "automation",
+      targetListNames: ["Checklist downloaders"],
+    });
+
+    expect(id).toBe("lead-1");
+    const createInit = vi.mocked(globalThis.fetch).mock.calls[2]?.[1] as RequestInit;
+    const body = JSON.parse(String(createInit.body)) as Record<string, unknown>;
+    expect(body.utmSource).toBe("website");
+    expect(body.utmMedium).toBe("lead_magnet");
+    expect(body.utmCampaign).toBe("12-automation-checklist");
+    expect(body.utmContent).toBe("links-page");
+    expect(body.utmTerm).toBe("automation");
+    expect(body.leadMagnet).toBe("12-automation-checklist");
+    expect(body.targetListsIds).toEqual(["list-1"]);
+    expect(String(body.description)).toContain("lead_magnet: 12-automation-checklist");
+    expect(String(body.description)).toContain("utm_term: automation");
+  });
+
+  it("on re-ingest updates the existing lead without regressing status and unions target lists", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-1" }] })) // TargetList lookup
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-0" }] })) // current memberships
+      .mockResolvedValueOnce(jsonResponse({ id: "lead-existing" })); // update
+    vi.stubGlobal("fetch", fetchMock);
+
+    const id = await createLead({
+      emailAddress: "dup@example.com",
+      source: "Messenger",
+      targetListNames: ["Messenger leads"],
+    });
+
+    expect(id).toBe("lead-existing");
+    // dedup search + list lookup + relation fetch + update = 4 calls
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const relationUrl = String(fetchMock.mock.calls[2]?.[0]);
+    expect(relationUrl).toContain("/Lead/lead-existing/targetLists");
+    const updateInit = fetchMock.mock.calls[3]?.[1] as RequestInit;
+    const body = JSON.parse(String(updateInit.body)) as Record<string, unknown>;
+    expect(body.status).toBeUndefined();
+    expect(body.targetListsIds).toEqual(["list-0", "list-1"]);
+  });
 });
 
