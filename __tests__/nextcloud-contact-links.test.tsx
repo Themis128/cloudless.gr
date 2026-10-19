@@ -65,16 +65,16 @@ describe("Nextcloud integration — contact form sidebar", () => {
 });
 
 describe("Nextcloud integration — links page", () => {
-  it("lists both self-hosted Nextcloud surfaces: Talk consult + workspace", () => {
-    render(<LinksPage />);
+  it("lists both self-hosted Nextcloud surfaces: Talk consult + workspace", async () => {
+    render(await LinksPage());
     const consult = screen.getByRole("link", { name: /book a free video consult/i });
     expect(consult.getAttribute("href")).toBe("https://cloud.cloudless.gr/call/zsykkx97");
     const workspace = screen.getByRole("link", { name: /client workspace/i });
     expect(workspace.getAttribute("href")).toBe("https://cloud.cloudless.gr");
   });
 
-  it("opens both Nextcloud links in a new tab without an opener handle", () => {
-    render(<LinksPage />);
+  it("opens both Nextcloud links in a new tab without an opener handle", async () => {
+    render(await LinksPage());
     for (const name of [/book a free video consult/i, /client workspace/i]) {
       const link = screen.getByRole("link", { name });
       expect(link.getAttribute("target")).toBe("_blank");
