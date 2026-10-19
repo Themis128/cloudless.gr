@@ -9,13 +9,23 @@ import { getFeaturedTestimonials } from "@/lib/appflowy-testimonials";
 // dynamically — `export const revalidate` cannot cache this page. Cache the
 // external calls instead: hourly revalidate keeps the subscriber count +
 // featured quote fresh without blocking every pageview on EspoCRM/AppFlowy.
+// Throw on failure-sentinels so unstable_cache never poisons the cache
+// with an upstream-error result (unstable_cache skips caching throws).
 const getCachedSubscriberCount = unstable_cache(
-  countNewsletterSubscribers,
+  async () => {
+    const n = await countNewsletterSubscribers();
+    if (n === null) throw new Error("EspoCRM subscriber count unavailable");
+    return n;
+  },
   ["links-subscriber-count"],
   { revalidate: 3600 }
 );
 const getCachedFeaturedTestimonials = unstable_cache(
-  getFeaturedTestimonials,
+  async () => {
+    const list = await getFeaturedTestimonials();
+    if (list.length === 0) throw new Error("no featured testimonials available");
+    return list;
+  },
   ["links-featured-testimonial"],
   { revalidate: 3600 }
 );
@@ -104,6 +114,20 @@ export default async function LinksPage() {
     getCachedFeaturedTestimonials().catch(() => []),
   ]);
   const testimonial = featured[0] ?? null;
+  // "Name, Role at Company" — but tolerate missing fields: never render
+  // dangling commas or a bare "at".
+  const testimonialAttribution = testimonial
+    ? [
+        testimonial.name,
+        testimonial.company
+          ? testimonial.role
+            ? `${testimonial.role} at ${testimonial.company}`
+            : testimonial.company
+          : testimonial.role,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
   return (
     <main className="bg-void min-h-screen text-slate-200">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center px-6 py-12">
@@ -139,7 +163,7 @@ export default async function LinksPage() {
                   “{testimonial.quote}”
                 </blockquote>
                 <figcaption className="mt-1.5 text-center text-[11px] text-slate-500">
-                  — {testimonial.name}, {testimonial.role} at {testimonial.company}
+                  — {testimonialAttribution}
                 </figcaption>
               </figure>
             )}

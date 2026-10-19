@@ -433,9 +433,10 @@ export async function listNewsletterSubscribers(): Promise<string[]> {
 
 /** Count active newsletter subscribers — Contacts with leadSource=Email,
  * the same convention listNewsletterSubscribers/setNewsletterStatus use.
- * Returns 0 on any failure so pages degrade to hiding the counter rather
- * than showing a fake number. */
-export async function countNewsletterSubscribers(): Promise<number> {
+ * Returns null on upstream failure so callers can distinguish "zero
+ * subscribers" from "EspoCRM unreachable" (matters for cache layers: a
+ * genuine 0 may be cached, a failure must not be). */
+export async function countNewsletterSubscribers(): Promise<number | null> {
   try {
     const res = await espoFetch(
       `/Contact?` +
@@ -447,11 +448,11 @@ export async function countNewsletterSubscribers(): Promise<number> {
           select: "id",
         }).toString()
     );
-    if (!res.ok) return 0;
+    if (!res.ok) return null;
     const data = (await res.json()) as { total: number };
     return data.total ?? 0;
   } catch {
-    return 0;
+    return null;
   }
 }
 
