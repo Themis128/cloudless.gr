@@ -922,17 +922,25 @@ export async function createLead(data: LeadData): Promise<string | null> {
       if (existing) {
         // targetListsIds is set-replacing and NOT selectable via searchParams —
         // read current memberships through the relation endpoint, then union
-        // so a re-ingest doesn't drop lists the lead already belongs to.
+        // so a re-ingest doesn't drop lists the lead already belongs to. If the
+        // read fails, leave memberships untouched rather than wiping them.
         if (targetListIds.length) {
           const rel = await espoFetch(`/Lead/${existing.id}/targetLists?select=id`);
-          const current = rel.ok
-            ? (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map((r) => r.id)
-            : [];
-          payload.targetListsIds = [...new Set([...current, ...targetListIds])];
+          if (rel.ok) {
+            const current = (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map(
+              (r) => r.id
+            );
+            payload.targetListsIds = [...new Set([...current, ...targetListIds])];
+          } else {
+            delete payload.targetListsIds;
+          }
         }
         // Never regress status on a re-ingest — an In Process / Converted
-        // lead keeps its stage (JSON.stringify drops undefined keys).
-        const updatePayload = { ...payload, status: undefined };
+        // lead keeps its stage, and empty-string values must not overwrite
+        // stored fields (e.g. firstName). JSON.stringify drops undefined keys.
+        const updatePayload = Object.fromEntries(
+          Object.entries(payload).filter(([k, v]) => k !== "status" && v !== "" && v !== undefined)
+        );
         await espoFetch(`/Lead/${existing.id}`, {
           method: "PUT",
           body: JSON.stringify(updatePayload),

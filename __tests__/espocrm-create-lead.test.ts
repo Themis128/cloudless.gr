@@ -118,4 +118,46 @@ describe("EspoCRM createLead", () => {
     expect(body.status).toBeUndefined();
     expect(body.targetListsIds).toEqual(["list-0", "list-1"]);
   });
+
+  it("on re-ingest never wipes stored fields with empty values", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
+      .mockResolvedValueOnce(jsonResponse({ id: "lead-existing" })); // update
+    vi.stubGlobal("fetch", fetchMock);
+
+    const id = await createLead({
+      emailAddress: "named@example.com",
+      // no firstName → would serialize as "" and clobber the stored name
+      utmSource: "referral",
+    });
+
+    expect(id).toBe("lead-existing");
+    const updateInit = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    const body = JSON.parse(String(updateInit.body)) as Record<string, unknown>;
+    expect(body.firstName).toBeUndefined();
+    expect(body.status).toBeUndefined();
+    expect(body.utmSource).toBe("referral");
+  });
+
+  it("leaves target-list memberships untouched when the relation read fails", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-1" }] })) // TargetList lookup
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
+      .mockResolvedValueOnce(new Response("boom", { status: 403 })) // relation read fails (non-retryable)
+      .mockResolvedValueOnce(jsonResponse({ id: "lead-existing" })); // update
+    vi.stubGlobal("fetch", fetchMock);
+
+    const id = await createLead({
+      emailAddress: "dup2@example.com",
+      firstName: "Dup",
+      targetListNames: ["Messenger leads"],
+    });
+
+    expect(id).toBe("lead-existing");
+    const updateInit = fetchMock.mock.calls[3]?.[1] as RequestInit;
+    const body = JSON.parse(String(updateInit.body)) as Record<string, unknown>;
+    expect(body.targetListsIds).toBeUndefined();
+  });
 });
