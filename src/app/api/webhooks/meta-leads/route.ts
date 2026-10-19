@@ -108,8 +108,6 @@ export async function POST(request: NextRequest) {
   // Meta retries non-2xx deliveries — 500 on transient failures (Graph/CRM
   // outages) so the lead is not silently lost; permanent issues like
   // "no_email" still ack 200 to stop useless retries.
-  const retryable = results.some(
-    (r) => !r.ok && r.reason !== "no_email"
-  );
+  const retryable = results.some((r) => !r.ok && r.reason !== "no_email");
   return NextResponse.json({ ok: !retryable, results }, { status: retryable ? 500 : 200 });
 }
