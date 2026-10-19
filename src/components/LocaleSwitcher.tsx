@@ -49,7 +49,7 @@ export default function LocaleSwitcher() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label={`Language: ${localeLabels[currentLocale]}. Click to change.`}
+        aria-label={`${localeFlags[currentLocale]} — Language: ${localeLabels[currentLocale]}. Click to change.`}
         aria-haspopup="listbox"
         aria-controls="locale-listbox"
         className="hover:text-neon-cyan active:text-neon-cyan flex min-h-11 items-center gap-2 px-3 py-2 text-slate-400 transition-colors"
