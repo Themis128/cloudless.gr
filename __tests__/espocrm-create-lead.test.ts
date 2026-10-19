@@ -119,4 +119,3 @@ describe("EspoCRM createLead", () => {
     expect(body.targetListsIds).toEqual(["list-0", "list-1"]);
   });
 });
-

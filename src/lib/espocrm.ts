@@ -926,9 +926,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
         if (targetListIds.length) {
           const rel = await espoFetch(`/Lead/${existing.id}/targetLists?select=id`);
           const current = rel.ok
-            ? (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map(
-                (r) => r.id
-              )
+            ? (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map((r) => r.id)
             : [];
           payload.targetListsIds = [...new Set([...current, ...targetListIds])];
         }

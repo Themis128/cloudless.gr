@@ -141,17 +141,14 @@ describe("POST /api/webhooks/socialauto-leads", () => {
   it("accepts a batch array and returns per-item results", async () => {
     mockCreateLead.mockResolvedValueOnce("lead-1").mockResolvedValueOnce(null);
     const res = await POST(
-      req(
-        { Authorization: `Bearer ${SECRET}` },
-        [
-          { source: "whatsapp_flow", name: "First User", email: "first@example.com" },
-          {
-            event: "lead.upserted",
-            operation: "updated",
-            lead: { source: "instagram_dm", name: "Second User", email: "second@example.com" },
-          },
-        ]
-      )
+      req({ Authorization: `Bearer ${SECRET}` }, [
+        { source: "whatsapp_flow", name: "First User", email: "first@example.com" },
+        {
+          event: "lead.upserted",
+          operation: "updated",
+          lead: { source: "instagram_dm", name: "Second User", email: "second@example.com" },
+        },
+      ])
     );
 
     expect(res.status).toBe(200);
@@ -190,7 +187,6 @@ describe("POST /api/webhooks/socialauto-leads", () => {
   });
 });
 
-
 describe("POST /api/webhooks/socialauto-leads tails", () => {
   const auth = { "x-socialauto-webhook-secret": "socialauto-test-secret" };
   const lead = { source: "whatsapp_dm", name: "A B", email: "a@b.com" };
@@ -218,9 +214,7 @@ describe("POST /api/webhooks/socialauto-leads tails", () => {
   });
 
   it("marks unrecognised and non-lead candidates invalid in the results", async () => {
-    const res = await POST(
-      req(auth, [{ other: 1 }, { source: "not_a_lead", name: "X" }, lead])
-    );
+    const res = await POST(req(auth, [{ other: 1 }, { source: "not_a_lead", name: "X" }, lead]));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.results).toEqual([
@@ -231,7 +225,12 @@ describe("POST /api/webhooks/socialauto-leads tails", () => {
   });
 
   it("rejects batches over 100 items", async () => {
-    const res = await POST(req(auth, Array.from({ length: 101 }, () => lead)));
+    const res = await POST(
+      req(
+        auth,
+        Array.from({ length: 101 }, () => lead)
+      )
+    );
     expect(res.status).toBe(413);
   });
 
