@@ -19,7 +19,7 @@ export type MetaLeadgenChange = {
   page_id?: string;
   form_id?: string;
   ad_id?: string;
-  adgroup_id?: string;
+  adset_id?: string;
   campaign_id?: string;
   created_time?: number;
 };
@@ -39,6 +39,8 @@ export type MetaLeadgenLead = {
   form_id?: string;
   ad_id?: string;
   ad_name?: string;
+  adset_id?: string;
+  adset_name?: string;
   campaign_id?: string;
   campaign_name?: string;
   platform?: string;
@@ -100,7 +102,7 @@ export async function fetchLeadgenLead(
   const url = new URL(`${META_GRAPH_API_BASE}/${leadgenId}`);
   url.searchParams.set(
     "fields",
-    "id,created_time,form_id,ad_id,ad_name,adgroup_id,campaign_id,campaign_name,platform,is_organic,field_data"
+    "id,created_time,form_id,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,platform,is_organic,field_data"
   );
   url.searchParams.set("access_token", pageAccessToken);
   try {
@@ -160,7 +162,10 @@ export function toEspoLeadDataFromMeta(
     ? { firstName: explicitFirst, lastName: explicitLast }
     : splitFullName(full);
 
-  const phone = first(fd, "phone_number", "phone");
+  const phoneRaw = first(fd, "phone_number", "phone");
+  // Meta returns raw digits like "+15550100" or "15550100" — normalize to
+  // a CRM-friendly form (leading + then digits/spaces/parens/dashes only).
+  const phone = phoneRaw?.replace(/[^\d+()\-\s]/g, "").trim() || undefined;
   const known = new Set([
     "email",
     "email_address",

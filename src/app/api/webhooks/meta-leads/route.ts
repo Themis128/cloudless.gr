@@ -84,16 +84,32 @@ export async function POST(request: NextRequest) {
     changes.map(async (change) => {
       const lead = await fetchLeadgenLead(change.leadgen_id, accessToken);
       if (!lead) {
-        return { ok: false, espocrm_lead_id: null, leadgen_id: change.leadgen_id };
+        return {
+          ok: false,
+          espocrm_lead_id: null,
+          leadgen_id: change.leadgen_id,
+          reason: "graph_fetch_failed",
+        };
       }
       const leadData = toEspoLeadDataFromMeta(lead, change);
       if (!leadData) {
         return { ok: false, espocrm_lead_id: null, reason: "no_email" };
       }
       const id = await createLead(leadData);
-      return { ok: Boolean(id), espocrm_lead_id: id, leadgen_id: change.leadgen_id };
+      return {
+        ok: Boolean(id),
+        espocrm_lead_id: id,
+        leadgen_id: change.leadgen_id,
+        ...(id ? {} : { reason: "crm_write_failed" }),
+      };
     })
   );
 
-  return NextResponse.json({ ok: true, results });
+  // Meta retries non-2xx deliveries — 500 on transient failures (Graph/CRM
+  // outages) so the lead is not silently lost; permanent issues like
+  // "no_email" still ack 200 to stop useless retries.
+  const retryable = results.some(
+    (r) => !r.ok && r.reason !== "no_email"
+  );
+  return NextResponse.json({ ok: !retryable, results }, { status: retryable ? 500 : 200 });
 }

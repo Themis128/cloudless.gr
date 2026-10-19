@@ -171,25 +171,41 @@ describe("POST leadgen processing", () => {
     expect(String(lead.description)).toContain("company: Acme");
   });
 
-  it("returns ok:false when Graph fetch fails or the lead has no email", async () => {
+  it("500s on Graph/CRM failure (Meta retries) but acks permanent no_email", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: false, status: 400 }))
     );
     let res = await POST(post(leadgenPayload(), sign(leadgenPayload())));
-    expect((await res.json()).results[0].ok).toBe(false);
+    expect(res.status).toBe(500);
+    expect((await res.json()).results[0].reason).toBe("graph_fetch_failed");
     expect(mockCreateLead).not.toHaveBeenCalled();
 
+    // no_email is permanent — ack 200 so Meta does not retry a dead lead
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ id: "8800112233", field_data: [{ name: "phone", values: ["1"] }] }),
+        json: async () => ({
+          id: "8800112233",
+          field_data: [{ name: "phone", values: ["1"] }],
+        }),
       }))
     );
     res = await POST(post(leadgenPayload(), sign(leadgenPayload())));
+    expect(res.status).toBe(200);
     expect((await res.json()).results[0].reason).toBe("no_email");
     expect(mockCreateLead).not.toHaveBeenCalled();
+
+    // CRM write failure is retryable too
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => GRAPH_LEAD }))
+    );
+    mockCreateLead.mockResolvedValueOnce(null);
+    res = await POST(post(leadgenPayload(), sign(leadgenPayload())));
+    expect(res.status).toBe(500);
+    expect((await res.json()).results[0].reason).toBe("crm_write_failed");
   });
 });
 
