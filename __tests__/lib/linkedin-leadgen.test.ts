@@ -16,8 +16,7 @@ import {
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-const okJson = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status });
+const okJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -98,7 +97,10 @@ describe("mapAnswersToFields", () => {
     const out = mapAnswersToFields([answer(9, "x@y.zw")], []);
     expect(out.email).toBe("x@y.zw");
     expect(out.extras[0]).toBeUndefined();
-    const out2 = mapAnswersToFields([{ answerDetails: { textQuestionAnswer: { answer: "hi" } } }], []);
+    const out2 = mapAnswersToFields(
+      [{ answerDetails: { textQuestionAnswer: { answer: "hi" } } }],
+      []
+    );
     expect(out2.extras[0]).toBe("q?: hi");
   });
 });
@@ -133,7 +135,7 @@ describe("toEspoLeadDataFromLeadGen", () => {
     });
     expect(lead).toMatchObject({
       emailAddress: "lead@x.co",
-      source: "Other",
+      source: "LinkedIn Lead Gen",
       campaignSlug: "shop-online",
       orderId: "li-leadgen-r1",
       utmSource: "linkedin",
@@ -146,15 +148,11 @@ describe("toEspoLeadDataFromLeadGen", () => {
   });
 
   it("returns null without an email and derives responseId from the notification", () => {
-    expect(
-      toEspoLeadDataFromLeadGen({ response: {}, questions: [] })
-    ).toBeNull();
+    expect(toEspoLeadDataFromLeadGen({ response: {}, questions: [] })).toBeNull();
     const lead = toEspoLeadDataFromLeadGen({
       response: {
         formResponse: {
-          answers: [
-            { questionId: 1, answerDetails: { textQuestionAnswer: { answer: "a@b.c" } } },
-          ],
+          answers: [{ questionId: 1, answerDetails: { textQuestionAnswer: { answer: "a@b.c" } } }],
         },
       },
       questions: [{ questionId: 1, predefinedField: "EMAIL" }],
@@ -174,9 +172,9 @@ describe("isLeadCreatedNotification", () => {
         leadGenFormResponse: "urn:x",
       })
     ).toBe(true);
-    expect(
-      isLeadCreatedNotification({ type: "LEAD_ACTION", leadGenFormResponse: "urn:x" })
-    ).toBe(true);
+    expect(isLeadCreatedNotification({ type: "LEAD_ACTION", leadGenFormResponse: "urn:x" })).toBe(
+      true
+    );
     expect(
       isLeadCreatedNotification({
         type: "LEAD_ACTION",
