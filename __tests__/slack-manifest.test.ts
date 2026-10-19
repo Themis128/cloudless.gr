@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 
-const { readFileSyncMock } = vi.hoisted(() => ({
+const { readFileSyncMock, actualFs } = vi.hoisted(() => ({
   readFileSyncMock: vi.fn(),
+  actualFs: {} as { readFileSync: typeof import("fs").readFileSync },
 }));
 
+// vi.mock("fs") DOES intercept the lib's readFileSync import, so a bare
+// vi.fn() makes every read return undefined. Default the mock to delegate
+// to the real fs — tests override per-call with mockReturnValueOnce.
 vi.mock("fs", async () => {
   const actual = await vi.importActual<typeof import("fs")>("fs");
+  actualFs.readFileSync = actual.readFileSync;
   return {
     ...actual,
     readFileSync: (...args: unknown[]) => readFileSyncMock(...args),
@@ -21,6 +26,9 @@ describe("slack-manifest", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     readFileSyncMock.mockReset();
+    readFileSyncMock.mockImplementation((...args: unknown[]) =>
+      actualFs.readFileSync(...(args as Parameters<typeof actualFs.readFileSync>))
+    );
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
