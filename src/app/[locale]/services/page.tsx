@@ -152,7 +152,6 @@ export default async function ServicesPage() {
             <a
               href="#audit"
               className="group relative flex flex-1 flex-col items-center text-center"
-              aria-label="Free Audit: 30-min strategy call"
             >
               <div className="border-neon-cyan/30 bg-void text-neon-cyan ring-neon-cyan/20 group-hover:bg-neon-cyan/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
                 01
@@ -165,7 +164,6 @@ export default async function ServicesPage() {
             <a
               href="#services"
               className="group relative flex flex-1 flex-col items-center text-center"
-              aria-label="Choose Your Scope: Services or bundle"
             >
               <div className="border-neon-magenta bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/25 group-hover:bg-neon-magenta/25 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-2 transition-all duration-200">
                 02
@@ -183,7 +181,6 @@ export default async function ServicesPage() {
             <a
               href="#results"
               className="group relative flex flex-1 flex-col items-center text-center"
-              aria-label="Results in 14 Days: Measurable progress"
             >
               <div className="border-neon-green/30 bg-void text-neon-green ring-neon-green/20 group-hover:bg-neon-green/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
                 03
@@ -674,7 +671,6 @@ export default async function ServicesPage() {
               <Link
                 href="/auth/signup?plan=bundle"
                 className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse mt-6 inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
-                aria-label="Get the full-stack growth engine bundle"
               >
                 {t("servicesPage.bundleCta", "Get the bundle")}
                 <Arrow />
