@@ -988,6 +988,29 @@ export async function createLead(data: LeadData): Promise<string | null> {
  * thousands, promote campaign to a dedicated `cCampaignSlug` custom field
  * on Lead and index it.
  */
+/** Count Leads with an exact EspoCRM `source` value (e.g. "Newsletter").
+ * Used for honest social-proof counters — returns 0 on any failure so pages
+ * degrade to hiding the counter rather than showing a fake number. */
+export async function countLeadsBySource(source: string): Promise<number> {
+  try {
+    const res = await espoFetch(
+      `/Lead?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "source",
+          "where[0][value]": source,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (!res.ok) return 0;
+    const data = (await res.json()) as { total: number };
+    return data.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function countLeadsForCampaign(campaignSlug: string): Promise<number> {
   try {
     const res = await espoFetch(

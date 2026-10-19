@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import ChecklistSignup from "@/components/ChecklistSignup";
+import { countLeadsBySource } from "@/lib/espocrm";
+import { getFeaturedTestimonials } from "@/lib/appflowy-testimonials";
+
+// Re-render at most hourly so the subscriber count + featured quote stay fresh
+// without hammering EspoCRM/AppFlowy on every pageview.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Cloudless — Links & Free Resources",
@@ -80,7 +86,12 @@ const LINKS: HubLink[] = [
   },
 ];
 
-export default function LinksPage() {
+export default async function LinksPage() {
+  const [subscribers, featured] = await Promise.all([
+    countLeadsBySource("Newsletter").catch(() => 0),
+    getFeaturedTestimonials().catch(() => []),
+  ]);
+  const testimonial = featured[0] ?? null;
   return (
     <main className="bg-void min-h-screen text-slate-200">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center px-6 py-12">
@@ -100,6 +111,34 @@ export default function LinksPage() {
           AI automation hacks &amp; no-code workflows for founders who would rather ship than
           babysit servers.
         </p>
+
+        {/* Social proof — rendered only when live data exists, never placeholder numbers */}
+        {(subscribers > 0 || testimonial) && (
+          <div className="mt-5 w-full rounded-xl border border-slate-800 bg-void-light/30 px-4 py-3">
+            {subscribers > 0 && (
+              <p className="text-center text-xs text-slate-400">
+                Join{" "}
+                <span className="font-semibold text-neon-cyan">
+                  {subscribers}+
+                </span>{" "}
+                builders already reading the build log.
+              </p>
+            )}
+            {testimonial && (
+              <figure
+                className={subscribers > 0 ? "mt-3 border-t border-slate-800 pt-3" : ""}
+              >
+                <blockquote className="text-center text-xs italic leading-relaxed text-slate-300">
+                  “{testimonial.quote}”
+                </blockquote>
+                <figcaption className="mt-1.5 text-center text-[11px] text-slate-500">
+                  — {testimonial.name}, {testimonial.role} at{" "}
+                  {testimonial.company}
+                </figcaption>
+              </figure>
+            )}
+          </div>
+        )}
 
         <nav className="mt-8 flex w-full flex-col gap-3">
           {LINKS.map((l) =>
