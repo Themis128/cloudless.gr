@@ -69,7 +69,7 @@ export default function Navbar() {
               href="/"
               className="group flex shrink-0 items-center transition-opacity hover:opacity-90"
               style={{ color: "var(--ink-primary)" }}
-              aria-label={translate(locale, "common.home", "Home")}
+              aria-label={`cloudless.gr — ${translate(locale, "common.home", "home")}`}
             >
               <Logo variant="wordmark" size="md" />
             </Link>
