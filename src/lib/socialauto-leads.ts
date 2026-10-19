@@ -38,6 +38,7 @@ function mapSourceToEspo(source: SocialAutoSource): {
   espoSource: string;
   channelLabel: string;
   utmSource: string;
+  utmMedium: string;
   targetListName?: string;
 } {
   switch (source) {
@@ -46,6 +47,7 @@ function mapSourceToEspo(source: SocialAutoSource): {
         espoSource: "Messenger",
         channelLabel: "Facebook Messenger",
         utmSource: "facebook_messenger",
+        utmMedium: "social",
         targetListName: "Messenger leads",
       };
     case "instagram_dm":
@@ -53,6 +55,7 @@ function mapSourceToEspo(source: SocialAutoSource): {
         espoSource: "Messenger",
         channelLabel: "Instagram DM",
         utmSource: "instagram_dm",
+        utmMedium: "social",
         targetListName: "Messenger leads",
       };
     case "whatsapp_flow":
@@ -60,6 +63,7 @@ function mapSourceToEspo(source: SocialAutoSource): {
         espoSource: "WhatsApp Flow",
         channelLabel: "WhatsApp Flow",
         utmSource: "whatsapp",
+        utmMedium: "social",
         targetListName: "WhatsApp leads",
       };
     case "whatsapp_dm":
@@ -67,6 +71,7 @@ function mapSourceToEspo(source: SocialAutoSource): {
         espoSource: "Messenger",
         channelLabel: "WhatsApp DM",
         utmSource: "whatsapp",
+        utmMedium: "social",
         targetListName: "WhatsApp leads",
       };
     case "website":
@@ -74,9 +79,15 @@ function mapSourceToEspo(source: SocialAutoSource): {
         espoSource: "Web Site",
         channelLabel: "Website",
         utmSource: "website",
+        utmMedium: "referral",
       };
     default:
-      return { espoSource: "Other", channelLabel: "Other", utmSource: "other" };
+      return {
+        espoSource: "Other",
+        channelLabel: "Other",
+        utmSource: "other",
+        utmMedium: "other",
+      };
   }
 }
 
@@ -112,7 +123,7 @@ function toDescription(lead: SocialAutoLead): string {
 
 export function toEspoLeadData(lead: SocialAutoLead): LeadData {
   const emailAddress = normalizeWhitespace(String(lead.email ?? "")).toLowerCase();
-  const { espoSource, utmSource, targetListName } = mapSourceToEspo(lead.source);
+  const { espoSource, utmSource, utmMedium, targetListName } = mapSourceToEspo(lead.source);
   const name = normalizeWhitespace(String(lead.name ?? ""));
   const { firstName, lastName } = splitName(name);
   const campaignSlug = `socialauto-${lead.source}`;
@@ -124,7 +135,7 @@ export function toEspoLeadData(lead: SocialAutoLead): LeadData {
     campaignSlug,
     description: toDescription(lead),
     utmSource,
-    utmMedium: "social",
+    utmMedium,
     utmCampaign: campaignSlug,
     targetListNames: targetListName ? [targetListName] : undefined,
   };

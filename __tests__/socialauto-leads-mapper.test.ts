@@ -69,6 +69,7 @@ describe("toEspoLeadData (SocialAuto → EspoCRM Lead)", () => {
     expect(data.source).toBe("Web Site");
     expect(data.campaignSlug).toBe("socialauto-website");
     expect(data.utmSource).toBe("website");
+    expect(data.utmMedium).toBe("referral");
     expect(data.targetListNames).toBeUndefined();
     expect(String(data.description)).toContain("website (Website)");
   });

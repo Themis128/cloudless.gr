@@ -97,7 +97,11 @@ describe("EspoCRM createLead", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-1" }] })) // TargetList lookup
-      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
+      .mockResolvedValueOnce(
+        jsonResponse({
+          list: [{ id: "lead-existing", description: "utm_source: older\nOld context" }],
+        })
+      ) // dedup search
       .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-0" }] })) // current memberships
       .mockResolvedValueOnce(jsonResponse({ id: "lead-existing" })); // update
     vi.stubGlobal("fetch", fetchMock);
@@ -105,11 +109,12 @@ describe("EspoCRM createLead", () => {
     const id = await createLead({
       emailAddress: "dup@example.com",
       source: "Messenger",
+      utmSource: "facebook_messenger",
       targetListNames: ["Messenger leads"],
     });
 
     expect(id).toBe("lead-existing");
-    // dedup search + list lookup + relation fetch + update = 4 calls
+    // list lookup + dedup search + relation fetch + update = 4 calls
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const relationUrl = String(fetchMock.mock.calls[2]?.[0]);
     expect(relationUrl).toContain("/Lead/lead-existing/targetLists");
@@ -117,6 +122,12 @@ describe("EspoCRM createLead", () => {
     const body = JSON.parse(String(updateInit.body)) as Record<string, unknown>;
     expect(body.status).toBeUndefined();
     expect(body.targetListsIds).toEqual(["list-0", "list-1"]);
+    // Description history is merged, not replaced; no fallback lastName written.
+    const desc = String(body.description);
+    expect(desc).toContain("Old context");
+    expect(desc).toContain("utm_source: facebook_messenger");
+    expect(desc.split("\n").filter((l) => l === "utm_source: older")).toHaveLength(1);
+    expect(body.lastName).toBeUndefined();
   });
 
   it("on re-ingest never wipes stored fields with empty values", async () => {

@@ -906,7 +906,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
     // creating a second record. EspoCRM has no unique-email constraint on Lead.
     const leadSearchParams = JSON.stringify({
       maxSize: 1,
-      select: ["id"],
+      select: ["id", "description"],
       where: [
         {
           type: "equals",
@@ -917,7 +917,9 @@ export async function createLead(data: LeadData): Promise<string | null> {
     });
     const dupSearch = await espoFetch(`/Lead?searchParams=${encodeURIComponent(leadSearchParams)}`);
     if (dupSearch.ok) {
-      const dupData = (await dupSearch.json()) as { list: { id: string }[] };
+      const dupData = (await dupSearch.json()) as {
+        list: { id: string; description?: string }[];
+      };
       const existing = dupData.list[0];
       if (existing) {
         // targetListsIds is set-replacing and NOT selectable via searchParams —
@@ -941,6 +943,20 @@ export async function createLead(data: LeadData): Promise<string | null> {
         const updatePayload = Object.fromEntries(
           Object.entries(payload).filter(([k, v]) => k !== "status" && v !== "" && v !== undefined)
         );
+        // lastName falls back to the email prefix on create — on update only
+        // send it when the caller actually supplied a name.
+        if (!data.lastName) delete updatePayload.lastName;
+        // Description accumulates context per ingest — merge lines instead of
+        // replacing, preserving existing campaign/UTM history.
+        if (existing.description && updatePayload.description) {
+          const merged = new Set([
+            ...existing.description.split("\n"),
+            ...String(updatePayload.description).split("\n"),
+          ]);
+          updatePayload.description = [...merged].filter(Boolean).join("\n");
+        } else if (existing.description && !updatePayload.description) {
+          delete updatePayload.description;
+        }
         await espoFetch(`/Lead/${existing.id}`, {
           method: "PUT",
           body: JSON.stringify(updatePayload),
