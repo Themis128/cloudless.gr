@@ -63,6 +63,8 @@ export interface IntegrationConfig {
   META_CAPI_ACCESS_TOKEN?: string;
   META_ACCESS_TOKEN?: string;
   META_PAGE_ID?: string;
+  META_APP_SECRET?: string;
+  META_LEADS_VERIFY_TOKEN?: string;
   // AI
   ANTHROPIC_API_KEY?: string;
   // EspoCRM (EspoCRM replacement, self-hosted on omv k3s)
@@ -135,6 +137,8 @@ export function getIntegrations(): IntegrationConfig {
     META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN,
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
     META_PAGE_ID: process.env.META_PAGE_ID,
+    META_APP_SECRET: process.env.META_APP_SECRET,
+    META_LEADS_VERIFY_TOKEN: process.env.META_LEADS_VERIFY_TOKEN,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL,
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY,
@@ -243,6 +247,9 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
         envCfg.META_CAPI_ACCESS_TOKEN || d1cfg.META_CAPI_ACCESS_TOKEN || undefined,
       META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || d1cfg.META_ACCESS_TOKEN || undefined,
       META_PAGE_ID: envCfg.META_PAGE_ID || d1cfg.META_PAGE_ID || undefined,
+      META_APP_SECRET: envCfg.META_APP_SECRET || d1cfg.META_APP_SECRET || undefined,
+      META_LEADS_VERIFY_TOKEN:
+        envCfg.META_LEADS_VERIFY_TOKEN || d1cfg.META_LEADS_VERIFY_TOKEN || undefined,
       ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || d1cfg.ANTHROPIC_API_KEY || undefined,
       ESPOCRM_BASE_URL: envCfg.ESPOCRM_BASE_URL || d1cfg.ESPOCRM_BASE_URL || undefined,
       ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || d1cfg.ESPOCRM_API_KEY || undefined,

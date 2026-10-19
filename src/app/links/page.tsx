@@ -1,5 +1,34 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import Image from "next/image";
+import ChecklistSignup from "@/components/ChecklistSignup";
+import { countNewsletterSubscribers } from "@/lib/espocrm";
+import { getFeaturedTestimonials } from "@/lib/appflowy-testimonials";
+
+// The root layout reads headers(), so the whole route tree renders
+// dynamically — `export const revalidate` cannot cache this page. Cache the
+// external calls instead: hourly revalidate keeps the subscriber count +
+// featured quote fresh without blocking every pageview on EspoCRM/AppFlowy.
+// Throw on failure-sentinels so unstable_cache never poisons the cache
+// with an upstream-error result (unstable_cache skips caching throws).
+const getCachedSubscriberCount = unstable_cache(
+  async () => {
+    const n = await countNewsletterSubscribers();
+    if (n === null) throw new Error("EspoCRM subscriber count unavailable");
+    return n;
+  },
+  ["links-subscriber-count"],
+  { revalidate: 3600 }
+);
+const getCachedFeaturedTestimonials = unstable_cache(
+  async () => {
+    const list = await getFeaturedTestimonials();
+    if (list.length === 0) throw new Error("no featured testimonials available");
+    return list;
+  },
+  ["links-featured-testimonial"],
+  { revalidate: 3600 }
+);
 
 export const metadata: Metadata = {
   title: "Cloudless — Links & Free Resources",
@@ -79,7 +108,26 @@ const LINKS: HubLink[] = [
   },
 ];
 
-export default function LinksPage() {
+export default async function LinksPage() {
+  const [subscribers, featured] = await Promise.all([
+    getCachedSubscriberCount().catch(() => 0),
+    getCachedFeaturedTestimonials().catch(() => []),
+  ]);
+  const testimonial = featured[0] ?? null;
+  // "Name, Role at Company" — but tolerate missing fields: never render
+  // dangling commas or a bare "at".
+  const testimonialAttribution = testimonial
+    ? [
+        testimonial.name,
+        testimonial.company
+          ? testimonial.role
+            ? `${testimonial.role} at ${testimonial.company}`
+            : testimonial.company
+          : testimonial.role,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
   return (
     <main className="bg-void min-h-screen text-slate-200">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center px-6 py-12">
@@ -100,27 +148,70 @@ export default function LinksPage() {
           babysit servers.
         </p>
 
+        {/* Social proof — rendered only when live data exists, never placeholder numbers */}
+        {(subscribers > 0 || testimonial) && (
+          <div className="bg-void-light/30 mt-5 w-full rounded-xl border border-slate-800 px-4 py-3">
+            {subscribers > 0 && (
+              <p className="text-center text-xs text-slate-400">
+                Join <span className="text-neon-cyan font-semibold">{subscribers}+</span> builders
+                already reading the build log.
+              </p>
+            )}
+            {testimonial && (
+              <figure className={subscribers > 0 ? "mt-3 border-t border-slate-800 pt-3" : ""}>
+                <blockquote className="text-center text-xs leading-relaxed text-slate-300 italic">
+                  “{testimonial.quote}”
+                </blockquote>
+                <figcaption className="mt-1.5 text-center text-[11px] text-slate-500">
+                  — {testimonialAttribution}
+                </figcaption>
+              </figure>
+            )}
+          </div>
+        )}
+
         <nav className="mt-8 flex w-full flex-col gap-3">
-          {LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className={`group flex min-h-[56px] w-full flex-col justify-center rounded-xl border px-5 py-3 transition-colors ${
-                l.accent
-                  ? "border-neon-cyan/60 bg-neon-cyan/10 hover:bg-neon-cyan/20"
-                  : "bg-void-light/50 hover:border-neon-cyan/50 border-slate-800"
-              }`}
-            >
-              <span className="flex items-center justify-between text-[15px] font-medium text-white">
-                {l.label}
-                <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
-                  →
+          {LINKS.map((l) =>
+            l.href === "/automation-checklist.pdf" ? (
+              <div
+                key={l.label}
+                className="bg-void-light/50 rounded-xl border border-slate-800 px-5 py-3"
+              >
+                <a
+                  href={l.href}
+                  className="group flex min-h-[40px] w-full flex-col justify-center transition-colors"
+                >
+                  <span className="flex items-center justify-between text-[15px] font-medium text-white">
+                    {l.label}
+                    <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </span>
+                  <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
+                </a>
+                <ChecklistSignup />
+              </div>
+            ) : (
+              <a
+                key={l.label}
+                href={l.href}
+                {...(l.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className={`group flex min-h-[56px] w-full flex-col justify-center rounded-xl border px-5 py-3 transition-colors ${
+                  l.accent
+                    ? "border-neon-cyan/60 bg-neon-cyan/10 hover:bg-neon-cyan/20"
+                    : "bg-void-light/50 hover:border-neon-cyan/50 border-slate-800"
+                }`}
+              >
+                <span className="flex items-center justify-between text-[15px] font-medium text-white">
+                  {l.label}
+                  <span className="text-neon-cyan transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
                 </span>
-              </span>
-              <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
-            </a>
-          ))}
+                <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
+              </a>
+            )
+          )}
         </nav>
 
         <p className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
