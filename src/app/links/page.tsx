@@ -114,26 +114,20 @@ export default async function LinksPage() {
 
         {/* Social proof — rendered only when live data exists, never placeholder numbers */}
         {(subscribers > 0 || testimonial) && (
-          <div className="mt-5 w-full rounded-xl border border-slate-800 bg-void-light/30 px-4 py-3">
+          <div className="bg-void-light/30 mt-5 w-full rounded-xl border border-slate-800 px-4 py-3">
             {subscribers > 0 && (
               <p className="text-center text-xs text-slate-400">
-                Join{" "}
-                <span className="font-semibold text-neon-cyan">
-                  {subscribers}+
-                </span>{" "}
-                builders already reading the build log.
+                Join <span className="text-neon-cyan font-semibold">{subscribers}+</span> builders
+                already reading the build log.
               </p>
             )}
             {testimonial && (
-              <figure
-                className={subscribers > 0 ? "mt-3 border-t border-slate-800 pt-3" : ""}
-              >
-                <blockquote className="text-center text-xs italic leading-relaxed text-slate-300">
+              <figure className={subscribers > 0 ? "mt-3 border-t border-slate-800 pt-3" : ""}>
+                <blockquote className="text-center text-xs leading-relaxed text-slate-300 italic">
                   “{testimonial.quote}”
                 </blockquote>
                 <figcaption className="mt-1.5 text-center text-[11px] text-slate-500">
-                  — {testimonial.name}, {testimonial.role} at{" "}
-                  {testimonial.company}
+                  — {testimonial.name}, {testimonial.role} at {testimonial.company}
                 </figcaption>
               </figure>
             )}
