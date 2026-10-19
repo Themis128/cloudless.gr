@@ -34,20 +34,60 @@ function splitName(name: string): { firstName?: string; lastName?: string } {
   };
 }
 
-function mapSourceToEspo(source: SocialAutoSource): { espoSource: string; channelLabel: string } {
+function mapSourceToEspo(source: SocialAutoSource): {
+  espoSource: string;
+  channelLabel: string;
+  utmSource: string;
+  utmMedium: string;
+  targetListName?: string;
+} {
   switch (source) {
     case "facebook_messenger":
-      return { espoSource: "Other", channelLabel: "Facebook Messenger" };
+      return {
+        espoSource: "Messenger",
+        channelLabel: "Facebook Messenger",
+        utmSource: "facebook_messenger",
+        utmMedium: "social",
+        targetListName: "Messenger leads",
+      };
     case "instagram_dm":
-      return { espoSource: "Other", channelLabel: "Instagram DM" };
+      return {
+        espoSource: "Messenger",
+        channelLabel: "Instagram DM",
+        utmSource: "instagram_dm",
+        utmMedium: "social",
+        targetListName: "Messenger leads",
+      };
     case "whatsapp_flow":
-      return { espoSource: "Other", channelLabel: "WhatsApp Flow" };
+      return {
+        espoSource: "WhatsApp Flow",
+        channelLabel: "WhatsApp Flow",
+        utmSource: "whatsapp",
+        utmMedium: "social",
+        targetListName: "WhatsApp leads",
+      };
     case "whatsapp_dm":
-      return { espoSource: "Other", channelLabel: "WhatsApp DM" };
+      return {
+        espoSource: "Messenger",
+        channelLabel: "WhatsApp DM",
+        utmSource: "whatsapp",
+        utmMedium: "social",
+        targetListName: "WhatsApp leads",
+      };
     case "website":
-      return { espoSource: "Web Site", channelLabel: "Website" };
+      return {
+        espoSource: "Web Site",
+        channelLabel: "Website",
+        utmSource: "website",
+        utmMedium: "referral",
+      };
     default:
-      return { espoSource: "Other", channelLabel: "Other" };
+      return {
+        espoSource: "Other",
+        channelLabel: "Other",
+        utmSource: "other",
+        utmMedium: "other",
+      };
   }
 }
 
@@ -83,16 +123,21 @@ function toDescription(lead: SocialAutoLead): string {
 
 export function toEspoLeadData(lead: SocialAutoLead): LeadData {
   const emailAddress = normalizeWhitespace(String(lead.email ?? "")).toLowerCase();
-  const { espoSource } = mapSourceToEspo(lead.source);
+  const { espoSource, utmSource, utmMedium, targetListName } = mapSourceToEspo(lead.source);
   const name = normalizeWhitespace(String(lead.name ?? ""));
   const { firstName, lastName } = splitName(name);
+  const campaignSlug = `socialauto-${lead.source}`;
   return {
     emailAddress,
     firstName,
     lastName,
     source: espoSource,
-    campaignSlug: `socialauto-${lead.source}`,
+    campaignSlug,
     description: toDescription(lead),
+    utmSource,
+    utmMedium,
+    utmCampaign: campaignSlug,
+    targetListNames: targetListName ? [targetListName] : undefined,
   };
 }
 

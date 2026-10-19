@@ -21,8 +21,10 @@ vi.mock("@/lib/slack-notify", () => ({
 }));
 
 const setNewsletterStatusMock = vi.fn();
+const createLeadMock = vi.fn();
 vi.mock("@/lib/espocrm", () => ({
   setNewsletterStatus: setNewsletterStatusMock,
+  createLead: createLeadMock,
 }));
 
 const removeFromSuppressionListMock = vi.fn();
@@ -58,6 +60,7 @@ describe("POST /api/subscribe", () => {
     sendSubscriberWelcomeMock.mockResolvedValue(undefined);
     slackSubscriberNotifyMock.mockResolvedValue(undefined);
     setNewsletterStatusMock.mockResolvedValue(true);
+    createLeadMock.mockResolvedValue("lead-1");
     removeFromSuppressionListMock.mockResolvedValue(true);
     sendContactEventMock.mockResolvedValue({ ok: true, eventsReceived: 1 });
   });
@@ -115,6 +118,33 @@ describe("POST /api/subscribe", () => {
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
     expect(response.status).toBe(200);
+  });
+
+  it("does not create a Lead for a plain newsletter signup", async () => {
+    const { POST } = await import("@/app/api/subscribe/route");
+    await POST(makeRequest({ email: "plain@cloudless.gr" }));
+
+    expect(createLeadMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a Lead Magnet lead when a magnet slug is provided", async () => {
+    const { POST } = await import("@/app/api/subscribe/route");
+    const response = await POST(
+      makeRequest({ email: "magnet@cloudless.gr", magnet: "12-automation-checklist" })
+    );
+
+    expect(response.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(createLeadMock).toHaveBeenCalledTimes(1);
+    expect(createLeadMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        emailAddress: "magnet@cloudless.gr",
+        source: "Lead Magnet",
+        leadMagnet: "12-automation-checklist",
+        utmMedium: "lead_magnet",
+        targetListNames: ["Checklist downloaders"],
+      })
+    );
   });
 });
 
