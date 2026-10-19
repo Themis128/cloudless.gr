@@ -62,8 +62,8 @@ describe("EspoCRM createLead", () => {
       "fetch",
       vi
         .fn()
+        .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-1" }] })) // TargetList lookup
         .mockResolvedValueOnce(jsonResponse({ list: [] })) // dedup search
-        .mockResolvedValueOnce(jsonResponse({ id: "list-1" })) // TargetList lookup
         .mockResolvedValueOnce(jsonResponse({ id: "lead-1" })) // create
     );
 
@@ -96,8 +96,8 @@ describe("EspoCRM createLead", () => {
   it("on re-ingest updates the existing lead without regressing status and unions target lists", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
       .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-1" }] })) // TargetList lookup
+      .mockResolvedValueOnce(jsonResponse({ list: [{ id: "lead-existing" }] })) // dedup search
       .mockResolvedValueOnce(jsonResponse({ list: [{ id: "list-0" }] })) // current memberships
       .mockResolvedValueOnce(jsonResponse({ id: "lead-existing" })); // update
     vi.stubGlobal("fetch", fetchMock);

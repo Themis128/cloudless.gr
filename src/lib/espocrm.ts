@@ -933,8 +933,8 @@ export async function createLead(data: LeadData): Promise<string | null> {
           payload.targetListsIds = [...new Set([...current, ...targetListIds])];
         }
         // Never regress status on a re-ingest — an In Process / Converted
-        // lead keeps its stage.
-        const { status: _status, ...updatePayload } = payload;
+        // lead keeps its stage (JSON.stringify drops undefined keys).
+        const updatePayload = { ...payload, status: undefined };
         await espoFetch(`/Lead/${existing.id}`, {
           method: "PUT",
           body: JSON.stringify(updatePayload),
