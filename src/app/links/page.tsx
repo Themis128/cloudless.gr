@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import ChecklistSignup from "@/components/ChecklistSignup";
-import { countLeadsBySource } from "@/lib/espocrm";
+import { countNewsletterSubscribers } from "@/lib/espocrm";
 import { getFeaturedTestimonials } from "@/lib/appflowy-testimonials";
 
-// Re-render at most hourly so the subscriber count + featured quote stay fresh
-// without hammering EspoCRM/AppFlowy on every pageview.
-export const revalidate = 3600;
+// The root layout reads headers(), so the whole route tree renders
+// dynamically — `export const revalidate` cannot cache this page. Cache the
+// external calls instead: hourly revalidate keeps the subscriber count +
+// featured quote fresh without blocking every pageview on EspoCRM/AppFlowy.
+const getCachedSubscriberCount = unstable_cache(
+  countNewsletterSubscribers,
+  ["links-subscriber-count"],
+  { revalidate: 3600 }
+);
+const getCachedFeaturedTestimonials = unstable_cache(
+  getFeaturedTestimonials,
+  ["links-featured-testimonial"],
+  { revalidate: 3600 }
+);
 
 export const metadata: Metadata = {
   title: "Cloudless — Links & Free Resources",
@@ -88,8 +100,8 @@ const LINKS: HubLink[] = [
 
 export default async function LinksPage() {
   const [subscribers, featured] = await Promise.all([
-    countLeadsBySource("Newsletter").catch(() => 0),
-    getFeaturedTestimonials().catch(() => []),
+    getCachedSubscriberCount().catch(() => 0),
+    getCachedFeaturedTestimonials().catch(() => []),
   ]);
   const testimonial = featured[0] ?? null;
   return (

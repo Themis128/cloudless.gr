@@ -431,6 +431,30 @@ export async function listNewsletterSubscribers(): Promise<string[]> {
   }
 }
 
+/** Count active newsletter subscribers — Contacts with leadSource=Email,
+ * the same convention listNewsletterSubscribers/setNewsletterStatus use.
+ * Returns 0 on any failure so pages degrade to hiding the counter rather
+ * than showing a fake number. */
+export async function countNewsletterSubscribers(): Promise<number> {
+  try {
+    const res = await espoFetch(
+      `/Contact?` +
+        new URLSearchParams({
+          "where[0][type]": "equals",
+          "where[0][attribute]": "leadSource",
+          "where[0][value]": "Email",
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (!res.ok) return 0;
+    const data = (await res.json()) as { total: number };
+    return data.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Flip a contact's newsletter state. Maps to leadSource = Email / Other. */
 export async function setNewsletterStatus(
   email: string,
