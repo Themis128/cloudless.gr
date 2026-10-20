@@ -159,7 +159,7 @@ CHECKLIST = [
 ]
 
 TIMELINE = [
-    ("2 Aug 2024", "AI Act enters into force"),
+    ("1 Aug 2024", "AI Act enters into force"),
     ("2 Feb 2025", "Prohibited practices banned + AI literacy duty (Art. 4-5)"),
     ("2 Aug 2025", "GPAI model obligations, governance, penalties provisions"),
     ("2 Aug 2026", "High-risk Annex III rules + Art. 50 transparency + sandboxes"),

@@ -46,6 +46,7 @@ interface HubLink {
   /** Lead-magnet slug — renders the card with a ChecklistSignup capture. */
   magnet?: string;
   magnetPitch?: string;
+  magnetSuccessText?: string;
 }
 
 const LINKS: HubLink[] = [
@@ -62,6 +63,8 @@ const LINKS: HubLink[] = [
     magnet: "eu-ai-act-checklist",
     magnetPitch:
       "We re-run this checklist every quarter as guidance lands. Leave your email — we'll send each refresh.",
+    magnetSuccessText:
+      "You're on the list — the refreshed checklist lands in your inbox every quarter.",
   },
   {
     // Internal route — same-tab nav. /telegram 307s to the channel invite
@@ -201,7 +204,11 @@ export default async function LinksPage() {
                   </span>
                   <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
                 </a>
-                <ChecklistSignup magnet={l.magnet} pitch={l.magnetPitch} />
+                <ChecklistSignup
+                  magnet={l.magnet}
+                  pitch={l.magnetPitch}
+                  successText={l.magnetSuccessText}
+                />
               </div>
             ) : (
               <a
