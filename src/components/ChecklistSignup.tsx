@@ -32,7 +32,7 @@ export default function ChecklistSignup({
         body: JSON.stringify({
           email,
           turnstileToken: turnstileToken ?? undefined,
-          magnet: MAGNET_SLUG,
+          magnet,
         }),
       });
       if (res.ok) {
@@ -48,17 +48,13 @@ export default function ChecklistSignup({
 
   if (status === "success") {
     return (
-      <p className="text-neon-green font-mono text-xs">
-        You&apos;re on the list — the updated checklist lands in your inbox monthly.
-      </p>
+      <p className="text-neon-green font-mono text-xs">{successText}</p>
     );
   }
 
   return (
     <div className="mt-2">
-      <p className="mb-2 text-[11px] leading-relaxed text-slate-400">
-        Want the monthly updated version? Leave your email — we&apos;ll send each refresh.
-      </p>
+      <p className="mb-2 text-[11px] leading-relaxed text-slate-400">{pitch}</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <div className="flex gap-2">
           <input

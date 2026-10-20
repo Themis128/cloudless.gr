@@ -43,6 +43,9 @@ interface HubLink {
   sub: string;
   external?: boolean;
   accent?: boolean;
+  /** Lead-magnet slug — renders the card with a ChecklistSignup capture. */
+  magnet?: string;
+  magnetPitch?: string;
 }
 
 const LINKS: HubLink[] = [
@@ -50,6 +53,15 @@ const LINKS: HubLink[] = [
     href: "/automation-checklist.pdf",
     label: "The 12-Automation Checklist",
     sub: "Free PDF — the exact workflows that run this stack",
+    magnet: "automation-checklist",
+  },
+  {
+    href: "/eu-ai-act-checklist.pdf",
+    label: "EU AI Act Readiness Checklist",
+    sub: "Free PDF — 12 practical checks before the next deadline",
+    magnet: "eu-ai-act-checklist",
+    magnetPitch:
+      "We re-run this checklist every quarter as guidance lands. Leave your email — we'll send each refresh.",
   },
   {
     // Internal route — same-tab nav. /telegram 307s to the channel invite
@@ -172,7 +184,7 @@ export default async function LinksPage() {
 
         <nav className="mt-8 flex w-full flex-col gap-3">
           {LINKS.map((l) =>
-            l.href === "/automation-checklist.pdf" ? (
+            l.magnet ? (
               <div
                 key={l.label}
                 className="bg-void-light/50 rounded-xl border border-slate-800 px-5 py-3"
@@ -189,7 +201,7 @@ export default async function LinksPage() {
                   </span>
                   <span className="mt-0.5 text-xs text-slate-400">{l.sub}</span>
                 </a>
-                <ChecklistSignup />
+                <ChecklistSignup magnet={l.magnet} pitch={l.magnetPitch} />
               </div>
             ) : (
               <a
