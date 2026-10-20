@@ -47,9 +47,7 @@ export default function ChecklistSignup({
   }
 
   if (status === "success") {
-    return (
-      <p className="text-neon-green font-mono text-xs">{successText}</p>
-    );
+    return <p className="text-neon-green font-mono text-xs">{successText}</p>;
   }
 
   return (
