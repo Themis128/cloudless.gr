@@ -25,20 +25,23 @@ jobs:
         run: |
           K="sudo k3s kubectl"
           DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
-          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
-          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -fe "
-            SELECT 'leads' k, COUNT(*) n FROM lead
-            UNION ALL SELECT 'contacts', COUNT(*) FROM contact
-            UNION ALL SELECT 'accounts', COUNT(*) FROM account
-            UNION ALL SELECT 'opportunities', COUNT(*) FROM opportunity
-            UNION ALL SELECT 'campaigns', COUNT(*) FROM campaign
-            UNION ALL SELECT 'emails', COUNT(*) FROM email
-            UNION ALL SELECT 'scheduled_jobs', COUNT(*) FROM scheduled_job
-            UNION ALL SELECT 'inbound_email_accts', COUNT(*) FROM inbound_email;
+          # Password expands inside the pod (container env) — never in kubectl
+          # args. Numeric labels keep the SQL quote-free for the sh -c arg:
+          #   1=lead 2=contact 3=account 4=opportunity 5=campaign 6=email
+          #   7=scheduled_job 8=inbound_email
+          $K -n espocrm exec "$DBPOD" -- sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" espocrm -fe "
+            SELECT 1 tbl, COUNT(*) n FROM lead
+            UNION ALL SELECT 2, COUNT(*) FROM contact
+            UNION ALL SELECT 3, COUNT(*) FROM account
+            UNION ALL SELECT 4, COUNT(*) FROM opportunity
+            UNION ALL SELECT 5, COUNT(*) FROM campaign
+            UNION ALL SELECT 6, COUNT(*) FROM email
+            UNION ALL SELECT 7, COUNT(*) FROM scheduled_job
+            UNION ALL SELECT 8, COUNT(*) FROM inbound_email;
             SELECT status, MAX(created_at) latest_lead, COUNT(*) n
               FROM lead GROUP BY status;
             SHOW COLUMNS FROM inbound_email;
-            SHOW COLUMNS FROM job;"
+            SHOW COLUMNS FROM job;"'
 
       - name: Cron daemon heartbeat
         run: |
@@ -48,6 +51,5 @@ jobs:
           $K -n espocrm logs "$POD" -c espocrm-daemon --tail=8
           echo "--- last cron runs ---"
           DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
-          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
-          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -fe \
-            "SELECT name, status, execute_time FROM job ORDER BY execute_time DESC LIMIT 8;" || true
+          $K -n espocrm exec "$DBPOD" -- sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" espocrm -fe \
+            "SELECT name, status, execute_time FROM job ORDER BY execute_time DESC LIMIT 8;"' || true
