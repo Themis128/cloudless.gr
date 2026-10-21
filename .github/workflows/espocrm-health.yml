@@ -35,9 +35,8 @@ jobs:
             UNION ALL SELECT 'emails', COUNT(*) FROM email
             UNION ALL SELECT 'scheduled_jobs', COUNT(*) FROM scheduled_job
             UNION ALL SELECT 'inbound_email_accts', COUNT(*) FROM inbound_email;
-            SELECT CONCAT_WS(' ', first_name, last_name) lead, status, created_at
-              FROM lead ORDER BY created_at DESC LIMIT 3;
-            SELECT name FROM inbound_email;
+            SELECT status, MAX(created_at) latest_lead, COUNT(*) n
+              FROM lead GROUP BY status;
             SHOW COLUMNS FROM inbound_email;
             SHOW COLUMNS FROM job;"
 
