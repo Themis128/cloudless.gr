@@ -24,14 +24,12 @@ jobs:
     - name: EspoCRM pod PHP version
       run: |
         set -x
-        POD=$(sudo k3s kubectl get pods -n espocrm -o name 2>/dev/null | head -1 || true)
+        POD=$(sudo k3s kubectl get pods -n espocrm -l app=espocrm -o name 2>/dev/null | head -1 || true)
         if [ -z "$POD" ]; then
-          POD=$(sudo k3s kubectl get pods -A -o name 2>/dev/null | grep espocrm | head -1 || true)
+          POD=$(sudo k3s kubectl get pods -A -l app=espocrm -o name 2>/dev/null | head -1 || true)
         fi
         if [ -n "$POD" ]; then
-          NS=$(sudo k3s kubectl get "$POD" -A -o jsonpath='{.metadata.namespace}' 2>/dev/null || echo espocrm)
-          sudo k3s kubectl exec -n "$NS" "$POD" -- php -v 2>&1 || true
-          sudo k3s kubectl exec -n "$NS" "$POD" -- sh -c 'echo IMAGE_TAG=$ESPOCRM_VERSION' 2>&1 || true
+          sudo k3s kubectl exec -n espocrm "$POD" -- php -v 2>&1 || true
         else
           echo "no espocrm pod found"
         fi
@@ -49,7 +47,7 @@ jobs:
       env:
         OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
       run: |
-        set -x
+        # No `set -x` here — the private key must never reach the log.
         KEY=$(mktemp)
         trap 'rm -f "$KEY"' EXIT
         printf '%s\n' "$OMV_SSH_KEY" > "$KEY"
