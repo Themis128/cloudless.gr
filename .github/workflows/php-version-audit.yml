@@ -24,14 +24,17 @@ jobs:
     - name: EspoCRM pod PHP version
       run: |
         set -x
-        POD=$(sudo k3s kubectl get pods -n espocrm -l app=espocrm -o name 2>/dev/null | head -1 || true)
+        NS=espocrm
+        POD=$(sudo k3s kubectl get pods -n "$NS" -l app=espocrm -o name 2>/dev/null | head -1 || true)
         if [ -z "$POD" ]; then
-          POD=$(sudo k3s kubectl get pods -A -l app=espocrm -o name 2>/dev/null | head -1 || true)
+          LINE=$(sudo k3s kubectl get pods -A -l app=espocrm -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name --no-headers 2>/dev/null | head -1 || true)
+          NS=${LINE%% *}
+          POD="pod/${LINE##* }"
         fi
-        if [ -n "$POD" ]; then
-          sudo k3s kubectl exec -n espocrm "$POD" -- php -v 2>&1 || true
+        if [ -n "$POD" ] && [ -n "$NS" ]; then
+          sudo k3s kubectl exec -n "$NS" "$POD" -- php -v 2>&1
         else
-          echo "no espocrm pod found"
+          echo "::warning::no espocrm pod found"
         fi
 
     - name: Nextcloud container PHP version
@@ -52,11 +55,14 @@ jobs:
         trap 'rm -f "$KEY"' EXIT
         printf '%s\n' "$OMV_SSH_KEY" > "$KEY"
         chmod 600 "$KEY"
+        REACHED=0
         for h in omv-ha 100.95.117.84 192.168.1.130; do
           if ssh -i "$KEY" -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
               "tbaltzakis@$h" 'echo ok' >/dev/null 2>&1; then
             ssh -i "$KEY" -o BatchMode=yes "tbaltzakis@$h" \
               'php -v 2>/dev/null | head -1; dpkg -l | grep -E "^ii  php[0-9].*-fpm" | awk "{print \$2, \$3}"; apt-cache policy php-fpm 2>/dev/null | grep -A2 Installed'
+            REACHED=1
             break
           fi
         done
+        [ "$REACHED" = 1 ] || { echo "::error::could not reach omv-ha over SSH"; exit 1; }
