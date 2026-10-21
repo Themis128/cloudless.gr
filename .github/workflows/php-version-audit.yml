@@ -25,9 +25,9 @@ jobs:
       run: |
         set -x
         NS=espocrm
-        POD=$(sudo k3s kubectl get pods -n "$NS" -l app=espocrm -o name 2>/dev/null | head -1 || true)
+        POD=$(sudo k3s kubectl get pods -n "$NS" -l app=espocrm,component=web -o name 2>/dev/null | head -1 || true)
         if [ -z "$POD" ]; then
-          LINE=$(sudo k3s kubectl get pods -A -l app=espocrm -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name --no-headers 2>/dev/null | head -1 || true)
+          LINE=$(sudo k3s kubectl get pods -A -l app=espocrm,component=web -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name --no-headers 2>/dev/null | head -1 || true)
           NS=${LINE%% *}
           POD="pod/${LINE##* }"
         fi
