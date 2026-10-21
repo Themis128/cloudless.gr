@@ -72,32 +72,43 @@ CHECKLIST = [
     ),
     (
         "Flag high-risk uses in Annex III",
-        "The classic SMB traps: CV screening or candidate ranking (employment), "
-        "credit scoring or pricing of insurance, biometric ID, education "
-        "admissions, and safety components in regulated products. If you deploy "
-        "one of these, the high-risk chapter applies to you.",
+        "The classic SMB traps are Annex III use cases: CV screening or "
+        "candidate ranking (employment), credit scoring or insurance "
+        "risk-pricing, biometric ID, education admissions, and access scoring "
+        "for essential services. If you deploy one of these, the high-risk "
+        "chapter applies to you.",
         "High-risk deployers must follow the provider's instructions, keep "
         "meaningful human oversight, feed relevant input data, and retain logs. "
-        "Some deployers also owe a fundamental-rights impact assessment.",
+        "Some deployers also owe a fundamental-rights impact assessment. Annex I "
+        "is a separate list — safety components of regulated products "
+        "(machinery, medical devices, toys) — with obligations landing a year "
+        "later.",
         "2 Aug 2026 (Annex III) · 2 Aug 2027 (Annex I products)",
     ),
     (
-        "Disclose when people talk to a machine",
-        "Label your chatbot as a bot. If your site, support desk, or DMs answer "
-        "with AI, say so up front — 'I'm the Cloudless bot' is enough. Keep the "
-        "disclosure close to the first message, not buried in a footer.",
-        "Art. 50 transparency duties apply to deployers of chatbots, emotion "
-        "recognition, and deep-fake / synthetic content from 2 Aug 2026.",
+        "Keep AI-interaction disclosure visible",
+        "Chatbot disclosure is the provider's job under Art. 50(1) — check your "
+        "vendor ships it. If you deploy a chatbot on your site, support desk, "
+        "or DMs, keep that disclosure visible near the first message — don't "
+        "bury it in a footer. For emotion-recognition or biometric-"
+        "categorisation tools you deploy, you must inform the people exposed "
+        "yourself (Art. 50(3)).",
+        "Art. 50 splits transparency duties: providers must disclose AI "
+        "interaction (50(1)) and mark synthetic content (50(2)); deployers "
+        "must inform people exposed to emotion recognition or biometric "
+        "categorisation (50(3)) and disclose deep fakes (50(4)).",
         "2 Aug 2026",
     ),
     (
-        "Mark AI-generated media",
-        "Adopt a rule that AI-made images, video, audio, and text you publish are "
-        "marked as synthetic in a machine-readable way. Build it into your "
-        "pipeline once instead of hand-tagging every asset.",
-        "Art. 50 requires synthetic content to be labelled as artificially "
-        "generated or manipulated. Content pipelines make this a one-time "
-        "engineering decision.",
+        "Disclose deep fakes and public-interest AI text",
+        "If you publish deep fakes (AI-generated or manipulated image, audio, "
+        "or video of real people or events) or AI-generated text that informs "
+        "the public on matters of public interest, label it visibly as "
+        "artificial. Machine-readable marking of synthetic content sits with "
+        "the provider — pick AI media tools that already do it.",
+        "Art. 50(4) puts deep-fake and public-interest-text disclosure on "
+        "deployers. Art. 50(2) puts machine-readable synthetic-content marking "
+        "on providers — a compliant vendor covers that half for you.",
         "2 Aug 2026",
     ),
     (

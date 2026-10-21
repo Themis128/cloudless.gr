@@ -62,9 +62,9 @@ const LINKS: HubLink[] = [
     sub: "Free PDF — 12 practical checks before the next deadline",
     magnet: "eu-ai-act-checklist",
     magnetPitch:
-      "We re-run this checklist every quarter as guidance lands. Leave your email — we'll send each refresh.",
+      "We refresh this checklist as new EU AI Act guidance lands. Leave your email — we'll send the next edition.",
     magnetSuccessText:
-      "You're on the list — the refreshed checklist lands in your inbox every quarter.",
+      "You're on the list — we'll email the next edition when the guidance moves.",
   },
   {
     // Internal route — same-tab nav. /telegram 307s to the channel invite
