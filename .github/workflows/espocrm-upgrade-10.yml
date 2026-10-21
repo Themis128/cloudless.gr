@@ -36,7 +36,7 @@ jobs:
 
       - name: Backup — MariaDB dump + app files
         run: |
-          set -e
+          set -eo pipefail
           K="sudo k3s kubectl"
           STAMP=$(date -u +%Y%m%dT%H%M%SZ)
           mkdir -p backup
@@ -52,8 +52,9 @@ jobs:
           $K -n espocrm cp "$PODNAME":/var/www/html/data backup/espocrm-data -c espocrm --retries=3
           $K -n espocrm cp "$PODNAME":/var/www/html/custom backup/espocrm-custom -c espocrm --retries=3
           $K -n espocrm cp "$PODNAME":/var/www/html/client/custom backup/espocrm-client-custom -c espocrm --retries=3
-          tar czf "backup/espocrm-files-$STAMP.tar.gz" -C backup espocrm-data espocrm-custom espocrm-client-custom
-          rm -rf backup/espocrm-data backup/espocrm-custom backup/espocrm-client-custom
+          sudo tar czf "backup/espocrm-files-$STAMP.tar.gz" -C backup espocrm-data espocrm-custom espocrm-client-custom
+          sudo rm -rf backup/espocrm-data backup/espocrm-custom backup/espocrm-client-custom
+          sudo chown -R "$USER" backup/
           ls -la backup/
 
       - name: Upload backup artifact
