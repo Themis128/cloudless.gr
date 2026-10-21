@@ -1,0 +1,55 @@
+name: EspoCRM health check
+
+# Dispatch-only post-change sanity check. Runs inside the cluster so no
+# credentials ever reach the log — only counts and statuses are printed.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  health:
+    runs-on: omv
+    steps:
+      - name: Version + pod health
+        run: |
+          K="sudo k3s kubectl"
+          $K -n espocrm get pods -o wide
+          $K -n espocrm get deploy espocrm -o jsonpath='{.spec.template.spec.containers[*].image}'; echo
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          echo "--- app version ---"
+          $K -n espocrm exec "$POD" -c espocrm -- php bin/command version 2>/dev/null \
+            || $K -n espocrm exec "$POD" -c espocrm -- php command.php --version 2>/dev/null \
+            || echo "::warning::version command failed"
+
+      - name: Data + IMAP surface (counts/status only — no secrets)
+        run: |
+          K="sudo k3s kubectl"
+          DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
+          # Password expands inside the pod (container env) — never in kubectl
+          # args. Numeric labels keep the SQL quote-free for the sh -c arg:
+          #   1=lead 2=contact 3=account 4=opportunity 5=campaign 6=email
+          #   7=scheduled_job 8=inbound_email
+          $K -n espocrm exec "$DBPOD" -- sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" espocrm -fe "
+            SELECT 1 tbl, COUNT(*) n FROM lead
+            UNION ALL SELECT 2, COUNT(*) FROM contact
+            UNION ALL SELECT 3, COUNT(*) FROM account
+            UNION ALL SELECT 4, COUNT(*) FROM opportunity
+            UNION ALL SELECT 5, COUNT(*) FROM campaign
+            UNION ALL SELECT 6, COUNT(*) FROM email
+            UNION ALL SELECT 7, COUNT(*) FROM scheduled_job
+            UNION ALL SELECT 8, COUNT(*) FROM inbound_email;
+            SELECT status, MAX(created_at) latest_lead, COUNT(*) n
+              FROM lead GROUP BY status;
+            SHOW COLUMNS FROM inbound_email;
+            SHOW COLUMNS FROM job;"'
+
+      - name: Cron daemon heartbeat
+        run: |
+          K="sudo k3s kubectl"
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          echo "--- daemon container ---"
+          $K -n espocrm logs "$POD" -c espocrm-daemon --tail=8
+          echo "--- last cron runs ---"
+          DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
+          $K -n espocrm exec "$DBPOD" -- sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" espocrm -fe \
+            "SELECT name, status, execute_time FROM job ORDER BY execute_time DESC LIMIT 8;"' || true

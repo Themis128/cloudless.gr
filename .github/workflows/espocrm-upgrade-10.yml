@@ -41,9 +41,9 @@ jobs:
           STAMP=$(date -u +%Y%m%dT%H%M%SZ)
           mkdir -p backup
           DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
-          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
+          # Password expands inside the pod (container env) — never in kubectl args.
           echo "== mariadb-dump =="
-          $K -n espocrm exec "$DBPOD" -- sh -c "mariadb-dump -uroot -p'$ROOT_PW' espocrm" \
+          $K -n espocrm exec "$DBPOD" -- sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" espocrm' \
             | gzip > "backup/espocrm-db-$STAMP.sql.gz"
           test -s "backup/espocrm-db-$STAMP.sql.gz" && echo "DB dump OK ($(stat -c%s backup/espocrm-db-$STAMP.sql.gz) bytes)"
           echo "== app files (data/ custom/ client/custom/) =="
