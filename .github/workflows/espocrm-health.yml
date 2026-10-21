@@ -26,7 +26,7 @@ jobs:
           K="sudo k3s kubectl"
           DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
           ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
-          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -e "
+          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -fe "
             SELECT 'leads' k, COUNT(*) n FROM lead
             UNION ALL SELECT 'contacts', COUNT(*) FROM contact
             UNION ALL SELECT 'accounts', COUNT(*) FROM account
@@ -35,10 +35,11 @@ jobs:
             UNION ALL SELECT 'emails', COUNT(*) FROM email
             UNION ALL SELECT 'scheduled_jobs', COUNT(*) FROM scheduled_job
             UNION ALL SELECT 'inbound_email_accts', COUNT(*) FROM inbound_email;
-            SELECT name, status, fetch_data_since FROM inbound_email;
-            SELECT name, custom_entities FROM
-              (SELECT 'custom-entity-count' name, COUNT(*) custom_entities FROM entity WHERE type='Base' AND deleted=0) t;
-            SELECT 'latest-lead' k, name v, created_at FROM lead ORDER BY created_at DESC LIMIT 3;"
+            SELECT CONCAT_WS(' ', first_name, last_name) lead, status, created_at
+              FROM lead ORDER BY created_at DESC LIMIT 3;
+            SELECT name FROM inbound_email;
+            SHOW COLUMNS FROM inbound_email;
+            SHOW COLUMNS FROM job;"
 
       - name: Cron daemon heartbeat
         run: |
@@ -49,5 +50,5 @@ jobs:
           echo "--- last cron runs ---"
           DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
           ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
-          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -e \
-            "SELECT job, status, executed_at FROM job ORDER BY executed_at DESC LIMIT 8;" || true
+          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -fe \
+            "SELECT name, status, execute_time FROM job ORDER BY execute_time DESC LIMIT 8;" || true
