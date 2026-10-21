@@ -154,7 +154,7 @@ spec:
         kubernetes.io/hostname: omv
       containers:
         - name: espocrm
-          image: espocrm/espocrm:9
+          image: espocrm/espocrm:10
           env:
             - { name: ESPOCRM_DATABASE_PLATFORM, value: Mysql }
             - { name: ESPOCRM_DATABASE_HOST, value: espocrm-mariadb }
@@ -196,7 +196,11 @@ spec:
             timeoutSeconds: 10
             failureThreshold: 6
           volumeMounts:
-            - { name: data, mountPath: /var/www/html }
+            # EspoCRM 10 layout — mount only the stateful dirs, app files
+            # ship inside the image (one-time migration, same PVC via subPath).
+            - { name: data, mountPath: /var/www/html/data, subPath: data }
+            - { name: data, mountPath: /var/www/html/custom, subPath: custom }
+            - { name: data, mountPath: /var/www/html/client/custom, subPath: client/custom }
             - name: omv-ha-mail-ca
               mountPath: /etc/ssl/omv-ha
               readOnly: true
@@ -206,14 +210,16 @@ spec:
         # EspoCRM job daemon — runs scheduled jobs (IMAP fetch, cron workflows).
         # Without it, inbound group email accounts are never polled.
         - name: espocrm-daemon
-          image: espocrm/espocrm:9
-          command: [sh, -c, "exec su -s /bin/sh www-data -c 'php daemon.php'"]
+          image: espocrm/espocrm:10
+          command: ["docker-daemon.sh"]
           workingDir: /var/www/html
           resources:
             requests: { cpu: 25m, memory: 128Mi }
             limits: { cpu: 250m, memory: 256Mi }
           volumeMounts:
-            - { name: data, mountPath: /var/www/html }
+            - { name: data, mountPath: /var/www/html/data, subPath: data }
+            - { name: data, mountPath: /var/www/html/custom, subPath: custom }
+            - { name: data, mountPath: /var/www/html/client/custom, subPath: client/custom }
             - name: omv-ha-mail-ca
               mountPath: /etc/ssl/omv-ha
               readOnly: true

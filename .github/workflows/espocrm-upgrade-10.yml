@@ -1,0 +1,99 @@
+name: EspoCRM 9 → 10 upgrade
+
+# One-shot upgrade runbook (workflow_dispatch only):
+#   1. Preflight — verify the PVC holds the three stateful dirs v10 needs.
+#   2. Backup — fresh mariadb-dump + tar of data/custom/client/custom
+#      uploaded as a run artifact (the hourly R2 xbstream backup also runs,
+#      but this artifact is self-contained for rollback).
+#   3. Scale web+daemon to 0 (clean state, no concurrent writers).
+#   4. Apply the v10 manifest from the checked-out ref.
+#   5. Rollout + verify version and HTTP.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Run the actual upgrade (false = backup+preflight only)"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  upgrade:
+    runs-on: omv
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight — current version + PVC layout
+        run: |
+          K="sudo k3s kubectl"
+          $K -n espocrm get deploy espocrm -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          echo "--- PVC root (must contain data/ custom/ client/custom/) ---"
+          $K -n espocrm exec "$POD" -c espocrm -- ls /var/www/html
+          echo "--- current espocrm version ---"
+          $K -n espocrm exec "$POD" -c espocrm -- php command.php --version 2>/dev/null || true
+
+      - name: Backup — MariaDB dump + app files
+        run: |
+          set -e
+          K="sudo k3s kubectl"
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          mkdir -p backup
+          DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
+          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
+          echo "== mariadb-dump =="
+          $K -n espocrm exec "$DBPOD" -- sh -c "mariadb-dump -uroot -p'$ROOT_PW' espocrm" \
+            | gzip > "backup/espocrm-db-$STAMP.sql.gz"
+          test -s "backup/espocrm-db-$STAMP.sql.gz" && echo "DB dump OK ($(stat -c%s backup/espocrm-db-$STAMP.sql.gz) bytes)"
+          echo "== app files (data/ custom/ client/custom/) =="
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          PODNAME=${POD#pod/}
+          $K -n espocrm cp "$PODNAME":/var/www/html/data backup/espocrm-data -c espocrm --retries=3
+          $K -n espocrm cp "$PODNAME":/var/www/html/custom backup/espocrm-custom -c espocrm --retries=3
+          $K -n espocrm cp "$PODNAME":/var/www/html/client/custom backup/espocrm-client-custom -c espocrm --retries=3
+          tar czf "backup/espocrm-files-$STAMP.tar.gz" -C backup espocrm-data espocrm-custom espocrm-client-custom
+          rm -rf backup/espocrm-data backup/espocrm-custom backup/espocrm-client-custom
+          ls -la backup/
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: espocrm-pre-upgrade-backup-${{ github.run_id }}
+          path: backup/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Apply upgrade (apply=true)
+        if: ${{ inputs.apply }}
+        run: |
+          set -e
+          K="sudo k3s kubectl"
+          echo "== scale to 0 =="
+          $K -n espocrm scale deploy/espocrm --replicas=0
+          $K -n espocrm rollout status deploy/espocrm --timeout=60s || true
+          echo "== apply v10 manifest =="
+          $K apply -f infrastructure/espocrm/k8s/espocrm.yaml
+          echo "== rollout =="
+          $K -n espocrm rollout status deploy/espocrm --timeout=600s
+
+      - name: Verify — version + HTTP
+        if: ${{ inputs.apply }}
+        run: |
+          K="sudo k3s kubectl"
+          sleep 30
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          $K -n espocrm get deploy espocrm -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
+          echo "--- version (bin/command, fallback command.php) ---"
+          $K -n espocrm exec "$POD" -c espocrm -- php bin/command version 2>/dev/null \
+            || $K -n espocrm exec "$POD" -c espocrm -- php command.php --version 2>/dev/null \
+            || echo "::warning::version command failed — check UI manually"
+          echo "--- HTTP probe ---"
+          NODEPORT=$($K -n espocrm get svc espocrm -o jsonpath='{.spec.ports[0].nodePort}')
+          curl -s -o /dev/null -w "espocrm nodeport -> %{http_code}\n" "http://127.0.0.1:$NODEPORT/" || true
+          $K -n espocrm logs "$POD" -c espocrm --tail=15
+
+      - name: Rollback hint (on failure)
+        if: failure() && inputs.apply
+        run: |
+          echo "::error::Upgrade failed. Rollback: kubectl set image deploy/espocrm espocrm=espocrm/espocrm:9 -n espocrm AND revert volumeMounts to the /var/www/html whole-root mount (git show HEAD~1:infrastructure/espocrm/k8s/espocrm.yaml | kubectl apply -f -). DB is unchanged by the image bump until the migration script runs — check pod logs before restoring the dump."
