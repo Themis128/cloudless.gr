@@ -1,0 +1,64 @@
+name: PHP Version Audit
+
+# Reports the real PHP version on every PHP surface:
+#   - EspoCRM pod on the omv k3s cluster (espocrm/espocrm image)
+#   - Nextcloud container in the OMV workspace compose stack
+#   - omv-ha system php-fpm (Roundcube webmail + mail-ingest)
+#
+# Read-only: execs `php -v` and package queries; no changes.
+# Runs on the omv self-hosted runner (kubectl + docker + SSH keys).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  php-audit:
+    name: PHP versions
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 8
+
+    steps:
+    - name: EspoCRM pod PHP version
+      run: |
+        set -x
+        POD=$(sudo k3s kubectl get pods -n espocrm -o name 2>/dev/null | head -1 || true)
+        if [ -z "$POD" ]; then
+          POD=$(sudo k3s kubectl get pods -A -o name 2>/dev/null | grep espocrm | head -1 || true)
+        fi
+        if [ -n "$POD" ]; then
+          NS=$(sudo k3s kubectl get "$POD" -A -o jsonpath='{.metadata.namespace}' 2>/dev/null || echo espocrm)
+          sudo k3s kubectl exec -n "$NS" "$POD" -- php -v 2>&1 || true
+          sudo k3s kubectl exec -n "$NS" "$POD" -- sh -c 'echo IMAGE_TAG=$ESPOCRM_VERSION' 2>&1 || true
+        else
+          echo "no espocrm pod found"
+        fi
+
+    - name: Nextcloud container PHP version
+      run: |
+        set -x
+        NC=$(sudo docker ps --format '{{.Names}} {{.Image}}' | grep 'nextcloud:' | head -1 | awk '{print $1}')
+        echo "container=$NC"
+        if [ -n "$NC" ]; then
+          sudo docker exec "$NC" php -v 2>&1 || true
+        fi
+
+    - name: omv-ha system PHP version
+      env:
+        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+      run: |
+        set -x
+        KEY=$(mktemp)
+        trap 'rm -f "$KEY"' EXIT
+        printf '%s\n' "$OMV_SSH_KEY" > "$KEY"
+        chmod 600 "$KEY"
+        for h in omv-ha 100.95.117.84 192.168.1.130; do
+          if ssh -i "$KEY" -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
+              "tbaltzakis@$h" 'echo ok' >/dev/null 2>&1; then
+            ssh -i "$KEY" -o BatchMode=yes "tbaltzakis@$h" \
+              'php -v 2>/dev/null | head -1; dpkg -l | grep -E "^ii  php[0-9].*-fpm" | awk "{print \$2, \$3}"; apt-cache policy php-fpm 2>/dev/null | grep -A2 Installed'
+            break
+          fi
+        done
