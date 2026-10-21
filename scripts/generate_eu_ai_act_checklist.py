@@ -83,7 +83,7 @@ CHECKLIST = [
         "is a separate list — safety components of regulated products "
         "(machinery, medical devices, toys) — with obligations landing a year "
         "later.",
-        "2 Aug 2026 (Annex III) · 2 Aug 2027 (Annex I products)",
+        "Applied 2 Aug 2026 (Annex III) · 2 Aug 2027 (Annex I products)",
     ),
     (
         "Keep AI-interaction disclosure visible",
@@ -97,7 +97,7 @@ CHECKLIST = [
         "interaction (50(1)) and mark synthetic content (50(2)); deployers "
         "must inform people exposed to emotion recognition or biometric "
         "categorisation (50(3)) and disclose deep fakes (50(4)).",
-        "2 Aug 2026",
+        "Applied 2 Aug 2026 — now binding",
     ),
     (
         "Disclose deep fakes and public-interest AI text",
@@ -109,24 +109,27 @@ CHECKLIST = [
         "Art. 50(4) puts deep-fake and public-interest-text disclosure on "
         "deployers. Art. 50(2) puts machine-readable synthetic-content marking "
         "on providers — a compliant vendor covers that half for you.",
-        "2 Aug 2026",
+        "Applied 2 Aug 2026 — now binding",
     ),
     (
         "Put a human in the loop — on paper",
         "For each AI system, name who reviews output before it reaches a customer "
         "and who can switch it off. Write the escalation rule down: a reviewer "
         "must be able to override or halt the system, not just watch it.",
-        "Art. 14 human oversight is the control regulators check first. 'A human "
-        "glances at it sometimes' is not oversight.",
+        "Art. 26(2) requires deployers to assign human oversight — the control "
+        "regulators check first. 'A human glances at it sometimes' is not "
+        "oversight.",
         "With each high-risk deployment",
     ),
     (
         "Demand documentation from vendors",
-        "Ask every AI vendor for their conformity status, instructions for use, "
-        "and Art. 11 technical docs before renewal. No docs, no deployment — "
+        "Ask every AI vendor for their conformity status and Art. 13 "
+        "instructions for use before renewal. No instructions, no deployment — "
         "their missing homework becomes your compliance risk.",
-        "Deployers must use systems 'in accordance with the instructions'. You "
-        "can't follow instructions you were never given.",
+        "Deployers must use systems 'in accordance with the instructions' — you "
+        "can't follow instructions you were never given. The provider's Art. 11 "
+        "technical file is for regulators; what you need is the deployer-facing "
+        "documentation.",
         "Before each procurement / renewal",
     ),
     (
@@ -150,12 +153,13 @@ CHECKLIST = [
     ),
     (
         "If you build on a GPAI model, know the chain",
-        "Using an API model (Llama, Mistral, commercial APIs) keeps you a "
-        "deployer — the model provider carries the GPAI duties. But "
-        "fine-tuning or releasing a modified model can move provider "
-        "obligations to you. Check before you ship.",
-        "GPAI obligations applied 2 Aug 2025. 'Substantial modification' is the "
-        "line between deployer and provider.",
+        "Using an API model internally (Llama, Mistral, commercial APIs) keeps "
+        "you a deployer — the model provider carries the GPAI duties. But if "
+        "you put an AI system built on it on the market under your own name or "
+        "brand, you become that system's provider under Art. 3(3). Fine-tuning "
+        "or releasing a modified model counts too. Check before you ship.",
+        "GPAI obligations applied 2 Aug 2025. An own-name market launch or "
+        "'substantial modification' is the line between deployer and provider.",
         "Applied 2 Aug 2025 — already binding",
     ),
     (
@@ -173,7 +177,7 @@ TIMELINE = [
     ("1 Aug 2024", "AI Act enters into force"),
     ("2 Feb 2025", "Prohibited practices banned + AI literacy duty (Art. 4-5)"),
     ("2 Aug 2025", "GPAI model obligations, governance, penalties provisions"),
-    ("2 Aug 2026", "High-risk Annex III rules + Art. 50 transparency + sandboxes"),
+    ("2 Aug 2026", "High-risk Annex III rules + Art. 50 transparency + sandboxes — now in force"),
     ("2 Aug 2027", "Annex I regulated-product obligations"),
 ]
 
@@ -244,7 +248,7 @@ def build(path: str) -> None:
         Spacer(1, 4 * mm),
         para(
             "Twelve checks for founders and small teams who build or use AI in "
-            "Europe. The Act lands in waves through 2027 — two of them are "
+            "Europe. The Act lands in waves through 2027 — three of them are "
             "already binding. Written in plain English, mapped to real articles. "
             "Updated October 2026.",
             sub,
