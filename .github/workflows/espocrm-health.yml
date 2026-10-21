@@ -1,0 +1,53 @@
+name: EspoCRM health check
+
+# Dispatch-only post-change sanity check. Runs inside the cluster so no
+# credentials ever reach the log — only counts and statuses are printed.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  health:
+    runs-on: omv
+    steps:
+      - name: Version + pod health
+        run: |
+          K="sudo k3s kubectl"
+          $K -n espocrm get pods -o wide
+          $K -n espocrm get deploy espocrm -o jsonpath='{.spec.template.spec.containers[*].image}'; echo
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          echo "--- app version ---"
+          $K -n espocrm exec "$POD" -c espocrm -- php bin/command version 2>/dev/null \
+            || $K -n espocrm exec "$POD" -c espocrm -- php command.php --version 2>/dev/null \
+            || echo "::warning::version command failed"
+
+      - name: Data + IMAP surface (counts/status only — no secrets)
+        run: |
+          K="sudo k3s kubectl"
+          DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
+          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
+          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -e "
+            SELECT 'leads' k, COUNT(*) n FROM lead
+            UNION ALL SELECT 'contacts', COUNT(*) FROM contact
+            UNION ALL SELECT 'accounts', COUNT(*) FROM account
+            UNION ALL SELECT 'opportunities', COUNT(*) FROM opportunity
+            UNION ALL SELECT 'campaigns', COUNT(*) FROM campaign
+            UNION ALL SELECT 'emails', COUNT(*) FROM email
+            UNION ALL SELECT 'scheduled_jobs', COUNT(*) FROM scheduled_job
+            UNION ALL SELECT 'inbound_email_accts', COUNT(*) FROM inbound_email;
+            SELECT name, status, fetch_data_since FROM inbound_email;
+            SELECT name, custom_entities FROM
+              (SELECT 'custom-entity-count' name, COUNT(*) custom_entities FROM entity WHERE type='Base' AND deleted=0) t;
+            SELECT 'latest-lead' k, name v, created_at FROM lead ORDER BY created_at DESC LIMIT 3;"
+
+      - name: Cron daemon heartbeat
+        run: |
+          K="sudo k3s kubectl"
+          POD=$($K -n espocrm get pod -l app=espocrm,component=web -o name | head -1)
+          echo "--- daemon container ---"
+          $K -n espocrm logs "$POD" -c espocrm-daemon --tail=8
+          echo "--- last cron runs ---"
+          DBPOD=$($K -n espocrm get pod -l app=espocrm,component=mariadb -o name | head -1)
+          ROOT_PW=$($K -n espocrm get secret espocrm-secrets -o jsonpath='{.data.mariadb-root-password}' | base64 -d)
+          $K -n espocrm exec "$DBPOD" -- mariadb -uroot -p"$ROOT_PW" espocrm -e \
+            "SELECT job, status, executed_at FROM job ORDER BY executed_at DESC LIMIT 8;" || true
