@@ -3,13 +3,19 @@
 import { useState, useCallback, type FormEvent } from "react";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
-const MAGNET_SLUG = "automation-checklist";
-
-/** Optional email capture for the 12-Automation Checklist on /links. The PDF
- *  stays a direct download — this subscribes the reader so monthly checklist
- *  updates land in their inbox, and records a `Lead Magnet` lead in EspoCRM
- *  (segment: "Checklist downloaders"). */
-export default function ChecklistSignup() {
+/** Optional email capture for a lead-magnet PDF on /links. The PDF stays a
+ *  direct download — this subscribes the reader so updates land in their
+ *  inbox, and records a `Lead Magnet` lead in EspoCRM tagged with the
+ *  magnet's slug (utm_campaign=<slug>). */
+export default function ChecklistSignup({
+  magnet = "automation-checklist",
+  pitch = "Want the monthly updated version? Leave your email — we'll send each refresh.",
+  successText = "You're on the list — the updated checklist lands in your inbox monthly.",
+}: {
+  magnet?: string;
+  pitch?: string;
+  successText?: string;
+}) {
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const onTurnstile = useCallback((token: string | null) => setTurnstileToken(token), []);
@@ -26,7 +32,7 @@ export default function ChecklistSignup() {
         body: JSON.stringify({
           email,
           turnstileToken: turnstileToken ?? undefined,
-          magnet: MAGNET_SLUG,
+          magnet,
         }),
       });
       if (res.ok) {
@@ -41,18 +47,12 @@ export default function ChecklistSignup() {
   }
 
   if (status === "success") {
-    return (
-      <p className="text-neon-green font-mono text-xs">
-        You&apos;re on the list — the updated checklist lands in your inbox monthly.
-      </p>
-    );
+    return <p className="text-neon-green font-mono text-xs">{successText}</p>;
   }
 
   return (
     <div className="mt-2">
-      <p className="mb-2 text-[11px] leading-relaxed text-slate-400">
-        Want the monthly updated version? Leave your email — we&apos;ll send each refresh.
-      </p>
+      <p className="mb-2 text-[11px] leading-relaxed text-slate-400">{pitch}</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <div className="flex gap-2">
           <input
