@@ -69,15 +69,21 @@ jobs:
           echo "===== logrotate dry-run (nginx section) ====="
           sudo logrotate -d /etc/logrotate.conf 2>&1 | grep -B3 -A25 'nginx' | head -60 || true
 
-      - name: Reproduce the postrotate failure
+      - name: Extract the postrotate script
         run: |
-          # Run the exact postrotate body so the real error surfaces.
-          echo "===== extracting + running postrotate script ====="
+          # Print the postrotate body (read-only) — the logrotate -d dry-run
+          # above already replays it safely; executing it live would mutate
+          # nginx (reload/reopen logs) in what's meant to be a read-only run.
+          echo "===== postrotate script body ====="
+          sudo awk '/postrotate/,/endscript/' /etc/logrotate.d/nginx* 2>/dev/null \
+            | grep -v 'postrotate\|endscript' || echo "(no postrotate block found)"
+
+      - name: Reproduce the postrotate failure (opt-in)
+        if: ${{ inputs.fix }}
+        run: |
+          echo "===== executing postrotate body ====="
           SCRIPT=$(sudo awk '/postrotate/,/endscript/' /etc/logrotate.d/nginx* 2>/dev/null \
             | grep -v 'postrotate\|endscript')
-          echo "--- script body ---"
-          echo "$SCRIPT"
-          echo "--- executing ---"
           echo "$SCRIPT" | sudo sh -x 2>&1 || echo "POSTROTATE_EXIT=$?"
 
       - name: Fix (opt-in)
