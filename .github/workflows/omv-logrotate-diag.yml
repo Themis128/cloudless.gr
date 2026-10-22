@@ -83,7 +83,7 @@ jobs:
       - name: Fix (opt-in)
         if: ${{ inputs.fix }}
         run: |
-          set -e
+          set -e -o pipefail
           echo "===== fixing ====="
           if ! systemctl is-active --quiet nginx; then
             echo "nginx inactive — restarting"
@@ -91,6 +91,6 @@ jobs:
             sleep 1
             systemctl is-active nginx
           fi
-          echo "forcing rotation to verify postrotate now exits 0"
-          sudo logrotate -f /etc/logrotate.conf 2>&1 | tail -20
+          echo "forcing rotation on the nginx stanza only to verify postrotate exits 0"
+          sudo logrotate -f /etc/logrotate.d/nginx 2>&1 | tail -20
           echo "done"
