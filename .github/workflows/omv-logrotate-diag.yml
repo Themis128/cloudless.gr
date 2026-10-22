@@ -1,0 +1,96 @@
+name: OMV logrotate diagnostic + fix
+
+# Diagnoses (and optionally fixes) cron mails like:
+#   "error: error running shared postrotate script for '/var/log/nginx/*.log'"
+# Runs directly on the omv self-hosted runner. Default mode is read-only
+# diagnostics; fix=true also restarts nginx if dead and forces a rotation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: Apply fix (restart nginx if inactive, force logrotate run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  diag:
+    name: OMV logrotate nginx postrotate diag
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    steps:
+      - name: Gather diagnostics
+        run: |
+          echo "===== logrotate confs touching /var/log/nginx ====="
+          sudo grep -rln 'var/log/nginx' /etc/logrotate.d/ /etc/logrotate.conf 2>/dev/null
+
+          echo ""
+          echo "===== /etc/logrotate.d/nginx* ====="
+          sudo cat /etc/logrotate.d/nginx* 2>/dev/null || echo "(none)"
+
+          echo ""
+          echo "===== nginx service state ====="
+          systemctl is-active nginx 2>&1 || true
+          systemctl status nginx --no-pager -l 2>&1 | head -15 || true
+
+          echo ""
+          echo "===== nginx processes + pid file ====="
+          ps aux | grep -v grep | grep nginx || echo "(no nginx processes)"
+          for f in /var/run/nginx.pid /run/nginx.pid; do
+            if [ -f "$f" ]; then
+              echo "$f -> $(cat $f)"
+              ps -p "$(cat $f)" -o pid,comm,args 2>/dev/null || echo "  (pid not running — stale pidfile)"
+            else
+              echo "$f missing"
+            fi
+          done
+
+          echo ""
+          echo "===== nginx -t ====="
+          sudo nginx -t 2>&1 || true
+
+          echo ""
+          echo "===== logrotate status (nginx) ====="
+          sudo grep -B2 -A2 'nginx' /var/lib/logrotate/status 2>/dev/null || true
+
+          echo ""
+          echo "===== recent logrotate/cron errors ====="
+          sudo journalctl --since '-2 days' --no-pager 2>/dev/null | grep -i 'logrotate\|postrotate' | tail -15 || true
+          sudo grep -i 'postrotate\|logrotate' /var/log/syslog 2>/dev/null | tail -10 || true
+
+          echo ""
+          echo "===== logrotate dry-run (nginx section) ====="
+          sudo logrotate -d /etc/logrotate.conf 2>&1 | grep -B3 -A25 'nginx' | head -60 || true
+
+      - name: Reproduce the postrotate failure
+        run: |
+          # Run the exact postrotate body so the real error surfaces.
+          echo "===== extracting + running postrotate script ====="
+          SCRIPT=$(sudo awk '/postrotate/,/endscript/' /etc/logrotate.d/nginx* 2>/dev/null \
+            | grep -v 'postrotate\|endscript')
+          echo "--- script body ---"
+          echo "$SCRIPT"
+          echo "--- executing ---"
+          echo "$SCRIPT" | sudo sh -x 2>&1 || echo "POSTROTATE_EXIT=$?"
+
+      - name: Fix (opt-in)
+        if: ${{ inputs.fix }}
+        run: |
+          set -e
+          echo "===== fixing ====="
+          if ! systemctl is-active --quiet nginx; then
+            echo "nginx inactive — restarting"
+            sudo systemctl restart nginx
+            sleep 1
+            systemctl is-active nginx
+          fi
+          echo "forcing rotation to verify postrotate now exits 0"
+          sudo logrotate -f /etc/logrotate.conf 2>&1 | tail -20
+          echo "done"
