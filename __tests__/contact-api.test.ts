@@ -306,11 +306,16 @@ describe("sendAdminEmail + catch branches", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST2(post(validBody));
     expect(res.status).toBe(200);
-    await vi.waitFor(() =>
-      expect(spy).toHaveBeenCalledWith(
-        expect.stringContaining("[Contact] Background task"),
-        expect.any(Error)
-      )
+    // The allSettled rejection log only fires once every background task has
+    // settled — including the Slack client, which performs a real network
+    // round-trip. The default 1s waitFor window is too small for that.
+    await vi.waitFor(
+      () =>
+        expect(spy).toHaveBeenCalledWith(
+          expect.stringContaining("[Contact] Background task"),
+          expect.any(Error)
+        ),
+      { timeout: 10_000 }
     );
     spy.mockRestore();
     vi.unstubAllEnvs();
