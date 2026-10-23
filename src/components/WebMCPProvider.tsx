@@ -74,7 +74,9 @@ export default function WebMCPProvider() {
     if (mc.registerTool) {
       const controller = new AbortController();
       for (const tool of TOOLS) {
-        mc.registerTool(tool, { signal: controller.signal }).catch(() => {});
+        // registerTool returns Promise in the current draft but void in some
+        // early builds — Promise.resolve keeps .catch safe either way.
+        Promise.resolve(mc.registerTool(tool, { signal: controller.signal })).catch(() => {});
       }
       return () => controller.abort();
     }

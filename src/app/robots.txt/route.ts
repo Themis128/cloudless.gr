@@ -24,6 +24,15 @@ const TRAINING_BOTS = [
   "Amazonbot",
 ];
 
+// Content usage preferences are group-level (draft-romm-aipref-contentsignals):
+// a crawler reads only the most specific matching group, so the signal must
+// repeat in every group that should carry it.
+const CONTENT_SIGNAL = "Content-Signal: ai-train=no, search=yes, ai-input=yes";
+
+// Locale-prefixed success pages (/en/store/success, /el/store/success) need the
+// wildcard form — "Disallow: /store/success" only matches the non-locale path.
+const PRIVATE_RULES = ["Disallow: /api/", "Disallow: /store/success", "Disallow: /*/store/success"];
+
 function group(agents: string[], rules: string[]): string {
   return agents.map((a) => `User-agent: ${a}`).join("\n") + "\n" + rules.join("\n");
 }
@@ -32,26 +41,16 @@ export function GET() {
   const body = [
     "# Cloudless — crawler + AI-bot rules",
     "# Public content is indexable; /api/ and checkout-success stay out.",
-    group(
-      ["*"],
-      [
-        "Allow: /",
-        "Disallow: /api/",
-        "Disallow: /store/success",
-        // Content usage preferences live inside the * group
-        // (draft-romm-aipref-contentsignals is a group-level field).
-        "Content-Signal: ai-train=no, search=yes, ai-input=yes",
-      ]
-    ),
+    group(["*"], ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
     "",
     "# AI search crawlers — index for AI answers",
-    group(SEARCH_BOTS, ["Allow: /", "Disallow: /api/", "Disallow: /store/success"]),
+    group(SEARCH_BOTS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
     "",
     "# AI user-triggered fetchers — may fetch pages for user queries",
-    group(USER_FETCHERS, ["Allow: /", "Disallow: /api/", "Disallow: /store/success"]),
+    group(USER_FETCHERS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
     "",
     "# AI training crawlers — may crawl; training preference is 'no' below",
-    group(TRAINING_BOTS, ["Allow: /", "Disallow: /api/", "Disallow: /store/success"]),
+    group(TRAINING_BOTS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
     "",
     "# ARD capability manifest (agenticresourcediscovery.org §6.1)",
     "Agentmap: https://cloudless.gr/.well-known/ai-catalog.json",
