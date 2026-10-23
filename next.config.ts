@@ -146,6 +146,16 @@ nextConfig.rewrites = async () => ({
       source: "/.well-known/agent-card.json",
       destination: "/api/.well-known/agent-card.json",
     },
+    {
+      // Agentic Commerce Protocol discovery (rfc.discovery).
+      source: "/.well-known/acp.json",
+      destination: "/api/.well-known/acp.json",
+    },
+    {
+      // Universal Commerce Protocol business profile.
+      source: "/.well-known/ucp",
+      destination: "/api/.well-known/ucp",
+    },
   ],
   afterFiles: [],
   fallback: [],
