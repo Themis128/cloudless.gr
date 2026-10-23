@@ -384,3 +384,26 @@ describe("openapi.json", () => {
     expect(res.headers.get("cache-control")).toContain("max-age=3600");
   });
 });
+describe("delegated payments", () => {
+  it("returns delegate_payment_unavailable when flag is off", async () => {
+    sessions.retrieve.mockResolvedValue(OPEN_SESSION);
+    const r = req("/x");
+    const res = await acpComplete(
+      new NextRequest("https://cloudless.gr/api/acp/checkout_sessions/cs_test_1/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ payment_data: { id: "spt_test_1" } }),
+      }),
+      params("cs_test_1"),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("delegate_payment_unavailable");
+  });
+
+  it("declares only hosted_checkout handler while flag is off", async () => {
+    const res = await acpDiscovery();
+    const handlers = (await res.json()).capabilities.payment_handlers;
+    expect(handlers).toHaveLength(1);
+    expect(handlers[0].id).toBe("dev.acp.hosted_checkout");
+  });
+});

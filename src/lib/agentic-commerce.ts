@@ -528,3 +528,57 @@ export async function expireStripeSession(id: string): Promise<SessionResult> {
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Delegated payments (ACP) — Stripe agentic payments (Shared Payment Token).
+// Gated by ACP_DELEGATED_PAYMENTS=1 until Stripe beta access is enabled; when
+// unset the hosted-checkout flow in acpSessionFromStripe remains the only path.
+// ---------------------------------------------------------------------------
+
+export function delegatedPaymentsEnabled(): boolean {
+  return process.env.ACP_DELEGATED_PAYMENTS === "1";
+}
+
+export type DelegatedResult =
+  | { ok: true; paymentStatus: "succeeded" | "requires_action" | "processing" }
+  | { ok: false; code: string; message: string };
+
+/**
+ * Charge a delegated payment token against an existing Checkout Session.
+ * Accepts SPT (shared_payment_token) or a classic pm_/tok_ payment method id.
+ */
+export async function chargeDelegatedToken(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  token: string,
+): Promise<DelegatedResult> {
+  const amount = session.amount_total;
+  if (!amount || amount <= 0) {
+    return { ok: false, code: "invalid_amount", message: "Session has no payable total." };
+  }
+  try {
+    const isClassic = /^(pm_|tok_)/.test(token);
+    const pi = await stripe.paymentIntents.create({
+      amount,
+      currency: session.currency ?? "eur",
+      confirm: true,
+      metadata: { acp_checkout_session: session.id },
+      ...(isClassic
+        ? { payment_method: token }
+        : ({ shared_payment_token: token } as unknown as Record<string, string>)),
+    } as Stripe.PaymentIntentCreateParams);
+    const status =
+      pi.status === "succeeded"
+        ? "succeeded"
+        : pi.status === "requires_action"
+          ? "requires_action"
+          : "processing";
+    return { ok: true, paymentStatus: status };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Payment failed.";
+    const code = msg.toLowerCase().includes("declin")
+      ? "payment_declined"
+      : "processing_error";
+    return { ok: false, code, message: msg };
+  }
+}
