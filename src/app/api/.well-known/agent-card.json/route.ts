@@ -10,6 +10,13 @@ export async function GET() {
       "Pre-sales assistant for Cloudless.gr — answers questions about cloud architecture, serverless, AI growth services, and books 30-minute consultation slots.",
     url: "https://cloudless.gr/api/a2a",
     preferredTransport: "JSONRPC",
+    supportedInterfaces: [
+      {
+        url: "https://cloudless.gr/api/a2a",
+        protocolBinding: "JSONRPC",
+        protocolVersion: "0.3.0",
+      },
+    ],
     version: "1.0.0",
     provider: {
       organization: "Cloudless.gr",
