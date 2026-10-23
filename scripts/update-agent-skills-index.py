@@ -5,6 +5,7 @@ Each published skill lives at public/.well-known/agent-skills/<name>/SKILL.md.
 This script recomputes sha256 digests and rewrites the discovery index —
 run it after editing any SKILL.md so digests stay honest.
 """
+
 import hashlib
 import json
 import re
@@ -34,7 +35,10 @@ def main() -> None:
                 "digest": "sha256:" + hashlib.sha256(body.encode()).hexdigest(),
             }
         )
-    index = {"$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json", "skills": skills}
+    index = {
+        "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+        "skills": skills,
+    }
     out = SKILLS_DIR / "index.json"
     out.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out} with {len(skills)} skills")

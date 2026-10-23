@@ -41,7 +41,7 @@ export function GET() {
         // Content usage preferences live inside the * group
         // (draft-romm-aipref-contentsignals is a group-level field).
         "Content-Signal: ai-train=no, search=yes, ai-input=yes",
-      ],
+      ]
     ),
     "",
     "# AI search crawlers — index for AI answers",
