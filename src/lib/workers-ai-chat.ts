@@ -203,7 +203,7 @@ export async function runWorkersAiChatLoop(
     messages.push({ role: "assistant", content: reply });
     let toolResult =
       !allowBooking && toolCall.name === "book_slot"
-        ? "Booking is not available through this channel. Ask the visitor to book via the website chat or the book_consultation tool."
+        ? "Booking is not available through this channel. Ask the visitor to book via the website chat or Contact page."
         : await runTool(toolCall.name, toolCall.args);
     // check_calendar_availability's output still carries book_slot instructions —
     // strip them on read-only channels so the model never sees a write directive.
