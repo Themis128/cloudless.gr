@@ -106,7 +106,10 @@ describe("booking short-circuit", () => {
   it("returns a friendly error when slot lookup throws", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     m.getAvailableSlots.mockRejectedValueOnce(new Error("cal down"));
-    const out = await runWorkersAiChatLoop("sys", [slotTable, user("1, Jane Doe, jane@example.com")]);
+    const out = await runWorkersAiChatLoop("sys", [
+      slotTable,
+      user("1, Jane Doe, jane@example.com"),
+    ]);
     expect(out).toContain("ran into a problem while booking");
     err.mockRestore();
   });
@@ -168,5 +171,54 @@ describe("tool loop", () => {
   it("falls back to the apology when the reply is empty", async () => {
     m.callWorkersAiChat.mockResolvedValueOnce("");
     expect(await runWorkersAiChatLoop("sys", [user("hi")])).toContain("could not generate");
+  });
+});
+
+describe("read-only mode (allowBooking:false — MCP/A2A channels)", () => {
+  const slotTable = asst("| Row | Day |\n| 1 | Mon 3 Nov Athens |");
+
+  it("skips the booking short-circuit and goes to the backend", async () => {
+    m.callWorkersAiChat.mockResolvedValueOnce("model reply");
+    const out = await runWorkersAiChatLoop(
+      "sys",
+      [slotTable, user("1, Jane Doe, jane@example.com")],
+      { allowBooking: false }
+    );
+    expect(out).toBe("model reply");
+    expect(m.runTool).not.toHaveBeenCalled();
+    expect(m.getAvailableSlots).not.toHaveBeenCalled();
+  });
+
+  it("intercepts a book_slot tool call instead of executing it", async () => {
+    m.callWorkersAiChat
+      .mockResolvedValueOnce('{"tool":"book_slot","args":{"name":"J"}}')
+      .mockResolvedValueOnce("Please book via the website chat.");
+    const out = await runWorkersAiChatLoop("sys", [user("book me")], { allowBooking: false });
+    expect(out).toBe("Please book via the website chat.");
+    expect(m.runTool).not.toHaveBeenCalled();
+    // The refusal text is fed back into the loop as the tool result.
+    const toolResultMsg = m.callWorkersAiChat.mock.calls[1][0].at(-1).content;
+    expect(toolResultMsg).toContain("Booking is not available through this channel");
+  });
+
+  it("strips book_slot instructions from check_calendar_availability output", async () => {
+    m.callWorkersAiChat
+      .mockResolvedValueOnce('{"tool":"check_calendar_availability","args":{}}')
+      .mockResolvedValueOnce("Here are the slots!");
+    m.runTool.mockResolvedValueOnce(
+      'Here are the slots table\n\nBOOKING_ISO_DATA:[]\n\nASK THE VISITOR: "Which row?" Then call book_slot with row=<number>.'
+    );
+    const out = await runWorkersAiChatLoop("sys", [user("slots?")], { allowBooking: false });
+    expect(out).toBe("Here are the slots!");
+    const toolResultMsg = m.callWorkersAiChat.mock.calls[1][0].at(-1).content;
+    expect(toolResultMsg).not.toContain("call book_slot");
+    expect(toolResultMsg).toContain("website chat or Contact page");
+  });
+
+  it("instructs the model that booking is unavailable (prompt override)", async () => {
+    m.callWorkersAiChat.mockResolvedValueOnce("reply");
+    await runWorkersAiChatLoop("sys", [user("hi")], { allowBooking: false });
+    const systemMsg = m.callWorkersAiChat.mock.calls[0][0][0].content;
+    expect(systemMsg).toContain("Booking is not available through this channel");
   });
 });
