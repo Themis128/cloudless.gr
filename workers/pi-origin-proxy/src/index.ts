@@ -80,7 +80,9 @@ export async function toMarkdownResponse(
   ai: Ai,
   url: URL,
 ): Promise<Response | null> {
-  const html = await upstream.text();
+  // Clone before consuming: on conversion failure the caller falls back to
+  // the HTML response and needs upstream.body intact.
+  const html = await upstream.clone().text();
   if (!html) return null;
   const name =
     url.pathname === "/"
@@ -366,6 +368,13 @@ export default {
           const markdown = await toMarkdownResponse(upstream, env.AI, url);
           if (markdown) {
             markdown.headers.set("x-served-by", "pi-tunnel-proxy");
+            if (env.ANALYTICS) {
+              env.ANALYTICS.writeDataPoint({
+                blobs: [url.pathname, "200-md", request.method],
+                doubles: [Date.now() - t0],
+                indexes: [url.pathname.split("/").slice(0, 3).join("/")],
+              });
+            }
             return markdown;
           }
         } catch (err) {

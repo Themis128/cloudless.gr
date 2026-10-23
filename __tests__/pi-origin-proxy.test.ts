@@ -416,12 +416,16 @@ describe("pi-origin-proxy: toMarkdownResponse", () => {
   });
 
   it("returns null on converter error so the caller falls back to HTML", async () => {
+    const upstream = htmlResponse();
     const res = await toMarkdownResponse(
-      htmlResponse(),
+      upstream,
       fakeAi("error") as unknown as Ai,
       new URL("https://cloudless.gr/"),
     );
     expect(res).toBeNull();
+    // Regression: the upstream body must stay consumable for the HTML
+    // fallback — toMarkdownResponse reads from a clone.
+    expect(await upstream.text()).toContain("<h1>Hello</h1>");
   });
 
   it("returns null on empty upstream body", async () => {
