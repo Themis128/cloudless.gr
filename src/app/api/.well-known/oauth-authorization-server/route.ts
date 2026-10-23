@@ -21,7 +21,7 @@ export async function GET() {
       skill: "https://cloudless.gr/auth.md",
       register_uri: "https://cloudless.gr/api/auth/register",
       claim_uri: "https://cloudless.gr/api/auth/activate",
-      identity_types_supported: ["verified_email"],
+      identity_types_supported: ["identity_assertion"],
       identity_assertion: {
         assertion_types_supported: ["verified_email"],
         credential_types_supported: ["email_password"],
