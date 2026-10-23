@@ -394,7 +394,7 @@ describe("delegated payments", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ payment_data: { id: "spt_test_1" } }),
       }),
-      params("cs_test_1"),
+      params("cs_test_1")
     );
     expect(res.status).toBe(400);
     expect((await res.json()).code).toBe("delegate_payment_unavailable");

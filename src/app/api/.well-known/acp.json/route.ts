@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  ACP_VERSION,
-  SITE_URL,
-  delegatedPaymentsEnabled,
-} from "@/lib/agentic-commerce";
+import { ACP_VERSION, SITE_URL, delegatedPaymentsEnabled } from "@/lib/agentic-commerce";
 
 /**
  * GET /.well-known/acp.json — Agentic Commerce Protocol discovery document
@@ -26,9 +22,19 @@ export async function GET() {
       supported_currencies: ["eur"],
       supported_locales: ["en-US", "el-GR", "fr-FR", "de-DE"],
       payment_handlers: [
-        { id: "dev.acp.hosted_checkout", version: "2026-04-17", spec: "https://agenticcommerce.dev" },
+        {
+          id: "dev.acp.hosted_checkout",
+          version: "2026-04-17",
+          spec: "https://agenticcommerce.dev",
+        },
         ...(delegatedPaymentsEnabled()
-          ? [{ id: "dev.acp.delegate_payment", version: "2026-04-17", spec: "https://agenticcommerce.dev" }]
+          ? [
+              {
+                id: "dev.acp.delegate_payment",
+                version: "2026-04-17",
+                spec: "https://agenticcommerce.dev",
+              },
+            ]
           : []),
       ],
     },

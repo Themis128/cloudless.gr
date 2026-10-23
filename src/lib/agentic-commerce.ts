@@ -56,9 +56,7 @@ export async function resolveLineItems(
 ): Promise<ResolvedLineItem[]> {
   // Entries arrive as parsed JSON — a null/malformed element must not
   // throw a TypeError here; it is a client error (400) like any unknown id.
-  const ids = items.map((item) =>
-    (item && typeof item === "object" ? (item.id ?? "") : "").trim()
-  );
+  const ids = items.map((item) => (item && typeof item === "object" ? (item.id ?? "") : "").trim());
   const products = await Promise.all(ids.map((id) => (id ? getProductByIdAsync(id) : null)));
   return items.map((item, i) => {
     const product = products[i];
@@ -550,7 +548,7 @@ export type DelegatedResult =
 export async function chargeDelegatedToken(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
-  token: string,
+  token: string
 ): Promise<DelegatedResult> {
   const amount = session.amount_total;
   if (!amount || amount <= 0) {
@@ -576,9 +574,7 @@ export async function chargeDelegatedToken(
     return { ok: true, paymentStatus: status };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Payment failed.";
-    const code = msg.toLowerCase().includes("declin")
-      ? "payment_declined"
-      : "processing_error";
+    const code = msg.toLowerCase().includes("declin") ? "payment_declined" : "processing_error";
     return { ok: false, code, message: msg };
   }
 }
