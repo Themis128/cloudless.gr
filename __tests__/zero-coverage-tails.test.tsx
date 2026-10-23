@@ -118,7 +118,9 @@ describe("auth.md route", () => {
     const { GET } = await import("@/app/auth.md/route");
     const res = await GET();
     expect(res.headers.get("Content-Type")).toContain("text/markdown");
-    expect(await res.text()).toContain("client_credentials");
+    const body = await res.text();
+    expect(body).toContain("# auth.md");
+    expect(body).toContain("/api/auth/register");
   });
 });
 
