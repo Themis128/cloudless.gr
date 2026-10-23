@@ -25,6 +25,7 @@ import { POST as acpCancel } from "@/app/api/acp/checkout_sessions/[id]/cancel/r
 import { POST as acpComplete } from "@/app/api/acp/checkout_sessions/[id]/complete/route";
 import { GET as acpDiscovery } from "@/app/api/.well-known/acp.json/route";
 import { GET as botAuthJwks } from "@/app/api/.well-known/http-message-signatures-directory/route";
+import { GET as openapiJson } from "@/app/openapi.json/route";
 import { GET as ucpProfile } from "@/app/api/.well-known/ucp/route";
 import { POST as ucpSearch } from "@/app/api/ucp/catalog/search/route";
 import { POST as ucpLookup } from "@/app/api/ucp/catalog/lookup/route";
@@ -368,5 +369,18 @@ describe("Web Bot Auth JWKS", () => {
     expect(doc.keys[0].crv).toBe("Ed25519");
     expect(doc.keys[0].kid).toBeTruthy();
     expect(res.headers.get("cache-control")).toContain("max-age=86400");
+  });
+});
+describe("openapi.json", () => {
+  it("serves the site-wide OpenAPI document", async () => {
+    const res = await openapiJson();
+    const doc = await res.json();
+    expect(res.status).toBe(200);
+    expect(doc.openapi).toBe("3.0.0");
+    expect(doc.paths["/.well-known/ucp"]).toBeTruthy();
+    expect(doc.paths["/api/acp/checkout_sessions"].post.operationId).toBe(
+      "acpCreateCheckoutSession"
+    );
+    expect(res.headers.get("cache-control")).toContain("max-age=3600");
   });
 });
