@@ -126,8 +126,10 @@ async function callTool(name: string, args: Record<string, unknown>, ip: string)
     }
     return toolText(`Unknown tool: ${name}`, true);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return toolText(`Tool error: ${msg.slice(0, 200)}`, true);
+    // Log name + message only server-side; callers get a generic failure so
+    // internal provider details never leak to unauthenticated agents.
+    console.error("[mcp] tool error:", err instanceof Error ? err.message : String(err));
+    return toolText("The service is temporarily unavailable. Please try again later.", true);
   }
 }
 
@@ -175,12 +177,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// MCP Streamable HTTP GET normally opens an SSE stream for server pushes.
-// This server is stateless request/response — return the descriptor instead.
+// MCP Streamable HTTP: GET opens an optional SSE stream for server-initiated
+// messages. This server is stateless request/response — per spec, return 405.
 export async function GET() {
-  return NextResponse.json({
-    ...SERVER_INFO,
-    transport: { type: "streamable-http", endpoint: "https://cloudless.gr/api/mcp" },
-    capabilities: { tools: TOOLS.map((t) => t.name) },
-  });
+  return new NextResponse(null, { status: 405, headers: { Allow: "POST" } });
 }

@@ -133,9 +133,10 @@ describe("POST /api/mcp (JSON-RPC)", () => {
     expect((await bad.json()).error.code).toBe(-32700);
   });
 
-  it("GET returns the server descriptor", async () => {
-    const body = await (await mcpGet()).json();
-    expect(body.transport.endpoint).toBe("https://cloudless.gr/api/mcp");
+  it("GET → 405 with Allow: POST (stateless transport, no SSE stream)", async () => {
+    const res = await mcpGet();
+    expect(res.status).toBe(405);
+    expect(res.headers.get("allow")).toBe("POST");
   });
 });
 
