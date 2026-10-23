@@ -124,7 +124,7 @@ nextConfig.rewrites = async () => ({
       // resource path — /.well-known/oauth-protected-resource/en must serve
       // the same metadata document (resource id stays the origin).
       source: "/.well-known/oauth-protected-resource/:path*",
-      destination: "/api/.well-known/oauth-protected-resource",
+      destination: "/api/.well-known/oauth-protected-resource/:path*",
     },
     {
       source: "/.well-known/oauth-authorization-server",
