@@ -7,6 +7,7 @@ import { GET as apiCatalog } from "@/app/api/.well-known/api-catalog/route";
 import { GET as oauthResource } from "@/app/api/.well-known/oauth-protected-resource/[[...path]]/route";
 import { GET as oidcConfig } from "@/app/api/.well-known/openid-configuration/route";
 import { GET as serverCard } from "@/app/api/.well-known/mcp/server-card.json/route";
+import { GET as agentCard } from "@/app/api/.well-known/agent-card.json/route";
 import { GET as skillsIndex } from "@/app/api/.well-known/agent-skills/index.json/route";
 
 describe(".well-known discovery routes", () => {
@@ -40,10 +41,21 @@ describe(".well-known discovery routes", () => {
     }
   });
 
-  it("mcp server-card declares sse transport + capabilities", async () => {
+  it("mcp server-card declares streamable-http transport at /api/mcp", async () => {
     const body = await (await serverCard()).json();
-    expect(body.transport.type).toBe("sse");
+    expect(body.transport.type).toBe("streamable-http");
+    expect(body.transport.endpoint).toBe("https://cloudless.gr/api/mcp");
     expect(body.capabilities.tools).toBe(true);
+    // Only tools are implemented — no resources/prompts claims.
+    expect(body.capabilities.resources).toBeUndefined();
+  });
+
+  it("a2a agent card points at /api/a2a with honest capabilities", async () => {
+    const body = await (await agentCard()).json();
+    expect(body.url).toBe("https://cloudless.gr/api/a2a");
+    expect(body.preferredTransport).toBe("JSONRPC");
+    expect(body.capabilities.streaming).toBe(false);
+    expect(body.skills.length).toBeGreaterThan(0);
   });
 
   it("agent-skills index lists the 3 published skills", async () => {

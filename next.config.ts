@@ -138,6 +138,14 @@ nextConfig.rewrites = async () => ({
       source: "/.well-known/ai-catalog.json",
       destination: "/api/.well-known/ai-catalog.json",
     },
+    {
+      source: "/.well-known/mcp/server-card.json",
+      destination: "/api/.well-known/mcp/server-card.json",
+    },
+    {
+      source: "/.well-known/agent-card.json",
+      destination: "/api/.well-known/agent-card.json",
+    },
   ],
   afterFiles: [],
   fallback: [],
