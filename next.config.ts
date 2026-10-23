@@ -110,6 +110,23 @@ nextConfig.rewrites = async () => ({
   beforeFiles: [
     { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
     { source: "/api/:path*", destination: "/api/:path*" },
+    // Canonical RFC 8615 well-known URIs. The handlers live under
+    // /api/.well-known/*; these rewrites expose the spec paths so agents
+    // resolving /.well-known/api-catalog (RFC 9727) et al. reach them.
+    // security.txt is intentionally NOT mapped — the static file in
+    // public/.well-known already serves it.
+    {
+      source: "/.well-known/api-catalog",
+      destination: "/api/.well-known/api-catalog",
+    },
+    {
+      source: "/.well-known/oauth-protected-resource",
+      destination: "/api/.well-known/oauth-protected-resource",
+    },
+    {
+      source: "/.well-known/openid-configuration",
+      destination: "/api/.well-known/openid-configuration",
+    },
   ],
   afterFiles: [],
   fallback: [],
@@ -123,6 +140,32 @@ nextConfig.redirects = async () => [
     source: "/:locale(en|el|fr|de)/pricing",
     destination: "/:locale/services",
     permanent: true,
+  },
+];
+
+// RFC 8288 Link headers for agent discovery (isitagentready).
+// Advertises only surfaces that exist today: the RFC 9727 api-catalog at
+// its canonical well-known URI (rewritten above), human docs, the
+// machine-readable docs index, OAuth protected-resource metadata
+// (RFC 9728), and contact/legal pages — all IANA-registered relation
+// types. Applied site-wide so agents entering on any page get the
+// pointers.
+const agentLinkHeader = [
+  '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+  '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
+  '</.well-known/openid-configuration>; rel="openid-configuration"; type="application/json"',
+  '</docs>; rel="service-doc"',
+  '</api/docs>; rel="service-desc"; type="application/json"',
+  '</api/health>; rel="status"; type="application/json"',
+  '</contact>; rel="contact"',
+  '</privacy>; rel="privacy-policy"',
+  '</terms>; rel="terms-of-service"',
+].join(", ");
+
+nextConfig.headers = async () => [
+  {
+    source: "/:path*",
+    headers: [{ key: "Link", value: agentLinkHeader }],
   },
 ];
 
