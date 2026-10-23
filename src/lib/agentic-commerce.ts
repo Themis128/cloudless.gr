@@ -54,20 +54,20 @@ export class UnknownItemError extends Error {
 export async function resolveLineItems(
   items: Array<{ id?: string; quantity?: number }>
 ): Promise<ResolvedLineItem[]> {
-  const resolved: ResolvedLineItem[] = [];
-  for (const item of items) {
-    // Entries arrive as parsed JSON — a null/malformed element must not
-    // throw a TypeError here; it is a client error (400) like any unknown id.
-    const id = (item && typeof item === "object" ? (item.id ?? "") : "").trim();
-    if (!id) throw new UnknownItemError("(empty)");
-    const product = await getProductByIdAsync(id);
-    if (!product) throw new UnknownItemError(id);
-    resolved.push({
+  // Entries arrive as parsed JSON — a null/malformed element must not
+  // throw a TypeError here; it is a client error (400) like any unknown id.
+  const ids = items.map((item) =>
+    (item && typeof item === "object" ? (item.id ?? "") : "").trim()
+  );
+  const products = await Promise.all(ids.map((id) => (id ? getProductByIdAsync(id) : null)));
+  return items.map((item, i) => {
+    const product = products[i];
+    if (!product) throw new UnknownItemError(ids[i] || "(empty)");
+    return {
       product,
       quantity: Math.max(1, Math.min(Math.trunc(item.quantity ?? 1) || 1, 99)),
-    });
-  }
-  return resolved;
+    };
+  });
 }
 
 /** Search the live catalog (Stripe-backed) with a free-text + category filter. */
@@ -105,7 +105,7 @@ function acpLineItem({ product, quantity }: ResolvedLineItem, index: number) {
   };
 }
 
-function acpTotals(items: ResolvedLineItem[]) {
+function lineTotals(items: ResolvedLineItem[]) {
   const subtotal = items.reduce((sum, { product, quantity }) => sum + product.price * quantity, 0);
   return [
     { type: "subtotal", display_text: "Subtotal", amount: subtotal },
@@ -182,8 +182,8 @@ export function acpSessionFromStripe(
     protocol: { version: ACP_VERSION },
     status,
     currency: (session.currency ?? "eur").toLowerCase(),
-    line_items: resolved.map(acpLineItem),
-    totals: acpTotals(resolved),
+    line_items: resolved.map((item, index) => acpLineItem(item, index)),
+    totals: lineTotals(resolved),
     fulfillment_options: [],
     messages:
       status === "ready_for_payment"
@@ -214,8 +214,8 @@ export function acpSessionFromStripe(
       checkout_session_id: session.id,
       status: "confirmed",
       currency: (session.currency ?? "eur").toLowerCase(),
-      totals: acpTotals(resolved),
-      line_items: resolved.map(acpLineItem),
+      totals: lineTotals(resolved),
+      line_items: resolved.map((item, index) => acpLineItem(item, index)),
       created_at: toIso(session.created),
     };
   }
@@ -416,14 +416,6 @@ function ucpLineItem({ product, quantity }: ResolvedLineItem, index: number) {
   };
 }
 
-function ucpTotals(items: ResolvedLineItem[]) {
-  const subtotal = items.reduce((sum, { product, quantity }) => sum + product.price * quantity, 0);
-  return [
-    { type: "subtotal", display_text: "Subtotal", amount: subtotal },
-    { type: "total", display_text: "Total", amount: subtotal },
-  ];
-}
-
 type UcpCheckoutStatus =
   | "incomplete"
   | "requires_escalation"
@@ -449,8 +441,8 @@ export function ucpCheckoutFromStripe(
     id: session.id,
     status,
     currency: (session.currency ?? "eur").toUpperCase(),
-    line_items: resolved.map(ucpLineItem),
-    totals: ucpTotals(resolved),
+    line_items: resolved.map((item, index) => ucpLineItem(item, index)),
+    totals: lineTotals(resolved),
     links: [
       {
         type: "terms_of_service",
