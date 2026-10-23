@@ -26,7 +26,7 @@ function rpcError(id: unknown, code: number, message: string) {
 }
 
 function extractText(message: A2AMessage | undefined): string {
-  if (!message?.parts) return "";
+  if (!message || !Array.isArray(message.parts)) return "";
   return message.parts
     .filter((p) => p.kind === "text" && typeof p.text === "string")
     .map((p) => p.text as string)
