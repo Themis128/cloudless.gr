@@ -79,7 +79,12 @@ async function callTool(name: string, args: Record<string, unknown>, ip: string)
       // Same booking-specific rate limit as POST /api/calendar/book.
       const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
       if (!rl.ok) return toolText("Rate limit exceeded. Try later.", true);
-      const { name: vname, email, start, end, notes } = args as Record<string, string>;
+      const asStr = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
+      const vname = asStr(args.name);
+      const email = asStr(args.email);
+      const start = asStr(args.start);
+      const end = asStr(args.end);
+      const notes = args.notes == null ? undefined : asStr(args.notes);
       if (!vname || !email || !start || !end || !isValidEmail(email)) {
         return toolText("Missing or invalid name/email/start/end.", true);
       }
