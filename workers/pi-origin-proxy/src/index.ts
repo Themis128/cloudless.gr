@@ -12,6 +12,7 @@ interface Env {
   PI_ORIGIN_HOST: string;
   PI_TIMEOUT_MS?: string;
   ANALYTICS?: AnalyticsEngineDataset;
+  AI?: Ai;
 }
 
 export const REQUEST_HOP_BY_HOP = new Set([
@@ -41,6 +42,81 @@ export const RESPONSE_HOP_BY_HOP = new Set([
 ]);
 
 export const IDEMPOTENT = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Whether the client asked for `text/markdown` via Accept negotiation
+ * (Markdown for Agents semantics). Only GET/HEAD are negotiable — a POST
+ * wants the HTML form/app response. `text/markdown;q=0` explicitly opts out.
+ */
+export function wantsMarkdown(request: Request): boolean {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  const accept = request.headers.get("accept");
+  if (!accept) return false;
+  for (const part of accept.split(",")) {
+    const [mime, ...params] = part.trim().split(";");
+    if (mime.trim().toLowerCase() !== "text/markdown") continue;
+    const qParam = params
+      .map((p) => p.trim().toLowerCase())
+      .find((p) => p.startsWith("q="));
+    if (!qParam || Number.parseFloat(qParam.slice(2)) > 0) return true;
+  }
+  return false;
+}
+
+export function isHtmlResponse(response: Response): boolean {
+  return response.status === 200 &&
+    (response.headers.get("content-type") || "").toLowerCase().includes("text/html");
+}
+
+/**
+ * Convert an HTML origin response to Markdown via the Workers AI binding.
+ * Mirrors Cloudflare's "Markdown for Agents" response contract:
+ * Content-Type text/markdown, Vary: Accept, x-markdown-tokens with the
+ * converter's token estimate, and body-descriptive headers stripped.
+ * Returns null so callers can fall back to the original HTML response.
+ */
+export async function toMarkdownResponse(
+  upstream: Response,
+  ai: Ai,
+  url: URL,
+): Promise<Response | null> {
+  // Clone before consuming: on conversion failure the caller falls back to
+  // the HTML response and needs upstream.body intact.
+  const html = await upstream.clone().text();
+  if (!html) return null;
+  const name =
+    url.pathname === "/"
+      ? "index.html"
+      : `${url.pathname.split("/").filter(Boolean).pop() || "page"}.html`;
+  const conv = await ai.toMarkdown(
+    { name, blob: new Blob([html], { type: "text/html" }) },
+    { conversionOptions: { html: { hostname: url.host } } },
+  );
+  if (conv.format === "error" || !("data" in conv) || !conv.data) return null;
+
+  const headers = new Headers();
+  for (const [k, v] of upstream.headers) {
+    if (!RESPONSE_HOP_BY_HOP.has(k.toLowerCase())) headers.set(k, v);
+  }
+  // Body no longer matches HTML-descriptive headers after conversion.
+  for (const h of ["content-length", "etag", "last-modified", "content-encoding"]) {
+    headers.delete(h);
+  }
+  headers.set("content-type", "text/markdown; charset=utf-8");
+  headers.set("x-markdown-tokens", String(conv.tokens));
+  const vary = new Set(
+    (headers.get("vary") || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  vary.add("accept");
+  headers.set(
+    "vary",
+    [...vary].map((v) => v.charAt(0).toUpperCase() + v.slice(1)).join(", "),
+  );
+  return new Response(conv.data, { status: 200, headers });
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -281,6 +357,28 @@ export default {
           if (retry.status < 500) upstream = retry;
         } catch (retryErr) {
           console.error("pi-tunnel-proxy: 502 retry failed", retryErr);
+        }
+      }
+
+      // Markdown for Agents: honor Accept: text/markdown by converting the
+      // HTML body at the edge via Workers AI. Falls back to the HTML
+      // response on any conversion failure — never breaks the request.
+      if (env.AI && wantsMarkdown(request) && isHtmlResponse(upstream)) {
+        try {
+          const markdown = await toMarkdownResponse(upstream, env.AI, url);
+          if (markdown) {
+            markdown.headers.set("x-served-by", "pi-tunnel-proxy");
+            if (env.ANALYTICS) {
+              env.ANALYTICS.writeDataPoint({
+                blobs: [url.pathname, "200-md", request.method],
+                doubles: [Date.now() - t0],
+                indexes: [url.pathname.split("/").slice(0, 3).join("/")],
+              });
+            }
+            return markdown;
+          }
+        } catch (err) {
+          console.error("pi-tunnel-proxy: markdown conversion failed", err);
         }
       }
 

@@ -36,6 +36,12 @@
       "dataset": "cloudless_analytics",
     },
   ],
+  // Workers AI binding powers Accept: text/markdown content negotiation
+  // (Markdown for Agents) — ai.toMarkdown converts HTML responses at the
+  // edge. Free tier covers the conversion neuron allocation.
+  "ai": {
+    "binding": "AI",
+  },
   "vars": {
     "PI_ORIGIN_HOST": "pi-origin.cloudless.gr",
     "PI_TIMEOUT_MS": "30000",

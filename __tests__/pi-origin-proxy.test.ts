@@ -5,6 +5,9 @@ import {
   isCacheable,
   isResponseCacheable,
   isWebSocketUpgrade,
+  wantsMarkdown,
+  isHtmlResponse,
+  toMarkdownResponse,
   REQUEST_HOP_BY_HOP,
   RESPONSE_HOP_BY_HOP,
   IDEMPOTENT,
@@ -305,5 +308,133 @@ describe("pi-origin-proxy: isResponseCacheable (response-side)", () => {
       headers: { "cache-control": cacheableCC, "set-cookie": "id=abc; Path=/" },
     });
     expect(isResponseCacheable(r)).toBe(false);
+  });
+});
+
+describe("pi-origin-proxy: wantsMarkdown (Accept negotiation)", () => {
+  it("accepts a bare text/markdown accept header", () => {
+    expect(
+      wantsMarkdown(makeRequest("https://cloudless.gr/", { Accept: "text/markdown" })),
+    ).toBe(true);
+  });
+
+  it("accepts text/markdown mixed with other types", () => {
+    expect(
+      wantsMarkdown(
+        makeRequest("https://cloudless.gr/", {
+          Accept: "text/html, application/xhtml+xml, text/markdown;q=0.9",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("honors an explicit q=0 opt-out", () => {
+    expect(
+      wantsMarkdown(makeRequest("https://cloudless.gr/", { Accept: "text/markdown;q=0" })),
+    ).toBe(false);
+  });
+
+  it("rejects browser defaults and missing headers", () => {
+    expect(wantsMarkdown(makeRequest("https://cloudless.gr/"))).toBe(false);
+    expect(
+      wantsMarkdown(
+        makeRequest("https://cloudless.gr/", {
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("never negotiates markdown for non-GET methods", () => {
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      expect(
+        wantsMarkdown(
+          makeRequest("https://cloudless.gr/", { Accept: "text/markdown" }, method),
+        ),
+      ).toBe(false);
+    }
+  });
+});
+
+describe("pi-origin-proxy: isHtmlResponse", () => {
+  it("accepts 200 + text/html", () => {
+    const r = new Response("<html></html>", {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+    expect(isHtmlResponse(r)).toBe(true);
+  });
+
+  it("rejects non-HTML content types and non-200", () => {
+    for (const ct of ["application/json", "text/plain", "image/png"]) {
+      const r = new Response("x", { status: 200, headers: { "content-type": ct } });
+      expect(isHtmlResponse(r)).toBe(false);
+    }
+    const r404 = new Response("<html></html>", {
+      status: 404,
+      headers: { "content-type": "text/html" },
+    });
+    expect(isHtmlResponse(r404)).toBe(false);
+  });
+});
+
+describe("pi-origin-proxy: toMarkdownResponse", () => {
+  const htmlResponse = () =>
+    new Response("<html><body><h1>Hello</h1><p>world</p></body></html>", {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        etag: '"abc123"',
+        "last-modified": "Mon, 01 Jan 2024 00:00:00 GMT",
+        "cache-control": "public, max-age=60",
+      },
+    });
+
+  const fakeAi = (format: string, data = "# Hello\n\nworld") => ({
+    toMarkdown: async () =>
+      format === "error"
+        ? { id: "1", name: "index.html", mimeType: "text/html", format, error: "boom" }
+        : { id: "1", name: "index.html", mimeType: "text/html", format, tokens: 128, data },
+  });
+
+  it("returns text/markdown with x-markdown-tokens and Vary: Accept", async () => {
+    const res = await toMarkdownResponse(
+      htmlResponse(),
+      fakeAi("markdown") as unknown as Ai,
+      new URL("https://cloudless.gr/"),
+    );
+    expect(res).not.toBeNull();
+    expect(res!.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    expect(res!.headers.get("x-markdown-tokens")).toBe("128");
+    expect(res!.headers.get("vary")?.toLowerCase()).toContain("accept");
+    // HTML-descriptive headers must not survive the body swap.
+    expect(res!.headers.get("etag")).toBeNull();
+    expect(res!.headers.get("last-modified")).toBeNull();
+    // Cache/response headers that still apply are preserved.
+    expect(res!.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(await res!.text()).toBe("# Hello\n\nworld");
+  });
+
+  it("returns null on converter error so the caller falls back to HTML", async () => {
+    const upstream = htmlResponse();
+    const res = await toMarkdownResponse(
+      upstream,
+      fakeAi("error") as unknown as Ai,
+      new URL("https://cloudless.gr/"),
+    );
+    expect(res).toBeNull();
+    // Regression: the upstream body must stay consumable for the HTML
+    // fallback — toMarkdownResponse reads from a clone.
+    expect(await upstream.text()).toContain("<h1>Hello</h1>");
+  });
+
+  it("returns null on empty upstream body", async () => {
+    const empty = new Response("", { status: 200, headers: { "content-type": "text/html" } });
+    const res = await toMarkdownResponse(
+      empty,
+      fakeAi("markdown") as unknown as Ai,
+      new URL("https://cloudless.gr/"),
+    );
+    expect(res).toBeNull();
   });
 });
