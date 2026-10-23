@@ -24,11 +24,7 @@
 
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import {
-  getProducts,
-  getProductByIdAsync,
-  type StoreProduct,
-} from "@/lib/store-products";
+import { getProducts, getProductByIdAsync, type StoreProduct } from "@/lib/store-products";
 
 export const ACP_VERSION = "2026-04-17";
 export const UCP_VERSION = "2026-04-08";
@@ -56,7 +52,7 @@ export class UnknownItemError extends Error {
 
 /** Resolve ACP/UCP item refs ({id, quantity}) to catalog products. */
 export async function resolveLineItems(
-  items: Array<{ id?: string; quantity?: number }>,
+  items: Array<{ id?: string; quantity?: number }>
 ): Promise<ResolvedLineItem[]> {
   const resolved: ResolvedLineItem[] = [];
   for (const item of items) {
@@ -73,18 +69,13 @@ export async function resolveLineItems(
 }
 
 /** Search the live catalog (Stripe-backed) with a free-text + category filter. */
-export async function searchCatalog(
-  query: string,
-  category?: string,
-): Promise<StoreProduct[]> {
+export async function searchCatalog(query: string, category?: string): Promise<StoreProduct[]> {
   const q = query.trim().toLowerCase();
   const products = await getProducts();
   return products.filter((p) => {
     if (category && p.category !== category) return false;
     if (!q) return true;
-    const hay = [p.name, p.description, p.category, ...(p.features ?? [])]
-      .join(" ")
-      .toLowerCase();
+    const hay = [p.name, p.description, p.category, ...(p.features ?? [])].join(" ").toLowerCase();
     return q.split(/\s+/).every((tok) => hay.includes(tok));
   });
 }
@@ -107,20 +98,13 @@ function acpLineItem({ product, quantity }: ResolvedLineItem, index: number) {
     product_id: product.id,
     category: product.category,
     unit_amount: product.price,
-    images: [
-      product.image.startsWith("http")
-        ? product.image
-        : `${SITE_URL}${product.image}`,
-    ],
+    images: [product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`],
     availability_status: "in_stock" as const,
   };
 }
 
 function acpTotals(items: ResolvedLineItem[]) {
-  const subtotal = items.reduce(
-    (sum, { product, quantity }) => sum + product.price * quantity,
-    0,
-  );
+  const subtotal = items.reduce((sum, { product, quantity }) => sum + product.price * quantity, 0);
   return [
     { type: "subtotal", display_text: "Subtotal", amount: subtotal },
     { type: "total", display_text: "Total", amount: subtotal },
@@ -173,8 +157,7 @@ type AcpStatus =
 
 function acpStatus(session: Stripe.Checkout.Session): AcpStatus {
   if (session.status === "expired") return "expired";
-  if (session.status === "complete" || session.payment_status === "paid")
-    return "completed";
+  if (session.status === "complete" || session.payment_status === "paid") return "completed";
   return "ready_for_payment";
 }
 
@@ -189,7 +172,7 @@ function toIso(unix: number | null | undefined): string | undefined {
  */
 export function acpSessionFromStripe(
   session: Stripe.Checkout.Session,
-  resolved: ResolvedLineItem[],
+  resolved: ResolvedLineItem[]
 ) {
   const status = acpStatus(session);
   const body: Record<string, unknown> = {
@@ -264,7 +247,7 @@ export async function createStripeCheckoutSession(input: CreateSessionInput) {
 
   const hasSubscription = resolved.some(({ product }) => product.recurring);
   const hasPhysical = resolved.some(
-    ({ product }) => !product.recurring && product.category === "physical",
+    ({ product }) => !product.recurring && product.category === "physical"
   );
   const locale = (input.locale ?? "en").split("-")[0];
 
@@ -293,14 +276,47 @@ export async function createStripeCheckoutSession(input: CreateSessionInput) {
           resolved.map(({ product, quantity }) => ({
             id: product.id,
             quantity,
-          })),
+          }))
         ),
       },
       shipping_address_collection: hasPhysical
-        ? { allowed_countries: ["GR", "DE", "FR", "IT", "ES", "NL", "BE", "AT", "PT", "IE", "FI", "SE", "DK", "PL", "CZ", "RO", "BG", "HR", "SK", "SI", "LT", "LV", "EE", "LU", "MT", "CY", "US", "GB", "CA", "AU"] }
+        ? {
+            allowed_countries: [
+              "GR",
+              "DE",
+              "FR",
+              "IT",
+              "ES",
+              "NL",
+              "BE",
+              "AT",
+              "PT",
+              "IE",
+              "FI",
+              "SE",
+              "DK",
+              "PL",
+              "CZ",
+              "RO",
+              "BG",
+              "HR",
+              "SK",
+              "SI",
+              "LT",
+              "LV",
+              "EE",
+              "LU",
+              "MT",
+              "CY",
+              "US",
+              "GB",
+              "CA",
+              "AU",
+            ],
+          }
         : undefined,
     },
-    input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+    input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined
   );
 
   return { stripe, session, resolved };
@@ -308,7 +324,7 @@ export async function createStripeCheckoutSession(input: CreateSessionInput) {
 
 /** Rebuild the resolved line items for a previously created session. */
 export async function resolvedItemsFromSession(
-  session: Stripe.Checkout.Session,
+  session: Stripe.Checkout.Session
 ): Promise<ResolvedLineItem[]> {
   const raw = session.metadata?.acp_items;
   if (!raw) return [];
@@ -360,9 +376,7 @@ export function ucpEnvelope(kind: "catalog" | "checkout") {
 /** Catalog product → UCP product object (types/product.json). */
 export function ucpProduct(product: StoreProduct) {
   const price = { amount: product.price, currency: product.currency.toUpperCase() };
-  const image = product.image.startsWith("http")
-    ? product.image
-    : `${SITE_URL}${product.image}`;
+  const image = product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`;
   return {
     id: product.id,
     handle: product.id,
@@ -381,9 +395,7 @@ export function ucpProduct(product: StoreProduct) {
         availability: { available: true },
       },
     ],
-    ...(product.recurring
-      ? { metadata: { billing_interval: product.interval ?? "month" } }
-      : {}),
+    ...(product.recurring ? { metadata: { billing_interval: product.interval ?? "month" } } : {}),
   };
 }
 
@@ -395,22 +407,15 @@ function ucpLineItem({ product, quantity }: ResolvedLineItem, index: number) {
       id: product.id,
       title: product.name,
       price: product.price,
-      image_url: product.image.startsWith("http")
-        ? product.image
-        : `${SITE_URL}${product.image}`,
+      image_url: product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`,
     },
     quantity,
-    totals: [
-      { type: "subtotal", display_text: "Item total", amount: lineTotal },
-    ],
+    totals: [{ type: "subtotal", display_text: "Item total", amount: lineTotal }],
   };
 }
 
 function ucpTotals(items: ResolvedLineItem[]) {
-  const subtotal = items.reduce(
-    (sum, { product, quantity }) => sum + product.price * quantity,
-    0,
-  );
+  const subtotal = items.reduce((sum, { product, quantity }) => sum + product.price * quantity, 0);
   return [
     { type: "subtotal", display_text: "Subtotal", amount: subtotal },
     { type: "total", display_text: "Total", amount: subtotal },
@@ -427,15 +432,14 @@ type UcpCheckoutStatus =
 
 function ucpStatus(session: Stripe.Checkout.Session): UcpCheckoutStatus {
   if (session.status === "expired") return "canceled";
-  if (session.status === "complete" || session.payment_status === "paid")
-    return "completed";
+  if (session.status === "complete" || session.payment_status === "paid") return "completed";
   return "ready_for_complete";
 }
 
 /** Stripe Checkout Session → UCP checkout object (checkout.json). */
 export function ucpCheckoutFromStripe(
   session: Stripe.Checkout.Session,
-  resolved: ResolvedLineItem[],
+  resolved: ResolvedLineItem[]
 ) {
   const status = ucpStatus(session);
   return {

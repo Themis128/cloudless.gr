@@ -14,11 +14,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ucp: ucpEnvelope("catalog"),
-        messages: [
-          { type: "error", content_type: "plain", content: "Invalid JSON body." },
-        ],
+        messages: [{ type: "error", content_type: "plain", content: "Invalid JSON body." }],
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -35,7 +33,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
-      { status: 404 },
+      { status: 404 }
     );
   }
 

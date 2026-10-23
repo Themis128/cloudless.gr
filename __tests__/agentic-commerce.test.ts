@@ -59,30 +59,23 @@ describe("agentic-commerce", () => {
   });
 
   it("resolveLineItems rejects unknown ids", async () => {
-    await expect(
-      resolveLineItems([{ id: "nope-404", quantity: 1 }]),
-    ).rejects.toBeInstanceOf(UnknownItemError);
+    await expect(resolveLineItems([{ id: "nope-404", quantity: 1 }])).rejects.toBeInstanceOf(
+      UnknownItemError
+    );
   });
 
   it("searchCatalog matches free text and category filter", async () => {
     expect((await searchCatalog("")).length).toBe(defaultProducts.length);
     const found = await searchCatalog("serverless");
     expect(found.length).toBeGreaterThan(0);
-    expect(found.every((p) => /serverless/i.test(p.name + p.description))).toBe(
-      true,
-    );
+    expect(found.every((p) => /serverless/i.test(p.name + p.description))).toBe(true);
     const physical = await searchCatalog("", "physical");
     expect(physical.every((p) => p.category === "physical")).toBe(true);
   });
 
   it("acpSessionFromStripe emits a spec-shaped session with continue_url", async () => {
-    const resolved = await resolveLineItems([
-      { id: "srv-cloud", quantity: 1 },
-    ]);
-    const body = acpSessionFromStripe(stripeSession(), resolved) as Record<
-      string,
-      unknown
-    >;
+    const resolved = await resolveLineItems([{ id: "srv-cloud", quantity: 1 }]);
+    const body = acpSessionFromStripe(stripeSession(), resolved) as Record<string, unknown>;
     expect(body.id).toBe("cs_test_123");
     expect(body.status).toBe("ready_for_payment");
     expect(body.currency).toBe("eur");
@@ -95,25 +88,21 @@ describe("agentic-commerce", () => {
   });
 
   it("acpSessionFromStripe marks paid sessions completed with an order", async () => {
-    const resolved = await resolveLineItems([
-      { id: "srv-cloud", quantity: 1 },
-    ]);
+    const resolved = await resolveLineItems([{ id: "srv-cloud", quantity: 1 }]);
     const body = acpSessionFromStripe(
       stripeSession({ status: "complete", payment_status: "paid" }),
-      resolved,
+      resolved
     ) as Record<string, unknown>;
     expect(body.status).toBe("completed");
     expect(body.order).toBeTruthy();
   });
 
   it("acpSessionFromStripe maps expired sessions", async () => {
-    const resolved = await resolveLineItems([
-      { id: "srv-cloud", quantity: 1 },
-    ]);
-    const body = acpSessionFromStripe(
-      stripeSession({ status: "expired" }),
-      resolved,
-    ) as Record<string, unknown>;
+    const resolved = await resolveLineItems([{ id: "srv-cloud", quantity: 1 }]);
+    const body = acpSessionFromStripe(stripeSession({ status: "expired" }), resolved) as Record<
+      string,
+      unknown
+    >;
     expect(body.status).toBe("expired");
   });
 
@@ -128,30 +117,24 @@ describe("agentic-commerce", () => {
   });
 
   it("ucpCheckoutFromStripe maps statuses and envelope", async () => {
-    const resolved = await resolveLineItems([
-      { id: "dig-cloud-playbook", quantity: 2 },
-    ]);
+    const resolved = await resolveLineItems([{ id: "dig-cloud-playbook", quantity: 2 }]);
     const open = ucpCheckoutFromStripe(stripeSession(), resolved);
     expect(open.ucp.version).toBe(UCP_VERSION);
     expect(open.status).toBe("ready_for_complete");
     expect(open.line_items[0].totals[0].amount).toBe(9800);
     expect(
-      (open.totals as Array<{ type: string; amount: number }>).find(
-        (t) => t.type === "total",
-      )?.amount,
+      (open.totals as Array<{ type: string; amount: number }>).find((t) => t.type === "total")
+        ?.amount
     ).toBe(9800);
     expect(open.continue_url).toContain("checkout.stripe.com");
 
     const paid = ucpCheckoutFromStripe(
       stripeSession({ status: "complete", payment_status: "paid" }),
-      resolved,
+      resolved
     );
     expect(paid.status).toBe("completed");
 
-    const dead = ucpCheckoutFromStripe(
-      stripeSession({ status: "expired" }),
-      resolved,
-    );
+    const dead = ucpCheckoutFromStripe(stripeSession({ status: "expired" }), resolved);
     expect(dead.status).toBe("canceled");
   });
 });

@@ -20,7 +20,7 @@ function ucpError(message: string, status: number, path?: string) {
         },
       ],
     },
-    { status },
+    { status }
   );
 }
 
@@ -47,11 +47,7 @@ export async function POST(request: NextRequest) {
     .map((li) => ({ id: li.item?.id, quantity: li.quantity }))
     .filter((i) => i.id);
   if (items.length === 0) {
-    return ucpError(
-      "line_items is required and each entry needs an item.id.",
-      400,
-      "$.line_items",
-    );
+    return ucpError("line_items is required and each entry needs an item.id.", 400, "$.line_items");
   }
 
   let result;
@@ -60,8 +56,7 @@ export async function POST(request: NextRequest) {
       items,
       buyerEmail: body.buyer?.email,
       locale: body.context?.language ?? "en",
-      idempotencyKey:
-        request.headers.get("idempotency-key")?.trim() || undefined,
+      idempotencyKey: request.headers.get("idempotency-key")?.trim() || undefined,
       origin: canonicalOrigin(request),
     });
   } catch (err) {
@@ -77,8 +72,5 @@ export async function POST(request: NextRequest) {
     return ucpError("Payment processing is temporarily unavailable.", 503);
   }
 
-  return NextResponse.json(
-    ucpCheckoutFromStripe(result.session, result.resolved),
-    { status: 201 },
-  );
+  return NextResponse.json(ucpCheckoutFromStripe(result.session, result.resolved), { status: 201 });
 }

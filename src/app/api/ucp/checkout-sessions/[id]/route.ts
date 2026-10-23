@@ -12,7 +12,7 @@ function ucpError(message: string, status: number) {
       ucp: ucpEnvelope("checkout"),
       messages: [{ type: "error", content_type: "plain", content: message }],
     },
-    { status },
+    { status }
   );
 }
 
@@ -20,10 +20,7 @@ function ucpError(message: string, status: number) {
  * GET /api/ucp/checkout-sessions/{id} — retrieve a UCP checkout session.
  * The id is the Stripe Checkout Session id; Stripe is the state store.
  */
-export async function GET(
-  _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const stripe = await getStripe();
   if (!stripe) return ucpError("Payment processing is temporarily unavailable.", 503);

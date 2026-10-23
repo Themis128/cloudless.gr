@@ -9,10 +9,7 @@ import {
 /**
  * POST /api/ucp/checkout-sessions/{id}/cancel — expire the Stripe session.
  */
-export async function POST(
-  _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const stripe = await getStripe();
   if (!stripe) {
@@ -27,7 +24,7 @@ export async function POST(
           },
         ],
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
@@ -46,7 +43,7 @@ export async function POST(
           },
         ],
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

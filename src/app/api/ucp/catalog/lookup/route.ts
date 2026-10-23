@@ -16,11 +16,9 @@ export async function POST(request: NextRequest) {
       {
         ucp: ucpEnvelope("catalog"),
         products: [],
-        messages: [
-          { type: "error", content_type: "plain", content: "Invalid JSON body." },
-        ],
+        messages: [{ type: "error", content_type: "plain", content: "Invalid JSON body." }],
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -38,14 +36,12 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const resolved = await Promise.all(ids.map((id) => getProductByIdAsync(id)));
-  const products = resolved
-    .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(ucpProduct);
+  const products = resolved.filter((p): p is NonNullable<typeof p> => Boolean(p)).map(ucpProduct);
   const missing = ids.filter((id, i) => !resolved[i]);
 
   return NextResponse.json({

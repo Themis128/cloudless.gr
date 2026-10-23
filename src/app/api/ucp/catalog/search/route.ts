@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  searchCatalog,
-  ucpEnvelope,
-  ucpProduct,
-} from "@/lib/agentic-commerce";
+import { searchCatalog, ucpEnvelope, ucpProduct } from "@/lib/agentic-commerce";
 
 /**
  * POST /api/ucp/catalog/search — UCP catalog_search capability.
@@ -20,9 +16,7 @@ export async function POST(request: NextRequest) {
 
   const query = typeof body.query === "string" ? body.query : "";
   const filters = body.filters as { categories?: string[] } | undefined;
-  const category = Array.isArray(filters?.categories)
-    ? filters!.categories[0]
-    : undefined;
+  const category = Array.isArray(filters?.categories) ? filters!.categories[0] : undefined;
 
   const products = (await searchCatalog(query, category)).map(ucpProduct);
 

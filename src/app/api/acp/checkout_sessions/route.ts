@@ -12,12 +12,9 @@ function acpError(
   code: string,
   message: string,
   status: number,
-  param?: string,
+  param?: string
 ) {
-  return NextResponse.json(
-    { type, code, message, ...(param ? { param } : {}) },
-    { status },
-  );
+  return NextResponse.json({ type, code, message, ...(param ? { param } : {}) }, { status });
 }
 
 /**
@@ -36,24 +33,18 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return acpError(
-      "invalid_request",
-      "invalid_json",
-      "Request body must be valid JSON.",
-      400,
-    );
+    return acpError("invalid_request", "invalid_json", "Request body must be valid JSON.", 400);
   }
 
   const rawItems = (body.line_items ?? body.items) as
-    | Array<{ id?: string; quantity?: number }>
-    | undefined;
+    Array<{ id?: string; quantity?: number }> | undefined;
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     return acpError(
       "invalid_request",
       "missing_line_items",
       "line_items is required and must contain at least one item.",
       400,
-      "$.line_items",
+      "$.line_items"
     );
   }
 
@@ -64,7 +55,7 @@ export async function POST(request: NextRequest) {
       "unsupported_currency",
       "Only 'eur' is supported.",
       400,
-      "$.currency",
+      "$.currency"
     );
   }
 
@@ -82,13 +73,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     if (err instanceof UnknownItemError) {
-      return acpError(
-        "invalid_request",
-        "unknown_item",
-        err.message,
-        400,
-        "$.line_items",
-      );
+      return acpError("invalid_request", "unknown_item", err.message, 400, "$.line_items");
     }
     const msg = String((err as Error)?.message ?? "unknown").slice(0, 200);
     console.error("ACP checkout create error: " + JSON.stringify(msg));
@@ -96,7 +81,7 @@ export async function POST(request: NextRequest) {
       "processing_error",
       "checkout_failed",
       "Failed to create checkout session.",
-      500,
+      500
     );
   }
 
@@ -105,14 +90,13 @@ export async function POST(request: NextRequest) {
       "service_unavailable",
       "payments_unavailable",
       "Payment processing is temporarily unavailable.",
-      503,
+      503
     );
   }
 
-  const response = NextResponse.json(
-    acpSessionFromStripe(result.session, result.resolved),
-    { status: 201 },
-  );
+  const response = NextResponse.json(acpSessionFromStripe(result.session, result.resolved), {
+    status: 201,
+  });
   if (idempotencyKey) response.headers.set("Idempotency-Key", idempotencyKey);
   response.headers.set("ACP-Version", ACP_VERSION);
   return response;
