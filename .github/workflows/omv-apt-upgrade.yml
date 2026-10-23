@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: Refresh package lists and show pending
         run: |
-          set -uo pipefail
+          set -euo pipefail
           sudo apt-get update -qq
           echo "=== Pending upgrades ==="
           apt list --upgradable 2>/dev/null | grep -v '^Listing' || echo "(none)"
