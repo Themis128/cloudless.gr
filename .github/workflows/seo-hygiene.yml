@@ -39,6 +39,7 @@ jobs:
       run: node scripts/audit/check-generic-link-text.mjs || true
     - name: Validate robots and sitemap presence
       run: |
-        test -f src/app/robots.ts
+        # robots.txt is served by either the MetadataRoute (robots.ts) or a literal route
+        test -f src/app/robots.ts || test -f src/app/robots.txt/route.ts
         test -f src/app/sitemap.ts
-        echo "robots.ts and sitemap.ts found"
+        echo "robots and sitemap found"

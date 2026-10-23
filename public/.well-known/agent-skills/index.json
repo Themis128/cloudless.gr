@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "book-cloud-consultation",
+      "type": "skill-md",
+      "description": "Book a free 30-minute cloud/AI audit with Cloudless for a human requester \u2014 check availability, then create the booking.",
+      "url": "https://cloudless.gr/.well-known/agent-skills/book-cloud-consultation/SKILL.md",
+      "digest": "sha256:4e91e3ac4f46d7f68b9adc002f7682d22b7deac2814414a8c16dfdb646409f9b"
+    },
+    {
+      "name": "cloudless-api-catalog",
+      "type": "skill-md",
+      "description": "Discover and call the public Cloudless.gr JSON APIs (docs index, chat, calendar, health) via the RFC 9727 linkset catalog.",
+      "url": "https://cloudless.gr/.well-known/agent-skills/cloudless-api-catalog/SKILL.md",
+      "digest": "sha256:3b6505f39bcd636fe133d73c2f4c4a472333c79987371d66a1c4e30a4c5bb7a4"
+    }
+  ]
+}

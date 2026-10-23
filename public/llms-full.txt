@@ -1,0 +1,54 @@
+# Cloudless — full index
+
+Websites, cloud infrastructure, and AI automations for small teams that have
+been let down before — fixed scope, no lock-in, measurable results in 14 days.
+
+## Pages
+
+- https://cloudless.gr/en — homepage
+- https://cloudless.gr/en/services — service packages & pricing
+- https://cloudless.gr/en/work — case studies
+- https://cloudless.gr/en/blog — articles
+- https://cloudless.gr/en/docs — documentation hub
+- https://cloudless.gr/en/campaigns — marketing campaigns
+- https://cloudless.gr/en/dashboard — client dashboard (auth required)
+- https://cloudless.gr/en/contact — contact + free 30-minute audit booking
+- https://cloudless.gr/links — link-in-bio / lead-magnet hub
+- https://cloudless.gr/telegram — Telegram channel info
+- https://cloudless.gr/en/partners — partner program
+- https://cloudless.gr/en/privacy — privacy policy
+- https://cloudless.gr/en/terms — terms of service
+- https://cloudless.gr/en/cookies — cookie policy
+- https://cloudless.gr/en/refund — refund policy
+- https://cloudless.gr/en/accessibility — accessibility statement
+
+## Public JSON APIs (see /.well-known/api-catalog)
+
+- GET https://cloudless.gr/api/docs — documentation index (grouped by category)
+- POST https://cloudless.gr/api/chat — assistant chat endpoint
+- GET https://cloudless.gr/api/health — liveness/status
+- GET https://cloudless.gr/api/calendar/availability — consultation slots
+- POST https://cloudless.gr/api/calendar/book — consultation booking
+
+## Discovery documents
+
+- https://cloudless.gr/.well-known/api-catalog — RFC 9727 linkset catalog
+- https://cloudless.gr/.well-known/ai-catalog.json — ARD capability manifest
+- https://cloudless.gr/.well-known/agent-skills/index.json — Agent Skills index
+- https://cloudless.gr/.well-known/openid-configuration — OIDC discovery
+- https://cloudless.gr/.well-known/oauth-protected-resource — RFC 9728 PRM
+- https://cloudless.gr/.well-known/poppy.json — Poppy discovery metadata
+- https://cloudless.gr/.well-known/security.txt — security contact policy
+- https://cloudless.gr/auth.md — agent authentication guide
+- https://cloudless.gr/robots.txt — crawler + AI-bot rules + Content-Signals
+- https://cloudless.gr/sitemap.xml — URL sitemap
+
+## Content negotiation
+
+GET/HEAD requests with `Accept: text/markdown` receive a Markdown
+representation (`Content-Type: text/markdown`, `x-markdown-tokens` header).
+HTML remains the default.
+
+## Contact
+
+Cloudless — cloudless.gr — hello@cloudless.gr — Thessaloniki, Greece.

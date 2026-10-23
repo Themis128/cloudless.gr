@@ -127,6 +127,10 @@ nextConfig.rewrites = async () => ({
       source: "/.well-known/openid-configuration",
       destination: "/api/.well-known/openid-configuration",
     },
+    {
+      source: "/.well-known/ai-catalog.json",
+      destination: "/api/.well-known/ai-catalog.json",
+    },
   ],
   afterFiles: [],
   fallback: [],
@@ -152,6 +156,7 @@ nextConfig.redirects = async () => [
 // pointers.
 const agentLinkHeader = [
   '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+  '</.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json"',
   '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
   '</.well-known/openid-configuration>; rel="openid-configuration"; type="application/json"',
   '</docs>; rel="service-doc"',

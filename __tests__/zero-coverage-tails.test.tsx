@@ -62,12 +62,20 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("robots.ts", () => {
-  it("returns the MetadataRoute.Robots shape", async () => {
-    const robots = (await import("@/app/robots")).default;
-    const out = robots();
-    expect(out.rules).toMatchObject({ userAgent: "*", allow: "/" });
-    expect(out.sitemap).toBe("https://cloudless.gr/sitemap.xml");
+describe("robots.txt route", () => {
+  it("serves crawler rules, AI-bot groups, and discovery directives", async () => {
+    const { GET } = await import("@/app/robots.txt/route");
+    const res = GET();
+    expect(res.headers.get("Content-Type")).toContain("text/plain");
+    const body = await res.text();
+    expect(body).toContain("User-agent: *");
+    expect(body).toContain("Allow: /");
+    expect(body).toContain("Disallow: /api/");
+    expect(body).toContain("User-agent: OAI-SearchBot");
+    expect(body).toContain("User-agent: GPTBot");
+    expect(body).toContain("Content-Signal: ai-train=no, search=yes, ai-input=yes");
+    expect(body).toContain("Agentmap: https://cloudless.gr/.well-known/ai-catalog.json");
+    expect(body).toContain("Sitemap: https://cloudless.gr/sitemap.xml");
   });
 });
 
@@ -84,6 +92,24 @@ describe("middleware.ts", () => {
     const mw = await import("@/middleware");
     expect(typeof mw.default).toBe("function");
     expect(mw.config.matcher[0]).toContain("api/health");
+  });
+});
+
+describe("ai-catalog.json route (ARD manifest)", () => {
+  it("serves a specVersion + entries manifest with CORS", async () => {
+    const { GET } = await import("@/app/api/.well-known/ai-catalog.json/route");
+    const res = await GET();
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const body = await res.json();
+    expect(body.specVersion).toBeTruthy();
+    expect(body.host.identifier).toBe("did:web:cloudless.gr");
+    expect(body.entries.length).toBeGreaterThan(0);
+    for (const e of body.entries) {
+      expect(e.identifier).toMatch(/^urn:air:cloudless\.gr:/);
+      // Spec §3.4: exactly one of url|data — never both, never neither.
+      expect(Boolean(e.url) !== Boolean(e.data)).toBe(true);
+      expect(e.representativeQueries.length).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
