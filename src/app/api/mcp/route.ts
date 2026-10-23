@@ -80,7 +80,12 @@ async function callTool(name: string, args: Record<string, unknown>) {
       }
       const startDate = new Date(start);
       const endDate = new Date(end);
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate < new Date() || endDate <= startDate) {
+      if (
+        isNaN(startDate.getTime()) ||
+        isNaN(endDate.getTime()) ||
+        startDate < new Date() ||
+        endDate <= startDate
+      ) {
         return toolText("Invalid or past slot times.", true);
       }
       const result = await bookConsultation({ name: vname, email, start, end, notes });
@@ -89,7 +94,9 @@ async function callTool(name: string, args: Record<string, unknown>) {
       return toolText(JSON.stringify({ success: true, booking: result }));
     }
     if (name === "ask_cloudless_assistant") {
-      const message = String(args.message ?? "").slice(0, 500).trim();
+      const message = String(args.message ?? "")
+        .slice(0, 500)
+        .trim();
       if (!message) return toolText("Empty message.", true);
       const text = await runWorkersAiChatLoop(SYSTEM_PROMPT, [{ role: "user", content: message }]);
       return toolText(text);
