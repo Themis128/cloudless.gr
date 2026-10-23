@@ -137,4 +137,28 @@ describe("agentic-commerce", () => {
     const dead = ucpCheckoutFromStripe(stripeSession({ status: "expired" }), resolved);
     expect(dead.status).toBe("canceled");
   });
+
+  it("resolveLineItems rejects null entries as client errors", async () => {
+    await expect(resolveLineItems([null as never, { id: "srv-cloud" }])).rejects.toBeInstanceOf(
+      UnknownItemError
+    );
+  });
+
+  it("ucpProduct marks recurring products with billing interval", () => {
+    const recurring = defaultProducts.find((p) => p.recurring)!;
+    const p = ucpProduct(recurring);
+    expect(
+      (p as unknown as Record<string, { billing_interval: string }>).metadata.billing_interval
+    ).toBe("month");
+  });
+
+  it("resolvedItemsFromSession returns empty without acp_items metadata", async () => {
+    const { resolvedItemsFromSession } = await import("@/lib/agentic-commerce");
+    expect(await resolvedItemsFromSession(stripeSession())).toEqual([]);
+    expect(
+      await resolvedItemsFromSession(
+        stripeSession({ metadata: { acp_items: "not-json{" } as never })
+      )
+    ).toEqual([]);
+  });
 });
