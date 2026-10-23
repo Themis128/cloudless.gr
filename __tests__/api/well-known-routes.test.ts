@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { GET as apiCatalog } from "@/app/api/.well-known/api-catalog/route";
-import { GET as oauthResource } from "@/app/api/.well-known/oauth-protected-resource/route";
+import { GET as oauthResource } from "@/app/api/.well-known/oauth-protected-resource/[[...path]]/route";
 import { GET as oidcConfig } from "@/app/api/.well-known/openid-configuration/route";
 import { GET as serverCard } from "@/app/api/.well-known/mcp/server-card.json/route";
 import { GET as skillsIndex } from "@/app/api/.well-known/agent-skills/index.json/route";
@@ -19,9 +19,18 @@ describe(".well-known discovery routes", () => {
   });
 
   it("oauth-protected-resource advertises cloudless.gr + scopes", async () => {
-    const body = await (await oauthResource()).json();
+    const ctx = { params: Promise.resolve({}) };
+    const body = await (await oauthResource(new Request("https://cloudless.gr"), ctx)).json();
     expect(body.resource).toBe("https://cloudless.gr");
     expect(body.scopes_supported).toContain("admin");
+    expect(body.bearer_methods_supported).toContain("header");
+  });
+
+  it("oauth-protected-resource resource id follows the requested path (RFC 9728 §3.1)", async () => {
+    const ctx = { params: Promise.resolve({ path: ["en"] }) };
+    const body = await (await oauthResource(new Request("https://cloudless.gr"), ctx)).json();
+    expect(body.resource).toBe("https://cloudless.gr/en");
+    expect(body.authorization_servers).toContain("https://cloudless.gr");
   });
 
   it("openid-configuration has all required endpoints", async () => {
