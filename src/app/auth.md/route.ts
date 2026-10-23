@@ -3,31 +3,27 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const content = `# auth.md — Agent Authentication & Registration (Cloudless.gr)
 
-This document provides instructions for AI agents to register and authenticate with the Cloudless.gr API.
+This document describes how agents and automated clients register and authenticate with the Cloudless.gr API.
 
 ## Authentication Method
-Cloudless.gr uses OAuth 2.0 / OpenID Connect (OIDC) for agent authentication.
+Cloudless.gr uses session-based authentication (NextAuth credentials). An
+authenticated session is established interactively at \`/auth/login\`; API
+requests carry the session cookie or the session token in the
+\`Authorization: Bearer\` header.
 
 ## Discovery
-Agents can discover authentication endpoints via:
-- OIDC Configuration: \`/.well-known/openid-configuration\`
-- Protected Resource Metadata: \`/.well-known/oauth-protected-resource\`
+- OIDC discovery: \`/.well-known/openid-configuration\`
+- OAuth 2.0 Protected Resource Metadata (RFC 9728): \`/.well-known/oauth-protected-resource\`
+- Authorization Server Metadata (RFC 8414): \`/.well-known/oauth-authorization-server\`
 
-## Registration Process
-1. **Request Access**: Agents should request a client ID and secret via the administrative contact or the provided registration URI in the OIDC configuration.
-2. **Identity Verification**: Agents must provide their identity metadata (e.g., developer info, purpose of access).
-3. **Credential Issuance**: Upon approval, a \`client_id\` and \`client_secret\` will be issued.
+## Registration
+1. **Self-service**: \`POST /api/auth/register\` with \`{"email", "password"}\` creates an account and sends an activation email; the account is usable once the link in that email is confirmed.
+2. **Service/agent accounts**: request a dedicated account via the administrative contact (\`/contact\`) — state the agent's identity and intended use.
 
 ## Authentication Flow
-Agents should use the \`client_credentials\` grant type for machine-to-machine communication:
-
 \`\`\`http
-POST /api/auth/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=client_credentials&
-client_id=YOUR_CLIENT_ID&
-client_secret=YOUR_CLIENT_SECRET
+GET /auth/login            # interactive sign-in
+GET /api/auth/session      # current session state (JSON)
 \`\`\`
 
 ## Scopes
