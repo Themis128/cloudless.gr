@@ -146,6 +146,21 @@ nextConfig.rewrites = async () => ({
       source: "/.well-known/agent-card.json",
       destination: "/api/.well-known/agent-card.json",
     },
+    {
+      // Agentic Commerce Protocol discovery (rfc.discovery).
+      source: "/.well-known/acp.json",
+      destination: "/api/.well-known/acp.json",
+    },
+    {
+      // Universal Commerce Protocol business profile.
+      source: "/.well-known/ucp",
+      destination: "/api/.well-known/ucp",
+    },
+    {
+      // Web Bot Auth (RFC 9421 message signatures) JWKS directory.
+      source: "/.well-known/http-message-signatures-directory",
+      destination: "/api/.well-known/http-message-signatures-directory",
+    },
   ],
   afterFiles: [],
   fallback: [],
