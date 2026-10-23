@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   const rawItems = Array.isArray(body.line_items) ? body.line_items : [];
   const items = rawItems
-    .map((li) => ({ id: li.item?.id, quantity: li.quantity }))
+    .map((li) => ({ id: li?.item?.id, quantity: li?.quantity }))
     .filter((i) => i.id);
   if (items.length === 0) {
     return ucpError("line_items is required and each entry needs an item.id.", 400, "$.line_items");

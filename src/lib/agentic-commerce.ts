@@ -56,7 +56,9 @@ export async function resolveLineItems(
 ): Promise<ResolvedLineItem[]> {
   const resolved: ResolvedLineItem[] = [];
   for (const item of items) {
-    const id = (item.id ?? "").trim();
+    // Entries arrive as parsed JSON — a null/malformed element must not
+    // throw a TypeError here; it is a client error (400) like any unknown id.
+    const id = (item && typeof item === "object" ? (item.id ?? "") : "").trim();
     if (!id) throw new UnknownItemError("(empty)");
     const product = await getProductByIdAsync(id);
     if (!product) throw new UnknownItemError(id);
