@@ -119,7 +119,9 @@ async function callTool(name: string, args: Record<string, unknown>, ip: string)
         .slice(0, 500)
         .trim();
       if (!message) return toolText("Empty message.", true);
-      const text = await runWorkersAiChatLoop(SYSTEM_PROMPT, [{ role: "user", content: message }]);
+      const text = await runWorkersAiChatLoop(SYSTEM_PROMPT, [{ role: "user", content: message }], {
+        allowBooking: false,
+      });
       return toolText(text);
     }
     return toolText(`Unknown tool: ${name}`, true);

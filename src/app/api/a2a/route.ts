@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
       const text = extractText(params.message).slice(0, 500);
       if (!text) return rpcError(body.id ?? null, -32602, "message.parts must contain a text part");
       try {
-        const reply = await runWorkersAiChatLoop(SYSTEM_PROMPT, [{ role: "user", content: text }]);
+        const reply = await runWorkersAiChatLoop(SYSTEM_PROMPT, [{ role: "user", content: text }], {
+          allowBooking: false,
+        });
         return rpcResult(body.id ?? null, {
           kind: "message",
           messageId: randomUUID(),
