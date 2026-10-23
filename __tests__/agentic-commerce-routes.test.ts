@@ -24,6 +24,7 @@ import { GET as acpGet } from "@/app/api/acp/checkout_sessions/[id]/route";
 import { POST as acpCancel } from "@/app/api/acp/checkout_sessions/[id]/cancel/route";
 import { POST as acpComplete } from "@/app/api/acp/checkout_sessions/[id]/complete/route";
 import { GET as acpDiscovery } from "@/app/api/.well-known/acp.json/route";
+import { GET as botAuthJwks } from "@/app/api/.well-known/http-message-signatures-directory/route";
 import { GET as ucpProfile } from "@/app/api/.well-known/ucp/route";
 import { POST as ucpSearch } from "@/app/api/ucp/catalog/search/route";
 import { POST as ucpLookup } from "@/app/api/ucp/catalog/lookup/route";
@@ -354,5 +355,18 @@ describe("UCP profile + catalog + checkout", () => {
     expect((await ucpGet(req("/x"), params("cs_x"))).status).toBe(503);
     expect((await ucpCancel(req("/x"), params("cs_x"))).status).toBe(503);
     expect((await ucpComplete(req("/x"), params("cs_x"))).status).toBe(503);
+  });
+});
+
+describe("Web Bot Auth JWKS", () => {
+  it("serves the Ed25519 verification key", async () => {
+    const res = await botAuthJwks();
+    const doc = await res.json();
+    expect(res.status).toBe(200);
+    expect(doc.keys).toHaveLength(1);
+    expect(doc.keys[0].kty).toBe("OKP");
+    expect(doc.keys[0].crv).toBe("Ed25519");
+    expect(doc.keys[0].kid).toBeTruthy();
+    expect(res.headers.get("cache-control")).toContain("max-age=86400");
   });
 });
