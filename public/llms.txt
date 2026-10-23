@@ -1,0 +1,38 @@
+# Cloudless
+
+> Websites, cloud infrastructure, and AI automations for small teams that have
+> been let down before — fixed scope, no lock-in, measurable results in 14 days.
+> Cloudless (cloudless.gr) is a Greek cloud/serverless consultancy and product
+> studio serving EU clients in English and Greek.
+
+## Main sections
+
+- [Homepage](https://cloudless.gr/en): productized cloud, serverless and AI
+  automation offers for small teams.
+- [Services](https://cloudless.gr/en/services): fixed-scope service packages
+  (cloud migration, serverless backends, AI marketing automation).
+- [Docs](https://cloudless.gr/en/docs): product and API documentation index.
+- [Playbooks](https://cloudless.gr/playbooks): operational playbooks.
+- [Blog](https://cloudless.gr/en/blog): engineering notes and case studies.
+- [Contact](https://cloudless.gr/en/contact): book a free 30-minute audit.
+- [Legal](https://cloudless.gr/en/privacy): privacy policy; also
+  [terms](https://cloudless.gr/en/terms),
+  [cookies](https://cloudless.gr/en/cookies),
+  [accessibility](https://cloudless.gr/en/accessibility),
+  [refunds](https://cloudless.gr/en/refund).
+
+## Agent-facing surfaces
+
+- [API catalog](https://cloudless.gr/.well-known/api-catalog): RFC 9727
+  linkset of public JSON APIs (chat, docs, calendar, analytics, health).
+- [ARD capability manifest](https://cloudless.gr/.well-known/ai-catalog.json):
+  agentic resource discovery entries.
+- [Docs index API](https://cloudless.gr/api/docs): machine-readable doc list.
+- [Chat API](https://cloudless.gr/api/chat): assistant endpoint (JSON POST).
+- [Health](https://cloudless.gr/api/health): liveness endpoint.
+- [auth.md](https://cloudless.gr/auth.md): agent auth & registration guide.
+- [Agent skills](https://cloudless.gr/.well-known/agent-skills/index.json):
+  published Agent Skills for this site.
+
+Pages accept `Accept: text/markdown` and return Markdown
+(`Content-Type: text/markdown`) — see /llms-full.txt for the expanded index.
