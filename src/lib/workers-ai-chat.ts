@@ -106,12 +106,21 @@ async function callChatBackend(messages: { role: string; content: string }[]): P
  */
 export async function runWorkersAiChatLoop(
   systemPrompt: string,
-  initialMessages: { role: "user" | "assistant"; content: string }[]
+  initialMessages: { role: "user" | "assistant"; content: string }[],
+  options: { allowBooking?: boolean } = {}
 ): Promise<string> {
+  // Unauthenticated agent channels (MCP, A2A) call this with allowBooking:false —
+  // book_slot is then neither advertised nor executed, so writes stay behind
+  // the direct booking endpoints' tighter rate limits.
+  const allowBooking = options.allowBooking !== false;
+  const tools = allowBooking ? CHAT_TOOLS : CHAT_TOOLS.filter((t) => t.name !== "book_slot");
+  const effectivePrompt = allowBooking
+    ? systemPrompt
+    : `${systemPrompt}\n\nIMPORTANT: Booking is not available through this channel. If the visitor asks to book, direct them to the website chat or Contact page — never attempt a booking call.`;
   const messages: { role: string; content: string }[] = [
     {
       role: "system",
-      content: `${systemPrompt}\n\n${buildWorkersAiToolProtocol(CHAT_TOOLS)}`,
+      content: `${effectivePrompt}\n\n${buildWorkersAiToolProtocol(tools)}`,
     },
     ...initialMessages.map((m) => ({ role: m.role, content: m.content })),
   ];
@@ -125,7 +134,7 @@ export async function runWorkersAiChatLoop(
   // message check is lenient: "Athens" alone (covers tab-separated tables, pipe
   // tables, and any format the model chooses).
   const lastUserMsg = initialMessages.filter((m) => m.role === "user").at(-1)?.content ?? "";
-  const bookingReply = tryParseBookingReply(lastUserMsg);
+  const bookingReply = allowBooking ? tryParseBookingReply(lastUserMsg) : null;
   if (bookingReply) {
     const prevAssistant = [...initialMessages].reverse().find((m) => m.role === "assistant");
     // Accept any prior assistant message that looks like a slot table:
@@ -192,7 +201,18 @@ export async function runWorkersAiChatLoop(
     }
 
     messages.push({ role: "assistant", content: reply });
-    const toolResult = await runTool(toolCall.name, toolCall.args);
+    let toolResult =
+      !allowBooking && toolCall.name === "book_slot"
+        ? "Booking is not available through this channel. Ask the visitor to book via the website chat or Contact page."
+        : await runTool(toolCall.name, toolCall.args);
+    // check_calendar_availability's output still carries book_slot instructions —
+    // strip them on read-only channels so the model never sees a write directive.
+    if (!allowBooking && toolCall.name === "check_calendar_availability") {
+      toolResult = toolResult.replace(
+        /ASK THE VISITOR:[\s\S]*$/,
+        "If the visitor wants to book, direct them to the website chat or Contact page — booking is not available through this channel."
+      );
+    }
     messages.push({
       role: "user",
       content: `TOOL_RESULT for ${toolCall.name}:\n${toolResult}`,
