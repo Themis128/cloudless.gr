@@ -11,7 +11,8 @@ const sessions = {
   retrieve: vi.fn(),
   expire: vi.fn(),
 };
-const getStripe = vi.fn(async () => ({ checkout: { sessions } }));
+const paymentIntents = { create: vi.fn() };
+const getStripe = vi.fn(async () => ({ checkout: { sessions }, paymentIntents }));
 const listStripeProducts = vi.fn(async () => null);
 
 vi.mock("@/lib/stripe", () => ({
@@ -57,7 +58,7 @@ const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getStripe.mockResolvedValue({ checkout: { sessions } } as never);
+  getStripe.mockResolvedValue({ checkout: { sessions }, paymentIntents } as never);
 });
 
 describe("ACP discovery + checkout_sessions", () => {
@@ -405,5 +406,64 @@ describe("delegated payments", () => {
     const handlers = (await res.json()).capabilities.payment_handlers;
     expect(handlers).toHaveLength(1);
     expect(handlers[0].id).toBe("dev.acp.hosted_checkout");
+  });
+});
+describe("delegated payments enabled", () => {
+  const delegated = (body: unknown) =>
+    acpComplete(
+      new NextRequest("https://cloudless.gr/api/acp/checkout_sessions/cs_test_1/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      params("cs_test_1")
+    );
+
+  it("charges an SPT token and completes the session", async () => {
+    process.env.ACP_DELEGATED_PAYMENTS = "1";
+    sessions.retrieve.mockResolvedValue({ ...OPEN_SESSION, amount_total: 5000 });
+    paymentIntents.create.mockResolvedValue({ status: "succeeded" });
+    const res = await delegated({ payment_data: { id: "spt_1" } });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("completed");
+    expect(body.order.id).toBe("cs_test_1");
+    expect(paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 5000, shared_payment_token: "spt_1" })
+    );
+    delete process.env.ACP_DELEGATED_PAYMENTS;
+  });
+
+  it("charges a classic pm_ token via payment_method", async () => {
+    process.env.ACP_DELEGATED_PAYMENTS = "1";
+    sessions.retrieve.mockResolvedValue({ ...OPEN_SESSION, amount_total: 100 });
+    paymentIntents.create.mockResolvedValue({ status: "succeeded" });
+    await delegated({ token: "pm_card_visa" });
+    expect(paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_method: "pm_card_visa" })
+    );
+    delete process.env.ACP_DELEGATED_PAYMENTS;
+  });
+
+  it("maps requires_action, processing, declines and no-amount", async () => {
+    process.env.ACP_DELEGATED_PAYMENTS = "1";
+    sessions.retrieve.mockResolvedValue({ ...OPEN_SESSION, amount_total: 100 });
+
+    paymentIntents.create.mockResolvedValue({ status: "requires_action" });
+    expect((await delegated({ token: "spt_1" })).status).toBe(402);
+
+    paymentIntents.create.mockResolvedValue({ status: "processing" });
+    expect((await delegated({ token: "spt_1" })).status).toBe(409);
+
+    paymentIntents.create.mockRejectedValue(new Error("card was declined"));
+    const dec = await delegated({ token: "spt_1" });
+    expect(dec.status).toBe(402);
+    expect((await dec.json()).code).toBe("payment_declined");
+
+    sessions.retrieve.mockResolvedValue({ ...OPEN_SESSION, amount_total: 0 });
+    const noAmt = await delegated({ token: "spt_1" });
+    expect(noAmt.status).toBe(402);
+    expect((await noAmt.json()).code).toBe("invalid_amount");
+    delete process.env.ACP_DELEGATED_PAYMENTS;
   });
 });
