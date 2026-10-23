@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const content = `# Agent Authentication & Registration - Cloudless.gr
+  const content = `# auth.md — Agent Authentication & Registration (Cloudless.gr)
 
 This document provides instructions for AI agents to register and authenticate with the Cloudless.gr API.
 

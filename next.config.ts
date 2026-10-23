@@ -120,8 +120,15 @@ nextConfig.rewrites = async () => ({
       destination: "/api/.well-known/api-catalog",
     },
     {
-      source: "/.well-known/oauth-protected-resource",
+      // Catch-all: RFC 9728 §3.1 inserts the well-known path before the
+      // resource path — /.well-known/oauth-protected-resource/en must serve
+      // the same metadata document (resource id stays the origin).
+      source: "/.well-known/oauth-protected-resource/:path*",
       destination: "/api/.well-known/oauth-protected-resource",
+    },
+    {
+      source: "/.well-known/oauth-authorization-server",
+      destination: "/api/.well-known/oauth-authorization-server",
     },
     {
       source: "/.well-known/openid-configuration",
