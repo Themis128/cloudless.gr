@@ -9,6 +9,9 @@ export async function GET() {
   return NextResponse.json({
     issuer: "https://cloudless.gr",
     authorization_endpoint: "https://cloudless.gr/auth/login",
+    // RFC 8414 required field — the interactive login issues session tokens
+    // in a code-like flow; no token endpoint is advertised (none exists).
+    response_types_supported: ["code"],
     scopes_supported: ["openid", "profile", "email", "admin"],
     service_documentation: "https://cloudless.gr/auth.md",
   });
