@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return rpcError(null, -32700, "Parse error");
   }
+  if (typeof body !== "object" || body === null) {
+    return rpcError(null, -32600, "Invalid Request");
+  }
   if (body.jsonrpc !== "2.0" || typeof body.method !== "string") {
     return rpcError(body.id ?? null, -32600, "Invalid Request");
   }

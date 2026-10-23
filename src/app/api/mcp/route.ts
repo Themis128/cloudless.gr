@@ -5,6 +5,8 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { runWorkersAiChatLoop } from "@/lib/workers-ai-chat";
 import { SYSTEM_PROMPT } from "@/app/api/chat/route";
 import { slackBookingNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
+import { invalidateConsultationCache } from "@/lib/content-calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +68,7 @@ function toolText(text: string, isError = false) {
   return { content: [{ type: "text", text }], isError };
 }
 
-async function callTool(name: string, args: Record<string, unknown>) {
+async function callTool(name: string, args: Record<string, unknown>, ip: string) {
   try {
     if (name === "check_availability") {
       const days = Math.max(1, Math.min(Number(args.days_ahead ?? 7) || 7, 30));
@@ -74,6 +76,9 @@ async function callTool(name: string, args: Record<string, unknown>) {
       return toolText(JSON.stringify({ slots }));
     }
     if (name === "book_consultation") {
+      // Same booking-specific rate limit as POST /api/calendar/book.
+      const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
+      if (!rl.ok) return toolText("Rate limit exceeded. Try later.", true);
       const { name: vname, email, start, end, notes } = args as Record<string, string>;
       if (!vname || !email || !start || !end || !isValidEmail(email)) {
         return toolText("Missing or invalid name/email/start/end.", true);
@@ -90,7 +95,18 @@ async function callTool(name: string, args: Record<string, unknown>) {
       }
       const result = await bookConsultation({ name: vname, email, start, end, notes });
       if (!result) return toolText("Failed to create booking.", true);
+      // Same side effects as POST /api/calendar/book.
+      invalidateConsultationCache();
       slackBookingNotify({ name: vname, email, start, notes }).catch(() => {});
+      recordNotification({
+        category: "booking",
+        type: "success",
+        title: `New consultation booked: ${vname}`,
+        message: `${vname} (${email}) booked ${start}`,
+        actor: email,
+        route: "/api/mcp",
+        metadata: { start, notes: notes ? notes.slice(0, 500) : null },
+      });
       return toolText(JSON.stringify({ success: true, booking: result }));
     }
     if (name === "ask_cloudless_assistant") {
@@ -118,6 +134,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return rpcError(null, -32700, "Parse error");
   }
+  if (typeof body !== "object" || body === null) {
+    return rpcError(null, -32600, "Invalid Request");
+  }
   if (body.jsonrpc !== "2.0" || typeof body.method !== "string") {
     return rpcError(body.id ?? null, -32600, "Invalid Request");
   }
@@ -142,7 +161,7 @@ export async function POST(request: NextRequest) {
       const params = body.params ?? {};
       const name = typeof params.name === "string" ? params.name : "";
       const args = (params.arguments ?? {}) as Record<string, unknown>;
-      return rpcResult(body.id, await callTool(name, args));
+      return rpcResult(body.id, await callTool(name, args, getClientIp(request)));
     }
     default:
       return rpcError(body.id, -32601, `Method not found: ${body.method}`);
