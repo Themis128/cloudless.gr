@@ -105,9 +105,13 @@ describe("POST /api/mcp (JSON-RPC)", () => {
     );
     const body = await res.json();
     expect(body.result.content[0].text).toContain("serverless");
-    expect(mockChatLoop).toHaveBeenCalledWith(expect.any(String), [
-      { role: "user", content: "pricing?" },
-    ]);
+    expect(mockChatLoop).toHaveBeenCalledWith(
+      expect.any(String),
+      [{ role: "user", content: "pricing?" }],
+      {
+        allowBooking: false,
+      }
+    );
   });
 
   it("unknown method → -32601; notification (no id) → 202; bad json → -32700", async () => {
