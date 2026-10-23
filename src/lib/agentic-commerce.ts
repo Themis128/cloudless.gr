@@ -476,3 +476,61 @@ export function ucpCheckoutFromStripe(
     expires_at: toIso(session.expires_at),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Shared route helpers (ACP + UCP thin routes)
+// ---------------------------------------------------------------------------
+
+type SessionResult =
+  | { ok: true; stripe: Stripe; session: Stripe.Checkout.Session }
+  | { ok: false; stripe: Stripe | null; status: number; code: string; message: string };
+
+/** Retrieve the Stripe Checkout Session backing an agentic session id. */
+export async function fetchStripeSession(id: string): Promise<SessionResult> {
+  const stripe = await getStripe();
+  if (!stripe) {
+    return {
+      ok: false,
+      stripe,
+      status: 503,
+      code: "payments_unavailable",
+      message: "Payment processing is temporarily unavailable.",
+    };
+  }
+  try {
+    return { ok: true, stripe, session: await stripe.checkout.sessions.retrieve(id) };
+  } catch {
+    return {
+      ok: false,
+      stripe,
+      status: 404,
+      code: "session_not_found",
+      message: "Checkout session not found.",
+    };
+  }
+}
+
+/** Expire the Stripe Checkout Session backing an agentic session id. */
+export async function expireStripeSession(id: string): Promise<SessionResult> {
+  const stripe = await getStripe();
+  if (!stripe) {
+    return {
+      ok: false,
+      stripe,
+      status: 503,
+      code: "payments_unavailable",
+      message: "Payment processing is temporarily unavailable.",
+    };
+  }
+  try {
+    return { ok: true, stripe, session: await stripe.checkout.sessions.expire(id) };
+  } catch {
+    return {
+      ok: false,
+      stripe,
+      status: 400,
+      code: "cannot_cancel",
+      message: "Checkout session not found or already completed/expired.",
+    };
+  }
+}

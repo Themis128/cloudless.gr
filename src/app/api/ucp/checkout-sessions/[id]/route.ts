@@ -1,37 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
 import {
+  fetchStripeSession,
   resolvedItemsFromSession,
   ucpCheckoutFromStripe,
   ucpEnvelope,
 } from "@/lib/agentic-commerce";
 
-function ucpError(message: string, status: number) {
-  return NextResponse.json(
-    {
-      ucp: ucpEnvelope("checkout"),
-      messages: [{ type: "error", content_type: "plain", content: message }],
-    },
-    { status }
-  );
-}
-
-/**
- * GET /api/ucp/checkout-sessions/{id} — retrieve a UCP checkout session.
- * The id is the Stripe Checkout Session id; Stripe is the state store.
- */
+/** GET /api/ucp/checkout-sessions/{id} — retrieve a UCP checkout session. */
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const stripe = await getStripe();
-  if (!stripe) return ucpError("Payment processing is temporarily unavailable.", 503);
-
-  let session;
-  try {
-    session = await stripe.checkout.sessions.retrieve(id);
-  } catch {
-    return ucpError("Checkout session not found.", 404);
+  const result = await fetchStripeSession(id);
+  if (!result.ok) {
+    return NextResponse.json(
+      {
+        ucp: ucpEnvelope("checkout"),
+        messages: [{ type: "error", content_type: "plain", content: result.message }],
+      },
+      { status: result.status }
+    );
   }
-
-  const resolved = await resolvedItemsFromSession(session);
-  return NextResponse.json(ucpCheckoutFromStripe(session, resolved));
+  const resolved = await resolvedItemsFromSession(result.session);
+  return NextResponse.json(ucpCheckoutFromStripe(result.session, resolved));
 }

@@ -1,48 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
-import { acpSessionFromStripe, resolvedItemsFromSession } from "@/lib/agentic-commerce";
+import {
+  acpSessionFromStripe,
+  expireStripeSession,
+  resolvedItemsFromSession,
+} from "@/lib/agentic-commerce";
 
-function acpError(
-  type: "invalid_request" | "processing_error" | "service_unavailable",
-  code: string,
-  message: string,
-  status: number
-) {
-  return NextResponse.json({ type, code, message }, { status });
-}
-
-/**
- * POST /api/acp/checkout_sessions/{id}/cancel — ACP cancelCheckoutSession.
- * Expires the underlying Stripe Checkout Session.
- */
+/** POST /api/acp/checkout_sessions/{id}/cancel — expires the Stripe session. */
 export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const stripe = await getStripe();
-  if (!stripe) {
-    return acpError(
-      "service_unavailable",
-      "payments_unavailable",
-      "Payment processing is temporarily unavailable.",
-      503
+  const result = await expireStripeSession(id);
+  if (!result.ok) {
+    const type = result.status === 503 ? "service_unavailable" : "invalid_request";
+    return NextResponse.json(
+      { type, code: result.code, message: result.message },
+      { status: result.status }
     );
   }
-
-  let session;
-  try {
-    session = await stripe.checkout.sessions.expire(id);
-  } catch {
-    return acpError(
-      "invalid_request",
-      "cannot_cancel",
-      "Checkout session not found or already completed/expired.",
-      400
-    );
-  }
-
-  const resolved = await resolvedItemsFromSession(session);
-  const body = acpSessionFromStripe(session, resolved) as Record<string, unknown>;
-  // Stripe reports the terminal state as `expired`; ACP semantics for an
-  // agent-initiated cancel are `canceled`.
+  const resolved = await resolvedItemsFromSession(result.session);
+  const body = acpSessionFromStripe(result.session, resolved) as Record<string, unknown>;
+  // Stripe reports the terminal state as `expired`; an agent-initiated
+  // cancel maps to ACP `canceled`.
   if (body.status === "expired") body.status = "canceled";
   return NextResponse.json(body);
 }

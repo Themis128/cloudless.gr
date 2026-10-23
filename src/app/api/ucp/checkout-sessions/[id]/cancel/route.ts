@@ -1,52 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
 import {
+  expireStripeSession,
   resolvedItemsFromSession,
   ucpCheckoutFromStripe,
   ucpEnvelope,
 } from "@/lib/agentic-commerce";
 
-/**
- * POST /api/ucp/checkout-sessions/{id}/cancel — expire the Stripe session.
- */
+/** POST /api/ucp/checkout-sessions/{id}/cancel — expire the Stripe session. */
 export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const stripe = await getStripe();
-  if (!stripe) {
+  const result = await expireStripeSession(id);
+  if (!result.ok) {
     return NextResponse.json(
       {
         ucp: ucpEnvelope("checkout"),
-        messages: [
-          {
-            type: "error",
-            content_type: "plain",
-            content: "Payment processing is temporarily unavailable.",
-          },
-        ],
+        messages: [{ type: "error", content_type: "plain", content: result.message }],
       },
-      { status: 503 }
+      { status: result.status }
     );
   }
-
-  let session;
-  try {
-    session = await stripe.checkout.sessions.expire(id);
-  } catch {
-    return NextResponse.json(
-      {
-        ucp: ucpEnvelope("checkout"),
-        messages: [
-          {
-            type: "error",
-            content_type: "plain",
-            content: "Checkout session not found or already completed/expired.",
-          },
-        ],
-      },
-      { status: 400 }
-    );
-  }
-
-  const resolved = await resolvedItemsFromSession(session);
-  return NextResponse.json(ucpCheckoutFromStripe(session, resolved));
+  const resolved = await resolvedItemsFromSession(result.session);
+  return NextResponse.json(ucpCheckoutFromStripe(result.session, resolved));
 }
