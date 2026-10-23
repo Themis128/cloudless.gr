@@ -16,8 +16,6 @@ import { ADMIN_TOKEN, api } from "./_helpers";
 
 const WORKER = "https://postiz-ai-proxy.baltzakis-themis.workers.dev";
 const PROXY_TOKEN = "69d8f49bc06ada482c44134ea3caae10329b2a2b1a83372db637a3b94eb8fa19";
-const CHATBOT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
-const POSTIZ_MODEL = "nvidia/nemotron-3-super-120b-a12b";
 const authHeaders = { authorization: `Bearer ${ADMIN_TOKEN}` };
 
 // ── 1. Worker: unauthenticated paths ─────────────────────────────────────────
@@ -45,7 +43,7 @@ test.describe("postiz-ai-proxy Worker — public", () => {
 // ── 2. Worker: model swap ─────────────────────────────────────────────────────
 
 test.describe("postiz-ai-proxy Worker — model swap", () => {
-  test("POST /v1/chat/completions swaps gpt-4.1 → llama-3.3-70b and returns a completion", async ({
+  test("POST /v1/chat/completions swaps gpt-4.1 → nemotron-3.5-super and returns a completion", async ({
     request,
   }) => {
     const res = await request.post(`${WORKER}/v1/chat/completions`, {
@@ -67,7 +65,9 @@ test.describe("postiz-ai-proxy Worker — model swap", () => {
     if (res.status() === 200) {
       const body = (await res.json()) as Record<string, unknown>;
       // Confirm the upstream model is the Postiz caption model, not gpt-4.1
-      expect(body.model as string).toBe(POSTIZ_MODEL);
+      // The worker env pins nvidia/nemotron-3.5-super-vl-120b-a12b; NVIDIA echoes
+      // early-access models under a private/ alias, so assert the family.
+      expect(body.model as string).toContain("nemotron-3.5-super");
       const choices = body.choices as Array<{ message: { content: string } }>;
       expect(choices.length).toBeGreaterThan(0);
       expect(typeof choices[0].message.content).toBe("string");
@@ -105,7 +105,9 @@ test("POST /v1/chat/completions?thinking=1 uses nemotron model and strips reason
   expect([200, 503]).toContain(res.status());
   if (res.status() === 200) {
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.model as string).toBe(CHATBOT_MODEL);
+    // The worker env pins nvidia/nemotron-3.5-super-vl-120b-a12b; NVIDIA echoes
+    // early-access models under a private/ alias, so assert the family.
+    expect(body.model as string).toContain("nemotron-3.5-super");
     const choices = body.choices as Array<{ message: Record<string, unknown> }>;
     expect(choices.length).toBeGreaterThan(0);
     // reasoning_content must be stripped — only content survives
