@@ -133,6 +133,17 @@ describe("ACP discovery + checkout_sessions", () => {
     ).toBe(400);
   });
 
+  it("returns 500 when the Stripe create call fails", async () => {
+    sessions.create.mockRejectedValue(new Error("stripe down"));
+    const res = await acpCreate(
+      req("/api/acp/checkout_sessions", {
+        line_items: [{ id: "srv-cloud" }],
+      })
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).type).toBe("processing_error");
+  });
+
   it("returns 503 when Stripe is not configured", async () => {
     getStripe.mockResolvedValue(null as never);
     const res = await acpCreate(
@@ -291,6 +302,17 @@ describe("UCP profile + catalog + checkout", () => {
         )
       ).status
     ).toBe(400);
+
+    sessions.create.mockRejectedValue(new Error("stripe down"));
+    expect(
+      (
+        await ucpCreate(
+          req("/api/ucp/checkout-sessions", {
+            line_items: [{ item: { id: "srv-cloud" } }],
+          })
+        )
+      ).status
+    ).toBe(500);
 
     getStripe.mockResolvedValue(null as never);
     expect(
