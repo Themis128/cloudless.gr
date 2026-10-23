@@ -114,10 +114,13 @@ export async function runWorkersAiChatLoop(
   // the direct booking endpoints' tighter rate limits.
   const allowBooking = options.allowBooking !== false;
   const tools = allowBooking ? CHAT_TOOLS : CHAT_TOOLS.filter((t) => t.name !== "book_slot");
+  const effectivePrompt = allowBooking
+    ? systemPrompt
+    : `${systemPrompt}\n\nIMPORTANT: Booking is not available through this channel. If the visitor asks to book, direct them to the website chat or Contact page — never attempt a booking call.`;
   const messages: { role: string; content: string }[] = [
     {
       role: "system",
-      content: `${systemPrompt}\n\n${buildWorkersAiToolProtocol(tools)}`,
+      content: `${effectivePrompt}\n\n${buildWorkersAiToolProtocol(tools)}`,
     },
     ...initialMessages.map((m) => ({ role: m.role, content: m.content })),
   ];
