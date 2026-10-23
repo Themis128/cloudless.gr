@@ -11,8 +11,8 @@ export default defineConfig({
 		},
 		env: {
 			NVIDIA_BASE_URL: bindings.text("https://integrate.api.nvidia.com/v1"),
-			NVIDIA_MODEL: bindings.text("nvidia/nemotron-3-super-120b-a12b"),
-			NVIDIA_POSTIZ_MODEL: bindings.text("nvidia/nemotron-3-super-120b-a12b"),
+			NVIDIA_MODEL: bindings.text("nvidia/nemotron-3.5-super-vl-120b-a12b"),
+			NVIDIA_POSTIZ_MODEL: bindings.text("nvidia/nemotron-3.5-super-vl-120b-a12b"),
 			POLLINATIONS_IMAGE_MODEL: bindings.text("flux"),
 		},
 	},
