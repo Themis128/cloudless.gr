@@ -66,7 +66,8 @@ jobs:
           echo
           echo "=== Service state ==="
           for svc in docker containerd tailscaled k3s openmediavault-engined; do
-            printf '%-28s %s\n' "$svc" "$(systemctl is-active "$svc" 2>/dev/null || echo 'n/a')"
+            state=$(systemctl show -p ActiveState --value "$svc" 2>/dev/null || true)
+            printf '%-28s %s\n' "$svc" "${state:-n/a}"
           done
           echo
           echo "=== Docker containers ==="
@@ -76,4 +77,15 @@ jobs:
           sudo k3s kubectl get nodes -o wide 2>/dev/null || echo "k3s kubectl unavailable"
           echo
           echo "=== Reboot required? ==="
-          if [ -f /var/run/reboot-required ]; then cat /var/run/reboot-required.pkgs 2>/dev/null || echo "reboot required"; else echo "no"; fi
+          # /var/run/reboot-required only exists when update-notifier-common is
+          # installed — also compare running vs newest installed kernel image.
+          if [ -f /var/run/reboot-required ]; then
+            cat /var/run/reboot-required.pkgs 2>/dev/null || echo "reboot required"
+          fi
+          running=$(uname -r)
+          newest=$(ls -t /boot/vmlinuz-* 2>/dev/null | head -1 | sed 's|.*/vmlinuz-||')
+          if [ -n "$newest" ] && [ "$running" != "$newest" ]; then
+            echo "kernel pending: running=$running installed=$newest"
+          elif [ ! -f /var/run/reboot-required ]; then
+            echo "no"
+          fi
