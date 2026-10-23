@@ -1,0 +1,91 @@
+name: omv apt upgrade
+
+# Applies pending apt package upgrades on the omv host (the reports come in
+# via apticron mail). Runs directly on the omv self-hosted runner.
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — apt-get update + list pending.
+#   apply=true:            dist-upgrade, then post-checks (remaining pending,
+#                          docker/containerd/tailscale/k3s service state).
+#
+# Notes:
+# - docker-ce/containerd upgrades restart dockerd — Docker containers on omv
+#   bounce briefly. k3s workloads run under k3s's bundled containerd and are
+#   not affected.
+# - tailscale upgrade bounces tailscaled briefly (tailnet blip only).
+# - --force-confdef/--force-confold keeps dpkg from prompting on conffile
+#   changes (non-interactive runner).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Run apt-get dist-upgrade (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+
+# OMV mutations on this host must never overlap — shared group on purpose.
+concurrency:
+  group: omv-host-mutation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apt-upgrade:
+    name: omv apt upgrade
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 30
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+    steps:
+      - name: Refresh package lists and show pending
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          echo "=== Pending upgrades ==="
+          apt list --upgradable 2>/dev/null | grep -v '^Listing' || echo "(none)"
+
+      - name: Dist-upgrade
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            dist-upgrade
+
+      - name: Post-checks
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          echo "=== Remaining upgradable ==="
+          apt list --upgradable 2>/dev/null | grep -v '^Listing' || echo "(none)"
+          echo
+          echo "=== Service state ==="
+          for svc in docker containerd tailscaled k3s openmediavault-engined; do
+            state=$(systemctl show -p ActiveState --value "$svc" 2>/dev/null || true)
+            printf '%-28s %s\n' "$svc" "${state:-n/a}"
+          done
+          echo
+          echo "=== Docker containers ==="
+          sudo docker ps --format '{{.Names}} ({{.Status}})' 2>/dev/null || echo "docker unavailable"
+          echo
+          echo "=== k3s nodes ==="
+          sudo k3s kubectl get nodes -o wide 2>/dev/null || echo "k3s kubectl unavailable"
+          echo
+          echo "=== Reboot required? ==="
+          # /var/run/reboot-required only exists when update-notifier-common is
+          # installed — also compare running vs newest installed kernel image.
+          if [ -f /var/run/reboot-required ]; then
+            cat /var/run/reboot-required.pkgs 2>/dev/null || echo "reboot required"
+          fi
+          running=$(uname -r)
+          newest=$(ls -t /boot/vmlinuz-* 2>/dev/null | head -1 | sed 's|.*/vmlinuz-||')
+          if [ -n "$newest" ] && [ "$running" != "$newest" ]; then
+            echo "kernel pending: running=$running installed=$newest"
+          elif [ ! -f /var/run/reboot-required ]; then
+            echo "no"
+          fi
