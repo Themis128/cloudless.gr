@@ -1,0 +1,42 @@
+User-agent: *
+Allow: /
+Disallow: /remote.php
+Disallow: /apps/
+Disallow: /index.php/apps/
+Disallow: /settings/
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+Sitemap: https://cloud.cloudless.gr/sitemap.xml

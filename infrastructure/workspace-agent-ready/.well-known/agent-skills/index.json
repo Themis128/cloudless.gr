@@ -1,0 +1,1 @@
+{"$schema":"https://agentskills.io/schema/agent-skills-index-0.2.0.json","skills":[{"name":"nextcloud-ops","type":"skill","description":"Nextcloud workspace file/DAV/OCS operations","url":"https://github.com/Themis128/cu130-slim/blob/main/deploy/omv-workspace/README.md","sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}]}

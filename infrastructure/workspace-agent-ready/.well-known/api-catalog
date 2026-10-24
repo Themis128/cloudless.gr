@@ -1,0 +1,1 @@
+{"linkset":[{"anchor":"https://cloud.cloudless.gr/ocs/v2.php","service-desc":[{"href":"https://cloud.cloudless.gr/.well-known/openapi.json","type":"application/vnd.oai.openapi+json"}],"service-doc":[{"href":"https://docs.nextcloud.com/server/latest/developer_manual/","type":"text/html"}],"status":[{"href":"https://cloud.cloudless.gr/status.php"}]}]}
