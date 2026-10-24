@@ -104,8 +104,9 @@ jobs:
             docker cp "$SRC/auth.md"     "$NC:$ROOT/auth.md"
             docker cp "$SRC/skill.md"    "$NC:$ROOT/skill.md"
             docker cp "$SRC/index.md"    "$NC:$ROOT/index.md"
+            docker cp "$SRC/agent-ready.js" "$NC:$ROOT/agent-ready.js"
             docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
-            docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
+            docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md /var/www/html/agent-ready.js 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md /var/www/html/agent-ready.js'
           else
             sudo mkdir -p "$D/.well-known/mcp" "$D/.well-known/agent-skills"
             sudo cp "$SRC/robots.txt"  "$D/robots.txt"
@@ -113,8 +114,9 @@ jobs:
             sudo cp "$SRC/auth.md"     "$D/auth.md"
             sudo cp "$SRC/skill.md"    "$D/skill.md"
             sudo cp "$SRC/index.md"    "$D/index.md"
+            sudo cp "$SRC/agent-ready.js" "$D/agent-ready.js"
             sudo cp -r "$SRC/.well-known/." "$D/.well-known/"
-            sudo chmod -R a+r "$D/.well-known" "$D/robots.txt" "$D/sitemap.xml" "$D/auth.md" "$D/skill.md" "$D/index.md"
+            sudo chmod -R a+r "$D/.well-known" "$D/robots.txt" "$D/sitemap.xml" "$D/auth.md" "$D/skill.md" "$D/index.md" "$D/agent-ready.js"
           fi
           echo "files copied to $D"
 
@@ -124,16 +126,19 @@ jobs:
           set -uo pipefail
           NC=$(cat /tmp/nc-container)
           docker exec "$NC" sh -c '
-            if apache2ctl -M 2>/dev/null | grep -qE "headers_module.*rewrite_module|rewrite_module.*headers_module" \
-               || (apache2ctl -M 2>/dev/null | grep -q headers_module && apache2ctl -M 2>/dev/null | grep -q rewrite_module); then
-              echo "modules already enabled"
-            else
-              a2enmod headers rewrite 2>/dev/null || apache2ctl -M 2>/dev/null | grep -E "headers|rewrite" || true
-              echo "enabled modules — reloading"
+            MISSING=""
+            for m in headers rewrite substitute; do
+              apache2ctl -M 2>/dev/null | grep -q "${m}_module" || MISSING="$MISSING $m"
+            done
+            if [ -n "$MISSING" ]; then
+              echo "enabling:$MISSING"
+              a2enmod $MISSING 2>/dev/null || true
               apache2ctl graceful 2>/dev/null || apachectl graceful 2>/dev/null || true
+            else
+              echo "modules already enabled"
             fi'
 
-      - name: Prepend .htaccess block (Link headers + markdown negotiation)
+      - name: Prepend/replace .htaccess block (Link headers + markdown negotiation)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
@@ -141,7 +146,10 @@ jobs:
           NC=$(cat /tmp/nc-container)
           if [ "$D" = "containerfs" ]; then
             if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
-              echo ".htaccess already patched — skipping"
+              # Replace the marked block in place (updates are versioned).
+              docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
+              docker exec "$NC" sh -c 'sed "/# --- agent-ready ---/,/# --- \/agent-ready ---/d" /var/www/html/.htaccess > /tmp/ht.base && cat /tmp/agent-htaccess.conf /tmp/ht.base > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.base'
+              echo ".htaccess block replaced (container)"
             else
               docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
               docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
@@ -149,7 +157,8 @@ jobs:
             fi
           else
             if sudo grep -q "agent-ready" "$D/.htaccess" 2>/dev/null; then
-              echo ".htaccess already patched — skipping"
+              sudo bash -c "sed '/# --- agent-ready ---/,/# --- \/agent-ready ---/d' '$D/.htaccess' > /tmp/ht.base && cat '$SRC/htaccess-agent-ready.conf' /tmp/ht.base > '$D/.htaccess' && rm /tmp/ht.base"
+              echo ".htaccess block replaced (host)"
             else
               sudo cp "$D/.htaccess" "$D/.htaccess.agent-ready.bak" 2>/dev/null || true
               sudo bash -c "cat '$SRC/htaccess-agent-ready.conf' '$D/.htaccess' > '$D/.htaccess.new' && cat '$D/.htaccess.new' > '$D/.htaccess' && rm '$D/.htaccess.new'"
@@ -163,7 +172,7 @@ jobs:
         run: |
           set -uo pipefail
           sleep 3
-          for p in /robots.txt /sitemap.xml /auth.md /skill.md /.well-known/api-catalog \
+          for p in /robots.txt /sitemap.xml /auth.md /skill.md /agent-ready.js /.well-known/api-catalog \
                    /.well-known/openid-configuration /.well-known/oauth-authorization-server \
                    /.well-known/oauth-protected-resource /.well-known/mcp/server-card.json \
                    /.well-known/agent-skills/index.json /.well-known/ai-catalog.json \
@@ -176,3 +185,5 @@ jobs:
           curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i '^link:' | head -c 300 || true; echo
           echo "--- markdown negotiation ---"
           curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10 || true
+          echo "--- webmcp injection ---"
+          curl -sk https://cloud.cloudless.gr/login --max-time 15 | grep -c "agent-ready.js" || true
