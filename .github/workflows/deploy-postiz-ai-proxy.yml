@@ -57,7 +57,7 @@ jobs:
         run: |
           RESULT=$(curl -sf https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models)
           echo "$RESULT"
-          echo "$RESULT" | grep -q "nemotron-3-super-120b" \
+          echo "$RESULT" | grep -q "nemotron-3.5-super-vl-120b" \
             && echo "✓ model present" \
             || (echo "✗ model missing" && exit 1)
 
