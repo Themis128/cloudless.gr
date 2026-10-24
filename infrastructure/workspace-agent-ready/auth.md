@@ -4,6 +4,7 @@
 {
   "authorization_endpoint": "https://cloud.cloudless.gr/apps/oauth2/authorize",
   "token_uri": "https://cloud.cloudless.gr/apps/oauth2/api/v1/token",
+  "register_uri": "https://cloud.cloudless.gr/ocs/v2.php/core/getapppassword",
   "dynamic_registration": false,
   "registration_contact": "tbaltzakis@cloudless.gr",
   "identity_types_supported": ["identity_assertion"],

@@ -124,16 +124,19 @@ jobs:
           set -uo pipefail
           NC=$(cat /tmp/nc-container)
           docker exec "$NC" sh -c '
-            if apache2ctl -M 2>/dev/null | grep -qE "headers_module.*rewrite_module|rewrite_module.*headers_module" \
-               || (apache2ctl -M 2>/dev/null | grep -q headers_module && apache2ctl -M 2>/dev/null | grep -q rewrite_module); then
-              echo "modules already enabled"
-            else
-              a2enmod headers rewrite 2>/dev/null || apache2ctl -M 2>/dev/null | grep -E "headers|rewrite" || true
-              echo "enabled modules — reloading"
+            MISSING=""
+            for m in headers rewrite substitute; do
+              apache2ctl -M 2>/dev/null | grep -q "${m}_module" || MISSING="$MISSING $m"
+            done
+            if [ -n "$MISSING" ]; then
+              echo "enabling:$MISSING"
+              a2enmod $MISSING 2>/dev/null || true
               apache2ctl graceful 2>/dev/null || apachectl graceful 2>/dev/null || true
+            else
+              echo "modules already enabled"
             fi'
 
-      - name: Prepend .htaccess block (Link headers + markdown negotiation)
+      - name: Prepend/replace .htaccess block (Link headers + markdown negotiation)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
@@ -141,7 +144,10 @@ jobs:
           NC=$(cat /tmp/nc-container)
           if [ "$D" = "containerfs" ]; then
             if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
-              echo ".htaccess already patched — skipping"
+              # Replace the marked block in place (updates are versioned).
+              docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
+              docker exec "$NC" sh -c 'sed "/# --- agent-ready ---/,/# --- \/agent-ready ---/d" /var/www/html/.htaccess > /tmp/ht.base && cat /tmp/agent-htaccess.conf /tmp/ht.base > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.base'
+              echo ".htaccess block replaced (container)"
             else
               docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
               docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
@@ -149,7 +155,8 @@ jobs:
             fi
           else
             if sudo grep -q "agent-ready" "$D/.htaccess" 2>/dev/null; then
-              echo ".htaccess already patched — skipping"
+              sudo bash -c "sed '/# --- agent-ready ---/,/# --- \/agent-ready ---/d' '$D/.htaccess' > /tmp/ht.base && cat '$SRC/htaccess-agent-ready.conf' /tmp/ht.base > '$D/.htaccess' && rm /tmp/ht.base"
+              echo ".htaccess block replaced (host)"
             else
               sudo cp "$D/.htaccess" "$D/.htaccess.agent-ready.bak" 2>/dev/null || true
               sudo bash -c "cat '$SRC/htaccess-agent-ready.conf' '$D/.htaccess' > '$D/.htaccess.new' && cat '$D/.htaccess.new' > '$D/.htaccess' && rm '$D/.htaccess.new'"
@@ -176,3 +183,5 @@ jobs:
           curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i '^link:' | head -c 300 || true; echo
           echo "--- markdown negotiation ---"
           curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10 || true
+          echo "--- webmcp injection ---"
+          curl -sk https://cloud.cloudless.gr/login --max-time 15 | grep -c "modelContext" || true
