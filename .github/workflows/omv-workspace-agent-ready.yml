@@ -167,6 +167,23 @@ jobs:
             fi
           fi
 
+      - name: Restart container if WebMCP injection inactive
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          NC=$(cat /tmp/nc-container)
+          # graceful reload doesn't always pick up newly a2enmod'd modules —
+          # if the tag isn't in the page, restart the web container (brief).
+          sleep 2
+          if curl -sk https://cloud.cloudless.gr/login --max-time 15 | grep -q "agent-ready.js"; then
+            echo "webmcp injection active — no restart needed"
+          else
+            echo "injection absent — restarting $NC to load mod_substitute"
+            docker restart "$NC" >/dev/null
+            sleep 10
+            docker exec "$NC" sh -c 'apache2ctl -M 2>/dev/null | grep -E "substitute|headers|rewrite"' || true
+          fi
+
       - name: Verify endpoints
         if: env.APPLY == 'true'
         run: |
