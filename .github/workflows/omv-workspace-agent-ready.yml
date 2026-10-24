@@ -43,13 +43,15 @@ jobs:
           echo "=== containers ==="
           docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
             || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
-          # Pick the container that actually has the Nextcloud docroot —
-          # avoids sidecars like nextcloud-talk-hpb / notify-push / collabora.
+          # Pick the container that actually serves the Nextcloud docroot.
+          # Prefer the one publishing the web port (11000); sidecars like
+          # notify-push / cron / worker share the image and version.php but
+          # mount /var/www/html read-only, so also require a writable docroot.
           NC=""
-          for c in $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
-            if docker exec "$c" test -f /var/www/html/version.php 2>/dev/null; then NC=$c; break; fi
+          for c in $(docker ps --format '{{.Names}} {{.Ports}}' | awk '/:11000->/{print $1}') \
+                   $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
+            if docker exec "$c" sh -c 'test -f /var/www/html/version.php && test -w /var/www/html' 2>/dev/null; then NC=$c; break; fi
           done
-          [ -z "$NC" ] && NC=$(docker ps --format '{{.Names}} {{.Ports}}' | grep '11000' | awk '{print $1}')
           echo "resolved NC=$NC"
           echo "$NC" > /tmp/nc-container
           if [ -n "$NC" ]; then
