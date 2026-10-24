@@ -204,3 +204,88 @@ describe("SocialAuto interaction actions", () => {
     expect(ctx?.elements?.[0]?.text).toContain("Acknowledged by <@U-OPS>");
   });
 });
+
+describe("agency proposal actions", () => {
+  let POST: (req: Request) => Promise<Response>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockOpsUsers.mockResolvedValue(["U-OPS"]);
+    mockIsConfigured.mockResolvedValue(true);
+    const mod = await import("@/app/api/slack/interactions/route");
+    POST = mod.POST;
+  });
+
+  function inChannelText(): unknown {
+    const bodies = fetchSpy.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
+    return bodies.find((b) => b.response_type === "in_channel")?.text;
+  }
+
+  function proposalPayload(actionId: string, value?: string) {
+    return {
+      type: "block_actions",
+      user: baseUser,
+      response_url: responseUrl,
+      message: { ts: "1", blocks: [{ type: "section" }, { type: "actions" }] },
+      actions: [{ action_id: actionId, value, type: "button" }],
+    };
+  }
+
+  it("approve calls agency-proposal-approve and posts in_channel", async () => {
+    mockRunOpsAction.mockResolvedValue({ ok: true });
+    verifyOk(proposalPayload("socialauto_proposal_approve", "prop-1"));
+    expect((await POST(makeRequest({}))).status).toBe(200);
+    await waitForAsync();
+    expect(mockRunOpsAction).toHaveBeenCalledWith({
+      action: "agency-proposal-approve",
+      id: "prop-1",
+    });
+    const bodies = fetchSpy.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
+    const msg = bodies.find((b) => b.response_type === "in_channel");
+    expect(String(msg?.text)).toContain("approved proposal `prop-1`");
+  });
+
+  it("approve failure surfaces the error", async () => {
+    mockRunOpsAction.mockRejectedValue(new Error("boom"));
+    verifyOk(proposalPayload("socialauto_proposal_approve", "prop-2"));
+    await POST(makeRequest({}));
+    await waitForAsync();
+    expect(String(inChannelText())).toContain("Proposal approve failed: boom");
+  });
+
+  it("approve without a value warns instead of calling upstream", async () => {
+    verifyOk(proposalPayload("socialauto_proposal_approve", ""));
+    await POST(makeRequest({}));
+    await waitForAsync();
+    expect(mockRunOpsAction).not.toHaveBeenCalled();
+    expect(String(inChannelText())).toContain("No proposal id");
+  });
+
+  it("reject calls agency-proposal-reject and posts in_channel", async () => {
+    mockRunOpsAction.mockResolvedValue({ ok: true });
+    verifyOk(proposalPayload("socialauto_proposal_reject", "prop-3"));
+    await POST(makeRequest({}));
+    await waitForAsync();
+    expect(mockRunOpsAction).toHaveBeenCalledWith({
+      action: "agency-proposal-reject",
+      id: "prop-3",
+    });
+    expect(String(inChannelText())).toContain("rejected proposal `prop-3`");
+  });
+
+  it("reject failure surfaces the error", async () => {
+    mockRunOpsAction.mockRejectedValue(new Error("nope"));
+    verifyOk(proposalPayload("socialauto_proposal_reject", "prop-4"));
+    await POST(makeRequest({}));
+    await waitForAsync();
+    expect(String(inChannelText())).toContain("Proposal reject failed: nope");
+  });
+
+  it("reject without a value warns instead of calling upstream", async () => {
+    verifyOk(proposalPayload("socialauto_proposal_reject", ""));
+    await POST(makeRequest({}));
+    await waitForAsync();
+    expect(mockRunOpsAction).not.toHaveBeenCalled();
+    expect(String(inChannelText())).toContain("No proposal id");
+  });
+});
