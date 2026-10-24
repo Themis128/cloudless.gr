@@ -53,6 +53,8 @@ jobs:
             "$PI_USER@$PI_HOST" \
             'sudo systemctl list-units --all "actions.runner.*" --format "{{.UNIT}}\t{{.ACTIVE}}\t{{.SUB}}" --no-legend;
              echo "--- restarting ---";
-             sudo systemctl restart "actions.runner.*" || true;
+             UNITS=$(systemctl list-units --all "actions.runner.*.service" --format "{{.UNIT}}" --no-legend | tr "\n" " ");
+             echo "units: $UNITS";
+             for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u"; done;
              sleep 3;
              sudo systemctl list-units "actions.runner.*" --format "{{.UNIT}}\t{{.ACTIVE}}\t{{.SUB}}" --no-legend'
