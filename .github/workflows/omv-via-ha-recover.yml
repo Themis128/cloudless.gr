@@ -80,4 +80,4 @@ jobs:
 
       - name: Cleanup temp key
         if: always()
-        run: rm -rf "${{ env.KEYDIR }}"
+        run: rm -rf "$KEYDIR"
