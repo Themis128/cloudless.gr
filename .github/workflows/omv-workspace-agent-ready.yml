@@ -40,16 +40,19 @@ jobs:
       - name: Locate Nextcloud container + probe endpoints
         run: |
           set -uo pipefail
+          # Diagnostics only: `| head` closes the pipe early, so the upstream
+          # grep can exit 2 (EPIPE); with Actions' default `bash -e` + pipefail
+          # that failed the step. Keep these listings non-fatal.
           echo "=== containers ==="
           docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
-            || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
+            || docker ps --format '{{.Names}}\t{{.Image}}' | head -20 || true
           echo "=== all containers (-a) ==="
-          docker ps -a --format '{{.Names}}\t{{.Status}}' | head -25
+          docker ps -a --format '{{.Names}}\t{{.Status}}' | head -25 || true
           echo "=== docker data-root + storage ==="
           docker info --format 'Root={{.DockerRootDir}} Driver={{.Driver}} Containers={{.Containers}}' || true
           echo "=== /srv mounts ==="
           mount | grep -iE 'srv|sdb|mergerfs' || echo "no /srv mounts"
-          df -h | grep -iE 'srv|var/lib|/$' | head -8
+          df -h | grep -iE 'srv|var/lib|/$' | head -8 || true
           # Self-heal: after a host reboot the workspace stack can sit exited.
           # Start stopped nextcloud/cloudflared containers before resolving.
           STOPPED=$(docker ps -a --filter status=exited --filter status=created --format '{{.Names}}' | grep -iE 'nextcloud|cloudflared' || true)
