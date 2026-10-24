@@ -43,7 +43,12 @@ jobs:
           echo "=== containers ==="
           docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
             || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
-          NC=$(docker ps --format '{{.Names}}' | grep -iE 'nextcloud' | head -1)
+          # Pick the container that actually has the Nextcloud docroot —
+          # avoids sidecars like nextcloud-talk-hpb / notify-push / collabora.
+          NC=""
+          for c in $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
+            if docker exec "$c" test -f /var/www/html/version.php 2>/dev/null; then NC=$c; break; fi
+          done
           [ -z "$NC" ] && NC=$(docker ps --format '{{.Names}} {{.Ports}}' | grep '11000' | awk '{print $1}')
           echo "resolved NC=$NC"
           echo "$NC" > /tmp/nc-container
