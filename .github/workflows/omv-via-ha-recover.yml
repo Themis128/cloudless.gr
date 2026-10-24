@@ -39,12 +39,13 @@ jobs:
         id: probe
         run: |
           for h in 192.168.1.200 192.168.1.128 192.168.1.130; do
-            if ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=6 \
-                 "$PI_USER@$h" 'hostname && docker ps --format "{{.Names}}" 2>/dev/null | head -3' 2>/dev/null; then
+            OUT=$(ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=6 \
+                 "$PI_USER@$h" 'hostname' 2>/dev/null || true)
+            echo "$h -> ${OUT:-unreachable}"
+            # Only accept the host that identifies as omv (not omv-ha itself).
+            if [ "$OUT" = "omv" ]; then
               echo "OMV_HOST=$h" >> "$GITHUB_OUTPUT"
               break
-            else
-              echo "$h: no access"
             fi
           done
 
