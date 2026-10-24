@@ -180,7 +180,7 @@ jobs:
           BODY=$(printf '%s' "$PAGE" | head -n -1)
           if [ "$CODE" != "200" ]; then
             echo "::warning::/login probe returned $CODE — skipping restart decision"
-          elif printf '%s' "$BODY" | grep -q "agent-ready.js"; then
+          elif [[ "$BODY" == *agent-ready.js* ]]; then
             echo "webmcp injection active — no restart needed"
           else
             echo "injection absent — restarting $NC to load mod_substitute"
