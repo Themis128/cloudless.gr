@@ -1,0 +1,83 @@
+name: omv recovery via omv-ha
+
+# Recovery lane for when omv's tailscaled/GH-runners/docker are down but the
+# host is up: runs on the omv-ha-deploy runner (same LAN), injects OMV_SSH_KEY
+# and SSHes to omv over LAN to restart docker + actions-runner units.
+#
+# Trigger: workflow_dispatch only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Probe only — no restarts'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    name: omv recovery via omv-ha LAN SSH
+    runs-on: [self-hosted, omv-ha, deploy]
+    timeout-minutes: 12
+    env:
+      PI_USER: tbaltzakis
+    steps:
+      - name: Install SSH key (temp dir — never touch runner ~/.ssh)
+        run: |
+          KEYDIR=$(mktemp -d)
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > "$KEYDIR/id_ed25519"
+          chmod 600 "$KEYDIR/id_ed25519"
+          for h in 192.168.1.200 192.168.1.128 192.168.1.130; do
+            ssh-keyscan -T5 -H "$h" >> "$KEYDIR/known_hosts" 2>/dev/null || true
+          done
+          echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
+          echo "SSH_OPTS=-i $KEYDIR/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$KEYDIR/known_hosts" >> "$GITHUB_ENV"
+
+      - name: Cleanup temp key
+        if: always()
+        run: rm -rf "${{ env.KEYDIR }}
+
+      - name: Probe omv candidate hosts
+        id: probe
+        run: |
+          for h in 192.168.1.200 192.168.1.128 192.168.1.130; do
+            OUT=$(ssh $SSH_OPTS -o ConnectTimeout=6 "$PI_USER@$h" 'hostname' 2>/dev/null || true)
+            echo "$h -> ${OUT:-unreachable}"
+            # Only accept the host that identifies as omv (not omv-ha itself).
+            if [ "$OUT" = "omv" ]; then
+              echo "OMV_HOST=$h" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
+          if [ ! -s "$GITHUB_OUTPUT" ] || ! grep -q OMV_HOST "$GITHUB_OUTPUT"; then
+            echo "::error::no reachable host identified as omv — recovery cannot proceed"
+            exit 1
+          fi
+
+      - name: Restart docker + runner services on omv
+        if: inputs.dry_run == false && steps.probe.outputs.OMV_HOST != ''
+        run: |
+          h="${{ steps.probe.outputs.OMV_HOST }}"
+          ssh $SSH_OPTS "$PI_USER@$h" '
+            echo "=== docker state ==="; sudo systemctl is-active docker || true;
+            FAILED=0;
+            sudo systemctl is-active --quiet docker || { sudo systemctl start docker || FAILED=1; }
+            sleep 5;
+            sudo systemctl is-active --quiet docker || FAILED=1;
+            docker ps --format "{{.Names}}\t{{.Status}}" 2>/dev/null | head -15;
+            echo "=== runner units ===";
+            sudo systemctl list-units --all --plain "actions.runner.*.service" --no-legend | awk "{print \$1, \$3, \$4}";
+            UNITS=$(systemctl list-units --all --plain "actions.runner.*.service" --no-legend | awk "{print \$1}");
+            for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u" || { echo "restart failed: $u"; FAILED=1; }; done;
+            echo "=== tailscaled ===";
+            sudo systemctl is-active --quiet tailscaled || { sudo systemctl start tailscaled || FAILED=1; }
+            sudo systemctl is-active --quiet tailscaled || FAILED=1;
+            [ "$FAILED" = "0" ]'
+
+      - name: Cleanup temp key
+        if: always()
+        run: rm -rf "${{ env.KEYDIR }}"
