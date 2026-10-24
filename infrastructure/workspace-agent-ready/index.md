@@ -3,6 +3,7 @@
 Self-hosted workspace — files, calendars, contacts, collaboration.
 
 ## Agent surface
+
 - OCS API: /ocs/v2.php
 - WebDAV: /remote.php/dav
 - Status: /status.php
