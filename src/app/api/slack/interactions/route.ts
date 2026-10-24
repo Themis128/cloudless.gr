@@ -167,7 +167,9 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
       case "socialauto_cancel_queue":
       case "socialauto_session_heal":
       case "socialauto_browser_release":
-      case "socialauto_ops_status": {
+      case "socialauto_ops_status":
+      case "socialauto_proposal_approve":
+      case "socialauto_proposal_reject": {
         // Buttons on SocialAuto alerts (posted via incoming webhooks owned by
         // this app). All dispatch into SocialAuto's admin API — mutations are
         // gated on the ops allowlist, status reads are open to the workspace.
@@ -737,7 +739,33 @@ async function socialautoActionAsync(
         : `:unlock: <@${userId}> released the browser orchestrator lock.`;
       break;
     }
-    /* v8 ignore next 2 -- unreachable: dispatch only calls this for the 5 cased action ids */
+    case "socialauto_proposal_approve": {
+      if (!value) {
+        text = ":warning: No proposal id on this button — can't approve.";
+        break;
+      }
+      const r = (await runOpsAction({ action: "agency-proposal-approve", id: value }).catch(
+        (err) => ({ error: (err as Error).message })
+      )) as Record<string, unknown> & { error?: string };
+      text = r.error
+        ? `:warning: Proposal approve failed: ${r.error}`
+        : `:mailbox_with_mail: <@${userId}> approved proposal \`${value}\` — emailed to the lead.`;
+      break;
+    }
+    case "socialauto_proposal_reject": {
+      if (!value) {
+        text = ":warning: No proposal id on this button — can't reject.";
+        break;
+      }
+      const r = (await runOpsAction({ action: "agency-proposal-reject", id: value }).catch(
+        (err) => ({ error: (err as Error).message })
+      )) as Record<string, unknown> & { error?: string };
+      text = r.error
+        ? `:warning: Proposal reject failed: ${r.error}`
+        : `:wastebasket: <@${userId}> rejected proposal \`${value}\`.`;
+      break;
+    }
+    /* v8 ignore next 2 -- unreachable: dispatch only calls this for the 7 cased action ids */
     default:
       text = `:question: Unknown SocialAuto action \`${actionId}\`.`;
   }
