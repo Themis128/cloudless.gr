@@ -514,4 +514,15 @@ describe("runOpsAction agency proposal actions", () => {
     expect(call?.[0]).toBe("https://social.cloudless.gr/agency/proposals/p8/reject");
     expect((call?.[1] as RequestInit).method).toBe("POST");
   });
+
+  it("encodes the proposal id so it cannot escape the path", async () => {
+    const lib = await loadLib();
+    mockGetConfig.mockResolvedValue(CONFIGURED);
+    mockLoginThen(jsonResponse({ ok: true }));
+    await lib.runOpsAction({ action: "agency-proposal-approve", id: "../../ops/session-heal?x=" });
+    const call = mockFetch.mock.calls.at(-1);
+    expect(call?.[0]).toBe(
+      "https://social.cloudless.gr/agency/proposals/..%2F..%2Fops%2Fsession-heal%3Fx%3D/approve"
+    );
+  });
 });
