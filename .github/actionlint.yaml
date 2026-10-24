@@ -4,9 +4,12 @@
 # `runs-on: [self-hosted, omv, pi, build]` as unknown. These are the Pi runner
 # fleet (omv/omv-2/omv-3) plus the `build`/`pi` label gates used by deploy-pi.yml
 # and the RUNNER_GENERIC failover (see CLAUDE.md → CI Runner Failover / Deployment).
+# `omv-ha`/`deploy` are the omv-ha-deploy runner's labels (omv-via-ha-recover.yml).
 self-hosted-runner:
   labels:
   - omv
   - pi
   - build
   - legion
+  - omv-ha
+  - deploy

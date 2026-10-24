@@ -1,0 +1,1 @@
+{"resource":"https://cloud.cloudless.gr/login","authorization_servers":["https://cloud.cloudless.gr"],"scopes_supported":["read","write","admin"],"bearer_methods_supported":["header"],"resource_documentation":"https://cloud.cloudless.gr/auth.md"}
