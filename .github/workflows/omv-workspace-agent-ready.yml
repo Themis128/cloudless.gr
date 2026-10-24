@@ -175,8 +175,12 @@ jobs:
           # graceful reload doesn't always pick up newly a2enmod'd modules —
           # if the tag isn't in the page, restart the web container (brief).
           sleep 2
-          PAGE=$(curl -sk https://cloud.cloudless.gr/login --max-time 15 || true)
-          if printf '%s' "$PAGE" | grep -q "agent-ready.js"; then
+          PAGE=$(curl -sk -w '\n%{http_code}' https://cloud.cloudless.gr/login --max-time 15 || true)
+          CODE=$(printf '%s' "$PAGE" | tail -1)
+          BODY=$(printf '%s' "$PAGE" | head -n -1)
+          if [ "$CODE" != "200" ]; then
+            echo "::warning::/login probe returned $CODE — skipping restart decision"
+          elif printf '%s' "$BODY" | grep -q "agent-ready.js"; then
             echo "webmcp injection active — no restart needed"
           else
             echo "injection absent — restarting $NC to load mod_substitute"
