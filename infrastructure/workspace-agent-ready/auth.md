@@ -7,6 +7,7 @@
   "register_uri": "https://cloud.cloudless.gr/ocs/v2.php/core/getapppassword",
   "dynamic_registration": false,
   "registration_contact": "tbaltzakis@cloudless.gr",
+  "claim_uri": "https://cloud.cloudless.gr/auth.md",
   "identity_types_supported": ["identity_assertion"],
   "identity_assertion": {
     "assertion_types_supported": ["verified_email"],
