@@ -70,6 +70,8 @@ def dockerd_uptime_s() -> float | None:
     Uses ActiveEnterTimestampMonotonic — wall-clock comparisons are broken at
     boot on Pis (no RTC; clock starts stale until NTP syncs).
     """
+    if run("systemctl", "is-active", "--quiet", "docker.service").returncode != 0:
+        return None
     r = run("systemctl", "show", "-p", "ActiveEnterTimestampMonotonic",
             "--value", "docker.service")
     try:
