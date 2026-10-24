@@ -205,7 +205,6 @@ describe("SocialAuto interaction actions", () => {
   });
 });
 
-
 describe("agency proposal actions", () => {
   let POST: (req: Request) => Promise<Response>;
 
@@ -232,7 +231,10 @@ describe("agency proposal actions", () => {
     verifyOk(proposalPayload("socialauto_proposal_approve", "prop-1"));
     expect((await POST(makeRequest({}))).status).toBe(200);
     await waitForAsync();
-    expect(mockRunOpsAction).toHaveBeenCalledWith({ action: "agency-proposal-approve", id: "prop-1" });
+    expect(mockRunOpsAction).toHaveBeenCalledWith({
+      action: "agency-proposal-approve",
+      id: "prop-1",
+    });
     const bodies = fetchSpy.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
     const msg = bodies.find((b) => b.response_type === "in_channel");
     expect(String(msg?.text)).toContain("approved proposal `prop-1`");
@@ -259,7 +261,10 @@ describe("agency proposal actions", () => {
     verifyOk(proposalPayload("socialauto_proposal_reject", "prop-3"));
     await POST(makeRequest({}));
     await waitForAsync();
-    expect(mockRunOpsAction).toHaveBeenCalledWith({ action: "agency-proposal-reject", id: "prop-3" });
+    expect(mockRunOpsAction).toHaveBeenCalledWith({
+      action: "agency-proposal-reject",
+      id: "prop-3",
+    });
     expect(String(lastFetchBody().text)).toContain("rejected proposal `prop-3`");
   });
 
