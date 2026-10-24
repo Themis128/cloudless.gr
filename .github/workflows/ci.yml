@@ -81,3 +81,264 @@ on:
       - .githooks/**
 
 concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Format
+    # Failover-capable: defaults to ubuntu-latest. Flip via
+    #   .github/scripts/toggle-runner.py pi
+    # when GH-hosted billing/capacity is broken.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm lint:md
+
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install yamllint + actionlint
+        run: |
+          pipx install yamllint==1.38.0
+          mkdir -p "$HOME/.local/bin"
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: python3 scripts/lint-yaml.py
+
+  python-lint:
+    name: Python Lint & Types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install Ruff + Mypy
+        run: pipx install ruff==0.15.15 && pipx install mypy==2.1.0
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy scripts infrastructure lambda
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: baltzakisthemiscom
+      SENTRY_PROJECT: cloudless-gr
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      NEXT_PUBLIC_AUTH_PROVIDER: d1
+      NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+      SSM_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Restore Next.js build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{
+            hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm build
+      - name: Install Syft for SBOM generation
+        continue-on-error: true
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.27.1
+      - name: Generate SBOM
+        continue-on-error: true
+        run: |
+          if ! command -v syft >/dev/null 2>&1; then
+            echo "syft not installed — skipping SBOM"
+            exit 0
+          fi
+          syft dir:. --source-name cloudless.gr -o syft-json > sbom.json
+          test -s sbom.json
+      - name: Generate SLSA provenance
+        continue-on-error: true
+        run: |
+          # Create SLSA Level 1 provenance attestation
+          cat > provenance.json << EOF
+          {
+            "_type": "https://in-toto.io/Statement/v0.1",
+            "subject": [
+              {
+                "name": ".next",
+                "digest": {
+                  "sha256": "$(find .next -type f -exec sha256sum {} + | sha256sum | cut -d' ' -f1)"
+                }
+              },
+              {
+                "name": "package.json",
+                "digest": {
+                  "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
+                }
+              },
+              {
+                "name": "pnpm-lock.yaml",
+                "digest": {
+                  "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
+                }
+              }
+            ],
+            "predicateType": "https://slsa.dev/provenance/v0.1",
+            "predicate": {
+              "builder": {
+                "id": "https://github.com/cloudless-gr/ci-workflow"
+              },
+              "buildType": "https://github.com/cloudless-gr/nextjs-build",
+              "invocation": {
+                "configSource": {
+                  "uri": "https://github.com/cloudless-gr/cloudless.gr",
+                  "digest": {
+                    "sha256": "$(git rev-parse HEAD)"
+                  }
+                },
+                "entryPoint": "pnpm build",
+                "arguments": [
+                  "--frozen-lockfile",
+                  "--prefer-offline"
+                ]
+              },
+              "materials": [
+                {
+                  "uri": "git+https://github.com/cloudless-gr/cloudless.gr",
+                  "digest": {
+                    "sha256": "$(git rev-parse HEAD)"
+                  }
+                },
+                {
+                  "uri": "file://package.json",
+                  "digest": {
+                    "sha256": "$(sha256sum package.json | cut -d' ' -f1)"
+                  }
+                },
+                {
+                  "uri": "file://pnpm-lock.yaml",
+                  "digest": {
+                    "sha256": "$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)"
+                  }
+                }
+              ]
+            }
+          }
+          EOF
+      - name: Upload provenance artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: provenance
+          path: provenance.json
+          retention-days: 30
+      - name: Upload SBOM artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 30
+      - name: Scan licenses with pnpm licenses
+        run: |
+          pnpm licenses ls --json > licenses.json
+      - name: Upload licenses artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: licenses
+          path: licenses.json
+          retention-days: 30
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          dest: ~/setup-pnpm-${{ runner.name }}
+      - name: pin pnpm store to persistent local path
+        run: |
+          mkdir -p "$HOME/.pnpm-store"
+          pnpm config set store-dir "$HOME/.pnpm-store"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      # Full-suite coverage: the thresholds in vitest.config.mts are enforced
+      # here, so a coverage regression fails this required check.
+      - name: Unit tests with coverage (thresholds enforced)
+        run: >-
+          pnpm exec vitest run --coverage
+          --coverage.reporter=text-summary
+          --coverage.reporter=json-summary
+      - name: Upload coverage summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-coverage-summary
+          path: coverage/vitest/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 14
