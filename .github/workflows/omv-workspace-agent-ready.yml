@@ -43,6 +43,14 @@ jobs:
           echo "=== containers ==="
           docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
             || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
+          # Self-heal: after a host reboot the workspace stack can sit exited.
+          # Start stopped nextcloud/cloudflared containers before resolving.
+          STOPPED=$(docker ps -a --filter status=exited --filter status=created --format '{{.Names}}' | grep -iE 'nextcloud|cloudflared' || true)
+          if [ -n "$STOPPED" ]; then
+            echo "=== starting stopped containers: $STOPPED ==="
+            echo "$STOPPED" | xargs -r docker start || true
+            sleep 10
+          fi
           # The web container publishes :11000 (the tunnel target). Sidecars
           # (notify-push, cron, worker, talk-hpb) share the same image/volume
           # but must not be selected.
