@@ -26,6 +26,9 @@ on:
       - .mcp.json
       - .github/workflows/**
       - .github/dependabot.yml
+        # actionlint's self-hosted-runner label list — without it, a
+        # config-only PR hangs on the required checks (never fires CI).
+      - .github/actionlint.yaml
         # Root-level config that affects build/lint/quality gates.
         # Without these, PRs editing only these files hang on the required
         # "Build" check because CI never triggers.
