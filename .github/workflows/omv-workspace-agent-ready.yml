@@ -65,12 +65,13 @@ jobs:
           docker cp "$SRC/robots.txt"    "$NC:$ROOT/robots.txt"
           docker cp "$SRC/sitemap.xml"   "$NC:$ROOT/sitemap.xml"
           docker cp "$SRC/auth.md"       "$NC:$ROOT/auth.md"
+          docker cp "$SRC/skill.md"      "$NC:$ROOT/skill.md"
           docker cp "$SRC/index.md"      "$NC:$ROOT/index.md"
           docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
-          docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/index.md'
+          docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
           echo "files copied"
 
-      - name: Append .htaccess block (Link headers + markdown negotiation)
+      - name: Prepend .htaccess block (Link headers + markdown negotiation)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
@@ -78,8 +79,11 @@ jobs:
           if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
             echo ".htaccess already patched — skipping"
           else
-            docker exec -i "$NC" sh -c "cat >> $ROOT/.htaccess" < "$SRC/htaccess-agent-ready.conf"
-            echo ".htaccess block appended"
+            # Prepend so our [L] pass-through rules run BEFORE Nextcloud's
+            # stock front-controller rewrite (.well-known → index.php).
+            docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
+            docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
+            echo ".htaccess block prepended"
           fi
 
       - name: Verify endpoints
@@ -87,7 +91,7 @@ jobs:
         run: |
           set -uo pipefail
           sleep 3
-          for p in /robots.txt /sitemap.xml /auth.md /.well-known/api-catalog \
+          for p in /robots.txt /sitemap.xml /auth.md /skill.md /.well-known/api-catalog \
                    /.well-known/openid-configuration /.well-known/oauth-authorization-server \
                    /.well-known/oauth-protected-resource /.well-known/mcp/server-card.json \
                    /.well-known/agent-skills/index.json /.well-known/ai-catalog.json \
