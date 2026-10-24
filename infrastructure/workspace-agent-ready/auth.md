@@ -26,8 +26,9 @@
    `tbaltzakis@cloudless.gr` (or ask an existing admin account), including
    the app name and requested scopes.
 2. **Provision** — the admin registers the OAuth client under
-   Settings → Security → OAuth 2.0, or issues an app password at
-   Settings → Security → App passwords.
+   Settings → Security → OAuth 2.0 (admin-side), or the user creates
+   their own app password at Settings → Security → App passwords
+   (per-user self-service).
 3. **Claim credentials** — with an authenticated session,
    `GET /ocs/v2.php/core/getapppassword` (`OCS-APIRequest: true`) returns
    an app password; OAuth clients receive `client_id`/`client_secret`
@@ -44,6 +45,7 @@ provisions credentials):
   flow via `/apps/oauth2/authorize` and `/apps/oauth2/api/v1/token`.
 - **App password (simple scripts):** `GET /ocs/v2.php/core/getapppassword`
   with `OCS-APIRequest: true` and `Authorization: Basic <user>:<pass>`,
-  or create one interactively at Settings → Security → App passwords.
+  or the user creates one interactively at Settings → Security →
+  App passwords (per-user feature, not admin-issued).
   Send `Authorization: Basic` or Bearer with the returned app password;
   scope is per-account.
