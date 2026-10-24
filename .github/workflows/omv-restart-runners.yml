@@ -53,10 +53,10 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
-            'sudo systemctl list-units --all "actions.runner.*" --no-legend | awk "{print \$1, \$3, \$4}";
+            'sudo systemctl list-units --all --plain "actions.runner.*" --no-legend | awk "{print \$1, \$3, \$4}";
              echo "--- restarting ---";
-             UNITS=$(systemctl list-units --all "actions.runner.*.service" --no-legend | awk "{print \$1}");
+             UNITS=$(systemctl list-units --all --plain "actions.runner.*.service" --no-legend | awk "{print \$1}");
              echo "units: $UNITS";
-             for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u"; done;
+             FAILED=0; for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u" || { echo "::error::restart failed for $u"; FAILED=1; }; done; [ "$FAILED" = "0" ] || exit 1;
              sleep 3;
-             sudo systemctl list-units "actions.runner.*" --no-legend | awk "{print \$1, \$3, \$4}"'
+             sudo systemctl list-units --plain "actions.runner.*" --no-legend | awk "{print \$1, \$3, \$4}"'
