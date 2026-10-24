@@ -46,7 +46,7 @@ jobs:
           # Self-heal: after a host reboot the workspace stack can sit exited.
           # Start stopped nextcloud/cloudflared containers before resolving.
           STOPPED=$(docker ps -a --filter status=exited --filter status=created --format '{{.Names}}' | grep -iE 'nextcloud|cloudflared' || true)
-          if [ -n "$STOPPED" ]; then
+          if [ -n "$STOPPED" ] && [ "${{ inputs.apply }}" = "true" ]; then
             echo "=== starting stopped containers: $STOPPED ==="
             echo "$STOPPED" | xargs -r docker start || true
             sleep 10
