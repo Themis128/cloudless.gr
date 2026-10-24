@@ -43,15 +43,19 @@ jobs:
           echo "=== containers ==="
           docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
             || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
-          # Pick the container that actually serves the Nextcloud docroot.
-          # Prefer the one publishing the web port (11000); sidecars like
-          # notify-push / cron / worker share the image and version.php but
-          # mount /var/www/html read-only, so also require a writable docroot.
+          # The web container publishes :11000 (the tunnel target). Sidecars
+          # (notify-push, cron, worker, talk-hpb) share the same image/volume
+          # but must not be selected.
           NC=""
-          for c in $(docker ps --format '{{.Names}} {{.Ports}}' | awk '/:11000->/{print $1}') \
-                   $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
-            if docker exec "$c" sh -c 'test -f /var/www/html/version.php && test -w /var/www/html' 2>/dev/null; then NC=$c; break; fi
+          for c in $(docker ps --format '{{.Names}} {{.Ports}}' | grep ':11000->' | awk '{print $1}'); do
+            if docker exec "$c" test -f /var/www/html/version.php 2>/dev/null; then NC=$c; break; fi
           done
+          if [ -z "$NC" ] && docker exec nextcloud test -f /var/www/html/version.php 2>/dev/null; then NC=nextcloud; fi
+          if [ -z "$NC" ]; then
+            for c in $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
+              if docker exec "$c" test -f /var/www/html/version.php 2>/dev/null; then NC=$c; break; fi
+            done
+          fi
           echo "resolved NC=$NC"
           echo "$NC" > /tmp/nc-container
           if [ -n "$NC" ]; then
@@ -62,35 +66,96 @@ jobs:
             echo "$code $p"
           done
 
-      - name: Copy agent-readiness files into container docroot
+      - name: Resolve docroot host path (docroot is a read-only bind mount)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
           NC=$(cat /tmp/nc-container)
           [ -z "$NC" ] && { echo "::error::no nextcloud container found"; exit 1; }
-          docker exec "$NC" mkdir -p "$ROOT/.well-known/mcp" "$ROOT/.well-known/agent-skills"
-          docker cp "$SRC/robots.txt"    "$NC:$ROOT/robots.txt"
-          docker cp "$SRC/sitemap.xml"   "$NC:$ROOT/sitemap.xml"
-          docker cp "$SRC/auth.md"       "$NC:$ROOT/auth.md"
-          docker cp "$SRC/skill.md"      "$NC:$ROOT/skill.md"
-          docker cp "$SRC/index.md"      "$NC:$ROOT/index.md"
-          docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
-          docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
-          echo "files copied"
+          DOCROOT=$(docker inspect "$NC" --format '{{range .Mounts}}{{if eq .Destination "/var/www/html"}}{{.Source}}{{end}}{{end}}')
+          if [ -z "$DOCROOT" ]; then
+            # Maybe a parent dir is mounted (e.g. /var/www).
+            DOCROOT=$(docker inspect "$NC" --format '{{range .Mounts}}{{if eq .Destination "/var/www"}}{{.Source}}/html{{end}}{{end}}')
+          fi
+          if [ -z "$DOCROOT" ]; then
+            RO=$(docker inspect "$NC" --format '{{.HostConfig.ReadonlyRootfs}}')
+            if [ "$RO" = "true" ]; then
+              echo "::error::container runs read-only rootfs and has no docroot bind mount — payload needs a compose volume change"
+              docker inspect "$NC" --format '{{json .Mounts}}'
+              exit 1
+            fi
+            # No docroot bind mount → docroot is container-writable; signal
+            # the docker-cp path instead.
+            DOCROOT="containerfs"
+          fi
+          echo "docroot target: $DOCROOT"
+          echo "$DOCROOT" > /tmp/nc-docroot
+
+      - name: Copy agent-readiness files to docroot
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          D=$(cat /tmp/nc-docroot)
+          NC=$(cat /tmp/nc-container)
+          if [ "$D" = "containerfs" ]; then
+            docker exec "$NC" mkdir -p "$ROOT/.well-known/mcp" "$ROOT/.well-known/agent-skills"
+            docker cp "$SRC/robots.txt"  "$NC:$ROOT/robots.txt"
+            docker cp "$SRC/sitemap.xml" "$NC:$ROOT/sitemap.xml"
+            docker cp "$SRC/auth.md"     "$NC:$ROOT/auth.md"
+            docker cp "$SRC/skill.md"    "$NC:$ROOT/skill.md"
+            docker cp "$SRC/index.md"    "$NC:$ROOT/index.md"
+            docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
+            docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
+          else
+            sudo mkdir -p "$D/.well-known/mcp" "$D/.well-known/agent-skills"
+            sudo cp "$SRC/robots.txt"  "$D/robots.txt"
+            sudo cp "$SRC/sitemap.xml" "$D/sitemap.xml"
+            sudo cp "$SRC/auth.md"     "$D/auth.md"
+            sudo cp "$SRC/skill.md"    "$D/skill.md"
+            sudo cp "$SRC/index.md"    "$D/index.md"
+            sudo cp -r "$SRC/.well-known/." "$D/.well-known/"
+            sudo chmod -R a+r "$D/.well-known" "$D/robots.txt" "$D/sitemap.xml" "$D/auth.md" "$D/skill.md" "$D/index.md"
+          fi
+          echo "files copied to $D"
+
+      - name: Ensure mod_headers + mod_rewrite are enabled
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          NC=$(cat /tmp/nc-container)
+          docker exec "$NC" sh -c '
+            if apache2ctl -M 2>/dev/null | grep -qE "headers_module.*rewrite_module|rewrite_module.*headers_module" \
+               || (apache2ctl -M 2>/dev/null | grep -q headers_module && apache2ctl -M 2>/dev/null | grep -q rewrite_module); then
+              echo "modules already enabled"
+            else
+              a2enmod headers rewrite 2>/dev/null || apache2ctl -M 2>/dev/null | grep -E "headers|rewrite" || true
+              echo "enabled modules — reloading"
+              apache2ctl graceful 2>/dev/null || apachectl graceful 2>/dev/null || true
+            fi'
 
       - name: Prepend .htaccess block (Link headers + markdown negotiation)
         if: env.APPLY == 'true'
         run: |
           set -euo pipefail
+          D=$(cat /tmp/nc-docroot)
           NC=$(cat /tmp/nc-container)
-          if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
-            echo ".htaccess already patched — skipping"
+          if [ "$D" = "containerfs" ]; then
+            if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
+              echo ".htaccess already patched — skipping"
+            else
+              docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
+              docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
+              echo ".htaccess block prepended (container)"
+            fi
           else
-            # Prepend so our [L] pass-through rules run BEFORE Nextcloud's
-            # stock front-controller rewrite (.well-known → index.php).
-            docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
-            docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
-            echo ".htaccess block prepended"
+            if sudo grep -q "agent-ready" "$D/.htaccess" 2>/dev/null; then
+              echo ".htaccess already patched — skipping"
+            else
+              sudo cp "$D/.htaccess" "$D/.htaccess.agent-ready.bak" 2>/dev/null || true
+              sudo bash -c "cat '$SRC/htaccess-agent-ready.conf' '$D/.htaccess' > '$D/.htaccess.new' && cat '$D/.htaccess.new' > '$D/.htaccess' && rm '$D/.htaccess.new'"
+              sudo chmod a+r "$D/.htaccess"
+              echo ".htaccess block prepended (host)"
+            fi
           fi
 
       - name: Verify endpoints
