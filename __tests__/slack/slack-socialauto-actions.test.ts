@@ -216,6 +216,11 @@ describe("agency proposal actions", () => {
     POST = mod.POST;
   });
 
+  function inChannelText(): unknown {
+    const bodies = fetchSpy.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
+    return bodies.find((b) => b.response_type === "in_channel")?.text;
+  }
+
   function proposalPayload(actionId: string, value?: string) {
     return {
       type: "block_actions",
@@ -245,7 +250,7 @@ describe("agency proposal actions", () => {
     verifyOk(proposalPayload("socialauto_proposal_approve", "prop-2"));
     await POST(makeRequest({}));
     await waitForAsync();
-    expect(String(lastFetchBody().text)).toContain("Proposal approve failed: boom");
+    expect(String(inChannelText())).toContain("Proposal approve failed: boom");
   });
 
   it("approve without a value warns instead of calling upstream", async () => {
@@ -253,7 +258,7 @@ describe("agency proposal actions", () => {
     await POST(makeRequest({}));
     await waitForAsync();
     expect(mockRunOpsAction).not.toHaveBeenCalled();
-    expect(String(lastFetchBody().text)).toContain("No proposal id");
+    expect(String(inChannelText())).toContain("No proposal id");
   });
 
   it("reject calls agency-proposal-reject and posts in_channel", async () => {
@@ -265,7 +270,7 @@ describe("agency proposal actions", () => {
       action: "agency-proposal-reject",
       id: "prop-3",
     });
-    expect(String(lastFetchBody().text)).toContain("rejected proposal `prop-3`");
+    expect(String(inChannelText())).toContain("rejected proposal `prop-3`");
   });
 
   it("reject failure surfaces the error", async () => {
@@ -273,7 +278,7 @@ describe("agency proposal actions", () => {
     verifyOk(proposalPayload("socialauto_proposal_reject", "prop-4"));
     await POST(makeRequest({}));
     await waitForAsync();
-    expect(String(lastFetchBody().text)).toContain("Proposal reject failed: nope");
+    expect(String(inChannelText())).toContain("Proposal reject failed: nope");
   });
 
   it("reject without a value warns instead of calling upstream", async () => {
@@ -281,6 +286,6 @@ describe("agency proposal actions", () => {
     await POST(makeRequest({}));
     await waitForAsync();
     expect(mockRunOpsAction).not.toHaveBeenCalled();
-    expect(String(lastFetchBody().text)).toContain("No proposal id");
+    expect(String(inChannelText())).toContain("No proposal id");
   });
 });
