@@ -492,3 +492,26 @@ describe("socialauto jwtExpiryMs fallback", () => {
     expect(logins).toHaveLength(1);
   });
 });
+
+
+describe("runOpsAction agency proposal actions", () => {
+  it("approves via POST /agency/proposals/:id/approve", async () => {
+    const lib = await loadLib();
+    mockGetConfig.mockResolvedValue(CONFIGURED);
+    mockLoginThen(jsonResponse({ ok: true }));
+    await lib.runOpsAction({ action: "agency-proposal-approve", id: "p9" });
+    const call = mockFetch.mock.calls.at(-1);
+    expect(call?.[0]).toBe("https://social.cloudless.gr/agency/proposals/p9/approve");
+    expect((call?.[1] as RequestInit).method).toBe("POST");
+  });
+
+  it("rejects via POST /agency/proposals/:id/reject", async () => {
+    const lib = await loadLib();
+    mockGetConfig.mockResolvedValue(CONFIGURED);
+    mockLoginThen(jsonResponse({ ok: true }));
+    await lib.runOpsAction({ action: "agency-proposal-reject", id: "p8" });
+    const call = mockFetch.mock.calls.at(-1);
+    expect(call?.[0]).toBe("https://social.cloudless.gr/agency/proposals/p8/reject");
+    expect((call?.[1] as RequestInit).method).toBe("POST");
+  });
+});
