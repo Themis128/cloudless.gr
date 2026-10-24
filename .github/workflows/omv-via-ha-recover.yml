@@ -26,21 +26,26 @@ jobs:
     env:
       PI_USER: tbaltzakis
     steps:
-      - name: Install SSH key
+      - name: Install SSH key (temp dir — never touch runner ~/.ssh)
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          KEYDIR=$(mktemp -d)
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > "$KEYDIR/id_ed25519"
+          chmod 600 "$KEYDIR/id_ed25519"
           for h in 192.168.1.200 192.168.1.128 192.168.1.130; do
-            ssh-keyscan -T5 -H "$h" >> ~/.ssh/known_hosts 2>/dev/null || true
+            ssh-keyscan -T5 -H "$h" >> "$KEYDIR/known_hosts" 2>/dev/null || true
           done
+          echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
+          echo "SSH_OPTS=-i $KEYDIR/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$KEYDIR/known_hosts" >> "$GITHUB_ENV"
+
+      - name: Cleanup temp key
+        if: always()
+        run: rm -rf "${{ env.KEYDIR }}
 
       - name: Probe omv candidate hosts
         id: probe
         run: |
           for h in 192.168.1.200 192.168.1.128 192.168.1.130; do
-            OUT=$(ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=6 \
-                 "$PI_USER@$h" 'hostname' 2>/dev/null || true)
+            OUT=$(ssh $SSH_OPTS -o ConnectTimeout=6 "$PI_USER@$h" 'hostname' 2>/dev/null || true)
             echo "$h -> ${OUT:-unreachable}"
             # Only accept the host that identifies as omv (not omv-ha itself).
             if [ "$OUT" = "omv" ]; then
@@ -57,7 +62,7 @@ jobs:
         if: inputs.dry_run == false && steps.probe.outputs.OMV_HOST != ''
         run: |
           h="${{ steps.probe.outputs.OMV_HOST }}"
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$PI_USER@$h" '
+          ssh $SSH_OPTS "$PI_USER@$h" '
             echo "=== docker state ==="; sudo systemctl is-active docker || true;
             FAILED=0;
             sudo systemctl is-active --quiet docker || { sudo systemctl start docker || FAILED=1; }
