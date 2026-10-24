@@ -106,6 +106,6 @@ jobs:
             echo "$code $p"
           done
           echo "--- Link header ---"
-          curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i '^link:' | head -c 300; echo
+          curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i '^link:' | head -c 300 || true; echo
           echo "--- markdown negotiation ---"
-          curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10
+          curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10 || true
