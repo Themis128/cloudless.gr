@@ -778,8 +778,9 @@ async function socialautoActionAsync(
 
   // Reflect the decision on the original alert card: drop the actions block
   // and append an actioned-by context line so the channel sees it was handled.
+  // On failure (`:warning:` reply) keep the action buttons so the user can retry.
   const blocks = message?.blocks;
-  if (Array.isArray(blocks) && blocks.length) {
+  if (Array.isArray(blocks) && blocks.length && !text.startsWith(":warning:")) {
     const kept = blocks.filter((b) => b.type !== "actions");
     await postResponseUrl(responseUrl, {
       replace_original: true,
