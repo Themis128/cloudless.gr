@@ -576,7 +576,9 @@ export async function getOpsConsole(): Promise<SaOpsConsole> {
 export type SaOpsAction =
   | { action: "session-heal" }
   | { action: "release-browser-lock" }
-  | { action: "set-tiktok-audit"; status: string; reference?: string; detail?: string };
+  | { action: "set-tiktok-audit"; status: string; reference?: string; detail?: string }
+  | { action: "agency-proposal-approve"; id: string }
+  | { action: "agency-proposal-reject"; id: string };
 
 /** POST-mapped ops actions — the only mutations the admin UI is allowed to
  *  trigger against the SocialAuto ops surface. Unknown actions 400. */
@@ -599,6 +601,10 @@ export async function runOpsAction(action: SaOpsAction): Promise<unknown> {
           detail: action.detail,
         }),
       });
+    case "agency-proposal-approve":
+      return callThrowing(`/agency/proposals/${action.id}/approve`, { method: "POST" });
+    case "agency-proposal-reject":
+      return callThrowing(`/agency/proposals/${action.id}/reject`, { method: "POST" });
   }
 }
 
