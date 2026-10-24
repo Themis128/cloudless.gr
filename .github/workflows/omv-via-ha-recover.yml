@@ -48,6 +48,10 @@ jobs:
               break
             fi
           done
+          if [ ! -s "$GITHUB_OUTPUT" ] || ! grep -q OMV_HOST "$GITHUB_OUTPUT"; then
+            echo "::error::no reachable host identified as omv — recovery cannot proceed"
+            exit 1
+          fi
 
       - name: Restart docker + runner services on omv
         if: inputs.dry_run == false && steps.probe.outputs.OMV_HOST != ''
@@ -55,12 +59,16 @@ jobs:
           h="${{ steps.probe.outputs.OMV_HOST }}"
           ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$PI_USER@$h" '
             echo "=== docker state ==="; sudo systemctl is-active docker || true;
-            sudo systemctl start docker 2>/dev/null || true; sleep 5;
+            FAILED=0;
+            sudo systemctl is-active --quiet docker || { sudo systemctl start docker || FAILED=1; }
+            sleep 5;
+            sudo systemctl is-active --quiet docker || FAILED=1;
             docker ps --format "{{.Names}}\t{{.Status}}" 2>/dev/null | head -15;
             echo "=== runner units ===";
             sudo systemctl list-units --all --plain "actions.runner.*.service" --no-legend | awk "{print \$1, \$3, \$4}";
             UNITS=$(systemctl list-units --all --plain "actions.runner.*.service" --no-legend | awk "{print \$1}");
-            FAILED=0; for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u" || { echo "restart failed: $u"; FAILED=1; }; done;
+            for u in $UNITS; do sudo systemctl restart "$u" && echo "restarted $u" || { echo "restart failed: $u"; FAILED=1; }; done;
             echo "=== tailscaled ===";
-            sudo systemctl is-active tailscaled || sudo systemctl start tailscaled;
+            sudo systemctl is-active --quiet tailscaled || { sudo systemctl start tailscaled || FAILED=1; }
+            sudo systemctl is-active --quiet tailscaled || FAILED=1;
             [ "$FAILED" = "0" ]'
