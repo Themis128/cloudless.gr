@@ -1,0 +1,219 @@
+name: omv workspace agent-readiness
+
+# Publishes agent-readiness artifacts into the Nextcloud workspace
+# container (cloud.cloudless.gr): robots.txt, sitemap.xml, auth.md,
+# /.well-known/* discovery docs, and .htaccess rules for Link headers +
+# Markdown-for-Agents negotiation. Runs on the omv self-hosted runner
+# which has docker access to the OMV workspace stack.
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — locate the container and
+#                          probe current endpoints, no changes.
+#   apply=true:            write files into the container docroot and
+#                          append the .htaccess block.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write files + patch .htaccess (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  agent-ready:
+    name: workspace agent-readiness
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+    steps:
+      - name: Locate Nextcloud container + probe endpoints
+        run: |
+          set -uo pipefail
+          echo "=== containers ==="
+          docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
+          NC=$(docker ps --format '{{.Names}}' | grep -iE '^nextcloud' | head -1)
+          echo "NC=$NC"
+          [ -z "$NC" ] && NC=$(docker ps --format '{{.Names}} {{.Ports}}' | grep '11000' | awk '{print $1}')
+          echo "resolved NC=$NC"
+          echo "$NC" > /tmp/nc-container
+          if [ -n "$NC" ]; then
+            docker exec "$NC" sh -c 'ls /var/www/html/robots.txt /var/www/html/.htaccess 2>&1; apache2ctl -M 2>/dev/null | grep -E "headers|rewrite" || true'
+          fi
+          for p in /robots.txt /sitemap.xml /.well-known/api-catalog; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' "https://cloud.cloudless.gr$p" --max-time 10)
+            echo "$code $p"
+          done
+
+      - name: Write agent-readiness files
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          NC=$(cat /tmp/nc-container)
+          [ -z "$NC" ] && { echo "no nextcloud container"; exit 1; }
+          ROOT=/var/www/html
+          docker exec "$NC" sh -c "mkdir -p $ROOT/.well-known/mcp $ROOT/.well-known/agent-skills"
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/robots.txt" <<'EOT'
+          User-agent: *
+          Allow: /
+          Disallow: /remote.php
+          Disallow: /apps/
+          Disallow: /index.php/apps/
+          Disallow: /settings/
+          Content-Signal: ai-train=no, search=yes, ai-input=yes
+
+          User-agent: OAI-SearchBot
+          Allow: /
+
+          User-agent: ChatGPT-User
+          Allow: /
+
+          User-agent: Claude-SearchBot
+          Allow: /
+
+          User-agent: Claude-User
+          Allow: /
+
+          User-agent: PerplexityBot
+          Allow: /
+
+          User-agent: Perplexity-User
+          Allow: /
+
+          User-agent: GPTBot
+          Disallow: /
+
+          User-agent: ClaudeBot
+          Disallow: /
+
+          User-agent: Google-Extended
+          Disallow: /
+
+          User-agent: CCBot
+          Disallow: /
+
+          User-agent: Bytespider
+          Disallow: /
+
+          Sitemap: https://cloud.cloudless.gr/sitemap.xml
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/sitemap.xml" <<'EOT'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <url><loc>https://cloud.cloudless.gr/</loc><changefreq>daily</changefreq></url>
+            <url><loc>https://cloud.cloudless.gr/login</loc><changefreq>monthly</changefreq></url>
+          </urlset>
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/auth.md" <<'EOT'
+          # auth.md — Agent Authentication for cloud.cloudless.gr
+
+          ```json agent_auth
+          {
+            "register_uri": "https://cloud.cloudless.gr/login",
+            "token_uri": "https://cloud.cloudless.gr/ocs/v2.php/core/getapppassword",
+            "identity_types_supported": ["identity_assertion"],
+            "identity_assertion": {
+              "assertion_types_supported": ["verified_email"],
+              "credential_types_supported": ["app_password"]
+            },
+            "authorization_servers": ["https://cloud.cloudless.gr"],
+            "protected_resource": "https://cloud.cloudless.gr/.well-known/oauth-protected-resource",
+            "contact": "tbaltzakis@cloudless.gr"
+          }
+          ```
+
+          Nextcloud OCS/WebDAV API: app passwords via `/ocs/v2.php/core/getapppassword`
+          (Basic auth) or interactive login → Settings → Security → App passwords.
+          Send `Authorization: Basic` or Bearer credentials; scope is per-account.
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/api-catalog" <<'EOT'
+          {"linkset":[{"anchor":"https://cloud.cloudless.gr/ocs/v2.php","service-desc":[{"href":"https://cloud.cloudless.gr/.well-known/openapi.json","type":"application/vnd.oai.openapi+json"}],"service-doc":[{"href":"https://docs.nextcloud.com/server/latest/developer_manual/","type":"text/html"}],"status":[{"href":"https://cloud.cloudless.gr/status.php"}]}]}
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/openid-configuration" <<'EOT'
+          {"issuer":"https://cloud.cloudless.gr","authorization_endpoint":"https://cloud.cloudless.gr/login","token_endpoint":"https://cloud.cloudless.gr/ocs/v2.php/core/getapppassword","jwks_uri":"https://cloud.cloudless.gr/.well-known/jwks.json","grant_types_supported":["password","authorization_code"],"response_types_supported":["token","code"],"subject_types_supported":["public"],"agent_auth":{"skill":"https://cloud.cloudless.gr/auth.md","register_uri":"https://cloud.cloudless.gr/login","identity_types_supported":["identity_assertion"],"identity_assertion":{"assertion_types_supported":["verified_email"],"credential_types_supported":["app_password"]}}}
+EOT
+          docker exec -i "$NC" sh -c "cp $ROOT/.well-known/openid-configuration $ROOT/.well-known/oauth-authorization-server"
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/oauth-protected-resource" <<'EOT'
+          {"resource":"https://cloud.cloudless.gr","authorization_servers":["https://cloud.cloudless.gr"],"scopes_supported":["read","write","admin"],"bearer_methods_supported":["header"],"resource_documentation":"https://cloud.cloudless.gr/auth.md"}
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/mcp/server-card.json" <<'EOT'
+          {"serverInfo":{"name":"nextcloud-cloudless","title":"Cloudless Workspace (Nextcloud)","version":"1.0.0"},"transport":{"type":"http","endpoint":"https://cloud.cloudless.gr/ocs/v2.php"},"capabilities":{"tools":true,"resources":true},"note":"Nextcloud OCS/WebDAV API; MCP tooling available via the cloudless.gr stack"}
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/agent-skills/index.json" <<'EOT'
+          {"$schema":"https://agentskills.io/schema/agent-skills-index-0.2.0.json","skills":[{"name":"nextcloud-ops","type":"skill","description":"Nextcloud workspace file/dav/ocs operations","url":"https://github.com/Themis128/cu130-slim/blob/main/deploy/omv-workspace/README.md","sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}]}
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/ai-catalog.json" <<'EOT'
+          {"specVersion":"0.1.0","host":{"domain":"cloud.cloudless.gr","name":"Cloudless Workspace","description":"Nextcloud file/DAV/OCS workspace"},"entries":[{"id":"urn:air:cloud.cloudless.gr:api:ocs","identifier":"urn:air:cloud.cloudless.gr:api:ocs","uri":"urn:air:cloud.cloudless.gr:api:ocs","displayName":"Nextcloud OCS API","type":"application/json","url":"https://cloud.cloudless.gr/ocs/v2.php","representativeQueries":["list files","share a file","user status"]},{"id":"urn:air:cloud.cloudless.gr:svc:status","identifier":"urn:air:cloud.cloudless.gr:svc:status","uri":"urn:air:cloud.cloudless.gr:svc:status","displayName":"Nextcloud status","type":"application/json","url":"https://cloud.cloudless.gr/status.php","representativeQueries":["is nextcloud up","server status"]}]}
+EOT
+
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/agent.json" <<'EOT'
+          {"name":"Cloudless Workspace Agent","description":"Nextcloud workspace agent — file, calendar, contacts and collaboration APIs via OCS/WebDAV.","url":"https://cloud.cloudless.gr/ocs/v2.php","version":"1.0.0","provider":{"organization":"Cloudless","url":"https://cloudless.gr"},"capabilities":{"streaming":false,"pushNotifications":false},"supportedInterfaces":[{"url":"https://cloud.cloudless.gr/ocs/v2.php","protocolBinding":"JSONRPC","protocolVersion":"1.0"}],"skills":[{"id":"files","name":"File access","description":"WebDAV file operations"},{"id":"ocs","name":"OCS API","description":"Nextcloud OCS share/user APIs"}],"defaultInputModes":["text"],"defaultOutputModes":["text"]}
+EOT
+          docker exec -i "$NC" sh -c "cp $ROOT/.well-known/agent.json $ROOT/.well-known/agent-card.json"
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/poppy.json" <<'EOT'
+          {"protocol_version":"0.1","protocol":"PAP","name":"Cloudless Workspace Agent","organization":{"name":"Cloudless","domain":"cloud.cloudless.gr"},"web":{"agentCard":"https://cloud.cloudless.gr/.well-known/agent.json"}}
+EOT
+          docker exec -i "$NC" sh -c "cat > $ROOT/.well-known/http-message-signatures-directory" <<'EOT'
+          {"keys":[{"kty":"OKP","crv":"Ed25519","x":"tYRI8xtCCA4JhHI8eHhFbmHu0ol1rcORbQmZ1iPHr8o","alg":"EdDSA","use":"sig","kid":"Bng5NAERjK8vX06O2B1dwWmDMGxhJ9WaL34mCnNYXE8"}]}
+EOT
+          echo "files written"
+
+      - name: Patch .htaccess for Link headers + markdown negotiation
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          NC=$(cat /tmp/nc-container)
+          docker exec "$NC" sh -c '
+            grep -q "agent-ready" /var/www/html/.htaccess 2>/dev/null && { echo "already patched"; exit 0; }
+            cat >> /var/www/html/.htaccess <<HT
+# --- agent-ready ---
+<IfModule mod_headers.c>
+  Header always set Link "</.well-known/api-catalog>; rel=\"api-catalog\"; type=\"application/linkset+json\", </.well-known/oauth-authorization-server>; rel=\"oauth-authorization-server\"; type=\"application/json\", </.well-known/agent.json>; rel=\"agent-card\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"mcp-server-card\"; type=\"application/json\", </.well-known/ai-catalog.json>; rel=\"ai-catalog\"; type=\"application/json\", </status.php>; rel=\"status\", </auth.md>; rel=\"agent-auth\"; type=\"text/markdown\""
+</IfModule>
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Accept} text/markdown
+  RewriteCond %{REQUEST_URI} ^/?$
+  RewriteRule .* /index.md [L,T=text/markdown]
+</IfModule>
+HT
+            cat > /var/www/html/index.md <<MD
+# Cloudless Workspace (Nextcloud)
+
+Self-hosted workspace — files, calendars, contacts, collaboration.
+
+## Agent surface
+- OCS API: /ocs/v2.php
+- WebDAV: /remote.php/dav
+- Status: /status.php
+- API catalog: /.well-known/api-catalog
+- Agent card: /.well-known/agent.json
+- MCP card: /.well-known/mcp/server-card.json
+- Auth: /auth.md
+MD
+          ' && echo "htaccess + index.md applied"
+
+      - name: Verify endpoints
+        if: env.APPLY == 'true'
+        run: |
+          sleep 3
+          for p in /robots.txt /sitemap.xml /auth.md /.well-known/api-catalog /.well-known/openid-configuration /.well-known/oauth-protected-resource /.well-known/mcp/server-card.json /.well-known/agent-skills/index.json /.well-known/ai-catalog.json /.well-known/agent.json /.well-known/agent-card.json /.well-known/poppy.json /.well-known/http-message-signatures-directory; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' "https://cloud.cloudless.gr$p" --max-time 10)
+            echo "$code $p"
+          done
+          curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i "^link:" | head -c 200; echo
+          curl -sk -o /dev/null -w 'markdown: %{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10
