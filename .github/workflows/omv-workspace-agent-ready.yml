@@ -104,8 +104,9 @@ jobs:
             docker cp "$SRC/auth.md"     "$NC:$ROOT/auth.md"
             docker cp "$SRC/skill.md"    "$NC:$ROOT/skill.md"
             docker cp "$SRC/index.md"    "$NC:$ROOT/index.md"
+            docker cp "$SRC/agent-ready.js" "$NC:$ROOT/agent-ready.js"
             docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
-            docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
+            docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md /var/www/html/agent-ready.js 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md /var/www/html/agent-ready.js'
           else
             sudo mkdir -p "$D/.well-known/mcp" "$D/.well-known/agent-skills"
             sudo cp "$SRC/robots.txt"  "$D/robots.txt"
@@ -113,8 +114,9 @@ jobs:
             sudo cp "$SRC/auth.md"     "$D/auth.md"
             sudo cp "$SRC/skill.md"    "$D/skill.md"
             sudo cp "$SRC/index.md"    "$D/index.md"
+            sudo cp "$SRC/agent-ready.js" "$D/agent-ready.js"
             sudo cp -r "$SRC/.well-known/." "$D/.well-known/"
-            sudo chmod -R a+r "$D/.well-known" "$D/robots.txt" "$D/sitemap.xml" "$D/auth.md" "$D/skill.md" "$D/index.md"
+            sudo chmod -R a+r "$D/.well-known" "$D/robots.txt" "$D/sitemap.xml" "$D/auth.md" "$D/skill.md" "$D/index.md" "$D/agent-ready.js"
           fi
           echo "files copied to $D"
 
@@ -170,7 +172,7 @@ jobs:
         run: |
           set -uo pipefail
           sleep 3
-          for p in /robots.txt /sitemap.xml /auth.md /skill.md /.well-known/api-catalog \
+          for p in /robots.txt /sitemap.xml /auth.md /skill.md /agent-ready.js /.well-known/api-catalog \
                    /.well-known/openid-configuration /.well-known/oauth-authorization-server \
                    /.well-known/oauth-protected-resource /.well-known/mcp/server-card.json \
                    /.well-known/agent-skills/index.json /.well-known/ai-catalog.json \
@@ -184,4 +186,4 @@ jobs:
           echo "--- markdown negotiation ---"
           curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10 || true
           echo "--- webmcp injection ---"
-          curl -sk https://cloud.cloudless.gr/login --max-time 15 | grep -c "modelContext" || true
+          curl -sk https://cloud.cloudless.gr/login --max-time 15 | grep -c "agent-ready.js" || true
