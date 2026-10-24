@@ -493,7 +493,6 @@ describe("socialauto jwtExpiryMs fallback", () => {
   });
 });
 
-
 describe("runOpsAction agency proposal actions", () => {
   it("approves via POST /agency/proposals/:id/approve", async () => {
     const lib = await loadLib();

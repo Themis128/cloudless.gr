@@ -602,9 +602,13 @@ export async function runOpsAction(action: SaOpsAction): Promise<unknown> {
         }),
       });
     case "agency-proposal-approve":
-      return callThrowing(`/agency/proposals/${encodeURIComponent(action.id)}/approve`, { method: "POST" });
+      return callThrowing(`/agency/proposals/${encodeURIComponent(action.id)}/approve`, {
+        method: "POST",
+      });
     case "agency-proposal-reject":
-      return callThrowing(`/agency/proposals/${encodeURIComponent(action.id)}/reject`, { method: "POST" });
+      return callThrowing(`/agency/proposals/${encodeURIComponent(action.id)}/reject`, {
+        method: "POST",
+      });
   }
 }
 
