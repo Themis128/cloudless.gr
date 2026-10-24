@@ -1,0 +1,111 @@
+name: omv workspace agent-readiness
+
+# Publishes agent-readiness artifacts into the Nextcloud workspace
+# container (cloud.cloudless.gr): robots.txt, sitemap.xml, auth.md,
+# /.well-known/* discovery docs, and .htaccess rules for Link headers +
+# Markdown-for-Agents negotiation. Payload lives versioned in
+# infrastructure/workspace-agent-ready/. Runs on the omv self-hosted
+# runner which has docker access to the OMV workspace stack.
+#
+# Trigger: workflow_dispatch.
+#   apply=false (default): diagnostics only — locate the container and
+#                          probe current endpoints, no changes.
+#   apply=true:            copy files into the container docroot and
+#                          append the .htaccess block (idempotent).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Copy files + patch .htaccess (default: diagnostics only)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  agent-ready:
+    name: workspace agent-readiness
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 15
+    env:
+      APPLY: ${{ format('{0}', inputs.apply) == 'true' }}
+      SRC: infrastructure/workspace-agent-ready
+      ROOT: /var/www/html
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Locate Nextcloud container + probe endpoints
+        run: |
+          set -uo pipefail
+          echo "=== containers ==="
+          docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' | grep -iE 'nextcloud|cloud' \
+            || docker ps --format '{{.Names}}\t{{.Image}}' | head -20
+          # Pick the container that actually has the Nextcloud docroot —
+          # avoids sidecars like nextcloud-talk-hpb / notify-push / collabora.
+          NC=""
+          for c in $(docker ps --format '{{.Names}}' | grep -iE 'nextcloud'); do
+            if docker exec "$c" test -f /var/www/html/version.php 2>/dev/null; then NC=$c; break; fi
+          done
+          [ -z "$NC" ] && NC=$(docker ps --format '{{.Names}} {{.Ports}}' | grep '11000' | awk '{print $1}')
+          echo "resolved NC=$NC"
+          echo "$NC" > /tmp/nc-container
+          if [ -n "$NC" ]; then
+            docker exec "$NC" sh -c 'ls -la /var/www/html/robots.txt /var/www/html/.htaccess 2>&1 | head -5; apache2ctl -M 2>/dev/null | grep -E "headers|rewrite" || true'
+          fi
+          for p in /robots.txt /sitemap.xml /.well-known/api-catalog; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' "https://cloud.cloudless.gr$p" --max-time 10 || echo ERR)
+            echo "$code $p"
+          done
+
+      - name: Copy agent-readiness files into container docroot
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          NC=$(cat /tmp/nc-container)
+          [ -z "$NC" ] && { echo "::error::no nextcloud container found"; exit 1; }
+          docker exec "$NC" mkdir -p "$ROOT/.well-known/mcp" "$ROOT/.well-known/agent-skills"
+          docker cp "$SRC/robots.txt"    "$NC:$ROOT/robots.txt"
+          docker cp "$SRC/sitemap.xml"   "$NC:$ROOT/sitemap.xml"
+          docker cp "$SRC/auth.md"       "$NC:$ROOT/auth.md"
+          docker cp "$SRC/skill.md"      "$NC:$ROOT/skill.md"
+          docker cp "$SRC/index.md"      "$NC:$ROOT/index.md"
+          docker cp "$SRC/.well-known/." "$NC:$ROOT/.well-known/"
+          docker exec "$NC" sh -c 'chown -R www-data:www-data /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md 2>/dev/null; chmod -R a+r /var/www/html/.well-known /var/www/html/robots.txt /var/www/html/sitemap.xml /var/www/html/auth.md /var/www/html/skill.md /var/www/html/index.md'
+          echo "files copied"
+
+      - name: Prepend .htaccess block (Link headers + markdown negotiation)
+        if: env.APPLY == 'true'
+        run: |
+          set -euo pipefail
+          NC=$(cat /tmp/nc-container)
+          if docker exec "$NC" grep -q "agent-ready" "$ROOT/.htaccess" 2>/dev/null; then
+            echo ".htaccess already patched — skipping"
+          else
+            # Prepend so our [L] pass-through rules run BEFORE Nextcloud's
+            # stock front-controller rewrite (.well-known → index.php).
+            docker cp "$SRC/htaccess-agent-ready.conf" "$NC:/tmp/agent-htaccess.conf"
+            docker exec "$NC" sh -c 'cat /tmp/agent-htaccess.conf /var/www/html/.htaccess > /tmp/ht.new && cat /tmp/ht.new > /var/www/html/.htaccess && rm /tmp/agent-htaccess.conf /tmp/ht.new'
+            echo ".htaccess block prepended"
+          fi
+
+      - name: Verify endpoints
+        if: env.APPLY == 'true'
+        run: |
+          set -uo pipefail
+          sleep 3
+          for p in /robots.txt /sitemap.xml /auth.md /skill.md /.well-known/api-catalog \
+                   /.well-known/openid-configuration /.well-known/oauth-authorization-server \
+                   /.well-known/oauth-protected-resource /.well-known/mcp/server-card.json \
+                   /.well-known/agent-skills/index.json /.well-known/ai-catalog.json \
+                   /.well-known/agent.json /.well-known/agent-card.json \
+                   /.well-known/poppy.json /.well-known/http-message-signatures-directory; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' "https://cloud.cloudless.gr$p" --max-time 10 || echo ERR)
+            echo "$code $p"
+          done
+          echo "--- Link header ---"
+          curl -skI https://cloud.cloudless.gr/ --max-time 10 | grep -i '^link:' | head -c 300 || true; echo
+          echo "--- markdown negotiation ---"
+          curl -sk -o /dev/null -w '%{http_code} %{content_type}\n' -H 'Accept: text/markdown' https://cloud.cloudless.gr/ --max-time 10 || true

@@ -1,0 +1,1 @@
+{"serverInfo":{"name":"nextcloud-cloudless","title":"Cloudless Workspace (Nextcloud)","version":"1.0.0"},"transport":{"type":"http","endpoint":"https://cloud.cloudless.gr/ocs/v2.php"},"capabilities":{"tools":true,"resources":true},"note":"Nextcloud OCS/WebDAV API; MCP tooling available via the cloudless.gr stack"}

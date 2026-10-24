@@ -1,0 +1,1 @@
+{"$schema":"https://agentskills.io/schema/agent-skills-index-0.2.0.json","skills":[{"name":"cloudless-workspace-ops","type":"skill","description":"Operate the Cloudless Nextcloud workspace — files via WebDAV, shares and users via OCS REST API","url":"https://cloud.cloudless.gr/skill.md","sha256":"1398434a625f34bc69d541fe05fcfdabfc872fdd52293ab837371d42cd581406"}]}
