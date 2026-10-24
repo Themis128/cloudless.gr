@@ -1,0 +1,58 @@
+name: omv restart GH runners
+
+# Restarts the GitHub Actions self-hosted runner services on the omv host
+# when they drop offline (runner systemd units wedged/stopped). Uses the
+# hosted-runner → Tailscale → SSH lane (same as k3s-watchdog-deploy).
+#
+# Trigger: workflow_dispatch only.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  restart-runners:
+    name: restart omv GH runners
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PI_USER: tbaltzakis
+      PI_HOST: "100.74.191.58"
+    steps:
+      - name: Check OMV_SSH_KEY secret is set
+        run: |
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::OMV_SSH_KEY secret is not set."
+            exit 1
+          fi
+          echo "OMV_SSH_KEY is set — proceeding"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+          ping: 100.74.191.58
+
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Restart actions-runner services on omv
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            'sudo systemctl list-units --all "actions.runner.*" --format "{{.UNIT}}\t{{.ACTIVE}}\t{{.SUB}}" --no-legend;
+             echo "--- restarting ---";
+             sudo systemctl restart "actions.runner.*" || true;
+             sleep 3;
+             sudo systemctl list-units "actions.runner.*" --format "{{.UNIT}}\t{{.ACTIVE}}\t{{.SUB}}" --no-legend'
