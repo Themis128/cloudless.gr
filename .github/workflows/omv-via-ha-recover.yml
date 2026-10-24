@@ -37,10 +37,6 @@ jobs:
           echo "KEYDIR=$KEYDIR" >> "$GITHUB_ENV"
           echo "SSH_OPTS=-i $KEYDIR/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$KEYDIR/known_hosts" >> "$GITHUB_ENV"
 
-      - name: Cleanup temp key
-        if: always()
-        run: rm -rf "${{ env.KEYDIR }}
-
       - name: Probe omv candidate hosts
         id: probe
         run: |
