@@ -39,7 +39,7 @@ export async function callNvidiaProxyChat(
         response.status === 401 || response.status === 403 ? "UnauthorizedException" : "AiError";
       recordAdminAiCall({
         ok: false,
-        model: "nvidia/nemotron-3.5-lightning-30b-a3b",
+        model: "nvidia/nemotron-3.5-super-vl-120b-a12b",
         viaGateway: false,
         latencyMs: Date.now() - started,
         error: err.message,
@@ -53,7 +53,7 @@ export async function callNvidiaProxyChat(
     const text = data.choices?.[0]?.message?.content?.trim() ?? "";
     recordAdminAiCall({
       ok: true,
-      model: "nvidia/nemotron-3.5-lightning-30b-a3b",
+      model: "nvidia/nemotron-3.5-super-vl-120b-a12b",
       viaGateway: false,
       latencyMs: Date.now() - started,
     });
@@ -64,7 +64,7 @@ export async function callNvidiaProxyChat(
     }
     recordAdminAiCall({
       ok: false,
-      model: "nvidia/nemotron-3.5-lightning-30b-a3b",
+      model: "nvidia/nemotron-3.5-super-vl-120b-a12b",
       viaGateway: false,
       latencyMs: Date.now() - started,
       error: err instanceof Error ? err.message : "NVIDIA proxy request failed",
