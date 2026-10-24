@@ -61,6 +61,11 @@ install(
     644,
     "/etc/systemd/system/docker.service.d/10-after-k3s.conf",
 )
+install(
+    REPO_DIR / "docker-restart-budget.conf",
+    644,
+    "/etc/systemd/system/docker.service.d/50-restart-budget.conf",
+)
 
 install(REPO_DIR / "cloudless-boot-stagger.py", 755, "/usr/local/sbin/cloudless-boot-stagger.py")
 # Compat wrapper for callers that still invoke the .sh path
