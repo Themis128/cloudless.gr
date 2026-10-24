@@ -3,7 +3,7 @@
 // resource URIs. The rewrite rule passes the resource path as ?p=<suffix>
 // because REQUEST_URI is rewritten before PHP sees it.
 $p = $_GET['p'] ?? '';
-$suffix = preg_match('#^[a-zA-Z0-9._~/-]+$#', $p) ? '/' . trim($p, '/') : '';
+$suffix = is_string($p) && preg_match('#^[a-zA-Z0-9._~/-]+$#', $p) ? '/' . trim($p, '/') : '';
 header('Content-Type: application/json');
 header('Cache-Control: public, max-age=300');
 echo json_encode([
