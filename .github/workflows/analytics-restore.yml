@@ -49,12 +49,15 @@ jobs:
         tags: tag:k8s
         ping: 100.74.191.58
     - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 6443
-    - name: Configure kubectl
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
+      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+    # kubectl goes through SSH on omv — the KUBECONFIG_B64 secret pointed at
+    # a localhost:8080 proxy that never existed, so every restore run hit
+    # "connection refused" while reporting success. Same SSH pattern as
+    # cron-free-tier.yml (OMV_SSH_KEY, remote sudo k3s kubectl).
+    - name: Configure kubectl via omv SSH
+      env:
+        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+      run: scripts/ci/kubectl-via-omv-ssh.sh
 
     - name: Run analytics-restore
       id: restore

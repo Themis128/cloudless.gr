@@ -56,8 +56,44 @@ log("=== Cleanup start (omv-main) ===")
 before_root = df_avail("/")
 
 # ── 1. Docker — images, stopped containers, unused volumes, buildx ──────────
-if shutil.which("docker"):
-    log("Docker: pruning stopped containers + dangling images...")
+# 2026-10-24 incident: the Persistent=true timer fired right after an unclean
+# boot while dockerd was still auto-starting restart=unless-stopped
+# containers — `container prune` deleted every not-yet-started container
+# (whole workspace stack) and `image prune -a` then removed all images.
+# Guard: never prune while dockerd has been up < 10 min.
+DOCKER_MIN_UPTIME_S = 600
+
+
+def dockerd_uptime_s() -> float | None:
+    """Seconds since docker.service activated; None if unknown/inactive.
+
+    Uses ActiveEnterTimestampMonotonic — wall-clock comparisons are broken at
+    boot on Pis (no RTC; clock starts stale until NTP syncs).
+    """
+    if run("systemctl", "is-active", "--quiet", "docker.service").returncode != 0:
+        return None
+    r = run("systemctl", "show", "-p", "ActiveEnterTimestampMonotonic", "--value", "docker.service")
+    try:
+        ts_us = int((r.stdout or "").strip())
+    except ValueError:
+        return None
+    if ts_us <= 0:
+        return None
+    try:
+        uptime_us = float(Path("/proc/uptime").read_text().split()[0]) * 1e6
+    except (OSError, ValueError, IndexError):
+        return None
+    return (uptime_us - ts_us) / 1e6
+
+
+docker_age = dockerd_uptime_s()
+if (
+    shutil.which("docker")
+    and docker_age is not None
+    and docker_age >= DOCKER_MIN_UPTIME_S
+    and run("docker", "ps").returncode == 0
+):
+    log(f"Docker: daemon up {int(docker_age)}s — pruning stopped containers + dangling images...")
     run_tail(3, "docker", "container", "prune", "-f")
 
     log("Docker: pruning unused images (not pulled in 48h)...")
@@ -69,7 +105,11 @@ if shutil.which("docker"):
     log("Docker: pruning buildx cache (> 10GB kept)...")
     run_tail(3, "docker", "buildx", "prune", "--keep-storage=10GB", "-f")
 else:
-    log("Docker not found — skipping Docker pruning")
+    log(
+        f"Docker pruning skipped — daemon age={docker_age!r}s "
+        f"(need >={DOCKER_MIN_UPTIME_S}s post-boot so auto-starting "
+        "containers aren't pruned as 'stopped')"
+    )
 
 # ── 2. GitHub Actions runner caches ──────────────────────────────────────────
 now = time.time()
@@ -151,8 +191,11 @@ else:
     log("crictl skipped: socket not ready")
 
 # ── 5. journald ──────────────────────────────────────────────────────────────
-log("journalctl: vacuum to 14 days / 100MB...")
-run_tail(5, "journalctl", "--vacuum-time=14d", "--vacuum-size=100M")
+# Time-based only — the old --vacuum-size=100M deleted the crashed boot's
+# journal right after the 2026-10-24 incident, killing forensics. Size is
+# already bounded by journald retention.conf (SystemMaxUse=2G).
+log("journalctl: vacuum to 14 days...")
+run_tail(5, "journalctl", "--vacuum-time=14d")
 
 # ── 6. Container logs ────────────────────────────────────────────────────────
 log("Pod logs: removing entries older than 3 days...")
