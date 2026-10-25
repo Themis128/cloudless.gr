@@ -294,6 +294,16 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
     metadata: { start, meetLink, notes: notes ? notes.slice(0, 500) : null },
   }).catch((err) => console.warn("[chat-tools] recordNotification failed:", err));
 
+  // Funnel: every booked visitor becomes a lead (EspoCRM + nurture sweep).
+  // Source is tagged "chatbot" so the funnel can tell bookings from forms.
+  forwardPlaybookLead({
+    email,
+    name,
+    pagePath: "/api/chat",
+    consentAt: new Date().toISOString(),
+    form: "chatbot-booking",
+  }).catch((err) => console.warn("[chat-tools] lead capture failed:", err));
+
   return [
     `Your consultation with **Themistoklis Baltzakis** at **Cloudless.gr** is confirmed! 🎉`,
     `**When:** ${slotLabel}`,
