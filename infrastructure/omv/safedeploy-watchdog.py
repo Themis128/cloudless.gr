@@ -307,12 +307,7 @@ def check_targets() -> None:
             )
             _set(f"notified_{name}", "1")
         if fc >= ROLLBACK_THRESHOLD and remed:
-            if remed[0] == "cmd":
-                ns, dep = None, None
-                cmd = remed[1]
-            else:
-                ns, dep = remed
-                cmd = None
+            cmd = remed[1] if remed[0] == "cmd" else None
             prev = int(_get(f"remed_ts_{name}", "0"))
             if now - prev >= ROLLBACK_COOLDOWN:
                 if cmd:
@@ -320,6 +315,7 @@ def check_targets() -> None:
                     ok = run("bash", "-c", cmd).returncode == 0
                     desc = f"`{cmd}`"
                 else:
+                    ns, dep = remed
                     log(f"REMEDIATION: k3s rollout restart {ns}/{dep} for {name}")
                     ok = (
                         run(
