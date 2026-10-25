@@ -58,6 +58,8 @@ def deploy_field(dep: str, path: str, default: str = "") -> str:
         capture_output=True,
         text=True,
     )
+    if r.returncode != 0:
+        note(f"  DEBUG get deploy {dep} rc={r.returncode}: {r.stderr.strip()[:200]}")
     return r.stdout.strip() or default
 
 
@@ -111,7 +113,7 @@ if mb_exit == "OOMKilled" or mb_n > 3 or mb_limit in ("400Mi", "600Mi", "unknown
     note(
         f"  patched Metabase → {METABASE_MEM_LIMIT} / {METABASE_JAVA_OPTS}"
         if r.returncode == 0
-        else "  WARNING: patch failed"
+        else f"  WARNING: patch failed: {r.strip()[:200]}"
     )
     subprocess.run(
         ["kubectl", "-n", NS, "rollout", "restart", "deploy/metabase"], capture_output=True
