@@ -49,9 +49,7 @@ def run_tail(n: int, *args: str) -> None:
 def df_avail(path: str) -> int:
     r = run("df", "--output=avail", path)
     lines = (r.stdout or "").splitlines()
-    return (
-        int(lines[-1].strip()) if len(lines) > 1 and lines[-1].strip().isdigit() else 0
-    )
+    return int(lines[-1].strip()) if len(lines) > 1 and lines[-1].strip().isdigit() else 0
 
 
 log("=== Cleanup start (omv-main) ===")
@@ -145,12 +143,8 @@ for _ in range(6):
     time.sleep(5)
 if shutil.which("k3s") and CRICTL_SOCK.exists():
     log("crictl: pruning unused images...")
-    r = run(
-        "k3s", "crictl", "--runtime-endpoint", f"unix://{CRICTL_SOCK}", "rmi", "--prune"
-    )
-    lines = [
-        line for line in (r.stdout or "").splitlines() if "DeadlineExceeded" not in line
-    ]
+    r = run("k3s", "crictl", "--runtime-endpoint", f"unix://{CRICTL_SOCK}", "rmi", "--prune")
+    lines = [line for line in (r.stdout or "").splitlines() if "DeadlineExceeded" not in line]
     for line in lines[-5:]:
         log(f"  {line}")
 else:
@@ -169,11 +163,7 @@ if pods_log.is_dir():
             age = now - f.stat().st_mtime
             if ".log" in f.name and age > 3 * DAY:
                 f.unlink(missing_ok=True)
-            elif (
-                f.name.endswith(".log")
-                and age > DAY
-                and f.stat().st_size > 10 * 1024 * 1024
-            ):
+            elif f.name.endswith(".log") and age > DAY and f.stat().st_size > 10 * 1024 * 1024:
                 with f.open("r+b") as fh:
                     fh.truncate(1024 * 1024)
         except OSError:
@@ -213,9 +203,7 @@ if releases_dir.is_dir():
             shutil.rmtree(f, ignore_errors=True)
 
     standalone = Path("/home/tbaltzakis/cloudless-standalone")
-    current_sha = (
-        os.path.basename(os.readlink(standalone)) if standalone.is_symlink() else ""
-    )
+    current_sha = os.path.basename(os.readlink(standalone)) if standalone.is_symlink() else ""
 
     shas = sorted(
         (p for p in releases_dir.iterdir() if p.is_dir() and p.name != current_sha),
