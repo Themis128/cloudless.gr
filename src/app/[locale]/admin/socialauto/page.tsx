@@ -27,7 +27,7 @@ export default function SocialAutoGatePage() {
 
   const load = useCallback(async () => {
     const r = await fetch("/api/admin/socialauto-gates", { cache: "no-store" });
-    const d = await r.json();
+    const d = (await r.json()) as { items?: GateItem[]; error?: string };
     if (!r.ok) { setErr(d.error || "load failed"); return; }
     setItems(d.items || []);
     setErr(null);

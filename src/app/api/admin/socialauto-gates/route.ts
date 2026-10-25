@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
   try {
-    const { id, op, comment_draft } = await request.json();
+    const { id, op, comment_draft } = (await request.json()) as {
+      id: string; op: "approve" | "reject"; comment_draft?: string;
+    };
     const item = op === "reject"
       ? await rejectGate(id)
       : await approveGate(id, comment_draft);

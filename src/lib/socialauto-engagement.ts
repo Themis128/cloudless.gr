@@ -24,11 +24,11 @@ export async function approveGate(id: string, commentDraft?: string): Promise<Ga
     body: JSON.stringify(commentDraft ? { comment_draft: commentDraft } : {}),
   });
   if (!r.ok) throw new Error(`approve: ${r.status}`);
-  return (await r.json()) as GateItem[];
+  return (await r.json()) as GateItem;
 }
 
 export async function rejectGate(id: string): Promise<GateItem> {
   const r = await saFetch(`/engagement/${id}/reject`, { method: "POST" });
   if (!r.ok) throw new Error(`reject: ${r.status}`);
-  return (await r.json()) as GateItem[];
+  return (await r.json()) as GateItem;
 }
