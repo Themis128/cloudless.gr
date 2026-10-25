@@ -120,7 +120,8 @@ Beyond the main site, each 2-min tick also runs:
 | social | `social.cloudless.gr/` | ok (2xx/3xx — Access 302 = up) | none (Docker on dev host — omv can't restart) |
 | postiz | `postiz.cloudless.gr/` | ok | `k3s:postiz:postiz` |
 | espocrm | `espocrm.cloudless.gr/` | ok | `k3s:espocrm:espocrm` |
-| n8n | `n8n.cloudless.gr/healthz` | 200 | cmd — `systemctl try-restart cloudflared` + SSH `docker start n8n` on dev box (needs Windows sshd on office-1); k3s deployment scaled to 0 since ~Aug 2026 |
+| n8n-tunnel | `n8n.cloudless.gr/healthz` | ok (302=up) | cmd — `timeout 120 systemctl try-restart cloudflared` (Access 302 means edge OK; only 5xx/timeout trips) |
+| n8n-app | `192.168.1.23:5678/healthz` (LAN, no Access) | 200 | cmd — SSH `docker start`/`restart n8n` on office-1 (sshd enabled, omv root key authorized) |
 | grafana | `grafana.cloudless.gr/api/health` | 200 | none (helm release name) |
 | appflowy | `appflowy.cloudless.gr/api/health` | 200 | none |
 | ntfy | `ntfy.cloudless.gr/` | ok | `k3s:ntfy:ntfy` |

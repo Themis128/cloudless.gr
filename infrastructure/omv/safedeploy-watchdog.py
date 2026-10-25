@@ -59,18 +59,23 @@ WATCH_TARGETS = [
     ("social", "https://social.cloudless.gr/", "ok", None),
     ("postiz", "https://postiz.cloudless.gr/", "ok", ("postiz", "postiz")),
     ("espocrm", "https://espocrm.cloudless.gr/", "ok", ("espocrm", "espocrm")),
-    # n8n runs on dev-box Docker (LAN 192.168.1.23:5678, tailnet 100.83.120.93).
-    # Remediation: restart the omv cloudflared (covers tunnel-side failures),
-    # then SSH to the dev box and `docker start n8n` (covers container-down).
-    # The ssh leg needs Windows sshd running on office-1; if it fails the
-    # urgent alert asks for a manual check — honest failure signal.
+    # n8n runs on dev-box Docker (LAN 192.168.1.23:5678). Two probes, each
+    # with targeted remediation — Access returns 302 regardless of backend
+    # health, so the public URL can only test the tunnel/edge:
+    #   tunnel leg: 302/2xx = edge OK; 5xx/timeout → restart omv cloudflared
+    #   app leg: direct LAN probe → SSH to office-1 and restart the container
     (
-        "n8n",
+        "n8n-tunnel",
         "https://n8n.cloudless.gr/healthz",
+        "ok",
+        ("cmd", "timeout 120 systemctl try-restart cloudflared"),
+    ),
+    (
+        "n8n-app",
+        "http://192.168.1.23:5678/healthz",
         "200",
         (
             "cmd",
-            "timeout 120 systemctl try-restart cloudflared && "
             "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
             "tbaltzakis@192.168.1.23 'docker start n8n || docker restart n8n'",
         ),
