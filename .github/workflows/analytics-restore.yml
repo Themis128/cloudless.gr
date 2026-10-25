@@ -55,19 +55,9 @@ jobs:
     # "connection refused" while reporting success. Same SSH pattern as
     # cron-free-tier.yml (OMV_SSH_KEY, remote sudo k3s kubectl).
     - name: Configure kubectl via omv SSH
-      run: |
-        mkdir -p ~/.ssh ~/bin
-        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
-        cat > ~/bin/kubectl <<'SH'
-        #!/usr/bin/env bash
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 tbaltzakis@100.74.191.58 "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml $*"
-        SH
-        chmod +x ~/bin/kubectl
-        echo "$HOME/bin" >> "$GITHUB_PATH"
-        # sanity: the shim must reach the real API before the restore runs
-        ~/bin/kubectl version --short 2>&1 | tail -2
+      env:
+        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+      run: scripts/ci/kubectl-via-omv-ssh.sh
 
     - name: Run analytics-restore
       id: restore
