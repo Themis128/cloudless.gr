@@ -70,7 +70,7 @@ WATCH_TARGETS = [
         "200",
         (
             "cmd",
-            "systemctl try-restart cloudflared && "
+            "timeout 120 systemctl try-restart cloudflared && "
             "ssh -o BatchMode=yes -o ConnectTimeout=5 "
             "tbaltzakis@100.83.120.93 'docker start n8n || docker restart n8n'",
         ),
@@ -310,6 +310,8 @@ def check_targets() -> None:
             cmd = remed[1] if remed[0] == "cmd" else None
             prev = int(_get(f"remed_ts_{name}", "0"))
             if now - prev >= ROLLBACK_COOLDOWN:
+                # stamp the attempt — failures retry after cooldown, not every cycle
+                _set(f"remed_ts_{name}", str(now))
                 if cmd:
                     log(f"REMEDIATION: cmd `{cmd}` for {name}")
                     ok = run("bash", "-c", cmd).returncode == 0
@@ -325,7 +327,6 @@ def check_targets() -> None:
                     )
                     desc = f"k3s rollout restart deploy/{dep} in ns {ns}"
                 if ok:
-                    _set(f"remed_ts_{name}", str(now))
                     notify_all(
                         f"🔁 {name} remediated",
                         f"{desc} after {fc} consecutive failures.",
