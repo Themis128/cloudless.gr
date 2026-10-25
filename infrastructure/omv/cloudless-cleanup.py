@@ -72,8 +72,7 @@ def dockerd_uptime_s() -> float | None:
     """
     if run("systemctl", "is-active", "--quiet", "docker.service").returncode != 0:
         return None
-    r = run("systemctl", "show", "-p", "ActiveEnterTimestampMonotonic",
-            "--value", "docker.service")
+    r = run("systemctl", "show", "-p", "ActiveEnterTimestampMonotonic", "--value", "docker.service")
     try:
         ts_us = int((r.stdout or "").strip())
     except ValueError:
@@ -88,9 +87,12 @@ def dockerd_uptime_s() -> float | None:
 
 
 docker_age = dockerd_uptime_s()
-if shutil.which("docker") and docker_age is not None \
-        and docker_age >= DOCKER_MIN_UPTIME_S \
-        and run("docker", "ps").returncode == 0:
+if (
+    shutil.which("docker")
+    and docker_age is not None
+    and docker_age >= DOCKER_MIN_UPTIME_S
+    and run("docker", "ps").returncode == 0
+):
     log(f"Docker: daemon up {int(docker_age)}s — pruning stopped containers + dangling images...")
     run_tail(3, "docker", "container", "prune", "-f")
 
@@ -103,9 +105,11 @@ if shutil.which("docker") and docker_age is not None \
     log("Docker: pruning buildx cache (> 10GB kept)...")
     run_tail(3, "docker", "buildx", "prune", "--keep-storage=10GB", "-f")
 else:
-    log(f"Docker pruning skipped — daemon age={docker_age!r}s "
+    log(
+        f"Docker pruning skipped — daemon age={docker_age!r}s "
         f"(need >={DOCKER_MIN_UPTIME_S}s post-boot so auto-starting "
-        "containers aren't pruned as 'stopped')")
+        "containers aren't pruned as 'stopped')"
+    )
 
 # ── 2. GitHub Actions runner caches ──────────────────────────────────────────
 now = time.time()
