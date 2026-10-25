@@ -58,7 +58,8 @@ WATCH_TARGETS = [
     ("social", "https://social.cloudless.gr/", "ok", None),
     ("postiz", "https://postiz.cloudless.gr/", "ok", ("postiz", "postiz")),
     ("espocrm", "https://espocrm.cloudless.gr/", "ok", ("espocrm", "espocrm")),
-    ("n8n", "https://n8n.cloudless.gr/healthz", "200", ("n8n", "n8n")),
+    # n8n runs on dev-box Docker (LAN 192.168.1.23:5678) — omv can't restart it
+    ("n8n", "https://n8n.cloudless.gr/healthz", "200", None),
     (
         "grafana",
         "https://grafana.cloudless.gr/api/health",
