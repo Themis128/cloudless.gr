@@ -41,12 +41,11 @@ jobs:
           ping: 100.74.191.58
 
       - name: Wait for tailnet path to omv
-        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 6443
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
 
       - name: Ensure pvc-backup-r2 exists
         run: |
