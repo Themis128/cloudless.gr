@@ -64,7 +64,7 @@ kubectl apply -f infrastructure/n8n/k8s.yaml
 
 # Verify
 kubectl get pods -n n8n -w
-kubectl get svc -n n8n n8n  # Should show NodePort 30900
+kubectl get svc -n n8n n8n  # NodePort 30900 — historical; n8n now runs in the dev-box Docker stack (see docs/pods/n8n)
 ```
 
 ### Available Workflows
