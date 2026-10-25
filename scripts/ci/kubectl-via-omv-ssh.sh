@@ -15,9 +15,11 @@ chmod 600 ~/.ssh/id_ed25519
 ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
 cat > ~/bin/kubectl <<'EOF'
 #!/usr/bin/env bash
+# Quote each arg so jsonpath={...}, --type=strategic, -p '{...}' survive SSH
+set -- "$(printf '%q ' "$@")"
 exec ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
   -i ~/.ssh/id_ed25519 tbaltzakis@100.74.191.58 \
-  "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml $*"
+  "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml $1"
 EOF
 chmod +x ~/bin/kubectl
 echo "$HOME/bin" >> "$GITHUB_PATH"
