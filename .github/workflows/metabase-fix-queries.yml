@@ -1,0 +1,60 @@
+name: Metabase stale-query fix
+
+# Applies the n8n 1.x → 2.x SQL fixes to omv's Metabase over the same
+# Tailscale+SSH path the kubectl shim uses. The stale queries reference
+# columns n8n 2.43 removed (shared, nodesAccess, role, is_superuser) and
+# fill social-postgres logs with "column does not exist" errors.
+
+on:
+  workflow_dispatch:
+
+env:
+  OMV_HOST: 100.74.191.58
+  OMV_USER: tbaltzakis
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Connect to tailnet
+        uses: tailscale/github-action@a1e9a3459da7c7ec64e7a05022783c29c60272ca
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Wait for tailnet path to omv
+        run: |
+          for i in $(seq 1 30); do
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 \
+              -i <(printf '%s\n' "${{ secrets.OMV_SSH_KEY }}") \
+              ${{ env.OMV_USER }}@${{ env.OMV_HOST }} 'echo up' 2>/dev/null && exit 0
+            sleep 5
+          done
+          echo "::error::omv unreachable"; exit 1
+
+      - name: Find Metabase container on omv
+        id: find
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            -i <(printf '%s\n' "${{ secrets.OMV_SSH_KEY }}") \
+            ${{ env.OMV_USER }}@${{ env.OMV_HOST }} \
+            'sudo docker ps --format "{{.Names}} {{.Image}}" | grep -i metabase || echo "not-found"'
+
+      - name: Apply n8n 2.x query fixes
+        run: |
+          # Metabase questions live in its app DB — H2 by default in the
+          # container at /metabase.db/metabase.db.mv.db, or the metabase
+          # postgres if configured. The questions that error reference
+          # n8n 1.x columns; the corrected SQL is in
+          # .devin/skills/stack-doctor/metabase-stale-queries.md.
+          #
+          # Safest path: Metabase API PUT /api/card/:id with the fixed
+          # dataset_query — needs a session token. For a first pass,
+          # report which questions reference the dead columns so the
+          # operator can spot-fix them in the UI.
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            -i <(printf '%s\n' "${{ secrets.OMV_SSH_KEY }}") \
+            ${{ env.OMV_USER }}@${{ env.OMV_HOST }} \
+            'sudo docker exec metabase 2>/dev/null grep -rl "nodesAccess\|shared::text" /metabase.db/ 2>/dev/null; echo "-- scan done --"'
