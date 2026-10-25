@@ -72,7 +72,7 @@ WATCH_TARGETS = [
             "cmd",
             "timeout 120 systemctl try-restart cloudflared && "
             "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            "tbaltzakis@100.83.120.93 'docker start n8n || docker restart n8n'",
+            "tbaltzakis@192.168.1.23 'docker start n8n || docker restart n8n'",
         ),
     ),
     (
