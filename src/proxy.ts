@@ -281,6 +281,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return handlePageRoute(request, pathname, nonce);
   }
 
+  // Auth-gated app shells (login/dashboard/admin) return thin client
+  // content to crawlers — flag them noindex so Google doesn't treat
+  // them as Soft 404s and penalize the index.
+  const isThinShell =
+    /^\/(en|el|fr|de)?\/?(auth|dashboard|admin)(\/|$)/.test(pathname);
+  const noindexRes = async (res: Promise<NextResponse>): Promise<NextResponse> => {
+    const r = await res;
+    if (isThinShell) r.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return r;
+  };
+
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const isHttps = forwardedProto === "https" || request.nextUrl.protocol === "https:";
 
@@ -300,7 +311,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return handleApiRoute(request, pathname, nonce);
   }
 
-  return handlePageRoute(request, pathname, nonce);
+  return noindexRes(handlePageRoute(request, pathname, nonce));
 }
 
 async function handleApiRoute(
