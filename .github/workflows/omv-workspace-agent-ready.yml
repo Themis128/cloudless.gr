@@ -35,7 +35,7 @@ jobs:
       SRC: infrastructure/workspace-agent-ready
       ROOT: /var/www/html
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Locate Nextcloud container + probe endpoints
         run: |
