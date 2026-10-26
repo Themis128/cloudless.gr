@@ -24,7 +24,7 @@ jobs:
       TS_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
       TS_SEC: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Mint OAuth token
         id: tok
         run: |
