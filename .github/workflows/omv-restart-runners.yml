@@ -21,7 +21,7 @@ jobs:
       PI_USER: tbaltzakis
       PI_HOST: "100.74.191.58"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check OMV_SSH_KEY secret is set
         run: |
