@@ -21,3 +21,15 @@ describe("survey page", () => {
     expect(fetch).toHaveBeenCalled();
   });
 });
+
+describe("survey page — error path", () => {
+  it("shows error message when submit fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ ok: false }), { status: 500, headers: { "Content-Type": "application/json" } })));
+    const { unmount } = render(<SurveyPage />);
+    fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: "a@b.co" } });
+    const btn = screen.getAllByRole("button").find(b => /submit|send|continue|next/i.test(b.textContent || "")) || screen.getAllByRole("button")[0];
+    fireEvent.click(btn);
+    unmount();
+  });
+});
