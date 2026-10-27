@@ -115,6 +115,12 @@ const LINKS: HubLink[] = [
     external: true,
   },
   {
+    href: "https://facebook.com/themis.baltzakis",
+    label: "Facebook (Themis)",
+    sub: "Founder build log — follow for the raw version",
+    external: true,
+  },
+  {
     href: "/en",
     label: "cloudless.gr",
     sub: "Cloud architecture & managed hosting for startups",
