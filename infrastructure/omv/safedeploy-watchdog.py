@@ -52,13 +52,34 @@ MIN_RELEASE_AGE = 900  # skip rollback if symlink younger than this (seconds)
 #   expect      = "ok" (any 2xx/3xx — Cloudflare Access 302 counts as up)
 #                 or an exact status like "200"
 #   remediation = "none" (alert only) or ("k3s", ns, deploy) → rollout restart
+#                 or ("cmd", "shell command") → runs the command
 #                 at ROLLBACK_THRESHOLD consecutive failures
 WATCH_TARGETS = [
     ("pi-origin", "https://pi-origin.cloudless.gr/api/health", "200", None),
     ("social", "https://social.cloudless.gr/", "ok", None),
     ("postiz", "https://postiz.cloudless.gr/", "ok", ("postiz", "postiz")),
     ("espocrm", "https://espocrm.cloudless.gr/", "ok", ("espocrm", "espocrm")),
-    ("n8n", "https://n8n.cloudless.gr/healthz", "200", ("n8n", "n8n")),
+    # n8n runs on dev-box Docker (LAN 192.168.1.23:5678). Two probes, each
+    # with targeted remediation — Access returns 302 regardless of backend
+    # health, so the public URL can only test the tunnel/edge:
+    #   tunnel leg: 302/2xx = edge OK; 5xx/timeout → restart omv cloudflared
+    #   app leg: direct LAN probe → SSH to office-1 and restart the container
+    (
+        "n8n-tunnel",
+        "https://n8n.cloudless.gr/healthz",
+        "ok",
+        ("cmd", "timeout 120 systemctl try-restart cloudflared"),
+    ),
+    (
+        "n8n-app",
+        "http://192.168.1.23:5678/healthz",
+        "200",
+        (
+            "cmd",
+            "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
+            "tbaltzakis@192.168.1.23 'docker start n8n || docker restart n8n'",
+        ),
+    ),
     (
         "grafana",
         "https://grafana.cloudless.gr/api/health",
@@ -291,26 +312,35 @@ def check_targets() -> None:
             )
             _set(f"notified_{name}", "1")
         if fc >= ROLLBACK_THRESHOLD and remed:
-            ns, dep = remed
+            cmd = remed[1] if remed[0] == "cmd" else None
             prev = int(_get(f"remed_ts_{name}", "0"))
             if now - prev >= ROLLBACK_COOLDOWN:
-                log(f"REMEDIATION: k3s rollout restart {ns}/{dep} for {name}")
-                if (
-                    run(
-                        "k3s", "kubectl", "-n", ns, "rollout", "restart", f"deploy/{dep}"
-                    ).returncode
-                    == 0
-                ):
-                    _set(f"remed_ts_{name}", str(now))
+                # stamp the attempt — failures retry after cooldown, not every cycle
+                _set(f"remed_ts_{name}", str(now))
+                if cmd:
+                    log(f"REMEDIATION: cmd `{cmd}` for {name}")
+                    ok = run("bash", "-c", cmd).returncode == 0
+                    desc = f"`{cmd}`"
+                else:
+                    ns, dep = remed
+                    log(f"REMEDIATION: k3s rollout restart {ns}/{dep} for {name}")
+                    ok = (
+                        run(
+                            "k3s", "kubectl", "-n", ns, "rollout", "restart", f"deploy/{dep}"
+                        ).returncode
+                        == 0
+                    )
+                    desc = f"k3s rollout restart deploy/{dep} in ns {ns}"
+                if ok:
                     notify_all(
-                        f"🔁 {name} restarted",
-                        f"k3s rollout restart deploy/{dep} in ns {ns} after {fc} consecutive failures.",
+                        f"🔁 {name} remediated",
+                        f"{desc} after {fc} consecutive failures.",
                         "high",
                     )
                 else:
                     notify_all(
                         f"🚨 {name} remediation failed",
-                        f"rollout restart deploy/{dep} in ns {ns} failed. Manual check needed.",
+                        f"{desc} failed. Manual check needed.",
                         "urgent",
                     )
 

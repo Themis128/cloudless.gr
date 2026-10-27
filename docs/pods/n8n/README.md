@@ -4,14 +4,20 @@
 
 ## Identity
 
-| Field | Value |
-|-------|-------|
-| Kind | Deployment |
-| Namespace | `n8n` |
-| Resource name | `n8n` |
-| Hostname / DNS | n8n.cloudless.gr |
-| Ports | 5678 · NodePort 30900 |
-| Role | Workflow automation (SQLite on PVC). |
+| Field          | Value                                                         |
+| -------------- | ------------------------------------------------------------- |
+| Kind           | Docker container (dev box compose stack `social-automation`)  |
+| Namespace      | — (Docker Desktop on office dev box)                          |
+| Resource name  | `n8n`                                                         |
+| Hostname / DNS | n8n.cloudless.gr (Cloudflare Access-gated)                    |
+| Ports          | 5678                                                          |
+| Role           | Workflow automation (Postgres `n8n` DB on `social-postgres`). |
+
+> **2026-10-25:** the k3s `n8n` Deployment (NodePort 30900, SQLite on PVC) is
+> scaled to 0 — the live n8n runs in the `cu130-slim` docker-compose stack on
+> the dev box. The tunnel ingress still routes `n8n.cloudless.gr` to
+> `192.168.1.128:30900`, so the public URL currently has no backend. The
+> k8s manifests under `infrastructure/n8n/` are kept for reference.
 
 ## How cloudless.gr uses it
 

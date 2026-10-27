@@ -17,10 +17,22 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "email", "value": "={{ $json.payload.record.emailAddress || $json.payload.record.email || '' }}" },
-            { "name": "first", "value": "={{ $json.payload.record.firstName || '' }}" },
-            { "name": "last",  "value": "={{ $json.payload.record.lastName  || '' }}" },
-            { "name": "leadId","value": "={{ $json.payload.record.id || '' }}" }
+            {
+              "name": "email",
+              "value": "={{ $json.payload.record.emailAddress || $json.payload.record.email || '' }}"
+            },
+            {
+              "name": "first",
+              "value": "={{ $json.payload.record.firstName || '' }}"
+            },
+            {
+              "name": "last",
+              "value": "={{ $json.payload.record.lastName  || '' }}"
+            },
+            {
+              "name": "leadId",
+              "value": "={{ $json.payload.record.id || '' }}"
+            }
           ]
         }
       },
@@ -31,11 +43,12 @@
     },
     {
       "parameters": {
-        "functionCode": "// Round-robin owner assignment from a hardcoded list. Replace with your\n// real team usernames in EspoCRM.\nconst owners = ['tbaltzakis'];\nconst idx = Math.floor(Math.random() * owners.length);\nreturn [{ json: { ...items[0].json, assignedUserName: owners[idx] } }];"
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Round-robin owner assignment from a hardcoded list. Replace with your\n// real team usernames in EspoCRM.\nconst owners = ['tbaltzakis'];\nconst idx = Math.floor(Math.random() * owners.length);\nconst items = $input.all();\nreturn [{ json: { ...items[0].json, assignedUserName: owners[idx] } }];"
       },
       "name": "Round-robin owner",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [680, 300]
     },
     {
@@ -45,13 +58,21 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-Api-Key", "value": "={{ $env.ESPOCRM_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $env.ESPOCRM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "bodyParametersJson": "={{ JSON.stringify({ assignedUserName: $json.assignedUserName }) }}",
-        "options": { "timeout": 8000 }
+        "options": {
+          "timeout": 8000
+        }
       },
       "name": "EspoCRM PUT /Lead/:id",
       "type": "n8n-nodes-base.httpRequest",
@@ -66,13 +87,21 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env.SLACK_BOT_TOKEN }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SLACK_BOT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "bodyParametersJson": "={{ JSON.stringify({ channel: '#leads', text: `:dart: New lead assigned to *${$json.assignedUserName}*: ${$('Extract lead fields').item.json.first} ${$('Extract lead fields').item.json.last} <${$('Extract lead fields').item.json.email}>` }) }}",
-        "options": { "timeout": 5000 }
+        "options": {
+          "timeout": 5000
+        }
       },
       "name": "Slack DM assignee",
       "type": "n8n-nodes-base.httpRequest",
@@ -82,12 +111,58 @@
     }
   ],
   "connections": {
-    "Webhook (lead-enrich)": { "main": [[{ "node": "Extract lead fields", "type": "main", "index": 0 }]] },
-    "Extract lead fields": { "main": [[{ "node": "Round-robin owner", "type": "main", "index": 0 }]] },
-    "Round-robin owner": { "main": [[{ "node": "EspoCRM PUT /Lead/:id", "type": "main", "index": 0 }]] },
-    "EspoCRM PUT /Lead/:id": { "main": [[{ "node": "Slack DM assignee", "type": "main", "index": 0 }]] }
+    "Webhook (lead-enrich)": {
+      "main": [
+        [
+          {
+            "node": "Extract lead fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract lead fields": {
+      "main": [
+        [
+          {
+            "node": "Round-robin owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Round-robin owner": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM PUT /Lead/:id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM PUT /Lead/:id": {
+      "main": [
+        [
+          {
+            "node": "Slack DM assignee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
-  "tags": [{ "name": "cloudless" }]
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "cloudless"
+    }
+  ]
 }

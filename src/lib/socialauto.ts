@@ -144,7 +144,7 @@ async function saToken(): Promise<string> {
   return saLogin();
 }
 
-async function saFetch(
+export async function saFetch(
   path: string,
   init: RequestInit & { timeoutMs?: number } = {},
   retried = false

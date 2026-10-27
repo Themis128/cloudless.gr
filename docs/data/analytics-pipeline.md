@@ -6,13 +6,13 @@ This document describes the analytics implementation strategy for the Cloudless.
 
 ## Phase Summary
 
-| Phase | Service | Status | RAM Impact |
-|-------|---------|--------|------------|
-| 1 | AppFlowy Stack | Ready to deploy | ~700Mi → +16% RAM |
-| 2 | n8n Analytics Workflows | Workflows ready | ~1Gi → +10% RAM |
-| 3 | EspoCRM Lead Lifecycle | Ready to deploy | ~512Mi-1Gi → +10% RAM |
-| 4 | DuckDB + Metabase | Pending | +5-10% RAM |
-| 5 | Postiz Social Analytics | Ready to deploy | +512Mi-1Gi → +10% RAM |
+| Phase | Service                 | Status          | RAM Impact            |
+| ----- | ----------------------- | --------------- | --------------------- |
+| 1     | AppFlowy Stack          | Ready to deploy | ~700Mi → +16% RAM     |
+| 2     | n8n Analytics Workflows | Workflows ready | ~1Gi → +10% RAM       |
+| 3     | EspoCRM Lead Lifecycle  | Ready to deploy | ~512Mi-1Gi → +10% RAM |
+| 4     | DuckDB + Metabase       | Pending         | +5-10% RAM            |
+| 5     | Postiz Social Analytics | Ready to deploy | +512Mi-1Gi → +10% RAM |
 
 ## Phase 1: AppFlowy Stack (Week 1-2)
 
@@ -40,17 +40,17 @@ kubectl get svc -n appflowy nginx-nodeport  # Should show port 30810
 
 ### Resource Allocation
 
-| Pod | CPU Request | Memory Request | Memory Limit |
-|-----|-------------|--------------|------------|
-| postgres | 50m | 200Mi | 400Mi |
-| redis | 10m | 16Mi | 64Mi |
-| gotrue | 10m | 32Mi | 96Mi |
-| appflowy-cloud | 50m | 128Mi | 320Mi |
-| appflowy-web | 10m | 48Mi | 96Mi |
-| admin-frontend | 10m | 48Mi | 96Mi |
-| nginx | 10m | 16Mi | 64Mi |
-| minio | 25m | 80Mi | 200Mi |
-| appflowy-worker (omv-ha) | 25m | 80Mi | 200Mi |
+| Pod                      | CPU Request | Memory Request | Memory Limit |
+| ------------------------ | ----------- | -------------- | ------------ |
+| postgres                 | 50m         | 200Mi          | 400Mi        |
+| redis                    | 10m         | 16Mi           | 64Mi         |
+| gotrue                   | 10m         | 32Mi           | 96Mi         |
+| appflowy-cloud           | 50m         | 128Mi          | 320Mi        |
+| appflowy-web             | 10m         | 48Mi           | 96Mi         |
+| admin-frontend           | 10m         | 48Mi           | 96Mi         |
+| nginx                    | 10m         | 16Mi           | 64Mi         |
+| minio                    | 25m         | 80Mi           | 200Mi        |
+| appflowy-worker (omv-ha) | 25m         | 80Mi           | 200Mi        |
 
 **Total RAM estimate: ~700Mi**
 
@@ -64,19 +64,19 @@ kubectl apply -f infrastructure/n8n/k8s.yaml
 
 # Verify
 kubectl get pods -n n8n -w
-kubectl get svc -n n8n n8n  # Should show NodePort 30900
+kubectl get svc -n n8n n8n  # NodePort 30900 — historical; n8n now runs in the dev-box Docker stack (see docs/pods/n8n)
 ```
 
 ### Available Workflows
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `lead-enrich.json` | Webhook | Round-robin owner assignment, update EspoCRM, Slack DM |
-| `newsletter-nurture.json` | Webhook | Tag contacts in EspoCRM, add to nurture sequence |
-| `postiz-utm-guard.json` | Webhook | Check post URLs for UTM params, alert #campaigns if missing |
-| `funnel-daily-rollup.json` | Cron (daily) | Fetch analytics, post digest to #analytics, upload to DuckDB |
-| `hot-lead-alert.json` | Webhook | Alert #notifications when lead score >65 |
-| `rfm-cohort-update.json` | Cron (weekly) | Trigger RFM compute, post results to #analytics |
+| Workflow                   | Trigger       | Purpose                                                      |
+| -------------------------- | ------------- | ------------------------------------------------------------ |
+| `lead-enrich.json`         | Webhook       | Round-robin owner assignment, update EspoCRM, Slack DM       |
+| `newsletter-nurture.json`  | Webhook       | Tag contacts in EspoCRM, add to nurture sequence             |
+| `postiz-utm-guard.json`    | Webhook       | Check post URLs for UTM params, alert #campaigns if missing  |
+| `funnel-daily-rollup.json` | Cron (daily)  | Fetch analytics, post digest to #analytics, upload to DuckDB |
+| `hot-lead-alert.json`      | Webhook       | Alert #notifications when lead score >65                     |
+| `rfm-cohort-update.json`   | Cron (weekly) | Trigger RFM compute, post results to #analytics              |
 
 ### Operator Bootstrap for Analytics Workflows
 
@@ -118,11 +118,11 @@ kubectl get svc -n espocrm espocrm  # Should show NodePort 30700
 
 ### Webhooks Configuration
 
-| Endpoint | Event | Integration |
-|----------|-------|------------|
-| `/api/webhooks/espocrm` | Contact Created | Slack #contacts |
-| `/api/webhooks/espocrm` | Deal Created | Lead scoring + R2 log |
-| `/api/webhooks/espocrm` | Deal Won | Stripe webhook correlation |
+| Endpoint                | Event           | Integration                |
+| ----------------------- | --------------- | -------------------------- |
+| `/api/webhooks/espocrm` | Contact Created | Slack #contacts            |
+| `/api/webhooks/espocrm` | Deal Created    | Lead scoring + R2 log      |
+| `/api/webhooks/espocrm` | Deal Won        | Stripe webhook correlation |
 
 ## Phase 4: Analytics Stack (Week 4-5)
 
@@ -222,10 +222,10 @@ kubectl get svc -n postiz postiz  # Should show NodePort 30500
 
 Postiz tracks social media engagement that feeds into the analytics pipeline:
 
-| Metric | Source | Destination |
-|--------|--------|-------------|
-| Posts published | Postiz DB | S3 `lake/social/` parquet |
-| Engagement rate | Postiz DB | S3 `lake/social/` parquet |
+| Metric             | Source    | Destination               |
+| ------------------ | --------- | ------------------------- |
+| Posts published    | Postiz DB | S3 `lake/social/` parquet |
+| Engagement rate    | Postiz DB | S3 `lake/social/` parquet |
 | Click-through rate | Postiz DB | S3 `lake/social/` parquet |
 
 ## Verification Scripts
@@ -270,14 +270,14 @@ kubectl top nodes
 
 Located in `scripts/etl/`:
 
-| Script | Purpose | Schedule |
-|--------|---------|----------|
-| `stripe-to-lake.mjs` | Stripe → transactions.parquet | Daily |
-| `clients-to-lake.mjs` | Cognito + portals → clients.parquet | Daily |
-| `compute-rfm-churn.mjs` | Compute RFM + churn scores | Daily |
-| `espocrm-to-lake.mjs` | EspoCRM leads/deals → leads.parquet | Daily |
-| `gsc-to-lake.mjs` | GSC clicks/impressions → gsc.parquet | Daily |
-| `postiz-to-lake.mjs` | Postiz engagement → social.parquet | Daily |
+| Script                  | Purpose                              | Schedule |
+| ----------------------- | ------------------------------------ | -------- |
+| `stripe-to-lake.mjs`    | Stripe → transactions.parquet        | Daily    |
+| `clients-to-lake.mjs`   | Cognito + portals → clients.parquet  | Daily    |
+| `compute-rfm-churn.mjs` | Compute RFM + churn scores           | Daily    |
+| `espocrm-to-lake.mjs`   | EspoCRM leads/deals → leads.parquet  | Daily    |
+| `gsc-to-lake.mjs`       | GSC clicks/impressions → gsc.parquet | Daily    |
+| `postiz-to-lake.mjs`    | Postiz engagement → social.parquet   | Daily    |
 
 ## Next Steps
 
@@ -310,3 +310,4 @@ Located in `scripts/etl/`:
 
    ```bash
    aws ssm get-parameter --name /cloudless/production/N8N_WORKFLOW_*/ --with-decryption
+   ```

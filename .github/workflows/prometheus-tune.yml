@@ -12,8 +12,8 @@ on:
   push:
     branches: [main]
     paths:
-    - .github/workflows/prometheus-tune.yml
-    - scripts/prometheus-tune.py
+      - .github/workflows/prometheus-tune.yml
+      - scripts/prometheus-tune.py
 
 permissions:
   contents: read
@@ -30,27 +30,26 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-        ping: 100.74.191.58
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Configure kubectl via omv SSH
-      env:
-        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
-      run: scripts/ci/kubectl-via-omv-ssh.sh
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
 
-    - name: Tune Prometheus rules
-      run: python3 scripts/prometheus-tune.py 2>&1 | tee prom-tune.log
+      - name: Tune Prometheus rules
+        run: python3 scripts/prometheus-tune.py 2>&1 | tee prom-tune.log
 
-    - name: Post result to tracking issue
-      if: always()
-      run: |
-        { echo '# Prometheus tune — '"$(date -u '+%Y-%m-%d %H:%M:%SZ')"; echo; echo '```'; cat prom-tune.log 2>/dev/null || echo '(no log)'; echo '```'; } > prom-comment.md
-        gh issue comment 382 --repo "${{ github.repository }}" --body-file prom-comment.md
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          { echo '# Prometheus tune — '"$(date -u '+%Y-%m-%d %H:%M:%SZ')"; echo; echo '```'; cat prom-tune.log 2>/dev/null || echo '(no log)'; echo '```'; } > prom-comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file prom-comment.md
