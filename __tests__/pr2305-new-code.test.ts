@@ -155,3 +155,41 @@ describe("admin agency analytics page", () => {
     expect(html).toContain("unavailable");
   });
 });
+
+describe("uncovered edge paths", () => {
+  it("gates POST 502s when upstream throws", async () => {
+    mockSaFetch.mockRejectedValue(new Error("network down"));
+    const r = await gatesPOST(
+      req("http://x/api/admin/socialauto-gates", {
+        method: "POST",
+        body: JSON.stringify({ id: "g1", op: "approve" }),
+      }) as never
+    );
+    expect(r.status).toBe(502);
+  });
+
+  it("approveGate throws on !ok", async () => {
+    mockSaFetch.mockResolvedValue(okJson({}, 500));
+    await expect(approveGate("g1", "draft")).rejects.toThrow(/approve/);
+  });
+
+  it("approveGate succeeds without draft", async () => {
+    mockSaFetch.mockResolvedValue(okJson({ id: "g1", status: "approved" }));
+    const item = await approveGate("g1");
+    expect((item as { status: string }).status).toBe("approved");
+  });
+
+  it("survey POST 502s when forward fetch throws", async () => {
+    mockGetConfig.mockResolvedValue(CFG);
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("dns")));
+    await expect(
+      surveyPOST(
+        req("http://x/api/survey", {
+          method: "POST",
+          body: JSON.stringify({ email: "a@b.co", consent: true, answers: {} }),
+        }) as never
+      )
+    ).rejects.toThrow("dns");
+    vi.unstubAllGlobals();
+  });
+});
