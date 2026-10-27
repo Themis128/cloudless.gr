@@ -34,7 +34,7 @@ async function getMetrics(): Promise<AgencyMetrics | null> {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-void-light/50 p-6">
+    <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
       <p className="text-sm text-slate-400">{label}</p>
       <p className="mt-2 text-3xl font-semibold text-slate-100">{value}</p>
     </div>
@@ -46,16 +46,19 @@ export default async function AgencyAnalyticsPage() {
   const v = (x: number | string | undefined, suffix = "") =>
     x === undefined || x === null ? "—" : `${x}${suffix}`;
   return (
-    <main className="p-8 space-y-6">
+    <main className="space-y-6 p-8">
       <h1 className="text-2xl font-bold">Agent Operations — 6-20 Client Board</h1>
       {m === null && (
         <p className="text-sm text-slate-400">
-          SocialAuto metrics unavailable — check SOCIALAUTO_* config or the
-          /api/v1/agency/metrics endpoint.
+          SocialAuto metrics unavailable — check SOCIALAUTO_* config or the /api/v1/agency/metrics
+          endpoint.
         </p>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Stat label="Token Cost per Delivery (TCD)" value={m?.tcd_eur == null ? "—" : `€${m.tcd_eur}`} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Stat
+          label="Token Cost per Delivery (TCD)"
+          value={m?.tcd_eur == null ? "—" : `€${m.tcd_eur}`}
+        />
         <Stat label="Task Success Rate (TSR)" value={v(m?.tsr_pct, "%")} />
         <Stat label="Parallel Tasks (PPL)" value={v(m?.ppl_active)} />
         <Stat label="Audit Lead Vector" value={v(m?.alv_minutes, " min")} />
