@@ -9,7 +9,7 @@
   },
   "devDependencies": {
 
-    "cf": "1.0.0-beta.13",
+    "cf": "1.0.0-beta.20",
     "wrangler": "4.152.0"
 
   }
