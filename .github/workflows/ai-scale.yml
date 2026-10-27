@@ -17,9 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Scale direction'
+        description: "Scale direction"
         required: true
-        default: 'up'
+        default: "up"
         type: choice
         options: [up, down]
 
@@ -30,50 +30,49 @@ jobs:
   scale:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd  # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-        ping: 100.74.191.58
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Configure kubectl via omv SSH
-      env:
-        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
-      run: scripts/ci/kubectl-via-omv-ssh.sh
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
 
-    - name: Scale ${{ inputs.action }}
-      run: |
-        set -euo pipefail
-        ACTION="${{ inputs.action }}"
-        REPLICAS=0
-        [ "${ACTION}" = "up" ] && REPLICAS=1
+      - name: Scale ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+          ACTION="${{ inputs.action }}"
+          REPLICAS=0
+          [ "${ACTION}" = "up" ] && REPLICAS=1
 
-        echo "→ scaling vllm-kimi (omv-ai) to ${REPLICAS}"
-        kubectl -n omv-ai scale deployment/vllm-kimi --replicas="${REPLICAS}"
+          echo "→ scaling vllm-kimi (omv-ai) to ${REPLICAS}"
+          kubectl -n omv-ai scale deployment/vllm-kimi --replicas="${REPLICAS}"
 
-        echo "→ scaling appflowy-ai (appflowy) to ${REPLICAS}"
-        kubectl -n appflowy scale deployment/appflowy-ai --replicas="${REPLICAS}"
+          echo "→ scaling appflowy-ai (appflowy) to ${REPLICAS}"
+          kubectl -n appflowy scale deployment/appflowy-ai --replicas="${REPLICAS}"
 
-        if [ "${ACTION}" = "up" ]; then
-          echo ""
-          echo "→ waiting for appflowy-ai to become ready (60s timeout)…"
-          kubectl -n appflowy rollout status deployment/appflowy-ai --timeout=60s || true
+          if [ "${ACTION}" = "up" ]; then
+            echo ""
+            echo "→ waiting for appflowy-ai to become ready (60s timeout)…"
+            kubectl -n appflowy rollout status deployment/appflowy-ai --timeout=60s || true
 
-          echo ""
-          echo "→ vllm-kimi is loading the model — this takes 3-5 min on the Pi."
-          echo "   Watch: kubectl -n omv-ai logs -f deployment/vllm-kimi"
-          echo ""
-          echo "→ current pod status:"
-          kubectl -n omv-ai get pods -l app=vllm-kimi
-          kubectl -n appflowy get pods -l app=appflowy-ai
-        else
-          echo ""
-          echo "→ AI pods scaled down. AppFlowy AI features will be unavailable until next 'up'."
-          kubectl -n omv-ai get pods -l app=vllm-kimi
-          kubectl -n appflowy get pods -l app=appflowy-ai
-        fi
+            echo ""
+            echo "→ vllm-kimi is loading the model — this takes 3-5 min on the Pi."
+            echo "   Watch: kubectl -n omv-ai logs -f deployment/vllm-kimi"
+            echo ""
+            echo "→ current pod status:"
+            kubectl -n omv-ai get pods -l app=vllm-kimi
+            kubectl -n appflowy get pods -l app=appflowy-ai
+          else
+            echo ""
+            echo "→ AI pods scaled down. AppFlowy AI features will be unavailable until next 'up'."
+            kubectl -n omv-ai get pods -l app=vllm-kimi
+            kubectl -n appflowy get pods -l app=appflowy-ai
+          fi

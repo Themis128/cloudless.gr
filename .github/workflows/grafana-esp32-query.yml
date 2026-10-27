@@ -14,29 +14,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-        ping: 100.74.191.58
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Configure kubectl via omv SSH
-      env:
-        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
-      run: scripts/ci/kubectl-via-omv-ssh.sh
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
 
-    - name: Get Grafana admin password
-      run: |
-        PASS=$(kubectl get secret kube-prom-grafana -n monitoring \
-          -o jsonpath='{.data.admin-password}' | base64 -d)
-        echo "::add-mask::${PASS}"
-        echo "GRAFANA_PASS=${PASS}" >> "$GITHUB_ENV"
-    - name: Query Grafana and ESP32 data
-      env:
-        DASHBOARD_UID: ${{ inputs.dashboard_uid }}
-      run: python3 scripts/grafana-esp32-query.py
+      - name: Get Grafana admin password
+        run: |
+          PASS=$(kubectl get secret kube-prom-grafana -n monitoring \
+            -o jsonpath='{.data.admin-password}' | base64 -d)
+          echo "::add-mask::${PASS}"
+          echo "GRAFANA_PASS=${PASS}" >> "$GITHUB_ENV"
+      - name: Query Grafana and ESP32 data
+        env:
+          DASHBOARD_UID: ${{ inputs.dashboard_uid }}
+        run: python3 scripts/grafana-esp32-query.py

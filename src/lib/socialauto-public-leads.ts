@@ -36,6 +36,7 @@ export interface PlaybookLeadInput {
   name?: string;
   locale?: string;
   pagePath?: string;
+  form?: string;
   consentAt: string;
 }
 
@@ -104,7 +105,7 @@ export async function forwardPlaybookLead(input: PlaybookLeadInput): Promise<For
         email: input.email,
         name: input.name || undefined,
         site: "cloudless.gr",
-        form: "playbook",
+        form: input.form ?? "playbook",
         page_path: input.pagePath || undefined,
         locale: input.locale || undefined,
         consent: true,

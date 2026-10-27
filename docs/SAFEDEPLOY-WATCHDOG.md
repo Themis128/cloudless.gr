@@ -10,13 +10,13 @@ in production, external dep hiccups, tunnel blips, etc.
 Runs on **omv** (host, outside the k3s cluster) via a systemd timer every
 2 minutes. Polls `/api/health` (local NodePort first, LAN, then public URL).
 
-| Consecutive failures | ~ Minutes unhealthy | Action |
-|---|---|---|
-| 1–2 | 2–4 min | Silent (transient hiccup) |
-| **3** | ~6 min | **Alert** on ntfy + Slack + email (one-shot per incident) |
-| 4–7 | 8–14 min | No further pings (won't spam) |
-| **8** | ~16 min | **Auto-rollback** `previous release` + "rolled back" alert |
-| — | recovers | "Recovered" alert; state reset |
+| Consecutive failures | ~ Minutes unhealthy | Action                                                     |
+| -------------------- | ------------------- | ---------------------------------------------------------- |
+| 1–2                  | 2–4 min             | Silent (transient hiccup)                                  |
+| **3**                | ~6 min              | **Alert** on ntfy + Slack + email (one-shot per incident)  |
+| 4–7                  | 8–14 min            | No further pings (won't spam)                              |
+| **8**                | ~16 min             | **Auto-rollback** `previous release` + "rolled back" alert |
+| —                    | recovers            | "Recovered" alert; state reset                             |
 
 ### Safeguards
 
@@ -114,19 +114,20 @@ Beyond the main site, each 2-min tick also runs:
 
 `WATCH_TARGETS` in the script — `name|url|expect|remediation`:
 
-| Target | URL | Expect | Remediation |
-|---|---|---|---|
-| pi-origin | `pi-origin.cloudless.gr/api/health` | 200 | none (same app as main check) |
-| social | `social.cloudless.gr/` | ok (2xx/3xx — Access 302 = up) | none (Docker on dev host — omv can't restart) |
-| postiz | `postiz.cloudless.gr/` | ok | `k3s:postiz:postiz` |
-| espocrm | `espocrm.cloudless.gr/` | ok | `k3s:espocrm:espocrm` |
-| n8n | `n8n.cloudless.gr/healthz` | 200 | `k3s:n8n:n8n` |
-| grafana | `grafana.cloudless.gr/api/health` | 200 | none (helm release name) |
-| appflowy | `appflowy.cloudless.gr/api/health` | 200 | none |
-| ntfy | `ntfy.cloudless.gr/` | ok | `k3s:ntfy:ntfy` |
-| uptime-kuma | `kuma.cloudless.gr/` | ok | `k3s:uptime-kuma:uptime-kuma` |
-| webmail | `webmail.cloudless.gr/` | ok | none (omv-ha, not k3s) |
-| postiz-ai-proxy | `…workers.dev/v1/models` | 200 | none (Cloudflare worker) |
+| Target          | URL                                          | Expect                         | Remediation                                                                                              |
+| --------------- | -------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| pi-origin       | `pi-origin.cloudless.gr/api/health`          | 200                            | none (same app as main check)                                                                            |
+| social          | `social.cloudless.gr/`                       | ok (2xx/3xx — Access 302 = up) | none (Docker on dev host — omv can't restart)                                                            |
+| postiz          | `postiz.cloudless.gr/`                       | ok                             | `k3s:postiz:postiz`                                                                                      |
+| espocrm         | `espocrm.cloudless.gr/`                      | ok                             | `k3s:espocrm:espocrm`                                                                                    |
+| n8n-tunnel      | `n8n.cloudless.gr/healthz`                   | ok (302=up)                    | cmd — `timeout 120 systemctl try-restart cloudflared` (Access 302 means edge OK; only 5xx/timeout trips) |
+| n8n-app         | `192.168.1.23:5678/healthz` (LAN, no Access) | 200                            | cmd — SSH `docker start`/`restart n8n` on office-1 (sshd enabled, omv root key authorized)               |
+| grafana         | `grafana.cloudless.gr/api/health`            | 200                            | none (helm release name)                                                                                 |
+| appflowy        | `appflowy.cloudless.gr/api/health`           | 200                            | none                                                                                                     |
+| ntfy            | `ntfy.cloudless.gr/`                         | ok                             | `k3s:ntfy:ntfy`                                                                                          |
+| uptime-kuma     | `kuma.cloudless.gr/`                         | ok                             | `k3s:uptime-kuma:uptime-kuma`                                                                            |
+| webmail         | `webmail.cloudless.gr/`                      | ok                             | none (omv-ha, not k3s)                                                                                   |
+| postiz-ai-proxy | `…workers.dev/v1/models`                     | 200                            | none (Cloudflare worker)                                                                                 |
 
 Same incident semantics as the main check: silent for 1–2 failures, one
 alert at 3, recovery alert on heal. `k3s:<ns>:<deploy>` remediation runs a
