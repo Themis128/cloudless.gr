@@ -274,6 +274,50 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "  next health check: 4m",
     ],
   },
+  {
+    tag: t("servicesSection.service7Tag", "AI GOVERNANCE"),
+    num: "07",
+    title: t("servicesSection.service7Title", "AI Governance Audit"),
+    price: "On request",
+    unit: t("servicesPage.perAudit", "fixed-scope, 2 weeks"),
+    color: "green" as const,
+    planKey: "ai-governance",
+    outcome: t(
+      "servicesPage.s7Outcome",
+      "Walk out audit-ready: system inventory, risk class per system, oversight checkpoints, evidence log."
+    ),
+    perfectFor: t(
+      "servicesSection.service7For",
+      "For Greek/EU SMBs already shipping AI features — or about to — without an AI Act evidence trail."
+    ),
+    description: t(
+      "servicesSection.service7Desc",
+      "EU AI Act obligations are live and fines are sized for enterprises. We inventory your AI systems, classify each against the Act's risk tiers, wire human-oversight checkpoints, and hand you an evidence log your auditor can verify — the same governance stack that runs our own agent fleet."
+    ),
+    features: [
+      "AI system inventory & ownership map",
+      "EU AI Act risk-tier classification per system",
+      "Human-oversight checkpoint design",
+      "Evidence log + audit-ready documentation",
+      "Remediation roadmap with owner assignments",
+    ],
+    stats: [
+      { value: "2 wks", label: "Fixed Scope" },
+      { value: "4", label: "Risk Tiers" },
+      { value: "2026", label: "Enforcement Live" },
+      { value: "100%", label: "Evidence-Based" },
+    ],
+    terminal: [
+      "$ cloudless ai-gov audit --scope smb",
+      "  ✓ 14 AI systems inventoried",
+      "  ✓ risk classes assigned (minimal/high)",
+      "  ✓ oversight checkpoints wired",
+      "  ✓ evidence log generated",
+      "  ---",
+      "  status: audit-ready",
+      "  next review: quarterly",
+    ],
+  },
 ];
 
 export const getServicesFaqs = (t: (key: string, fallback: string) => string) => [
