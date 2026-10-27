@@ -142,22 +142,26 @@ jobs:
             print(ds)
           "
 
-          DS_ID=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
-            wget -qO- --header="Authorization: Basic $B64" \
-            "http://localhost:3000/api/datasources" | \
-            python3 -c "import sys,json; ds=json.load(sys.stdin); \
-            print(next((str(d['id']) for d in (ds if isinstance(ds,list) else []) \
-            if d['type']=='prometheus'), '1'))")
+          # Grafana's HTTP API only documents UID-based health/proxy routes
+          # (/api/datasources/uid/:uid/health, /api/datasources/proxy/uid/:uid/*);
+          # the numeric-id routes return 404 on current Grafana.
+          DS_UID=$(echo "$DS_JSON" | python3 -c "import sys,json; ds=json.load(sys.stdin); \
+            print(next((d['uid'] for d in (ds if isinstance(ds,list) else []) \
+            if d['type']=='prometheus'), ''))")
+          if [ -z "$DS_UID" ]; then
+            echo "::warning::No Prometheus datasource found in Grafana; skipping health probe."
+            exit 0
+          fi
 
-          echo "=== Datasource $DS_ID health ==="
+          echo "=== Datasource $DS_UID health ==="
           kubectl exec -n monitoring "$GRAFANA_POD" -- \
             wget -qO- --header="Authorization: Basic $B64" \
-            "http://localhost:3000/api/datasources/$DS_ID/health" | python3 -m json.tool
+            "http://localhost:3000/api/datasources/uid/$DS_UID/health" | python3 -m json.tool
 
           echo "=== Prometheus 'up' metric (first 8 targets) ==="
           kubectl exec -n monitoring "$GRAFANA_POD" -- \
             wget -qO- --header="Authorization: Basic $B64" \
-            "http://localhost:3000/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
+            "http://localhost:3000/api/datasources/proxy/uid/$DS_UID/api/v1/query?query=up" | \
             python3 -c "
           import sys, json
           r = json.load(sys.stdin)
