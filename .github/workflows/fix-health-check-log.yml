@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-    - .github/workflows/fix-health-check-log.yml
+      - .github/workflows/fix-health-check-log.yml
 
 permissions:
   contents: read
@@ -27,84 +27,84 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-    - uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
+      - uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
 
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
 
-    - name: Write SSH key + wait for tailnet
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
-        chmod 600 ~/.ssh/omv_key
-        # Wait until the Pi is reachable over the tailnet before attempting SSH
-        for i in $(seq 1 18); do
-          if nc -zv -w3 100.74.191.58 22 2>/dev/null; then
-            echo "tailnet ready after ${i}×2s"
-            break
+      - name: Write SSH key + wait for tailnet
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
+          chmod 600 ~/.ssh/omv_key
+          # Wait until the Pi is reachable over the tailnet before attempting SSH
+          for i in $(seq 1 18); do
+            if nc -zv -w3 100.74.191.58 22 2>/dev/null; then
+              echo "tailnet ready after ${i}×2s"
+              break
+            fi
+            echo "waiting for tailnet... ($i/18)"
+            sleep 2
+          done
+          ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Fix log file + crontab on omv
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.74.191.58 bash -s << 'ENDSSH'
+          set -euo pipefail
+
+          LOG=/var/log/health-check-cloudless.log
+          USERLOG="$HOME/logs/health-check-cloudless.log"
+
+          # 1) Try to create/chown the system log file (needs sudo, may fail)
+          if sudo touch "$LOG" && sudo chown tbaltzakis:tbaltzakis "$LOG"; then
+            echo "OK: $LOG is now owned by tbaltzakis"
+            TARGET="$LOG"
+          else
+            echo "WARN: cannot chown $LOG (no sudo?), falling back to user log"
+            mkdir -p "$HOME/logs"
+            touch "$USERLOG"
+            TARGET="$USERLOG"
           fi
-          echo "waiting for tailnet... ($i/18)"
-          sleep 2
-        done
-        ssh-keyscan -H 100.74.191.58 >> ~/.ssh/known_hosts 2>/dev/null || true
 
-    - name: Fix log file + crontab on omv
-      run: |
-        ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.74.191.58 bash -s << 'ENDSSH'
-        set -euo pipefail
+          # 2) Verify the cron entry uses the writable target
+          CURRENT_CRON=$(crontab -l 2>/dev/null || true)
+          SCRIPT=/usr/local/bin/health-check-cloudless.sh
 
-        LOG=/var/log/health-check-cloudless.log
-        USERLOG="$HOME/logs/health-check-cloudless.log"
-
-        # 1) Try to create/chown the system log file (needs sudo, may fail)
-        if sudo touch "$LOG" && sudo chown tbaltzakis:tbaltzakis "$LOG"; then
-          echo "OK: $LOG is now owned by tbaltzakis"
-          TARGET="$LOG"
-        else
-          echo "WARN: cannot chown $LOG (no sudo?), falling back to user log"
+          # Always ensure ~/logs/ exists regardless of which log target we use
           mkdir -p "$HOME/logs"
           touch "$USERLOG"
-          TARGET="$USERLOG"
-        fi
+          chmod 644 "$USERLOG"
 
-        # 2) Verify the cron entry uses the writable target
-        CURRENT_CRON=$(crontab -l 2>/dev/null || true)
-        SCRIPT=/usr/local/bin/health-check-cloudless.sh
-
-        # Always ensure ~/logs/ exists regardless of which log target we use
-        mkdir -p "$HOME/logs"
-        touch "$USERLOG"
-        chmod 644 "$USERLOG"
-
-        if echo "$CURRENT_CRON" | grep -q "$SCRIPT"; then
-          # Replace whatever log path is in the cron line with TARGET
-          NEW_CRON=$(echo "$CURRENT_CRON" | sed "s|>> .*health-check-cloudless\.log|>> $TARGET|g")
-          if [ "$NEW_CRON" != "$CURRENT_CRON" ]; then
-            echo "$NEW_CRON" | crontab -
-            echo "OK: crontab updated to write to $TARGET"
+          if echo "$CURRENT_CRON" | grep -q "$SCRIPT"; then
+            # Replace whatever log path is in the cron line with TARGET
+            NEW_CRON=$(echo "$CURRENT_CRON" | sed "s|>> .*health-check-cloudless\.log|>> $TARGET|g")
+            if [ "$NEW_CRON" != "$CURRENT_CRON" ]; then
+              echo "$NEW_CRON" | crontab -
+              echo "OK: crontab updated to write to $TARGET"
+            else
+              echo "INFO: crontab already points at $TARGET — no change needed"
+            fi
           else
-            echo "INFO: crontab already points at $TARGET — no change needed"
+            echo "WARN: $SCRIPT not found in crontab — nothing to fix"
+            echo "Current crontab:"
+            echo "$CURRENT_CRON"
           fi
-        else
-          echo "WARN: $SCRIPT not found in crontab — nothing to fix"
-          echo "Current crontab:"
-          echo "$CURRENT_CRON"
-        fi
 
-        # 3) Test the script runs cleanly
-        if [ -x "$SCRIPT" ]; then
-          echo "Testing $SCRIPT..."
-          bash "$SCRIPT" >> "$TARGET" 2>&1 && echo "OK: test run succeeded" || echo "WARN: test run exited non-zero (check $TARGET)"
-        fi
+          # 3) Test the script runs cleanly
+          if [ -x "$SCRIPT" ]; then
+            echo "Testing $SCRIPT..."
+            bash "$SCRIPT" >> "$TARGET" 2>&1 && echo "OK: test run succeeded" || echo "WARN: test run exited non-zero (check $TARGET)"
+          fi
 
-        echo "--- Final crontab ---"
-        crontab -l || true
-        echo "--- Log tail ---"
-        tail -5 "$TARGET" || true
-        ENDSSH
+          echo "--- Final crontab ---"
+          crontab -l || true
+          echo "--- Log tail ---"
+          tail -5 "$TARGET" || true
+          ENDSSH

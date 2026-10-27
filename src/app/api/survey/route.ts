@@ -1,5 +1,5 @@
 import { getConfig } from "@/lib/ssm-config";
-import { splitServiceToken, type CfAccessCreds } from "@/lib/upstream-client";
+import { splitServiceToken } from "@/lib/upstream-client";
 
 /**
  * /api/survey — forwards the public survey form to SocialAuto's
@@ -7,18 +7,22 @@ import { splitServiceToken, type CfAccessCreds } from "@/lib/upstream-client";
  * same pattern as /api/playbook-lead.
  */
 
-const BASE = () => getConfig("SOCIALAUTO_API_URL") || "https://social.cloudless.gr";
+const DEFAULT_BASE_URL = "https://social.cloudless.gr";
+const SURVEY_PATH = "/api/v1/leads/public/survey";
 
 async function forward(payload: Record<string, unknown>) {
-  const raw = getConfig("SOCIALAUTO_SERVICE_TOKEN") || getConfig("SOCIALAUTO_SECRET");
-  const creds: CfAccessCreds = splitServiceToken(raw, getConfig("SOCIALAUTO_CF_ACCESS_CLIENT_ID"));
-  if (!creds.id || !creds.secret) return { delivered: "not_configured" as const };
-  const res = await fetch(`${BASE()}/api/v1/leads/public/survey`, {
+  const cfg = (await getConfig()) as unknown as Record<string, string | undefined>;
+  const creds = splitServiceToken(cfg.SOCIALAUTO_SERVICE_TOKEN, cfg.SOCIALAUTO_CF_ACCESS_CLIENT_ID);
+  if (!creds) return { delivered: "not_configured" as const };
+  const base = (cfg.SOCIALAUTO_API_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
+  const res = await fetch(`${base}${SURVEY_PATH}`, {
     method: "POST",
+    redirect: "manual",
     headers: {
       "Content-Type": "application/json",
-      "Cf-Access-Client-Id": creds.id,
-      "Cf-Access-Client-Secret": creds.secret,
+      Accept: "application/json",
+      "Cf-Access-Client-Id": creds.clientId,
+      "Cf-Access-Client-Secret": creds.clientSecret,
     },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10_000),
@@ -31,7 +35,9 @@ export async function POST(req: Request) {
   if (typeof body.website === "string" && body.website) {
     return Response.json({ ok: true }); // honeypot
   }
-  const email = String(body.email ?? "").trim().toLowerCase();
+  const email = String(body.email ?? "")
+    .trim()
+    .toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return Response.json({ error: "Invalid email", code: "bad_email" }, { status: 400 });
   }

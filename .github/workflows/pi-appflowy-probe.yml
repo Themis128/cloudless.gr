@@ -22,92 +22,92 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-    - uses: actions/checkout@v7
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd  # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Configure kubectl via omv SSH
-      env:
-        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
-      run: scripts/ci/kubectl-via-omv-ssh.sh
+      - uses: actions/checkout@v7
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
 
-    - name: Copy probe script into pod + run
-      run: |
-        set -euo pipefail
-        POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
-        echo "pod: $POD"
+      - name: Copy probe script into pod + run
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          echo "pod: $POD"
 
-        cat > /tmp/probe.mjs <<'JS'
-        const url = (process.env.APPFLOWY_API_URL || "").replace(/\/$/, "");
-        const email = process.env.APPFLOWY_EMAIL || "";
-        const password = process.env.APPFLOWY_PASSWORD || "";
-        const jwtSecret = process.env.APPFLOWY_JWT_SECRET || "";
+          cat > /tmp/probe.mjs <<'JS'
+          const url = (process.env.APPFLOWY_API_URL || "").replace(/\/$/, "");
+          const email = process.env.APPFLOWY_EMAIL || "";
+          const password = process.env.APPFLOWY_PASSWORD || "";
+          const jwtSecret = process.env.APPFLOWY_JWT_SECRET || "";
 
-        console.log(`APPFLOWY_API_URL: ${url}`);
-        console.log(`has email/password: ${email && password ? "yes" : "no"}`);
-        console.log(`has jwt secret: ${jwtSecret ? "yes" : "no"}`);
-        console.log();
-
-        // Health check first
-        try {
-          const h = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
-          console.log(`--- health: ${h.status} ---`);
-          console.log((await h.text()).slice(0, 200));
-        } catch (e) {
-          console.log(`--- health FAILED: ${e.message} ---`);
-        }
-        console.log();
-
-        // GoTrue password grant (this is what appflowy.ts does under the hood)
-        try {
-          const t = await fetch(`${url}/gotrue/token?grant_type=password`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-            signal: AbortSignal.timeout(10000),
-          });
-          console.log(`--- gotrue/token: ${t.status} ---`);
-          const body = await t.text();
-          console.log(body.slice(0, 600));
+          console.log(`APPFLOWY_API_URL: ${url}`);
+          console.log(`has email/password: ${email && password ? "yes" : "no"}`);
+          console.log(`has jwt secret: ${jwtSecret ? "yes" : "no"}`);
           console.log();
 
-          if (t.ok) {
-            const { access_token } = JSON.parse(body);
-            // Try listing workspaces
-            const w = await fetch(`${url}/api/workspace`, {
-              headers: { Authorization: `Bearer ${access_token}` },
+          // Health check first
+          try {
+            const h = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+            console.log(`--- health: ${h.status} ---`);
+            console.log((await h.text()).slice(0, 200));
+          } catch (e) {
+            console.log(`--- health FAILED: ${e.message} ---`);
+          }
+          console.log();
+
+          // GoTrue password grant (this is what appflowy.ts does under the hood)
+          try {
+            const t = await fetch(`${url}/gotrue/token?grant_type=password`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password }),
               signal: AbortSignal.timeout(10000),
             });
-            console.log(`--- /api/workspace: ${w.status} ---`);
-            console.log((await w.text()).slice(0, 800));
+            console.log(`--- gotrue/token: ${t.status} ---`);
+            const body = await t.text();
+            console.log(body.slice(0, 600));
+            console.log();
+
+            if (t.ok) {
+              const { access_token } = JSON.parse(body);
+              // Try listing workspaces
+              const w = await fetch(`${url}/api/workspace`, {
+                headers: { Authorization: `Bearer ${access_token}` },
+                signal: AbortSignal.timeout(10000),
+              });
+              console.log(`--- /api/workspace: ${w.status} ---`);
+              console.log((await w.text()).slice(0, 800));
+            }
+          } catch (e) {
+            console.log(`--- gotrue FAILED: ${e.message} ---`);
           }
-        } catch (e) {
-          console.log(`--- gotrue FAILED: ${e.message} ---`);
-        }
-        JS
+          JS
 
-        kubectl cp /tmp/probe.mjs ${POD#pod/}:/tmp/probe.mjs -n cloudless
-        {
-          echo "## AppFlowy auth probe from inside cloudless-app pod"
-          echo '```'
-          kubectl exec -n cloudless "$POD" -- node /tmp/probe.mjs 2>&1 || echo "(node exited non-zero)"
-          echo '```'
-        } > probe.md
-        cat probe.md
+          kubectl cp /tmp/probe.mjs ${POD#pod/}:/tmp/probe.mjs -n cloudless
+          {
+            echo "## AppFlowy auth probe from inside cloudless-app pod"
+            echo '```'
+            kubectl exec -n cloudless "$POD" -- node /tmp/probe.mjs 2>&1 || echo "(node exited non-zero)"
+            echo '```'
+          } > probe.md
+          cat probe.md
 
-    - name: Post to tracking issue 382
-      if: always()
-      run: |
-        {
-          echo "# Pi AppFlowy probe — $(date -u '+%F %T')Z"
-          echo
-          echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
-          echo
-          cat probe.md 2>/dev/null || echo "(no probe output)"
-        } > comment.md
-        gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md
+      - name: Post to tracking issue 382
+        if: always()
+        run: |
+          {
+            echo "# Pi AppFlowy probe — $(date -u '+%F %T')Z"
+            echo
+            echo "Triggered by: ${{ github.actor }} (run ${{ github.run_id }})"
+            echo
+            cat probe.md 2>/dev/null || echo "(no probe output)"
+          } > comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file comment.md

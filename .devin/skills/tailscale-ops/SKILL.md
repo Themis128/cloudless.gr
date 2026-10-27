@@ -14,11 +14,11 @@ target is actually reachable before work proceeds.
 ## The join pattern
 
 ```yaml
-- uses: tailscale/github-action@<sha>  # v4.2.0
+- uses: tailscale/github-action@<sha> # v4.2.0
   with:
     oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
     oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-    tags: tag:ci          # required — OAuth nodes must be tagged
+    tags: tag:ci # required — OAuth nodes must be tagged
     # NO ping: — flaky (see above)
 - run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
 ```

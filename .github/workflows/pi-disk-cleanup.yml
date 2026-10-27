@@ -11,12 +11,12 @@ on:
       issue:
         description: Issue number to post the result to
         required: false
-        default: '382'
+        default: "382"
   push:
     branches: [main]
     paths:
-    - .github/workflows/pi-disk-cleanup.yml
-    - scripts/pi-disk-cleanup.py
+      - .github/workflows/pi-disk-cleanup.yml
+      - scripts/pi-disk-cleanup.py
 
 permissions:
   contents: read
@@ -36,37 +36,37 @@ jobs:
       PI_HOST: 100.74.191.58
       PI_USER: tbaltzakis
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Run disk cleanup via SSH
-      run: |
-        SSH_KEY="/tmp/omv_key"
-        printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
-        chmod 600 "$SSH_KEY"
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Run disk cleanup via SSH
+        run: |
+          SSH_KEY="/tmp/omv_key"
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > "$SSH_KEY"
+          chmod 600 "$SSH_KEY"
 
-        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-          scripts/pi-disk-cleanup.py \
-          "$PI_USER@$PI_HOST:/tmp/pi-disk-cleanup.py"
+          scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+            scripts/pi-disk-cleanup.py \
+            "$PI_USER@$PI_HOST:/tmp/pi-disk-cleanup.py"
 
-        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
-          "$PI_USER@$PI_HOST" \
-          "sudo python3 /tmp/pi-disk-cleanup.py" 2>&1 | tee cleanup-output.md
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+            "$PI_USER@$PI_HOST" \
+            "sudo python3 /tmp/pi-disk-cleanup.py" 2>&1 | tee cleanup-output.md
 
-        rm -f "$SSH_KEY"
+          rm -f "$SSH_KEY"
 
-    - name: Post result to tracking issue
-      if: always()
-      run: |
-        if [ ! -s cleanup-output.md ]; then
-          printf '# Disk cleanup\n\n_SSH or cleanup script produced no output._\n' > cleanup-output.md
-        fi
-        gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
-          --body-file cleanup-output.md
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          if [ ! -s cleanup-output.md ]; then
+            printf '# Disk cleanup\n\n_SSH or cleanup script produced no output._\n' > cleanup-output.md
+          fi
+          gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+            --body-file cleanup-output.md

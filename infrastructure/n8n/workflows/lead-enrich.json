@@ -10,10 +10,7 @@
       "name": "Webhook (lead-enrich)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [
-        240,
-        300
-      ],
+      "position": [240, 300],
       "webhookId": "lead-enrich"
     },
     {
@@ -42,10 +39,7 @@
       "name": "Extract lead fields",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [
-        460,
-        300
-      ]
+      "position": [460, 300]
     },
     {
       "parameters": {
@@ -55,10 +49,7 @@
       "name": "Round-robin owner",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        680,
-        300
-      ]
+      "position": [680, 300]
     },
     {
       "parameters": {
@@ -86,10 +77,7 @@
       "name": "EspoCRM PUT /Lead/:id",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        900,
-        300
-      ],
+      "position": [900, 300],
       "continueOnFail": true
     },
     {
@@ -118,10 +106,7 @@
       "name": "Slack DM assignee",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        1120,
-        300
-      ],
+      "position": [1120, 300],
       "continueOnFail": true
     }
   ],

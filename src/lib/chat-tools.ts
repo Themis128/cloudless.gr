@@ -19,6 +19,7 @@ import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation, notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { recordNotification } from "@/lib/admin-notifications";
+import { forwardPlaybookLead } from "@/lib/socialauto-public-leads";
 import {
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
@@ -302,7 +303,7 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
     pagePath: "/api/chat",
     consentAt: new Date().toISOString(),
     form: "chatbot-booking",
-  }).catch((err) => console.warn("[chat-tools] lead capture failed:", err));
+  }).catch((err: unknown) => console.warn("[chat-tools] lead capture failed:", err));
 
   return [
     `Your consultation with **Themistoklis Baltzakis** at **Cloudless.gr** is confirmed! 🎉`,

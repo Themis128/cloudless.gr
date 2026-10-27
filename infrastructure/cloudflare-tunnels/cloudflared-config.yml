@@ -72,7 +72,7 @@ ingress:
       tcpKeepAlive: 30s
 
   - hostname: n8n.cloudless.gr
-    service: http://192.168.1.23:5678  # dev-box Docker n8n (LAN-bound)
+    service: http://192.168.1.23:5678 # dev-box Docker n8n (LAN-bound)
     originRequest:
       connectTimeout: 15s
       tcpKeepAlive: 30s

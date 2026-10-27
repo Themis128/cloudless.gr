@@ -11,8 +11,8 @@ on:
   push:
     branches: [main]
     paths:
-    - .github/workflows/grafana-nodeport-upgrade.yml
-    - infrastructure/monitoring/kube-prom-stack-values.yaml
+      - .github/workflows/grafana-nodeport-upgrade.yml
+      - infrastructure/monitoring/kube-prom-stack-values.yaml
 
 permissions:
   contents: read
@@ -28,156 +28,156 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1         # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
 
-    - name: Connect to tailnet
-      uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd         # v4.2.0
-      with:
-        oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
-        tags: tag:k8s
-    - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
-    - name: Configure kubectl via omv SSH
-      env:
-        OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
-      run: scripts/ci/kubectl-via-omv-ssh.sh
-        kubectl version --client
+      - name: Connect to tailnet
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
+          kubectl version --client
 
-    - name: Patch Grafana service to NodePort 30850
-      run: |
-        # Helm upgrade fails due to chart template nil-pointer across versions.
-        # Use kubectl patch to update only the Grafana service type — same result,
-        # no template rendering involved.
-        SVC=$(kubectl get svc -n monitoring -l app.kubernetes.io/name=grafana \
-          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -z "$SVC" ]; then
-          # Fallback: match by service name — the label differs across
-          # kube-prometheus-stack chart versions (svc is kube-prom-grafana).
-          SVC=$(kubectl get svc -n monitoring -o jsonpath='{.items[*].metadata.name}' 2>/dev/null \
-            | tr ' ' '\n' | grep -i grafana | head -1)
-        fi
-        if [ -z "$SVC" ]; then
-          echo "ERROR: Grafana service not found in monitoring namespace"
-          kubectl get svc -n monitoring
-          exit 1
-        fi
-        echo "Patching service: $SVC"
-        kubectl patch svc -n monitoring "$SVC" \
-          --type=merge \
-          -p '{"spec":{"type":"NodePort","ports":[{"name":"http-web","port":80,"targetPort":3000,"nodePort":30850}]}}' \
-        2>&1 | tee helm-upgrade.log
+      - name: Patch Grafana service to NodePort 30850
+        run: |
+          # Helm upgrade fails due to chart template nil-pointer across versions.
+          # Use kubectl patch to update only the Grafana service type — same result,
+          # no template rendering involved.
+          SVC=$(kubectl get svc -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          if [ -z "$SVC" ]; then
+            # Fallback: match by service name — the label differs across
+            # kube-prometheus-stack chart versions (svc is kube-prom-grafana).
+            SVC=$(kubectl get svc -n monitoring -o jsonpath='{.items[*].metadata.name}' 2>/dev/null \
+              | tr ' ' '\n' | grep -i grafana | head -1)
+          fi
+          if [ -z "$SVC" ]; then
+            echo "ERROR: Grafana service not found in monitoring namespace"
+            kubectl get svc -n monitoring
+            exit 1
+          fi
+          echo "Patching service: $SVC"
+          kubectl patch svc -n monitoring "$SVC" \
+            --type=merge \
+            -p '{"spec":{"type":"NodePort","ports":[{"name":"http-web","port":80,"targetPort":3000,"nodePort":30850}]}}' \
+          2>&1 | tee helm-upgrade.log
 
-    - name: Verify Grafana NodePort service
-      run: |
-        echo "=== Grafana service ==="
-        kubectl get svc -n monitoring kube-prom-stack-grafana -o wide 2>/dev/null || \
-          kubectl get svc -n monitoring | grep grafana
-        echo "=== Grafana pods ==="
-        kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
-        echo "=== NodePort 30850 ==="
-        kubectl get svc -n monitoring -o json | \
-          python3 -c "import sys,json; svcs=json.load(sys.stdin)['items']; [print(s['metadata']['name'], [p for p in s.get('spec',{}).get('ports',[]) if p.get('nodePort')==30850]) for s in svcs if any(p.get('nodePort')==30850 for p in s.get('spec',{}).get('ports',[]))]" || \
-          echo "(no service on NodePort 30850 yet)"
-        echo "=== Health check ==="
-        curl -s -o /dev/null -w "grafana.cloudless.gr: %{http_code}\n" \
-          https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
-
-    - name: Probe Grafana → Prometheus datasource
-      run: |
-        # kube-prometheus-stack stores credentials in the release-named secret;
-        # keys are admin-user/admin-password. Print key names only on failure.
-        SECRET=$(kubectl get secret -n monitoring -l app.kubernetes.io/name=grafana \
-          -o jsonpath='{.items[0].metadata.name}')
-        [ -z "$SECRET" ] && SECRET=kube-prom-grafana
-        GRAFANA_USER=$(kubectl get secret -n monitoring "$SECRET" \
-          -o jsonpath='{.data.admin-user}' | base64 -d 2>/dev/null || true)
-        PASS=$(kubectl get secret -n monitoring "$SECRET" \
-          -o jsonpath='{.data.admin-password}' | base64 -d)
-        : "${GRAFANA_USER:=admin}"
-        echo "secret=$SECRET user=$GRAFANA_USER pass_len=${#PASS}"
-        echo "secret keys: $(kubectl get secret -n monitoring "$SECRET" -o jsonpath='{.data}' | tr ',' '\n' | grep -oE '"[^"]+":' | tr -d '":' | tr '\n' ' ')"
-        # Compare against the pod's live admin env (values: length only)
-        GRAFANA_POD0=$(kubectl get pod -n monitoring -l app.kubernetes.io/name=grafana \
-          -o jsonpath='{.items[0].metadata.name}')
-        kubectl exec -n monitoring "$GRAFANA_POD0" -- sh -c \
-          'echo "pod GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER pod_pass_len=${#GF_SECURITY_ADMIN_PASSWORD}"' \
-          2>/dev/null || echo "pod has no GF_SECURITY_ADMIN_* env (admin may come from grafana.ini/ldap-toml)"
-        # Grafana image ships BusyBox wget — no --user/--password, use Basic header
-        B64=$(printf '%s:%s' "$GRAFANA_USER" "$PASS" | base64 | tr -d '\n')
-        # Use cluster-internal Grafana ClusterIP service — reachable via kubectl exec
-        GRAFANA_SVC=$(kubectl get svc -n monitoring -l app.kubernetes.io/name=grafana \
-          -o jsonpath='{.items[0].metadata.name}')
-        GRAFANA_POD=$(kubectl get pod -n monitoring -l app.kubernetes.io/name=grafana \
-          -o jsonpath='{.items[0].metadata.name}')
-        echo "Grafana pod: $GRAFANA_POD"
-
-        echo "=== Datasources ==="
-        DS_JSON=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
-          wget -qO- --header="Authorization: Basic $B64" \
-          "http://localhost:3000/api/datasources" 2>/dev/null || true)
-        if [ -z "$DS_JSON" ]; then
-          # grafana.db admin password can diverge from the k8s secret after a
-          # UI password change — env only seeds the *initial* admin. Don't fail
-          # the NodePort patch job over a stale credential; verify Grafana is
-          # serving and warn for a manual password sync instead.
-          echo "::warning::Grafana API 401 — admin password in grafana.db differs from secret '$SECRET' (user=$GRAFANA_USER). Sync the secret or reset the Grafana admin password."
-          echo "=== Fallback: Grafana health ==="
-          kubectl exec -n monitoring "$GRAFANA_POD" -- \
-            wget -qO- "http://localhost:3000/api/health" || true
-          echo
-          echo "=== Fallback: Prometheus svc endpoints ==="
-          kubectl get endpoints -n monitoring -l app.kubernetes.io/name=prometheus || true
-          exit 0
-        fi
-        echo "$DS_JSON" | python3 -c "
-        import sys, json
-        ds = json.load(sys.stdin)
-        if isinstance(ds, list):
-          for d in ds:
-            print(d['name'], d['type'], d['url'], 'default=' + str(d.get('isDefault', False)))
-        else:
-          print(ds)
-        "
-
-        DS_ID=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
-          wget -qO- --header="Authorization: Basic $B64" \
-          "http://localhost:3000/api/datasources" | \
-          python3 -c "import sys,json; ds=json.load(sys.stdin); \
-          print(next((str(d['id']) for d in (ds if isinstance(ds,list) else []) \
-          if d['type']=='prometheus'), '1'))")
-
-        echo "=== Datasource $DS_ID health ==="
-        kubectl exec -n monitoring "$GRAFANA_POD" -- \
-          wget -qO- --header="Authorization: Basic $B64" \
-          "http://localhost:3000/api/datasources/$DS_ID/health" | python3 -m json.tool
-
-        echo "=== Prometheus 'up' metric (first 8 targets) ==="
-        kubectl exec -n monitoring "$GRAFANA_POD" -- \
-          wget -qO- --header="Authorization: Basic $B64" \
-          "http://localhost:3000/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
-          python3 -c "
-        import sys, json
-        r = json.load(sys.stdin)
-        print('status:', r.get('status'))
-        for m in r.get('data', {}).get('result', [])[:8]:
-          print(' ', m['metric'].get('job','?'), '|', m['metric'].get('instance','?'), '=', m['value'][1])
-        "
-
-    - name: Post result to tracking issue
-      if: always()
-      run: |
-        {
-          echo "# Grafana NodePort upgrade — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-          echo
-          echo '```'
-          cat helm-upgrade.log 2>/dev/null | tail -20 || echo '(no log)'
-          echo
-          kubectl get svc -n monitoring kube-prom-stack-grafana 2>/dev/null || true
-          curl -s -o /dev/null -w "grafana.cloudless.gr HTTP: %{http_code}" \
+      - name: Verify Grafana NodePort service
+        run: |
+          echo "=== Grafana service ==="
+          kubectl get svc -n monitoring kube-prom-stack-grafana -o wide 2>/dev/null || \
+            kubectl get svc -n monitoring | grep grafana
+          echo "=== Grafana pods ==="
+          kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
+          echo "=== NodePort 30850 ==="
+          kubectl get svc -n monitoring -o json | \
+            python3 -c "import sys,json; svcs=json.load(sys.stdin)['items']; [print(s['metadata']['name'], [p for p in s.get('spec',{}).get('ports',[]) if p.get('nodePort')==30850]) for s in svcs if any(p.get('nodePort')==30850 for p in s.get('spec',{}).get('ports',[]))]" || \
+            echo "(no service on NodePort 30850 yet)"
+          echo "=== Health check ==="
+          curl -s -o /dev/null -w "grafana.cloudless.gr: %{http_code}\n" \
             https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
-          echo '```'
-        } > upgrade-comment.md
-        gh issue comment 382 --repo "${{ github.repository }}" --body-file upgrade-comment.md
+
+      - name: Probe Grafana → Prometheus datasource
+        run: |
+          # kube-prometheus-stack stores credentials in the release-named secret;
+          # keys are admin-user/admin-password. Print key names only on failure.
+          SECRET=$(kubectl get secret -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          [ -z "$SECRET" ] && SECRET=kube-prom-grafana
+          GRAFANA_USER=$(kubectl get secret -n monitoring "$SECRET" \
+            -o jsonpath='{.data.admin-user}' | base64 -d 2>/dev/null || true)
+          PASS=$(kubectl get secret -n monitoring "$SECRET" \
+            -o jsonpath='{.data.admin-password}' | base64 -d)
+          : "${GRAFANA_USER:=admin}"
+          echo "secret=$SECRET user=$GRAFANA_USER pass_len=${#PASS}"
+          echo "secret keys: $(kubectl get secret -n monitoring "$SECRET" -o jsonpath='{.data}' | tr ',' '\n' | grep -oE '"[^"]+":' | tr -d '":' | tr '\n' ' ')"
+          # Compare against the pod's live admin env (values: length only)
+          GRAFANA_POD0=$(kubectl get pod -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n monitoring "$GRAFANA_POD0" -- sh -c \
+            'echo "pod GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER pod_pass_len=${#GF_SECURITY_ADMIN_PASSWORD}"' \
+            2>/dev/null || echo "pod has no GF_SECURITY_ADMIN_* env (admin may come from grafana.ini/ldap-toml)"
+          # Grafana image ships BusyBox wget — no --user/--password, use Basic header
+          B64=$(printf '%s:%s' "$GRAFANA_USER" "$PASS" | base64 | tr -d '\n')
+          # Use cluster-internal Grafana ClusterIP service — reachable via kubectl exec
+          GRAFANA_SVC=$(kubectl get svc -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          GRAFANA_POD=$(kubectl get pod -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          echo "Grafana pod: $GRAFANA_POD"
+
+          echo "=== Datasources ==="
+          DS_JSON=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --header="Authorization: Basic $B64" \
+            "http://localhost:3000/api/datasources" 2>/dev/null || true)
+          if [ -z "$DS_JSON" ]; then
+            # grafana.db admin password can diverge from the k8s secret after a
+            # UI password change — env only seeds the *initial* admin. Don't fail
+            # the NodePort patch job over a stale credential; verify Grafana is
+            # serving and warn for a manual password sync instead.
+            echo "::warning::Grafana API 401 — admin password in grafana.db differs from secret '$SECRET' (user=$GRAFANA_USER). Sync the secret or reset the Grafana admin password."
+            echo "=== Fallback: Grafana health ==="
+            kubectl exec -n monitoring "$GRAFANA_POD" -- \
+              wget -qO- "http://localhost:3000/api/health" || true
+            echo
+            echo "=== Fallback: Prometheus svc endpoints ==="
+            kubectl get endpoints -n monitoring -l app.kubernetes.io/name=prometheus || true
+            exit 0
+          fi
+          echo "$DS_JSON" | python3 -c "
+          import sys, json
+          ds = json.load(sys.stdin)
+          if isinstance(ds, list):
+            for d in ds:
+              print(d['name'], d['type'], d['url'], 'default=' + str(d.get('isDefault', False)))
+          else:
+            print(ds)
+          "
+
+          DS_ID=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --header="Authorization: Basic $B64" \
+            "http://localhost:3000/api/datasources" | \
+            python3 -c "import sys,json; ds=json.load(sys.stdin); \
+            print(next((str(d['id']) for d in (ds if isinstance(ds,list) else []) \
+            if d['type']=='prometheus'), '1'))")
+
+          echo "=== Datasource $DS_ID health ==="
+          kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --header="Authorization: Basic $B64" \
+            "http://localhost:3000/api/datasources/$DS_ID/health" | python3 -m json.tool
+
+          echo "=== Prometheus 'up' metric (first 8 targets) ==="
+          kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --header="Authorization: Basic $B64" \
+            "http://localhost:3000/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
+            python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          print('status:', r.get('status'))
+          for m in r.get('data', {}).get('result', [])[:8]:
+            print(' ', m['metric'].get('job','?'), '|', m['metric'].get('instance','?'), '=', m['value'][1])
+          "
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Grafana NodePort upgrade — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo
+            echo '```'
+            cat helm-upgrade.log 2>/dev/null | tail -20 || echo '(no log)'
+            echo
+            kubectl get svc -n monitoring kube-prom-stack-grafana 2>/dev/null || true
+            curl -s -o /dev/null -w "grafana.cloudless.gr HTTP: %{http_code}" \
+              https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
+            echo '```'
+          } > upgrade-comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file upgrade-comment.md
