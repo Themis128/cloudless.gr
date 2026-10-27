@@ -69,6 +69,30 @@ function sectionOk(section, rows) {
 	return { section, rows, rowCount: rows.length, fromCache: false };
 }
 
+function surveyFunnel(rows) {
+	// Flat survey_responses → per-question answer distribution + audit funnel.
+	const byQ = {};
+	const auditYes = rows.filter((r) =>
+		/^y|yes|tell me/i.test(String((r.answers || {}).audit_interest || ""))
+	);
+	for (const r of rows) {
+		for (const [q, a] of Object.entries(r.answers || {})) {
+			const k = `${q}::${String(a).slice(0, 80)}`;
+			byQ[k] = (byQ[k] || 0) + 1;
+		}
+	}
+	const dist = Object.entries(byQ).map(([k, n]) => {
+		const [question, answer] = k.split("::");
+		return { question, answer, count: n };
+	});
+	return [
+		{ metric: "responses_total", value: rows.length },
+		{ metric: "audit_interest_yes", value: auditYes.length },
+		{ metric: "audit_rate_pct", value: rows.length ? Math.round((auditYes.length / rows.length) * 100) : 0 },
+		...dist,
+	];
+}
+
 // ── D1 hot-overlay sections ────────────────────────────────────────────
 // acquisition_funnel + attribution are served live from D1 analytics_events
 // (see datalake-r2.ts HOT_D1_SECTIONS). Materialize the same queries into
@@ -902,6 +926,7 @@ async function main() {
 	const saFollowers = await safeJson("lake/socialauto-followers/followers.json");
 	const saTgChannels = await safeJson("lake/socialauto-telegram/channels.json");
 	const saMonetization = await safeJson("lake/socialauto-monetization/gates.json");
+	const saSurveyResp = await safeJson("lake/socialauto-survey-responses/responses.json");
 
 	let saInsights = null;
 	try {
@@ -945,6 +970,11 @@ async function main() {
 		saLeads
 			? sectionOk("social_leads", socialLeads(saLeads))
 			: sectionErr("social_leads", "missing socialauto leads json")
+	);
+	sections.push(
+		saSurveyResp
+			? sectionOk("survey_funnel", surveyFunnel(saSurveyResp))
+			: sectionErr("survey_funnel", "missing socialauto survey-responses json")
 	);
 	sections.push(
 		saWebEvents
@@ -1007,6 +1037,7 @@ async function main() {
 		"lake/socialauto-ads/demographics.json",
 		"lake/socialauto-telegram/channels.json",
 		"lake/socialauto-monetization/gates.json",
+		"lake/socialauto-survey-responses/responses.json",
 		"lake/linkedin-ads/demographics.parquet",
 		"lake/appflowy-workspaces/workspaces.parquet",
 		"ml-parquet/scores_rfm.parquet",
