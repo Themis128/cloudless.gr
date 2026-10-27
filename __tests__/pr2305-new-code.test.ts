@@ -154,6 +154,14 @@ describe("admin agency analytics page", () => {
     const html = renderToString(await mod.default());
     expect(html).toContain("unavailable");
   });
+
+  it("renders unavailable when saFetch throws", async () => {
+    const { renderToString } = await import("react-dom/server");
+    mockSaFetch.mockRejectedValue(new Error("boom"));
+    const mod = await import("@/app/[locale]/admin/analytics/agency/page");
+    const html = renderToString(await mod.default());
+    expect(html).toContain("unavailable");
+  });
 });
 
 describe("uncovered edge paths", () => {

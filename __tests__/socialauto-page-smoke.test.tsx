@@ -105,3 +105,41 @@ describe("admin socialauto gate page — edge paths", () => {
     expect(screen.queryByText("@Ana")).toBeNull();
   });
 });
+
+describe("admin socialauto gate page — keyboard guards", () => {
+  it("ignores keys while typing in the textarea", async () => {
+    stubFetch();
+    await act(async () => { render(<SocialAutoGatePage />); });
+    await screen.findByText("@Ana");
+    const ta = screen.getByRole("textbox");
+    await act(async () => {
+      fireEvent.keyDown(ta, { key: "ArrowDown" });
+      fireEvent.keyDown(ta, { key: " " });
+      fireEvent.keyDown(ta, { key: "Backspace" });
+    });
+    // item must still be present — keys were typed inside the textarea
+    expect(screen.getByText("@Ana")).toBeTruthy();
+  });
+
+  it("ignores keys when no items are loaded", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ items: [] }),
+        { status: 200, headers: { "Content-Type": "application/json" } })));
+    await act(async () => { render(<SocialAutoGatePage />); });
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: "ArrowDown" });
+      fireEvent.keyDown(document.body, { key: " " });
+    });
+    expect(screen.queryByText("@Ana")).toBeNull();
+  });
+
+  it("clicking a card selects it", async () => {
+    stubFetch();
+    const { container } = await act(async () => render(<SocialAutoGatePage />));
+    await screen.findByText("@Ana");
+    await act(async () => {
+      fireEvent.click(screen.getByText("@Ana").closest("div[class*='rounded-xl']")!);
+    });
+    expect(container.querySelector(".border-neon-cyan\\/60, [class*='neon-cyan']")).toBeTruthy();
+  });
+});
