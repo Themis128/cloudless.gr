@@ -48,12 +48,12 @@ jobs:
         tags: tag:ci
 
     - name: Wait for tailnet path to omv
-      run: python3 scripts/ci/tailscale-wait.py 100.74.191.58
+      run: python3 scripts/ci/tailscale-wait.py 100.83.120.93
     - name: Run n8n-to-R2 sync
       working-directory: scripts/etl
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-        N8N_API_URL: http://100.74.191.58:30900
+        N8N_API_URL: http://100.83.120.93:5678  # dev-box Docker n8n (tailnet)
         N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
