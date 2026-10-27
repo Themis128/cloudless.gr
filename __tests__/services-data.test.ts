@@ -7,10 +7,10 @@ const tPass = (_key: string, fallback: string) => fallback;
 
 describe("services-data", () => {
   describe("getServices", () => {
-    it("returns 6 services in stable order", () => {
+    it("returns 7 services in stable order", () => {
       const services = getServices(tPass);
-      expect(services).toHaveLength(6);
-      expect(services.map((s) => s.num)).toEqual(["01", "02", "03", "04", "05", "06"]);
+      expect(services).toHaveLength(7);
+      expect(services.map((s) => s.num)).toEqual(["01", "02", "03", "04", "05", "06", "07"]);
     });
 
     it("every service exposes the contract the page renders against", () => {
