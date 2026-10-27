@@ -243,7 +243,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "@vitest/utils": "^5.0.5",
 
-    "cf": "1.0.0-beta.18",
+    "cf": "1.0.0-beta.20",
 
 
     "eslint": "^9.39.5",
