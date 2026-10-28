@@ -485,7 +485,7 @@ If you're unsure, [book a free 30-minute call](/contact) — we'll review your s
     category: "AI Marketing",
     tags: ["AI agents", "multi-agent systems", "automation", "governance"],
     content: `
-We spent a day at Shift.Forward() 2026, Outshift by Cisco's event on agentic AI, with an AI agent covering all 16 sessions in parallel. The strongest signal across every track: single agents are a solved problem — the hard part is what happens when agents have to work *together*.
+We spent a day at Shift.Forward() 2026, Outshift by Cisco's event on agentic AI, with an AI agent covering all 16 sessions in parallel. The strongest signal across every track: single agents are a solved problem — the hard part is what happens when agents have to work **together**.
 
 Most multi-agent systems don't crash. They drift. Each agent looks perfectly healthy on its own dashboard while the system as a whole quietly fails the objective. Speakers called these "cognitive failures" or "silent failures" — the collective outcome degrades even though every component is technically working.
 
@@ -495,9 +495,9 @@ LLMs are non-deterministic. Two agents given the same goal will reason different
 
 The patterns behind it are concrete enough to use today:
 
-- **Intent contracts (ACCORD)** — agents declare objectives and success criteria *before* work starts, so alignment is checked up front, not discovered post-mortem.
+- **Intent contracts (ACCORD)** — agents declare objectives and success criteria **before** work starts, so alignment is checked up front, not discovered post-mortem.
 - **Coordination protocols (CONCORD)** — during execution, agents evaluate trade-offs and reach consensus instead of each optimizing locally.
-- **Cognitive observability (SCOPE)** — telemetry on *how agents reason together*, not just whether they're up. If you can't see the drift, you can't fix it.
+- **Cognitive observability (SCOPE)** — telemetry on **how agents reason together**, not just whether they're up. If you can't see the drift, you can't fix it.
 - **Loop engineering** — wrap the LLM in control loops, context management, and rigorous checking. Software engineering discipline applied to a non-deterministic core. This is the difference between an AI demo and an AI system you can trust with client work.
 
 ## Governance is not optional
