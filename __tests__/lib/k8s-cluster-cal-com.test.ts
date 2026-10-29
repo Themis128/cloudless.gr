@@ -40,6 +40,10 @@ import {
   k8sPost,
   listWatchdogCronJobs,
 } from "@/lib/k8s-cluster";
+vi.mock("@/lib/google-calendar", () => ({
+  getAvailableSlots: vi.fn(async () => []),
+  bookConsultation: vi.fn(async () => null),
+}));
 import {
   getAvailableSlots,
   bookConsultation,
@@ -200,9 +204,22 @@ describe("cal-com", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("getAvailableSlots throws without a key", async () => {
+  it("getAvailableSlots falls back to google when cal key absent", async () => {
     cfg.values = {};
-    await expect(getAvailableSlots()).rejects.toThrow("not configured");
+    const g = await import("@/lib/google-calendar");
+    const res = await getAvailableSlots();
+    expect(g.getAvailableSlots).toHaveBeenCalled();
+    expect(res).toEqual([]);
+  });
+
+  it("bookConsultation falls back to google when cal key absent", async () => {
+    cfg.values = {};
+    const g = await import("@/lib/google-calendar");
+    const res = await bookConsultation({
+      name: "n", email: "e", start: "s", end: "e",
+    });
+    expect(g.bookConsultation).toHaveBeenCalled();
+    expect(res).toBeNull();
   });
 
   it("getAvailableSlots flattens and sorts slots by day", async () => {
