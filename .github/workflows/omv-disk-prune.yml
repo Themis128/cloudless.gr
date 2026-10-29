@@ -34,6 +34,8 @@ jobs:
           sudo du -xh --max-depth=1 /var/lib/rancher/k3s 2>/dev/null | sort -rh | head -12
           echo "--- local-path PVs ---"
           sudo du -xh --max-depth=1 /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/storage 2>/dev/null | sort -rh | head -12
+          echo "--- sda1 root (the real 94G lives here if not in k3s) ---"
+          sudo du -xh --max-depth=2 /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -rh | head -15
 
       - name: containerd image prune (k3s images live on sda1)
         if: inputs.diagnose_only != 'true'
