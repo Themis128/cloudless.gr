@@ -47,7 +47,7 @@ def heal_lint() -> bool:
     files = changed_py()
     if not files:
         return False
-    r = sh(RUFF, "check", "--fix", *files)
+    sh(RUFF, "check", "--fix", *files)
     dirty = sh("git", "status", "--porcelain")
     if not dirty:
         return False
