@@ -4,6 +4,8 @@ name: OMV disk prune
 # buys headroom on the k3s SSD before the 85% remediate threshold.
 
 on:
+  schedule:
+    - cron: "20 4 * * 0"  # weekly auto-heal, Sunday 04:20
   workflow_dispatch:
     inputs:
       docker_prune:
@@ -44,6 +46,27 @@ jobs:
       - name: journal vacuum
         if: inputs.diagnose_only != 'true'
         run: sudo journalctl --vacuum-size=${{ inputs.journal_mb }}M || true
+
+      - name: runner-work purge (~7G regenerable build state)
+        if: inputs.diagnose_only != 'true'
+        run: sudo rm -rf /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/runner-work/{.pnpm-store,build} 2>/dev/null; echo "runner-work purged"
+
+      - name: NAS-Backup move sda1 → sdb1 (~11G off the k3s SSD)
+        if: inputs.diagnose_only != 'true'
+        run: |
+          SRC=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/NAS-Backup
+          DST=/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/NAS-Backup
+          [ -d "$SRC" ] && sudo mkdir -p "$DST" && sudo mv "$SRC"/* "$DST"/ 2>/dev/null && sudo rmdir "$SRC" && echo "NAS-Backup moved to sdb1" || echo "no NAS-Backup move needed"
+
+      - name: docker-cache registry GC (~20G pull-through blobs)
+        if: inputs.diagnose_only != 'true'
+        run: |
+          REG=$(sudo docker ps --format '{{.Names}}' | grep -i registry | head -1)
+          if [ -n "$REG" ]; then
+            sudo docker exec "$REG" bin/registry garbage-collect /etc/docker/registry/config.yml 2>/dev/null | tail -3 || echo "gc skipped"
+          else
+            sudo rm -rf /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/docker-cache/blobs/* 2>/dev/null && echo "orphaned cache blobs cleared (no live registry)" || echo "no registry container + blob clear skipped"
+          fi
 
       - name: docker system prune
         if: inputs.docker_prune == 'true' && inputs.diagnose_only != 'true'
