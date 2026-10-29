@@ -82,7 +82,12 @@ function eventTypeId(): number {
 export async function getAvailableSlots(daysAhead = DEFAULT_DAYS_AHEAD): Promise<TimeSlot[]> {
   if (!process.env.CAL_API_KEY) {
     const cfg = await getConfig();
-    if (!cfg.CAL_API_KEY) throw new Error("Cal.com API key not configured");
+    if (!cfg.CAL_API_KEY) {
+      // Cal.com unconfigured → fall back to the Google Calendar provider
+      // (service-account creds are provisioned in SSM).
+      const g = await import("./google-calendar");
+      return g.getAvailableSlots(daysAhead);
+    }
   }
 
   const now = new Date();
@@ -138,6 +143,13 @@ export async function bookConsultation(data: {
   end: string;
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string; meetLink?: string } | null> {
+  if (!process.env.CAL_API_KEY) {
+    const cfg = await getConfig();
+    if (!cfg.CAL_API_KEY) {
+      const g = await import("./google-calendar");
+      return g.bookConsultation(data);
+    }
+  }
   try {
     const res = await calFetch("/bookings", {
       method: "POST",
