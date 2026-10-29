@@ -64,8 +64,9 @@ def analyze(root: str) -> list[dict]:
                         f"  line {i.get('index')}: {i.get('line', i.get('node', {}).get('snippet', ''))[:60]} — {i.get('message', '')}"
                         for i in items[:6]]
                 fails.append(entry)
-        routes.setdefault(path, {"cats": [], "fails": fails})
-        routes[path]["cats"].append(cats)
+        r = routes.setdefault(path, {"cats": [], "fails": []})
+        r["cats"].append(cats)
+        r["fails"].extend(fails)
     out = []
     for path, r in routes.items():
         med = {}
