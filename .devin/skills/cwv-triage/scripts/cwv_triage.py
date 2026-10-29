@@ -85,7 +85,8 @@ def main() -> int:
     else:
         run = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else latest_failed_run()
         if not run:
-            print("no failed run found"); return 1
+            print("no failed run found")
+            return 1
         print(f"run {run}")
         root = download(run)
     for r in analyze(root):
