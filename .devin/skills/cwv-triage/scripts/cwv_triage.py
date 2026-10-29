@@ -12,6 +12,7 @@ Requires: gh CLI auth, repo Themis128/cloudless.gr.
 """
 import glob
 import json
+import shutil
 import os
 import re
 import statistics
@@ -27,7 +28,7 @@ DETAIL_AUDITS = {"robots-txt", "tap-targets", "crawlable-anchors", "image-alt"}
 
 def latest_failed_run() -> str | None:
     r = subprocess.run(
-        ["gh", "run", "list", "--repo", REPO, "--workflow",
+        [shutil.which("gh") or "gh", "run", "list", "--repo", REPO, "--workflow",
          "core-web-vitals-audit.yml", "--limit", "10",
          "--json", "databaseId,conclusion", "--jq",
          "[.[]|select(.conclusion==\"failure\")][0].databaseId"],
@@ -38,7 +39,7 @@ def latest_failed_run() -> str | None:
 
 def download(run_id: str) -> str:
     d = tempfile.mkdtemp(prefix="cwv-")
-    subprocess.run(["gh", "run", "download", run_id, "--repo", REPO, "-D", d],
+    subprocess.run([shutil.which("gh") or "gh", "run", "download", run_id, "--repo", REPO, "-D", d],
                    capture_output=True, text=True)
     return d
 
