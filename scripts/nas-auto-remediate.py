@@ -32,7 +32,7 @@ HEALTH_LOG = Path("/var/log/nas-daily-health.log")
 BACKUP_LOG = Path("/var/log/nas-backup.log")
 STATE = Path("/var/lib/nas-auto-remediate/state.json")
 
-DISK_WARN_PCT = 85
+DISK_WARN_PCT = 75
 POD_PENDING_MIN = 30
 MAX_SERVICE_RESTARTS_PER_DAY = 1
 
@@ -392,6 +392,9 @@ def fix_disk() -> None:
     log(
         f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})"
     )
+    if shutil.which("crictl"):
+        r3 = run("crictl", "rmi", "--prune", timeout=600)
+        log(f"disk: crictl image prune rc={r3.returncode}")
     st2 = shutil.disk_usage("/")
     log(f"disk: / now at {int(st2.used * 100 / st2.total)}%")
 

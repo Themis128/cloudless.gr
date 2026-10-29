@@ -14,6 +14,10 @@ on:
         description: "journalctl vacuum size in MB"
         required: false
         default: "200"
+      diagnose_only:
+        description: "Only run the k3s dir audit — no prunes"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -25,14 +29,22 @@ jobs:
       - name: Disk before
         run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
 
+      - name: k3s dir audit (find the real sda1 consumer)
+        run: |
+          sudo du -xh --max-depth=1 /var/lib/rancher/k3s 2>/dev/null | sort -rh | head -12
+          echo "--- local-path PVs ---"
+          sudo du -xh --max-depth=1 /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/storage 2>/dev/null | sort -rh | head -12
+
       - name: containerd image prune (k3s images live on sda1)
+        if: inputs.diagnose_only != 'true'
         run: sudo crictl rmi --prune || echo "crictl unavailable"
 
       - name: journal vacuum
+        if: inputs.diagnose_only != 'true'
         run: sudo journalctl --vacuum-size=${{ inputs.journal_mb }}M || true
 
       - name: docker system prune
-        if: inputs.docker_prune == 'true'
+        if: inputs.docker_prune == 'true' && inputs.diagnose_only != 'true'
         run: sudo docker system prune -af --volumes 2>/dev/null | tail -5 || echo "docker prune skipped"
 
       - name: Disk after
