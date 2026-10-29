@@ -212,6 +212,16 @@ describe("cal-com", () => {
     expect(res).toEqual([]);
   });
 
+  it("bookConsultation falls back to google when cal key absent", async () => {
+    cfg.values = {};
+    const g = await import("@/lib/google-calendar");
+    const res = await bookConsultation({
+      name: "n", email: "e", start: "s", end: "e",
+    });
+    expect(g.bookConsultation).toHaveBeenCalled();
+    expect(res).toBeNull();
+  });
+
   it("getAvailableSlots flattens and sorts slots by day", async () => {
     vi.mocked(fetch).mockResolvedValue(
       jsonRes({
