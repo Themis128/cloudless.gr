@@ -83,10 +83,8 @@ export async function getAvailableSlots(daysAhead = DEFAULT_DAYS_AHEAD): Promise
   if (!process.env.CAL_API_KEY) {
     const cfg = await getConfig();
     if (!cfg.CAL_API_KEY) {
-      // Cal.com unconfigured → fall back to the Google Calendar provider
-      // (service-account creds are provisioned in SSM).
-      const g = await import("./google-calendar");
-      return g.getAvailableSlots(daysAhead);
+      const { getAvailableSlots: googleSlots } = await import("./google-calendar");
+      return googleSlots(daysAhead);
     }
   }
 
@@ -143,14 +141,14 @@ export async function bookConsultation(data: {
   end: string;
   notes?: string;
 }): Promise<{ eventId: string; htmlLink: string; meetLink?: string } | null> {
-  if (!process.env.CAL_API_KEY) {
-    const cfg = await getConfig();
-    if (!cfg.CAL_API_KEY) {
-      const g = await import("./google-calendar");
-      return g.bookConsultation(data);
-    }
-  }
   try {
+    if (!process.env.CAL_API_KEY) {
+      const cfg = await getConfig();
+      if (!cfg.CAL_API_KEY) {
+        const { bookConsultation: googleBook } = await import("./google-calendar");
+        return googleBook(data);
+      }
+    }
     const res = await calFetch("/bookings", {
       method: "POST",
       body: JSON.stringify({
