@@ -392,8 +392,11 @@ def fix_disk() -> None:
     log(
         f"disk: docker prune rc={r2.returncode} ({r2.stdout.strip().splitlines()[-1] if r2.stdout else 'no output'})"
     )
-    if shutil.which("crictl"):
-        r3 = run("crictl", "rmi", "--prune", timeout=600)
+    crictl = shutil.which("crictl") or next(
+        (p for p in ("/usr/local/bin/crictl", "/usr/bin/crictl", "/usr/local/bin/k3s-crictl")
+         if Path(p).exists()), None)
+    if crictl:
+        r3 = run(crictl, "rmi", "--prune", timeout=600)
         log(f"disk: crictl image prune rc={r3.returncode}")
     st2 = shutil.disk_usage("/")
     log(f"disk: / now at {int(st2.used * 100 / st2.total)}%")
