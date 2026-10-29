@@ -12,9 +12,9 @@ Requires: gh CLI auth, repo Themis128/cloudless.gr.
 """
 import glob
 import json
-import shutil
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
