@@ -41,7 +41,7 @@ export interface SpamVerdict {
 }
 
 const SPAM_SUBJECT =
-  /(seed phrase|wallet (verify|unlock|recovery)|you have won|lottery|inheritance fund|urgent (invoice|payment|verification)|account (suspended|locked|verify)|crypto giveaway|free bitcoin)/i;
+  /(seed phrase|wallet (verify|unlock|recovery)|you have won|lottery|inheritance fund|urgent (invoice|payment|verification)|account (suspended|locked|verify)|crypto giveaway|free bitcoin|ενημέρωση ασφαλείας|υποχρεωτική ενημέρωση|απαιτείται ενέργεια|εκκρεμεί η ενημέρωση|σημαντική ειδοποίηση)/i;
 
 /** Public IPv4 from the SPF comment or the Received chain. */
 export function senderIpFromHeaders(headers: Headers): string | null {

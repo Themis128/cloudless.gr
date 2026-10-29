@@ -1,0 +1,39 @@
+name: OMV disk prune
+# Manual sda1/k3s disk cleanup on the omv self-hosted runner.
+# Prunes containerd images (crictl), docker layers, and journal —
+# buys headroom on the k3s SSD before the 85% remediate threshold.
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker_prune:
+        description: "Also docker system prune -af (plain-docker workspace)"
+        required: false
+        default: "true"
+      journal_mb:
+        description: "journalctl vacuum size in MB"
+        required: false
+        default: "200"
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: [self-hosted, omv]
+    steps:
+      - name: Disk before
+        run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
+
+      - name: containerd image prune (k3s images live on sda1)
+        run: sudo crictl rmi --prune || echo "crictl unavailable"
+
+      - name: journal vacuum
+        run: sudo journalctl --vacuum-size=${{ inputs.journal_mb }}M || true
+
+      - name: docker system prune
+        if: inputs.docker_prune == 'true'
+        run: sudo docker system prune -af --volumes 2>/dev/null | tail -5 || echo "docker prune skipped"
+
+      - name: Disk after
+        run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
