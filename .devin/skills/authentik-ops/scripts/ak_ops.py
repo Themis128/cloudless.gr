@@ -140,6 +140,33 @@ def cmd_act_rm(key, slug):
         print(f"{slug} not found")
 
 
+
+def cmd_recovery(key):
+    """Finish the recovery flow: password prompt stage at order 2 + verify all bindings."""
+    fl = api("GET", "/api/v3/flows/instances/cloudless-recovery/", key=key)
+    if not fl.get("pk"):
+        return print("recovery flow missing")
+    binds = api("GET", f"/api/v3/flows/bindings/?target={fl['pk']}&page_size=50", key=key).get("results", [])
+    orders = {b["order"] for b in binds}
+    if 2 not in orders:
+        # create password prompt field + stage via ORM (API field pk not exposed)
+        out = remote_py("""
+import subprocess
+print(subprocess.run(['sudo','kubectl','exec','-n','authentik','deploy/authentik-server','--','ak','shell','-c',
+'from authentik.stages.prompt.models import Prompt, PromptStage, FieldTypes\n'
+'from authentik.flows.models import Flow, FlowStageBinding\n'
+'pw,_=Prompt.objects.get_or_create(field_key=\\'password\\',defaults={\\'label\\':\\'New password\\',\\'type\\':FieldTypes.PASSWORD,\\'required\\':True})\n'
+'st,_=PromptStage.objects.get_or_create(name=\\'recovery-password\\')\n'
+'st.fields.add(pw)\n'
+'FlowStageBinding.objects.get_or_create(target=Flow.objects.get(slug=\\'cloudless-recovery\\'),stage=st,order=2)\n'
+'print(\\'bound\\')'],capture_output=True,text=True).stdout[-200:])
+""")
+        print(out.strip()[-120:])
+    else:
+        print("password stage already bound")
+    print("recovery:", [(b["order"], b["stage"]) for b in binds])
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -157,6 +184,8 @@ def main():
         cmd_env_token()
     elif cmd == "add" and len(args) == 4:
         cmd_add(key, args[1], args[2], args[3])
+    elif cmd == "recovery":
+        cmd_recovery(key)
     elif cmd == "act" and len(args) >= 2:
         sub = args[1]
         if sub == "add" and len(args) == 5:
