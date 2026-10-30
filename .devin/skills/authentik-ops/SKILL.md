@@ -28,7 +28,15 @@ python3 ak_ops.py add cu130 foo.cloudless.gr http://stack-ops:8080       # gate 
 python3 ak_ops.py env-token                  # print the cu130 outpost token for .env
 python3 ak_ops.py outposts                   # list outposts + assigned providers
 python3 ak_ops.py health                     # pod restarts + OOM check
+python3 ak_ops.py act add <slug> <name> <url>  # register a pending-act launcher tile
+python3 ak_ops.py act list                   # list act launchers (no-provider apps)
+python3 ak_ops.py act rm <slug>              # remove when the act is done
 ```
+
+`act` tracks irreducible human acts (OAuth consents, co-admin decisions, phone
+gates) as launcher tiles in the user portal (`/if/user/`) — one pane for all
+pending auth work. Note: `launch_url` alone doesn't persist via POST — the tool
+sets `meta_launch_url` via a follow-up PUT (authentik 2025.10 quirk).
 
 `add` does the full chain: proxy provider → application → outpost assign → tunnel repoint → DNS CNAME. `omv` = embedded outpost (origin `192.168.1.128:PORT`), `cu130` = remote outpost (docker name).
 
