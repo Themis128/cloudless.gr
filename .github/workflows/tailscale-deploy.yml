@@ -49,13 +49,16 @@ jobs:
         fi
         helm repo add tailscale https://pkgs.tailscale.com/helmcharts || true
         helm repo update
-        # Adopt tailscale CRDs installed under a different release ns —
+        # Adopt ALL tailscale CRDs installed under a different release ns —
         # helm refuses to import them otherwise (release-namespace error).
-        for crd in connectors.tailscale.com proxygroups.tailscale.com \
-          proxyclasses.tailscale.com recorders.tailscale.com; do
-          kubectl get crd "$crd" >/dev/null 2>&1 || continue
-          kubectl annotate crd "$crd" meta.helm.sh/release-name=tailscale-operator meta.helm.sh/release-namespace=tailscale-operator --overwrite
-          kubectl label crd "$crd" app.kubernetes.io/managed-by=Helm --overwrite
+        # The list grows (connectors, proxygroups, dnsconfigs, ...), so scan
+        # the CRDs rather than hardcode names.
+        for crd in $(kubectl get crd -o name | grep tailscale.com); do
+          kubectl annotate "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+            meta.helm.sh/release-name=tailscale-operator \
+            meta.helm.sh/release-namespace=tailscale-operator --overwrite
+          kubectl label "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+            app.kubernetes.io/managed-by=Helm --overwrite
         done
         helm upgrade --install tailscale-operator tailscale/tailscale-operator \
           --namespace tailscale-operator \
