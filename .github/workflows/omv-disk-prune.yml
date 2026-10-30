@@ -137,6 +137,13 @@ jobs:
           echo "=== pod state after 60s ==="
           sleep 60
           $KC get pods -A 2>/dev/null | grep -vE "Running|Completed" | head -20
+          echo "=== tailscale ns pods ==="
+          $KC get pods -n tailscale -o wide 2>/dev/null
+          echo "=== ts.net service probe (from omv, on the tailnet) ==="
+          for host in appflowy ntfy kuma nextcloud; do
+            code=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 8 "https://$host.tail4ecae1.ts.net/" 2>/dev/null)
+            echo "$host.tail4ecae1.ts.net: $code"
+          done
           echo "=== describe stalled pods (why ContainerCreating) ==="
           for nsdep in "tailscale operator" "tailscale kube"; do
             ns=${nsdep%% *}; dep=${nsdep##* }
