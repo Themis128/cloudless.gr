@@ -57,8 +57,9 @@ jobs:
           SRC=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/NAS-Backup
           DST=/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/NAS-Backup
           if [ -d "$SRC" ] && [ ! -L "$SRC" ]; then
-            sudo mkdir -p "$DST" && sudo mv "$SRC"/* "$DST"/ 2>/dev/null && sudo rmdir "$SRC" \
-              && sudo ln -s "$DST" "$SRC" && echo "NAS-Backup moved + symlinked to sdb1"
+            sudo mkdir -p "$DST"
+            sudo bash -c "shopt -s dotglob nullglob && mv $SRC/* $DST/"
+            sudo rmdir "$SRC" && sudo ln -s "$DST" "$SRC" && echo "NAS-Backup moved + symlinked to sdb1"
           else
             echo "NAS-Backup already linked or absent"
           fi
