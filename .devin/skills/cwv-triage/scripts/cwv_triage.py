@@ -10,6 +10,7 @@ their messages (meta-description, robots-txt lines, tap-targets, etc.).
 
 Requires: gh CLI auth, repo Themis128/cloudless.gr.
 """
+
 import glob
 import json
 import os
@@ -28,19 +29,35 @@ DETAIL_AUDITS = {"robots-txt", "tap-targets", "crawlable-anchors", "image-alt"}
 
 def latest_failed_run() -> str | None:
     r = subprocess.run(
-        [shutil.which("gh") or "gh", "run", "list", "--repo", REPO, "--workflow",
-         "core-web-vitals-audit.yml", "--limit", "10",
-         "--json", "databaseId,conclusion", "--jq",
-         "[.[]|select(.conclusion==\"failure\")][0].databaseId"],
-        capture_output=True, text=True)
+        [
+            shutil.which("gh") or "gh",
+            "run",
+            "list",
+            "--repo",
+            REPO,
+            "--workflow",
+            "core-web-vitals-audit.yml",
+            "--limit",
+            "10",
+            "--json",
+            "databaseId,conclusion",
+            "--jq",
+            '[.[]|select(.conclusion=="failure")][0].databaseId',
+        ],
+        capture_output=True,
+        text=True,
+    )
     v = r.stdout.strip()
     return v or None
 
 
 def download(run_id: str) -> str:
     d = tempfile.mkdtemp(prefix="cwv-")
-    subprocess.run([shutil.which("gh") or "gh", "run", "download", run_id, "--repo", REPO, "-D", d],
-                   capture_output=True, text=True)
+    subprocess.run(
+        [shutil.which("gh") or "gh", "run", "download", run_id, "--repo", REPO, "-D", d],
+        capture_output=True,
+        text=True,
+    )
     return d
 
 
@@ -56,14 +73,18 @@ def analyze(root: str) -> list[dict]:
         cats = {k: c.get("score") for k, c in d.get("categories", {}).items()}
         fails = []
         for aid, a in d.get("audits", {}).items():
-            if a.get("score") not in (None, 1) and \
-               a.get("scoreDisplayMode") not in ("notApplicable", "manual", "informative"):
+            if a.get("score") not in (None, 1) and a.get("scoreDisplayMode") not in (
+                "notApplicable",
+                "manual",
+                "informative",
+            ):
                 entry = {"id": aid, "title": a.get("title", "")}
                 if aid in DETAIL_AUDITS:
                     items = a.get("details", {}).get("items", [])
                     entry["lines"] = [
                         f"  line {i.get('index')}: {i.get('line', i.get('node', {}).get('snippet', ''))[:60]} — {i.get('message', '')}"
-                        for i in items[:6]]
+                        for i in items[:6]
+                    ]
                 fails.append(entry)
         r = routes.setdefault(path, {"cats": [], "fails": []})
         r["cats"].append(cats)
@@ -83,7 +104,11 @@ def main() -> int:
     if "--local" in sys.argv:
         root = sys.argv[sys.argv.index("--local") + 1]
     else:
-        run = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else latest_failed_run()
+        run = (
+            sys.argv[1]
+            if len(sys.argv) > 1 and not sys.argv[1].startswith("-")
+            else latest_failed_run()
+        )
         if not run:
             print("no failed run found")
             return 1
