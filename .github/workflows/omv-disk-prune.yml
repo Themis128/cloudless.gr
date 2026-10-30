@@ -105,12 +105,15 @@ jobs:
         if: inputs.restart_k3s == 'true'
         run: |
           echo "=== restarting k3s (pod creation stalls detected) ==="
-          K3S_UNIT=$(systemctl list-units --type=service --all | grep -oE "k3s[a-z-]*\.service" | head -1)
+          systemctl list-units --type=service --all | grep -iE "k3s|rancher|containerd" || true
+          K3S_UNIT=$(systemctl list-units --type=service --all | grep -oE "(k3s|k3s-agent|rancher[a-z-]*)\.service" | grep -v "firewall" | head -1)
           echo "k3s unit: ${K3S_UNIT:-none}"
           if [ -n "$K3S_UNIT" ]; then
             sudo systemctl restart "$K3S_UNIT"
           else
-            echo "::warning::no k3s service unit — k3s may run differently on omv"
+            echo "no k3s unit — restarting containerd + docker instead (pod stalls)"
+            sudo systemctl restart containerd 2>/dev/null || true
+            sudo systemctl restart docker 2>/dev/null || true
           fi
           sleep 30
           sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes
