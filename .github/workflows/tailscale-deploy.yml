@@ -6,16 +6,19 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Runs on the omv box itself — the tailnet-API path (100.74.191.58:6443
+    # from a hosted runner) dies when the operator is down, which is exactly
+    # when this deploy is needed. Local kubeconfig = always reachable.
+    runs-on: [self-hosted, omv]
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
     - name: Check required secrets
       run: |
-        # Fallback support for TAILSCALE_OAUTH_* or TS_*
         CLIENT_ID="${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
         if [ -z "$CLIENT_ID" ]; then
           CLIENT_ID="${{ secrets.TS_CLIENT_ID }}"
@@ -35,21 +38,18 @@ jobs:
 
     - name: Setup kubectl
       run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
+        sudo chmod 644 /etc/rancher/k3s/k3s.yaml 2>/dev/null || true
         kubectl cluster-info || echo "Warning: Could not reach cluster, but continuing"
 
     - name: Deploy Tailscale Operator (Helm)
       run: |
         echo "=== Deploying Tailscale Operator ==="
+        if ! command -v helm >/dev/null; then
+          echo "installing helm"
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash
+        fi
         helm repo add tailscale https://pkgs.tailscale.com/helmcharts || true
         helm repo update
-        # Check if cluster reachable
-        if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-          echo "::warning::k3s API (100.74.191.58:6443) not reachable"
-          echo "Deployment will be attempted but may fail if cluster offline"
-        fi
         helm upgrade --install tailscale-operator tailscale/tailscale-operator \
           --namespace tailscale-operator \
           --create-namespace \
