@@ -20,6 +20,10 @@ on:
         description: "Only run the k3s dir audit — no prunes"
         required: false
         default: "false"
+      restart_k3s:
+        description: "Restart k3s after prune (fix wedged kubelet/pod stalls)"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -92,6 +96,16 @@ jobs:
           fi
           sudo systemctl restart tailscaled 2>/dev/null; echo "tailscaled bounced"
           sudo systemctl restart cloudflared 2>/dev/null; echo "cloudflared bounced"
+
+      - name: Restart k3s (kubelet stall — pods stuck ContainerCreating/crashloop)
+        if: inputs.restart_k3s == 'true'
+        run: |
+          echo "=== restarting k3s (pod creation stalls detected) ==="
+          sudo systemctl restart k3s
+          sleep 30
+          sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes
+          echo "=== pods after restart ==="
+          sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get pods -A | grep -vE "Running|Completed" | head -15
 
       - name: Disk after
         run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
