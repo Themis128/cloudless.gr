@@ -81,6 +81,15 @@ jobs:
       - name: tailnet services heal (appflowy/ntfy/kuma unreachable 000)
         if: inputs.diagnose_only != 'true'
         run: |
+          # Bounce the right layer: tailscaled is only the host daemon — the
+          # *.ts.net services route through the k3s tailscale-operator. If its
+          # namespace is empty (evicted in a disk-full event), bounces do
+          # nothing; the operator needs a redeploy (tailscale-deploy.yml).
+          OP_PODS=$(sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml -n tailscale-operator get pods --no-headers 2>/dev/null | wc -l)
+          echo "tailscale-operator pods: $OP_PODS"
+          if [ "$OP_PODS" -eq 0 ]; then
+            echo "::warning::tailscale-operator namespace EMPTY — all *.ts.net services down; run tailscale-deploy.yml"
+          fi
           sudo systemctl restart tailscaled 2>/dev/null; echo "tailscaled bounced"
           sudo systemctl restart cloudflared 2>/dev/null; echo "cloudflared bounced"
 

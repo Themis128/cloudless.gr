@@ -378,6 +378,51 @@ def fix_stuck_pods() -> None:
         log("pods: no stuck pods")
 
 
+# Namespaces whose absence kills services while looking "healthy" —
+# stuck-pod deletion can't see an empty namespace (nothing to be stuck).
+CRITICAL_NS = (
+    "tailscale-operator",
+    "appflowy",
+    "monitoring",
+)
+
+
+def fix_critical_namespaces() -> None:
+    """Detect critical namespaces with no running workloads.
+
+    Two failure modes beyond stuck-pod deletion:
+    - deployments exist but every replica is down → rollout restart
+    - namespace has NO deployments at all (evicted/deleted workload) →
+      log CRITICAL so the deploy workflow gets dispatched; a pod-level
+      checker can never see this state.
+    """
+    for ns in CRITICAL_NS:
+        r = run(KUBECTL, "-n", ns, "get", "deploy", "-o", "json")
+        if r.returncode != 0:
+            continue  # kubectl/API down is already covered elsewhere
+        try:
+            deps = json.loads(r.stdout).get("items", [])
+        except json.JSONDecodeError:
+            continue
+        if not deps:
+            log(
+                f"CRITICAL ns:{ns} has ZERO deployments — workload deleted; "
+                f"needs the deploy workflow (helm), not a pod restart",
+                quiet=False,
+            )
+            continue
+        for dep in deps:
+            meta, status = dep.get("metadata", {}), dep.get("status", {})
+            name = meta.get("name", "")
+            desired = dep.get("spec", {}).get("replicas", 1)
+            available = status.get("availableReplicas", 0)
+            if name and desired and available < desired:
+                log(f"ns:{ns} deploy/{name} {available}/{desired} available — restarting")
+                rr = run(KUBECTL, "-n", ns, "rollout", "restart", f"deployment/{name}")
+                if rr.returncode != 0:
+                    log(f"ns:{ns} rollout restart {name} failed: {rr.stderr.strip()[:120]}")
+
+
 def fix_disk() -> None:
     """Relieve root-disk pressure before it wedges k3s/etcd."""
     st = shutil.disk_usage("/")
@@ -507,6 +552,7 @@ def main() -> None:
         fix_backup,
         fix_failed_units,
         fix_stuck_pods,
+        fix_critical_namespaces,
         fix_disk,
         fix_docker_health,
         fix_tailscale,
