@@ -1,0 +1,488 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-redis","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-redis"}},"template":{"metadata":{"labels":{"app":"authentik-redis"}},"spec":{"containers":[{"image":"redis:7-alpine","name":"redis","ports":[{"containerPort":6379}],"resources":{"limits":{"memory":"96Mi"},"requests":{"memory":"32Mi"}}}]}}}}
+        name: authentik-redis
+    namespace: authentik
+      spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: authentik-redis
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: authentik-redis
+      spec:
+        containers:
+        - image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          name: redis
+          ports:
+          - containerPort: 6379
+            protocol: TCP
+          resources:
+            limits:
+              memory: 96Mi
+            requests:
+              memory: 32Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2026-10-30T11:32:00Z"
+      lastUpdateTime: "2026-10-30T11:32:00Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2026-10-30T11:31:58Z"
+      lastUpdateTime: "2026-10-30T11:32:00Z"
+      message: ReplicaSet "authentik-redis-6559c65b76" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    terminatingReplicas: 0
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-server","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-server"}},"template":{"metadata":{"labels":{"app":"authentik-server"}},"spec":{"containers":[{"args":["server"],"env":[{"name":"AUTHENTIK_SECRET_KEY","valueFrom":{"secretKeyRef":{"key":"secret-key","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_PASSWORD","valueFrom":{"secretKeyRef":{"key":"bootstrap-password","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_TOKEN","valueFrom":{"secretKeyRef":{"key":"bootstrap-token","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_EMAIL","value":"tbaltzakis@cloudless.gr"},{"name":"AUTHENTIK_REDIS__HOST","value":"authentik-redis"},{"name":"AUTHENTIK_POSTGRESQL__HOST","value":"authentik-postgres"},{"name":"AUTHENTIK_POSTGRESQL__NAME","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__USER","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}},{"name":"AUTHENTIK_LISTEN__HTTP","value":"0.0.0.0:9000"}],"image":"ghcr.io/goauthentik/server:2025.10.1","name":"server","ports":[{"containerPort":9000}],"readinessProbe":{"httpGet":{"path":"/-/health/ready/","port":9000},"initialDelaySeconds":30,"periodSeconds":15},"resources":{"limits":{"memory":"640Mi"},"requests":{"memory":"256Mi"}}}]}}}}
+        name: authentik-server
+    namespace: authentik
+      spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: authentik-server
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: authentik-server
+      spec:
+        containers:
+        - args:
+          - server
+          env:
+          - name: AUTHENTIK_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                key: secret-key
+                name: authentik-secret
+          - name: AUTHENTIK_BOOTSTRAP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: bootstrap-password
+                name: authentik-secret
+          - name: AUTHENTIK_BOOTSTRAP_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: bootstrap-token
+                name: authentik-secret
+          - name: AUTHENTIK_BOOTSTRAP_EMAIL
+            value: tbaltzakis@cloudless.gr
+          - name: AUTHENTIK_REDIS__HOST
+            value: authentik-redis
+          - name: AUTHENTIK_POSTGRESQL__HOST
+            value: authentik-postgres
+          - name: AUTHENTIK_POSTGRESQL__NAME
+            value: authentik
+          - name: AUTHENTIK_POSTGRESQL__USER
+            value: authentik
+          - name: AUTHENTIK_POSTGRESQL__PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: pg-password
+                name: authentik-secret
+          - name: AUTHENTIK_LISTEN__HTTP
+            value: 0.0.0.0:9000
+          image: ghcr.io/goauthentik/server:2025.10.1
+          imagePullPolicy: IfNotPresent
+          name: server
+          ports:
+          - containerPort: 9000
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /-/health/ready/
+              port: 9000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 640Mi
+            requests:
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2026-10-30T11:31:58Z"
+      lastUpdateTime: "2026-10-30T11:35:05Z"
+      message: ReplicaSet "authentik-server-5ff87454f" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2026-10-30T11:44:51Z"
+      lastUpdateTime: "2026-10-30T11:44:51Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    terminatingReplicas: 0
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-worker","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-worker"}},"template":{"metadata":{"labels":{"app":"authentik-worker"}},"spec":{"containers":[{"args":["worker"],"env":[{"name":"AUTHENTIK_SECRET_KEY","valueFrom":{"secretKeyRef":{"key":"secret-key","name":"authentik-secret"}}},{"name":"AUTHENTIK_REDIS__HOST","value":"authentik-redis"},{"name":"AUTHENTIK_POSTGRESQL__HOST","value":"authentik-postgres"},{"name":"AUTHENTIK_POSTGRESQL__NAME","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__USER","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}}],"image":"ghcr.io/goauthentik/server:2025.10.1","name":"worker","resources":{"limits":{"memory":"384Mi"},"requests":{"memory":"128Mi"}}}]}}}}
+        name: authentik-worker
+    namespace: authentik
+      spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: authentik-worker
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: authentik-worker
+      spec:
+        containers:
+        - args:
+          - worker
+          env:
+          - name: AUTHENTIK_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                key: secret-key
+                name: authentik-secret
+          - name: AUTHENTIK_REDIS__HOST
+            value: authentik-redis
+          - name: AUTHENTIK_POSTGRESQL__HOST
+            value: authentik-postgres
+          - name: AUTHENTIK_POSTGRESQL__NAME
+            value: authentik
+          - name: AUTHENTIK_POSTGRESQL__USER
+            value: authentik
+          - name: AUTHENTIK_POSTGRESQL__PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: pg-password
+                name: authentik-secret
+          image: ghcr.io/goauthentik/server:2025.10.1
+          imagePullPolicy: IfNotPresent
+          name: worker
+          resources:
+            limits:
+              memory: 384Mi
+            requests:
+              memory: 128Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    conditions:
+    - lastTransitionTime: "2026-10-30T11:31:58Z"
+      lastUpdateTime: "2026-10-30T11:33:06Z"
+      message: ReplicaSet "authentik-worker-75f8957598" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2026-10-30T11:48:24Z"
+      lastUpdateTime: "2026-10-30T11:48:24Z"
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+    observedGeneration: 1
+    replicas: 1
+    terminatingReplicas: 0
+    unavailableReplicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"name":"authentik-postgres","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-postgres"}},"serviceName":"authentik-postgres","template":{"metadata":{"labels":{"app":"authentik-postgres"}},"spec":{"containers":[{"env":[{"name":"POSTGRES_USER","value":"authentik"},{"name":"POSTGRES_DB","value":"authentik"},{"name":"POSTGRES_PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}}],"image":"postgres:16-alpine","name":"postgres","ports":[{"containerPort":5432}],"resources":{"limits":{"memory":"384Mi"},"requests":{"memory":"128Mi"}},"volumeMounts":[{"mountPath":"/var/lib/postgresql/data","name":"data","subPath":"data"}]}]}},"volumeClaimTemplates":[{"metadata":{"name":"data"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"4Gi"}}}}]}}
+        name: authentik-postgres
+    namespace: authentik
+      spec:
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: authentik-postgres
+    serviceName: authentik-postgres
+    template:
+      metadata:
+        labels:
+          app: authentik-postgres
+      spec:
+        containers:
+        - env:
+          - name: POSTGRES_USER
+            value: authentik
+          - name: POSTGRES_DB
+            value: authentik
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: pg-password
+                name: authentik-secret
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          name: postgres
+          ports:
+          - containerPort: 5432
+            protocol: TCP
+          resources:
+            limits:
+              memory: 384Mi
+            requests:
+              memory: 128Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: data
+            subPath: data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    updateStrategy:
+      rollingUpdate:
+        partition: 0
+      type: RollingUpdate
+    volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 4Gi
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+  status:
+    availableReplicas: 1
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: authentik-postgres-5d44899d
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: authentik-postgres-5d44899d
+    updatedReplicas: 1
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-postgres","namespace":"authentik"},"spec":{"clusterIP":"None","ports":[{"port":5432}],"selector":{"app":"authentik-postgres"}}}
+      name: authentik-postgres
+    namespace: authentik
+      spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      app: authentik-postgres
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-redis","namespace":"authentik"},"spec":{"ports":[{"port":6379}],"selector":{"app":"authentik-redis"}}}
+      name: authentik-redis
+    namespace: authentik
+      spec:
+    clusterIP: 10.43.62.229
+    clusterIPs:
+    - 10.43.62.229
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 6379
+      protocol: TCP
+      targetPort: 6379
+    selector:
+      app: authentik-redis
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-server","namespace":"authentik"},"spec":{"ports":[{"nodePort":30910,"port":9000,"targetPort":9000}],"selector":{"app":"authentik-server"},"type":"NodePort"}}
+      name: authentik-server
+    namespace: authentik
+      spec:
+    clusterIP: 10.43.231.232
+    clusterIPs:
+    - 10.43.231.232
+    externalTrafficPolicy: Cluster
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - nodePort: 30910
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+    selector:
+      app: authentik-server
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  data:
+    : <redacted>
+    : <redacted>
+    : <redacted>
+    : <redacted>
+  kind: Secret
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Secret","metadata":{"annotations":{},"name":"authentik-secret","namespace":"authentik"},"stringData":{"bootstrap-password":"lCLcH_R4TclEiDX5Wf3SHg","bootstrap-token":"cedb5b33d85052388dfbe01738179ccd5122b42f07016ed2","pg-password":"c5351f752e46a5ca68e27f20485adc12","secret-key":"8e6a790ebc5c282fc212bf688a19c589b4f6b9b48ef6b68651592651db1038fb"},"type":"Opaque"}
+      name: authentik-secret
+    namespace: authentik
+      type: Opaque
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"authentik-pg","namespace":"authentik"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"4Gi"}}}}
+        - kubernetes.io/pvc-protection
+    name: authentik-pg
+    namespace: authentik
+      spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+    storageClassName: local-path
+    volumeMode: Filesystem
+  status:
+    phase: Pending
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+      volume.beta.kubernetes.io/storage-provisioner: rancher.io/local-path
+      volume.kubernetes.io/selected-node: omv
+      volume.kubernetes.io/storage-provisioner: rancher.io/local-path
+        - kubernetes.io/pvc-protection
+    labels:
+      app: authentik-postgres
+    name: data-authentik-postgres-0
+    namespace: authentik
+      spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+    storageClassName: local-path
+    volumeMode: Filesystem
+    volumeName: pvc-d48aad8f-ab2a-4b53-bd2a-099f1c77f395
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 4Gi
+    phase: Bound
+kind: List
+metadata:
