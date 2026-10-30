@@ -20,8 +20,7 @@ if not kube("get", "namespace", "appflowy"):
     sys.exit("❌ Namespace appflowy not found")
 pods = kube("get", "pods", "-n", "appflowy")
 if not re.search(
-    r"(postgres|redis|gotrue|appflowy-cloud|"
-    r"appflowy-web|admin-frontend|nginx|worker)",
+    r"(postgres|redis|gotrue|appflowy-cloud|" r"appflowy-web|admin-frontend|nginx|worker)",
     pods,
 ):
     print("❌ Some AppFlowy pods missing")

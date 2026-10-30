@@ -25,8 +25,7 @@ LINES_OF_INTEREST = re.compile(
 )
 
 RISKY_TRIGGER = re.compile(
-    r"pull_request|pull_request_target|issue_comment|"
-    r"workflow_run|repository_dispatch"
+    r"pull_request|pull_request_target|issue_comment|" r"workflow_run|repository_dispatch"
 )
 
 print("=== Self-hosted runner risk audit ===\n")

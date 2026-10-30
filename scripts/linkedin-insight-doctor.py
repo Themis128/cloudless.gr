@@ -195,8 +195,7 @@ else:
                 continue
             # (a) inline literal
             m = re.search(
-                r'_linkedin_(?:data_)?partner_id[s]?[^"]{0,40}'
-                r'"([0-9]{6,9})"',
+                r'_linkedin_(?:data_)?partner_id[s]?[^"]{0,40}' r'"([0-9]{6,9})"',
                 body,
             )
             # (b) minified var assigned before the loader

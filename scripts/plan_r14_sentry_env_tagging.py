@@ -19,10 +19,7 @@ Goal:
 
 Search current Sentry/environment usage:""")
 
-rx = re.compile(
-    r"SENTRY_ENVIRONMENT|SENTRY_DSN|sentry"
-    r"|environment"
-)
+rx = re.compile(r"SENTRY_ENVIRONMENT|SENTRY_DSN|sentry" r"|environment")
 skip_dirs = {".venv", "node_modules", ".git", ".next"}
 roots = [
     "src",

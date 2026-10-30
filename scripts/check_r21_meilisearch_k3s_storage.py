@@ -25,8 +25,7 @@ if not c.expect(
 c.expect(
     c.contains_re(
         manifest,
-        r"kind:\s*PersistentVolumeClaim|persistentVolumeClaim"
-        r"|claimName:",
+        r"kind:\s*PersistentVolumeClaim|persistentVolumeClaim" r"|claimName:",
     ),
     "Manifest defines or uses persistent volume claim",
     "Manifest does not define/use a PVC",
