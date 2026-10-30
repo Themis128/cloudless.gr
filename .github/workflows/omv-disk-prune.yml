@@ -24,6 +24,10 @@ on:
         description: "Restart k3s after prune (fix wedged kubelet/pod stalls)"
         required: false
         default: "false"
+      pods_restart:
+        description: "Dump pod inventory + rollout restart all app deployments"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -112,6 +116,23 @@ jobs:
           sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes
           echo "=== pods after restart ==="
           sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get pods -A | grep -vE "Running|Completed" | head -15
+
+      - name: Pod inventory + restart sweep (dead apps behind the ts.net VIPs)
+        if: inputs.pods_restart == 'true'
+        run: |
+          KC="sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
+          echo "=== pod inventory (non-healthy) ==="
+          $KC get pods -A -o wide 2>/dev/null | grep -vE "Running|Completed" | head -30
+          echo "=== rollout-restarting every deployment (down apps recover) ==="
+          $KC get deploy -A -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null | \
+            while read ns dep; do
+              [ -z "$dep" ] && continue
+              echo "restart: $ns/$dep"
+              $KC -n "$ns" rollout restart deployment/"$dep" 2>/dev/null || true
+            done
+          echo "=== pod state after 60s ==="
+          sleep 60
+          $KC get pods -A 2>/dev/null | grep -vE "Running|Completed" | head -20
 
       - name: Disk after
         run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
