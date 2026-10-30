@@ -67,6 +67,15 @@ jobs:
           --set-string oauth.clientSecret="${{ env.TS_CLIENT_SECRET }}" \
           --set operatorLogLevel=info \
           --timeout 300s --wait=false
+        # The operator deployment mounts an "oauth" secret — if it never
+        # landed (stale adopted release), pods stall on FailedMount. Ensure it.
+        if ! kubectl -n tailscale get secret operator-oauth >/dev/null 2>&1; then
+          kubectl -n tailscale create secret generic operator-oauth \
+            --from-literal=client_id="${{ env.TS_CLIENT_ID }}" \
+            --from-literal=client_secret="${{ env.TS_CLIENT_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "operator-oauth secret created"
+        fi
 
     - name: Verify deployment
       if: always()
