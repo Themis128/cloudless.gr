@@ -28,8 +28,7 @@ for i in range(1, 16):
         ln
         for ln in out.splitlines()
         if re.search(
-            r"Partner ID literal|verdict|HEALTHY"
-            r"|DEGRADED",
+            r"Partner ID literal|verdict|HEALTHY" r"|DEGRADED",
             ln,
         )
     ]

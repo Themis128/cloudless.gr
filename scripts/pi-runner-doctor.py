@@ -89,10 +89,7 @@ print("## 4. Workflows pinned to [self-hosted, omv, pi, *]")
 wf_dir = Path(".github/workflows")
 pinned = []
 if wf_dir.is_dir():
-    pat = re.compile(
-        r"runs-on:.*self-hosted.*omv.*pi"
-        r"|runs-on:.*omv.*pi.*build"
-    )
+    pat = re.compile(r"runs-on:.*self-hosted.*omv.*pi" r"|runs-on:.*omv.*pi.*build")
     for f in wf_dir.glob("*.yml"):
         if pat.search(f.read_text()):
             pinned.append(f.name)

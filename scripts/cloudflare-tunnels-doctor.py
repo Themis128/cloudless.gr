@@ -269,15 +269,13 @@ omv_yml.write_text(CANONICAL.read_text())
 text = CANONICAL.read_text()
 text = text.replace("service: http://192.168.1.130:80", "service: http://localhost:80", 1)
 text = re.sub(
-    r"(- hostname: omv\.cloudless\.gr\n  service: )"
-    r"http://localhost:80",
+    r"(- hostname: omv\.cloudless\.gr\n  service: )" r"http://localhost:80",
     r"\1http://192.168.1.128:80",
     text,
     count=1,
 )
 text = re.sub(
-    r"(- hostname: ftp\.cloudless\.gr\n  service: )"
-    r"http://localhost:21",
+    r"(- hostname: ftp\.cloudless\.gr\n  service: )" r"http://localhost:21",
     r"\1http://192.168.1.128:21",
     text,
     count=1,

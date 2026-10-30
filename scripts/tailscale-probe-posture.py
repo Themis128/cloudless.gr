@@ -36,8 +36,7 @@ print("== tagged devices ==")
 for d in ts_api.get(f"tailnet/{T}/devices").get("devices") or []:
     host = d.get("hostname", "")
     if re.search(
-        r"kube-0|ingress-0|operator|subnet-router|github-omv|"
-        r"omv-ha|office",
+        r"kube-0|ingress-0|operator|subnet-router|github-omv|" r"omv-ha|office",
         host,
     ):
         print(

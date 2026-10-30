@@ -89,8 +89,7 @@ for c in configmaps:
     print(f"  {c}")
 
 PAT = re.compile(
-    r"auth|cognito|app|env|config|cloudless"
-    r"|integration|ssm",
+    r"auth|cognito|app|env|config|cloudless" r"|integration|ssm",
     re.I,
 )
 print("\n## key NAMES (not values) of auth-ish secrets/configmaps:")

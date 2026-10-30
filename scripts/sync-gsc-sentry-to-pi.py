@@ -39,8 +39,7 @@ os.environ.setdefault("SENTRY_ORG", "baltzakisthemiscom")
 os.environ.setdefault("SENTRY_PROJECT", "cloudless-gr")
 
 placeholder = re.compile(
-    r"^(your[_-]?value|your[_-]?service|changeme|todo|xxx|"
-    r"placeholder)",
+    r"^(your[_-]?value|your[_-]?service|changeme|todo|xxx|" r"placeholder)",
     re.I,
 )
 
