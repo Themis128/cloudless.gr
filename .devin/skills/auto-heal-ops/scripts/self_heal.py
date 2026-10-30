@@ -7,7 +7,8 @@ Healers:
   * Python Lint (ruff) fail → `ruff check --fix` on changed .py files →
     commit + push (the branch updates itself, checks re-run)
   * core-web-vitals-audit fail → one auto-retrigger (variance-absorb)
-  * reports each action; exits 0 when the PR merges or nothing left to fix.
+  * reports each action
+  exits 0 when the PR merges or nothing left to fix.
 
 Requires gh CLI + ruff (pipx/pip). Runs in the repo checkout.
 """
@@ -35,12 +36,12 @@ def pr_state(pr: str) -> dict:
 
 def failed_jobs(pr: str) -> list[str]:
     out = sh(GH, "pr", "checks", pr, "--repo", REPO)
-    return [l.split("\t")[0] for l in out.splitlines() if "\tfail\t" in l]
+    return [ln.split("\t")[0] for ln in out.splitlines() if "\tfail\t" in ln]
 
 
 def changed_py() -> list[str]:
     out = sh("git", "diff", "--name-only", "origin/main...HEAD")
-    return [l for l in out.splitlines() if l.endswith(".py")]
+    return [ln for ln in out.splitlines() if ln.endswith(".py")]
 
 
 def heal_lint() -> bool:
@@ -75,7 +76,8 @@ def retrigger_cwv() -> bool:
 def main() -> int:
     pr = sys.argv[1] if len(sys.argv) > 1 else None
     if not pr:
-        print("usage: self_heal.py PR_NUMBER"); return 1
+        print("usage: self_heal.py PR_NUMBER")
+        return 1
     watch_min = 20
     if "--watch-min" in sys.argv:
         watch_min = int(sys.argv[sys.argv.index("--watch-min") + 1])
@@ -85,20 +87,27 @@ def main() -> int:
         s = pr_state(pr)
         state = s.get("state", "?")
         if state == "MERGED":
-            print("PR merged — done"); return 0
+            print("PR merged — done")
+            return 0
         if state in ("CLOSED",):
-            print("PR closed"); return 1
+            print("PR closed")
+            return 1
         fails = failed_jobs(pr)
         if fails:
             print("[watch] failing:", ", ".join(fails[:5]))
         if any("Lint" in f or "ruff" in f.lower() for f in fails) \
            and "lint" not in healed_once:
-            heal_lint(); healed_once.add("lint"); time.sleep(30); continue
+            heal_lint()
+            healed_once.add("lint")
+            time.sleep(30)
+            continue
         if any("Core Web Vitals" in f or "Lighthouse" in f for f in fails) \
            and "cwv" not in healed_once:
-            retrigger_cwv(); healed_once.add("cwv")
+            retrigger_cwv()
+            healed_once.add("cwv")
         time.sleep(30)
-    print("watch window ended"); return 0
+    print("watch window ended")
+    return 0
 
 
 if __name__ == "__main__":
