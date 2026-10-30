@@ -54,10 +54,10 @@ jobs:
         # The list grows (connectors, proxygroups, dnsconfigs, ...), so scan
         # the CRDs rather than hardcode names.
         for crd in $(kubectl get crd -o name | grep tailscale.com); do
-          kubectl annotate "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+          kubectl annotate crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
             meta.helm.sh/release-name=tailscale-operator \
             meta.helm.sh/release-namespace=tailscale-operator --overwrite
-          kubectl label "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+          kubectl label crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
             app.kubernetes.io/managed-by=Helm --overwrite
         done
         helm upgrade --install tailscale-operator tailscale/tailscale-operator \
