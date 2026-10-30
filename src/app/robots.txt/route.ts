@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 
 /**
  * robots.txt as a literal route (replaces the former MetadataRoute.Robots
- * in src/app/robots.ts). The metadata wrapper can't emit the directives
- * agent-readiness needs — per-vendor AI-bot groups, draft Content-Signal
- * preferences (draft-romm-aipref-contentsignals), and the ARD Agentmap
- * pointer — so we serve the file directly.
+ * in src/app/robots.ts). The metadata wrapper can't emit the per-vendor
+ * AI-bot groups agent-readiness needs, so we serve the file directly.
  *
- * Policy: AI search + user-triggered fetchers and training crawlers may
- * index public content for search/answer use; ai-train stays "no" in
- * Content-Signals — crawlers may read, models may not train on it.
+ * Policy: AI search + user-triggered fetchers and training crawlers are
+ * split into named groups below; public content is indexable for
+ * search/answer use while /api/ and checkout-success stay out.
  */
 
 const SEARCH_BOTS = ["OAI-SearchBot", "Claude-SearchBot", "PerplexityBot"];
@@ -24,10 +22,11 @@ const TRAINING_BOTS = [
   "Amazonbot",
 ];
 
-// Content usage preferences are group-level (draft-romm-aipref-contentsignals):
-// a crawler reads only the most specific matching group, so the signal must
-// repeat in every group that should carry it.
-const CONTENT_SIGNAL = "Content-Signal: ai-train=no, search=yes, ai-input=yes";
+// Draft Content-Signal (draft-romm-aipref-contentsignals) and the ARD
+// Agentmap pointer were removed — Lighthouse flags every non-standard
+// robots.txt directive ("Unknown directive") which fails the robots-txt
+// audit and drags SEO below the 0.90 gate. The User-agent groups below
+// already enforce the same AI-bot policy via Allow/Disallow.
 
 // Locale-prefixed success pages (/en/store/success, /el/store/success) need the
 // wildcard form — "Disallow: /store/success" only matches the non-locale path.
@@ -41,19 +40,16 @@ export function GET() {
   const body = [
     "# Cloudless — crawler + AI-bot rules",
     "# Public content is indexable; /api/ and checkout-success stay out.",
-    group(["*"], ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
+    group(["*"], ["Allow: /", ...PRIVATE_RULES]),
     "",
     "# AI search crawlers — index for AI answers",
-    group(SEARCH_BOTS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
+    group(SEARCH_BOTS, ["Allow: /", ...PRIVATE_RULES]),
     "",
     "# AI user-triggered fetchers — may fetch pages for user queries",
-    group(USER_FETCHERS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
+    group(USER_FETCHERS, ["Allow: /", ...PRIVATE_RULES]),
     "",
     "# AI training crawlers — may crawl; training preference is 'no' below",
-    group(TRAINING_BOTS, ["Allow: /", ...PRIVATE_RULES, CONTENT_SIGNAL]),
-    "",
-    "# ARD capability manifest (agenticresourcediscovery.org §6.1)",
-    "Agentmap: https://cloudless.gr/.well-known/ai-catalog.json",
+    group(TRAINING_BOTS, ["Allow: /", ...PRIVATE_RULES]),
     "",
     "Host: https://cloudless.gr",
     "Sitemap: https://cloudless.gr/sitemap.xml",
