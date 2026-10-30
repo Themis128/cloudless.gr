@@ -6,9 +6,8 @@ permissions:
 
 jobs:
   deploy:
-    # Runs on the omv box itself — the tailnet-API path (100.74.191.58:6443
-    # from a hosted runner) dies when the operator is down, which is exactly
-    # when this deploy is needed. Local kubeconfig = always reachable.
+    # Runs on the omv box — the tailnet-API path from a hosted runner
+    # dies when the operator is down (exactly when this is needed).
     runs-on: [self-hosted, omv]
     timeout-minutes: 15
     env:
@@ -50,8 +49,19 @@ jobs:
         fi
         helm repo add tailscale https://pkgs.tailscale.com/helmcharts || true
         helm repo update
+        # Adopt ALL tailscale CRDs installed under a different release ns —
+        # helm refuses to import them otherwise (release-namespace error).
+        # The list grows (connectors, proxygroups, dnsconfigs, ...), so scan
+        # the CRDs rather than hardcode names.
+        for crd in $(kubectl get crd -o name | grep tailscale.com); do
+          kubectl annotate crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+            meta.helm.sh/release-name=tailscale-operator \
+            meta.helm.sh/release-namespace=tailscale --overwrite
+          kubectl label crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
+            app.kubernetes.io/managed-by=Helm --overwrite
+        done
         helm upgrade --install tailscale-operator tailscale/tailscale-operator \
-          --namespace tailscale-operator \
+          --namespace tailscale \
           --create-namespace \
           --set-string oauth.clientID="${{ env.TS_CLIENT_ID }}" \
           --set-string oauth.clientSecret="${{ env.TS_CLIENT_SECRET }}" \
@@ -62,5 +72,5 @@ jobs:
       if: always()
       run: |
         echo "=== Verifying Tailscale Operator deployment ==="
-        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        kubectl get pods -n tailscale-operator -o wide; kubectl get pods -n tailscale -o wide || echo "Could not reach cluster"
         kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
