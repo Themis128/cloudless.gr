@@ -380,8 +380,12 @@ def fix_stuck_pods() -> None:
 
 # Namespaces whose absence kills services while looking "healthy" —
 # stuck-pod deletion can't see an empty namespace (nothing to be stuck).
+# The tailscale operator helm release lives in `tailscale` (its pods,
+# ProxyGroups, and CRDs all sit there); `tailscale-operator` is the
+# namespace name kubectl targets for the operator's own work, which is
+# legitimately empty — watch the namespace that actually runs workloads.
 CRITICAL_NS = (
-    "tailscale-operator",
+    "tailscale",
     "appflowy",
     "monitoring",
 )
