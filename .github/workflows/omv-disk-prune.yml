@@ -51,12 +51,17 @@ jobs:
         if: inputs.diagnose_only != 'true'
         run: sudo rm -rf /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/runner-work/{.pnpm-store,build} 2>/dev/null; echo "runner-work purged"
 
-      - name: NAS-Backup move sda1 → sdb1 (~11G off the k3s SSD)
+      - name: NAS-Backup move sda1 → sdb1 + symlink (writers stay on sdb1)
         if: inputs.diagnose_only != 'true'
         run: |
           SRC=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/NAS-Backup
           DST=/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/NAS-Backup
-          [ -d "$SRC" ] && sudo mkdir -p "$DST" && sudo mv "$SRC"/* "$DST"/ 2>/dev/null && sudo rmdir "$SRC" && echo "NAS-Backup moved to sdb1" || echo "no NAS-Backup move needed"
+          if [ -d "$SRC" ] && [ ! -L "$SRC" ]; then
+            sudo mkdir -p "$DST" && sudo mv "$SRC"/* "$DST"/ 2>/dev/null && sudo rmdir "$SRC" \
+              && sudo ln -s "$DST" "$SRC" && echo "NAS-Backup moved + symlinked to sdb1"
+          else
+            echo "NAS-Backup already linked or absent"
+          fi
 
       - name: docker-cache registry GC (~20G pull-through blobs)
         if: inputs.diagnose_only != 'true'
