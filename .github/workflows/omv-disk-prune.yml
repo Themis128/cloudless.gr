@@ -137,6 +137,13 @@ jobs:
           echo "=== pod state after 60s ==="
           sleep 60
           $KC get pods -A 2>/dev/null | grep -vE "Running|Completed" | head -20
+          echo "=== describe stalled pods (why ContainerCreating) ==="
+          for nsdep in "tailscale operator" "tailscale kube"; do
+            ns=${nsdep%% *}; dep=${nsdep##* }
+            pod=$($KC -n $ns get pods -l app=$dep -o name 2>/dev/null | head -1)
+            [ -z "$pod" ] && pod=$($KC -n $ns get pods -o name 2>/dev/null | grep "$dep" | head -1)
+            [ -n "$pod" ] && $KC -n $ns describe "$pod" 2>/dev/null | tail -15
+          done
 
       - name: Disk after
         run: df -h / /var/lib/rancher/k3s /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 2>/dev/null | sort -u
