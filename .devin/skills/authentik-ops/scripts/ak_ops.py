@@ -110,6 +110,36 @@ def cmd_add(key, side, host, internal):
     print(f"point tunnel {host} -> http://{'192.168.1.128:30910' if side=='omv' else 'authentik-outpost:9000'} + DNS CNAME")
 
 
+
+def cmd_act_add(key, slug, name, url):
+    # launch_url alone doesn't persist — needs meta_launch_url set via PUT too
+    body = {"slug": slug, "name": name, "open_in_new_tab": True,
+            "policy_engine_mode": "any"}
+    r = api("POST", "/api/v3/core/applications/", body, key=key)
+    if not r.get("pk"):
+        return print("failed")
+    app = api("GET", f"/api/v3/core/applications/{slug}/", key=key)
+    app["launch_url"] = app["meta_launch_url"] = url
+    api("PUT", f"/api/v3/core/applications/{slug}/",
+        {k: v for k, v in app.items() if k != "pk"}, key=key)
+    print(f"launcher '{slug}' -> {url}")
+
+
+def cmd_act_list(key):
+    for a in api("GET", "/api/v3/core/applications/?page_size=100", key=key).get("results", []):
+        if not a.get("provider"):
+            print(f"  {a['slug']:20} {a['name']:40} {(a.get('launch_url') or a.get('meta_launch_url') or '')[:50]}")
+
+
+def cmd_act_rm(key, slug):
+    r = api("GET", f"/api/v3/core/applications/{slug}/", key=key)
+    if r.get("pk"):
+        api("DELETE", f"/api/v3/core/applications/{slug}/", key=key)
+        print(f"removed {slug}")
+    else:
+        print(f"{slug} not found")
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -127,6 +157,16 @@ def main():
         cmd_env_token()
     elif cmd == "add" and len(args) == 4:
         cmd_add(key, args[1], args[2], args[3])
+    elif cmd == "act" and len(args) >= 2:
+        sub = args[1]
+        if sub == "add" and len(args) == 5:
+            cmd_act_add(key, args[2], args[3], args[4])
+        elif sub == "list":
+            cmd_act_list(key)
+        elif sub == "rm" and len(args) == 3:
+            cmd_act_rm(key, args[2])
+        else:
+            print("usage: ak_ops.py act add <slug> <name> <url> | list | rm <slug>")
     else:
         print(__doc__)
 
