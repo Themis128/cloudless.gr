@@ -128,6 +128,7 @@ AppFlowy (`src/lib/appflowy-*.ts`, admin routes under `src/app/api/admin/appflow
 - **nas-auto-remediate**: Automated self-healing script for the omv node. Handles:
   - Failed systemd units: clears stale flags, resets/restarts wedged units (one per day), reports persistent failures.
   - Stuck k3s pods: deletes CrashLoopBackOff, bad-image, or Pending>30m pods for controller recreation.
+  - Critical k3s namespaces (`tailscale`, `appflowy`, `monitoring`): a namespace with **zero deployments** means the workload was evicted/deleted — invisible to pod-level checks. Logs `CRITICAL` (the fix is the deploy workflow, not a pod restart); a deployment whose available replicas drop below desired gets `rollout restart`. Note: the Tailscale operator release and pods live in ns `tailscale`, **not** `tailscale-operator` (which is empty by design).
   - Root disk pressure: triggers journal vacuum and docker prune at 85% usage.
   - Docker containers stuck `unhealthy`: restarts them (per-container daily budget) — Docker marks the state but never acts on it. Runs standalone via `--docker-health` from the 10-min `/etc/cron.d/nas-docker-health` entry, so container outages self-heal in minutes.
   - Tailscale: restarts tailscaled if status check fails.

@@ -466,6 +466,34 @@ export KUBECONFIG=~/.kube/config-cloudless-ts   # LAN kubeconfig at office
 python3 infrastructure/tailscale/deploy.py
 ```
 
+**Release layout (as of 2026-10-30):** the helm release `tailscale-operator`
+deploys into namespace **`tailscale`** — operator pods, ProxyGroup
+StatefulSets (`ingress`, `kube`), and CRDs all live there. Namespace
+`tailscale-operator` is the operator's working namespace and is **empty by
+design** — do not treat its emptiness as an outage (the healer watches
+`tailscale`).
+
+**Recovery via CI:** `tailscale-deploy.yml` now runs on the **omv
+self-hosted runner** (`runs-on: [self-hosted, omv]`) with the local
+`/etc/rancher/k3s/k3s.yaml`. This is deliberate: a GitHub-hosted runner
+reaches the API through `100.74.191.58:6443`, which is itself proxied by the
+operator — a dead operator means the deploy can't reach the cluster it's
+supposed to fix. The workflow also:
+
+- adopts pre-existing `*.tailscale.com` CRDs (annotates
+  `meta.helm.sh/release-*` + `app.kubernetes.io/managed-by=Helm`) so helm can
+  import CRDs installed under an older release namespace;
+- creates `secret/operator-oauth` in `tailscale` if missing — the operator
+  deployment mounts it; an adopted release may not have created it, which
+  wedges the pod in `ContainerCreating` on `FailedMount`;
+- deletes the `app=operator` pod / rollout-restarts `deploy/operator` —
+  helm won't restart an unchanged pod that is crashlooping.
+
+`kube-0` (ProxyGroup kube) mounts the `kube-apiserver-auth-proxy`
+ServiceAccount, which the **running operator** creates — a stalled operator
+therefore also crashloops `kube-0` on `FailedMount` until the operator first
+comes up.
+
 ```bash
 kubectl wait connector k3s-cidrs --for=condition=ConnectorReady=true --timeout=5m
 kubectl wait proxygroup ingress --for=condition=ProxyGroupReady=true --timeout=5m
@@ -506,7 +534,8 @@ sudo tailscale set --accept-routes   # Linux with real TUN
 
 | Workflow / script                                      | Purpose                                                       |
 | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `tailscale-deploy.yml` / `tailscale-fabric-deploy.yml` | Operator / fabric apply                                       |
+| `tailscale-deploy.yml` / `tailscale-fabric-deploy.yml` | Operator (on omv runner) / fabric apply                        |
+| `omv-disk-prune.yml` (`restart_k3s`, `pods_restart`)   | Bounce `k3s-k3s-omv.service` + rollout-restart all deployments  |
 | `tailscale-enable-https.yml`                           | Tailnet HTTPS setting                                         |
 | `tailscale-approve-service-hosts.yml`                  | Approve `svc:*` hosts                                         |
 | `tailscale-fix-fabric-acl.yml`                         | ACL merge helper                                              |
@@ -534,6 +563,10 @@ flowchart TD
   Q -->|Member hits :9100/:6443| A8[Expected deny — grants are HTTPS-only<br/>promote to admin or use LAN]
   Q -->|Apps red / SaaS not routed| A9[Connector tag + advertise-connector<br/>ACL nodeAttrs + MagicDNS on]
   Q -->|svc VIP empty/dark| A10[Approve Service host<br/>HTTPS Certificates on]
+  Q -->|all *.ts.net 000, tailscaled OK| A11[Operator dead — get pods -n tailscale<br/>empty/crashloop → tailscale-deploy.yml]
+  Q -->|operator ContainerCreating| A12[FailedMount — missing operator-oauth<br/>deploy creates it; image pull is slow]
+  Q -->|kube-0 CrashLoopBackOff| A13[kube-apiserver-auth-proxy SA missing<br/>operator creates it once Running]
+  Q -->|curl *.ts.net = 000 on omv| A14[MagicDNS not in host resolver<br/>probe the svc:* VIP IP directly]
 ```
 
 ```bash
