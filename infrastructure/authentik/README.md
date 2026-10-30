@@ -35,3 +35,42 @@ redis, server+worker, NodePort :30910. Rotate the secret values first.
 
 Bootstrap password lives in the `authentik-secret` k8s secret
 (`bootstrap-password` key); ops API token identifier `ops-api`.
+
+## OIDC login for SocialAuto (added 2026-10-30)
+
+SocialAuto's own user login now goes through authentik — its accounts live in
+the IdP, not just its JWT store.
+
+- Provider `social-oidc` (client_id `social_client`) →
+  `auth.cloudless.gr/application/o/social-oidc`
+- social-api endpoints: `GET /api/v1/auth/oidc/authorize` →
+  `/oidc/callback` — exchanges the code, pulls userinfo, upserts the user by
+  email, mints the app's JWT
+- Flow: SocialAuto login → `auth.cloudless.gr` → sign in → back to SocialAuto
+  as an authenticated user. Platform OAuth connections (X/Meta/…) stay in
+  `social_accounts` — OIDC only replaces the *user* login.
+
+## Full auth map (2026-10-30)
+
+```
+                      ┌─────────────────────────────────┐
+   browser ──────────►│ auth.cloudless.gr (authentik)   │
+                      │  IdP: users, groups, MFA, TOTP  │
+                      └───────┬───────────────┬─────────┘
+              proxy outposts  │               │ OIDC
+        ┌─────────────────────┘               └──────────┐
+        ▼                                                ▼
+┌───────────────┐                              ┌──────────────────┐
+│ 15 gated GUIs │                              │ SocialAuto login │
+│ (embedded+cu130)│                            │ (app JWT via OIDC)│
+└───────────────┘                              └──────────────────┘
+```
+
+- **IdP**: authentik on omv k3s — users, groups (`gates-ops`), superuser
+  `tbaltzakis@cloudless.gr`
+- **Proxy gate**: every internal GUI is fronted by an outpost (SSO redirect)
+- **OIDC**: apps that support OAuth2 get real login, not just a gate
+- **CF Access**: omv tunnel hostnames use Cloudflare's separate ZT account
+- **Platform OAuth**: X/Meta/LinkedIn/etc. live in `social_accounts` — never
+  authentik (they're third-party providers, not your identity)
+- **Secrets**: TOTP/API slots in `authentik-secret` — the canonical store
