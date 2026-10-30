@@ -20,8 +20,10 @@ _opener = urllib.request.build_opener(_NoRedirect)
 def http(url, tok=None, host=None):
     try:
         r = urllib.request.Request(url)
-        if tok: r.add_header("Authorization", f"Bearer {tok}")
-        if host: r.add_header("Host", host)
+        if tok:
+            r.add_header("Authorization", f"Bearer {tok}")
+        if host:
+            r.add_header("Host", host)
         _opener.open(r, timeout=12)
         return "200"
     except urllib.error.HTTPError as e:
@@ -62,7 +64,7 @@ for name, port in [("social-api",8083),("metabase",3000),("portainer",9000),("gr
 print("\n=== tokens in social-api env ===")
 env = subprocess.run(["docker","exec","social-api","env"], capture_output=True, text=True).stdout
 for k in ["TWITTER_TOTP_SECRET","META_TOTP_SECRET","CLOUDFLARE_API_TOKEN","AUTHENTIK_OUTPOST_TOKEN"]:
-    found = "SET" if any(l.startswith(k+"=") and len(l.split("=",1)[1])>3 for l in env.splitlines()) else "missing"
+    found = "SET" if any(line.startswith(k+"=") and len(line.split("=",1)[1])>3 for line in env.splitlines()) else "missing"
     print(f"  {k}: {found}")
 
 print("\nDone.")
