@@ -73,8 +73,10 @@ describe("robots.txt route", () => {
     expect(body).toContain("Disallow: /api/");
     expect(body).toContain("User-agent: OAI-SearchBot");
     expect(body).toContain("User-agent: GPTBot");
-    expect(body).toContain("Content-Signal: ai-train=no, search=yes, ai-input=yes");
-    expect(body).toContain("Agentmap: https://cloudless.gr/.well-known/ai-catalog.json");
+    // Draft directives were removed for Lighthouse robots-txt validity —
+    // assert they stay out (non-standard directives fail the SEO audit).
+    expect(body).not.toContain("Content-Signal:");
+    expect(body).not.toContain("Agentmap:");
     expect(body).toContain("Sitemap: https://cloudless.gr/sitemap.xml");
   });
 });
