@@ -56,12 +56,12 @@ jobs:
         for crd in $(kubectl get crd -o name | grep tailscale.com); do
           kubectl annotate crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
             meta.helm.sh/release-name=tailscale-operator \
-            meta.helm.sh/release-namespace=tailscale-operator --overwrite
+            meta.helm.sh/release-namespace=tailscale --overwrite
           kubectl label crd "${crd#customresourcedefinition.apiextensions.k8s.io/}" \
             app.kubernetes.io/managed-by=Helm --overwrite
         done
         helm upgrade --install tailscale-operator tailscale/tailscale-operator \
-          --namespace tailscale-operator \
+          --namespace tailscale \
           --create-namespace \
           --set-string oauth.clientID="${{ env.TS_CLIENT_ID }}" \
           --set-string oauth.clientSecret="${{ env.TS_CLIENT_SECRET }}" \
@@ -72,5 +72,5 @@ jobs:
       if: always()
       run: |
         echo "=== Verifying Tailscale Operator deployment ==="
-        kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
+        kubectl get pods -n tailscale-operator -o wide; kubectl get pods -n tailscale -o wide || echo "Could not reach cluster"
         kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
