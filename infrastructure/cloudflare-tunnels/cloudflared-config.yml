@@ -56,14 +56,17 @@ ingress:
     service: http://192.168.1.128:4319
   - hostname: cloud.cloudless.gr
     service: http://192.168.1.128:11000
+  - hostname: auth.cloudless.gr
+    service: http://192.168.1.128:30910
   - hostname: omv.cloudless.gr
-    service: http://192.168.1.128:9080
+    service: http://192.168.1.128:30910
   - hostname: files.cloudless.gr
-    service: http://192.168.1.128:3671
+    service: http://192.168.1.128:30910
   - hostname: office.cloudless.gr
     service: http://192.168.1.128:9980
   - hostname: signal.cloudless.gr
     service: http://192.168.1.128:8090
   - hostname: push.cloudless.gr
     service: http://192.168.1.128:7867
+  # otel.cloudless.gr removed 2026-10-30 - no backend on :4319
   - service: http_status:404
