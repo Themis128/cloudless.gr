@@ -77,6 +77,15 @@ jobs:
           echo "operator-oauth secret created"
         fi
 
+    - name: Restart crashlooping operator pod
+      run: |
+        # The operator pod can wedge in Completed/restart-loop after a disk
+        # event — helm won't restart a pod it didn't change, so force it.
+        kubectl -n tailscale delete pod -l app=operator --ignore-not-found || true
+        kubectl -n tailscale rollout restart deploy/operator 2>/dev/null || true
+        sleep 20
+        kubectl get pods -n tailscale -o wide
+
     - name: Verify deployment
       if: always()
       run: |
