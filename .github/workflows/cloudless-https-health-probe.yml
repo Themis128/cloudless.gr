@@ -274,7 +274,11 @@ jobs:
           # with no JS. Seen 2026-10-31 after the OMV disk prune.
           UA="cloudless-health-probe/1.0 (+https://github.com/${GITHUB_REPOSITORY})"
           base="https://${PROBE_HOST}"
-          code=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /tmp/en.html -w '%{http_code}' -m 20 "$base/en" || true)
+          # Unique query per run defeats the cloudless2 Worker edge cache —
+          # a warm-cache 200 would mask a broken origin. Applies to /en too:
+          # cached HTML could reference a chunk hash the origin no longer has.
+          CB="?probe=${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+          code=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /tmp/en.html -w '%{http_code}' -m 20 "$base/en${CB}" || true)
           if [ "$code" = "403" ]; then
             # CF bot challenge on the runner IP — edge is up but won't serve
             # us. Re-probe via the tailnet NodePort when it's joined; otherwise
@@ -282,7 +286,7 @@ jobs:
             if getent hosts "${TS_ORIGIN_HOST}" >/dev/null 2>&1; then
               echo "::warning::CF 403 on /en — falling back to Tailscale NodePort origin"
               base="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}"
-              code=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /tmp/en.html -w '%{http_code}' -m 20 "$base/en" || true)
+              code=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /tmp/en.html -w '%{http_code}' -m 20 "$base/en${CB}" || true)
             else
               echo "::warning::CF 403 on /en from runner IP — asset check SKIPPED (no tailnet path to origin)"
               echo "ASSET_CHECK=skipped-cf-403" >> "$GITHUB_ENV"
@@ -292,8 +296,8 @@ jobs:
           if [ "$code" != "200" ]; then echo "::error::/en returned HTTP ${code} via ${base}"; exit 1; fi
           chunk=$(grep -oE '/_next/static/chunks/[^"]+\.js' /tmp/en.html | head -1 || true)
           if [ -z "$chunk" ]; then echo "::error::no /_next/static chunk in /en (HTTP $code via $base)"; exit 1; fi
-          acode=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /dev/null -w '%{http_code}' -m 20 "${base}${chunk}" || true)
-          echo "  ${base}${chunk} -> ${acode}"
+          acode=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /dev/null -w '%{http_code}' -m 20 "${base}${chunk}${CB}" || true)
+          echo "  ${base}${chunk}${CB} -> ${acode}"
           if [ "$acode" = "403" ] && [ "$base" = "https://${PROBE_HOST}" ] && getent hosts "${TS_ORIGIN_HOST}" >/dev/null 2>&1; then
             echo "::warning::CF 403 on asset — retrying via Tailscale NodePort origin"
             acode=$(curl -s -A "$UA" --retry 2 --retry-delay 5 --retry-all-errors -o /dev/null -w '%{http_code}' -m 20 "http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}${chunk}" || true)
