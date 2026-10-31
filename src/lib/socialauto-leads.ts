@@ -34,6 +34,22 @@ function splitName(name: string): { firstName?: string; lastName?: string } {
   };
 }
 
+// [espoSource, channelLabel, utmSource, utmMedium, targetListName]
+type SourceRow = [string, string, string, string, string | undefined];
+const SOURCE_MAP: Record<SocialAutoSource, SourceRow> = {
+  facebook_messenger: [
+    "Messenger",
+    "Facebook Messenger",
+    "facebook_messenger",
+    "social",
+    "Messenger leads",
+  ],
+  instagram_dm: ["Messenger", "Instagram DM", "instagram_dm", "social", "Messenger leads"],
+  whatsapp_flow: ["WhatsApp Flow", "WhatsApp Flow", "whatsapp", "social", "WhatsApp leads"],
+  whatsapp_dm: ["Messenger", "WhatsApp DM", "whatsapp", "social", "WhatsApp leads"],
+  website: ["Web Site", "Website", "website", "referral", undefined],
+};
+
 function mapSourceToEspo(source: SocialAutoSource): {
   espoSource: string;
   channelLabel: string;
@@ -41,54 +57,14 @@ function mapSourceToEspo(source: SocialAutoSource): {
   utmMedium: string;
   targetListName?: string;
 } {
-  switch (source) {
-    case "facebook_messenger":
-      return {
-        espoSource: "Messenger",
-        channelLabel: "Facebook Messenger",
-        utmSource: "facebook_messenger",
-        utmMedium: "social",
-        targetListName: "Messenger leads",
-      };
-    case "instagram_dm":
-      return {
-        espoSource: "Messenger",
-        channelLabel: "Instagram DM",
-        utmSource: "instagram_dm",
-        utmMedium: "social",
-        targetListName: "Messenger leads",
-      };
-    case "whatsapp_flow":
-      return {
-        espoSource: "WhatsApp Flow",
-        channelLabel: "WhatsApp Flow",
-        utmSource: "whatsapp",
-        utmMedium: "social",
-        targetListName: "WhatsApp leads",
-      };
-    case "whatsapp_dm":
-      return {
-        espoSource: "Messenger",
-        channelLabel: "WhatsApp DM",
-        utmSource: "whatsapp",
-        utmMedium: "social",
-        targetListName: "WhatsApp leads",
-      };
-    case "website":
-      return {
-        espoSource: "Web Site",
-        channelLabel: "Website",
-        utmSource: "website",
-        utmMedium: "referral",
-      };
-    default:
-      return {
-        espoSource: "Other",
-        channelLabel: "Other",
-        utmSource: "other",
-        utmMedium: "other",
-      };
-  }
+  const [espoSource, channelLabel, utmSource, utmMedium, targetListName] = SOURCE_MAP[source] ?? [
+    "Other",
+    "Other",
+    "other",
+    "other",
+    undefined,
+  ];
+  return { espoSource, channelLabel, utmSource, utmMedium, targetListName };
 }
 
 function stringifyMeta(meta: unknown, maxChars = 2000): string | undefined {
