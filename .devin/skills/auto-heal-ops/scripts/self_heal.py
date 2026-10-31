@@ -12,6 +12,7 @@ Healers:
 
 Requires gh CLI + ruff (pipx/pip). Runs in the repo checkout.
 """
+
 import json
 import shutil
 import subprocess
@@ -29,8 +30,7 @@ def sh(*a, cwd=None) -> str:
 
 
 def pr_state(pr: str) -> dict:
-    out = sh(GH, "pr", "view", pr, "--repo", REPO,
-             "--json", "state,headRefName,mergeStateStatus")
+    out = sh(GH, "pr", "view", pr, "--repo", REPO, "--json", "state,headRefName,mergeStateStatus")
     return json.loads(out) if out.startswith("{") else {}
 
 
@@ -54,18 +54,36 @@ def heal_lint() -> bool:
         return False
     print("[heal] ruff --fix applied:", dirty.replace("\n", ", ")[:120])
     sh("git", "add", "-A")
-    sh("git", "-c", "user.name=Devin",
-       "-c", "user.email=158243242+devin-ai-integration[bot]@users.noreply.github.com",
-       "commit", "-q", "-m", "auto-heal: ruff --fix")
+    sh(
+        "git",
+        "-c",
+        "user.name=Devin",
+        "-c",
+        "user.email=158243242+devin-ai-integration[bot]@users.noreply.github.com",
+        "commit",
+        "-q",
+        "-m",
+        "auto-heal: ruff --fix",
+    )
     out = sh("git", "push")
     print("[heal] pushed:", out[:80])
     return True
 
 
 def retrigger_cwv() -> bool:
-    out = sh(GH, "run", "list", "--repo", REPO, "--workflow",
-             "core-web-vitals-audit.yml", "--limit", "3",
-             "--json", "conclusion")
+    out = sh(
+        GH,
+        "run",
+        "list",
+        "--repo",
+        REPO,
+        "--workflow",
+        "core-web-vitals-audit.yml",
+        "--limit",
+        "3",
+        "--json",
+        "conclusion",
+    )
     if '"failure"' in out:
         sh(GH, "workflow", "run", "core-web-vitals-audit.yml", "--repo", REPO)
         print("[heal] cwv re-triggered")
@@ -95,14 +113,15 @@ def main() -> int:
         fails = failed_jobs(pr)
         if fails:
             print("[watch] failing:", ", ".join(fails[:5]))
-        if any("Lint" in f or "ruff" in f.lower() for f in fails) \
-           and "lint" not in healed_once:
+        if any("Lint" in f or "ruff" in f.lower() for f in fails) and "lint" not in healed_once:
             heal_lint()
             healed_once.add("lint")
             time.sleep(30)
             continue
-        if any("Core Web Vitals" in f or "Lighthouse" in f for f in fails) \
-           and "cwv" not in healed_once:
+        if (
+            any("Core Web Vitals" in f or "Lighthouse" in f for f in fails)
+            and "cwv" not in healed_once
+        ):
             retrigger_cwv()
             healed_once.add("cwv")
         time.sleep(30)

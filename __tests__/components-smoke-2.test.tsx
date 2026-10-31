@@ -313,6 +313,9 @@ describe("behavioral components", () => {
   it("ThemeProvider helpers map routes to themes", () => {
     expect(themeForRoute("/admin")).toBeDefined();
     expect(dataThemeAttr("/")).toHaveProperty("data-theme");
+    // Non-admin, non-marketing routes (dashboard/auth/app) stay dark.
+    expect(themeForRoute("/dashboard/services")).toBe("dark");
+    expect(themeForRoute("/el/dashboard")).toBe("dark");
   });
 
   it("ConsentGatedPixel injects the pixel script when marketing consent given", async () => {
