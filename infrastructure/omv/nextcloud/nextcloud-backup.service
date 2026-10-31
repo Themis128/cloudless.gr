@@ -1,0 +1,6 @@
+[Unit]
+Description=Nightly Nextcloud DB + config backup
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nextcloud-backup.sh
