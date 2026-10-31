@@ -266,6 +266,20 @@ jobs:
             echo "HEALTH_TS_IP=${IP}"
           } >> "$GITHUB_ENV"
 
+      - name: GET a /_next/static chunk (HTML-only 200 hides broken assets)
+        run: |
+          set -euo pipefail
+          # /api/health and the HTML can be 200 while every /_next/static file
+          # 400s (Next maps fs read errors to 400) — the site renders unstyled
+          # with no JS. Seen 2026-10-31 after the OMV disk prune.
+          code=$(curl -s -o /tmp/en.html -w '%{http_code}' -m 20 "https://${PROBE_HOST}/en" || true)
+          if [ "$code" = "403" ]; then echo "::warning::CF 403 on HTML from runner IP; skipping asset check"; exit 0; fi
+          chunk=$(grep -oE '/_next/static/chunks/[^"]+\.js' /tmp/en.html | head -1 || true)
+          if [ -z "$chunk" ]; then echo "::error::no /_next/static chunk in /en (HTTP $code)"; exit 1; fi
+          acode=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "https://${PROBE_HOST}${chunk}" || true)
+          echo "  ${chunk} -> ${acode}"
+          if [ "$acode" = "403" ]; then echo "::warning::CF 403 on asset from runner IP"; exit 0; fi
+          if [ "$acode" != "200" ]; then echo "::error::static asset ${chunk} returned HTTP ${acode} — site renders without CSS/JS"; exit 1; fi
       - name: Step summary
         if: success()
         run: |
