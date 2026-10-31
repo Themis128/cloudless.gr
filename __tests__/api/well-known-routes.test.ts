@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { GET as apiCatalog } from "@/app/api/.well-known/api-catalog/route";
+import { GET as oauthAs } from "@/app/api/.well-known/oauth-authorization-server/route";
 import { GET as oauthResource } from "@/app/api/.well-known/oauth-protected-resource/[[...path]]/route";
 import { GET as oidcConfig } from "@/app/api/.well-known/openid-configuration/route";
 import { GET as serverCard } from "@/app/api/.well-known/mcp/server-card.json/route";
@@ -17,6 +18,18 @@ describe(".well-known discovery routes", () => {
     const body = await res.json();
     expect(body.linkset).toHaveLength(3);
     expect(body.linkset[0].anchor).toBe("https://cloudless.gr/api/chat");
+  });
+
+  it("oauth-authorization-server advertises only endpoints that exist (RFC 8414)", async () => {
+    const body = await (await oauthAs()).json();
+    expect(body.issuer).toBe("https://cloudless.gr");
+    expect(body.authorization_endpoint).toBe("https://cloudless.gr/auth/login");
+    expect(body.response_types_supported).toContain("code");
+    expect(body.scopes_supported).toContain("openid");
+    // No public token endpoint or JWKS — they must not be advertised.
+    expect(body.token_endpoint).toBeUndefined();
+    expect(body.jwks_uri).toBeUndefined();
+    expect(body.agent_auth.register_uri).toBe("https://cloudless.gr/api/auth/register");
   });
 
   it("oauth-protected-resource advertises cloudless.gr + scopes", async () => {

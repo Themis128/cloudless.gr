@@ -222,7 +222,7 @@ function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse
 function buildCSP(nonce: string): string {
   return `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: http: 'unsafe-inline' 'unsafe-eval';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval';
     style-src 'self' 'unsafe-inline' https:;
     img-src 'self' data: https: blob:;
     font-src 'self' https: data:;

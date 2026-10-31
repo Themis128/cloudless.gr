@@ -2,26 +2,35 @@
 """authentik ops — one entrypoint for the omv k3s IdP.
 SSHes to omv (tbaltzakis@100.74.191.58, ~/.ssh/id_rsa_win) and drives the
 authentik REST API. Subcommands: status, add, env-token, outposts, health."""
+
 import base64
 import json
 import subprocess
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 
 AK = "http://192.168.1.128:30910"
-SSH = ["ssh", "-i", "~/.ssh/id_rsa_win", "-o", "StrictHostKeyChecking=no",
-       "-o", "ConnectTimeout=10", "tbaltzakis@100.74.191.58"]
+SSH = [
+    "ssh",
+    "-i",
+    "~/.ssh/id_rsa_win",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "-o",
+    "ConnectTimeout=10",
+    "tbaltzakis@100.74.191.58",
+]
 
 
 def omv(cmd: str) -> str:
-    return subprocess.run(SSH + [cmd], capture_output=True, text=True,
-                          timeout=60).stdout.strip()
+    return subprocess.run(SSH + [cmd], capture_output=True, text=True, timeout=60).stdout.strip()
 
 
 def api_key() -> str:
-    raw = omv("sudo kubectl get secret authentik-secret -n authentik "
-              "-o jsonpath='{.data.ops-api-token}'")
+    raw = omv(
+        "sudo kubectl get secret authentik-secret -n authentik -o jsonpath='{.data.ops-api-token}'"
+    )
     return base64.b64decode(raw).decode()
 
 
@@ -40,6 +49,7 @@ def api(method: str, path: str, body=None, key=None):
 def remote_py(script: str) -> str:
     """Run a python snippet on omv (reaches 192.168.1.128:30910)."""
     import base64 as b64
+
     enc = b64.b64encode(script.encode()).decode()
     return omv(f"python3 -c \"import base64;exec(base64.b64decode('{enc}'))\"")
 
@@ -51,14 +61,18 @@ def flows(key):
 
 
 def cmd_status(key):
-    print(remote_py(f"""
+    print(
+        remote_py(f"""
 import urllib.request,json
 try:
     urllib.request.urlopen('{AK}/-/health/ready/',timeout=10)
     print('authentik: READY')
 except Exception as e: print('authentik: DOWN',e)
-"""))
-    outs = api("GET", "/api/v3/outposts/instances/?type=proxy&page_size=50", key=key).get("results", [])
+""")
+    )
+    outs = api("GET", "/api/v3/outposts/instances/?type=proxy&page_size=50", key=key).get(
+        "results", []
+    )
     for o in outs:
         print(f"outpost {o['name']}: {len(o.get('providers') or [])} providers")
     provs = api("GET", "/api/v3/providers/proxy/?page_size=100", key=key).get("results", [])
@@ -77,58 +91,84 @@ def cmd_health():
 
 
 def cmd_env_token():
-    out = remote_py("""
-import urllib.request,json
-H={'Authorization':'Bearer ' + open('/dev/stdin').read().strip()}
-""")
-    # simpler: pull the token via ak shell on omv
-    print(omv("sudo kubectl exec -n authentik deploy/authentik-server -- ak shell -c \""
-              "from authentik.core.models import Token\n"
-              "for t in Token.objects.filter(identifier__startswith='ak-outpost'):\n"
-              " print(t.identifier, t.key)\n\" 2>/dev/null | grep -v '###\\|objects imported'"))
+    # pull the token via ak shell on omv
+    print(
+        omv(
+            'sudo kubectl exec -n authentik deploy/authentik-server -- ak shell -c "'
+            "from authentik.core.models import Token\n"
+            "for t in Token.objects.filter(identifier__startswith='ak-outpost'):\n"
+            " print(t.identifier, t.key)\n\" 2>/dev/null | grep -v '###\\|objects imported'"
+        )
+    )
 
 
 def cmd_add(key, side, host, internal):
     slug = host.split(".")[0].replace("-", "_")
     fl, inv = flows(key)
-    p = api("POST", "/api/v3/providers/proxy/", {
-        "name": host, "authorization_flow": fl, "invalidation_flow": inv,
-        "external_host": f"https://{host}", "internal_host": internal,
-        "mode": "proxy", "cookie_domain": "cloudless.gr",
-        "internal_host_ssl_validation": False}, key=key)
+    p = api(
+        "POST",
+        "/api/v3/providers/proxy/",
+        {
+            "name": host,
+            "authorization_flow": fl,
+            "invalidation_flow": inv,
+            "external_host": f"https://{host}",
+            "internal_host": internal,
+            "mode": "proxy",
+            "cookie_domain": "cloudless.gr",
+            "internal_host_ssl_validation": False,
+        },
+        key=key,
+    )
     if not p.get("pk"):
         return print("provider create failed")
-    api("POST", "/api/v3/core/applications/",
-        {"name": slug, "slug": slug, "provider": p["pk"], "policy_engine_mode": "any"}, key=key)
-    outs = api("GET", "/api/v3/outposts/instances/?type=proxy&page_size=50", key=key).get("results", [])
+    api(
+        "POST",
+        "/api/v3/core/applications/",
+        {"name": slug, "slug": slug, "provider": p["pk"], "policy_engine_mode": "any"},
+        key=key,
+    )
+    outs = api("GET", "/api/v3/outposts/instances/?type=proxy&page_size=50", key=key).get(
+        "results", []
+    )
     target = "embedded" if side == "omv" else "cu130"
     o = next((x for x in outs if target in x.get("name", "").lower()), None)
     if o:
-        api("PATCH", f"/api/v3/outposts/instances/{o['pk']}/",
-            {"providers": list(set(list(o.get("providers") or []) + [p["pk"]]))}, key=key)
+        api(
+            "PATCH",
+            f"/api/v3/outposts/instances/{o['pk']}/",
+            {"providers": list(set(list(o.get("providers") or []) + [p["pk"]]))},
+            key=key,
+        )
     print(f"{host} gated via {target} outpost -> {internal}")
-    print(f"point tunnel {host} -> http://{'192.168.1.128:30910' if side=='omv' else 'authentik-outpost:9000'} + DNS CNAME")
-
+    print(
+        f"point tunnel {host} -> http://{'192.168.1.128:30910' if side == 'omv' else 'authentik-outpost:9000'} + DNS CNAME"
+    )
 
 
 def cmd_act_add(key, slug, name, url):
     # launch_url alone doesn't persist — needs meta_launch_url set via PUT too
-    body = {"slug": slug, "name": name, "open_in_new_tab": True,
-            "policy_engine_mode": "any"}
+    body = {"slug": slug, "name": name, "open_in_new_tab": True, "policy_engine_mode": "any"}
     r = api("POST", "/api/v3/core/applications/", body, key=key)
     if not r.get("pk"):
         return print("failed")
     app = api("GET", f"/api/v3/core/applications/{slug}/", key=key)
     app["launch_url"] = app["meta_launch_url"] = url
-    api("PUT", f"/api/v3/core/applications/{slug}/",
-        {k: v for k, v in app.items() if k != "pk"}, key=key)
+    api(
+        "PUT",
+        f"/api/v3/core/applications/{slug}/",
+        {k: v for k, v in app.items() if k != "pk"},
+        key=key,
+    )
     print(f"launcher '{slug}' -> {url}")
 
 
 def cmd_act_list(key):
     for a in api("GET", "/api/v3/core/applications/?page_size=100", key=key).get("results", []):
         if not a.get("provider"):
-            print(f"  {a['slug']:20} {a['name']:40} {(a.get('launch_url') or a.get('meta_launch_url') or '')[:50]}")
+            print(
+                f"  {a['slug']:20} {a['name']:40} {(a.get('launch_url') or a.get('meta_launch_url') or '')[:50]}"
+            )
 
 
 def cmd_act_rm(key, slug):
@@ -140,13 +180,14 @@ def cmd_act_rm(key, slug):
         print(f"{slug} not found")
 
 
-
 def cmd_recovery(key):
     """Finish the recovery flow: password prompt stage at order 2 + verify all bindings."""
     fl = api("GET", "/api/v3/flows/instances/cloudless-recovery/", key=key)
     if not fl.get("pk"):
         return print("recovery flow missing")
-    binds = api("GET", f"/api/v3/flows/bindings/?target={fl['pk']}&page_size=50", key=key).get("results", [])
+    binds = api("GET", f"/api/v3/flows/bindings/?target={fl['pk']}&page_size=50", key=key).get(
+        "results", []
+    )
     orders = {b["order"] for b in binds}
     if 2 not in orders:
         # create password prompt field + stage via ORM (API field pk not exposed)

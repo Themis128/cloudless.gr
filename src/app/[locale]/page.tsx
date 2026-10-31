@@ -46,8 +46,11 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  // Per-locale canonicals must match og:url (`${BASE_URL}/${locale}` in the
+  // locale layout). Mapping `en` to the bare apex made Google see /en as a
+  // duplicate of / while og:url said /en — keep them identical per locale.
   const localePaths: Record<string, string> = {
-    en: "https://cloudless.gr",
+    en: "https://cloudless.gr/en",
     el: "https://cloudless.gr/el",
     fr: "https://cloudless.gr/fr",
     de: "https://cloudless.gr/de",

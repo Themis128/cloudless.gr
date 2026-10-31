@@ -7,9 +7,9 @@ items:
       deployment.kubernetes.io/revision: "1"
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-redis","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-redis"}},"template":{"metadata":{"labels":{"app":"authentik-redis"}},"spec":{"containers":[{"image":"redis:7-alpine","name":"redis","ports":[{"containerPort":6379}],"resources":{"limits":{"memory":"96Mi"},"requests":{"memory":"32Mi"}}}]}}}}
-        name: authentik-redis
+    name: authentik-redis
     namespace: authentik
-      spec:
+  spec:
     progressDeadlineSeconds: 600
     replicas: 1
     revisionHistoryLimit: 10
@@ -72,9 +72,9 @@ items:
       deployment.kubernetes.io/revision: "1"
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-server","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-server"}},"template":{"metadata":{"labels":{"app":"authentik-server"}},"spec":{"containers":[{"args":["server"],"env":[{"name":"AUTHENTIK_SECRET_KEY","valueFrom":{"secretKeyRef":{"key":"secret-key","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_PASSWORD","valueFrom":{"secretKeyRef":{"key":"bootstrap-password","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_TOKEN","valueFrom":{"secretKeyRef":{"key":"bootstrap-token","name":"authentik-secret"}}},{"name":"AUTHENTIK_BOOTSTRAP_EMAIL","value":"tbaltzakis@cloudless.gr"},{"name":"AUTHENTIK_REDIS__HOST","value":"authentik-redis"},{"name":"AUTHENTIK_POSTGRESQL__HOST","value":"authentik-postgres"},{"name":"AUTHENTIK_POSTGRESQL__NAME","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__USER","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}},{"name":"AUTHENTIK_LISTEN__HTTP","value":"0.0.0.0:9000"}],"image":"ghcr.io/goauthentik/server:2025.10.1","name":"server","ports":[{"containerPort":9000}],"readinessProbe":{"httpGet":{"path":"/-/health/ready/","port":9000},"initialDelaySeconds":30,"periodSeconds":15},"resources":{"limits":{"memory":"640Mi"},"requests":{"memory":"256Mi"}}}]}}}}
-        name: authentik-server
+    name: authentik-server
     namespace: authentik
-      spec:
+  spec:
     progressDeadlineSeconds: 600
     replicas: 1
     revisionHistoryLimit: 10
@@ -182,9 +182,9 @@ items:
       deployment.kubernetes.io/revision: "1"
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"authentik-worker","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-worker"}},"template":{"metadata":{"labels":{"app":"authentik-worker"}},"spec":{"containers":[{"args":["worker"],"env":[{"name":"AUTHENTIK_SECRET_KEY","valueFrom":{"secretKeyRef":{"key":"secret-key","name":"authentik-secret"}}},{"name":"AUTHENTIK_REDIS__HOST","value":"authentik-redis"},{"name":"AUTHENTIK_POSTGRESQL__HOST","value":"authentik-postgres"},{"name":"AUTHENTIK_POSTGRESQL__NAME","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__USER","value":"authentik"},{"name":"AUTHENTIK_POSTGRESQL__PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}}],"image":"ghcr.io/goauthentik/server:2025.10.1","name":"worker","resources":{"limits":{"memory":"384Mi"},"requests":{"memory":"128Mi"}}}]}}}}
-        name: authentik-worker
+    name: authentik-worker
     namespace: authentik
-      spec:
+  spec:
     progressDeadlineSeconds: 600
     replicas: 1
     revisionHistoryLimit: 10
@@ -263,9 +263,9 @@ items:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"name":"authentik-postgres","namespace":"authentik"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"authentik-postgres"}},"serviceName":"authentik-postgres","template":{"metadata":{"labels":{"app":"authentik-postgres"}},"spec":{"containers":[{"env":[{"name":"POSTGRES_USER","value":"authentik"},{"name":"POSTGRES_DB","value":"authentik"},{"name":"POSTGRES_PASSWORD","valueFrom":{"secretKeyRef":{"key":"pg-password","name":"authentik-secret"}}}],"image":"postgres:16-alpine","name":"postgres","ports":[{"containerPort":5432}],"resources":{"limits":{"memory":"384Mi"},"requests":{"memory":"128Mi"}},"volumeMounts":[{"mountPath":"/var/lib/postgresql/data","name":"data","subPath":"data"}]}]}},"volumeClaimTemplates":[{"metadata":{"name":"data"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"4Gi"}}}}]}}
-        name: authentik-postgres
+    name: authentik-postgres
     namespace: authentik
-      spec:
+  spec:
     persistentVolumeClaimRetentionPolicy:
       whenDeleted: Retain
       whenScaled: Retain
@@ -348,9 +348,9 @@ items:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-postgres","namespace":"authentik"},"spec":{"clusterIP":"None","ports":[{"port":5432}],"selector":{"app":"authentik-postgres"}}}
-      name: authentik-postgres
+    name: authentik-postgres
     namespace: authentik
-      spec:
+  spec:
     clusterIP: None
     clusterIPs:
     - None
@@ -374,9 +374,9 @@ items:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-redis","namespace":"authentik"},"spec":{"ports":[{"port":6379}],"selector":{"app":"authentik-redis"}}}
-      name: authentik-redis
+    name: authentik-redis
     namespace: authentik
-      spec:
+  spec:
     clusterIP: 10.43.62.229
     clusterIPs:
     - 10.43.62.229
@@ -400,9 +400,9 @@ items:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"authentik-server","namespace":"authentik"},"spec":{"ports":[{"nodePort":30910,"port":9000,"targetPort":9000}],"selector":{"app":"authentik-server"},"type":"NodePort"}}
-      name: authentik-server
+    name: authentik-server
     namespace: authentik
-      spec:
+  spec:
     clusterIP: 10.43.231.232
     clusterIPs:
     - 10.43.231.232
@@ -424,28 +424,29 @@ items:
     loadBalancer: {}
 - apiVersion: v1
   data:
-    : <redacted>
-    : <redacted>
-    : <redacted>
-    : <redacted>
+    bootstrap-password: <redacted>
+    bootstrap-token: <redacted>
+    pg-password: <redacted>
+    secret-key: <redacted>
   kind: Secret
   metadata:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"v1","kind":"Secret","metadata":{"annotations":{},"name":"authentik-secret","namespace":"authentik"},"stringData":{"bootstrap-password":"lCLcH_R4TclEiDX5Wf3SHg","bootstrap-token":"cedb5b33d85052388dfbe01738179ccd5122b42f07016ed2","pg-password":"c5351f752e46a5ca68e27f20485adc12","secret-key":"8e6a790ebc5c282fc212bf688a19c589b4f6b9b48ef6b68651592651db1038fb"},"type":"Opaque"}
-      name: authentik-secret
+    name: authentik-secret
     namespace: authentik
-      type: Opaque
+  type: Opaque
 - apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
     annotations:
       kubectl.kubernetes.io/last-applied-configuration: |
         {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"authentik-pg","namespace":"authentik"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"4Gi"}}}}
-        - kubernetes.io/pvc-protection
+    finalizers:
+    - kubernetes.io/pvc-protection
     name: authentik-pg
     namespace: authentik
-      spec:
+  spec:
     accessModes:
     - ReadWriteOnce
     resources:
@@ -464,12 +465,13 @@ items:
       volume.beta.kubernetes.io/storage-provisioner: rancher.io/local-path
       volume.kubernetes.io/selected-node: omv
       volume.kubernetes.io/storage-provisioner: rancher.io/local-path
-        - kubernetes.io/pvc-protection
+    finalizers:
+    - kubernetes.io/pvc-protection
     labels:
       app: authentik-postgres
     name: data-authentik-postgres-0
     namespace: authentik
-      spec:
+  spec:
     accessModes:
     - ReadWriteOnce
     resources:

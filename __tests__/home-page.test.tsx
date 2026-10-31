@@ -74,4 +74,22 @@ describe("homepage", () => {
     const meta = await generateMetadata({ params: Promise.resolve({ locale: "el" }) });
     expect(meta.alternates?.canonical).toBe("https://cloudless.gr/el");
   });
+
+  it("canonical is per-locale and matches og:url for every locale", async () => {
+    // og:url is emitted by src/app/[locale]/layout.tsx as
+    // `https://cloudless.gr/${locale}` — canonical must equal it, or Google
+    // sees /en as a duplicate of the bare apex.
+    for (const locale of ["en", "el", "fr", "de"]) {
+      const meta = await generateMetadata({ params: Promise.resolve({ locale }) });
+      expect(meta.alternates?.canonical).toBe(`https://cloudless.gr/${locale}`);
+    }
+  });
+
+  it("emits hreflang alternates including x-default", async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ locale: "en" }) });
+    const langs = meta.alternates?.languages as Record<string, string>;
+    expect(langs.en).toBe("https://cloudless.gr/en");
+    expect(langs.el).toBe("https://cloudless.gr/el");
+    expect(langs["x-default"]).toBe("https://cloudless.gr/en");
+  });
 });
