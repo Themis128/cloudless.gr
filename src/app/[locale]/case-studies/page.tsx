@@ -36,7 +36,11 @@ export const metadata: Metadata = {
 async function loadCaseStudies(): Promise<CaseStudy[]> {
   try {
     const configured = await isAppFlowyConfigured();
-    return configured ? await getCaseStudies() : staticCaseStudies;
+    if (!configured) return staticCaseStudies;
+    // getCaseStudies() swallows AppFlowy errors and returns []; keep the
+    // static list visible instead of rendering an empty page.
+    const cms = await getCaseStudies();
+    return cms.length > 0 ? cms : staticCaseStudies;
   } catch {
     return staticCaseStudies;
   }

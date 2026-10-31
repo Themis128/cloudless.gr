@@ -26,9 +26,8 @@ const BASE_URL = "https://cloudless.gr";
 export async function generateStaticParams() {
   try {
     const configured = await isAppFlowyConfigured();
-    const slugs = configured
-      ? (await getCaseStudies()).map((c) => c.slug)
-      : staticCaseStudies.map((c) => c.slug);
+    const cms = configured ? await getCaseStudies() : [];
+    const slugs = (cms.length > 0 ? cms : staticCaseStudies).map((c) => c.slug);
     return slugs.map((slug) => ({ slug }));
   } catch {
     return staticCaseStudies.map((c) => ({ slug: c.slug }));
@@ -79,7 +78,12 @@ export async function generateMetadata({
 async function loadCaseStudy(slug: string): Promise<CaseStudyWithContent | null> {
   try {
     const configured = await isAppFlowyConfigured();
-    if (configured) return await getCaseStudyBySlug(slug);
+    if (configured) {
+      // AppFlowy returns null when unreachable or the page is missing; fall
+      // back to the static copy so sitemap-listed slugs never 404.
+      const fromCms = await getCaseStudyBySlug(slug);
+      if (fromCms) return fromCms;
+    }
     const cs = staticCaseStudies.find((c) => c.slug === slug);
     return cs ? { ...cs, html: "" } : null;
   } catch {
