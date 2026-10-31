@@ -126,7 +126,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Case studies (AppFlowy with static fallback)
   let caseStudyList = staticCaseStudies;
   try {
-    if (await isAppFlowyConfigured()) caseStudyList = await getCaseStudies();
+    if (await isAppFlowyConfigured()) {
+      const cms = await getCaseStudies();
+      if (cms.length > 0) caseStudyList = cms;
+    }
   } catch {
     // fall back to static list
   }
