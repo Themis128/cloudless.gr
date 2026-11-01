@@ -91,10 +91,13 @@ WATCH_TARGETS = [
     ("uptime-kuma", "https://kuma.cloudless.gr/", "ok", ("uptime-kuma", "uptime-kuma")),
     ("webmail", "https://webmail.cloudless.gr/", "ok", None),
     ("nextcloud", "https://cloud.cloudless.gr/status.php", "200", None),
-    # Talk HPB on omv plain-Docker: dead-service/"Up" failure mode — restart on 8 misses (~16min)
+    # Talk HPB on omv plain-Docker: dead-service/"Up" failure mode — restart on 8 misses (~16min).
+    # Public probe is alert-only (tunnel/DNS outages must not restart the container);
+    # the local probe carries the remediation — it only fails when the container is actually dead.
+    ("nextcloud-signal", "https://signal.cloudless.gr/api/v1/welcome", "200", None),
     (
-        "nextcloud-signal",
-        "https://signal.cloudless.gr/api/v1/welcome",
+        "nextcloud-signal-local",
+        "http://127.0.0.1:8090/api/v1/welcome",
         "200",
         ("cmd", "timeout 60 docker restart nextcloud-talk-hpb"),
     ),
