@@ -53,8 +53,14 @@ def step(msg: str) -> None:
 
 
 def find_compose_file() -> str | None:
-    hits = glob.glob("/srv/dev-disk-by-uuid-*/compose-files/workspace/workspace.yml")
-    return hits[0] if hits else None
+    # OMV compose plugin canonicalizes to compose.yml (see the container's
+    # com.docker.compose.project.config_files label); workspace.yml is the
+    # legacy copy kept alongside it.
+    for name in ("compose.yml", "workspace.yml"):
+        hits = glob.glob(f"/srv/dev-disk-by-uuid-*/compose-files/workspace/{name}")
+        if hits:
+            return hits[0]
+    return None
 
 
 def main() -> int:
