@@ -90,6 +90,15 @@ WATCH_TARGETS = [
     ("ntfy", "https://ntfy.cloudless.gr/", "ok", ("ntfy", "ntfy")),
     ("uptime-kuma", "https://kuma.cloudless.gr/", "ok", ("uptime-kuma", "uptime-kuma")),
     ("webmail", "https://webmail.cloudless.gr/", "ok", None),
+    ("nextcloud", "https://cloud.cloudless.gr/status.php", "200", None),
+    # Talk HPB on omv plain-Docker: dead-service/"Up" failure mode — restart on 8 misses (~16min)
+    (
+        "nextcloud-signal",
+        "https://signal.cloudless.gr/api/v1/welcome",
+        "200",
+        ("cmd", "timeout 60 docker restart nextcloud-talk-hpb"),
+    ),
+    ("nextcloud-office", "https://office.cloudless.gr/", "ok", None),
     (
         "postiz-ai-proxy",
         "https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models",
