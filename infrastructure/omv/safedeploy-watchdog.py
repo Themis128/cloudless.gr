@@ -102,6 +102,30 @@ WATCH_TARGETS = [
         ("cmd", "timeout 60 docker restart nextcloud-talk-hpb"),
     ),
     ("nextcloud-office", "https://office.cloudless.gr/", "ok", None),
+    # WSL box (office Windows host, Ubuntu-26.04, Docker Desktop) — the
+    # social-api LAN probe is the deepest signal available: it traverses
+    # WSL localhostForwarding -> docker-proxy -> container, so it only fails
+    # when the container or WSL itself is dead (vsock/NAT degradation shows
+    # up here first). Public probe is alert-only (tunnel/DNS outages must
+    # not trigger restarts); the LAN probe owns remediation — docker restart
+    # covers the common case, and if WSL itself is down the cmd fails and
+    # escalates to urgent (no auto-bounce: a WSL restart kills the stack).
+    (
+        "wsl-social-api",
+        "http://192.168.1.23:8083/health",
+        "200",
+        (
+            "cmd",
+            "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
+            "tbaltzakis@192.168.1.23 'docker restart social-api'",
+        ),
+    ),
+    (
+        "wsl-social-public",
+        "https://social.cloudless.gr/api/v1/health",
+        "200",
+        None,
+    ),
     (
         "postiz-ai-proxy",
         "https://postiz-ai-proxy.baltzakis-themis.workers.dev/v1/models",
