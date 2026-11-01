@@ -55,6 +55,24 @@ docker exec -u www-data nextcloud php occ config:system:set overwrite.cli.url --
 `nextcloud-backup.sh` -> /usr/local/sbin (750); `.service`/`.timer` -> /etc/systemd/system; `systemctl enable --now nextcloud-backup.timer`.
 Writes NAS-Backup/nextcloud/nightly/<ts>/ (pg_dump gz + config/), 14-day rotation, 03:15 nightly.
 
+## nextcloud-talk-hpb (signal.cloudless.gr) - known quirks
+
+- **Dead services, "Up" container**: the image runs several daemons under dinit (nats,
+  signaling, janus). PID 1 (dinit) stays alive even when every service is `[STOPPD]`, so
+  `docker ps` can show `Up` while signal.cloudless.gr returns 502. Always check for
+  `(unhealthy)` plus the logs, not just the state.
+- **Janus TURN DNS one-shot**: at startup Janus resolves the configured TURN host
+  (`cloud.cloudless.gr:3478`) exactly once. If container DNS is briefly unavailable
+  (network churn, firewall reload, recreate storm) it exits with:
+  `[ERR] [ice.c:janus_ice_set_turn_server] Could not resolve cloud.cloudless.gr` +
+  `[FATAL] Invalid TURN address` -> `janus restarting too quickly; stopping` ->
+  `[STOPPD] signaling`. Fix (verified 2026-11-01): `docker restart nextcloud-talk-hpb`
+  once DNS is healthy; Janus reconnects, signaling listens on :8081 (published :8090).
+- **Health path**: `GET /api/v1/welcome` -> 200 `{"nextcloud-spreed-signaling":"Welcome",...}`
+  (local `http://127.0.0.1:8090/api/v1/welcome`, public
+  `https://signal.cloudless.gr/api/v1/welcome`). Root `/` returning 404 is **normal**
+  for this Go service; only a 502 means the backend is actually down.
+
 ## Known integrity-check deviations (intentional, local customisations)
 
 .htaccess, robots.txt modified; extra files skill.md, .well-known/oauth-protected-resource(.php), .well-known/agent-skills/index.json.
