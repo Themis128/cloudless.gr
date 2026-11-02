@@ -112,7 +112,7 @@ WATCH_TARGETS = [
     # escalates to urgent (no auto-bounce: a WSL restart kills the stack).
     (
         "wsl-social-api",
-        "http://192.168.1.23:8083/health",
+        "http://192.168.1.23:9390/metrics",
         "200",
         (
             "cmd",
