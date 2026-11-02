@@ -70,16 +70,12 @@ WATCH_TARGETS = [
         "ok",
         ("cmd", "timeout 120 systemctl try-restart cloudflared"),
     ),
-    (
-        "n8n-app",
-        "http://192.168.1.23:5678/healthz",
-        "200",
-        (
-            "cmd",
-            "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            "tbaltzakis@192.168.1.23 'docker start n8n || docker restart n8n'",
-        ),
-    ),
+    # NOTE: no n8n LAN leg — n8n publishes 127.0.0.1:5678 inside WSL
+    # (localhost-only), so a LAN probe can never succeed and fired a false
+    # `docker restart n8n` 434+ times against a healthy container.
+    # n8n-tunnel covers public reachability; real container loss is handled
+    # by the compose-healer / wsl-social-api compose-up remediation.
+
     (
         "grafana",
         "https://grafana.cloudless.gr/api/health",
@@ -117,7 +113,7 @@ WATCH_TARGETS = [
         (
             "cmd",
             "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            "tbaltzakis@192.168.1.23 'docker restart social-api'",
+            "tbaltzakis@192.168.1.23 'docker compose -f C:/Users/tbaltzakis/cu130-slim/docker-compose.yml up -d'",
         ),
     ),
     (
