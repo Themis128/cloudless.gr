@@ -117,7 +117,7 @@ WATCH_TARGETS = [
         (
             "cmd",
             "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            "tbaltzakis@192.168.1.23 'docker restart social-api'",
+            "tbaltzakis@192.168.1.23 'docker compose -f C:/Users/tbaltzakis/cu130-slim/docker-compose.yml up -d'",
         ),
     ),
     (
