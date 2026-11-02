@@ -39,7 +39,7 @@ jobs:
       # appflowy.cloudless.gr is Access-gated; k8s API :6443 times out from GH
       # runners even on the tailnet. SSH local-forward to omv NodePort 30810.
       - name: Join Tailscale
-        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
         with:
           oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
@@ -197,7 +197,7 @@ jobs:
 
       - name: Join Tailscale
         if: steps.weekly.outputs.run == 'true'
-        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
         with:
           oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
