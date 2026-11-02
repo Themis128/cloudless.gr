@@ -75,7 +75,6 @@ WATCH_TARGETS = [
     # `docker restart n8n` 434+ times against a healthy container.
     # n8n-tunnel covers public reachability; real container loss is handled
     # by the compose-healer / wsl-social-api compose-up remediation.
-
     (
         "grafana",
         "https://grafana.cloudless.gr/api/health",
