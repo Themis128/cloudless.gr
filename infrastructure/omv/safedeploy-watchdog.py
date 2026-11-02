@@ -206,7 +206,11 @@ def http_req(
     body: bytes | None = None,
     follow: bool = False,
 ) -> tuple[str, bytes]:
-    req = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+    # urllib's default "Python-urllib/x.y" UA is 403'd by Cloudflare bot rules
+    # on social.cloudless.gr — identify as the watchdog instead.
+    hdrs = {"User-Agent": "safedeploy-watchdog/1.0 (+omv; cloudless.gr monitor)"}
+    hdrs.update(headers or {})
+    req = urllib.request.Request(url, data=body, headers=hdrs, method=method)
     try:
         opener = (
             urllib.request.build_opener() if follow else urllib.request.build_opener(NoRedirect())
