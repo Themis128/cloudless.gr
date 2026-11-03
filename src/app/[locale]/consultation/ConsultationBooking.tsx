@@ -348,11 +348,12 @@ export default function ConsultationBooking() {
             </button>
             <button
               type="button"
+              disabled={status === BOOK_SENDING}
               onClick={() => {
                 setSelected(null);
                 setStatus(BOOK_IDLE);
               }}
-              className="font-mono text-sm text-slate-400 transition-colors hover:text-white"
+              className="font-mono text-sm text-slate-400 transition-colors hover:text-white disabled:opacity-40"
             >
               {t("consultation.back", "← Back to slots")}
             </button>
