@@ -85,6 +85,49 @@ describe("ConsultationBooking", () => {
     expect(screen.getByRole("link").getAttribute("href")).toBe("/contact");
   });
 
+  it("shows the unavailable fallback when the availability request throws", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("network down"));
+    renderWidget();
+    expect(await screen.findByTestId("booking-unavailable")).toBeTruthy();
+  });
+
+  it("back button drops the selection and returns to the slot picker", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ slots: SLOTS }), { status: 200 })
+    );
+    renderWidget();
+
+    await screen.findByTestId("slot-grid");
+    fireEvent.click(screen.getByRole("button", { name: "09:00–09:30" }));
+    await screen.findByTestId("booking-form");
+
+    fireEvent.click(screen.getByRole("button", { name: /Back to slots/ }));
+    expect(screen.queryByTestId("booking-form")).toBeNull();
+    await screen.findByTestId("slot-grid");
+  });
+
+  it("keeps the error alert when the post-failure slot refresh throws", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ slots: SLOTS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("nope", { status: 500 }))
+      .mockRejectedValueOnce(new Error("refresh down"));
+    renderWidget();
+
+    await screen.findByTestId("slot-grid");
+    fireEvent.click(screen.getByRole("button", { name: "09:00–09:30" }));
+    const form = await screen.findByTestId("booking-form");
+    fireEvent.change(form.querySelector("#name") as Element, { target: { value: "Jane Doe" } });
+    fireEvent.change(form.querySelector("#email") as Element, {
+      target: { value: "jane@example.com" },
+    });
+    fireEvent.click(form.querySelector("#consultation-consent") as Element);
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(screen.getByTestId("booking-form")).toBeTruthy();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
   it("reveals the form on slot pick and posts start/end/name/email to /api/calendar/book", async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ slots: SLOTS }), { status: 200 }))
