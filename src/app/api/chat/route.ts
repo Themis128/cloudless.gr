@@ -135,8 +135,12 @@ const NAME_WORD_RE = /^\p{L}[\p{L}\p{M}'’-]*$/u;
 
 function extractEmail(content: string): string | undefined {
   const match = content.match(EMAIL_RE)?.[0];
-  // Guard against a local part that ends in a dot (not a valid address).
-  return match && !match.includes("..") && !match.startsWith(".") && !match.includes(".@")
+  // Guard against a local part that ends in a dot (not a valid address)
+  // and against leading punctuation/markdown captured into the match.
+  return match &&
+    !match.includes("..") &&
+    !match.includes(".@") &&
+    /^[\p{L}\d]/u.test(match)
     ? match
     : undefined;
 }
@@ -148,13 +152,26 @@ function extractEmail(content: string): string | undefined {
  * parse. Returns `{}` when no segment looks like a name, so the caller sends
  * no name at all instead of a bad guess.
  */
+// Filler words that betray a conversational phrase rather than a bare name
+// ("Jane Smith here", "thanks John Doe please"). Only checked at segment end —
+// they are still legal inside a longer last name.
+const NAME_END_STOPWORDS = new Set([
+  "here", "please", "thanks", "thank", "me", "is", "my", "now", "today",
+]);
+
 function extractName(content: string): { firstname?: string; lastname?: string } {
-  for (const rawSegment of content.split(/[,\n]/)) {
+  const segments = content.split(/[,\n]/);
+  // Guided reply format puts the name BEFORE the email — never trust a
+  // segment that follows the address (postamble chatter is not a name).
+  const emailIdx = segments.findIndex((s) => s.includes("@"));
+  const candidates = emailIdx === -1 ? [] : segments.slice(0, emailIdx);
+  for (const rawSegment of candidates) {
     const segment = rawSegment.trim();
     if (!segment || segment.includes("@")) continue;
     const words = segment.split(/\s+/);
     if (words.length < 2 || words.length > 4) continue;
     if (!words.every((w) => NAME_WORD_RE.test(w))) continue;
+    if (NAME_END_STOPWORDS.has(words[words.length - 1].toLowerCase())) continue;
     return { firstname: words[0], lastname: words.slice(1).join(" ") };
   }
   return {};
