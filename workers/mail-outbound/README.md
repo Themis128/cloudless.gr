@@ -9,7 +9,7 @@ funnel; SocialAuto's omv-ha/Resend SMTP path stays as fallback.
 | Method | Path      | Auth   | Body                                              |
 |--------|-----------|--------|---------------------------------------------------|
 | GET    | `/health` | —      | liveness                                          |
-| POST   | `/send`   | Bearer | `{to, subject, text|html, from?, replyTo?, category}` |
+| POST   | `/send`   | Bearer | `{to, subject, text or html, from?, replyTo?, category}` |
 | POST   | `/verify` | Bearer | — (sends self-test to `VERIFY_TO`)                |
 
 `category` is allowlisted: `audit-confirm`, `nurture`, `quiet-lead`,
