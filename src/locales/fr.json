@@ -202,6 +202,38 @@
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "privacyConsent": "J'accepte que mes données soient traitées pour répondre à ma demande, comme décrit dans la"
   },
+  "consultation": {
+    "title": "Réservez votre consultation gratuite.",
+    "subtitle": "30 minutes avec un ingénieur senior — pas un commercial. Choisissez le créneau qui vous convient.",
+    "pickSlot": "Choisissez un horaire",
+    "timezoneNote": "Tous les horaires sont affichés en heure d'Athènes (EET).",
+    "loading": "Chargement des disponibilités…",
+    "noSlots": "Aucun créneau libre dans les deux prochaines semaines — essayez le formulaire de contact et nous trouverons un horaire manuellement.",
+    "unavailable": "La réservation en ligne n'est pas disponible pour le moment.",
+    "unavailableCta": "Écrivez-nous plutôt →",
+    "name": "Nom",
+    "email": "Email",
+    "notes": "Que devons-nous préparer ? (optionnel)",
+    "notesPlaceholder": "ex. tableaux de bord lents, facture cloud en hausse, automatisation marketing…",
+    "consent": "J'accepte que mes données soient utilisées pour organiser cette consultation, comme décrit dans la",
+    "submit": "Confirmer la réservation",
+    "sending": "Réservation…",
+    "confirmed": "C'est réservé !",
+    "confirmedDesc": "Une invitation calendrier est en route vers votre boîte de réception.",
+    "viewBooking": "Voir les détails de la réservation →",
+    "error": "Une erreur est survenue. Réessayez ou écrivez à",
+    "back": "← Retour aux créneaux",
+    "whatToExpect": "Déroulement",
+    "step1": "Choisissez un créneau",
+    "step1Desc": "Disponibilités en direct — choisissez n'importe quelle fenêtre de 30 minutes ouverte.",
+    "step2": "Rendez-vous en vidéo",
+    "step2Desc": "Vous recevez instantanément une invitation calendrier + lien de réunion.",
+    "step3": "Repartez avec un plan",
+    "step3Desc": "Prochaines étapes concrètes, périmètre honnête, zéro pression.",
+    "preferWriting": "Vous préférez écrire ?",
+    "preferWritingDesc": "Parlez-nous de votre projet via le formulaire de contact et nous répondrons sous 24 heures."
+  },
+
   "store": {
     "title": "Nos Produits",
     "subtitle": "Produits numériques et services pour accélérer votre croissance.",
@@ -482,6 +514,10 @@
     "contact": {
       "title": "Contact",
       "description": "Contactez-nous pour un audit gratuit de votre infrastructure cloud. Conseil expert en serverless, analytics et marketing IA."
+    },
+    "consultation": {
+      "title": "Consultation gratuite de 30 minutes — Cloudless",
+      "description": "Choisissez un créneau en direct pour une consultation gratuite de 30 minutes. Revue de votre cloud, automatisation ou stack IA par un ingénieur senior — repartez avec un plan concret."
     },
     "store": {
       "title": "Boutique",
