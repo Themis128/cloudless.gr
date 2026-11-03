@@ -137,4 +137,34 @@ describe("ConsultationBooking", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.queryByTestId("booking-success")).toBeNull();
   });
+
+  it("refreshes availability and drops a just-taken slot when booking fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ slots: SLOTS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("conflict", { status: 409 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ slots: SLOTS.slice(1) }), { status: 200 })
+      );
+    renderWidget();
+
+    await screen.findByTestId("slot-grid");
+    fireEvent.click(screen.getByRole("button", { name: "09:00–09:30" }));
+    const form = await screen.findByTestId("booking-form");
+    fireEvent.change(form.querySelector("#name") as Element, { target: { value: "Jane Doe" } });
+    fireEvent.change(form.querySelector("#email") as Element, {
+      target: { value: "jane@example.com" },
+    });
+    fireEvent.click(form.querySelector("#consultation-consent") as Element);
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    // Form survives — typed data and the error stay visible while the
+    // refreshed picker drops the taken slot.
+    expect(screen.getByTestId("booking-form")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "09:00–09:30" })).toBeNull()
+    );
+    expect(screen.getByRole("button", { name: "09:30–10:00" })).toBeTruthy();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });

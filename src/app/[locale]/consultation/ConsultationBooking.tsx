@@ -118,11 +118,11 @@ export default function ConsultationBooking() {
           () => null
         );
         if (res2?.ok) {
+          // Refresh the picker so a just-taken slot is no longer offered.
+          // Keep `selected` — clearing it would unmount the form and lose
+          // the visitor's typed name/email plus this error alert.
           const fresh = ((await res2.json()) as { slots?: TimeSlot[] }).slots ?? [];
           setSlots(fresh);
-          if (selected && !fresh.some((s) => s.start === selected.start)) {
-            setSelected(null);
-          }
         }
       }
     } catch {
