@@ -25,7 +25,15 @@ export async function POST(req: Request) {
   }
 
   const email = (body.email ?? "").trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  // Linear-time check — no regex on user input (CodeQL js/polynomial-redos).
+  const at = email.indexOf("@");
+  const emailOk =
+    email.length <= 254 &&
+    at > 0 &&
+    email.lastIndexOf("@") === at &&
+    email.slice(at + 1).includes(".") &&
+    !email.endsWith(".");
+  if (!emailOk) {
     return NextResponse.json({ error: "valid email required" }, { status: 400 });
   }
   for (const key of ["goal", "pain", "timeline"] as const) {
