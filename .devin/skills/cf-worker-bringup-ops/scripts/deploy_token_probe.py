@@ -45,7 +45,6 @@ def main() -> int:
 
     res = data["result"]
     print(f"token status: {res.get('status')}  expires: {res.get('expires_on') or 'never'}")
-    groups = [p.get("permission_groups", []) for p in res.get("policies", [])]
     flat = {g.get("name") for pol in res.get("policies", []) for g in pol.get("permission_groups", [])}
     print(f"permission groups ({len(flat)}):")
     for g in sorted(flat):
@@ -60,14 +59,14 @@ def main() -> int:
         print("  dash.cloudflare.com → My Profile → API Tokens → Create Token")
         print("  perms: Account → Workers Scripts → Edit, Account → D1 → Edit")
         print("  resources: Include → this account only")
-        print(f"Then push it to the repo secret (automatable — this works NOW):")
+        print("Then push it to the repo secret (automatable — this works NOW):")
         print(f"  gh secret set CLOUDFLARE_WORKERS_DEPLOY_TOKEN -R {repo} --body <token>")
         if repo:
             try:
                 out = subprocess.run(
                     ["gh", "secret", "list", "-R", repo], capture_output=True, text=True, timeout=20
                 )
-                names = [l.split()[0] for l in out.stdout.splitlines() if l.strip()]
+                names = [ln.split()[0] for ln in out.stdout.splitlines() if ln.strip()]
                 print(f"\nrepo secrets present: {[n for n in names if 'CLOUDFLARE' in n or 'CF_' in n]}")
             except Exception:
                 pass
