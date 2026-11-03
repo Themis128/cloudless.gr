@@ -10,6 +10,7 @@ Usage:
 --restart also runs `docker compose restart social-api social-worker`
 in the target file's directory when docker-compose.yml sits beside it.
 """
+
 from __future__ import annotations
 
 import os
@@ -59,7 +60,8 @@ def main() -> int:
         if os.path.exists(os.path.join(cwd, "docker-compose.yml")):
             subprocess.run(
                 ["docker", "compose", "restart", "social-api", "social-worker"],
-                cwd=cwd, timeout=120,
+                cwd=cwd,
+                timeout=120,
             )
             print("restarted social-api + social-worker")
         else:

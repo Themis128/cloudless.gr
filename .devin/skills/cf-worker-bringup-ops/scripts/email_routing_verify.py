@@ -21,6 +21,7 @@ Companions:
   address verifies, transactional mail stays on Resend/SMTP and
   mail-outbound serves ops/digest traffic only.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,7 +43,10 @@ def _req(token: str, method: str, path: str, body: dict | None = None) -> dict:
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
-        return {"success": False, "errors": [{"code": e.code, "message": e.read()[:300].decode("utf-8", "replace")}]}
+        return {
+            "success": False,
+            "errors": [{"code": e.code, "message": e.read()[:300].decode("utf-8", "replace")}],
+        }
 
 
 def main() -> int:

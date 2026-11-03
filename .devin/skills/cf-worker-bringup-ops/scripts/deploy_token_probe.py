@@ -10,6 +10,7 @@ Already present (verified by live deploys): Workers KV / D1 edits etc.
 Usage:
   CLOUDFLARE_API_TOKEN=... python deploy_token_probe.py [owner/repo]
 """
+
 from __future__ import annotations
 
 import json
@@ -45,7 +46,9 @@ def main() -> int:
 
     res = data["result"]
     print(f"token status: {res.get('status')}  expires: {res.get('expires_on') or 'never'}")
-    flat = {g.get("name") for pol in res.get("policies", []) for g in pol.get("permission_groups", [])}
+    flat = {
+        g.get("name") for pol in res.get("policies", []) for g in pol.get("permission_groups", [])
+    }
     print(f"permission groups ({len(flat)}):")
     for g in sorted(flat):
         print(f"  - {g}")
@@ -67,7 +70,9 @@ def main() -> int:
                     ["gh", "secret", "list", "-R", repo], capture_output=True, text=True, timeout=20
                 )
                 names = [ln.split()[0] for ln in out.stdout.splitlines() if ln.strip()]
-                print(f"\nrepo secrets present: {[n for n in names if 'CLOUDFLARE' in n or 'CF_' in n]}")
+                print(
+                    f"\nrepo secrets present: {[n for n in names if 'CLOUDFLARE' in n or 'CF_' in n]}"
+                )
             except Exception:
                 pass
     return 0
