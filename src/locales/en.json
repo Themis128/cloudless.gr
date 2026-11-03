@@ -571,5 +571,17 @@
     "step2Desc": "Pick one service or bundle all four for 30% savings. We align on deliverables, timeline, and what 'done' looks like before any work starts.",
     "step3Title": "Results in 14 days",
     "step3Desc": "We kick off immediately. Measurable progress within two weeks — cost savings, live infrastructure, first campaign data. We keep working until you see it."
+  },
+  "servicesPage": {
+    "starterBadge": "STARTER PACKAGE",
+    "starterTitle": "Website + Hosting + Automation — live in 14 days.",
+    "starterDesc": "One fixed-scope engagement: a high-converting business website, secure zero-maintenance hosting, and automatic marketing + inquiry tracking. One signature, one flat price — and you own 100% of the code, always.",
+    "starterF1": "Business website that converts",
+    "starterF2": "Secure, zero-maintenance hosting",
+    "starterF3": "Marketing + inquiry automation",
+    "starterVat": "flat, excl. VAT",
+    "starterTerms": "50% deposit locks the date · 50% on Day 14 completion",
+    "starterCta": "Start with a free audit",
+    "starterCtaAria": "Start with a free audit call"
   }
 }
