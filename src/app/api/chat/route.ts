@@ -4,7 +4,7 @@ import { runWorkersAiChatLoop } from "@/lib/workers-ai-chat";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { slackChatNotify } from "@/lib/slack-notify";
 import { notifyTeam } from "@/lib/email";
-import { upsertContact } from "@/lib/espocrm";
+import { createContactNote, upsertContact } from "@/lib/espocrm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,6 +120,76 @@ function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
 }
 
 // ---------------------------------------------------------------------------
+// Lead capture helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Match an email inside free text. The domain is a sequence of dot-separated
+ * label groups, so a trailing sentence period ("...mail me at a@b.com.") is
+ * left out of the match rather than being stored as part of the address.
+ */
+const EMAIL_RE = /[\p{L}\d!#$%&'*+/=?^_`{|}~.-]+@[\p{L}\d-]+(?:\.[\p{L}\d-]+)+/u;
+
+/** A single name word: any script, optionally hyphenated/apostrophised. */
+const NAME_WORD_RE = /^\p{L}[\p{L}\p{M}'’-]*$/u;
+
+function extractEmail(content: string): string | undefined {
+  const match = content.match(EMAIL_RE)?.[0];
+  // Guard against a local part that ends in a dot (not a valid address).
+  return match && !match.includes("..") && !match.startsWith(".") && !match.includes(".@")
+    ? match
+    : undefined;
+}
+
+/**
+ * Pull a person's name out of a comma-separated reply such as
+ * "2, Jane Smith, jane@example.com" or "2, Ιωάννα Παπαδοπούλου, i@x.gr".
+ * Unicode-aware: Greek, accents, hyphens, apostrophes and lowercase input all
+ * parse. Returns `{}` when no segment looks like a name, so the caller sends
+ * no name at all instead of a bad guess.
+ */
+function extractName(content: string): { firstname?: string; lastname?: string } {
+  for (const rawSegment of content.split(/[,\n]/)) {
+    const segment = rawSegment.trim();
+    if (!segment || segment.includes("@")) continue;
+    const words = segment.split(/\s+/);
+    if (words.length < 2 || words.length > 4) continue;
+    if (!words.every((w) => NAME_WORD_RE.test(w))) continue;
+    return { firstname: words[0], lastname: words.slice(1).join(" ") };
+  }
+  return {};
+}
+
+/**
+ * Create the contact if it is new, and record the chat message as a Note
+ * either way. Never updates an existing contact's fields — chat input is
+ * unauthenticated and must not be able to overwrite CRM-owned data.
+ */
+async function captureChatLead(lead: {
+  email: string;
+  firstname?: string;
+  lastname?: string;
+  note: string;
+}): Promise<void> {
+  try {
+    const id = await upsertContact(
+      {
+        email: lead.email,
+        firstname: lead.firstname,
+        lastname: lead.lastname,
+        lead_source: "chat",
+        service_interest: "chat",
+        message: lead.note,
+      },
+      { skipExisting: true }
+    );
+    if (id) await createContactNote(id, `Website chat:\n\n${lead.note}`);
+  } catch (err) {
+    console.error("[chat] lead capture failed:", err instanceof Error ? err.message : String(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
 
@@ -147,25 +217,22 @@ export async function POST(request: NextRequest) {
     ).catch(() => {});
   }
 
-  // Lead capture — any email the visitor shares (booking reply format
+  // Lead capture — an email the visitor shares (booking reply format
   // "2, Jane Smith, jane@example.com" or free text) lands in EspoCRM so
   // the lead stays reachable. The 2026-11-03 "Book a free audit" alert
   // carried only the message + IP — the lead was lost.
-  const seenEmails = new Set<string>();
-  for (const m of userMessages) {
-    const email = m.content.match(/[^\s@,]+@[^\s@,]+\.[^\s@,]+/)?.[0];
-    if (!email || seenEmails.has(email)) continue;
-    seenEmails.add(email);
-    const nameMatch = m.content.match(/,\s*([A-Z][a-z]+(?: [A-Z][a-z]+)+)\s*,/);
-    const [firstname, ...rest] = (nameMatch?.[1] ?? "").split(" ");
-    upsertContact({
-      email,
-      firstname: firstname || undefined,
-      lastname: rest.join(" ") || undefined,
-      lead_source: "chat",
-      service_interest: "chat",
-      message: m.content.slice(0, 500),
-    }).catch(() => {});
+  //
+  // Only the newest user message is scanned: the client replays the whole
+  // conversation on every turn, so iterating the history would re-send the
+  // same lead on each request. Chat is unauthenticated, so an existing
+  // contact is never modified (`skipExisting`) — the chat transcript is
+  // appended as a Note instead of clobbering CRM-owned fields.
+  const latestUserMessage = userMessages.at(-1)?.content;
+  const email = latestUserMessage ? extractEmail(latestUserMessage) : undefined;
+  if (email && latestUserMessage) {
+    const { firstname, lastname } = extractName(latestUserMessage);
+    const note = latestUserMessage.slice(0, 500);
+    void captureChatLead({ email, firstname, lastname, note });
   }
 
   let finalText: string;
