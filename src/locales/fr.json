@@ -571,5 +571,17 @@
     "step2Desc": "Un seul service ou le bundle complet à -30%. Nous alignons livrables, calendrier et la définition de « terminé » avant tout démarrage.",
     "step3Title": "Résultats en 14 jours",
     "step3Desc": "Nous démarrons immédiatement. Progrès mesurable en deux semaines — économies, infrastructure en production, premières données de campagne. Nous continuons jusqu’à ce que vous les voyiez."
+  },
+  "servicesPage": {
+    "starterBadge": "PACK DÉMARRAGE",
+    "starterTitle": "Site web + Hébergement + Automation — en ligne en 14 jours.",
+    "starterDesc": "Une mission à périmètre fixe : un site vitrine qui convertit, un hébergement sécurisé sans maintenance, et un marketing automatisé avec suivi des demandes. Une signature, un prix fixe — et le code vous appartient à 100%, toujours.",
+    "starterF1": "Un site vitrine qui convertit",
+    "starterF2": "Hébergement sécurisé, zéro maintenance",
+    "starterF3": "Marketing + suivi automatisé des demandes",
+    "starterVat": "prix fixe, hors TVA",
+    "starterTerms": "50% d'acompte pour bloquer la date · 50% à la livraison J+14",
+    "starterCta": "Commencer par un audit gratuit",
+    "starterCtaAria": "Commencer par un appel d'audit gratuit"
   }
 }

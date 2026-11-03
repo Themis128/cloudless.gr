@@ -571,5 +571,17 @@
     "step2Desc": "Ein Service oder das Bundle mit 30% Ersparnis. Wir stimmen Deliverables, Zeitplan und die Definition von „fertig“ ab, bevor irgendetwas beginnt.",
     "step3Title": "Ergebnisse in 14 Tagen",
     "step3Desc": "Wir starten sofort. Messbarer Fortschritt in zwei Wochen — Kostensenkung, live Infrastruktur, erste Kampagnendaten. Wir arbeiten, bis Sie sie sehen."
+  },
+  "servicesPage": {
+    "starterBadge": "STARTER-PAKET",
+    "starterTitle": "Website + Hosting + Automation — live in 14 Tagen.",
+    "starterDesc": "Ein Festpreis-Paket: eine konvertierende Business-Website, sicheres wartungsfreies Hosting und automatisiertes Marketing mit Anfrage-Tracking. Eine Unterschrift, ein Festpreis — und der Code gehört zu 100% Ihnen, immer.",
+    "starterF1": "Business-Website, die konvertiert",
+    "starterF2": "Sicheres, wartungsfreies Hosting",
+    "starterF3": "Marketing + automatisches Anfrage-Tracking",
+    "starterVat": "Festpreis, zzgl. MwSt.",
+    "starterTerms": "50% Anzahlung reserviert den Termin · 50% bei Fertigstellung an Tag 14",
+    "starterCta": "Mit gratis Audit starten",
+    "starterCtaAria": "Mit einem kostenlosen Audit-Gespräch starten"
   }
 }

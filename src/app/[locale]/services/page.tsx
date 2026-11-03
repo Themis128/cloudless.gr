@@ -306,6 +306,76 @@ export default async function ServicesPage() {
         </div>
       </section>
 
+      {/* ── Starter Package — the €800 / 14-day fixed-scope offer ──
+          Mirrors the 1-page Letter of Agreement: Web Design + Hosting +
+          Automation, flat €800 excl. VAT, 50% deposit / 50% on Day 14. */}
+      <section className="bg-void-light/20 border-b border-slate-800 py-12 lg:py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <ScrollReveal>
+            <div className="border-neon-green/30 bg-neon-green/5 grid gap-8 rounded-2xl border p-8 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-14 lg:p-10">
+              <div>
+                <span className="border-neon-green/40 bg-neon-green/10 text-neon-green inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-medium">
+                  {t("servicesPage.starterBadge", "STARTER PACKAGE")}
+                </span>
+                <h3 className="font-heading mt-4 text-2xl font-bold text-white md:text-3xl">
+                  {t(
+                    "servicesPage.starterTitle",
+                    "Website + Hosting + Automation — live in 14 days."
+                  )}
+                </h3>
+                <p className="mt-3 max-w-2xl leading-relaxed text-slate-400">
+                  {t(
+                    "servicesPage.starterDesc",
+                    "One fixed-scope engagement: a high-converting business website, secure zero-maintenance hosting, and automatic marketing + inquiry tracking. One signature, one flat price — and you own 100% of the code, always."
+                  )}
+                </p>
+                <ul className="mt-6 grid gap-2.5 sm:grid-cols-3">
+                  {[
+                    t("servicesPage.starterF1", "Business website that converts"),
+                    t("servicesPage.starterF2", "Secure, zero-maintenance hosting"),
+                    t("servicesPage.starterF3", "Marketing + inquiry automation"),
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
+                      <svg
+                        className="text-neon-green mt-0.5 h-4 w-4 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-void/60 w-full rounded-xl border border-slate-800 p-6 text-center lg:w-72">
+                <span className="text-neon-green font-mono text-4xl font-bold">€800</span>
+                <p className="mt-1 font-mono text-xs text-slate-500">
+                  {t("servicesPage.starterVat", "flat, excl. VAT")}
+                </p>
+                <p className="mt-4 font-mono text-xs leading-relaxed text-slate-400">
+                  {t(
+                    "servicesPage.starterTerms",
+                    "50% deposit locks the date · 50% on Day 14 completion"
+                  )}
+                </p>
+                <Link
+                  href="/contact"
+                  className="group/link border-neon-green/50 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 mt-6 inline-flex items-center gap-2 rounded-lg border px-6 py-3 font-mono text-sm font-semibold transition-all duration-300"
+                  aria-label={t("servicesPage.starterCtaAria", "Start with a free audit call")}
+                  role="button"
+                >
+                  {t("servicesPage.starterCta", "Start with a free audit")}
+                  <Arrow />
+                </Link>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* ── Alternating Feature Rows ────────────────────────── */}
       <section className="bg-void py-16 lg:py-24">
         <div className="mx-auto max-w-6xl space-y-24 px-6 lg:space-y-32">
