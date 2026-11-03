@@ -35,7 +35,9 @@ export async function POST(req: Request) {
   }
 
   const apiBase =
-    process.env.SOCIALAUTO_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "https://social.cloudless.gr";
+    process.env.SOCIALAUTO_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "https://social.cloudless.gr";
 
   const res = await fetch(`${apiBase}/api/v1/leads/public`, {
     method: "POST",

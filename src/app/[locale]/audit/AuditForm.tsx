@@ -45,13 +45,7 @@ export default function AuditForm({ labels }: { labels: Record<string, string> }
         <input name="name" placeholder={labels.name} className={inputCls} />
         <input name="email" type="email" required placeholder={labels.email} className={inputCls} />
       </div>
-      <textarea
-        name="goal"
-        required
-        rows={2}
-        placeholder={labels.goal}
-        className={inputCls}
-      />
+      <textarea name="goal" required rows={2} placeholder={labels.goal} className={inputCls} />
       <input name="pain" required placeholder={labels.pain} className={inputCls} />
       <input name="timeline" required placeholder={labels.timeline} className={inputCls} />
       <button

@@ -96,10 +96,7 @@ export default async function AuditPage() {
   const labels = {
     name: t("auditPage.formName", "Your name"),
     email: t("auditPage.formEmail", "Work email *"),
-    goal: t(
-      "auditPage.formGoal",
-      "What project or task do you need to get done right now? *"
-    ),
+    goal: t("auditPage.formGoal", "What project or task do you need to get done right now? *"),
     pain: t(
       "auditPage.formPain",
       "What is making that hard or taking too much time? (High bills, slow tools, lack of time?) *"
@@ -110,10 +107,7 @@ export default async function AuditPage() {
     ),
     submit: t("auditPage.formSubmit", "Book Your Free 30-Minute Tech Checkup"),
     sending: t("auditPage.formSending", "Booking…"),
-    done: t(
-      "auditPage.formDone",
-      "Booked — check your inbox. We'll confirm your slot shortly."
-    ),
+    done: t("auditPage.formDone", "Booked — check your inbox. We'll confirm your slot shortly."),
     error: t("auditPage.formError", "Something went wrong — please try again."),
   };
 
@@ -210,7 +204,10 @@ export default async function AuditPage() {
               </p>
               <AuditForm labels={labels} />
               <p className="text-neon-green mt-5 text-center font-mono text-xs">
-                {t("auditPage.formFootnote", "No credit card. No obligation. You keep the plan either way.")}
+                {t(
+                  "auditPage.formFootnote",
+                  "No credit card. No obligation. You keep the plan either way."
+                )}
               </p>
             </div>
           </ScrollReveal>
