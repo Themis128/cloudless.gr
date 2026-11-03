@@ -39,7 +39,13 @@ export async function generateMetadata({
         "x-default": `${BASE_URL}/en/consultation`,
       },
     },
-    openGraph: { type: "website", title, description, url: `${BASE_URL}/consultation`, siteName: "Cloudless" },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: `${BASE_URL}/consultation`,
+      siteName: "Cloudless",
+    },
   };
 }
 
@@ -50,24 +56,15 @@ export default async function ConsultationPage() {
   const steps = [
     {
       title: t("consultation.step1", "Pick a slot"),
-      desc: t(
-        "consultation.step1Desc",
-        "Live availability — choose any open 30-minute window."
-      ),
+      desc: t("consultation.step1Desc", "Live availability — choose any open 30-minute window."),
     },
     {
       title: t("consultation.step2", "Meet on video"),
-      desc: t(
-        "consultation.step2Desc",
-        "You get a calendar invite + meeting link instantly."
-      ),
+      desc: t("consultation.step2Desc", "You get a calendar invite + meeting link instantly."),
     },
     {
       title: t("consultation.step3", "Leave with a plan"),
-      desc: t(
-        "consultation.step3Desc",
-        "Concrete next steps, honest scope, zero pressure."
-      ),
+      desc: t("consultation.step3Desc", "Concrete next steps, honest scope, zero pressure."),
     },
   ];
 

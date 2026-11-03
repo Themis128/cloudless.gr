@@ -35,11 +35,7 @@ const BOOK_IDLE = "idle" as const;
 const BOOK_SENDING = "sending" as const;
 const BOOK_DONE = "done" as const;
 const BOOK_ERROR = "error" as const;
-type BookStatus =
-  | typeof BOOK_IDLE
-  | typeof BOOK_SENDING
-  | typeof BOOK_DONE
-  | typeof BOOK_ERROR;
+type BookStatus = typeof BOOK_IDLE | typeof BOOK_SENDING | typeof BOOK_DONE | typeof BOOK_ERROR;
 
 /**
  * Public booking widget for /consultation — live slot picker over
@@ -55,31 +51,26 @@ export default function ConsultationBooking() {
   const [status, setStatus] = useState<BookStatus>(BOOK_IDLE);
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
 
-  const refreshSlots = async (cancelled?: () => boolean) => {
-    try {
-      const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`);
-      if (!res.ok) {
-        if (!cancelled?.()) setAvail(AVAIL_UNAVAILABLE);
-        return false;
-      }
-      const data = (await res.json()) as { slots?: TimeSlot[] };
-      if (cancelled?.()) return true;
-      setSlots(data.slots ?? []);
-      setAvail(AVAIL_READY);
-      return true;
-    } catch {
-      if (!cancelled?.()) setAvail(AVAIL_UNAVAILABLE);
-      return false;
-    }
-  };
-
   useEffect(() => {
     let cancelled = false;
-    void refreshSlots(() => cancelled);
+    (async () => {
+      try {
+        const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`);
+        if (!res.ok) {
+          if (!cancelled) setAvail(AVAIL_UNAVAILABLE);
+          return;
+        }
+        const data = (await res.json()) as { slots?: TimeSlot[] };
+        if (cancelled) return;
+        setSlots(data.slots ?? []);
+        setAvail(AVAIL_READY);
+      } catch {
+        if (!cancelled) setAvail(AVAIL_UNAVAILABLE);
+      }
+    })();
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byDay = useMemo(() => {
@@ -141,7 +132,10 @@ export default function ConsultationBooking() {
 
   if (status === BOOK_DONE) {
     return (
-      <div className="neon-border bg-void-light rounded-lg p-10 text-center" data-testid="booking-success">
+      <div
+        className="neon-border bg-void-light rounded-lg p-10 text-center"
+        data-testid="booking-success"
+      >
         <div className="text-neon-cyan mb-4 font-mono text-4xl">✓</div>
         <h2 className="font-heading text-2xl font-bold text-white">
           {t("consultation.confirmed", "You're booked!")}
@@ -232,7 +226,7 @@ export default function ConsultationBooking() {
                         className={`min-h-11 rounded-lg border px-4 py-2 font-mono text-sm transition-all ${
                           isSelected
                             ? "bg-neon-cyan/20 border-neon-cyan text-neon-cyan shadow-[0_0_15px_rgba(0,255,245,0.2)]"
-                            : "bg-void border-slate-800 text-slate-300 hover:border-neon-cyan/40 hover:text-white"
+                            : "bg-void hover:border-neon-cyan/40 border-slate-800 text-slate-300 hover:text-white"
                         }`}
                       >
                         {formatAthensSlotTimeRange(slot.start, slot.end)}
@@ -313,7 +307,10 @@ export default function ConsultationBooking() {
               required
               className="border-neon-cyan/30 bg-void mt-0.5 h-5 w-5 shrink-0 rounded border accent-cyan-400"
             />
-            <label htmlFor="consultation-consent" className="text-sm leading-relaxed text-slate-400">
+            <label
+              htmlFor="consultation-consent"
+              className="text-sm leading-relaxed text-slate-400"
+            >
               {t(
                 "consultation.consent",
                 "I agree that my details will be used to arrange this consultation, as described in the"

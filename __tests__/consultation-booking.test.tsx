@@ -72,9 +72,7 @@ describe("ConsultationBooking", () => {
   });
 
   it("shows the empty state when no slots are returned", async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ slots: [] }), { status: 200 })
-    );
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ slots: [] }), { status: 200 }));
     renderWidget();
     expect(await screen.findByTestId("slots-empty")).toBeTruthy();
   });
