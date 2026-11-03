@@ -68,7 +68,9 @@ describe("ConsultationBooking", () => {
     expect(screen.getAllByText(/Aug/).length).toBeGreaterThanOrEqual(2);
     // Three slot buttons total
     expect(screen.getAllByRole("button", { name: /09:00|09:30|10:00/ }).length).toBe(3);
-    expect(mockFetch).toHaveBeenCalledWith("/api/calendar/availability?days=14");
+    expect(mockFetch).toHaveBeenCalledWith("/api/calendar/availability?days=14", {
+      cache: "no-store",
+    });
   });
 
   it("shows the empty state when no slots are returned", async () => {

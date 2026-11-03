@@ -27,17 +27,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, start, end, notes } = (await request.json()) as {
+    const { name, email, start, end, notes, privacyConsent } = (await request.json()) as {
       name?: string;
       email?: string;
       start?: string;
       end?: string;
       notes?: string;
+      privacyConsent?: boolean;
     };
 
     if (!name || !email || !start || !end) {
       return NextResponse.json(
         { error: "Name, email, start, and end are required." },
+        { status: 400 }
+      );
+    }
+
+    if (privacyConsent !== true) {
+      return NextResponse.json(
+        { error: "Privacy consent is required to book a consultation." },
         { status: 400 }
       );
     }

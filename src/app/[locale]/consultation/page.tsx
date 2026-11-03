@@ -73,7 +73,7 @@ export default async function ConsultationPage() {
       <JsonLd
         data={getBreadcrumbSchema([
           { name: "Home", url: "https://cloudless.gr" },
-          { name: "Consultation", url: "https://cloudless.gr/consultation" },
+          { name: "Consultation", url: `https://cloudless.gr/${locale}/consultation` },
         ])}
       />
 
@@ -101,7 +101,7 @@ export default async function ConsultationPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
             <div className="lg:col-span-3">
-              <ConsultationBooking locale={safeLocale} />
+              <ConsultationBooking />
             </div>
 
             {/* Sidebar — what to expect */}

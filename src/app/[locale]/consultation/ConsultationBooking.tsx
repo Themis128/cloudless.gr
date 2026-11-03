@@ -41,7 +41,7 @@ type BookStatus = typeof BOOK_IDLE | typeof BOOK_SENDING | typeof BOOK_DONE | ty
  * Public booking widget for /consultation — live slot picker over
  * GET /api/calendar/availability + POST /api/calendar/book (cal.com-backed).
  */
-export default function ConsultationBooking({ locale }: { locale: string }) {
+export default function ConsultationBooking() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
@@ -96,7 +96,7 @@ export default function ConsultationBooking({ locale }: { locale: string }) {
       name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
       email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       notes: (form.elements.namedItem(FIELD_NOTES) as HTMLTextAreaElement).value || undefined,
-      consent: true,
+      privacyConsent: (form.elements.namedItem("privacyConsent") as HTMLInputElement).checked,
       start: selected.start,
       end: selected.end,
     };
@@ -221,11 +221,11 @@ export default function ConsultationBooking({ locale }: { locale: string }) {
                       <button
                         key={slot.start}
                         type="button"
+                        disabled={status === BOOK_SENDING}
                         onClick={() => {
                           setSelected(slot);
                           setStatus(BOOK_IDLE);
                         }}
-                        disabled={status === BOOK_SENDING}
                         aria-pressed={isSelected}
                         className={`min-h-11 rounded-lg border px-4 py-2 font-mono text-sm transition-all ${
                           isSelected
@@ -253,7 +253,7 @@ export default function ConsultationBooking({ locale }: { locale: string }) {
         >
           <p className="font-mono text-xs text-slate-400">
             <span className="text-neon-cyan">
-              {formatAthensSlotDay(selected.start)}{" "}
+              {formatAthensSlotDay(selected.start, locale)}{" "}
               {formatAthensSlotTimeRange(selected.start, selected.end)} Athens
             </span>
           </p>

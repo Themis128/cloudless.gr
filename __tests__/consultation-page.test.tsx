@@ -42,7 +42,7 @@ describe("consultation page", () => {
     expect(String(meta.title)).toContain("Consultation");
     expect(meta.alternates?.canonical).toBe("https://cloudless.gr/en/consultation");
     expect(meta.alternates?.languages?.el).toBe("https://cloudless.gr/el/consultation");
-    expect(meta.openGraph?.url).toBe("https://cloudless.gr/consultation");
+    expect(meta.openGraph?.url).toBe("https://cloudless.gr/en/consultation");
   });
 
   it("generateMetadata falls back to en on an unsupported locale", async () => {
