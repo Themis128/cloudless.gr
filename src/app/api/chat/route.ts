@@ -4,6 +4,7 @@ import { runWorkersAiChatLoop } from "@/lib/workers-ai-chat";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { slackChatNotify } from "@/lib/slack-notify";
 import { notifyTeam } from "@/lib/email";
+import { upsertContact } from "@/lib/espocrm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,6 +145,27 @@ export async function POST(request: NextRequest) {
       "New Chat Conversation",
       `A visitor started a chat:\n\n"${msg.slice(0, 200)}"\n\nIP: ${ip}`
     ).catch(() => {});
+  }
+
+  // Lead capture — any email the visitor shares (booking reply format
+  // "2, Jane Smith, jane@example.com" or free text) lands in EspoCRM so
+  // the lead stays reachable. The 2026-11-03 "Book a free audit" alert
+  // carried only the message + IP — the lead was lost.
+  const seenEmails = new Set<string>();
+  for (const m of userMessages) {
+    const email = m.content.match(/[^\s@,]+@[^\s@,]+\.[^\s@,]+/)?.[0];
+    if (!email || seenEmails.has(email)) continue;
+    seenEmails.add(email);
+    const nameMatch = m.content.match(/,\s*([A-Z][a-z]+(?: [A-Z][a-z]+)+)\s*,/);
+    const [firstname, ...rest] = (nameMatch?.[1] ?? "").split(" ");
+    upsertContact({
+      email,
+      firstname: firstname || undefined,
+      lastname: rest.join(" ") || undefined,
+      lead_source: "chat",
+      service_interest: "chat",
+      message: m.content.slice(0, 500),
+    }).catch(() => {});
   }
 
   let finalText: string;

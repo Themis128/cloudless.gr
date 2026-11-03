@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 
-const { callWorkersAiChatMock, parseWorkersAiToolCallMock, mockRunTool } = vi.hoisted(() => ({
+const { callWorkersAiChatMock, parseWorkersAiToolCallMock, mockRunTool, upsertContactMock } = vi.hoisted(() => ({
   callWorkersAiChatMock: vi.fn(),
   parseWorkersAiToolCallMock: vi.fn(),
   mockRunTool: vi.fn(),
+  upsertContactMock: vi.fn(),
 }));
 
 vi.mock("@/lib/workers-ai-client", () => ({
@@ -15,6 +16,10 @@ vi.mock("@/lib/workers-ai-client", () => ({
     tools.map((t) => `- ${t.name}: ${t.description}`).join("\n"),
   callWorkersAiChat: (...args: unknown[]) => callWorkersAiChatMock(...args),
   parseWorkersAiToolCall: (...args: unknown[]) => parseWorkersAiToolCallMock(...args),
+}));
+
+vi.mock("@/lib/espocrm", () => ({
+  upsertContact: (...args: unknown[]) => upsertContactMock(...args),
 }));
 
 vi.mock("@/lib/chat-tools", () => ({
@@ -55,6 +60,7 @@ describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitStore();
+    upsertContactMock.mockResolvedValue(null);
   });
 
   it("returns 400 when messages array is missing", async () => {
@@ -196,5 +202,32 @@ describe("POST /api/chat", () => {
     const text = await readSseText(res);
     expect(text.toLowerCase()).toContain("contact page");
     expect(callWorkersAiChatMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("captures a visitor email into EspoCRM when one is shared", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Booked!");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(
+      makeRequest({
+        messages: [
+          { role: "user", content: "Book a free audit" },
+          { role: "assistant", content: "Reply with: 2, Jane Smith, jane@example.com" },
+          { role: "user", content: "2, Jane Smith, jane@example.com" },
+        ],
+      })
+    );
+    expect(upsertContactMock).toHaveBeenCalledTimes(1);
+    const contact = upsertContactMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(contact.email).toBe("jane@example.com");
+    expect(contact.lead_source).toBe("chat");
+    expect(contact.firstname).toBe("Jane");
+    expect(contact.lastname).toBe("Smith");
+  });
+
+  it("does not write a lead when no email is present", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Hello!");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(makeRequest({ messages: [{ role: "user", content: "hi" }] }));
+    expect(upsertContactMock).not.toHaveBeenCalled();
   });
 });
