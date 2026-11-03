@@ -9,7 +9,6 @@ import { getServerLocale } from "@/lib/server-locale";
 import ConsultationBooking from "./ConsultationBooking";
 
 const BASE_URL = "https://cloudless.gr";
-const canonical = `${BASE_URL}/consultation`;
 
 export async function generateMetadata({
   params,
@@ -25,6 +24,7 @@ export async function generateMetadata({
   const description =
     meta?.consultation?.description ??
     "Pick a live slot for a free 30-minute consultation. Senior-engineer review of your cloud, automation, or AI setup — leave with a concrete plan.";
+  const canonical = `${BASE_URL}/${safeLocale}/consultation`;
 
   return {
     title,
@@ -39,7 +39,7 @@ export async function generateMetadata({
         "x-default": `${BASE_URL}/en/consultation`,
       },
     },
-    openGraph: { type: "website", title, description, url: canonical, siteName: "Cloudless" },
+    openGraph: { type: "website", title, description, url: `${BASE_URL}/consultation`, siteName: "Cloudless" },
   };
 }
 

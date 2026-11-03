@@ -55,26 +55,31 @@ export default function ConsultationBooking() {
   const [status, setStatus] = useState<BookStatus>(BOOK_IDLE);
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
 
+  const refreshSlots = async (cancelled?: () => boolean) => {
+    try {
+      const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`);
+      if (!res.ok) {
+        if (!cancelled?.()) setAvail(AVAIL_UNAVAILABLE);
+        return false;
+      }
+      const data = (await res.json()) as { slots?: TimeSlot[] };
+      if (cancelled?.()) return true;
+      setSlots(data.slots ?? []);
+      setAvail(AVAIL_READY);
+      return true;
+    } catch {
+      if (!cancelled?.()) setAvail(AVAIL_UNAVAILABLE);
+      return false;
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`);
-        if (!res.ok) {
-          if (!cancelled) setAvail(AVAIL_UNAVAILABLE);
-          return;
-        }
-        const data = (await res.json()) as { slots?: TimeSlot[] };
-        if (cancelled) return;
-        setSlots(data.slots ?? []);
-        setAvail(AVAIL_READY);
-      } catch {
-        if (!cancelled) setAvail(AVAIL_UNAVAILABLE);
-      }
-    })();
+    void refreshSlots(() => cancelled);
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byDay = useMemo(() => {
@@ -116,6 +121,18 @@ export default function ConsultationBooking() {
         setStatus(BOOK_DONE);
       } else {
         setStatus(BOOK_ERROR);
+        // The slot may have just been taken — refresh availability and
+        // drop the selection if it is no longer offered.
+        const res2 = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`).catch(
+          () => null
+        );
+        if (res2?.ok) {
+          const fresh = ((await res2.json()) as { slots?: TimeSlot[] }).slots ?? [];
+          setSlots(fresh);
+          if (selected && !fresh.some((s) => s.start === selected.start)) {
+            setSelected(null);
+          }
+        }
       }
     } catch {
       setStatus(BOOK_ERROR);
