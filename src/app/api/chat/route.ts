@@ -137,10 +137,7 @@ function extractEmail(content: string): string | undefined {
   const match = content.match(EMAIL_RE)?.[0];
   // Guard against a local part that ends in a dot (not a valid address)
   // and against leading punctuation/markdown captured into the match.
-  return match &&
-    !match.includes("..") &&
-    !match.includes(".@") &&
-    /^[\p{L}\d]/u.test(match)
+  return match && !match.includes("..") && !match.includes(".@") && /^[\p{L}\d]/u.test(match)
     ? match
     : undefined;
 }
@@ -156,7 +153,15 @@ function extractEmail(content: string): string | undefined {
 // ("Jane Smith here", "thanks John Doe please"). Only checked at segment end —
 // they are still legal inside a longer last name.
 const NAME_END_STOPWORDS = new Set([
-  "here", "please", "thanks", "thank", "me", "is", "my", "now", "today",
+  "here",
+  "please",
+  "thanks",
+  "thank",
+  "me",
+  "is",
+  "my",
+  "now",
+  "today",
 ]);
 
 function extractName(content: string): { firstname?: string; lastname?: string } {
