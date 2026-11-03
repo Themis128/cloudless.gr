@@ -204,9 +204,7 @@ describe("ConsultationBooking", () => {
     // Form survives — typed data and the error stay visible while the
     // refreshed picker drops the taken slot.
     expect(screen.getByTestId("booking-form")).toBeTruthy();
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "09:00–09:30" })).toBeNull()
-    );
+    await waitFor(() => expect(screen.queryByRole("button", { name: "09:00–09:30" })).toBeNull());
     expect(screen.getByRole("button", { name: "09:30–10:00" })).toBeTruthy();
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });

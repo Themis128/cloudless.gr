@@ -41,7 +41,7 @@ type BookStatus = typeof BOOK_IDLE | typeof BOOK_SENDING | typeof BOOK_DONE | ty
  * Public booking widget for /consultation — live slot picker over
  * GET /api/calendar/availability + POST /api/calendar/book (cal.com-backed).
  */
-export default function ConsultationBooking() {
+export default function ConsultationBooking({ locale }: { locale: string }) {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
@@ -55,7 +55,9 @@ export default function ConsultationBooking() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`);
+        const res = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`, {
+          cache: "no-store",
+        });
         if (!res.ok) {
           if (!cancelled) setAvail(AVAIL_UNAVAILABLE);
           return;
@@ -76,13 +78,13 @@ export default function ConsultationBooking() {
   const byDay = useMemo(() => {
     const groups = new Map<string, TimeSlot[]>();
     for (const slot of slots) {
-      const day = formatAthensSlotDay(slot.start);
+      const day = formatAthensSlotDay(slot.start, locale);
       const list = groups.get(day) ?? [];
       list.push(slot);
       groups.set(day, list);
     }
     return [...groups.entries()];
-  }, [slots]);
+  }, [slots, locale]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -94,6 +96,7 @@ export default function ConsultationBooking() {
       name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
       email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       notes: (form.elements.namedItem(FIELD_NOTES) as HTMLTextAreaElement).value || undefined,
+      consent: true,
       start: selected.start,
       end: selected.end,
     };
@@ -114,9 +117,9 @@ export default function ConsultationBooking() {
         setStatus(BOOK_ERROR);
         // The slot may have just been taken — refresh availability and
         // drop the selection if it is no longer offered.
-        const res2 = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`).catch(
-          () => null
-        );
+        const res2 = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`, {
+          cache: "no-store",
+        }).catch(() => null);
         if (res2?.ok) {
           // Refresh the picker so a just-taken slot is no longer offered.
           // Keep `selected` — clearing it would unmount the form and lose
@@ -222,6 +225,7 @@ export default function ConsultationBooking() {
                           setSelected(slot);
                           setStatus(BOOK_IDLE);
                         }}
+                        disabled={status === BOOK_SENDING}
                         aria-pressed={isSelected}
                         className={`min-h-11 rounded-lg border px-4 py-2 font-mono text-sm transition-all ${
                           isSelected

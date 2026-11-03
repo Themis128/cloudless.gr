@@ -43,7 +43,7 @@ export async function generateMetadata({
       type: "website",
       title,
       description,
-      url: `${BASE_URL}/consultation`,
+      url: `${BASE_URL}/${safeLocale}/consultation`,
       siteName: "Cloudless",
     },
   };
@@ -101,7 +101,7 @@ export default async function ConsultationPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
             <div className="lg:col-span-3">
-              <ConsultationBooking />
+              <ConsultationBooking locale={safeLocale} />
             </div>
 
             {/* Sidebar — what to expect */}
