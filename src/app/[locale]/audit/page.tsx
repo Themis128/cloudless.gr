@@ -7,7 +7,6 @@ import { getServerLocale } from "@/lib/server-locale";
 import AuditForm from "./AuditForm";
 
 const BASE_URL = "https://cloudless.gr";
-const canonical = `${BASE_URL}/audit`;
 
 export async function generateMetadata({
   params,
@@ -23,6 +22,11 @@ export async function generateMetadata({
   const description =
     meta?.audit?.description ??
     "Book a free 30-minute tech checkup. We review your setup, find the software cost leaks, and hand you a concrete action plan — no sales pitch.";
+
+  // Locale-prefixed: unprefixed paths redirect to /en/…, so an unprefixed
+  // canonical would point every localized page at a redirect and contradict
+  // its own hreflang alternates.
+  const canonical = `${BASE_URL}/${safeLocale}/audit`;
 
   return {
     title,
@@ -109,6 +113,11 @@ export default async function AuditPage() {
     sending: t("auditPage.formSending", "Booking…"),
     done: t("auditPage.formDone", "Booked — check your inbox. We'll confirm your slot shortly."),
     error: t("auditPage.formError", "Something went wrong — please try again."),
+    consent: t(
+      "auditPage.formConsent",
+      "I agree that my data will be processed to arrange and prepare this audit call, as described in the"
+    ),
+    privacyPolicy: t("legal.privacyTitle", "Privacy Policy"),
   };
 
   return (

@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { isSupportedLocale } from "@/lib/i18n";
+import { forwardAuditLead } from "@/lib/socialauto-public-leads";
 
 /**
  * POST /api/audit — free 30-minute tech checkup booking intake.
@@ -9,87 +12,168 @@ import { NextResponse } from "next/server";
  * server-side to the SocialAuto public capture endpoint as
  * form="audit-request" so it lands in the same funnel as the other public
  * forms (newsletter / free-audit / survey).
+ *
+ * Abuse controls mirror /api/playbook-lead: 5 attempts per IP per 10 minutes
+ * plus a honeypot field. SocialAuto sits behind Cloudflare Access, so the
+ * forward goes through `forwardAuditLead` with a service token — never an
+ * unauthenticated fetch that an Access login page could answer with a 200.
  */
-export async function POST(req: Request) {
-  let body: {
-    email?: string;
-    name?: string;
-    goal?: string;
-    pain?: string;
-    timeline?: string;
-  };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
 
-  const email = (body.email ?? "").trim();
-  // Linear-time check — no regex on user input (CodeQL js/polynomial-redos).
+const MAX_FIELD_CHARS = 1000;
+const MAX_NAME_CHARS = 200;
+
+interface AuditBody {
+  email?: unknown;
+  name?: unknown;
+  goal?: unknown;
+  pain?: unknown;
+  timeline?: unknown;
+  consent?: unknown;
+  locale?: unknown;
+  website?: unknown;
+}
+
+function jsonError(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
+}
+
+/** Linear-time email check — no regex on user input (CodeQL js/polynomial-redos). */
+function isPlausibleEmail(email: string): boolean {
   const at = email.indexOf("@");
-  const emailOk =
+  return (
     email.length <= 254 &&
     at > 0 &&
     email.lastIndexOf("@") === at &&
     email.slice(at + 1).includes(".") &&
-    !email.endsWith(".");
-  if (!emailOk) {
-    return NextResponse.json({ error: "valid email required" }, { status: 400 });
+    !email.endsWith(".")
+  );
+}
+
+function pagePathFromReferer(referer: string | null): string | undefined {
+  if (!referer) return undefined;
+  try {
+    return new URL(referer).pathname.slice(0, 200);
+  } catch {
+    return undefined;
   }
-  for (const key of ["goal", "pain", "timeline"] as const) {
-    if (!(body[key] ?? "").trim()) {
-      return NextResponse.json({ error: `${key} is required` }, { status: 400 });
-    }
-  }
+}
 
-  const apiBase =
-    process.env.SOCIALAUTO_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    "https://social.cloudless.gr";
-
-  const res = await fetch(`${apiBase}/api/v1/leads/public`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      name: (body.name ?? "").trim() || email.split("@")[0],
-      form: "audit-request",
-      interest: "audit",
-      site: "cloudless.gr/audit",
-      consent_at: new Date().toISOString(),
-      message:
-        `Goal: ${body.goal!.trim()}\n` +
-        `Pain: ${body.pain!.trim()}\n` +
-        `Timeline: ${body.timeline!.trim()}`,
-    }),
-  });
-
-  if (!res.ok) {
-    return NextResponse.json({ error: "booking failed, please try again" }, { status: 502 });
-  }
-
-  // Booking-confirmation mail via the mail-outbound worker (send_email
-  // binding) — fire-and-forget: a mail failure must never break booking.
+/**
+ * Booking-confirmation mail via the mail-outbound worker (send_email binding)
+ * — fire-and-forget: a mail failure must never break a captured booking.
+ */
+function sendConfirmationMail(
+  email: string,
+  name: string,
+  discovery: Record<"goal" | "pain" | "timeline", string>
+): void {
   const mailBase = process.env.MAIL_OUTBOUND_URL;
   const mailToken = process.env.MAIL_OUTBOUND_TOKEN;
-  if (mailBase && mailToken) {
-    void fetch(`${mailBase.replace(/\/$/, "")}/send`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${mailToken}` },
-      body: JSON.stringify({
-        to: email,
-        subject: "Your free 30-minute tech checkup — confirmed",
-        text:
-          `Hi${(body.name ?? "").trim() ? ` ${(body.name as string).trim().split(" ")[0]}` : ""},\n\n` +
-          "Got your request — we'll confirm your slot shortly.\n\n" +
-          `Your goal: ${body.goal!.trim()}\n` +
-          `What's hard: ${body.pain!.trim()}\n` +
-          `Timeline: ${body.timeline!.trim()}\n\n` +
-          "— Themis, Cloudless",
-        category: "audit-confirm",
-      }),
-    }).catch(() => {});
+  if (!mailBase || !mailToken) return;
+  const firstName = name ? ` ${name.split(" ")[0]}` : "";
+  void fetch(`${mailBase.replace(/\/$/, "")}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${mailToken}` },
+    body: JSON.stringify({
+      to: email,
+      subject: "Your free 30-minute tech checkup — confirmed",
+      text:
+        `Hi${firstName},\n\n` +
+        "Got your request — we'll confirm your slot shortly.\n\n" +
+        `Your goal: ${discovery.goal}\n` +
+        `What's hard: ${discovery.pain}\n` +
+        `Timeline: ${discovery.timeline}\n\n` +
+        "— Themis, Cloudless",
+      category: "audit-confirm",
+    }),
+  }).catch(() => {});
+}
+
+export async function POST(req: Request) {
+  // Same budget as /api/playbook-lead: 5 attempts per IP per 10 minutes.
+  const ip = getClientIp(req);
+  const rl = rateLimit(`audit:${ip}`, 5, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
+  let body: AuditBody;
+  try {
+    body = (await req.json()) as AuditBody;
+  } catch {
+    return jsonError("invalid JSON", 400);
+  }
+  if (!body || typeof body !== "object") {
+    return jsonError("invalid JSON", 400);
   }
 
-  return NextResponse.json({ ok: true });
+  // Honeypot: a hidden field humans never fill. Ack without forwarding.
+  if (typeof body.website === "string" && body.website.trim() !== "") {
+    return NextResponse.json({ ok: true });
+  }
+
+  const email = (typeof body.email === "string" ? body.email : "").trim().toLowerCase();
+  if (!isPlausibleEmail(email)) {
+    return jsonError("valid email required", 400);
+  }
+
+  const discovery: Record<"goal" | "pain" | "timeline", string> = {
+    goal: "",
+    pain: "",
+    timeline: "",
+  };
+  for (const key of ["goal", "pain", "timeline"] as const) {
+    const raw = body[key];
+    if (raw !== undefined && raw !== null && typeof raw !== "string") {
+      return jsonError(`${key} must be a string`, 400);
+    }
+    const value = typeof raw === "string" ? raw.trim() : "";
+    if (!value) {
+      return jsonError(`${key} is required`, 400);
+    }
+    if (value.length > MAX_FIELD_CHARS) {
+      return jsonError(`${key} must be at most ${MAX_FIELD_CHARS} characters`, 400);
+    }
+    discovery[key] = value;
+  }
+
+  if (body.name !== undefined && body.name !== null && typeof body.name !== "string") {
+    return jsonError("name must be a string", 400);
+  }
+  const name = (typeof body.name === "string" ? body.name : "").replace(/\s+/g, " ").trim();
+  if (name.length > MAX_NAME_CHARS) {
+    return jsonError(`name must be at most ${MAX_NAME_CHARS} characters`, 400);
+  }
+
+  // GDPR: `consent_at` is only recorded when the visitor explicitly ticked the
+  // consent box — never derived from a bare submission.
+  if (body.consent !== true) {
+    return jsonError("consent is required", 400);
+  }
+
+  const locale =
+    typeof body.locale === "string" && isSupportedLocale(body.locale) ? body.locale : undefined;
+
+  const result = await forwardAuditLead({
+    email,
+    name: name || undefined,
+    locale,
+    pagePath: pagePathFromReferer(req.headers.get("referer")),
+    consentAt: new Date().toISOString(),
+    ...discovery,
+  });
+
+  if (result.ok) {
+    sendConfirmationMail(email, name, discovery);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (result.reason === "rejected") {
+    return jsonError("valid email required", 400);
+  }
+
+  const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";
+  console.error(`[audit] forward failed: ${result.reason}${statusSuffix}`);
+  if (result.reason === "not_configured") {
+    return jsonError("Audit booking is temporarily unavailable. Please email us instead.", 503);
+  }
+  return jsonError("booking failed, please try again", 502);
 }

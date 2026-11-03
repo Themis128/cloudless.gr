@@ -616,6 +616,7 @@
     "formSending": "Réservation…",
     "formDone": "Réservé — vérifiez votre boîte mail.",
     "formError": "Une erreur est survenue — réessayez.",
+    "formConsent": "J'accepte que mes données soient traitées pour organiser et préparer cet appel d'audit, comme décrit dans la",
     "formFootnote": "Sans CB. Sans engagement. Le plan vous appartient."
   }
 }

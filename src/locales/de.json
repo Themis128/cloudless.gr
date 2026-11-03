@@ -616,6 +616,7 @@
     "formSending": "Wird gebucht…",
     "formDone": "Gebucht — prüfen Sie Ihren Posteingang.",
     "formError": "Etwas ist schiefgelaufen — bitte erneut versuchen.",
+    "formConsent": "Ich stimme zu, dass meine Daten zur Vereinbarung und Vorbereitung dieses Audit-Gesprächs verarbeitet werden, wie in der",
     "formFootnote": "Keine Karte. Keine Verpflichtung. Der Plan gehört Ihnen."
   }
 }

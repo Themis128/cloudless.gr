@@ -616,6 +616,7 @@
     "formSending": "Booking…",
     "formDone": "Booked — check your inbox. We'll confirm your slot shortly.",
     "formError": "Something went wrong — please try again.",
+    "formConsent": "I agree that my data will be processed to arrange and prepare this audit call, as described in the",
     "formFootnote": "No credit card. No obligation. You keep the plan either way."
   }
 }

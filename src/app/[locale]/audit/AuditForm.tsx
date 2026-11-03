@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 /**
@@ -14,18 +15,27 @@ export default function AuditForm({ labels }: { labels: Record<string, string> }
     e.preventDefault();
     setStatus("sending");
     const fd = new FormData(e.currentTarget);
-    const res = await fetch("/api/audit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: fd.get("name"),
-        email: fd.get("email"),
-        goal: fd.get("goal"),
-        pain: fd.get("pain"),
-        timeline: fd.get("timeline"),
-      }),
-    });
-    setStatus(res.ok ? "done" : "error");
+    try {
+      const res = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fd.get("name"),
+          email: fd.get("email"),
+          goal: fd.get("goal"),
+          pain: fd.get("pain"),
+          timeline: fd.get("timeline"),
+          // Only ever true when the visitor ticked the GDPR box.
+          consent: fd.get("consent") === "on",
+          website: fd.get("website"),
+        }),
+      });
+      setStatus(res.ok ? "done" : "error");
+    } catch {
+      // Network failure / timeout / abort — surface it so the visitor can retry
+      // instead of leaving the form stuck in "sending".
+      setStatus("error");
+    }
   }
 
   if (status === "done") {
@@ -48,6 +58,32 @@ export default function AuditForm({ labels }: { labels: Record<string, string> }
       <textarea name="goal" required rows={2} placeholder={labels.goal} className={inputCls} />
       <input name="pain" required placeholder={labels.pain} className={inputCls} />
       <input name="timeline" required placeholder={labels.timeline} className={inputCls} />
+      {/* Honeypot — hidden from humans and assistive tech, bots fill it. */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="hidden"
+      />
+      {/* GDPR consent checkbox — the API records consent_at only when ticked. */}
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          id="audit-consent"
+          name="consent"
+          required
+          className="border-neon-cyan/30 bg-void mt-0.5 h-5 w-5 shrink-0 rounded border accent-cyan-400"
+        />
+        <label htmlFor="audit-consent" className="text-sm leading-relaxed text-slate-400">
+          {labels.consent}{" "}
+          <Link href="/privacy" className="text-neon-cyan underline underline-offset-2">
+            {labels.privacyPolicy}
+          </Link>
+          . *
+        </label>
+      </div>
       <button
         type="submit"
         disabled={status === "sending"}
