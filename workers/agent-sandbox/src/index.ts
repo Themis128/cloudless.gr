@@ -36,7 +36,7 @@ export default {
     if (!source)
       return Response.json(
         { error: `module must be one of: ${Object.keys(MODULES).join(", ")}` },
-        { status: 400 },
+        { status: 400 }
       );
     // Binding-less worker — no env, no bindings, fetch-only sandbox.
     const worker = env.LOADER.get(mod, () => ({
@@ -46,7 +46,9 @@ export default {
     }));
     const res = await worker
       .getEntrypoint()
-      .fetch(new Request("https://sandbox/run", { method: "POST", body: JSON.stringify(input ?? {}) }));
+      .fetch(
+        new Request("https://sandbox/run", { method: "POST", body: JSON.stringify(input ?? {}) })
+      );
     return new Response(res.body, res);
   },
 };

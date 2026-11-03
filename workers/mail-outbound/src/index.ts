@@ -16,19 +16,19 @@ import { EmailMessage } from "cloudflare:email";
 import { createMimeMessage } from "mimetext";
 
 interface Env {
-	SEND_EMAIL: SendEmail;
-	MAIL_OUTBOUND_TOKEN: string;
-	DEFAULT_FROM?: string;
-	VERIFY_TO?: string;
+  SEND_EMAIL: SendEmail;
+  MAIL_OUTBOUND_TOKEN: string;
+  DEFAULT_FROM?: string;
+  VERIFY_TO?: string;
 }
 
 const CATEGORIES = new Set([
-	"audit-confirm",
-	"nurture",
-	"quiet-lead",
-	"loa-delivery",
-	"playbook",
-	"ops-alert",
+  "audit-confirm",
+  "nurture",
+  "quiet-lead",
+  "loa-delivery",
+  "playbook",
+  "ops-alert",
 ]);
 
 /**
@@ -47,98 +47,98 @@ const DEFAULT_FROM_NAME = "Cloudless";
  * either shape can never corrupt the header or the envelope sender.
  */
 function parseSender(value: string): { name: string; addr: string } {
-	const withName = /^\s*(?:"([^"]*)"|([^<>]*?))\s*<\s*([^<>\s]+)\s*>\s*$/.exec(value);
-	if (withName) {
-		const name = (withName[1] ?? withName[2] ?? "").trim();
-		return { name: name || DEFAULT_FROM_NAME, addr: withName[3] };
-	}
-	return { name: DEFAULT_FROM_NAME, addr: value.trim() };
+  const withName = /^\s*(?:"([^"]*)"|([^<>]*?))\s*<\s*([^<>\s]+)\s*>\s*$/.exec(value);
+  if (withName) {
+    const name = (withName[1] ?? withName[2] ?? "").trim();
+    return { name: name || DEFAULT_FROM_NAME, addr: withName[3] };
+  }
+  return { name: DEFAULT_FROM_NAME, addr: value.trim() };
 }
 
 function json(data: unknown, status = 200): Response {
-	return new Response(JSON.stringify(data), {
-		status,
-		headers: { "content-type": "application/json" },
-	});
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 function authorized(request: Request, env: Env): boolean {
-	const auth = request.headers.get("authorization") ?? "";
-	const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-	return Boolean(token) && token === env.MAIL_OUTBOUND_TOKEN;
+  const auth = request.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  return Boolean(token) && token === env.MAIL_OUTBOUND_TOKEN;
 }
 
 type SendBody = {
-	to?: string;
-	subject?: string;
-	text?: string;
-	html?: string;
-	from?: string;
-	category?: string;
-	replyTo?: string;
+  to?: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+  from?: string;
+  category?: string;
+  replyTo?: string;
 };
 
 async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> & SendBody) {
-	const sender = parseSender(b.from ?? env.DEFAULT_FROM ?? DEFAULT_FROM_ADDR);
-	const msg = createMimeMessage();
-	msg.setSender(sender);
-	msg.setRecipient(b.to);
-	msg.setSubject(b.subject);
-	if (b.replyTo) msg.setHeader("Reply-To", b.replyTo);
-	msg.addMessage({ contentType: "text/plain", data: b.text ?? "" });
-	if (b.html) msg.addMessage({ contentType: "text/html", data: b.html });
-	// Envelope sender must be the bare address, never "Name <addr>".
-	const raw = new EmailMessage(sender.addr, b.to, msg.asRaw());
-	await env.SEND_EMAIL.send(raw);
+  const sender = parseSender(b.from ?? env.DEFAULT_FROM ?? DEFAULT_FROM_ADDR);
+  const msg = createMimeMessage();
+  msg.setSender(sender);
+  msg.setRecipient(b.to);
+  msg.setSubject(b.subject);
+  if (b.replyTo) msg.setHeader("Reply-To", b.replyTo);
+  msg.addMessage({ contentType: "text/plain", data: b.text ?? "" });
+  if (b.html) msg.addMessage({ contentType: "text/html", data: b.html });
+  // Envelope sender must be the bare address, never "Name <addr>".
+  const raw = new EmailMessage(sender.addr, b.to, msg.asRaw());
+  await env.SEND_EMAIL.send(raw);
 }
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const url = new URL(request.url);
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
 
-		if (request.method === "GET" && url.pathname === "/health") {
-			return json({ ok: true, service: "mail-outbound" });
-		}
-		if (!authorized(request, env)) {
-			return json({ error: "unauthorized" }, 401);
-		}
+    if (request.method === "GET" && url.pathname === "/health") {
+      return json({ ok: true, service: "mail-outbound" });
+    }
+    if (!authorized(request, env)) {
+      return json({ error: "unauthorized" }, 401);
+    }
 
-		if (request.method === "POST" && url.pathname === "/verify") {
-			try {
-				await deliver(env, {
-					to: env.VERIFY_TO ?? "tbaltzakis@cloudless.gr",
-					subject: "mail-outbound self-test",
-					text: `send_email binding OK — ${new Date().toISOString()}`,
-					category: "ops-alert",
-				});
-				return json({ ok: true, sent: true });
-			} catch (err) {
-				return json({ ok: false, error: String(err) }, 502);
-			}
-		}
+    if (request.method === "POST" && url.pathname === "/verify") {
+      try {
+        await deliver(env, {
+          to: env.VERIFY_TO ?? "tbaltzakis@cloudless.gr",
+          subject: "mail-outbound self-test",
+          text: `send_email binding OK — ${new Date().toISOString()}`,
+          category: "ops-alert",
+        });
+        return json({ ok: true, sent: true });
+      } catch (err) {
+        return json({ ok: false, error: String(err) }, 502);
+      }
+    }
 
-		if (request.method === "POST" && url.pathname === "/send") {
-			let body: SendBody;
-			try {
-				body = (await request.json()) as SendBody;
-			} catch {
-				return json({ error: "invalid_json" }, 400);
-			}
-			if (!body.to || !body.subject || (!body.text && !body.html)) {
-				return json({ error: "to, subject and text|html are required" }, 400);
-			}
-			const category = body.category ?? "ops-alert";
-			if (!CATEGORIES.has(category)) {
-				return json({ error: `category must be one of: ${[...CATEGORIES].join(", ")}` }, 400);
-			}
-			try {
-				await deliver(env, { ...body, to: body.to, subject: body.subject });
-				return json({ ok: true, category });
-			} catch (err) {
-				return json({ ok: false, error: String(err) }, 502);
-			}
-		}
+    if (request.method === "POST" && url.pathname === "/send") {
+      let body: SendBody;
+      try {
+        body = (await request.json()) as SendBody;
+      } catch {
+        return json({ error: "invalid_json" }, 400);
+      }
+      if (!body.to || !body.subject || (!body.text && !body.html)) {
+        return json({ error: "to, subject and text|html are required" }, 400);
+      }
+      const category = body.category ?? "ops-alert";
+      if (!CATEGORIES.has(category)) {
+        return json({ error: `category must be one of: ${[...CATEGORIES].join(", ")}` }, 400);
+      }
+      try {
+        await deliver(env, { ...body, to: body.to, subject: body.subject });
+        return json({ ok: true, category });
+      } catch (err) {
+        return json({ ok: false, error: String(err) }, 502);
+      }
+    }
 
-		return json({ error: "not_found" }, 404);
-	},
+    return json({ error: "not_found" }, 404);
+  },
 };
