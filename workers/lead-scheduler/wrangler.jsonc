@@ -12,7 +12,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["LeadFollowup", "BookingSlot", "WebhookDedup"]
+      "new_sqlite_classes": ["LeadFollowup", "BookingSlot", "WebhookDedup"]
     }
   ],
   "observability": { "enabled": true, "logs": { "enabled": true } },

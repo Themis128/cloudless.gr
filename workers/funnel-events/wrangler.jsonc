@@ -9,7 +9,7 @@
   "pipelines": [
     {
       "binding": "FUNNEL_PIPELINE",
-      "pipeline": "cloudless-funnel-events"
+      "stream": "6e1951f9168d4427a3ba525da36397a7"
     }
   ],
   "observability": { "enabled": true, "logs": { "enabled": true } },
