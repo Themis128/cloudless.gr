@@ -8,7 +8,13 @@ import { useState } from "react";
  * Agent Manifest (CALENDAR_INTEGRATION_ROUTING). Answers land on the lead's
  * CRM record so the audit call starts pre-briefed.
  */
-export default function AuditForm({ labels }: { labels: Record<string, string> }) {
+export default function AuditForm({
+  labels,
+  locale,
+}: {
+  labels: Record<string, string>;
+  locale: string;
+}) {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -28,6 +34,7 @@ export default function AuditForm({ labels }: { labels: Record<string, string> }
           // Only ever true when the visitor ticked the GDPR box.
           consent: fd.get("consent") === "on",
           website: fd.get("website"),
+          locale,
         }),
       });
       setStatus(res.ok ? "done" : "error");
@@ -78,7 +85,7 @@ export default function AuditForm({ labels }: { labels: Record<string, string> }
         />
         <label htmlFor="audit-consent" className="text-sm leading-relaxed text-slate-400">
           {labels.consent}{" "}
-          <Link href="/privacy" className="text-neon-cyan underline underline-offset-2">
+          <Link href={`/${locale}/privacy`} className="text-neon-cyan underline underline-offset-2">
             {labels.privacyPolicy}
           </Link>
           . *
