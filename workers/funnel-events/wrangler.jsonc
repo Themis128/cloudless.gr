@@ -12,6 +12,7 @@
       "pipeline": "cloudless-funnel-events"
     }
   ],
+  "observability": { "logpush": true },
   "vars": {
     "WORKER_NAME": "funnel-events"
   }
