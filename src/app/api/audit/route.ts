@@ -167,7 +167,8 @@ export async function POST(req: Request) {
   }
 
   if (result.reason === "rejected") {
-    return jsonError("valid email required", 400);
+    // Upstream field-level rejection — not necessarily the email.
+    return jsonError("submission rejected — check the details and try again", 400);
   }
 
   const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";

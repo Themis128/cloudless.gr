@@ -211,7 +211,7 @@ export default async function AuditPage() {
                   "No sales pitch, just a simple action plan. Let's find your quick wins today."
                 )}
               </p>
-              <AuditForm labels={labels} />
+              <AuditForm labels={labels} locale={locale} />
               <p className="text-neon-green mt-5 text-center font-mono text-xs">
                 {t(
                   "auditPage.formFootnote",
