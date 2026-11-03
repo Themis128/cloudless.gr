@@ -444,13 +444,27 @@ the mail still reaches ingest/fallback — scorer throws must never drop mail.
 
 ### Deployment inventory (single source of truth)
 
-The Cloudflare account currently holds **three** deployed Workers:
+The Cloudflare account currently holds **six** deployed Workers:
 
 | Live script name                                      | Source config                                                                            | Deployed by                                                                                | Notes                                          |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
 | `cloudless2`                                          | [`workers/pi-origin-proxy/wrangler.jsonc`](../../workers/pi-origin-proxy/wrangler.jsonc) | [`.github/workflows/cloudflare-deploy.yml`](../../.github/workflows/cloudflare-deploy.yml) | The Free-tier pi-origin proxy described above. |
 | `cloudless-monorepo-production-analyticsworkerscript` | Analytics Engine worker (see Worker 3)                                                   | Monorepo pipeline                                                                          | Serves `/api/analytics/*`.                     |
 | `mail-ingest`                                         | [`workers/mail-ingest`](../../workers/mail-ingest)                                      | Manual Wrangler / Workers API upload                                                       | Inbound mail scorer + ingest relay (Worker 4). |
+| `mail-outbound`                                       | [`workers/mail-outbound/wrangler.jsonc`](../../workers/mail-outbound/wrangler.jsonc)     | Manual `wrangler deploy` (CI loop wired via `cloudflare-deploy.yml`)                       | `send_email` transactional outbox → `POST /send`, Bearer `MAIL_OUTBOUND_TOKEN`, category allowlist. |
+| `lead-scheduler`                                      | [`workers/lead-scheduler/wrangler.jsonc`](../../workers/lead-scheduler/wrangler.jsonc)   | Manual `wrangler deploy`                                                                   | DOs `LeadFollowup`/`BookingSlot`/`WebhookDedup`; alarm cadence 24h→72h→168h; `SCHEDULER_TOKEN`, `DISPATCH_URL`/`DISPATCH_TOKEN` → mail-outbound. |
+| `funnel-events`                                       | [`workers/funnel-events/wrangler.jsonc`](../../workers/funnel-events/wrangler.jsonc)     | Manual `wrangler deploy`                                                                   | `POST /event` → Pipelines → R2 `cloudless-datalake/events/` (JSON+gzip, day partitions). Bearer `EVENTS_TOKEN`. |
+
+**Supporting resources (created 2026-11-03):** Pipeline
+`cloudless_funnel_events_pipe` (stream `cloudless_funnel_events_stream` →
+sink `cloudless_funnel_events_sink`, R2 `cloudless-datalake`, `events/`
+prefix, JSON+gzip, `year=%Y/month=%m/day=%d`, 300 s roll). Pipeline
+resource names must be underscore-safe — wrangler 4 rejects dashes.
+
+**Gate:** Email Sending (`send_email`) still requires a *verified
+destination address* per recipient under Email Routing — until domains
+are verified, mail-outbound returns `destination address is not a
+verified address` and omv-ha/Resend remains the primary outbound lane.
 
 Verify with `mcp__cloudflare-observability__workers_list` or
 `npx wrangler deployments list --config workers/pi-origin-proxy/wrangler.jsonc`.
