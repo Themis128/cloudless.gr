@@ -202,6 +202,38 @@
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "privacyConsent": "Ich stimme zu, dass meine Daten verarbeitet werden, um auf meine Anfrage zu antworten, wie in der"
   },
+  "consultation": {
+    "title": "Buchen Sie Ihre kostenlose Beratung.",
+    "subtitle": "30 Minuten mit einem Senior-Engineer — kein Verkäufer. Wählen Sie den passenden Termin.",
+    "pickSlot": "Zeit wählen",
+    "timezoneNote": "Alle Zeiten in Athener Zeit (EET) angezeigt.",
+    "loading": "Verfügbarkeit wird geladen…",
+    "noSlots": "Keine freien Termine in den nächsten zwei Wochen — nutzen Sie das Kontaktformular und wir finden manuell einen Termin.",
+    "unavailable": "Online-Buchung ist derzeit nicht verfügbar.",
+    "unavailableCta": "Schreiben Sie uns stattdessen →",
+    "name": "Name",
+    "email": "E-Mail",
+    "notes": "Was sollen wir vorbereiten? (optional)",
+    "notesPlaceholder": "z. B. langsame Dashboards, steigende Cloud-Rechnung, Marketing-Automatisierung…",
+    "consent": "Ich stimme zu, dass meine Daten zur Terminvereinbarung dieser Beratung verwendet werden, wie in der",
+    "submit": "Buchung bestätigen",
+    "sending": "Buchung läuft…",
+    "confirmed": "Gebucht!",
+    "confirmedDesc": "Eine Kalendereinladung ist unterwegs in Ihr Postfach.",
+    "viewBooking": "Buchungsdetails ansehen →",
+    "error": "Etwas ist schiefgelaufen. Bitte erneut versuchen oder E-Mail an",
+    "back": "← Zurück zu den Terminen",
+    "whatToExpect": "Ablauf",
+    "step1": "Termin wählen",
+    "step1Desc": "Live-Verfügbarkeit — wählen Sie ein beliebiges freies 30-Minuten-Fenster.",
+    "step2": "Per Video treffen",
+    "step2Desc": "Sie erhalten sofort eine Kalendereinladung + Meeting-Link.",
+    "step3": "Mit einem Plan gehen",
+    "step3Desc": "Konkrete nächste Schritte, ehrlicher Umfang, null Druck.",
+    "preferWriting": "Lieber schriftlich?",
+    "preferWritingDesc": "Erzählen Sie uns im Kontaktformular von Ihrem Projekt — wir antworten innerhalb von 24 Stunden."
+  },
+
   "store": {
     "title": "Unsere Produkte",
     "subtitle": "Digitale Produkte und Dienstleistungen für schnelleres Wachstum.",
@@ -482,6 +514,10 @@
     "contact": {
       "title": "Kontakt",
       "description": "Kontaktieren Sie uns für ein kostenloses Cloud-Infrastruktur-Audit. Expertenberatung zu Serverless, Analytics und KI-Marketing."
+    },
+    "consultation": {
+      "title": "Kostenlose 30-minütige Beratung — Cloudless",
+      "description": "Wählen Sie einen freien Termin für eine kostenlose 30-minütige Beratung. Senior-Engineer-Review Ihrer Cloud-, Automatisierungs- oder KI-Umgebung — Sie gehen mit einem konkreten Plan."
     },
     "store": {
       "title": "Shop",
