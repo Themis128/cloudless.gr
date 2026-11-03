@@ -202,6 +202,38 @@
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "privacyConsent": "J'accepte que mes données soient traitées pour répondre à ma demande, comme décrit dans la"
   },
+  "consultation": {
+    "title": "Réservez votre consultation gratuite.",
+    "subtitle": "30 minutes avec un ingénieur senior — pas un commercial. Choisissez le créneau qui vous convient.",
+    "pickSlot": "Choisissez un horaire",
+    "timezoneNote": "Tous les horaires sont affichés en heure d'Athènes (EET).",
+    "loading": "Chargement des disponibilités…",
+    "noSlots": "Aucun créneau libre dans les deux prochaines semaines — essayez le formulaire de contact et nous trouverons un horaire manuellement.",
+    "unavailable": "La réservation en ligne n'est pas disponible pour le moment.",
+    "unavailableCta": "Écrivez-nous plutôt →",
+    "name": "Nom",
+    "email": "Email",
+    "notes": "Que devons-nous préparer ? (optionnel)",
+    "notesPlaceholder": "ex. tableaux de bord lents, facture cloud en hausse, automatisation marketing…",
+    "consent": "J'accepte que mes données soient utilisées pour organiser cette consultation, comme décrit dans la",
+    "submit": "Confirmer la réservation",
+    "sending": "Réservation…",
+    "confirmed": "C'est réservé !",
+    "confirmedDesc": "Une invitation calendrier est en route vers votre boîte de réception.",
+    "viewBooking": "Voir les détails de la réservation →",
+    "error": "Une erreur est survenue. Réessayez ou écrivez à",
+    "back": "← Retour aux créneaux",
+    "whatToExpect": "Déroulement",
+    "step1": "Choisissez un créneau",
+    "step1Desc": "Disponibilités en direct — choisissez n'importe quelle fenêtre de 30 minutes ouverte.",
+    "step2": "Rendez-vous en vidéo",
+    "step2Desc": "Vous recevez instantanément une invitation calendrier + lien de réunion.",
+    "step3": "Repartez avec un plan",
+    "step3Desc": "Prochaines étapes concrètes, périmètre honnête, zéro pression.",
+    "preferWriting": "Vous préférez écrire ?",
+    "preferWritingDesc": "Parlez-nous de votre projet via le formulaire de contact et nous répondrons sous 24 heures."
+  },
+
   "store": {
     "title": "Nos Produits",
     "subtitle": "Produits numériques et services pour accélérer votre croissance.",
@@ -483,6 +515,10 @@
       "title": "Contact",
       "description": "Contactez-nous pour un audit gratuit de votre infrastructure cloud. Conseil expert en serverless, analytics et marketing IA."
     },
+    "consultation": {
+      "title": "Consultation gratuite de 30 minutes — Cloudless",
+      "description": "Choisissez un créneau en direct pour une consultation gratuite de 30 minutes. Revue de votre cloud, automatisation ou stack IA par un ingénieur senior — repartez avec un plan concret."
+    },
     "store": {
       "title": "Boutique",
       "description": "Forfaits premium de cloud computing, serverless et marketing IA. Tarifs transparents, sans engagement."
@@ -494,6 +530,10 @@
     "partners": {
       "title": "Partenariat avec Cloudless — Sponsoring & Brand Deals",
       "description": "Contenu sponsorisé, démos produit et partenariats de marque avec une audience de niche engagée de fondateurs et ingénieurs. Media kit inclus."
+    },
+    "audit": {
+      "title": "Bilan Tech Gratuit 30 min — Cloudless",
+      "description": "Réservez un bilan tech gratuit de 30 min. Nous trouvons vos fuites de coûts logiciels — sans pitch."
     }
   },
   "playbook": {
@@ -583,5 +623,36 @@
     "starterTerms": "50% d'acompte pour bloquer la date · 50% à la livraison J+14",
     "starterCta": "Commencer par un audit gratuit",
     "starterCtaAria": "Commencer par un appel d'audit gratuit"
+  },
+  "auditPage": {
+    "badge": "BILAN TECH GRATUIT 30 MIN",
+    "title": "Nous aidons les startups et PME à corriger les tâches lentes et les factures logicielles élevées.",
+    "subtitle": "Chez Cloudless, nous concevons des sites simples, l'hébergement et des systèmes marketing automatisés en 14 jours. Vous possédez tout — dès 800 €.",
+    "problemTitle": "Pourquoi les systèmes traditionnels vous freinent",
+    "probA": "Tâches Quotidiennes Lentes",
+    "probADesc": "Votre équipe perd des heures chaque semaine en saisies manuelles, outils cassés et opérations lourdes.",
+    "probB": "Factures Logicielles Explosives",
+    "probBDesc": "Les abonnements cachés et licences redondantes grignotent vos profits.",
+    "probC": "Pièges des Retainers d'Agence",
+    "probCDesc": "Coincé dans des retainers mensuels ou à courir après des freelances injoignables.",
+    "philosophyTitle": "Le Blueprint Cloudless",
+    "p1Metric": "Livraison en 14 Jours",
+    "p1Desc": "Votre site et vos automatisations sont construits, testés et en ligne en deux semaines.",
+    "p2Metric": "Propriété 100%",
+    "p2Desc": "Chaque ligne de code et chaque config vous appartient. Zéro lock-in.",
+    "p3Metric": "Tarifs Transparents",
+    "p3Desc": "Setups dès 800 €. Exécution fractionnée complète à 3 600 €/mois.",
+    "formIntro": "Pas de pitch — un simple plan d'action. Trouvons vos quick wins aujourd'hui.",
+    "formName": "Votre nom",
+    "formEmail": "Email professionnel *",
+    "formGoal": "Quel projet ou tâche devez-vous accomplir maintenant ? *",
+    "formPain": "Qu'est-ce qui le rend difficile ou chronophage ? (Factures élevées, outils lents, manque de temps ?) *",
+    "formTimeline": "Quand ce système doit-il absolument fonctionner ? *",
+    "formSubmit": "Réserver le Bilan Tech Gratuit",
+    "formSending": "Réservation…",
+    "formDone": "Réservé — vérifiez votre boîte mail.",
+    "formError": "Une erreur est survenue — réessayez.",
+    "formConsent": "J'accepte que mes données soient traitées pour organiser et préparer cet appel d'audit, comme décrit dans la",
+    "formFootnote": "Sans CB. Sans engagement. Le plan vous appartient."
   }
 }

@@ -202,6 +202,38 @@
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "privacyConsent": "Ich stimme zu, dass meine Daten verarbeitet werden, um auf meine Anfrage zu antworten, wie in der"
   },
+  "consultation": {
+    "title": "Buchen Sie Ihre kostenlose Beratung.",
+    "subtitle": "30 Minuten mit einem Senior-Engineer — kein Verkäufer. Wählen Sie den passenden Termin.",
+    "pickSlot": "Zeit wählen",
+    "timezoneNote": "Alle Zeiten in Athener Zeit (EET) angezeigt.",
+    "loading": "Verfügbarkeit wird geladen…",
+    "noSlots": "Keine freien Termine in den nächsten zwei Wochen — nutzen Sie das Kontaktformular und wir finden manuell einen Termin.",
+    "unavailable": "Online-Buchung ist derzeit nicht verfügbar.",
+    "unavailableCta": "Schreiben Sie uns stattdessen →",
+    "name": "Name",
+    "email": "E-Mail",
+    "notes": "Was sollen wir vorbereiten? (optional)",
+    "notesPlaceholder": "z. B. langsame Dashboards, steigende Cloud-Rechnung, Marketing-Automatisierung…",
+    "consent": "Ich stimme zu, dass meine Daten zur Terminvereinbarung dieser Beratung verwendet werden, wie in der",
+    "submit": "Buchung bestätigen",
+    "sending": "Buchung läuft…",
+    "confirmed": "Gebucht!",
+    "confirmedDesc": "Eine Kalendereinladung ist unterwegs in Ihr Postfach.",
+    "viewBooking": "Buchungsdetails ansehen →",
+    "error": "Etwas ist schiefgelaufen. Bitte erneut versuchen oder E-Mail an",
+    "back": "← Zurück zu den Terminen",
+    "whatToExpect": "Ablauf",
+    "step1": "Termin wählen",
+    "step1Desc": "Live-Verfügbarkeit — wählen Sie ein beliebiges freies 30-Minuten-Fenster.",
+    "step2": "Per Video treffen",
+    "step2Desc": "Sie erhalten sofort eine Kalendereinladung + Meeting-Link.",
+    "step3": "Mit einem Plan gehen",
+    "step3Desc": "Konkrete nächste Schritte, ehrlicher Umfang, null Druck.",
+    "preferWriting": "Lieber schriftlich?",
+    "preferWritingDesc": "Erzählen Sie uns im Kontaktformular von Ihrem Projekt — wir antworten innerhalb von 24 Stunden."
+  },
+
   "store": {
     "title": "Unsere Produkte",
     "subtitle": "Digitale Produkte und Dienstleistungen für schnelleres Wachstum.",
@@ -483,6 +515,10 @@
       "title": "Kontakt",
       "description": "Kontaktieren Sie uns für ein kostenloses Cloud-Infrastruktur-Audit. Expertenberatung zu Serverless, Analytics und KI-Marketing."
     },
+    "consultation": {
+      "title": "Kostenlose 30-minütige Beratung — Cloudless",
+      "description": "Wählen Sie einen freien Termin für eine kostenlose 30-minütige Beratung. Senior-Engineer-Review Ihrer Cloud-, Automatisierungs- oder KI-Umgebung — Sie gehen mit einem konkreten Plan."
+    },
     "store": {
       "title": "Shop",
       "description": "Premium Cloud Computing, Serverless und KI-Marketing-Servicepakete. Transparente Preise, keine Bindung."
@@ -494,6 +530,10 @@
     "partners": {
       "title": "Partnerschaft mit Cloudless — Sponsoring & Brand Deals",
       "description": "Gesponserter Content, Produkt-Walkthroughs und Markenpartnerschaften mit einem engagierten Nischenpublikum aus Gründern und Ingenieuren. Media Kit inklusive."
+    },
+    "audit": {
+      "title": "Gratis 30-Min Tech Checkup — Cloudless",
+      "description": "Buchen Sie einen gratis 30-Minuten Tech Checkup. Wir finden Ihre Software-Kostenlecks — ohne Pitch."
     }
   },
   "playbook": {
@@ -583,5 +623,36 @@
     "starterTerms": "50% Anzahlung reserviert den Termin · 50% bei Fertigstellung an Tag 14",
     "starterCta": "Mit gratis Audit starten",
     "starterCtaAria": "Mit einem kostenlosen Audit-Gespräch starten"
+  },
+  "auditPage": {
+    "badge": "GRATIS 30-MIN TECH CHECKUP",
+    "title": "Wir helfen Startups und kleinen Unternehmen, langsame Routineaufgaben und hohe Softwarekosten zu beheben.",
+    "subtitle": "Bei Cloudless bauen wir einfache Websites, Hosting und automatische Marketing-Systeme in 14 Tagen. Alles gehört Ihnen — ab 800 €.",
+    "problemTitle": "Warum traditionelle Systeme Sie ausbremsen",
+    "probA": "Langsame Tagesaufgaben",
+    "probADesc": "Ihr Team verliert wöchentlich Stunden mit manuellen Einträgen, kaputten Tools und umständlichen Abläufen.",
+    "probB": "Explodierende Softwarekosten",
+    "probBDesc": "Versteckte Abos und doppelte Lizenzen fressen leise Ihren Gewinn.",
+    "probC": "Agentur-Retainer-Fallen",
+    "probCDesc": "Festgefahren in endlosen Monats-Retainers oder hinter unzuverlässigen Freelancern her.",
+    "philosophyTitle": "Der Cloudless Blueprint",
+    "p1Metric": "14-Tage-Lieferung",
+    "p1Desc": "Website und Automationen werden in zwei Wochen gebaut, getestet und live geschaltet.",
+    "p2Metric": "100% Eigentum",
+    "p2Desc": "Jede Zeile Code und jede Config gehört Ihnen. Kein Lock-in.",
+    "p3Metric": "Transparente Preise",
+    "p3Desc": "Setups ab 800 €. Vollumfängliche Ausführung 3.600 €/Monat.",
+    "formIntro": "Kein Pitch — nur ein einfacher Aktionsplan. Finden wir heute Ihre Quick Wins.",
+    "formName": "Ihr Name",
+    "formEmail": "Geschäftliche E-Mail *",
+    "formGoal": "Welches Projekt oder welche Aufgabe müssen Sie jetzt erledigen? *",
+    "formPain": "Was macht es schwierig oder zeitraubend? (Hohe Kosten, langsame Tools, Zeitmangel?) *",
+    "formTimeline": "Wann muss dieses Setup unbedingt laufen? *",
+    "formSubmit": "Gratis Tech Checkup buchen",
+    "formSending": "Wird gebucht…",
+    "formDone": "Gebucht — prüfen Sie Ihren Posteingang.",
+    "formError": "Etwas ist schiefgelaufen — bitte erneut versuchen.",
+    "formConsent": "Ich stimme zu, dass meine Daten zur Vereinbarung und Vorbereitung dieses Audit-Gesprächs verarbeitet werden, wie in der",
+    "formFootnote": "Keine Karte. Keine Verpflichtung. Der Plan gehört Ihnen."
   }
 }

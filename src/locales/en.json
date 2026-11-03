@@ -202,6 +202,38 @@
     "error": "Something went wrong. Please try again.",
     "privacyConsent": "I agree that my data will be processed to respond to my enquiry, as described in the"
   },
+  "consultation": {
+    "title": "Book your free consultation.",
+    "subtitle": "30 minutes with a senior engineer — not a salesperson. Pick a slot that works for you.",
+    "pickSlot": "Choose a time",
+    "timezoneNote": "All times shown in Athens time (EET).",
+    "loading": "Loading availability…",
+    "noSlots": "No open slots in the next two weeks — try the contact form and we'll find a time manually.",
+    "unavailable": "Online booking isn't available right now.",
+    "unavailableCta": "Message us instead →",
+    "name": "Name",
+    "email": "Email",
+    "notes": "What should we prepare for? (optional)",
+    "notesPlaceholder": "e.g. slow dashboards, rising cloud bill, marketing automation…",
+    "consent": "I agree that my details will be used to arrange this consultation, as described in the",
+    "submit": "Confirm booking",
+    "sending": "Booking…",
+    "confirmed": "You're booked!",
+    "confirmedDesc": "A calendar invite is on its way to your inbox.",
+    "viewBooking": "View booking details →",
+    "error": "Something went wrong. Please try again or email",
+    "back": "← Back to slots",
+    "whatToExpect": "What happens",
+    "step1": "Pick a slot",
+    "step1Desc": "Live availability — choose any open 30-minute window.",
+    "step2": "Meet on video",
+    "step2Desc": "You get a calendar invite + meeting link instantly.",
+    "step3": "Leave with a plan",
+    "step3Desc": "Concrete next steps, honest scope, zero pressure.",
+    "preferWriting": "Prefer writing?",
+    "preferWritingDesc": "Tell us about your project in the contact form and we'll reply within 24 hours."
+  },
+
   "store": {
     "title": "Our Products",
     "subtitle": "Digital products and services to accelerate your growth.",
@@ -483,6 +515,10 @@
       "title": "Contact",
       "description": "Get in touch for a free cloud infrastructure audit. Expert guidance on serverless, analytics, and AI marketing."
     },
+    "consultation": {
+      "title": "Book a Free 30-Minute Consultation — Cloudless",
+      "description": "Pick a live slot for a free 30-minute consultation. Senior-engineer review of your cloud, automation, or AI setup — leave with a concrete plan."
+    },
     "store": {
       "title": "Store",
       "description": "cloud computing, serverless, and AI marketing service packages. Transparent pricing, no lock-in."
@@ -494,6 +530,10 @@
     "partners": {
       "title": "Partner with Cloudless — Sponsorships & Brand Deals",
       "description": "Sponsored content, product walkthroughs, and brand partnerships with an engaged niche audience of founders and engineers. Media kit and formats inside."
+    },
+    "audit": {
+      "title": "Free 30-Minute Tech Checkup — Cloudless",
+      "description": "Book a free 30-minute tech checkup. We review your setup, find the software cost leaks, and hand you a concrete action plan — no sales pitch."
     }
   },
   "playbook": {
@@ -583,5 +623,36 @@
     "starterTerms": "50% deposit locks the date · 50% on Day 14 completion",
     "starterCta": "Start with a free audit",
     "starterCtaAria": "Start with a free audit call"
+  },
+  "auditPage": {
+    "badge": "FREE 30-MINUTE TECH CHECKUP",
+    "title": "We help startups and small businesses fix slow daily tasks and high software bills.",
+    "subtitle": "At Cloudless, we design easy websites, hosting, and automatic marketing systems in just 14 days flat. You own everything we make, and investments start at only €800.",
+    "problemTitle": "Why traditional systems drag you down",
+    "probA": "Slow Daily Tasks",
+    "probADesc": "Your team loses hours every week on manual data entries, broken tools, and clunky day-to-day operations.",
+    "probB": "Skyrocketing Software Bills",
+    "probBDesc": "Hidden monthly subscription fees and overlapping software licenses quietly eat into your hard-earned profits.",
+    "probC": "Agency Retainer Traps",
+    "probCDesc": "Getting trapped in open-ended monthly agency retainers or constantly chasing unreliable freelancers who do not reply.",
+    "philosophyTitle": "The Cloudless Architecture Blueprint",
+    "p1Metric": "14-Day Delivery",
+    "p1Desc": "Your custom high-converting website and background automations are fully built, tested, and pushed live by week two.",
+    "p2Metric": "100% Ownership",
+    "p2Desc": "You own every single line of code and backend configuration we make. No forced ongoing tech lock-ins.",
+    "p3Metric": "Transparent Rates",
+    "p3Desc": "Single platform setups start at a flat rate of only €800. Complete fractional tech execution at €3,600 a month.",
+    "formIntro": "No sales pitch, just a simple action plan. Let's find your quick wins today.",
+    "formName": "Your name",
+    "formEmail": "Work email *",
+    "formGoal": "What project or task do you need to get done right now? *",
+    "formPain": "What is making that hard or taking too much time? (High bills, slow tools, lack of time?) *",
+    "formTimeline": "When do you absolutely need this setup running smoothly? *",
+    "formSubmit": "Book Your Free 30-Minute Tech Checkup",
+    "formSending": "Booking…",
+    "formDone": "Booked — check your inbox. We'll confirm your slot shortly.",
+    "formError": "Something went wrong — please try again.",
+    "formConsent": "I agree that my data will be processed to arrange and prepare this audit call, as described in the",
+    "formFootnote": "No credit card. No obligation. You keep the plan either way."
   }
 }
