@@ -15,7 +15,7 @@
       "new_classes": ["LeadFollowup", "BookingSlot", "WebhookDedup"]
     }
   ],
-  "observability": { "logpush": true },
+  "observability": { "enabled": true, "logs": { "enabled": true } },
   "vars": {
     "WORKER_NAME": "lead-scheduler",
     // Where an alarm dispatch is forwarded (mail-outbound worker or

@@ -16,7 +16,7 @@
       "name": "SEND_EMAIL",
     },
   ],
-  "observability": { "logpush": true },
+  "observability": { "enabled": true, "logs": { "enabled": true } },
   "vars": {
     "WORKER_NAME": "mail-outbound",
   },
