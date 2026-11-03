@@ -249,7 +249,10 @@ export class WebhookDedup extends DurableObject<Env> {
 		for (const [key, expiresAt] of entries) {
 			if (typeof expiresAt !== "number" || expiresAt <= now) expired.push(key);
 		}
-		if (expired.length > 0) await this.ctx.storage.delete(expired);
+		// DO storage.delete() accepts at most 128 keys per call — chunk.
+		for (let i = 0; i < expired.length; i += 128) {
+			await this.ctx.storage.delete(expired.slice(i, i + 128));
+		}
 		if (expired.length < entries.size) {
 			await this.ctx.storage.setAlarm(now + WebhookDedup.SWEEP_MS);
 		}
