@@ -494,6 +494,10 @@
     "partners": {
       "title": "Partner with Cloudless — Sponsorships & Brand Deals",
       "description": "Sponsored content, product walkthroughs, and brand partnerships with an engaged niche audience of founders and engineers. Media kit and formats inside."
+    },
+    "audit": {
+      "title": "Free 30-Minute Tech Checkup — Cloudless",
+      "description": "Book a free 30-minute tech checkup. We review your setup, find the software cost leaks, and hand you a concrete action plan — no sales pitch."
     }
   },
   "playbook": {
@@ -583,5 +587,35 @@
     "starterTerms": "50% deposit locks the date · 50% on Day 14 completion",
     "starterCta": "Start with a free audit",
     "starterCtaAria": "Start with a free audit call"
+  },
+  "auditPage": {
+    "badge": "FREE 30-MINUTE TECH CHECKUP",
+    "title": "We help startups and small businesses fix slow daily tasks and high software bills.",
+    "subtitle": "At Cloudless, we design easy websites, hosting, and automatic marketing systems in just 14 days flat. You own everything we make, and investments start at only €800.",
+    "problemTitle": "Why traditional systems drag you down",
+    "probA": "Slow Daily Tasks",
+    "probADesc": "Your team loses hours every week on manual data entries, broken tools, and clunky day-to-day operations.",
+    "probB": "Skyrocketing Software Bills",
+    "probBDesc": "Hidden monthly subscription fees and overlapping software licenses quietly eat into your hard-earned profits.",
+    "probC": "Agency Retainer Traps",
+    "probCDesc": "Getting trapped in open-ended monthly agency retainers or constantly chasing unreliable freelancers who do not reply.",
+    "philosophyTitle": "The Cloudless Architecture Blueprint",
+    "p1Metric": "14-Day Delivery",
+    "p1Desc": "Your custom high-converting website and background automations are fully built, tested, and pushed live by week two.",
+    "p2Metric": "100% Ownership",
+    "p2Desc": "You own every single line of code and backend configuration we make. No forced ongoing tech lock-ins.",
+    "p3Metric": "Transparent Rates",
+    "p3Desc": "Single platform setups start at a flat rate of only €800. Complete fractional tech execution at €3,600 a month.",
+    "formIntro": "No sales pitch, just a simple action plan. Let's find your quick wins today.",
+    "formName": "Your name",
+    "formEmail": "Work email *",
+    "formGoal": "What project or task do you need to get done right now? *",
+    "formPain": "What is making that hard or taking too much time? (High bills, slow tools, lack of time?) *",
+    "formTimeline": "When do you absolutely need this setup running smoothly? *",
+    "formSubmit": "Book Your Free 30-Minute Tech Checkup",
+    "formSending": "Booking…",
+    "formDone": "Booked — check your inbox. We'll confirm your slot shortly.",
+    "formError": "Something went wrong — please try again.",
+    "formFootnote": "No credit card. No obligation. You keep the plan either way."
   }
 }

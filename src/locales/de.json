@@ -494,6 +494,10 @@
     "partners": {
       "title": "Partnerschaft mit Cloudless — Sponsoring & Brand Deals",
       "description": "Gesponserter Content, Produkt-Walkthroughs und Markenpartnerschaften mit einem engagierten Nischenpublikum aus Gründern und Ingenieuren. Media Kit inklusive."
+    },
+    "audit": {
+      "title": "Gratis 30-Min Tech Checkup — Cloudless",
+      "description": "Buchen Sie einen gratis 30-Minuten Tech Checkup. Wir finden Ihre Software-Kostenlecks — ohne Pitch."
     }
   },
   "playbook": {
@@ -583,5 +587,35 @@
     "starterTerms": "50% Anzahlung reserviert den Termin · 50% bei Fertigstellung an Tag 14",
     "starterCta": "Mit gratis Audit starten",
     "starterCtaAria": "Mit einem kostenlosen Audit-Gespräch starten"
+  },
+  "auditPage": {
+    "badge": "GRATIS 30-MIN TECH CHECKUP",
+    "title": "Wir helfen Startups und kleinen Unternehmen, langsame Routineaufgaben und hohe Softwarekosten zu beheben.",
+    "subtitle": "Bei Cloudless bauen wir einfache Websites, Hosting und automatische Marketing-Systeme in 14 Tagen. Alles gehört Ihnen — ab 800 €.",
+    "problemTitle": "Warum traditionelle Systeme Sie ausbremsen",
+    "probA": "Langsame Tagesaufgaben",
+    "probADesc": "Ihr Team verliert wöchentlich Stunden mit manuellen Einträgen, kaputten Tools und umständlichen Abläufen.",
+    "probB": "Explodierende Softwarekosten",
+    "probBDesc": "Versteckte Abos und doppelte Lizenzen fressen leise Ihren Gewinn.",
+    "probC": "Agentur-Retainer-Fallen",
+    "probCDesc": "Festgefahren in endlosen Monats-Retainers oder hinter unzuverlässigen Freelancern her.",
+    "philosophyTitle": "Der Cloudless Blueprint",
+    "p1Metric": "14-Tage-Lieferung",
+    "p1Desc": "Website und Automationen werden in zwei Wochen gebaut, getestet und live geschaltet.",
+    "p2Metric": "100% Eigentum",
+    "p2Desc": "Jede Zeile Code und jede Config gehört Ihnen. Kein Lock-in.",
+    "p3Metric": "Transparente Preise",
+    "p3Desc": "Setups ab 800 €. Vollumfängliche Ausführung 3.600 €/Monat.",
+    "formIntro": "Kein Pitch — nur ein einfacher Aktionsplan. Finden wir heute Ihre Quick Wins.",
+    "formName": "Ihr Name",
+    "formEmail": "Geschäftliche E-Mail *",
+    "formGoal": "Welches Projekt oder welche Aufgabe müssen Sie jetzt erledigen? *",
+    "formPain": "Was macht es schwierig oder zeitraubend? (Hohe Kosten, langsame Tools, Zeitmangel?) *",
+    "formTimeline": "Wann muss dieses Setup unbedingt laufen? *",
+    "formSubmit": "Gratis Tech Checkup buchen",
+    "formSending": "Wird gebucht…",
+    "formDone": "Gebucht — prüfen Sie Ihren Posteingang.",
+    "formError": "Etwas ist schiefgelaufen — bitte erneut versuchen.",
+    "formFootnote": "Keine Karte. Keine Verpflichtung. Der Plan gehört Ihnen."
   }
 }

@@ -494,6 +494,10 @@
     "partners": {
       "title": "Partenariat avec Cloudless — Sponsoring & Brand Deals",
       "description": "Contenu sponsorisé, démos produit et partenariats de marque avec une audience de niche engagée de fondateurs et ingénieurs. Media kit inclus."
+    },
+    "audit": {
+      "title": "Bilan Tech Gratuit 30 min — Cloudless",
+      "description": "Réservez un bilan tech gratuit de 30 min. Nous trouvons vos fuites de coûts logiciels — sans pitch."
     }
   },
   "playbook": {
@@ -583,5 +587,35 @@
     "starterTerms": "50% d'acompte pour bloquer la date · 50% à la livraison J+14",
     "starterCta": "Commencer par un audit gratuit",
     "starterCtaAria": "Commencer par un appel d'audit gratuit"
+  },
+  "auditPage": {
+    "badge": "BILAN TECH GRATUIT 30 MIN",
+    "title": "Nous aidons les startups et PME à corriger les tâches lentes et les factures logicielles élevées.",
+    "subtitle": "Chez Cloudless, nous concevons des sites simples, l'hébergement et des systèmes marketing automatisés en 14 jours. Vous possédez tout — dès 800 €.",
+    "problemTitle": "Pourquoi les systèmes traditionnels vous freinent",
+    "probA": "Tâches Quotidiennes Lentes",
+    "probADesc": "Votre équipe perd des heures chaque semaine en saisies manuelles, outils cassés et opérations lourdes.",
+    "probB": "Factures Logicielles Explosives",
+    "probBDesc": "Les abonnements cachés et licences redondantes grignotent vos profits.",
+    "probC": "Pièges des Retainers d'Agence",
+    "probCDesc": "Coincé dans des retainers mensuels ou à courir après des freelances injoignables.",
+    "philosophyTitle": "Le Blueprint Cloudless",
+    "p1Metric": "Livraison en 14 Jours",
+    "p1Desc": "Votre site et vos automatisations sont construits, testés et en ligne en deux semaines.",
+    "p2Metric": "Propriété 100%",
+    "p2Desc": "Chaque ligne de code et chaque config vous appartient. Zéro lock-in.",
+    "p3Metric": "Tarifs Transparents",
+    "p3Desc": "Setups dès 800 €. Exécution fractionnée complète à 3 600 €/mois.",
+    "formIntro": "Pas de pitch — un simple plan d'action. Trouvons vos quick wins aujourd'hui.",
+    "formName": "Votre nom",
+    "formEmail": "Email professionnel *",
+    "formGoal": "Quel projet ou tâche devez-vous accomplir maintenant ? *",
+    "formPain": "Qu'est-ce qui le rend difficile ou chronophage ? (Factures élevées, outils lents, manque de temps ?) *",
+    "formTimeline": "Quand ce système doit-il absolument fonctionner ? *",
+    "formSubmit": "Réserver le Bilan Tech Gratuit",
+    "formSending": "Réservation…",
+    "formDone": "Réservé — vérifiez votre boîte mail.",
+    "formError": "Une erreur est survenue — réessayez.",
+    "formFootnote": "Sans CB. Sans engagement. Le plan vous appartient."
   }
 }
