@@ -31,7 +31,29 @@ const CATEGORIES = new Set([
 	"ops-alert",
 ]);
 
-const DEFAULT_FROM = "Cloudless <no-reply@cloudless.gr>";
+/**
+ * Sender defaults. `DEFAULT_FROM_ADDR` must stay a bare address: it is
+ * used both for the MIME `From` header (via `setSender`, which adds the
+ * display name itself) and for the SMTP envelope sender passed to
+ * `EmailMessage`, which rejects display-name forms.
+ */
+const DEFAULT_FROM_ADDR = "no-reply@cloudless.gr";
+const DEFAULT_FROM_NAME = "Cloudless";
+
+/**
+ * Accepts either a bare address (`no-reply@cloudless.gr`) or an RFC 5322
+ * display-name form (`Cloudless <no-reply@cloudless.gr>`) and always
+ * returns the two parts separately, so a configured `DEFAULT_FROM` in
+ * either shape can never corrupt the header or the envelope sender.
+ */
+function parseSender(value: string): { name: string; addr: string } {
+	const withName = /^\s*(?:"([^"]*)"|([^<>]*?))\s*<\s*([^<>\s]+)\s*>\s*$/.exec(value);
+	if (withName) {
+		const name = (withName[1] ?? withName[2] ?? "").trim();
+		return { name: name || DEFAULT_FROM_NAME, addr: withName[3] };
+	}
+	return { name: DEFAULT_FROM_NAME, addr: value.trim() };
+}
 
 function json(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
@@ -57,14 +79,16 @@ type SendBody = {
 };
 
 async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> & SendBody) {
+	const sender = parseSender(b.from ?? env.DEFAULT_FROM ?? DEFAULT_FROM_ADDR);
 	const msg = createMimeMessage();
-	msg.setSender({ name: "Cloudless", addr: b.from ?? env.DEFAULT_FROM ?? DEFAULT_FROM });
+	msg.setSender(sender);
 	msg.setRecipient(b.to);
 	msg.setSubject(b.subject);
 	if (b.replyTo) msg.setHeader("Reply-To", b.replyTo);
 	msg.addMessage({ contentType: "text/plain", data: b.text ?? "" });
 	if (b.html) msg.addMessage({ contentType: "text/html", data: b.html });
-	const raw = new EmailMessage(b.from ?? env.DEFAULT_FROM ?? DEFAULT_FROM, b.to, msg.asRaw());
+	// Envelope sender must be the bare address, never "Name <addr>".
+	const raw = new EmailMessage(sender.addr, b.to, msg.asRaw());
 	await env.SEND_EMAIL.send(raw);
 }
 

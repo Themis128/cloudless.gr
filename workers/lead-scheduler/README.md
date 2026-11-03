@@ -7,8 +7,19 @@ Durable Objects powering funnel timing + consistency (paid plan feature).
 | Class | Route | Purpose |
 |---|---|---|
 | `LeadFollowup` | `/do/followup/<leadId>/enroll` `/unsubscribe` `/status` | Quiet-lead 24h/3d/7d cadence via `alarm()` — serverless version of the manifest follow-up. Dispatches through `DISPATCH_URL` (mail-outbound). |
-| `BookingSlot` | `/do/slot/<key>/hold?slot=..&ttl=..` `/release` | Atomic slot holds for the /audit calendar — a hold succeeds exactly once until expiry/release. |
-| `WebhookDedup` | `/do/dedup/<key>/` `{eventId}` | 7-day TTL seen-cache — `firstSeen:false` on replays (Meta leads, Slack, Stripe). |
+| `BookingSlot` | `/do/slot/<key>/hold?slot=..&ttl=..` `/release` | Atomic slot holds for the /audit calendar — a hold succeeds exactly once until expiry/release. `ttl` is in seconds, must be `1..86400`, defaults to 900; anything else is a `400`. |
+| `WebhookDedup` | `/do/dedup/<key>/` `{eventId}` | 7-day TTL seen-cache — `firstSeen:false` on replays (Meta leads, Slack, Stripe). Expired keys are swept by a daily `alarm()`, so storage stays bounded. |
+
+## Delivery semantics
+
+- `enroll` is idempotent: re-enrolling a lead with an alarm already armed
+  does **not** reschedule it, so duplicate form submits cannot postpone
+  the cadence.
+- `alarm()` only advances `step` after the dispatch returns `2xx`. A
+  failed or unconfigured dispatch retries hourly up to 6 times, then the
+  lead is parked with `lastError` instead of silently skipping the mail.
+- After the awaited dispatch, the lead record is re-read before the next
+  step is written — a concurrent `/unsubscribe` is never overwritten.
 
 ## Setup
 

@@ -5,17 +5,34 @@
   // send_email binding — transactional funnel mail (audit-confirm,
   // nurture, quiet-lead, loa-delivery, playbook, ops-alert). Bulk
   // marketing stays on ActiveCampaign — categories are allowlisted.
+  //
+  // The production binding is unrestricted: callers pass their own `to`
+  // and real leads live across every category. A `destination_address`
+  // binding is restricted to a single recipient and would make every
+  // production /send fail, so it only exists in the `dev` environment
+  // below, where it acts as the safety net for `wrangler dev`.
   "send_email": [
     {
       "name": "SEND_EMAIL",
-      // destination_address required for dev/test sends; production
-      // callers pass their own `to` — the binding value is the safety
-      // net for wrangler dev only.
-      "destination_address": "tbaltzakis@cloudless.gr",
     },
   ],
   "observability": { "logpush": true },
   "vars": {
     "WORKER_NAME": "mail-outbound",
+  },
+  "env": {
+    // wrangler dev / wrangler deploy --env dev — sends can only ever
+    // reach the verification inbox.
+    "dev": {
+      "send_email": [
+        {
+          "name": "SEND_EMAIL",
+          "destination_address": "tbaltzakis@cloudless.gr",
+        },
+      ],
+      "vars": {
+        "WORKER_NAME": "mail-outbound-dev",
+      },
+    },
   },
 }
