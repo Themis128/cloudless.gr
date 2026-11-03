@@ -15,6 +15,9 @@ on:
     paths:
       - migrations/*.sql
       - workers/pi-origin-proxy/**
+      - workers/mail-outbound/**
+      - workers/lead-scheduler/**
+      - workers/funnel-events/**
       - scripts/cf-tunnel-set-pi-origin.py
       - wrangler.jsonc
       - package.json
@@ -134,6 +137,36 @@ jobs:
             exit 0
           fi
           exit "$code"
+
+      - name: Deploy funnel workers (mail-outbound, lead-scheduler, funnel-events)
+        # Same soft-skip as the proxy: warn on token-scope failure (API 10000)
+        # instead of failing the run — deploys may be done locally meanwhile.
+        # Worker secrets (MAIL_OUTBOUND_TOKEN, EVENTS_TOKEN, DO auth) are set
+        # out-of-band via `wrangler secret put` — never in the workflow.
+        run: |
+          set -euo pipefail
+          for cfg in workers/mail-outbound/wrangler.jsonc \
+                     workers/lead-scheduler/wrangler.jsonc \
+                     workers/funnel-events/wrangler.jsonc; do
+            if [ ! -f "$cfg" ]; then
+              echo "::notice::$cfg not present — skipping (worker not merged yet)"
+              continue
+            fi
+            name=$(basename "$(dirname "$cfg")")
+            set +e
+            npx wrangler deploy --config "$cfg" --minify 2>&1 | tee "/tmp/cf-${name}-deploy.log"
+            code=${PIPESTATUS[0]}
+            set -e
+            if [ "$code" -eq 0 ]; then
+              echo "OK  $name deployed"
+              continue
+            fi
+            if grep -qE '10000|Authentication error|Not authorized|Unauthorized|No access to the specified resource' "/tmp/cf-${name}-deploy.log"; then
+              echo "::warning::$name deploy skipped — token lacks Workers Scripts Write (API 10000). Deploy locally: npx wrangler deploy --config $cfg --minify"
+              continue
+            fi
+            exit "$code"
+          done
 
       - name: Optional OpenNext attempt (manual only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.try_opennext ==
