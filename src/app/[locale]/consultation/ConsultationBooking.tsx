@@ -117,9 +117,10 @@ export default function ConsultationBooking() {
         setStatus(BOOK_ERROR);
         // The slot may have just been taken — refresh availability and
         // drop the selection if it is no longer offered.
-        const res2 = await fetch(`/api/calendar/availability?days=${MAX_DAYS_AHEAD}`, {
-          cache: "no-store",
-        }).catch(() => null);
+        const res2 = await fetch(
+          `/api/calendar/availability?days=${MAX_DAYS_AHEAD}&_=${Date.now()}`,
+          { cache: "no-store" }
+        ).catch(() => null);
         if (res2?.ok) {
           // Refresh the picker so a just-taken slot is no longer offered.
           // Keep `selected` — clearing it would unmount the form and lose
@@ -347,7 +348,10 @@ export default function ConsultationBooking() {
             </button>
             <button
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={() => {
+                setSelected(null);
+                setStatus(BOOK_IDLE);
+              }}
               className="font-mono text-sm text-slate-400 transition-colors hover:text-white"
             >
               {t("consultation.back", "← Back to slots")}
