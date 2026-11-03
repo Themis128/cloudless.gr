@@ -1,0 +1,10 @@
+{
+  "name": "agent-sandbox",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Dynamic Workers spike — worker-loader runs allow-listed modules only,
+  // no fs/net egress in loaded code (binding-less).
+  "worker_loaders": [{ "binding": "LOADER" }],
+  "observability": { "logpush": true },
+  "vars": { "WORKER_NAME": "agent-sandbox" }
+}
