@@ -1,0 +1,20 @@
+{
+  "name": "mail-outbound",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // send_email binding — transactional funnel mail (audit-confirm,
+  // nurture, quiet-lead, loa-delivery, playbook, ops-alert). Bulk
+  // marketing stays on ActiveCampaign — categories are allowlisted.
+  "send_email": [
+    {
+      "name": "SEND_EMAIL",
+      // destination_address required for dev/test sends; production
+      // callers pass their own `to` — the binding value is the safety
+      // net for wrangler dev only.
+      "destination_address": "tbaltzakis@cloudless.gr",
+    },
+  ],
+  "vars": {
+    "WORKER_NAME": "mail-outbound",
+  },
+}

@@ -1,0 +1,18 @@
+{
+  "name": "funnel-events",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Pipelines binding → R2 (Iceberg tables, cloudless-datalake bucket,
+  // events/ prefix). Create the pipeline once via:
+  //   wrangler pipelines create cloudless-funnel-events \
+  //     --r2-bucket cloudless-datalake --compression gzip
+  "pipelines": [
+    {
+      "binding": "FUNNEL_PIPELINE",
+      "pipeline": "cloudless-funnel-events"
+    }
+  ],
+  "vars": {
+    "WORKER_NAME": "funnel-events"
+  }
+}
