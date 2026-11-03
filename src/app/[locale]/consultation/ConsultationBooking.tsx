@@ -123,7 +123,8 @@ export default function ConsultationBooking() {
         if (res2?.ok) {
           // Refresh the picker so a just-taken slot is no longer offered.
           // Keep `selected` — clearing it would unmount the form and lose
-          // the visitor's typed name/email plus this error alert.
+          // the visitor's typed name/email plus this error alert. A dead
+          // slot simply 409s again and refreshes once more.
           const fresh = ((await res2.json()) as { slots?: TimeSlot[] }).slots ?? [];
           setSlots(fresh);
         }
@@ -245,6 +246,14 @@ export default function ConsultationBooking() {
       </div>
 
       {/* Details form — appears once a slot is picked */}
+      {status === BOOK_ERROR && (
+        <p role="alert" className="text-neon-magenta font-mono text-sm">
+          {t("consultation.error", "Something went wrong. Please try again or email")}{" "}
+          <a href="mailto:tbaltzakis@cloudless.gr" className="text-neon-cyan underline">
+            tbaltzakis@cloudless.gr
+          </a>
+        </p>
+      )}
       {selected && (
         <form
           data-testid="booking-form"
@@ -325,15 +334,6 @@ export default function ConsultationBooking() {
               . *
             </label>
           </div>
-
-          {status === BOOK_ERROR && (
-            <p role="alert" className="text-neon-magenta font-mono text-sm">
-              {t("consultation.error", "Something went wrong. Please try again or email")}{" "}
-              <a href="mailto:tbaltzakis@cloudless.gr" className="text-neon-cyan underline">
-                tbaltzakis@cloudless.gr
-              </a>
-            </p>
-          )}
 
           <div className="flex flex-wrap items-center gap-4">
             <button
