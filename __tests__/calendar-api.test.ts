@@ -144,6 +144,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
+        privacyConsent: true,
       })
     );
     expect(res.status).toBe(503);
@@ -157,6 +158,21 @@ describe("POST /api/calendar/book", () => {
     expect(data).toHaveProperty("error");
   });
 
+  it("returns 400 when privacy consent is not given", async () => {
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(
+      bookRequest({
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
+        start: futureStart,
+        end: futureEnd,
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/consent/i);
+  });
+
   it("returns 400 for invalid email address", async () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
@@ -165,6 +181,7 @@ describe("POST /api/calendar/book", () => {
         email: "not-an-email",
         start: futureStart,
         end: futureEnd,
+        privacyConsent: true,
       })
     );
     expect(res.status).toBe(400);
@@ -180,6 +197,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: "2020-01-01T10:00:00Z",
         end: "2020-01-01T10:30:00Z",
+        privacyConsent: true,
       })
     );
     expect(res.status).toBe(400);
@@ -195,6 +213,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
+        privacyConsent: true,
         notes: "Looking forward to the call",
       })
     );
@@ -213,6 +232,7 @@ describe("POST /api/calendar/book", () => {
         email: "notify@example.com",
         start: futureStart,
         end: futureEnd,
+        privacyConsent: true,
       })
     );
     // Give the fire-and-forget promise a tick to resolve
@@ -240,6 +260,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
+        privacyConsent: true,
       })
     );
     expect(res.status).toBe(500);
@@ -281,6 +302,7 @@ describe("POST /api/calendar/book — tail branches", () => {
       email: TEST_USER_EMAIL,
       start: futureStart,
       end: futureEnd,
+      privacyConsent: true,
       ...over,
     });
 
@@ -288,9 +310,7 @@ describe("POST /api/calendar/book — tail branches", () => {
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(book({ start: "not-a-date" }));
     expect(res.status).toBe(400);
-    const res2 = await POST(
-      book({ start: futureEnd, end: futureStart })
-    );
+    const res2 = await POST(book({ start: futureEnd, end: futureStart }));
     expect(res2.status).toBe(400);
   });
 

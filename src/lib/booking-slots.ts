@@ -48,8 +48,8 @@ export function formatAthensSlot(start: string, end: string): string {
 }
 
 /** Day label only, e.g. "Fri, 28 Aug". */
-export function formatAthensSlotDay(start: string): string {
-  return new Date(start).toLocaleDateString("en-IE", ATHENS_DAY_FORMAT);
+export function formatAthensSlotDay(start: string, locale = "en-IE"): string {
+  return new Date(start).toLocaleDateString(locale, ATHENS_DAY_FORMAT);
 }
 
 /** Time range only, e.g. "09:00–09:30". */

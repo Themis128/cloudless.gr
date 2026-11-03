@@ -131,7 +131,7 @@ export default function ConsultationsPage() {
           </p>
           {tab === "upcoming" && (
             <Link
-              href="/contact"
+              href="/consultation"
               className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/20 mt-6 inline-block min-h-11 rounded-lg border px-6 py-2.5 font-mono text-sm transition-all"
             >
               Book Consultation →
