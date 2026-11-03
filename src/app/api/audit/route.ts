@@ -67,5 +67,29 @@ export async function POST(req: Request) {
   if (!res.ok) {
     return NextResponse.json({ error: "booking failed, please try again" }, { status: 502 });
   }
+
+  // Booking-confirmation mail via the mail-outbound worker (send_email
+  // binding) — fire-and-forget: a mail failure must never break booking.
+  const mailBase = process.env.MAIL_OUTBOUND_URL;
+  const mailToken = process.env.MAIL_OUTBOUND_TOKEN;
+  if (mailBase && mailToken) {
+    void fetch(`${mailBase.replace(/\/$/, "")}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${mailToken}` },
+      body: JSON.stringify({
+        to: email,
+        subject: "Your free 30-minute tech checkup — confirmed",
+        text:
+          `Hi${(body.name ?? "").trim() ? ` ${(body.name as string).trim().split(" ")[0]}` : ""},\n\n` +
+          "Got your request — we'll confirm your slot shortly.\n\n" +
+          `Your goal: ${body.goal!.trim()}\n` +
+          `What's hard: ${body.pain!.trim()}\n` +
+          `Timeline: ${body.timeline!.trim()}\n\n` +
+          "— Themis, Cloudless",
+        category: "audit-confirm",
+      }),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true });
 }
