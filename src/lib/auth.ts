@@ -1,4 +1,5 @@
 import NextAuth, { type DefaultSession } from "next-auth";
+import Authentik from "next-auth/providers/authentik";
 import type { JWT } from "next-auth/jwt";
 import { D1Database } from "@cloudflare/workers-types";
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
@@ -67,6 +68,18 @@ function resolveAuthEnv(): AuthEnv {
 }
 
 /**
+ * Authentik OIDC provider (auth.cloudless.gr). Read lazily like the rest of
+ * the env so absent vars keep the provider-less fallback below working.
+ */
+function resolveAuthentikProvider() {
+  const issuer = process.env.AUTH_AUTHENTIK_ISSUER ?? "";
+  const clientId = process.env.AUTH_AUTHENTIK_ID ?? "";
+  const clientSecret = process.env.AUTH_AUTHENTIK_SECRET ?? "";
+  if (!issuer || !clientId || !clientSecret) return [];
+  return [Authentik({ clientId, clientSecret, issuer })];
+}
+
+/**
  * Handles the initial sign-in: create session in D1 and populate claims.
  */
 async function handleSignIn(
@@ -124,7 +137,7 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
   return NextAuth({
     // Local/dev often has AUTH_SECRET without IdP providers — still serve
     // /api/auth/session as JSON null instead of throwing Configuration.
-    providers: [],
+    providers: resolveAuthentikProvider(),
     secret: env.authSecret,
     trustHost: true,
     callbacks: {
