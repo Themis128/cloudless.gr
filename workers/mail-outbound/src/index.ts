@@ -132,6 +132,9 @@ export default {
       } catch {
         return json({ error: "invalid_json" }, 400);
       }
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return json({ error: "invalid_body" }, 400);
+      }
       if (!body.to || !body.subject || (!body.text && !body.html)) {
         return json({ error: "to, subject and text|html are required" }, 400);
       }
