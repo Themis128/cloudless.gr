@@ -47,12 +47,20 @@ const DEFAULT_FROM_NAME = "Cloudless";
  * either shape can never corrupt the header or the envelope sender.
  */
 function parseSender(value: string): { name: string; addr: string } {
-  const withName = /^\s*(?:"([^"]*)"|([^<>]*?))\s*<\s*([^<>\s]+)\s*>\s*$/.exec(value);
-  if (withName) {
-    const name = (withName[1] ?? withName[2] ?? "").trim();
-    return { name: name || DEFAULT_FROM_NAME, addr: withName[3] };
+  // Deterministic parse — no regex over untrusted input (CodeQL
+  // js/polynomial-redos). Bounded length first.
+  const trimmed = value.trim().slice(0, 320);
+  const lt = trimmed.indexOf("<");
+  if (lt === -1) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  const gt = trimmed.indexOf(">", lt);
+  if (gt === -1) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  const addr = trimmed.slice(lt + 1, gt).trim();
+  if (!addr || /\s/.test(addr)) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  let name = trimmed.slice(0, lt).trim();
+  if (name.length > 1 && name.startsWith('"') && name.endsWith('"')) {
+    name = name.slice(1, -1);
   }
-  return { name: DEFAULT_FROM_NAME, addr: value.trim() };
+  return { name: name || DEFAULT_FROM_NAME, addr };
 }
 
 function json(data: unknown, status = 200): Response {
@@ -112,8 +120,8 @@ export default {
           category: "ops-alert",
         });
         return json({ ok: true, sent: true });
-      } catch (err) {
-        return json({ ok: false, error: String(err) }, 502);
+      } catch {
+        return json({ ok: false, error: "send failed" }, 502);
       }
     }
 
@@ -134,8 +142,8 @@ export default {
       try {
         await deliver(env, { ...body, to: body.to, subject: body.subject });
         return json({ ok: true, category });
-      } catch (err) {
-        return json({ ok: false, error: String(err) }, 502);
+      } catch {
+        return json({ ok: false, error: "send failed" }, 502);
       }
     }
 
