@@ -77,8 +77,15 @@ export async function POST(req: NextRequest) {
   }
   const description = String(body.description ?? "Cloudless engagement").slice(0, 200);
   const proposalId = String(body.proposal_id ?? "").slice(0, 64);
-  if (body.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.client_email)) {
-    return NextResponse.json({ error: "invalid client_email" }, { status: 400 });
+  if (body.client_email) {
+    // Manual check — an email regex here tripped CodeQL js/polynomial-redos.
+    const em = String(body.client_email);
+    const at = em.indexOf("@");
+    const dot = em.lastIndexOf(".");
+    const bad = em.length > 254 || at < 1 || dot < at + 2 || dot === em.length - 1 || /\s/.test(em);
+    if (bad) {
+      return NextResponse.json({ error: "invalid client_email" }, { status: 400 });
+    }
   }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cloudless.gr";
