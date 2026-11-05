@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { escapeHtml } from "@/lib/escape-html";
 import { getConfig } from "@/lib/ssm-config";
 import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cloudflare";
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
@@ -281,6 +282,70 @@ Please update your payment information and try again.
 If you have any questions, please contact our support team.
     `,
     fromLabel: "Cloudless Billing",
+  });
+}
+
+/**
+ * Send an abandoned-checkout recovery nudge.
+ * @param email - Customer's email address
+ * @param amount - Cart total (major units)
+ * @param currency - ISO currency code
+ * @param campaign - Campaign slug from session metadata (optional)
+ * @param tier - Tier name from session metadata (optional)
+ */
+export async function sendCartAbandonedNotice(
+  email: string,
+  amount: number,
+  currency: string,
+  campaign?: string,
+  tier?: string
+) {
+  const amountStr = `€${amount.toFixed(2)} ${currency.toUpperCase()}`;
+  const what = tier ? `${tier}${campaign ? ` (${campaign})` : ""}` : campaign || "your order";
+  await sendEmail({
+    to: email,
+    from: SENDERS.orders,
+    subject: "You left something in your cart",
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Your cart is waiting</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; }
+            h1 { color: #007bff; }
+            .cart { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .cta { display: inline-block; background: #007bff; color: #ffffff !important; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>Your cart is still waiting</h1>
+          <p>You started checkout for <strong>${escapeHtml(what)}</strong> but didn't finish — no charge was made.</p>
+
+          <div class="cart">
+            <p><strong>Total:</strong> ${amountStr}</p>
+          </div>
+
+          <p>Everything is still in stock — pick up where you left off:</p>
+          <a class="cta" href="https://cloudless.gr/en/store">Return to the store</a>
+
+          <p>If something went wrong at checkout, just reply to this email and we'll sort it out.</p>
+        </body>
+      </html>
+    `,
+    text: `
+Your cart is still waiting
+
+You started checkout for ${what} but didn't finish — no charge was made.
+
+Total: ${amountStr}
+
+Pick up where you left off: https://cloudless.gr/en/store
+
+If something went wrong at checkout, just reply to this email and we'll sort it out.
+    `,
+    fromLabel: "Cloudless Shop",
   });
 }
 

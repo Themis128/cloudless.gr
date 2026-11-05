@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getConfig } from "@/lib/ssm-config";
-import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/lib/email";
+import {
+  sendOrderConfirmation,
+  sendPaymentFailureNotice,
+  sendCartAbandonedNotice,
+  notifyTeam,
+} from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
+import { upsertContact, createDeal, associateDealWithContact, createLead } from "@/lib/espocrm";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
 import {
@@ -244,10 +249,67 @@ async function handleSubscriptionEvent(
  * If those rules don't fit a new event, add a queue first
  * (see docs/stripe-webhook-audit-r22.md).
  */
+/**
+ * Abandoned checkout — recovery email + EspoCRM lead so the SocialAuto
+ * nurture machinery can run the second touch. Idempotent via the
+ * route-level event dedup + createLead's email-dedup contract.
+ */
+async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<void> {
+  const email = session.customer_email;
+  const amount = (session.amount_total ?? 0) / 100;
+  const currency = (session.currency ?? "eur").toUpperCase();
+  const campaign = session.metadata?.campaign ?? undefined;
+  const tier = session.metadata?.tier ?? undefined;
+
+  if (email) {
+    await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+    try {
+      await createLead({
+        emailAddress: email,
+        firstName: session.customer_details?.name?.split(" ")[0] ?? "",
+        lastName: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+        source: "Web Site",
+        campaignSlug: campaign,
+        tier: tier ?? null,
+        orderId: session.id,
+        description: [
+          "lead_source: cart_abandoned",
+          `Abandoned checkout ${session.id} — €${amount.toFixed(2)} ${currency}`,
+          ...(campaign ? [`Campaign: ${campaign}`] : []),
+        ].join("\n"),
+      });
+    } catch (err) {
+      console.error("[Stripe→EspoCRM] cart_abandoned lead failed:", err);
+    }
+  }
+
+  recordNotification({
+    category: "order",
+    type: "info",
+    title: `Abandoned checkout: €${amount.toFixed(2)}`,
+    message: `${email ?? "anonymous"} left checkout ${session.id} unpaid`,
+    actor: email ?? undefined,
+    route: "/api/webhooks/stripe",
+    metadata: { sessionId: session.id, amountTotal: session.amount_total, currency },
+  });
+
+  trackAnalyticsEvent({
+    event: "cart_abandoned",
+    email: email ?? undefined,
+    page: "/store",
+    amount,
+    currency,
+    properties: { order_id: session.id },
+  }).catch(() => {});
+}
+
 async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
       await handleCheckoutCompleted(event.data.object, event.id);
+      break;
+    case "checkout.session.expired":
+      await handleCheckoutExpired(event.data.object);
       break;
     case "customer.subscription.created":
       await handleSubscriptionEvent("created", event.data.object);

@@ -10,6 +10,7 @@ import {
   createDeal,
   associateDealWithContact,
   createContactNote,
+  createLead,
 } from "@/lib/espocrm";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -113,6 +114,20 @@ export async function POST(request: Request) {
         if (dealId && contactId) {
           await associateDealWithContact(dealId, contactId);
         }
+        // Consult bookers also enter the Lead pipeline — SocialAuto's agency
+        // triage sweep (15-min) classifies them and queues a site audit when
+        // the notes carry an auditable domain.
+        await createLead({
+          emailAddress: email,
+          firstName: firstName ?? "",
+          lastName: rest.join(" ") || String(email).split("@")[0],
+          source: "Web Site",
+          description: [
+            "lead_source: calendar_booking",
+            `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
+            ...(notes ? [`Notes: ${notes}`] : []),
+          ].join("\n"),
+        });
       } catch (err) {
         const _r = mapIntegrationError(err);
         if (_r) return _r;
