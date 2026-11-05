@@ -1,21 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const getStripeMock = vi.fn();
-const getConfigMock = vi.fn();
-const rateLimitMock = vi.fn();
-const sessionsCreateMock = vi.fn();
+const mocks = vi.hoisted(() => ({
+  getStripe: vi.fn(),
+  getConfig: vi.fn(),
+  rateLimit: vi.fn(),
+  sessionsCreate: vi.fn(),
+}));
 
 vi.mock("@/lib/stripe", () => ({
-  getStripe: getStripeMock,
+  getStripe: mocks.getStripe,
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
-  getConfig: getConfigMock,
+  getConfig: mocks.getConfig,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  rateLimit: rateLimitMock,
+  rateLimit: mocks.rateLimit,
   getClientIp: () => "1.2.3.4",
 }));
 
@@ -34,14 +36,14 @@ const AUTH = { "x-socialauto-webhook-secret": "s3cret" };
 describe("POST /api/checkout/agency", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    rateLimitMock.mockReturnValue({ ok: true });
-    getConfigMock.mockResolvedValue({ SOCIALAUTO_LEADS_WEBHOOK_SECRET: "s3cret" });
-    getStripeMock.mockResolvedValue({ checkout: { sessions: { create: sessionsCreateMock } } });
-    sessionsCreateMock.mockResolvedValue({ url: "https://checkout.stripe.com/pay/x", id: "cs_1" });
+    mocks.rateLimit.mockReturnValue({ ok: true });
+    mocks.getConfig.mockResolvedValue({ SOCIALAUTO_LEADS_WEBHOOK_SECRET: "s3cret" });
+    mocks.getStripe.mockResolvedValue({ checkout: { sessions: { create: mocks.sessionsCreate } } });
+    mocks.sessionsCreate.mockResolvedValue({ url: "https://checkout.stripe.com/pay/x", id: "cs_1" });
   });
 
   it("503 when the shared secret is not configured", async () => {
-    getConfigMock.mockResolvedValue({});
+    mocks.getConfig.mockResolvedValue({});
     const r = await POST(req({}, AUTH));
     expect(r.status).toBe(503);
   });
@@ -60,13 +62,13 @@ describe("POST /api/checkout/agency", () => {
   });
 
   it("429s when rate-limited", async () => {
-    rateLimitMock.mockReturnValue({ ok: false, response: new Response("rl", { status: 429 }) });
+    mocks.rateLimit.mockReturnValue({ ok: false, response: new Response("rl", { status: 429 }) });
     const r = await POST(req({}, AUTH));
     expect(r.status).toBe(429);
   });
 
   it("503 when Stripe is not configured", async () => {
-    getStripeMock.mockResolvedValue(null);
+    mocks.getStripe.mockResolvedValue(null);
     const r = await POST(req({}, AUTH));
     expect(r.status).toBe(503);
   });
@@ -87,7 +89,7 @@ describe("POST /api/checkout/agency", () => {
   it("400 on malformed client_email", async () => {
     const r = await POST(req({ amount_eur: 10, client_email: "not-an-email" }, AUTH));
     expect(r.status).toBe(400);
-    expect(sessionsCreateMock).not.toHaveBeenCalled();
+    expect(mocks.sessionsCreate).not.toHaveBeenCalled();
   });
 
   it("200 — mints a Stripe session for a valid request", async () => {
@@ -106,7 +108,7 @@ describe("POST /api/checkout/agency", () => {
     expect(r.status).toBe(200);
     const j = await r.json();
     expect(j.url).toBe("https://checkout.stripe.com/pay/x");
-    const call = sessionsCreateMock.mock.calls[0][0];
+    const call = mocks.sessionsCreate.mock.calls[0][0];
     expect(call.mode).toBe("payment");
     expect(call.line_items[0].price_data.unit_amount).toBe(80_000);
     expect(call.customer_email).toBe("buyer@acme.example");
@@ -117,7 +119,7 @@ describe("POST /api/checkout/agency", () => {
   it("200 — works without optional fields", async () => {
     const r = await POST(req({ amount_eur: 100 }, AUTH));
     expect(r.status).toBe(200);
-    const call = sessionsCreateMock.mock.calls[0][0];
+    const call = mocks.sessionsCreate.mock.calls[0][0];
     expect(call.customer_email).toBeUndefined();
     expect(call.client_reference_id).toBeUndefined();
   });
