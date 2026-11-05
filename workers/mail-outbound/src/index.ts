@@ -13,7 +13,7 @@
  */
 
 import { EmailMessage } from "cloudflare:email";
-import { createMimeMessage } from "mimetext";
+import { createMimeMessage, Mailbox } from "mimetext";
 
 interface Env {
   SEND_EMAIL: SendEmail;
@@ -84,7 +84,7 @@ async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> &
   msg.setSender(sender);
   msg.setRecipient(b.to);
   msg.setSubject(b.subject);
-  if (b.replyTo) msg.setHeader("Reply-To", b.replyTo);
+  if (b.replyTo) msg.setHeader("Reply-To", new Mailbox(b.replyTo));
   msg.addMessage({ contentType: "text/plain", data: b.text ?? "" });
   if (b.html) msg.addMessage({ contentType: "text/html", data: b.html });
   // Envelope sender must be the bare address, never "Name <addr>".
