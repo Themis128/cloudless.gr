@@ -266,15 +266,10 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<
   if (session.metadata?.source === "agency_proposal") return;
 
   if (email) {
-
     try {
-
       await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
-
     } catch (e) {
-
       console.warn("[Stripe] cart-abandoned email failed; still creating lead:", e);
-
     }
     try {
       await createLead({
