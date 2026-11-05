@@ -67,6 +67,9 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  }
 
   const amountEur = Number(body.amount_eur);
   if (!Number.isFinite(amountEur) || amountEur < 1 || amountEur > 100_000) {
@@ -74,6 +77,9 @@ export async function POST(req: NextRequest) {
   }
   const description = String(body.description ?? "Cloudless engagement").slice(0, 200);
   const proposalId = String(body.proposal_id ?? "").slice(0, 64);
+  if (body.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.client_email)) {
+    return NextResponse.json({ error: "invalid client_email" }, { status: 400 });
+  }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cloudless.gr";
   const session = await stripe.checkout.sessions.create({

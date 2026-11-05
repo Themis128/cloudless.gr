@@ -261,8 +261,21 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<
   const campaign = session.metadata?.campaign ?? undefined;
   const tier = session.metadata?.tier ?? undefined;
 
+  // Agency-proposal sessions get their own follow-up lane — skip store cart mail.
+
+  if (session.metadata?.source === "agency_proposal") return;
+
   if (email) {
-    await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+
+    try {
+
+      await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+
+    } catch (e) {
+
+      console.warn("[Stripe] cart-abandoned email failed; still creating lead:", e);
+
+    }
     try {
       await createLead({
         emailAddress: email,
