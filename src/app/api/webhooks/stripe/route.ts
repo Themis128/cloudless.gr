@@ -264,8 +264,30 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<
   const tier = session.metadata?.tier ?? undefined;
 
   // Agency-proposal sessions get their own follow-up lane — skip store cart mail.
-
   if (session.metadata?.source === "agency_proposal") return;
+
+  // Agentic-commerce sessions (ACP/UCP) aren't store carts: cancel routes
+  // expire the Stripe session, which would otherwise look like abandonment.
+  const protocol = session.metadata?.protocol;
+  if (protocol === "acp" || protocol === "agentic-commerce") return;
+
+  // A repurchase expires the customer's older open session ~24h later — if a
+  // NEWER session already completed, this expiry isn't abandonment.
+  if (session.customer && session.created) {
+    try {
+      const stripe = await getStripe();
+      if (stripe) {
+        const newer = await stripe.checkout.sessions.list({
+          customer: session.customer as string,
+          status: "complete",
+          limit: 10,
+        });
+        if (newer.data.some((s) => s.created > session.created)) return;
+      }
+    } catch (e) {
+      console.warn("[Stripe] repurchase check failed; treating as abandoned:", e);
+    }
+  }
 
   if (email) {
     try {

@@ -141,6 +141,41 @@ describe("POST /api/webhooks/stripe — checkout.session.expired", () => {
     expect(recordNotificationMock).not.toHaveBeenCalled();
   });
 
+  it("skips agentic-commerce sessions (cancelled ACP/UCP checkouts)", async () => {
+    constructEventMock.mockReturnValue(
+      expiredEvent({
+        ...SESSION,
+        metadata: { protocol: "agentic-commerce" },
+      })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(sendCartAbandonedNoticeMock).not.toHaveBeenCalled();
+    expect(createLeadMock).not.toHaveBeenCalled();
+  });
+
+  it("skips recovery when a newer session already completed", async () => {
+    getStripeMock.mockResolvedValue({
+      webhooks: { constructEvent: constructEventMock },
+      checkout: {
+        sessions: {
+          list: vi.fn().mockResolvedValue({
+            data: [{ id: "cs_newer", created: 9999999999 }],
+          }),
+        },
+      },
+    });
+    constructEventMock.mockReturnValue(
+      expiredEvent({ ...SESSION, customer: "cus_1", created: 1000 })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(sendCartAbandonedNoticeMock).not.toHaveBeenCalled();
+    expect(createLeadMock).not.toHaveBeenCalled();
+  });
+
   it("anonymous session still records notification + analytics", async () => {
     constructEventMock.mockReturnValue(
       expiredEvent({ id: "cs_anon", amount_total: null, currency: null, metadata: {} })

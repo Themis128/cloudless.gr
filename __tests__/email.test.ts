@@ -251,6 +251,34 @@ describe("email.ts", () => {
     });
   });
 
+  describe("sendCartAbandonedNotice()", () => {
+    it("sends recovery nudge with tier and campaign", async () => {
+      const { sendCartAbandonedNotice } = await import("@/lib/email");
+      await sendCartAbandonedNotice("cart@example.com", 49.9, "eur", "spring-promo", "Pro");
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "cart@example.com",
+          subject: "You left something in your cart",
+        })
+      );
+      const call = mockSendEmailCloudflare.mock.calls[0]?.[0] as { html: string };
+      expect(call.html).toContain("Pro (spring-promo)");
+      expect(call.html).toContain("€49.90 EUR");
+    });
+
+    it("falls back to campaign-only and generic labels", async () => {
+      const { sendCartAbandonedNotice } = await import("@/lib/email");
+      await sendCartAbandonedNotice("a@b.com", 10, "usd", "solo-campaign");
+      let call = mockSendEmailCloudflare.mock.calls[0]?.[0] as { html: string };
+      expect(call.html).toContain("solo-campaign");
+
+      mockSendEmailCloudflare.mockClear();
+      await sendCartAbandonedNotice("a@b.com", 10, "usd");
+      call = mockSendEmailCloudflare.mock.calls[0]?.[0] as { html: string };
+      expect(call.html).toContain("your order");
+    });
+  });
+
   describe("notifyTeam()", () => {
     it("sends to SES_TO_EMAIL from config", async () => {
       const { notifyTeam } = await import("@/lib/email");

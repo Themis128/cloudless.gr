@@ -101,7 +101,9 @@ async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> &
     const bytes = new TextEncoder().encode(s);
     let bin = "";
     for (const b of bytes) bin += String.fromCharCode(b);
-    return btoa(bin);
+    // RFC 2045 §6.8 / RFC 5322 §2.1.1: base64 payload lines ≤76 chars, CRLF-joined.
+    const raw = btoa(bin);
+    return raw.replace(/.{1,76}/g, (m) => m + "\r\n");
   };
   msg.addMessage({ contentType: "text/plain", data: b64(b.text ?? ""), encoding: "base64" });
   if (b.html) msg.addMessage({ contentType: "text/html", data: b64(b.html), encoding: "base64" });
