@@ -63,9 +63,14 @@ def main() -> int:
         print(f"Zone lookup failed: {zones.get('errors')}")
         print("Token needs Zone:Read on the zone — mint/fix in the CF dashboard.")
         return 1
-    zone_id = zones["result"][0]["id"]
+    # Destination addresses are account-scoped, not zone-scoped —
+    # /zones/{id}/email/routing/addresses 404s; use /accounts/{id}/...
+    account_id = zones["result"][0].get("account", {}).get("id")
+    if not account_id:
+        print("Zone result missing account.id — cannot resolve account-level routing API.")
+        return 1
 
-    listed = _req(token, "GET", f"/zones/{zone_id}/email/routing/addresses")
+    listed = _req(token, "GET", f"/accounts/{account_id}/email/routing/addresses")
     if not listed.get("success"):
         print(f"List destinations failed: {listed.get('errors')}")
         print(
@@ -83,7 +88,7 @@ def main() -> int:
         email = addr.strip().lower()
         if email in have:
             continue
-        res = _req(token, "POST", f"/zones/{zone_id}/email/routing/addresses", {"email": email})
+        res = _req(token, "POST", f"/accounts/{account_id}/email/routing/addresses", {"email": email})
         ok = res.get("success")
         print(f"create {email}: {'OK — verification email sent' if ok else res.get('errors')}")
         if ok:

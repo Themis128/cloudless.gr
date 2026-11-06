@@ -7,8 +7,10 @@ Usage:
   python env_sync.py <fragment> <target.env>
   python env_sync.py ~/cf-worker-secrets.txt /mnt/c/Users/tbaltzakis/cu130-slim/.env --restart
 
---restart also runs `docker compose restart social-api social-worker`
-in the target file's directory when docker-compose.yml sits beside it.
+--restart also runs `docker compose up -d --force-recreate` for
+social-api + social-worker-publishing/-media/-default/-messenger in the
+target file's directory when docker-compose.yml sits beside it.
+(`compose restart` does NOT re-read .env — env changes need a recreate.)
 """
 
 from __future__ import annotations
@@ -58,12 +60,29 @@ def main() -> int:
     if restart:
         cwd = os.path.dirname(os.path.abspath(target))
         if os.path.exists(os.path.join(cwd, "docker-compose.yml")):
-            subprocess.run(
-                ["docker", "compose", "restart", "social-api", "social-worker"],
-                cwd=cwd,
-                timeout=120,
-            )
-            print("restarted social-api + social-worker")
+            services = [
+                "social-api",
+                "social-worker-publishing",
+                "social-worker-media",
+                "social-worker-default",
+                "social-worker-messenger",
+                "celery-beat",
+            ]
+            try:
+                result = subprocess.run(
+                    ["docker", "compose", "up", "-d", "--force-recreate", *services],
+                    cwd=cwd,
+                    timeout=300,
+                    capture_output=True,
+                    text=True,
+                )
+            except (OSError, subprocess.TimeoutExpired) as e:
+                print(f"recreate failed to run: {e}")
+                return 1
+            if result.returncode != 0:
+                print(f"compose up failed (rc={result.returncode}): {result.stderr.strip()[:300]}")
+                return 1
+            print("recreated social-api + workers (env reloaded)")
         else:
             print("no docker-compose.yml next to target — restart manually")
     return 0

@@ -19,7 +19,11 @@ import subprocess
 import sys
 import urllib.request
 
-NEEDED = {"Workers Scripts:Edit", "Account Cloudflare Workers Scripts:Edit"}
+# /user/tokens/verify only reports status — permission groups must be
+# read from GET /user/tokens (matched by the verify result's token id).
+# NEEDED uses the Cloudflare API permission-group names (not dashboard
+# labels): wrangler deploy needs account-level "Workers Scripts Write".
+NEEDED = {"Workers Scripts Write"}
 
 
 def main() -> int:
@@ -46,17 +50,46 @@ def main() -> int:
 
     res = data["result"]
     print(f"token status: {res.get('status')}  expires: {res.get('expires_on') or 'never'}")
-    flat = {
-        g.get("name") for pol in res.get("policies", []) for g in pol.get("permission_groups", [])
-    }
-    print(f"permission groups ({len(flat)}):")
-    for g in sorted(flat):
-        print(f"  - {g}")
 
+    # /user/tokens/verify carries no policies — look the token up in
+    # /user/tokens by id to read its permission groups. That endpoint
+    # needs User → API Tokens → Read; degrade gracefully if absent.
+    flat: set[str] = set()
+    policies_known = False
+    tok_id = res.get("id")
+    if tok_id:
+        try:
+            req2 = urllib.request.Request(
+                "https://api.cloudflare.com/client/v4/user/tokens",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(req2, timeout=15) as r2:
+                listing = json.loads(r2.read())
+            for t in listing.get("result", []):
+                if t.get("id") == tok_id:
+                    flat = {
+                        g.get("name")
+                        for pol in t.get("policies", [])
+                        for g in pol.get("permission_groups", [])
+                    }
+                    policies_known = True
+                    break
+        except Exception as e:
+            print(f"(could not list token policies: {e} — verify-only mode)")
+
+    if policies_known:
+        print(f"permission groups ({len(flat)}):")
+        for g in sorted(flat):
+            print(f"  - {g}")
+    else:
+        print("permission groups: unavailable (token lacks API Tokens read, or verify-only)")
+
+    if policies_known and not (NEEDED & flat):
+        print("\nNOTE: token is valid but Workers Scripts Write was not found in its policies.")
     hit = NEEDED & flat
     if hit:
         print(f"\nOK — token already has {sorted(hit)}; CI deploys should work.")
-    else:
+    elif policies_known:
         print("\nMISSING Workers Scripts:Edit — this is the documented API-10000 blocker.")
         print("Mint a token in the dashboard:")
         print("  dash.cloudflare.com → My Profile → API Tokens → Create Token")
