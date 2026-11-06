@@ -255,7 +255,9 @@ async function handleSubscriptionEvent(
  * route-level event dedup + createLead's email-dedup contract.
  */
 async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<void> {
-  const email = session.customer_email;
+  // Anonymous checkouts leave customer_email null — the details object still
+  // carries the email Stripe collected, so fall back before skipping the lane.
+  const email = session.customer_email ?? session.customer_details?.email ?? null;
   const amount = (session.amount_total ?? 0) / 100;
   const currency = (session.currency ?? "eur").toUpperCase();
   const campaign = session.metadata?.campaign ?? undefined;

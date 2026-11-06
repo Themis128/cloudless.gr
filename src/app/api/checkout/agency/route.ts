@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { safeEqual } from "@/lib/cron-auth";
 import { getStripe } from "@/lib/stripe";
 import { getConfig } from "@/lib/ssm-config";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
@@ -22,10 +22,7 @@ export const runtime = "nodejs";
  */
 
 function safeEq(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length || ab.length === 0) return false;
-  return timingSafeEqual(ab, bb);
+  return a.length > 0 && safeEqual(a, b);
 }
 
 async function verifySecret(req: NextRequest): Promise<true | Response> {
