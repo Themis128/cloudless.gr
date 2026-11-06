@@ -13,7 +13,7 @@
  */
 
 import { EmailMessage } from "cloudflare:email";
-import { createMimeMessage } from "mimetext";
+import { createMimeMessage, Mailbox } from "mimetext";
 
 interface Env {
   SEND_EMAIL: SendEmail;
@@ -47,12 +47,20 @@ const DEFAULT_FROM_NAME = "Cloudless";
  * either shape can never corrupt the header or the envelope sender.
  */
 function parseSender(value: string): { name: string; addr: string } {
-  const withName = /^\s*(?:"([^"]*)"|([^<>]*?))\s*<\s*([^<>\s]+)\s*>\s*$/.exec(value);
-  if (withName) {
-    const name = (withName[1] ?? withName[2] ?? "").trim();
-    return { name: name || DEFAULT_FROM_NAME, addr: withName[3] };
+  // Deterministic parse — no regex over untrusted input (CodeQL
+  // js/polynomial-redos). Bounded length first.
+  const trimmed = value.trim().slice(0, 320);
+  const lt = trimmed.indexOf("<");
+  if (lt === -1) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  const gt = trimmed.indexOf(">", lt);
+  if (gt === -1) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  const addr = trimmed.slice(lt + 1, gt).trim();
+  if (!addr || /\s/.test(addr)) return { name: DEFAULT_FROM_NAME, addr: trimmed };
+  let name = trimmed.slice(0, lt).trim();
+  if (name.length > 1 && name.startsWith('"') && name.endsWith('"')) {
+    name = name.slice(1, -1);
   }
-  return { name: DEFAULT_FROM_NAME, addr: value.trim() };
+  return { name: name || DEFAULT_FROM_NAME, addr };
 }
 
 function json(data: unknown, status = 200): Response {
@@ -84,9 +92,21 @@ async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> &
   msg.setSender(sender);
   msg.setRecipient(b.to);
   msg.setSubject(b.subject);
-  if (b.replyTo) msg.setHeader("Reply-To", b.replyTo);
-  msg.addMessage({ contentType: "text/plain", data: b.text ?? "" });
-  if (b.html) msg.addMessage({ contentType: "text/html", data: b.html });
+  if (b.replyTo) msg.setHeader("Reply-To", new Mailbox(b.replyTo));
+  // mimetext only *declares* Content-Transfer-Encoding — the body is dumped
+  // verbatim — so encode ourselves: base64 keeps arbitrary UTF-8 intact
+  // under the declared 7bit-default otherwise-corrupting transport.
+  // (No nodejs_compat: TextEncoder + btoa, not Buffer.)
+  const b64 = (s: string) => {
+    const bytes = new TextEncoder().encode(s);
+    let bin = "";
+    for (const b of bytes) bin += String.fromCharCode(b);
+    // RFC 2045 §6.8 / RFC 5322 §2.1.1: base64 payload lines ≤76 chars, CRLF-joined.
+    const raw = btoa(bin);
+    return raw.replace(/.{1,76}/g, (m) => m + "\r\n");
+  };
+  msg.addMessage({ contentType: "text/plain", data: b64(b.text ?? ""), encoding: "base64" });
+  if (b.html) msg.addMessage({ contentType: "text/html", data: b64(b.html), encoding: "base64" });
   // Envelope sender must be the bare address, never "Name <addr>".
   const raw = new EmailMessage(sender.addr, b.to, msg.asRaw());
   await env.SEND_EMAIL.send(raw);
@@ -112,8 +132,8 @@ export default {
           category: "ops-alert",
         });
         return json({ ok: true, sent: true });
-      } catch (err) {
-        return json({ ok: false, error: String(err) }, 502);
+      } catch {
+        return json({ ok: false, error: "send failed" }, 502);
       }
     }
 
@@ -124,8 +144,18 @@ export default {
       } catch {
         return json({ error: "invalid_json" }, 400);
       }
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return json({ error: "invalid_body" }, 400);
+      }
       if (!body.to || !body.subject || (!body.text && !body.html)) {
         return json({ error: "to, subject and text|html are required" }, 400);
+      }
+      // Header-bound fields must not carry CR/LF — mimetext writes mailbox
+      // values raw into headers, so a CRLF here would inject extra headers.
+      for (const f of [body.to, body.subject, body.from, body.replyTo]) {
+        if (typeof f === "string" && /[\r\n]/.test(f)) {
+          return json({ error: "header fields must not contain CR/LF" }, 400);
+        }
       }
       const category = body.category ?? "ops-alert";
       if (!CATEGORIES.has(category)) {
@@ -134,8 +164,8 @@ export default {
       try {
         await deliver(env, { ...body, to: body.to, subject: body.subject });
         return json({ ok: true, category });
-      } catch (err) {
-        return json({ ok: false, error: String(err) }, 502);
+      } catch {
+        return json({ ok: false, error: "send failed" }, 502);
       }
     }
 
