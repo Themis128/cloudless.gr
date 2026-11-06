@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getConfig } from "@/lib/ssm-config";
-import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/lib/email";
+import {
+  sendOrderConfirmation,
+  sendPaymentFailureNotice,
+  sendCartAbandonedNotice,
+  notifyTeam,
+} from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
-import { recordNotification } from "@/lib/admin-notifications";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
+import { listNotifications, recordNotification } from "@/lib/admin-notifications";
+import { upsertContact, createDeal, associateDealWithContact, createLead } from "@/lib/espocrm";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
 import {
@@ -244,10 +249,125 @@ async function handleSubscriptionEvent(
  * If those rules don't fit a new event, add a queue first
  * (see docs/stripe-webhook-audit-r22.md).
  */
+/**
+ * Abandoned checkout — recovery email + EspoCRM lead so the SocialAuto
+ * nurture machinery can run the second touch. Idempotent via the
+ * route-level event dedup + createLead's email-dedup contract.
+ */
+async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<void> {
+  // Anonymous checkouts leave customer_email null — the details object still
+  // carries the email Stripe collected, so fall back before skipping the lane.
+  const email = session.customer_email ?? session.customer_details?.email ?? null;
+  const amount = (session.amount_total ?? 0) / 100;
+  const currency = (session.currency ?? "eur").toUpperCase();
+  const campaign = session.metadata?.campaign ?? undefined;
+  const tier = session.metadata?.tier ?? undefined;
+
+  // Agency-proposal sessions get their own follow-up lane — skip store cart mail.
+  if (session.metadata?.source === "agency_proposal") return;
+
+  // Agentic-commerce sessions (ACP/UCP) aren't store carts: cancel routes
+  // expire the Stripe session, which would otherwise look like abandonment.
+  const protocol = session.metadata?.protocol;
+  if (protocol === "acp" || protocol === "agentic-commerce") return;
+
+  // A repurchase expires the customer's older open session ~24h later — if a
+  // NEWER session already completed, this expiry isn't abandonment.
+  // Payment-mode sessions often have no `customer` object — resolve it by
+  // the collected email so the guard still applies to store carts.
+  if (session.created) {
+    try {
+      const stripe = await getStripe();
+      if (stripe) {
+        const cust = session.customer;
+        let customerId =
+          typeof cust === "string" ? cust : cust && !("deleted" in cust) ? cust.id : null;
+        if (!customerId && email) {
+          const found = await stripe.customers.list({ email, limit: 1 });
+          customerId = found.data[0]?.id ?? null;
+        }
+        if (customerId) {
+          const newer = await stripe.checkout.sessions.list({
+            customer: customerId,
+            status: "complete",
+            limit: 10,
+          });
+          if (newer.data.some((s) => s.created > session.created)) return;
+        }
+      }
+    } catch (e) {
+      console.warn("[Stripe] repurchase check failed; treating as abandoned:", e);
+    }
+  }
+
+  if (email) {
+    // Per-email dedupe — abandoning several sessions shouldn't send a recovery
+    // mail per session. The order-notification row written below doubles as
+    // the "already nudged" marker; fail-open so a D1 hiccup never loses mail.
+    let alreadyNudged = false;
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const recent = await listNotifications({ category: "order", since, limit: 50 });
+      alreadyNudged = recent.some(
+        (n) => n.actor === email && n.title.startsWith("Abandoned checkout")
+      );
+    } catch (e) {
+      console.warn("[Stripe] abandoned-dedupe check failed; sending anyway:", e);
+    }
+    if (!alreadyNudged) {
+      try {
+        await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+      } catch (e) {
+        console.warn("[Stripe] cart-abandoned email failed; still creating lead:", e);
+      }
+    }
+    try {
+      await createLead({
+        emailAddress: email,
+        firstName: session.customer_details?.name?.split(" ")[0] ?? "",
+        lastName: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
+        source: "Web Site",
+        campaignSlug: campaign,
+        tier: tier ?? null,
+        orderId: session.id,
+        description: [
+          "lead_source: cart_abandoned",
+          `Abandoned checkout ${session.id} — €${amount.toFixed(2)} ${currency}`,
+          ...(campaign ? [`Campaign: ${campaign}`] : []),
+        ].join("\n"),
+      });
+    } catch (err) {
+      console.error("[Stripe→EspoCRM] cart_abandoned lead failed:", err);
+    }
+  }
+
+  recordNotification({
+    category: "order",
+    type: "info",
+    title: `Abandoned checkout: €${amount.toFixed(2)}`,
+    message: `${email ?? "anonymous"} left checkout ${session.id} unpaid`,
+    actor: email ?? undefined,
+    route: "/api/webhooks/stripe",
+    metadata: { sessionId: session.id, amountTotal: session.amount_total, currency },
+  });
+
+  trackAnalyticsEvent({
+    event: "cart_abandoned",
+    email: email ?? undefined,
+    page: "/store",
+    amount,
+    currency,
+    properties: { order_id: session.id },
+  }).catch(() => {});
+}
+
 async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
       await handleCheckoutCompleted(event.data.object, event.id);
+      break;
+    case "checkout.session.expired":
+      await handleCheckoutExpired(event.data.object);
       break;
     case "customer.subscription.created":
       await handleSubscriptionEvent("created", event.data.object);
