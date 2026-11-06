@@ -10,6 +10,7 @@ const markStripeEventFailedMock = vi.fn();
 const sendCartAbandonedNoticeMock = vi.fn();
 const createLeadMock = vi.fn();
 const recordNotificationMock = vi.fn();
+const listNotificationsMock = vi.fn();
 const trackAnalyticsEventMock = vi.fn();
 
 vi.mock("@/lib/stripe", () => ({
@@ -51,6 +52,7 @@ vi.mock("@/lib/slack-notify", () => ({
 
 vi.mock("@/lib/admin-notifications", () => ({
   recordNotification: recordNotificationMock,
+  listNotifications: listNotificationsMock,
 }));
 
 vi.mock("@/lib/analytics", () => ({
@@ -99,6 +101,7 @@ describe("POST /api/webhooks/stripe — checkout.session.expired", () => {
     sendCartAbandonedNoticeMock.mockResolvedValue(undefined);
     createLeadMock.mockResolvedValue("lead_1");
     trackAnalyticsEventMock.mockResolvedValue(undefined);
+    listNotificationsMock.mockResolvedValue([]);
   });
 
   it("sends recovery email, creates lead, notifies, tracks analytics", async () => {
@@ -215,6 +218,25 @@ describe("POST /api/webhooks/stripe — checkout.session.expired", () => {
     constructEventMock.mockReturnValue(
       expiredEvent({ ...SESSION, customer: null, created: 1000 })
     );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(sendCartAbandonedNoticeMock).toHaveBeenCalled();
+  });
+
+  it("skips duplicate recovery email within 24h but still creates the lead", async () => {
+    listNotificationsMock.mockResolvedValue([
+      { actor: "buyer@acme.example", title: "Abandoned checkout: €800.00", category: "order" },
+    ]);
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(sendCartAbandonedNoticeMock).not.toHaveBeenCalled();
+    expect(createLeadMock).toHaveBeenCalled();
+  });
+
+  it("dedupe check failure fails open — recovery email still sends", async () => {
+    listNotificationsMock.mockRejectedValue(new Error("d1 down"));
     const { POST } = await import("@/app/api/webhooks/stripe/route");
     const res = await POST(makeRequest());
     expect(res.status).toBe(200);

@@ -9,7 +9,7 @@ import {
 } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
-import { recordNotification } from "@/lib/admin-notifications";
+import { listNotifications, recordNotification } from "@/lib/admin-notifications";
 import { upsertContact, createDeal, associateDealWithContact, createLead } from "@/lib/espocrm";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -301,10 +301,25 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<
   }
 
   if (email) {
+    // Per-email dedupe — abandoning several sessions shouldn't send a recovery
+    // mail per session. The order-notification row written below doubles as
+    // the "already nudged" marker; fail-open so a D1 hiccup never loses mail.
+    let alreadyNudged = false;
     try {
-      await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const recent = await listNotifications({ category: "order", since, limit: 50 });
+      alreadyNudged = recent.some(
+        (n) => n.actor === email && n.title.startsWith("Abandoned checkout")
+      );
     } catch (e) {
-      console.warn("[Stripe] cart-abandoned email failed; still creating lead:", e);
+      console.warn("[Stripe] abandoned-dedupe check failed; sending anyway:", e);
+    }
+    if (!alreadyNudged) {
+      try {
+        await sendCartAbandonedNotice(email, amount, currency, campaign, tier);
+      } catch (e) {
+        console.warn("[Stripe] cart-abandoned email failed; still creating lead:", e);
+      }
     }
     try {
       await createLead({
