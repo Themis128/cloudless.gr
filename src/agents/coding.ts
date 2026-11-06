@@ -44,7 +44,8 @@ function extractText(result: unknown): string {
     } else if (Array.isArray(value.choices)) {
       const first = value.choices[0] as Record<string, unknown> | undefined;
       const message = first?.message as Record<string, unknown> | undefined;
-      text = typeof message?.content === "string" ? message.content : JSON.stringify(result, null, 2);
+      text =
+        typeof message?.content === "string" ? message.content : JSON.stringify(result, null, 2);
     } else {
       text = JSON.stringify(result, null, 2);
     }
