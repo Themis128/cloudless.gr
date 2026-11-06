@@ -88,7 +88,9 @@ def main() -> int:
         email = addr.strip().lower()
         if email in have:
             continue
-        res = _req(token, "POST", f"/accounts/{account_id}/email/routing/addresses", {"email": email})
+        res = _req(
+            token, "POST", f"/accounts/{account_id}/email/routing/addresses", {"email": email}
+        )
         ok = res.get("success")
         print(f"create {email}: {'OK — verification email sent' if ok else res.get('errors')}")
         if ok:
