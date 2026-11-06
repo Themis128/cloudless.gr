@@ -41,6 +41,10 @@ function extractText(result: unknown): string {
       text = value.text;
     } else if (typeof value.result === "string") {
       text = value.result;
+    } else if (Array.isArray(value.choices)) {
+      const first = value.choices[0] as Record<string, unknown> | undefined;
+      const message = first?.message as Record<string, unknown> | undefined;
+      text = typeof message?.content === "string" ? message.content : JSON.stringify(result, null, 2);
     } else {
       text = JSON.stringify(result, null, 2);
     }
@@ -218,8 +222,11 @@ export class CodingAgent extends Agent<Env, CodingState> {
     try {
       const systemPrompt = buildSystemPrompt(mode);
 
-      const result = await this.env.AI.run("@cf/deepseek-ai/deepseek-r1-distill-qwen-32b", {
-        prompt: systemPrompt + "\n\nUser task and repository context:\n" + prompt,
+      const result = await this.env.AI.run("@cf/deepseek-ai/deepseek-v4.1-flash-1017", {
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: "User task and repository context:\n" + prompt },
+        ],
       });
 
       const responseText = extractText(result);
