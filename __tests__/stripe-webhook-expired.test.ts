@@ -176,6 +176,51 @@ describe("POST /api/webhooks/stripe — checkout.session.expired", () => {
     expect(createLeadMock).not.toHaveBeenCalled();
   });
 
+  it("repurchase guard resolves customer by email when session.customer is null", async () => {
+    const customersList = vi.fn().mockResolvedValue({ data: [{ id: "cus_by_email" }] });
+    const sessionsList = vi.fn().mockResolvedValue({
+      data: [{ id: "cs_newer", created: 9999999999 }],
+    });
+    getStripeMock.mockResolvedValue({
+      webhooks: { constructEvent: constructEventMock },
+      customers: { list: customersList },
+      checkout: { sessions: { list: sessionsList } },
+    });
+    constructEventMock.mockReturnValue(
+      expiredEvent({ ...SESSION, customer: null, created: 1000 })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(customersList).toHaveBeenCalledWith({ email: "buyer@acme.example", limit: 1 });
+    expect(sessionsList).toHaveBeenCalledWith({
+      customer: "cus_by_email",
+      status: "complete",
+      limit: 10,
+    });
+    expect(sendCartAbandonedNoticeMock).not.toHaveBeenCalled();
+    expect(createLeadMock).not.toHaveBeenCalled();
+  });
+
+  it("repurchase guard proceeds when no newer completed session exists", async () => {
+    getStripeMock.mockResolvedValue({
+      webhooks: { constructEvent: constructEventMock },
+      customers: { list: vi.fn().mockResolvedValue({ data: [{ id: "cus_1" }] }) },
+      checkout: {
+        sessions: {
+          list: vi.fn().mockResolvedValue({ data: [{ id: "cs_old", created: 500 }] }),
+        },
+      },
+    });
+    constructEventMock.mockReturnValue(
+      expiredEvent({ ...SESSION, customer: null, created: 1000 })
+    );
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(sendCartAbandonedNoticeMock).toHaveBeenCalled();
+  });
+
   it("anonymous session still records notification + analytics", async () => {
     constructEventMock.mockReturnValue(
       expiredEvent({ id: "cs_anon", amount_total: null, currency: null, metadata: {} })

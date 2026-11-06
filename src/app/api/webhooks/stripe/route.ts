@@ -273,16 +273,27 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<
 
   // A repurchase expires the customer's older open session ~24h later — if a
   // NEWER session already completed, this expiry isn't abandonment.
-  if (session.customer && session.created) {
+  // Payment-mode sessions often have no `customer` object — resolve it by
+  // the collected email so the guard still applies to store carts.
+  if (session.created) {
     try {
       const stripe = await getStripe();
       if (stripe) {
-        const newer = await stripe.checkout.sessions.list({
-          customer: session.customer as string,
-          status: "complete",
-          limit: 10,
-        });
-        if (newer.data.some((s) => s.created > session.created)) return;
+        const cust = session.customer;
+        let customerId =
+          typeof cust === "string" ? cust : cust && !("deleted" in cust) ? cust.id : null;
+        if (!customerId && email) {
+          const found = await stripe.customers.list({ email, limit: 1 });
+          customerId = found.data[0]?.id ?? null;
+        }
+        if (customerId) {
+          const newer = await stripe.checkout.sessions.list({
+            customer: customerId,
+            status: "complete",
+            limit: 10,
+          });
+          if (newer.data.some((s) => s.created > session.created)) return;
+        }
       }
     } catch (e) {
       console.warn("[Stripe] repurchase check failed; treating as abandoned:", e);
