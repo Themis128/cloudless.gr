@@ -51,9 +51,16 @@ test.describe("stack-audit survey", () => {
       .getByPlaceholder(/work email/i)
       .fill(`e2e-survey-${Date.now()}@example.com`);
     await page.getByRole("button", { name: /get my audit/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /thanks.*stack audit/i }),
-    ).toBeVisible({ timeout: 20_000 });
+    const thanks = page.getByRole("heading", { name: /thanks.*stack audit/i });
+    const submitError = page.getByText(/something went wrong/i);
+    // The edge rate-limiter can 429 a mutating POST mid-suite — the page shows
+    // the error state; wait out the window and retry once before failing.
+    await expect(thanks.or(submitError).first()).toBeVisible({ timeout: 20_000 });
+    if (await submitError.isVisible()) {
+      await page.waitForTimeout(65_000);
+      await page.getByRole("button", { name: /get my audit/i }).click();
+    }
+    await expect(thanks).toBeVisible({ timeout: 20_000 });
   });
 });
 
@@ -82,12 +89,13 @@ test.describe("site-audit request form", () => {
 test.describe("consultation booking", () => {
   test("booking widget loads and shows slots or an empty state", async ({ page }) => {
     await page.goto("/en/consultation");
-    await expect(page.getByTestId("booking-form")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 20_000 });
     // Either slots render or the empty/unavailable state does — never a hang.
-    const slots = page.getByTestId("slot-grid");
+    // (booking-form only appears after a slot is picked — see next test.)
+    const grid = page.getByTestId("slot-grid");
     const empty = page.getByTestId("slots-empty");
     const unavailable = page.getByTestId("booking-unavailable");
-    await expect(slots.or(empty).or(unavailable).first()).toBeVisible({ timeout: 30_000 });
+    await expect(grid.or(empty).or(unavailable).first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("booking form appears after picking a slot and requires consent", async ({ page }) => {
