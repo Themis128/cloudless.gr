@@ -122,7 +122,10 @@ test.describe("postiz-ai-proxy Worker — image gen", () => {
   test("POST /v1/images/generations returns 200 (Pollinations proxy) or 502 if upstream down", async ({
     request,
   }) => {
+    // Pollinations flux at 1024px legitimately takes 30–120s upstream.
+    test.setTimeout(180_000);
     const res = await request.post(`${WORKER}/v1/images/generations`, {
+      timeout: 170_000,
       headers: {
         Authorization: `Bearer ${PROXY_TOKEN}`,
         "Content-Type": "application/json",

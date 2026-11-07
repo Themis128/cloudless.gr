@@ -231,7 +231,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
       let imgBytes: Uint8Array;
       try {
-        const imgResp = await fetch(imgUrl);
+        // Pollinations flux can take 60–120s; cap below the Workers CPU/wall
+        // limits so a hung upstream surfaces as 502 instead of a stuck request.
+        const imgResp = await fetch(imgUrl, { signal: AbortSignal.timeout(150_000) });
         if (!imgResp.ok) {
           return json({
             error: { message: `Image generation failed: ${imgResp.status}`, type: "server_error" },

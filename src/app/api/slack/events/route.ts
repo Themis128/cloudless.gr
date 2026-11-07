@@ -19,6 +19,7 @@
 
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
+import { trackSlackEvent } from "@/lib/slack-event-tracker";
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackConfigAsync } from "@/lib/integrations";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
@@ -121,9 +122,11 @@ export async function POST(request: Request): Promise<Response> {
 
     // Respond 200 immediately — Slack requires a response within 3 seconds.
     // Heavy processing is offloaded to background tasks via .catch().
-    handleEvent(payload.event).catch((err) => {
-      console.error("[Slack Events] Handler error:", err);
-    });
+    trackSlackEvent(
+      handleEvent(payload.event).catch((err) => {
+        console.error("[Slack Events] Handler error:", err);
+      })
+    );
 
     return Response.json({ ok: true });
   }

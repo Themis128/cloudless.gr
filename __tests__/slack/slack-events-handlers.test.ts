@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { drainSlackEvents } from "@/lib/slack-event-tracker";
 
 /**
  * Extended coverage for src/app/api/slack/events/route.ts — the handler
@@ -74,6 +75,9 @@ describe("POST /api/slack/events — handler internals", () => {
   let POST: (req: Request) => Promise<Response>;
 
   beforeEach(async () => {
+    // Flush fire-and-forget handlers leaked by the previous test before
+    // resetting mocks, so their fetch calls don't pollute this test's counts.
+    await drainSlackEvents();
     mockFetch.mockReset();
     mockFetch.mockResolvedValue(slackOk());
     mockVerify.mockReset();
@@ -91,7 +95,7 @@ describe("POST /api/slack/events — handler internals", () => {
     vi.restoreAllMocks();
   });
 
-  const settle = () => new Promise((r) => setTimeout(r, 50));
+  const settle = () => drainSlackEvents();
 
   it("deduplicates repeated event_id deliveries (Slack retry window)", async () => {
     const body = eventBody({ type: "app_mention", channel: "C1", text: "status", ts: "1.0" });
@@ -350,6 +354,7 @@ describe("POST /api/slack/events — tail branches", () => {
   let POST: (req: Request) => Promise<Response>;
 
   beforeEach(async () => {
+    await drainSlackEvents();
     mockFetch.mockReset();
     mockFetch.mockResolvedValue(slackOk());
     mockVerify.mockReset();
@@ -363,7 +368,7 @@ describe("POST /api/slack/events — tail branches", () => {
     POST = mod.POST;
   });
 
-  const settle = () => new Promise((r) => setTimeout(r, 50));
+  const settle = () => drainSlackEvents();
 
   it("app_mention without status/help replies with the generic intro", async () => {
     const body = eventBody({ type: "app_mention", channel: "C9", text: "hey bot", ts: "9.9" });
