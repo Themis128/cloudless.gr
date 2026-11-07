@@ -3,7 +3,7 @@ import { ADMIN_TOKEN, api, expectJson } from "./_helpers";
 
 const authHeaders = { authorization: `Bearer ${ADMIN_TOKEN}` };
 
-test.describe("Admin API with E2E bearer", () => {
+test.describe("Admin API with E2E bearer", { tag: "@localOnly" }, () => {
   test("GET /api/admin/users with the e2e token is not 401", async ({ request }) => {
     const res = await api(request, "get", "/api/admin/users", { headers: authHeaders });
     expect(res.status()).not.toBe(401);
@@ -57,7 +57,7 @@ test.describe("Admin API with E2E bearer", () => {
   });
 });
 
-test.describe("Admin UI", () => {
+test.describe("Admin UI", { tag: "@localOnly" }, () => {
   test("admin home renders the command-center chrome", async ({ page }) => {
     await page.goto("/en/admin");
     if (/\/auth\/login/.test(page.url())) {

@@ -84,6 +84,7 @@ type SendBody = {
   from?: string;
   category?: string;
   replyTo?: string;
+  listUnsubscribe?: string;
 };
 
 async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> & SendBody) {
@@ -93,6 +94,10 @@ async function deliver(env: Env, b: Required<Pick<SendBody, "to" | "subject">> &
   msg.setRecipient(b.to);
   msg.setSubject(b.subject);
   if (b.replyTo) msg.setHeader("Reply-To", new Mailbox(b.replyTo));
+  if (b.listUnsubscribe) {
+    msg.setHeader("List-Unsubscribe", `<${b.listUnsubscribe}>`);
+    msg.setHeader("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+  }
   // mimetext only *declares* Content-Transfer-Encoding — the body is dumped
   // verbatim — so encode ourselves: base64 keeps arbitrary UTF-8 intact
   // under the declared 7bit-default otherwise-corrupting transport.
@@ -152,7 +157,7 @@ export default {
       }
       // Header-bound fields must not carry CR/LF — mimetext writes mailbox
       // values raw into headers, so a CRLF here would inject extra headers.
-      for (const f of [body.to, body.subject, body.from, body.replyTo]) {
+      for (const f of [body.to, body.subject, body.from, body.replyTo, body.listUnsubscribe]) {
         if (typeof f === "string" && /[\r\n]/.test(f)) {
           return json({ error: "header fields must not contain CR/LF" }, 400);
         }

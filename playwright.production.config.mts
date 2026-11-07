@@ -22,8 +22,8 @@ export default defineConfig({
   // Exclude k3s-specific tests (they have their own config) and helper files.
   testIgnore: ["**/k3s/**", "**/*.test.ts", "**/_internal/**", "**/helpers/**", "**/fixtures/**", "**/coverage/**", "**/utils/**", "**/migrated/**"],
 
-  // Skip tests that POST real data or require local dev setup
-  grep: /^(?!.*@mutating)/,
+  // Skip tests that POST real data or require local E2E auth bypasses
+  grepInvert: /@mutating|@localOnly/,
 
   fullyParallel: true,
   forbidOnly: false,

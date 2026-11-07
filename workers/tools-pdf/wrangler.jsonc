@@ -1,0 +1,11 @@
+{
+  "name": "tools-pdf",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // pdf-lib in-Worker (no Container — free-first: container minutes are
+  // billed). R2 holds generated LOAs/worksheets under pipeline-assets/.
+  "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "cloudless-pipeline-assets" }],
+  "logpush": true,
+  "observability": { "enabled": true, "logs": { "enabled": true } },
+  "vars": { "WORKER_NAME": "tools-pdf" },
+}

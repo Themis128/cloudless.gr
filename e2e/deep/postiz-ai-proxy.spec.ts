@@ -157,7 +157,7 @@ test.describe("postiz-ai-proxy Worker — routing", () => {
 
 // ── 6. App: admin Postiz routes still healthy after env change ────────────────
 
-test.describe("admin Postiz routes — still wired after env change", () => {
+test.describe("admin Postiz routes — still wired after env change", { tag: "@localOnly" }, () => {
   test("GET /api/admin/postiz/health responds (2xx or 503 if Postiz unreachable)", async ({
     request,
   }) => {

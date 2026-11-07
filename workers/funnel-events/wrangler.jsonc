@@ -1,0 +1,19 @@
+{
+  "name": "funnel-events",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Pipelines binding (stream ID) → sink → R2 cloudless-datalake
+  // events/ prefix, JSON+gzip day-partitioned. Pipeline
+  // cloudless_funnel_events_pipe already created — runbook in README.
+  "pipelines": [
+    {
+      "binding": "FUNNEL_PIPELINE",
+      "stream": "6e1951f9168d4427a3ba525da36397a7",
+    },
+  ],
+  "logpush": true,
+  "observability": { "enabled": true, "logs": { "enabled": true } },
+  "vars": {
+    "WORKER_NAME": "funnel-events",
+  },
+}
