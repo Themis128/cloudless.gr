@@ -2,19 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 
-const { callWorkersAiChatMock, parseWorkersAiToolCallMock, mockRunTool } = vi.hoisted(() => ({
+const {
+  callWorkersAiChatMock,
+  parseWorkersAiToolCallMock,
+  mockRunTool,
+  upsertContactMock,
+  createContactNoteMock,
+} = vi.hoisted(() => ({
   callWorkersAiChatMock: vi.fn(),
   parseWorkersAiToolCallMock: vi.fn(),
   mockRunTool: vi.fn(),
+  upsertContactMock: vi.fn(),
+  createContactNoteMock: vi.fn(),
 }));
 
 vi.mock("@/lib/workers-ai-client", () => ({
   buildWorkersAiToolProtocol: (
     tools: ReadonlyArray<{ name: string; description: string; input_schema: unknown }>
-  ) =>
-    tools.map((t) => `- ${t.name}: ${t.description}`).join("\n"),
+  ) => tools.map((t) => `- ${t.name}: ${t.description}`).join("\n"),
   callWorkersAiChat: (...args: unknown[]) => callWorkersAiChatMock(...args),
   parseWorkersAiToolCall: (...args: unknown[]) => parseWorkersAiToolCallMock(...args),
+}));
+
+vi.mock("@/lib/espocrm", () => ({
+  upsertContact: (...args: unknown[]) => upsertContactMock(...args),
+  createContactNote: (...args: unknown[]) => createContactNoteMock(...args),
 }));
 
 vi.mock("@/lib/chat-tools", () => ({
@@ -55,6 +67,8 @@ describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitStore();
+    upsertContactMock.mockResolvedValue("contact-1");
+    createContactNoteMock.mockResolvedValue({ id: "note-1" });
   });
 
   it("returns 400 when messages array is missing", async () => {
@@ -181,9 +195,7 @@ describe("POST /api/chat", () => {
   });
 
   it("falls back to a contact-page nudge if the loop exceeds the iteration cap", async () => {
-    callWorkersAiChatMock.mockResolvedValue(
-      '{"tool":"lookup_product","args":{"query":"loop"}}'
-    );
+    callWorkersAiChatMock.mockResolvedValue('{"tool":"lookup_product","args":{"query":"loop"}}');
     parseWorkersAiToolCallMock.mockReturnValue({
       name: "lookup_product",
       args: { query: "loop" },
@@ -196,5 +208,91 @@ describe("POST /api/chat", () => {
     const text = await readSseText(res);
     expect(text.toLowerCase()).toContain("contact page");
     expect(callWorkersAiChatMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("captures a visitor email into EspoCRM when one is shared", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Booked!");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(
+      makeRequest({
+        messages: [
+          { role: "user", content: "Book a free audit" },
+          { role: "assistant", content: "Reply with: 2, Jane Smith, jane@example.com" },
+          { role: "user", content: "2, Jane Smith, jane@example.com" },
+        ],
+      })
+    );
+    expect(upsertContactMock).toHaveBeenCalledTimes(1);
+    const contact = upsertContactMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(contact.email).toBe("jane@example.com");
+    expect(contact.lead_source).toBe("chat");
+    expect(contact.firstname).toBe("Jane");
+    expect(contact.lastname).toBe("Smith");
+    // Chat is unauthenticated — an existing contact must never be overwritten.
+    expect(upsertContactMock.mock.calls[0][1]).toEqual({ skipExisting: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(createContactNoteMock).toHaveBeenCalledWith(
+      "contact-1",
+      expect.stringContaining("2, Jane Smith, jane@example.com")
+    );
+  });
+
+  it("does not write a lead when no email is present", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Hello!");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(makeRequest({ messages: [{ role: "user", content: "hi" }] }));
+    expect(upsertContactMock).not.toHaveBeenCalled();
+    expect(createContactNoteMock).not.toHaveBeenCalled();
+  });
+
+  it("only captures the newest turn, so replayed history is not re-sent", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Sure.");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(
+      makeRequest({
+        messages: [
+          { role: "user", content: "2, Jane Smith, jane@example.com" },
+          { role: "assistant", content: "Thanks Jane." },
+          { role: "user", content: "What time is the slot?" },
+        ],
+      })
+    );
+    expect(upsertContactMock).not.toHaveBeenCalled();
+  });
+
+  it("strips a trailing sentence period from the captured email", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Noted.");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(
+      makeRequest({
+        messages: [{ role: "user", content: "You can reach me at jane@example.com." }],
+      })
+    );
+    expect(upsertContactMock).toHaveBeenCalledTimes(1);
+    const contact = upsertContactMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(contact.email).toBe("jane@example.com");
+  });
+
+  it("parses non-ASCII and hyphenated names", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Ok.");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(
+      makeRequest({
+        messages: [{ role: "user", content: "2, Ιωάννα Παπαδοπούλου-Λέκκα, ioanna@example.gr" }],
+      })
+    );
+    const contact = upsertContactMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(contact.firstname).toBe("Ιωάννα");
+    expect(contact.lastname).toBe("Παπαδοπούλου-Λέκκα");
+    expect(contact.email).toBe("ioanna@example.gr");
+  });
+
+  it("sends no name when the message has no name-like segment", async () => {
+    callWorkersAiChatMock.mockResolvedValue("Ok.");
+    const { POST } = await import("@/app/api/chat/route");
+    await POST(makeRequest({ messages: [{ role: "user", content: "ping me: bob@example.com" }] }));
+    const contact = upsertContactMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(contact.firstname).toBeUndefined();
+    expect(contact.lastname).toBeUndefined();
   });
 });

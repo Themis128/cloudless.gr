@@ -154,6 +154,7 @@ function mapLeadSource(s?: string): string | undefined {
   switch (s) {
     case "website_contact_form":
     case "contact_form":
+    case "chat":
       return "Web Site";
     case "newsletter_signup":
       return "Email";
@@ -259,7 +260,31 @@ async function updateConflictContact(
   return { ok: !!res, detail: "" };
 }
 
-export async function upsertContact(contact: EspoContact): Promise<string | null> {
+export interface UpsertContactOptions {
+  /**
+   * Never modify an already-existing contact — only create missing ones.
+   *
+   * Required for untrusted/unauthenticated sources (e.g. the public chat
+   * widget): without it, anyone who types a known customer's address into a
+   * public form would overwrite that contact's name, description and
+   * leadSource with low-confidence values. With it, the existing record is
+   * returned untouched and the caller can append a Note instead.
+   */
+  skipExisting?: boolean;
+}
+
+export async function upsertContact(
+  contact: EspoContact,
+  options: UpsertContactOptions = {}
+): Promise<string | null> {
+  const { skipExisting = false } = options;
+  // No-op stand-in for updateConflictContact when the caller is not allowed
+  // to modify existing records.
+  const applyUpdate = async (
+    id: string,
+    body: Record<string, unknown>
+  ): Promise<{ ok: boolean; detail: string }> =>
+    skipExisting ? { ok: true, detail: "" } : updateConflictContact(id, body);
   try {
     // Resolve Account id before building payload so the Contact links to a real
     // Account record rather than a free-text accountName string.
@@ -274,10 +299,10 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       // Check the update like the 409 paths do: a returning contact whose
       // phone fails EspoCRM's validator gets a 400 — retry once without it
       // rather than silently keeping stale data.
-      const updated = await updateConflictContact(existingId, payload);
+      const updated = await applyUpdate(existingId, payload);
       if (!updated.ok && updated.detail.includes("phoneNumber")) {
         const noPhone = toEspoContactPayload(contact, false);
-        await updateConflictContact(
+        await applyUpdate(
           existingId,
           accountId ? { ...noPhone, accountId, accountName: undefined } : noPhone
         );
@@ -317,7 +342,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         (c) => c.emailAddress === contact.email || c.emailAddress === baseEmail
       );
       if (match) {
-        await updateConflictContact(match.id, payload);
+        await applyUpdate(match.id, payload);
         void invalidateEspoContactCaches(match.id);
         return match.id;
       }
@@ -330,13 +355,22 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         // Lookup incomplete — fall through to the conflictContacts fallback
       }
       if (conflictId) {
-        await updateConflictContact(conflictId, payload);
+        await applyUpdate(conflictId, payload);
         void invalidateEspoContactCaches(conflictId);
         return conflictId;
       }
       // The 409 is a "duplicates exist" response — EspoCRM found a duplicate
       // by name or other field, not email. Use the first contact from the
       // 409 array and update it with our data (including the new email).
+      // A skipExisting caller must not claim (or touch) a record that only
+      // matched on name — bail out instead.
+      if (skipExisting) {
+        console.warn(
+          "[EspoCRM] upsertContact: skipExisting — 409 matched on name only, not writing for",
+          safeLog(contact.email)
+        );
+        return null;
+      }
       if (conflictContacts[0]?.id) {
         const dup = conflictContacts[0];
         await updateConflictContact(dup.id, payload);
@@ -379,7 +413,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           // Use the first contact from the 409 array. Update it with the
           // phone-less payload: the original one was just rejected for its
           // phone number and would fail the same validation on PUT.
-          if (retryContacts[0]?.id) {
+          if (retryContacts[0]?.id && !skipExisting) {
             const dup = retryContacts[0];
             await updateConflictContact(dup.id, retryPayload);
             void invalidateEspoContactCaches(dup.id);
@@ -388,7 +422,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
           // Fallback to email search
           const conflictId = await findContactByEmail(contact.email);
           if (conflictId) {
-            await updateConflictContact(conflictId, retryPayload);
+            await applyUpdate(conflictId, retryPayload);
             void invalidateEspoContactCaches(conflictId);
             return conflictId;
           }
