@@ -13,7 +13,7 @@
  * immediately with one clear message if either is wrong. Fail fast, fail loud.
  */
 import type { FullConfig } from "@playwright/test";
-import { E2E_ORIGIN } from "./_port";
+import { E2E_ORIGIN } from "./_port.mjs";
 
 const BASE_URL = E2E_ORIGIN;
 
