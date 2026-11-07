@@ -52,12 +52,14 @@ export class LeadFollowup extends DurableObject<Env> {
   }
 
   private delays(): number[] {
-    return (this.env.STEP_DELAYS_HOURS ?? "")
+    const custom = (this.env.STEP_DELAYS_HOURS ?? "")
       .split(",")
       .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n) && n > 0)
-      .concat(DEFAULT_DELAYS)
-      .slice(0, 3);
+      .filter((n) => Number.isFinite(n) && n > 0);
+    // Per-step override: a partial STEP_DELAYS_HOURS replaces only the
+    // leading steps — padding with defaults keeps later steps aligned
+    // instead of shifting them left.
+    return DEFAULT_DELAYS.map((d, i) => custom[i] ?? d);
   }
 
   async enroll(lead: { email: string; name?: string }): Promise<Response> {
@@ -101,22 +103,27 @@ export class LeadFollowup extends DurableObject<Env> {
    * budget is spent. Never advances the step on failure.
    */
   private async retryLater(st: LeadState, reason: string): Promise<void> {
-    const attempts = (st.attempts ?? 0) + 1;
+    // The dispatch fetch above is an input-gate await — /unsubscribe may
+    // have flipped `done` meanwhile. Re-read before writing so the retry
+    // state can't resurrect a finished sequence or re-arm its alarm.
+    const fresh = (await this.ctx.storage.get<LeadState>("lead")) ?? st;
+    if (fresh.done) return;
+    const attempts = (fresh.attempts ?? 0) + 1;
     const exhausted = attempts >= MAX_DISPATCH_ATTEMPTS;
     await this.ctx.storage.put("lead", {
-      ...st,
+      ...fresh,
       attempts,
       lastError: reason,
       ...(exhausted ? { done: true } : {}),
     });
     if (exhausted) {
       console.error(
-        `lead-scheduler: giving up on step ${st.step} after ${attempts} attempts — ${reason}`
+        `lead-scheduler: giving up on step ${fresh.step} after ${attempts} attempts — ${reason}`
       );
       return;
     }
     console.warn(
-      `lead-scheduler: dispatch attempt ${attempts} for step ${st.step} failed — ${reason}`
+      `lead-scheduler: dispatch attempt ${attempts} for step ${fresh.step} failed — ${reason}`
     );
     await this.ctx.storage.setAlarm(Date.now() + DISPATCH_RETRY_MS);
   }

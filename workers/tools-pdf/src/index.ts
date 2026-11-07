@@ -5,6 +5,12 @@ interface Env {
   TOOLS_TOKEN?: string;
 }
 
+// StandardFonts.Helvetica is WinAnsi-encoded — glyphs outside CP1252
+// (e.g. Greek letters in client names) make drawText throw. Map them to
+// "?" so PDF generation degrades instead of failing the whole request.
+const toWinAnsi = (text: string): string =>
+  text.replace(/[^\u0020-\u007E\u00A0-\u00FF\u20AC]/g, "?");
+
 const wrap = (text: string, width: number): string[] => {
   const words = text.split(/\s+/),
     lines: string[] = [];
@@ -31,7 +37,7 @@ async function pdf(lines: { text: string; bold?: boolean }[]): Promise<Uint8Arra
         page = doc.addPage();
         y = 800;
       }
-      page.drawText(line, {
+      page.drawText(toWinAnsi(line), {
         x: 50,
         y,
         size: b ? 14 : 11,
