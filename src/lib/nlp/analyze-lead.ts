@@ -4,7 +4,7 @@ import { extractLeadEntities } from "./entities";
 import { classifyIntentLocal, detectLeadLocale } from "./language";
 import { LEAD_INTENTS, type AnalyzeLeadInput, type LeadIntent, type LeadNlpResult } from "./types";
 
-const NLP_MODEL = process.env.WORKERS_AI_NLP_MODEL?.trim() || "@cf/meta/llama-3.2-3b-instruct";
+const NLP_MODEL = process.env.WORKERS_AI_NLP_MODEL?.trim() || "@cf/qwen/qwen3.8-27b";
 
 const LeadNlpSchema = z.object({
   intent: z.enum([...LEAD_INTENTS] as [LeadIntent, ...LeadIntent[]]),
