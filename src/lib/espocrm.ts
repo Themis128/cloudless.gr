@@ -154,6 +154,7 @@ function mapLeadSource(s?: string): string | undefined {
   switch (s) {
     case "website_contact_form":
     case "contact_form":
+    case "chat":
       return "Web Site";
     case "newsletter_signup":
       return "Email";
@@ -1326,3 +1327,4 @@ export async function associateDealWithContact(dealId: string, contactId: string
     console.error("[EspoCRM] associateDealWithContact error:", err);
   }
 }
+
