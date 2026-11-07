@@ -88,7 +88,10 @@ if not NEXT_BIN.exists():
     log(f"missing {NEXT_BIN} — run pnpm install")
     sys.exit(1)
 
-PIDFILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / f"cloudless-dev-{PORT}.pid"
+runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+if not runtime_dir.is_dir():
+    runtime_dir = Path("/tmp")
+PIDFILE = runtime_dir / f"cloudless-dev-{PORT}.pid"
 
 state: dict[str, Any] = {
     "shutdown": False,
@@ -315,8 +318,10 @@ if CLEAN:
 
 def start_next() -> None:
     args = ["dev", "-p", str(PORT), "--hostname", HOST]
-    if BUNDLER == "webpack":
-        args.append("--webpack")
+    if BUNDLER == "turbopack":
+        # Next 15.5 CLI has no --webpack flag: webpack is the default when
+        # --turbopack is absent, so only pass the flag for turbopack.
+        args.append("--turbopack")
     log(f"starting next {' '.join(args)} ({BUNDLER})")
     state["child"] = subprocess.Popen([str(NEXT_BIN), *args])
 
