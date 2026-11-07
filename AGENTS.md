@@ -24,6 +24,44 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Testing:** Vitest + @testing-library/react + Playwright
 - **Deployment target:** Cloudflare Workers (via OpenNext)
 
+## Agentic Workflows (Python)
+
+The project includes a suite of Python-based agents for research and documentation, located in `agents/`.
+
+- **Research Agent:** `agents/run_cloudless_agent.py` — Uses Tavily search + Deep Agents for technical analysis.
+- **Docs Research:** `agents/run_langchain_docs_research.py` — Specialized for LangChain/LangGraph documentation.
+- **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
+- **Setup:** Run `./setup-agents.py` to initialize the Python environment.
+
+### Custom Claude Agents (2026-10)
+
+The following Claude-powered agents are available (see `.claude/agents/*.md` for full docs):
+
+- **api-security-audit** — Audits `/api` route handlers for auth, validation, error leakage, rate limiting, and secret logging issues.
+- **cms-populate** — Bootstraps Notion CMS databases (testimonials, case studies, services, FAQs) with static content.
+- **lighthouse-triage** — Diagnoses failing Lighthouse/Core Web Vitals CI runs, distinguishes variance from regressions, and identifies likely causes.
+- **notion-schema-drift** — Detects schema drift between expected Notion DB schemas and the live workspace.
+- **pr-review-debug** — Inspects and debugs the Phase 4a PR review workflow (triggers, model, prompt, comment posting).
+- **release-notes** — Drafts release notes from commit ranges, grouping by Features/Fixes/Performance/Internal.
+- **slack-routing-verify** — Verifies Slack notification routing (channels, bot invites, SSM params, test messages).
+- **sonarcloud-cleanup** — Audits and fixes SonarCloud-style code quality issues in changed files (dup strings, complexity, void, global fetch).
+
+## Shared Memory
+
+All agents write their findings to the **shared memory file**:
+
+```
+{workspace_root}/.agent-memory/memories/AGENTS.md
+```
+
+If you add new research notes, append them **at the end** of that file so existing entries stay intact.
+
+## Integration with the Cloudless Repo
+
+- The agents automatically set `WORKSPACE=/home/$(whoami)/cloudless.gr`.
+- They respect the `.cursor/` configuration (e.g., they respect the `mcp.json` server list).
+- When you open a PR, the CI step `npm run research:reports` will run both agents and commit the updated `docs/research/*.md` files.
+
 ## Design System (Cyberpunk × Quantum Devflow)
 
 - **Void colors:** `#0a0a0f` (void), `#12121a` (void-light), `#1a1a2e` (void-lighter)
@@ -68,34 +106,6 @@ src/
 │   └── i18n.ts                  # Locale system
 └── locales/                     # en.json, el.json, fr.json, de.json
 ```
-
-## Agentic Workflows (Python)
-
-The project includes a suite of Python-based agents for research and documentation, located in `agents/`.
-
-- **Research Agent:** `agents/run_cloudless_agent.py` — Uses Tavily search + Deep Agents for technical analysis.
-- **Docs Research:** `agents/run_langchain_docs_research.py` — Specialized for LangChain/LangGraph documentation.
-- **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
-- **Setup:** Run `./setup-agents.py` to initialize the Python environment.
-
-### Custom Claude Agents (2026-10)
-
-The following Claude-powered agents are available (see `.claude/agents/*.md` for full docs):
-
-- **api-security-audit** — Audits `/api` route handlers for auth, validation, error leakage, rate limiting, and secret logging issues.
-- **cms-populate** — Bootstraps Notion CMS databases (testimonials, case studies, services, FAQs) with static content.
-- **lighthouse-triage** — Diagnoses failing Lighthouse/Core Web Vitals CI runs, distinguishes variance from regressions, and identifies likely causes.
-- **notion-schema-drift** — Detects schema drift between expected Notion DB schemas and the live workspace.
-- **pr-review-debug** — Inspects and debugs the Phase 4a PR review workflow (triggers, model, prompt, comment posting).
-- **release-notes** — Drafts release notes from commit ranges, grouping by Features/Fixes/Performance/Internal.
-- **slack-routing-verify** — Verifies Slack notification routing (channels, bot invites, SSM params, test messages).
-- **sonarcloud-cleanup** — Audits and fixes SonarCloud-style code quality issues in changed files (dup strings, complexity, void, global fetch).
-
-## MCP Configuration
-
-Workspace MCP servers configured in `mcp.json` / `.devin/mcp_config.json` when
-present. The `notion` MCP entry was removed — the CMS migrated to self-hosted
-AppFlowy (`src/lib/appflowy-*.ts`, admin routes under `src/app/api/admin/appflowy/`).
 
 ## Authentication (Cloudflare D1)
 
