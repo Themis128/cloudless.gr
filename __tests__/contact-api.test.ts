@@ -302,6 +302,15 @@ describe("sendAdminEmail + catch branches", () => {
 
   it("rethrows generic email errors into the rejected-task log", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    // setup.ts seeds a fake SLACK_BOT_TOKEN; without clearing it the Slack
+    // client performs real chat.postMessage fetches (3 retries x 8s timeout)
+    // that keep Promise.allSettled pending past the waitFor window.
+    vi.stubEnv("SLACK_BOT_TOKEN", "");
+    const { resetSlackConfigCache, resetIntegrationCache } = await import(
+      "@/lib/integrations"
+    );
+    resetSlackConfigCache();
+    resetIntegrationCache();
     vi.mocked(sendEmail).mockRejectedValueOnce(new Error("smtp exploded"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST2(post(validBody));

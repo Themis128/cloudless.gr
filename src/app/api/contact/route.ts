@@ -390,6 +390,7 @@ export async function POST(request: Request) {
           "espocrm",
           "appflowy",
           "activecampaign",
+          "socialauto",
         ];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
