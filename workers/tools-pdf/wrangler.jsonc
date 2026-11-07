@@ -5,6 +5,7 @@
   // pdf-lib in-Worker (no Container — free-first: container minutes are
   // billed). R2 holds generated LOAs/worksheets under pipeline-assets/.
   "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "cloudless-pipeline-assets" }],
+  "logpush": true,
   "observability": { "enabled": true, "logs": { "enabled": true } },
-  "vars": { "WORKER_NAME": "tools-pdf" }
+  "vars": { "WORKER_NAME": "tools-pdf" },
 }

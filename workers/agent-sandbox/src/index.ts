@@ -38,11 +38,14 @@ export default {
         { error: `module must be one of: ${Object.keys(MODULES).join(", ")}` },
         { status: 400 }
       );
-    // Binding-less worker — no env, no bindings, fetch-only sandbox.
+    // Binding-less worker — no env, no bindings. globalOutbound: null cuts
+    // egress entirely; without it the loaded worker inherits the parent's
+    // network access, which breaks the "no net egress" guarantee.
     const worker = env.LOADER.get(mod, () => ({
       compatibilityDate: "2026-11-01",
       mainModule: "index.js",
       modules: { "index.js": source },
+      globalOutbound: null,
     }));
     const res = await worker
       .getEntrypoint()

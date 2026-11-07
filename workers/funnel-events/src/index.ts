@@ -10,6 +10,13 @@
  * quiet.sent, post.published, site.pageview.
  */
 
+// Structural type for the pipelines binding — kept local because the
+// v4 @cloudflare/workers-types pinned by this package does not expose
+// `Pipeline` as a global.
+interface Pipeline {
+  send(records: { type: string; payload: unknown; ts: string; source: string }[]): Promise<void>;
+}
+
 interface Env {
   FUNNEL_PIPELINE: Pipeline;
   EVENTS_TOKEN: string;

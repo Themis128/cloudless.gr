@@ -22,6 +22,8 @@ interface Env {
   DISPATCH_TOKEN?: string;
   STEP_DELAYS_HOURS?: string; // "24,72,168"
   STEP_SUBJECTS?: string; // pipe-separated per step
+  STEP_BODIES?: string; // pipe-separated per step; "{name}" is substituted
+  PUBLIC_BASE_URL?: string; // this worker's public origin — builds unsubscribe links
 }
 
 const DEFAULT_DELAYS = [24, 72, 168]; // 24h nudge, 3d pain, 7d clean break
@@ -29,6 +31,11 @@ const DEFAULT_SUBJECTS = [
   "Quick question about your free tech checkup",
   "Still fighting slow tools or high software bills?",
   "Last note — closing your file",
+];
+const DEFAULT_BODIES = [
+  "Hi {name},\n\nYou grabbed the free 30-minute tech checkup slot but never booked a time. Happy to walk through your setup — slow site, duplicate SaaS spend, manual busywork — and tell you honestly whether it's worth fixing.\n\nReply to this email or grab a slot at https://cloudless.gr/audit and I'll take a look.",
+  "Hi {name},\n\nLast note from me on this. Most of the teams I talk to are losing hours a week to tools that don't talk to each other and software bills that keep growing. If that's not you, ignore this — I'll close your file.\n\nIf it is, the fastest check is the free tech checkup: https://cloudless.gr/audit",
+  "Hi {name},\n\nClosing the loop — I won't keep emailing. If the timing's ever right for a tech checkup or a second pair of eyes on your stack, cloudless.gr/audit is always open.\n\nEither way, thanks for your interest.",
 ];
 
 /** Alarm retry budget for a failing dispatch before the lead is parked. */
@@ -45,6 +52,23 @@ type LeadState = {
   attempts?: number;
   lastError?: string;
 };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function toHex(buf: ArrayBuffer): string {
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hmacHex(message: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  return toHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)));
+}
 
 export class LeadFollowup extends DurableObject<Env> {
   private state(): DurableObjectState {
@@ -63,10 +87,19 @@ export class LeadFollowup extends DurableObject<Env> {
   }
 
   async enroll(lead: { email: string; name?: string }): Promise<Response> {
+    const email = lead.email?.trim() ?? "";
+    if (!EMAIL_RE.test(email)) {
+      return Response.json({ ok: false, reason: "valid-email-required" }, { status: 400 });
+    }
     const existing = await this.ctx.storage.get<LeadState>("lead");
     if (existing?.done) return Response.json({ ok: false, reason: "sequence-finished" });
     const delays = this.delays();
-    const st: LeadState = existing ?? { ...lead, step: 0, startedAt: Date.now() };
+    const st: LeadState = existing ?? {
+      email,
+      name: lead.name?.trim() || undefined,
+      step: 0,
+      startedAt: Date.now(),
+    };
     const nextInHours = delays[st.step] ?? delays[delays.length - 1];
     await this.ctx.storage.put("lead", st);
     // Re-enrolling an already-active lead must not push back the
@@ -134,6 +167,20 @@ export class LeadFollowup extends DurableObject<Env> {
     const delays = this.delays();
     const subjects = (this.env.STEP_SUBJECTS ?? "").split("|").filter(Boolean);
     const subject = subjects[st.step] ?? DEFAULT_SUBJECTS[st.step] ?? `Follow-up ${st.step + 1}`;
+    const bodies = (this.env.STEP_BODIES ?? "").split("|").filter(Boolean);
+    const bodyTpl =
+      bodies[st.step] ?? DEFAULT_BODIES[st.step] ?? DEFAULT_BODIES[DEFAULT_BODIES.length - 1];
+    // Signed public unsubscribe link — the DO's own id is unguessable and
+    // the HMAC proves the link came from us, so /u/ needs no bearer token.
+    const uid = this.ctx.id.toString();
+    const unsubUrl = this.env.PUBLIC_BASE_URL
+      ? `${this.env.PUBLIC_BASE_URL.replace(/\/+$/, "")}/u/${uid}/${await hmacHex(uid, this.env.SCHEDULER_TOKEN)}`
+      : undefined;
+    if (!unsubUrl) {
+      console.warn("lead-scheduler: PUBLIC_BASE_URL unset — dispatching without unsubscribe link");
+    }
+    let text = bodyTpl.replaceAll("{name}", st.name ?? "there");
+    if (unsubUrl) text += `\n\n—\nCloudless · Unsubscribe: ${unsubUrl}`;
     if (!this.env.DISPATCH_URL) {
       // Misconfiguration, not a delivered step — retry rather than
       // silently burning through the cadence.
@@ -151,8 +198,9 @@ export class LeadFollowup extends DurableObject<Env> {
         body: JSON.stringify({
           to: st.email,
           subject,
-          text: `Hi ${st.name ?? "there"},\n\n— Cloudless`,
+          text,
           category: "quiet-lead",
+          listUnsubscribe: unsubUrl,
         }),
       });
     } catch (err) {
@@ -290,6 +338,20 @@ export default {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
       return Response.json({ ok: true, service: "lead-scheduler" });
+    }
+    // Public unsubscribe: /u/<doId>/<hmac> — the signature (HMAC of the DO
+    // id under SCHEDULER_TOKEN) is the credential, so no bearer token is
+    // needed inside an email link. GET covers the link; POST covers
+    // RFC 8058 one-click (List-Unsubscribe-Post) from mail clients.
+    const um = url.pathname.match(/^\/u\/([0-9a-f]{64})\/([0-9a-f]{64})$/);
+    if ((request.method === "GET" || request.method === "POST") && um) {
+      const [, uid, sig] = um;
+      const expected = await hmacHex(uid, env.SCHEDULER_TOKEN ?? "");
+      if (!env.SCHEDULER_TOKEN || sig !== expected) {
+        return Response.json({ error: "invalid_signature" }, { status: 403 });
+      }
+      const stub = env.LEAD_FOLLOWUP.get(env.LEAD_FOLLOWUP.idFromString(uid));
+      return stub.fetch(new Request(`${url.origin}/unsubscribe`, request));
     }
     if (!authorized(request, env)) {
       return Response.json({ error: "unauthorized" }, { status: 401 });

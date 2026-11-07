@@ -6,20 +6,24 @@
     "bindings": [
       { "name": "LEAD_FOLLOWUP", "class_name": "LeadFollowup" },
       { "name": "BOOKING_SLOT", "class_name": "BookingSlot" },
-      { "name": "WEBHOOK_DEDUP", "class_name": "WebhookDedup" }
-    ]
+      { "name": "WEBHOOK_DEDUP", "class_name": "WebhookDedup" },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["LeadFollowup", "BookingSlot", "WebhookDedup"]
-    }
+      "new_sqlite_classes": ["LeadFollowup", "BookingSlot", "WebhookDedup"],
+    },
   ],
+  "logpush": true,
   "observability": { "enabled": true, "logs": { "enabled": true } },
   "vars": {
     "WORKER_NAME": "lead-scheduler",
     // Where an alarm dispatch is forwarded (mail-outbound worker or
     // SocialAuto endpoint) — configured via secret MAIL_OUTBOUND_URL.
-    "STEP_DELAYS_HOURS": "24,72,168"
-  }
+    "STEP_DELAYS_HOURS": "24,72,168",
+    // Public origin used to build signed unsubscribe links in dispatch
+    // bodies, e.g. "https://lead-scheduler.<subdomain>.workers.dev".
+    "PUBLIC_BASE_URL": "",
+  },
 }

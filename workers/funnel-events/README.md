@@ -15,7 +15,7 @@ wrangler pipelines streams create cloudless_funnel_events_stream
 wrangler pipelines sinks create cloudless_funnel_events_sink \
   --type r2 --bucket cloudless-datalake --format json \
   --compression gzip --path events/
-wrangler pipelines create cloudless-funnel-events \
+wrangler pipelines create cloudless_funnel_events_pipe \
   --sql "INSERT INTO cloudless_funnel_events_sink SELECT * FROM cloudless_funnel_events_stream"
 wrangler secret put EVENTS_TOKEN --config workers/funnel-events/wrangler.jsonc
 wrangler deploy --config workers/funnel-events/wrangler.jsonc --minify
@@ -29,5 +29,6 @@ JSON+gzip, `year=%Y/month=%m/day=%d` partitions, 300s roll interval.
 
 `POST /event` `{type, payload}` — types: `lead.created`,
 `audit.booked`, `nurture.sent`, `quiet.sent`, `post.published`,
-`site.pageview`. Rows land as `events/` partitions; query via
-`iceberg_scan` in the DuckDB API.
+`site.pageview`. Rows land as `events/` JSON+gzip partitions; query via
+the DuckDB API, e.g.
+`read_json_auto('r2://cloudless-datalake/events/**/*.json.gz', hive_partitioning = true)`.
