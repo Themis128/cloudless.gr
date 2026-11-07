@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { drainSlackEvents } from "@/lib/slack-event-tracker";
 
 // ---------------------------------------------------------------------------
 // Mock slack-verify — all route tests control verification at this boundary
@@ -62,7 +63,10 @@ describe("POST /api/slack/events", () => {
     POST = mod.POST;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Drain fire-and-forget event handlers while fetch is still stubbed,
+    // so no background work leaks into the next test.
+    await drainSlackEvents();
     vi.unstubAllGlobals();
   });
 
@@ -125,7 +129,7 @@ describe("POST /api/slack/events", () => {
     expect(data.ok).toBe(true);
 
     // Allow async handlers to settle
-    await new Promise((r) => setTimeout(r, 50));
+    await drainSlackEvents();
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://slack.com/api/chat.postMessage",
@@ -158,7 +162,7 @@ describe("POST /api/slack/events", () => {
     verifyOk(JSON.stringify(body));
 
     await POST(makeRequest(body));
-    await new Promise((r) => setTimeout(r, 50));
+    await drainSlackEvents();
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const sentBody = JSON.parse(opts.body as string);
@@ -190,7 +194,7 @@ describe("POST /api/slack/events", () => {
     verifyOk(JSON.stringify(body));
 
     await POST(makeRequest(body));
-    await new Promise((r) => setTimeout(r, 50));
+    await drainSlackEvents();
 
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const sentBody = JSON.parse(opts.body as string);
@@ -224,7 +228,7 @@ describe("POST /api/slack/events", () => {
     verifyOk(JSON.stringify(body));
 
     await POST(makeRequest(body));
-    await new Promise((r) => setTimeout(r, 50));
+    await drainSlackEvents();
 
     expect(mockFetch).not.toHaveBeenCalled();
   });
@@ -247,7 +251,7 @@ describe("POST /api/slack/events", () => {
     const response = await POST(makeRequest(body));
 
     expect(response.status).toBe(200);
-    await new Promise((r) => setTimeout(r, 50));
+    await drainSlackEvents();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

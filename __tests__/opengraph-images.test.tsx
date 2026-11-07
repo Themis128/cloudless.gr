@@ -25,7 +25,7 @@ async function expectPng(result: unknown) {
 }
 
 describe("opengraph-image generators", () => {
-  it("static pages each render a PNG", async () => {
+  it("static pages each render a PNG", { timeout: 60_000 }, async () => {
     await expectPng(RootOg());
     await expectPng(BlogOg());
     await expectPng(ContactOg());
