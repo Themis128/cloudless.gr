@@ -11,7 +11,7 @@ in Slack and EspoCRM notes.
 1. `POST /api/contact` validates Turnstile + fields.
 2. `analyzeLeadMessage()` ([`src/lib/nlp/analyze-lead.ts`](../../src/lib/nlp/analyze-lead.ts)):
    - Local heuristics (script + patterns) always run.
-   - Workers AI (`WORKERS_AI_NLP_MODEL`, default `@cf/meta/llama-3.2-3b-instruct`)
+   - Workers AI (`WORKERS_AI_NLP_MODEL`, default `@cf/qwen/qwen3.8-27b`)
      only when confidence is low and CF credentials exist.
    - Skipped under `NEXT_PUBLIC_E2E=1` or `NLP_LEAD_LLM=0`.
 3. `scoreLead({ …, nlp })` adds up to **+15** for intents/entities; `spam_or_noise`

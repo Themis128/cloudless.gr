@@ -78,15 +78,10 @@ test.describe("Auth lifecycle", () => {
         .catch(() => {});
     }
 
-    const cart = page.getByRole("dialog", { name: /shopping cart|cart/i });
-    if (await cart.isVisible().catch(() => false)) {
-      await page
-        .getByRole("button", { name: /close cart/i })
-        .click()
-        .catch(() => {});
-      await expect(cart)
-        .toBeHidden({ timeout: 10_000 })
-        .catch(() => {});
+    const cart = page.getByTestId("cart-drawer");
+    if ((await cart.getAttribute("data-open")) === "true") {
+      await cart.getByRole("button", { name: /close cart/i }).click({ timeout: 5_000 });
+      await expect(cart).toHaveAttribute("data-open", "false", { timeout: 10_000 });
     }
 
     // Fill+assert as one retried unit: if a fill lands before React hydration
@@ -95,14 +90,8 @@ test.describe("Auth lifecycle", () => {
     await expect(async () => {
       await page.locator("#signup-name").fill("E2E Mismatch");
       await page.locator("#signup-email").fill("mismatch-e2e@example.invalid");
-      // Type (don't only fill) confirm last so password-managers can't sync both
-      // fields to the same value before submit.
       await page.locator("#signup-password").fill("LongEnough1!");
-      await page.locator("#signup-confirm-password").click();
-      await page.locator("#signup-confirm-password").fill("");
-      await page.locator("#signup-confirm-password").pressSequentially("DifferentPass1!", {
-        delay: 15,
-      });
+      await page.locator("#signup-confirm-password").fill("DifferentPass1!");
       await expect(page.locator("#signup-password")).toHaveValue("LongEnough1!");
       await expect(page.locator("#signup-confirm-password")).toHaveValue("DifferentPass1!");
       // Value sticking for a beat proves hydration has attached and the
