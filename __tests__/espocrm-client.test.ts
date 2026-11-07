@@ -383,3 +383,49 @@ describe("mapLeadSource + listCompanies tail", () => {
     await expect(listCompanies()).resolves.toEqual([]);
   });
 });
+
+describe("upsertContact skipExisting (untrusted sources)", () => {
+  it("returns the existing id without issuing a PUT", async () => {
+    mockFetch.mockResolvedValueOnce(listResp([{ id: "ex1" }])); // findContactByEmail hit
+    const { upsertContact } = await lib();
+    const id = await upsertContact({ email: "a@b.co", firstname: "A" }, { skipExisting: true });
+    expect(id).toBe("ex1");
+    expect(mockFetch).toHaveBeenCalledTimes(1); // search only — applyUpdate is a no-op
+  });
+
+  it("409 with an email match returns the id without issuing a PUT", async () => {
+    mockFetch
+      .mockResolvedValueOnce(listResp([])) // equals miss
+      .mockResolvedValueOnce(listResp([])) // textFilter miss
+      .mockResolvedValueOnce(jsonResponse([{ id: "dup9", emailAddress: "a@b.co" }], 409));
+    const { upsertContact } = await lib();
+    const id = await upsertContact({ email: "a@b.co" }, { skipExisting: true });
+    expect(id).toBe("dup9");
+    expect(mockFetch).toHaveBeenCalledTimes(3); // no PUT after the 409
+  });
+
+  it("409 matched on name only bails with null and never writes", async () => {
+    mockFetch
+      .mockResolvedValueOnce(listResp([]))
+      .mockResolvedValueOnce(listResp([]))
+      .mockResolvedValueOnce(
+        jsonResponse([{ id: "dupX", emailAddress: "other@x", name: "A B" }], 409)
+      )
+      .mockResolvedValueOnce(listResp([])) // conflictId equals miss
+      .mockResolvedValueOnce(listResp([])); // conflictId textFilter miss
+    const { upsertContact } = await lib();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await upsertContact({ email: "a@b.co" }, { skipExisting: true })).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("skipExisting"),
+      expect.anything()
+    );
+    warn.mockRestore();
+    // the only write attempt was the POST that earned the 409 — no PUT followed
+    const methods = mockFetch.mock.calls.map(
+      ([, init]) => (init as RequestInit | undefined)?.method ?? "GET"
+    );
+    expect(methods).toContain("POST");
+    expect(methods).not.toContain("PUT");
+  });
+});
