@@ -1,6 +1,6 @@
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ORIGIN, E2E_PORT, E2E_HOST } from "./e2e/_port";
+import { E2E_ORIGIN, E2E_PORT, E2E_HOST } from "./e2e/_port.mjs";
 
 const rootDir = import.meta.dirname ?? path.resolve();
 const isCi = !!process.env.CI;
@@ -79,6 +79,11 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     ignoreHTTPSErrors: true,
+    // Optional: run against a real Chrome for Testing / Chrome binary instead
+    // of the bundled Chromium, e.g. E2E_CHROME_PATH=~/.cache/chrome-for-testing/chrome-linux64/chrome
+    launchOptions: process.env.E2E_CHROME_PATH
+      ? { executablePath: process.env.E2E_CHROME_PATH }
+      : undefined,
   },
 
   webServer: {
@@ -96,7 +101,10 @@ export default defineConfig({
     // Never reuse a foreign `pnpm dev` — it lacks E2E_ADMIN_TOKEN.
     // Local default port is 4010 (see e2e/_port.ts) so :4000 can stay for
     // interactive `pnpm dev`. CI uses 4000.
-    reuseExistingServer: false,
+    // Opt-in via E2E_REUSE_SERVER=1 for a pre-warmed dev server (e.g. manual
+    // `scripts/dev-server.py` boot). Default stays false so a foreign dev
+    // server without E2E_ADMIN_TOKEN is never reused.
+    reuseExistingServer: !!process.env.E2E_REUSE_SERVER,
     env: {
       ...inheritEnv(
         "CLOUDFLARE_ACCOUNT_ID",
