@@ -33,15 +33,25 @@ const slug = (s: string): string =>
     .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "") || "client";
 
-const wrap = (text: string, width: number): string[] => {
+// Usable text width: letter page is 612pt wide with 50pt side margins.
+const MAX_TEXT_WIDTH = 612 - 2 * 50;
+
+// Wrap by measured glyph width, not a fixed char count — a 14pt bold
+// line holds far fewer characters than an 11pt regular one.
+const wrap = (
+  text: string,
+  font: { widthOfTextAtSize(t: string, size: number): number },
+  size: number
+): string[] => {
   const words = text.split(/\s+/),
     lines: string[] = [];
   let cur = "";
   for (const w of words) {
-    if ((cur + " " + w).trim().length > width) {
+    const candidate = (cur + " " + w).trim();
+    if (cur && font.widthOfTextAtSize(candidate, size) > MAX_TEXT_WIDTH) {
       lines.push(cur.trim());
       cur = w;
-    } else cur += " " + w;
+    } else cur = candidate;
   }
   if (cur.trim()) lines.push(cur.trim());
   return lines;
@@ -54,7 +64,9 @@ async function pdf(lines: { text: string; bold?: boolean }[]): Promise<Uint8Arra
   let page = doc.addPage(),
     y = 800;
   for (const { text, bold: b } of lines) {
-    for (const line of wrap(text, 90)) {
+    const font = b ? bold : reg,
+      size = b ? 14 : 11;
+    for (const line of wrap(text, font, size)) {
       if (y < 60) {
         page = doc.addPage();
         y = 800;
@@ -62,8 +74,8 @@ async function pdf(lines: { text: string; bold?: boolean }[]): Promise<Uint8Arra
       page.drawText(toWinAnsi(line), {
         x: 50,
         y,
-        size: b ? 14 : 11,
-        font: b ? bold : reg,
+        size,
+        font,
         color: rgb(0.1, 0.1, 0.1),
       });
       y -= b ? 20 : 15;
