@@ -175,7 +175,10 @@ export class LeadFollowup extends DurableObject<Env> {
     const url = new URL(request.url);
     const body =
       request.method === "POST"
-        ? ((await request.json().catch(() => ({}))) as { email?: string; name?: string })
+        ? (((await request.json().catch(() => ({}))) ?? {}) as {
+            email?: string;
+            name?: string;
+          })
         : {};
     if (url.pathname === "/enroll")
       return this.enroll({ email: body.email ?? "", name: body.name });
@@ -230,7 +233,9 @@ export class WebhookDedup extends DurableObject<Env> {
   private static SWEEP_MS = 24 * 3600_000;
 
   async fetch(request: Request): Promise<Response> {
-    const body = (await request.json().catch(() => ({}))) as { eventId?: string };
+    const body = ((await request.json().catch(() => ({}))) ?? {}) as {
+      eventId?: string;
+    };
     const eventId = body.eventId;
     if (!eventId) return Response.json({ error: "eventId required" }, { status: 400 });
     const first = await this.ctx.storage.transaction(async () => {

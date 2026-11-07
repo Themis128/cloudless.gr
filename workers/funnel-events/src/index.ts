@@ -40,7 +40,7 @@ export default {
     }
     let body: { type?: string; payload?: unknown };
     try {
-      body = (await request.json()) as typeof body;
+      body = ((await request.json()) ?? {}) as typeof body;
     } catch {
       return Response.json({ error: "invalid_json" }, { status: 400 });
     }
