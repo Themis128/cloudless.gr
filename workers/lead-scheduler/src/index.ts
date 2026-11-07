@@ -53,7 +53,16 @@ type LeadState = {
   lastError?: string;
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time email shape check — a single-pass parse avoids the
+// polynomial-backtracking regex CodeQL flags on nested [^\s@]+ classes.
+function isValidEmail(email: string): boolean {
+  if (/\s/.test(email)) return false;
+  const at = email.indexOf("@");
+  if (at <= 0 || at !== email.lastIndexOf("@")) return false;
+  const domain = email.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  return dot > 0 && dot < domain.length - 1;
+}
 
 function toHex(buf: ArrayBuffer): string {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -88,7 +97,7 @@ export class LeadFollowup extends DurableObject<Env> {
 
   async enroll(lead: { email: string; name?: string }): Promise<Response> {
     const email = lead.email?.trim() ?? "";
-    if (!EMAIL_RE.test(email)) {
+    if (!isValidEmail(email)) {
       return Response.json({ ok: false, reason: "valid-email-required" }, { status: 400 });
     }
     const existing = await this.ctx.storage.get<LeadState>("lead");
