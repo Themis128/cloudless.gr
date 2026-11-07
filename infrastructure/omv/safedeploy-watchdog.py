@@ -112,7 +112,7 @@ WATCH_TARGETS = [
         (
             "cmd",
             "timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            "tbaltzakis@192.168.1.23 'docker compose -f C:/Users/tbaltzakis/cu130-slim/docker-compose.yml up -d'",
+            "tbaltzakis@192.168.1.23 'wsl -d Ubuntu-24.04 docker compose -f /home/tbaltzakis/cu130-slim/docker-compose.yml up -d'",
         ),
     ),
     (
