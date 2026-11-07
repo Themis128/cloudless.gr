@@ -26,7 +26,7 @@ Intents: `quote_request | booking | support | partnership | spam_or_noise | gene
 
 - Greek patterns **must not use `\b`** — JS word boundaries break on Greek script.
 - Skip LLM when `NEXT_PUBLIC_E2E=1`, `NLP_LEAD_LLM=0`, or Workers AI unconfigured.
-- Default model: `@cf/meta/llama-3.2-3b-instruct` (`WORKERS_AI_NLP_MODEL` override). JSON-only, 3s timeout, Zod parse; on failure keep local result (`source: "fallback"`).
+- Default model: `@cf/qwen/qwen3.8-27b` (`WORKERS_AI_NLP_MODEL` override). JSON-only, 3s timeout, Zod parse; on failure keep local result (`source: "fallback"`).
 - Slack / Espo notes include `intent`, `locale`, `confidence`, `source` — scores stay explainable (`nlp intent:quote_request (+12)`).
 - Do not revive Bedrock / Anthropic / LangGraph for this path.
 
