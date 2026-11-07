@@ -24,6 +24,8 @@
     "STEP_DELAYS_HOURS": "24,72,168",
     // Public origin used to build signed unsubscribe links in dispatch
     // bodies, e.g. "https://lead-scheduler.<subdomain>.workers.dev".
+    // REQUIRED — empty defers dispatch via the retry path (mail without
+    // an unsubscribe URL is non-compliant).
     "PUBLIC_BASE_URL": "",
   },
 }

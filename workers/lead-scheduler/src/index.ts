@@ -48,6 +48,8 @@ type LeadState = {
   step: number; // next step index to send
   startedAt: number;
   done?: boolean;
+  /** Dispatch retries exhausted — parked, not finished; /enroll resumes. */
+  parked?: boolean;
   /** Consecutive failed dispatch attempts for the current step. */
   attempts?: number;
   lastError?: string;
@@ -103,12 +105,18 @@ export class LeadFollowup extends DurableObject<Env> {
     const existing = await this.ctx.storage.get<LeadState>("lead");
     if (existing?.done) return Response.json({ ok: false, reason: "sequence-finished" });
     const delays = this.delays();
-    const st: LeadState = existing ?? {
-      email,
-      name: lead.name?.trim() || undefined,
-      step: 0,
-      startedAt: Date.now(),
-    };
+    // A parked lead (dispatch retries exhausted) resumes on re-enroll:
+    // clear the park, reset the attempt budget and re-arm the alarm.
+    const st: LeadState = existing
+      ? existing.parked
+        ? { ...existing, parked: false, attempts: 0 }
+        : existing
+      : {
+          email,
+          name: lead.name?.trim() || undefined,
+          step: 0,
+          startedAt: Date.now(),
+        };
     const nextInHours = delays[st.step] ?? delays[delays.length - 1];
     await this.ctx.storage.put("lead", st);
     // Re-enrolling an already-active lead must not push back the
@@ -124,6 +132,7 @@ export class LeadFollowup extends DurableObject<Env> {
       nextInHours,
       alarmAt: pending ?? (await this.ctx.storage.getAlarm()),
       alreadyEnrolled: Boolean(existing),
+      resumed: Boolean(existing?.parked),
     });
   }
 
@@ -149,14 +158,16 @@ export class LeadFollowup extends DurableObject<Env> {
     // have flipped `done` meanwhile. Re-read before writing so the retry
     // state can't resurrect a finished sequence or re-arm its alarm.
     const fresh = (await this.ctx.storage.get<LeadState>("lead")) ?? st;
-    if (fresh.done) return;
+    if (fresh.done || fresh.parked) return;
     const attempts = (fresh.attempts ?? 0) + 1;
     const exhausted = attempts >= MAX_DISPATCH_ATTEMPTS;
+    // Exhaustion parks the sequence (parked:true, no done) so a later
+    // /enroll can resume it — done is reserved for completed/unsubscribed.
     await this.ctx.storage.put("lead", {
       ...fresh,
       attempts,
       lastError: reason,
-      ...(exhausted ? { done: true } : {}),
+      ...(exhausted ? { parked: true } : {}),
     });
     if (exhausted) {
       console.error(
@@ -172,8 +183,20 @@ export class LeadFollowup extends DurableObject<Env> {
 
   async alarm(): Promise<void> {
     const st = await this.ctx.storage.get<LeadState>("lead");
-    if (!st || st.done) return;
+    if (!st || st.done || st.parked) return;
     const delays = this.delays();
+    if (!this.env.DISPATCH_URL || !this.env.PUBLIC_BASE_URL) {
+      // Misconfiguration, not a delivered step — retry rather than
+      // silently burning through the cadence or sending mail without an
+      // unsubscribe path (non-compliant bulk mail).
+      await this.retryLater(
+        st,
+        !this.env.DISPATCH_URL
+          ? "DISPATCH_URL is not configured"
+          : "PUBLIC_BASE_URL is not configured"
+      );
+      return;
+    }
     const subjects = (this.env.STEP_SUBJECTS ?? "").split("|").filter(Boolean);
     const subject = subjects[st.step] ?? DEFAULT_SUBJECTS[st.step] ?? `Follow-up ${st.step + 1}`;
     const bodies = (this.env.STEP_BODIES ?? "").split("|").filter(Boolean);
@@ -182,20 +205,8 @@ export class LeadFollowup extends DurableObject<Env> {
     // Signed public unsubscribe link — the DO's own id is unguessable and
     // the HMAC proves the link came from us, so /u/ needs no bearer token.
     const uid = this.ctx.id.toString();
-    const unsubUrl = this.env.PUBLIC_BASE_URL
-      ? `${this.env.PUBLIC_BASE_URL.replace(/\/+$/, "")}/u/${uid}/${await hmacHex(uid, this.env.SCHEDULER_TOKEN)}`
-      : undefined;
-    if (!unsubUrl) {
-      console.warn("lead-scheduler: PUBLIC_BASE_URL unset — dispatching without unsubscribe link");
-    }
-    let text = bodyTpl.replaceAll("{name}", st.name ?? "there");
-    if (unsubUrl) text += `\n\n—\nCloudless · Unsubscribe: ${unsubUrl}`;
-    if (!this.env.DISPATCH_URL) {
-      // Misconfiguration, not a delivered step — retry rather than
-      // silently burning through the cadence.
-      await this.retryLater(st, "DISPATCH_URL is not configured");
-      return;
-    }
+    const unsubUrl = `${this.env.PUBLIC_BASE_URL.replace(/\/+$/, "")}/u/${uid}/${await hmacHex(uid, this.env.SCHEDULER_TOKEN)}`;
+    const text = `${bodyTpl.replaceAll("{name}", st.name ?? "there")}\n\n—\nCloudless · Unsubscribe: ${unsubUrl}`;
     let res: Response;
     try {
       res = await fetch(this.env.DISPATCH_URL, {
@@ -350,14 +361,28 @@ export default {
     }
     // Public unsubscribe: /u/<doId>/<hmac> — the signature (HMAC of the DO
     // id under SCHEDULER_TOKEN) is the credential, so no bearer token is
-    // needed inside an email link. GET covers the link; POST covers
-    // RFC 8058 one-click (List-Unsubscribe-Post) from mail clients.
+    // needed inside an email link. GET renders a confirmation page (mail
+    // scanners/prefetchers must not unsubscribe on a bare GET); POST is
+    // the action — both the confirm form and RFC 8058 one-click
+    // (List-Unsubscribe-Post) land here.
     const um = url.pathname.match(/^\/u\/([0-9a-f]{64})\/([0-9a-f]{64})$/);
     if ((request.method === "GET" || request.method === "POST") && um) {
       const [, uid, sig] = um;
       const expected = await hmacHex(uid, env.SCHEDULER_TOKEN ?? "");
       if (!env.SCHEDULER_TOKEN || sig !== expected) {
         return Response.json({ error: "invalid_signature" }, { status: 403 });
+      }
+      if (request.method === "GET") {
+        return new Response(
+          `<!doctype html><html><head><meta charset="utf-8"><title>Unsubscribe</title></head>` +
+            `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem">` +
+            `<h1>Unsubscribe from Cloudless follow-ups?</h1>` +
+            `<p>Confirm below and we won't send you any more checkup reminders.</p>` +
+            `<form method="post" action="${url.pathname}"><button type="submit" ` +
+            `style="padding:.6rem 1.2rem;font-size:1rem">Unsubscribe</button></form>` +
+            `</body></html>`,
+          { headers: { "content-type": "text/html; charset=utf-8" } }
+        );
       }
       const stub = env.LEAD_FOLLOWUP.get(env.LEAD_FOLLOWUP.idFromString(uid));
       return stub.fetch(new Request(`${url.origin}/unsubscribe`, request));
