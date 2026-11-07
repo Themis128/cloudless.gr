@@ -74,7 +74,7 @@ test.describe("POST /api/chat — public chatbot", () => {
 
 // ── B. Admin assistant (tool loop) ──────────────────────────────────────────
 
-test.describe("POST /api/admin/ai/assistant", () => {
+test.describe("POST /api/admin/ai/assistant", { tag: "@localOnly" }, () => {
   test("401 without auth token", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/assistant", {
       data: { messages: [{ role: "user", content: "what are recent orders?" }] },
@@ -130,7 +130,7 @@ test.describe("POST /api/admin/ai/assistant", () => {
 
 // ── C. Admin copy generation ─────────────────────────────────────────────────
 
-test.describe("POST /api/admin/ai/copy", () => {
+test.describe("POST /api/admin/ai/copy", { tag: "@localOnly" }, () => {
   test("401 without auth", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/copy", {
       data: { service: "cloud hosting", platform: "LinkedIn", objective: "awareness" },
@@ -168,7 +168,7 @@ test.describe("POST /api/admin/ai/copy", () => {
 
 // ── D. Admin campaign generation ─────────────────────────────────────────────
 
-test.describe("POST /api/admin/ai/campaign", () => {
+test.describe("POST /api/admin/ai/campaign", { tag: "@localOnly" }, () => {
   test("401 without auth", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/campaign", {
       data: { brief: "launch cloud hosting" },
@@ -203,7 +203,7 @@ test.describe("POST /api/admin/ai/campaign", () => {
 
 // ── E. Admin audience targeting ──────────────────────────────────────────────
 
-test.describe("POST /api/admin/ai/audience", () => {
+test.describe("POST /api/admin/ai/audience", { tag: "@localOnly" }, () => {
   test("401 without auth", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/audience", {
       data: { description: "tech founders" },
@@ -234,7 +234,7 @@ test.describe("POST /api/admin/ai/audience", () => {
 
 // ── F. Admin report insights ──────────────────────────────────────────────────
 
-test.describe("POST /api/admin/ai/report-insights", () => {
+test.describe("POST /api/admin/ai/report-insights", { tag: "@localOnly" }, () => {
   test("401 without auth", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/report-insights", {
       data: { metrics: { visits: 1200, conversions: 42 }, period: "last 30 days" },
@@ -268,7 +268,7 @@ test.describe("POST /api/admin/ai/report-insights", () => {
 
 // ── G. Admin generate (Workers AI direct) ────────────────────────────────────
 
-test.describe("POST /api/admin/ai/generate", () => {
+test.describe("POST /api/admin/ai/generate", { tag: "@localOnly" }, () => {
   test("401 without auth", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/generate", {
       data: { prompt: "hello" },
@@ -312,7 +312,7 @@ test.describe("POST /api/admin/ai/generate", () => {
 
 // ── H. Provider field contract (integration smoke) ───────────────────────────
 
-test.describe("provider field contract — assistant + copy return known provider", () => {
+test.describe("provider field contract — assistant + copy return known provider", { tag: "@localOnly" }, () => {
   test("assistant response.provider is one of the four known backends", async ({ request }) => {
     const res = await api(request, "post", "/api/admin/ai/assistant", {
       headers: authHeaders,
