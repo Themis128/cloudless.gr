@@ -37,7 +37,13 @@ export default function SocialAutoGatePage() {
   }, []);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const act = useCallback(async (item: GateItem, op: "approve" | "reject", idx: number) => {
