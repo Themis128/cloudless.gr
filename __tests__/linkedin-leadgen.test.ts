@@ -173,7 +173,10 @@ describe("POST /api/webhooks/linkedin-leads", () => {
 
     const mockCreateLead = vi.fn().mockResolvedValue("lead-99");
     vi.doMock("@/lib/espocrm", () => ({
-      createLead: (...args: unknown[]) => mockCreateLead(...args),
+      createLeadDetailed: async (...args: unknown[]) => {
+        const id = (await mockCreateLead(...args)) as string | null;
+        return id ? { id } : { id: null, failure: "transient" as const };
+      },
     }));
 
     vi.doMock("@/lib/linkedin-leadgen", async () => {
@@ -269,6 +272,7 @@ describe("linkedin-leads route tails", () => {
     fetchResp?: unknown;
     fetchQuestions?: unknown;
     createLead?: (d: unknown) => Promise<string | null>;
+    createLeadFailure?: "permanent" | "transient";
   }) => {
     vi.doMock("@/lib/ssm-config", () => ({
       getConfig: vi.fn().mockResolvedValue({
@@ -278,8 +282,13 @@ describe("linkedin-leads route tails", () => {
         LINKEDIN_CAPI_ACCESS_TOKEN: "",
       }),
     }));
+    const mockCreate = opts.createLead ?? (vi.fn().mockResolvedValue("lead-1") as never);
     vi.doMock("@/lib/espocrm", () => ({
-      createLead: opts.createLead ?? (vi.fn().mockResolvedValue("lead-1") as never),
+      createLeadDetailed: async (d: unknown) => {
+        const id = (await mockCreate(d)) as string | null;
+        if (id) return { id };
+        return { id: null, failure: opts.createLeadFailure ?? ("transient" as const) };
+      },
     }));
     vi.doMock("@/lib/linkedin-leadgen", async () => {
       const actual =
@@ -424,5 +433,39 @@ describe("linkedin-leads route tails", () => {
     const r2 = await POST2(await req(body, "sec"));
     expect(r2.status).toBe(200);
     expect(((await r2.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
+  });
+
+  it("acknowledges permanent EspoCRM rejections with 200 (no retry loop)", async () => {
+    mockDeps({
+      secret: "sec",
+      token: "tok",
+      fetchResp: {
+        id: "r1",
+        formResponse: {
+          answers: [
+            {
+              questionId: 1,
+              answerDetails: { textQuestionAnswer: { answer: "lead@ex.com" } },
+            },
+          ],
+        },
+      },
+      fetchQuestions: [{ questionId: 1, predefinedField: "EMAIL" }],
+      createLead: vi.fn().mockResolvedValue(null),
+      createLeadFailure: "permanent",
+    });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify({
+      type: "LEAD_ACTION",
+      leadAction: "CREATED",
+      leadGenFormResponse: "urn:li:leadGenFormResponse:r1",
+      occurredAt: 1,
+    });
+    const r = await POST(await req(body, "sec"));
+    // EspoCRM 4xx → permanent → 200 so LinkedIn does not redeliver forever.
+    expect(r.status).toBe(200);
+    const j = (await r.json()) as { results: { ok: boolean; retryable?: boolean }[] };
+    expect(j.results[0].ok).toBe(false);
+    expect(j.results[0].retryable).toBe(false);
   });
 });

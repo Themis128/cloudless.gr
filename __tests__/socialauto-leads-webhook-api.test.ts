@@ -7,7 +7,10 @@ vi.mock("@/lib/ssm-config", () => ({
 
 const mockCreateLead = vi.fn();
 vi.mock("@/lib/espocrm", () => ({
-  createLead: (...args: unknown[]) => mockCreateLead(...args),
+  createLeadDetailed: async (...args: unknown[]) => {
+    const id = (await mockCreateLead(...args)) as string | null;
+    return id ? { id } : { id: null, failure: "transient" as const };
+  },
 }));
 
 import { getConfig } from "@/lib/ssm-config";

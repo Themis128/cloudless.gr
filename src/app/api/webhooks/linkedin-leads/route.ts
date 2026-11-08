@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
-import { createLead } from "@/lib/espocrm";
+import { createLeadDetailed } from "@/lib/espocrm";
 import {
   buildChallengeResponse,
   fetchLeadFormQuestions,
@@ -164,10 +164,15 @@ export async function POST(request: NextRequest) {
         return { ok: false, retryable: false as const, espocrm_lead_id: null };
       }
 
-      const id = await createLead(leadData);
+      const { id, failure } = await createLeadDetailed(leadData);
       return id
         ? { ok: true, retryable: false as const, espocrm_lead_id: id, skipped: false as const }
-        : { ok: false, retryable: true as const, espocrm_lead_id: null, skipped: false as const };
+        : {
+            ok: false,
+            retryable: failure !== "permanent",
+            espocrm_lead_id: null,
+            skipped: false as const,
+          };
     })
   );
 

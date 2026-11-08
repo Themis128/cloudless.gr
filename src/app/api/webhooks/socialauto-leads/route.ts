@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
-import { createLead } from "@/lib/espocrm";
+import { createLeadDetailed } from "@/lib/espocrm";
 import { isSocialAutoLead, toEspoLeadData, type SocialAutoLead } from "@/lib/socialauto-leads";
 
 export const dynamic = "force-dynamic";
@@ -87,10 +87,10 @@ export async function POST(req: NextRequest) {
         }
         const data = toEspoLeadData(item);
         if (!data.emailAddress) return { ok: false, espocrm_lead_id: null };
-        const id = await createLead(data);
+        const { id, failure } = await createLeadDetailed(data);
         return id
           ? { ok: true, espocrm_lead_id: id }
-          : { ok: false, espocrm_lead_id: null, retryable: true };
+          : { ok: false, espocrm_lead_id: null, retryable: failure !== "permanent" };
       }
     )
   );
