@@ -131,3 +131,74 @@ export function socialMonetization(gates) {
 	});
 }
 
+/**
+ * Developer-app snapshots — lake/socialauto-devapps/snapshots.json rows
+ * written by SocialAuto's devapps-sync sweep (one per active account:
+ * token health, scopes, expiry, platform insights, demographics).
+ * Surfaces health first so a dead channel is visible, not zeroed.
+ */
+export function socialDevapps(snapshots) {
+	if (!Array.isArray(snapshots) || !snapshots.length) return null;
+	const now = Date.now();
+	return snapshots
+		.map((s) => {
+			const health = s.health || {};
+			const ins = s.insights || {};
+			const expiryRaw = s.token_expires_at ?? health.expires_at ?? null;
+			const expiryMs = expiryRaw ? Date.parse(expiryRaw) : NaN;
+			return {
+				platform: s.platform ?? null,
+				username: s.username ?? null,
+				ok: s.ok ?? null,
+				token_valid: health.token_valid ?? null,
+				token_expires_at: expiryRaw,
+				days_to_expiry:
+					Number.isFinite(expiryMs)
+						? Math.round(((expiryMs - now) / 86400000) * 10) / 10
+						: null,
+				scopes: Array.isArray(s.scopes) ? s.scopes : [],
+				debug_scopes: Array.isArray(health.debug_scopes) ? health.debug_scopes : [],
+				followers:
+					ins.followers ??
+					ins.profile?.followers ??
+					ins.profile?.followers_count ??
+					ins.organization?.followers ??
+					ins.creator_info?.follower_count ??
+					null,
+				reach_30d:
+					ins.reach_30d ??
+					ins.page_impressions_unique_30d ??
+					ins.accounts_engaged_30d ??
+					ins.total_interactions_30d ??
+					null,
+				quota_exhausted: Boolean(ins.quota_exhausted),
+				error: s.error ?? ins.insights_error ?? ins.object_error ?? null,
+				captured_at: s.captured_at ?? null,
+			};
+		})
+		.sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
+}
+
+/**
+ * Channel actions — lake/socialauto-channel-actions/actions.json rows:
+ * the per-channel hand-off to SocialAuto post generation (health
+ * overrides first, else content hints with followers/media flags).
+ */
+export function socialChannelActions(actions) {
+	if (!Array.isArray(actions) || !actions.length) return null;
+	return actions
+		.map((a) => ({
+			platform: a.platform ?? null,
+			username: a.username ?? null,
+			type: a.type ?? null,
+			priority: a.priority ?? null,
+			action: a.action ?? null,
+			reason: a.reason ?? null,
+			followers: a.followers ?? null,
+			media_required: a.media_required ?? null,
+			note: a.note ?? null,
+			captured_at: a.captured_at ?? null,
+		}))
+		.sort((a, b) => String(a.platform).localeCompare(String(b.platform)));
+}
+
