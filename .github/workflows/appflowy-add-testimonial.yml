@@ -139,10 +139,12 @@ jobs:
           if [ -z "$API_URL" ] || [ "$API_URL" = "NONE" ]; then
             echo "no working AppFlowy API base found"; exit 1
           fi
-          # nginx serves both surfaces in-cluster: /api/* → appflowy-cloud,
-          # /gotrue/* → gotrue (path-stripped). Verified live 2026-11-09.
-          # Gotrue always goes through nginx — appflowy-cloud:8000 has no
-          # /gotrue route (it returns the SPA HTML catch-all).
+          # Positional args keep the title injection-safe (names may contain
+          # quotes). nginx serves both surfaces in-cluster: /api/* →
+          # appflowy-cloud, /gotrue/* → gotrue (path-stripped). Verified
+          # live 2026-11-09. Gotrue always goes through nginx —
+          # appflowy-cloud:8000 has no /gotrue route (SPA HTML catch-all).
           echo "using api: $API_URL"
           kubectl exec -n cloudless "$POD" -- sh -c \
-            "APPFLOWY_BASE_URL='$API_URL' APPFLOWY_GOTRUE_URL='http://nginx.appflowy.svc.cluster.local/gotrue' node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title '[Testimonial] $T_NAME'"
+            'APPFLOWY_BASE_URL="$1" APPFLOWY_GOTRUE_URL="$2" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "$3"' \
+            _ "$API_URL" "http://nginx.appflowy.svc.cluster.local/gotrue" "[Testimonial] $T_NAME"
