@@ -123,8 +123,8 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
     : [null, null, null];
 
   const sources = {
-    espocrm: espoConfigured && stageData.leads !== null,
-    socialauto: saConfigured && overview !== null,
+    espocrm: espoConfigured && stageData.leads !== null && stageData.opportunities !== null,
+    socialauto: saConfigured && overview !== null && followersSeries !== null,
   };
 
   // ── SocialAuto-side stages ──────────────────────────────────────────
@@ -145,6 +145,7 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
   const activeOpps =
     opps?.filter((o) => !CLOSED_STAGES.has((o.stage ?? "").toLowerCase())).length ?? null;
   const won = opps?.filter((o) => WON_STAGES.has((o.stage ?? "").toLowerCase())).length ?? null;
+  const oppsTotal = opps?.length ?? null;
 
   const leadSources: Record<string, number> = {};
   for (const l of leads ?? []) {
@@ -173,7 +174,11 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
       note: `EspoCRM leads (${dead} dead)`,
     },
     { stage: "nurtured", count: nurtured, note: "leads past 'New'/'Dead'" },
-    { stage: "opportunity", count: activeOpps, note: "EspoCRM opportunities, active only" },
+    {
+      stage: "opportunity",
+      count: oppsTotal,
+      note: `EspoCRM opportunities (${activeOpps ?? "?"} active)`,
+    },
     { stage: "won", count: won, note: "opportunities closed-won" },
   ];
 
@@ -201,14 +206,19 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
 
   const reachGrowing =
     reach !== null && reach30dAgo !== null && reach30dAgo > 0 && reach > reach30dAgo;
-  const leadConvVsAudience = reach ? ((leadsTotal ?? 0) / reach) * 100 : 0;
+  // Null when EspoCRM is unreachable — a missing lead count must not be
+  // treated as 0 leads (that would fire the auction warning on reach
+  // growth alone).
+  const leadConvVsAudience = reach && leads ? (leads.length / reach) * 100 : null;
 
   return {
     generated_at: new Date().toISOString(),
     sources,
     stages,
     weakest_transition: weakestTransition,
-    auction_warning: Boolean(reachGrowing && leadConvVsAudience < 0.5),
+    auction_warning: Boolean(
+      reachGrowing && leadConvVsAudience !== null && leadConvVsAudience < 0.5
+    ),
     lead_sources: leadSources,
     socialauto_funnel: funnelState
       ? {

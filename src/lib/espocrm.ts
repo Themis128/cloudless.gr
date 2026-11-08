@@ -1371,8 +1371,14 @@ export interface FunnelStageData {
  */
 export async function getFunnelStageData(): Promise<FunnelStageData> {
   const [leads, opportunities] = await Promise.all([
-    espoListAll<FunnelLeadRow>("Lead", { select: "status,source" }).catch(() => null),
-    espoListAll<FunnelOpportunityRow>("Opportunity", { select: "stage" }).catch(() => null),
+    espoListAll<FunnelLeadRow>("Lead", { select: "status,source" }).catch((err) => {
+      console.warn("[EspoCRM] getFunnelStageData Lead fetch failed:", err);
+      return null;
+    }),
+    espoListAll<FunnelOpportunityRow>("Opportunity", { select: "stage" }).catch((err) => {
+      console.warn("[EspoCRM] getFunnelStageData Opportunity fetch failed:", err);
+      return null;
+    }),
   ]);
   return { leads, opportunities };
 }

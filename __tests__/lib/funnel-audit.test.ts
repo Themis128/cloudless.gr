@@ -138,7 +138,7 @@ describe("buildFunnelAudit — happy path", () => {
     expect(byStage.lead.count).toBe(4);
     expect(byStage.lead.note).toContain("1 dead");
     expect(byStage.nurtured.count).toBe(1); // only "In Process" — New+Dead excluded
-    expect(byStage.opportunity.count).toBe(2); // closed stages excluded
+    expect(byStage.opportunity.count).toBe(4); // all stages incl. closed
     expect(byStage.won.count).toBe(1);
 
     // conv vs previous stage (proxy stages still display a number)
@@ -146,11 +146,11 @@ describe("buildFunnelAudit — happy path", () => {
     expect(byStage.engaged.conv_pct).toBeCloseTo(4.2, 1); // 42/1000
     expect(byStage.lead.conv_pct).toBeCloseTo(9.52, 1); // 4/42
     expect(byStage.nurtured.conv_pct).toBe(25); // 1/4
-    expect(byStage.opportunity.conv_pct).toBe(200); // 2/1
-    expect(byStage.won.conv_pct).toBe(50); // 1/2
+    expect(byStage.opportunity.conv_pct).toBe(400); // 4/1
+    expect(byStage.won.conv_pct).toBe(25); // 1/4 — win rate vs all opps
 
     // weakest non-proxy transition: engaged→lead excluded (prev is proxy),
-    // candidates lead→nurtured 25%, nurtured→opp 200%, opp→won 50%
+    // candidates lead→nurtured 25%, nurtured→opp 400%, opp→won 25%
     expect(r.weakest_transition).toBe("lead→nurtured (25%)");
     expect(r.lead_sources).toEqual({ "Web Site": 2, LinkedIn: 1, "Cold Call": 1 });
     expect(r.socialauto_funnel?.total_conversions).toBe(2);
@@ -178,13 +178,19 @@ describe("buildFunnelAudit — happy path", () => {
     expect((await buildFunnelAudit()).auction_warning).toBe(false);
   });
 
+  it("does not fire the auction warning when EspoCRM is unreachable", async () => {
+    // Reach is growing (900→1000) but leads are unknown — null must not
+    // be treated as 0 leads, or the warning would fire on reach alone.
+    mockEspo("fail", "fail");
+    const { buildFunnelAudit } = await lib();
+    const r = await buildFunnelAudit();
+    expect(r.auction_warning).toBe(false);
+  });
+
   it("falls back to current followers for accounts with no snapshot series", async () => {
     // New account onboarded mid-window: series empty → current count used.
     mockSa({
-      followers: [
-        { platform: "x", current: 500, series: [] },
-        ...followersSeries(900, 1000),
-      ],
+      followers: [{ platform: "x", current: 500, series: [] }, ...followersSeries(900, 1000)],
     });
     const { buildFunnelAudit } = await lib();
     const r = await buildFunnelAudit();
@@ -218,6 +224,35 @@ describe("buildFunnelAudit — degradation", () => {
     expect(byStage.lead.count).toBe(4);
     expect(r.socialauto_funnel).toBeNull();
     expect(mockSaFetch).not.toHaveBeenCalled();
+  });
+
+  it("partial EspoCRM failure marks the source unhealthy", async () => {
+    // Leads OK, opportunities down → sources.espocrm must be false.
+    mockEspo(LEADS, "fail");
+    const { buildFunnelAudit } = await lib();
+    const r = await buildFunnelAudit();
+    expect(r.sources.espocrm).toBe(false);
+    const byStage = Object.fromEntries(r.stages.map((s) => [s.stage, s]));
+    expect(byStage.lead.count).toBe(4);
+    expect(byStage.opportunity.count).toBeNull();
+  });
+
+  it("partial SocialAuto failure marks the source unhealthy", async () => {
+    // Overview + funnel/state OK, followers down → sources.socialauto false.
+    mockSaFetch.mockImplementation(async (path: string) => {
+      if (path.startsWith("/analytics/followers")) return json({ error: "down" }, 503);
+      if (path.startsWith("/analytics/overview")) {
+        return json({ total_followers: 1000, total_engagement: 42, connected_accounts: 3 });
+      }
+      if (path === "/funnel/state") return json({ leads: {}, conversions: [] });
+      return json({}, 404);
+    });
+    const { buildFunnelAudit } = await lib();
+    const r = await buildFunnelAudit();
+    expect(r.sources.socialauto).toBe(false);
+    const byStage = Object.fromEntries(r.stages.map((s) => [s.stage, s]));
+    expect(byStage.audience.count).toBeNull();
+    expect(byStage.engaged.count).toBe(42);
   });
 
   it("SocialAuto fetch failures degrade per-endpoint", async () => {
