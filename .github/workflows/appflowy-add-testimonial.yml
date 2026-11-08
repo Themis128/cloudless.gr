@@ -84,6 +84,24 @@ jobs:
           kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-probe.mjs | tee /tmp/probe.out
           grep '^SELECTED=' /tmp/probe.out | grep -v NONE
 
+      - name: Export AppFlowy env for Infisical sync
+        # Reads the pod's APPFLOWY_* env into a base64 artifact (values never
+        # hit the step log) so an operator can mirror them into Infisical.
+        # Artifact is deleted after sync; retention is 1 day regardless.
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          kubectl exec -n cloudless "$POD" -- sh -c \
+            'env | grep -E "^APPFLOWY_" | sort' | base64 -w0 > /tmp/appflowy-env.b64
+          echo "exported $(wc -c < /tmp/appflowy-env.b64) bytes"
+
+      - name: Upload env artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: appflowy-env
+          path: /tmp/appflowy-env.b64
+          retention-days: 1
+
       - name: Upload testimonial page into AppFlowy
         run: |
           set -euo pipefail
