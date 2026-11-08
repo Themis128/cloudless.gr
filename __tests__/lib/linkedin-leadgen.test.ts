@@ -10,7 +10,9 @@ import {
   toEspoLeadDataFromLeadGen,
   isLeadCreatedNotification,
   fetchLeadFormResponse,
+  fetchLeadFormResponseDetailed,
   fetchLeadFormQuestions,
+  fetchLeadFormQuestionsDetailed,
 } from "@/lib/linkedin-leadgen";
 
 const mockFetch = vi.fn();
@@ -228,6 +230,42 @@ describe("fetchLeadFormResponse", () => {
     mockFetch.mockResolvedValueOnce(new Response("not-json", { status: 200 }));
     expect(await fetchLeadFormResponse({ responseId: "r1", token: "t" })).toBeNull();
   });
+
+  it("detailed variant classifies permanent vs transient failures", async () => {
+    // invalid id → permanent, no fetch
+    expect(await fetchLeadFormResponseDetailed({ responseId: "bad id", token: "t" })).toEqual({
+      response: null,
+      failure: "permanent",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // 4xx → permanent
+    mockFetch.mockResolvedValueOnce(new Response("gone", { status: 404 }));
+    expect(await fetchLeadFormResponseDetailed({ responseId: "r1", token: "t" })).toEqual({
+      response: null,
+      failure: "permanent",
+    });
+
+    // 429 / 5xx / network → transient
+    mockFetch.mockResolvedValueOnce(new Response("slow", { status: 429 }));
+    expect((await fetchLeadFormResponseDetailed({ responseId: "r1", token: "t" })).failure).toBe(
+      "transient"
+    );
+    mockFetch.mockResolvedValueOnce(new Response("oops", { status: 503 }));
+    expect((await fetchLeadFormResponseDetailed({ responseId: "r1", token: "t" })).failure).toBe(
+      "transient"
+    );
+    mockFetch.mockRejectedValueOnce(new Error("net"));
+    expect((await fetchLeadFormResponseDetailed({ responseId: "r1", token: "t" })).failure).toBe(
+      "transient"
+    );
+
+    // ok-but-empty json → transient
+    mockFetch.mockResolvedValueOnce(new Response("not-json", { status: 200 }));
+    expect((await fetchLeadFormResponseDetailed({ responseId: "r1", token: "t" })).failure).toBe(
+      "transient"
+    );
+  });
 });
 
 describe("fetchLeadFormQuestions", () => {
@@ -251,5 +289,34 @@ describe("fetchLeadFormQuestions", () => {
     expect(mockFetch.mock.calls[1][0] as string).toContain("leadType=");
     mockFetch.mockResolvedValueOnce(okJson({}));
     expect(await fetchLeadFormQuestions({ formId: "f1", token: "t" })).toEqual([]);
+  });
+
+  it("detailed variant classifies permanent vs transient failures", async () => {
+    expect(await fetchLeadFormQuestionsDetailed({ formId: "a b", token: "t" })).toEqual({
+      questions: [],
+      failure: "permanent",
+    });
+
+    mockFetch.mockResolvedValueOnce(new Response("x", { status: 403 }));
+    expect((await fetchLeadFormQuestionsDetailed({ formId: "f1", token: "t" })).failure).toBe(
+      "permanent"
+    );
+    mockFetch.mockResolvedValueOnce(new Response("x", { status: 500 }));
+    expect((await fetchLeadFormQuestionsDetailed({ formId: "f1", token: "t" })).failure).toBe(
+      "transient"
+    );
+    mockFetch.mockResolvedValueOnce(new Response("x", { status: 200 }));
+    expect((await fetchLeadFormQuestionsDetailed({ formId: "f1", token: "t" })).failure).toBe(
+      "transient"
+    );
+    mockFetch.mockRejectedValueOnce(new Error("net"));
+    expect((await fetchLeadFormQuestionsDetailed({ formId: "f1", token: "t" })).failure).toBe(
+      "transient"
+    );
+
+    mockFetch.mockResolvedValueOnce(okJson({ questions: [{ questionId: 7 }] }));
+    expect(await fetchLeadFormQuestionsDetailed({ formId: "f1", token: "t" })).toEqual({
+      questions: [{ questionId: 7 }],
+    });
   });
 });

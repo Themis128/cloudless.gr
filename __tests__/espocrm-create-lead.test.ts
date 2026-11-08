@@ -5,7 +5,7 @@ vi.mock("@/lib/integrations", () => ({
 }));
 
 import { getIntegrationsAsync } from "@/lib/integrations";
-import { createLead } from "@/lib/espocrm";
+import { createLead, createLeadDetailed } from "@/lib/espocrm";
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -170,5 +170,43 @@ describe("EspoCRM createLead", () => {
     const updateInit = fetchMock.mock.calls[3]?.[1] as RequestInit;
     const body = JSON.parse(String(updateInit.body)) as Record<string, unknown>;
     expect(body.targetListsIds).toBeUndefined();
+  });
+
+  it("createLeadDetailed classifies create failures as permanent vs transient", async () => {
+    const lead = { emailAddress: "fail@example.com" };
+
+    // EspoCRM 4xx rejection → permanent (redelivery can't help)
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ list: [] }))
+        .mockResolvedValueOnce(new Response("bad request", { status: 400 }))
+    );
+    expect(await createLeadDetailed(lead)).toEqual({ id: null, failure: "permanent" });
+
+    // EspoCRM 5xx → transient
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ list: [] }))
+        .mockResolvedValueOnce(new Response("oops", { status: 503 }))
+    );
+    expect(await createLeadDetailed(lead)).toEqual({ id: null, failure: "transient" });
+
+    // 429 → transient (rate limit worth retrying)
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ list: [] }))
+        .mockResolvedValueOnce(new Response("slow down", { status: 429 }))
+    );
+    expect((await createLeadDetailed(lead)).failure).toBe("transient");
+
+    // network throw → transient
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("socket hangup")));
+    expect(await createLeadDetailed(lead)).toEqual({ id: null, failure: "transient" });
   });
 });
