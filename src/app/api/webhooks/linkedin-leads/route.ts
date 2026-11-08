@@ -18,8 +18,8 @@ import { getConfig } from "@/lib/ssm-config";
 import { createLeadDetailed } from "@/lib/espocrm";
 import {
   buildChallengeResponse,
-  fetchLeadFormQuestions,
-  fetchLeadFormResponse,
+  fetchLeadFormQuestionsDetailed,
+  fetchLeadFormResponseDetailed,
   isLeadCreatedNotification,
   parseLeadGenFormId,
   parseLeadGenFormResponseId,
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       const ownerSponsoredAccount = n.owner?.sponsoredAccount ?? ownerUrn ?? undefined;
       const leadType = n.leadType ?? "SPONSORED";
 
-      const response = await fetchLeadFormResponse({
+      const { response, failure: fetchFailure } = await fetchLeadFormResponseDetailed({
         responseId,
         token: accessToken,
         ownerSponsoredAccount,
@@ -137,23 +137,33 @@ export async function POST(request: NextRequest) {
           "[linkedin-leads] failed to fetch leadFormResponse",
           responseId.replace(/\n/g, "").replace(/\r/g, "")
         );
-        return { ok: false, retryable: true as const, espocrm_lead_id: null };
+        return {
+          ok: false,
+          retryable: fetchFailure !== "permanent",
+          espocrm_lead_id: null,
+        };
       }
 
       const formId =
         parseLeadGenFormId(n.leadGenForm) ?? parseLeadGenFormId(response.versionedLeadGenFormUrn);
-      const questions = formId
-        ? await fetchLeadFormQuestions({
+      const questionsResult = formId
+        ? await fetchLeadFormQuestionsDetailed({
             formId,
             token: accessToken,
             ownerSponsoredAccount,
             leadType,
           })
-        : [];
+        : { questions: [], failure: undefined };
+      // A transient questions-fetch failure would strip field labels and can
+      // make a mappable lead look email-less — treat it as retryable rather
+      // than dropping the lead as "permanent".
+      if (questionsResult.failure === "transient") {
+        return { ok: false, retryable: true as const, espocrm_lead_id: null };
+      }
 
       const leadData = toEspoLeadDataFromLeadGen({
         response,
-        questions,
+        questions: questionsResult.questions,
         notification: n,
       });
       if (!leadData?.emailAddress) {

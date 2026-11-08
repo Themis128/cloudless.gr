@@ -246,34 +246,106 @@ async function linkedInGet(
   return { ok: res.ok, status: res.status, json };
 }
 
+export interface LeadFormResponseResult {
+  response: LeadFormResponse | null;
+  /** Set when response is null: "permanent" = LinkedIn rejected the request
+   *  (4xx other than 408/429, or an invalid id) so redelivery can't help;
+   *  "transient" = worth retrying (5xx, 408/429, network). */
+  failure?: "permanent" | "transient";
+}
+
+function classifyLinkedInStatus(status: number): "permanent" | "transient" {
+  if (status === 408 || status === 429 || status >= 500) return "transient";
+  if (status >= 400) return "permanent";
+  return "transient";
+}
+
+export async function fetchLeadFormResponseDetailed(
+  opts: Parameters<typeof fetchLeadFormResponse>[0]
+): Promise<LeadFormResponseResult> {
+  // Webhook-controlled value — whitelist-validate before it reaches the URL.
+  if (!LINKEDIN_ID_RE.test(opts.responseId)) {
+    return { response: null, failure: "permanent" };
+  }
+  const leadType = opts.leadType ?? "SPONSORED";
+  try {
+    // Prefer the finder that includes owner (required for many tokens).
+    if (opts.ownerSponsoredAccount) {
+      const owner = encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`);
+      const ids = encodeURIComponent(`List(${opts.responseId})`);
+      const path =
+        `/leadFormResponses?ids=${ids}` +
+        `&owner=${owner}` +
+        `&leadType=${encodeURIComponent(`(leadType:${leadType})`)}`;
+      const batch = await linkedInGet(path, opts.token);
+      if (batch.ok && batch.json && typeof batch.json === "object") {
+        const results = (batch.json as { results?: Record<string, LeadFormResponse> }).results;
+        const hit = results?.[opts.responseId];
+        if (hit) return { response: hit };
+      }
+    }
+
+    const single = await linkedInGet(`/leadFormResponses/${opts.responseId}`, opts.token);
+    if (!single.ok || !single.json || typeof single.json !== "object") {
+      return {
+        response: null,
+        failure: single.ok ? "transient" : classifyLinkedInStatus(single.status),
+      };
+    }
+    return { response: single.json as LeadFormResponse };
+  } catch {
+    return { response: null, failure: "transient" };
+  }
+}
+
 export async function fetchLeadFormResponse(opts: {
   responseId: string;
   token: string;
   ownerSponsoredAccount?: string;
   leadType?: string;
 }): Promise<LeadFormResponse | null> {
-  // Webhook-controlled value — whitelist-validate before it reaches the URL.
-  if (!LINKEDIN_ID_RE.test(opts.responseId)) return null;
-  const leadType = opts.leadType ?? "SPONSORED";
-  // Prefer the finder that includes owner (required for many tokens).
-  if (opts.ownerSponsoredAccount) {
-    const owner = encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`);
-    const ids = encodeURIComponent(`List(${opts.responseId})`);
-    const path =
-      `/leadFormResponses?ids=${ids}` +
-      `&owner=${owner}` +
-      `&leadType=${encodeURIComponent(`(leadType:${leadType})`)}`;
-    const batch = await linkedInGet(path, opts.token);
-    if (batch.ok && batch.json && typeof batch.json === "object") {
-      const results = (batch.json as { results?: Record<string, LeadFormResponse> }).results;
-      const hit = results?.[opts.responseId];
-      if (hit) return hit;
-    }
-  }
+  return (await fetchLeadFormResponseDetailed(opts)).response;
+}
 
-  const single = await linkedInGet(`/leadFormResponses/${opts.responseId}`, opts.token);
-  if (!single.ok || !single.json || typeof single.json !== "object") return null;
-  return single.json as LeadFormResponse;
+export interface LeadFormQuestionsResult {
+  questions: FormQuestion[];
+  /** Set when the fetch failed: "permanent" = LinkedIn rejected (4xx other
+   *  than 408/429) or the form id is invalid; "transient" = worth retrying. */
+  failure?: "permanent" | "transient";
+}
+
+export async function fetchLeadFormQuestionsDetailed(opts: {
+  formId: string;
+  token: string;
+  ownerSponsoredAccount?: string;
+  leadType?: string;
+}): Promise<LeadFormQuestionsResult> {
+  if (!LINKEDIN_ID_RE.test(opts.formId)) {
+    return { questions: [], failure: "permanent" };
+  }
+  const leadType = opts.leadType ?? "SPONSORED";
+  let path = `/leadForms/${opts.formId}`;
+  if (opts.ownerSponsoredAccount) {
+    path +=
+      `?owner=${encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`)}` +
+      `&leadType=${encodeURIComponent(`(leadType:${leadType})`)}`;
+  }
+  try {
+    const res = await linkedInGet(path, opts.token);
+    if (!res.ok || !res.json || typeof res.json !== "object") {
+      return {
+        questions: [],
+        failure: res.ok ? "transient" : classifyLinkedInStatus(res.status),
+      };
+    }
+    const form = res.json as {
+      questions?: FormQuestion[];
+      content?: { questions?: FormQuestion[] };
+    };
+    return { questions: form.questions ?? form.content?.questions ?? [] };
+  } catch {
+    return { questions: [], failure: "transient" };
+  }
 }
 
 export async function fetchLeadFormQuestions(opts: {
@@ -282,19 +354,5 @@ export async function fetchLeadFormQuestions(opts: {
   ownerSponsoredAccount?: string;
   leadType?: string;
 }): Promise<FormQuestion[]> {
-  if (!LINKEDIN_ID_RE.test(opts.formId)) return [];
-  const leadType = opts.leadType ?? "SPONSORED";
-  let path = `/leadForms/${opts.formId}`;
-  if (opts.ownerSponsoredAccount) {
-    path +=
-      `?owner=${encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`)}` +
-      `&leadType=${encodeURIComponent(`(leadType:${leadType})`)}`;
-  }
-  const res = await linkedInGet(path, opts.token);
-  if (!res.ok || !res.json || typeof res.json !== "object") return [];
-  const form = res.json as {
-    questions?: FormQuestion[];
-    content?: { questions?: FormQuestion[] };
-  };
-  return form.questions ?? form.content?.questions ?? [];
+  return (await fetchLeadFormQuestionsDetailed(opts)).questions;
 }

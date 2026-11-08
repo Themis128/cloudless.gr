@@ -184,23 +184,25 @@ describe("POST /api/webhooks/linkedin-leads", () => {
         await vi.importActual<typeof import("@/lib/linkedin-leadgen")>("@/lib/linkedin-leadgen");
       return {
         ...actual,
-        fetchLeadFormResponse: vi.fn().mockResolvedValue({
-          id: "resp-9",
-          leadMetadata: {
-            sponsoredLeadMetadata: { campaign: "urn:li:sponsoredCampaign:857622786" },
-          },
-          formResponse: {
-            answers: [
-              {
-                questionId: 1,
-                answerDetails: { textQuestionAnswer: { answer: "lead@ex.com" } },
-              },
-            ],
+        fetchLeadFormResponseDetailed: vi.fn().mockResolvedValue({
+          response: {
+            id: "resp-9",
+            leadMetadata: {
+              sponsoredLeadMetadata: { campaign: "urn:li:sponsoredCampaign:857622786" },
+            },
+            formResponse: {
+              answers: [
+                {
+                  questionId: 1,
+                  answerDetails: { textQuestionAnswer: { answer: "lead@ex.com" } },
+                },
+              ],
+            },
           },
         }),
-        fetchLeadFormQuestions: vi
-          .fn()
-          .mockResolvedValue([{ questionId: 1, predefinedField: "EMAIL" }]),
+        fetchLeadFormQuestionsDetailed: vi.fn().mockResolvedValue({
+          questions: [{ questionId: 1, predefinedField: "EMAIL" }],
+        }),
       };
     });
 
@@ -270,6 +272,7 @@ describe("linkedin-leads route tails", () => {
     secret?: string;
     token?: string;
     fetchResp?: unknown;
+    fetchRespFailure?: "permanent" | "transient";
     fetchQuestions?: unknown;
     createLead?: (d: unknown) => Promise<string | null>;
     createLeadFailure?: "permanent" | "transient";
@@ -295,8 +298,16 @@ describe("linkedin-leads route tails", () => {
         await vi.importActual<typeof import("@/lib/linkedin-leadgen")>("@/lib/linkedin-leadgen");
       return {
         ...actual,
-        fetchLeadFormResponse: vi.fn().mockResolvedValue(opts.fetchResp ?? null),
-        fetchLeadFormQuestions: vi.fn().mockResolvedValue(opts.fetchQuestions ?? []),
+        fetchLeadFormResponseDetailed: vi
+          .fn()
+          .mockResolvedValue(
+            opts.fetchResp == null
+              ? { response: null, failure: opts.fetchRespFailure ?? ("transient" as const) }
+              : { response: opts.fetchResp }
+          ),
+        fetchLeadFormQuestionsDetailed: vi
+          .fn()
+          .mockResolvedValue({ questions: opts.fetchQuestions ?? [] }),
       };
     });
   };
@@ -433,6 +444,28 @@ describe("linkedin-leads route tails", () => {
     const r2 = await POST2(await req(body, "sec"));
     expect(r2.status).toBe(200);
     expect(((await r2.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
+  });
+
+  it("acknowledges permanent LinkedIn fetch rejections with 200 (no retry loop)", async () => {
+    mockDeps({
+      secret: "sec",
+      token: "tok",
+      fetchResp: null,
+      fetchRespFailure: "permanent",
+    });
+    const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
+    const body = JSON.stringify({
+      type: "LEAD_ACTION",
+      leadAction: "CREATED",
+      leadGenFormResponse: "urn:li:leadGenFormResponse:r1",
+      occurredAt: 1,
+    });
+    const r = await POST(await req(body, "sec"));
+    // LinkedIn 4xx (e.g. unknown response id) → permanent → 200, no redelivery.
+    expect(r.status).toBe(200);
+    const j = (await r.json()) as { results: { ok: boolean; retryable?: boolean }[] };
+    expect(j.results[0].ok).toBe(false);
+    expect(j.results[0].retryable).toBe(false);
   });
 
   it("acknowledges permanent EspoCRM rejections with 200 (no retry loop)", async () => {
