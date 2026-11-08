@@ -8,6 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  socialChannelActions,
+  socialDevapps,
   socialEngagement,
   socialMonetization,
   socialOutliers,
@@ -117,6 +119,79 @@ describe("socialMonetization", () => {
   it("returns null on empty input", () => {
     expect(socialMonetization(null)).toBeNull();
     expect(socialMonetization([])).toBeNull();
+  });
+});
+
+describe("socialDevapps", () => {
+  it("surfaces health + audience fields per channel", () => {
+    const rows = socialDevapps([
+      {
+        platform: "linkedin",
+        username: "cloudless-gr",
+        ok: true,
+        token_expires_at: new Date(Date.now() + 10 * 86400000).toISOString(),
+        scopes: ["w_member_social"],
+        health: { token_valid: true, debug_scopes: ["w_member_social"] },
+        insights: { followers: 1200, reach_30d: 5400 },
+        captured_at: "2026-11-08T12:00:00Z",
+      },
+      {
+        platform: "twitter",
+        username: "tb",
+        ok: false,
+        error: "TwitterAPIError: 401",
+        health: { token_valid: false },
+        insights: {},
+      },
+    ])!;
+    expect(rows).toHaveLength(2);
+    const li = rows.find((r) => r.platform === "linkedin")!;
+    expect(li.token_valid).toBe(true);
+    expect(li.followers).toBe(1200);
+    expect(li.reach_30d).toBe(5400);
+    expect(li.days_to_expiry).toBeGreaterThan(9);
+    const tw = rows.find((r) => r.platform === "twitter")!;
+    expect(tw.ok).toBe(false);
+    expect(tw.error).toBe("TwitterAPIError: 401");
+  });
+
+  it("returns null on empty input", () => {
+    expect(socialDevapps(null)).toBeNull();
+    expect(socialDevapps([])).toBeNull();
+  });
+});
+
+describe("socialChannelActions", () => {
+  it("passes health overrides and content hints through", () => {
+    const rows = socialChannelActions([
+      {
+        type: "channel_health",
+        priority: "high",
+        action: "heal_session",
+        reason: "token invalid",
+        platform: "instagram",
+        username: "cloudless.gr",
+      },
+      {
+        type: "channel_action",
+        platform: "linkedin",
+        username: "cloudless-gr",
+        followers: 1200,
+        media_required: false,
+        note: "text-first",
+      },
+    ])!;
+    expect(rows).toHaveLength(2);
+    const ig = rows.find((r) => r.platform === "instagram")!;
+    expect(ig.action).toBe("heal_session");
+    const li = rows.find((r) => r.platform === "linkedin")!;
+    expect(li.followers).toBe(1200);
+    expect(li.media_required).toBe(false);
+  });
+
+  it("returns null on empty input", () => {
+    expect(socialChannelActions(null)).toBeNull();
+    expect(socialChannelActions([])).toBeNull();
   });
 });
 
