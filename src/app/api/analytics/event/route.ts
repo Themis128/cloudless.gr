@@ -16,6 +16,12 @@ export async function POST(req: NextRequest) {
   if (!isSocialAutoAnalyticsEvent(parsed)) {
     return NextResponse.json({ error: "invalid_event" }, { status: 400 });
   }
+  // This beacon is unauthenticated — restrict `domain` to our own hostnames
+  // so anyone can't inject forged analytics for arbitrary domains.
+  const domain = parsed.domain.trim().toLowerCase();
+  if (domain !== "cloudless.gr" && !domain.endsWith(".cloudless.gr")) {
+    return NextResponse.json({ error: "invalid_domain" }, { status: 400 });
+  }
 
   await sendSocialAutoEventServer(parsed, req);
   return NextResponse.json({ ok: true });

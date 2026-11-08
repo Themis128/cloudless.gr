@@ -20,6 +20,7 @@ interface Insights {
   clicks: number;
   costInLocalCurrency: string;
   conversions: number;
+  currency?: string;
 }
 
 interface CrmRollup {
@@ -106,7 +107,7 @@ export default function LinkedInPage() {
           <MetricCard label="Clicks" value={insights.clicks.toLocaleString()} />
           <MetricCard
             label="Spend"
-            value={`$${Number.parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
+            value={`${insights.currency ? `${insights.currency} ` : ""}${Number.parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
           />
           <MetricCard label="Leads" value={insights.conversions.toLocaleString()} />
         </div>
@@ -145,7 +146,10 @@ export default function LinkedInPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-400">{c.objectiveType}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-                    {c.totalBudget ? `${c.totalBudget.amount} ${c.totalBudget.currencyCode}` : "—"}
+                    {c.totalBudget
+                      ? // LinkedIn returns budget amounts in cents (minor units).
+                        `${(Number(c.totalBudget.amount) / 100).toFixed(2)} ${c.totalBudget.currencyCode}`
+                      : "—"}
                   </td>
                 </tr>
               ))}

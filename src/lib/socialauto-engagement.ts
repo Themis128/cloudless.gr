@@ -18,7 +18,7 @@ export async function listPendingGates(): Promise<GateItem[]> {
 }
 
 export async function approveGate(id: string, commentDraft?: string): Promise<GateItem> {
-  const r = await saFetch(`/engagement/${id}/approve`, {
+  const r = await saFetch(`/engagement/${encodeURIComponent(id)}/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(commentDraft ? { comment_draft: commentDraft } : {}),
@@ -28,7 +28,7 @@ export async function approveGate(id: string, commentDraft?: string): Promise<Ga
 }
 
 export async function rejectGate(id: string): Promise<GateItem> {
-  const r = await saFetch(`/engagement/${id}/reject`, { method: "POST" });
+  const r = await saFetch(`/engagement/${encodeURIComponent(id)}/reject`, { method: "POST" });
   if (!r.ok) throw new Error(`reject: ${r.status}`);
   return (await r.json()) as GateItem;
 }

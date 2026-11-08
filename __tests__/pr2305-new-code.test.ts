@@ -13,7 +13,12 @@ vi.mock("@/lib/socialauto", () => ({
   saFetch: mockSaFetch,
   SocialAutoNotConfiguredError: class SocialAutoNotConfiguredError extends Error {},
   SocialAutoApiError: class SocialAutoApiError extends Error {
-    constructor(public status: number, public detail: string) { super(detail); }
+    constructor(
+      public status: number,
+      public detail: string
+    ) {
+      super(detail);
+    }
   },
 }));
 
@@ -41,44 +46,69 @@ beforeEach(() => {
 
 describe("api/survey", () => {
   it("rejects bad email", async () => {
-    const r = await surveyPOST(req("http://x/api/survey", {
-      method: "POST", body: JSON.stringify({ email: "nope" }),
-    }) as never);
+    const r = await surveyPOST(
+      req("http://x/api/survey", {
+        method: "POST",
+        body: JSON.stringify({ email: "nope" }),
+      }) as never
+    );
     expect(r.status).toBe(400);
   });
 
   it("honeypot short-circuits", async () => {
-    const r = await surveyPOST(req("http://x/api/survey", {
-      method: "POST", body: JSON.stringify({ email: "a@b.co", website: "spam" }),
-    }) as never);
+    const r = await surveyPOST(
+      req("http://x/api/survey", {
+        method: "POST",
+        body: JSON.stringify({ email: "a@b.co", website: "spam" }),
+      }) as never
+    );
     expect((await r.json()).ok).toBe(true);
   });
 
   it("reports not_configured without service token", async () => {
     mockGetConfig.mockResolvedValue({});
-    const r = await surveyPOST(req("http://x/api/survey", {
-      method: "POST", body: JSON.stringify({ email: "a@b.co" }),
-    }) as never);
+    const r = await surveyPOST(
+      req("http://x/api/survey", {
+        method: "POST",
+        body: JSON.stringify({ email: "a@b.co" }),
+      }) as never
+    );
     expect((await r.json()).forwarded.delivered).toBe("not_configured");
   });
 
   it("forwards a valid survey", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => okJson({ ok: true })));
-    const r = await surveyPOST(req("http://x/api/survey", {
-      method: "POST",
-      headers: { referer: "https://cloudless.gr/survey" },
-      body: JSON.stringify({ email: "a@b.co", name: "A", answers: { stack: "AWS" }, consent: true }),
-    }) as never);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => okJson({ ok: true }))
+    );
+    const r = await surveyPOST(
+      req("http://x/api/survey", {
+        method: "POST",
+        headers: { referer: "https://cloudless.gr/survey" },
+        body: JSON.stringify({
+          email: "a@b.co",
+          name: "A",
+          answers: { stack: "AWS" },
+          consent: true,
+        }),
+      }) as never
+    );
     expect((await r.json()).forwarded.delivered).toBe("sent");
     const call = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(call[0])).toContain("/api/v1/leads/public/survey");
   });
 
   it("reports upstream_error on failure", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => okJson({}, 502)));
-    const r = await surveyPOST(req("http://x/api/survey", {
-      method: "POST", body: JSON.stringify({ email: "a@b.co" }),
-    }) as never);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => okJson({}, 502))
+    );
+    const r = await surveyPOST(
+      req("http://x/api/survey", {
+        method: "POST",
+        body: JSON.stringify({ email: "a@b.co" }),
+      }) as never
+    );
     expect((await r.json()).forwarded.delivered).toBe("upstream_error");
   });
 });
@@ -98,18 +128,42 @@ describe("api/admin/socialauto-gates", () => {
 
   it("POST approves with draft", async () => {
     mockSaFetch.mockResolvedValue(okJson({ id: "1", status: "approved" }));
-    const r = await gatesPOST(req("http://x/api/admin/socialauto-gates", {
-      method: "POST", body: JSON.stringify({ id: "1", op: "approve", comment_draft: "hi" }),
-    }));
+    const r = await gatesPOST(
+      req("http://x/api/admin/socialauto-gates", {
+        method: "POST",
+        body: JSON.stringify({ id: "1", op: "approve", comment_draft: "hi" }),
+      })
+    );
     expect((await r.json()).item.status).toBe("approved");
   });
 
   it("POST rejects", async () => {
     mockSaFetch.mockResolvedValue(okJson({ id: "2", status: "rejected" }));
-    const r = await gatesPOST(req("http://x/api/admin/socialauto-gates", {
-      method: "POST", body: JSON.stringify({ id: "2", op: "reject" }),
-    }));
+    const r = await gatesPOST(
+      req("http://x/api/admin/socialauto-gates", {
+        method: "POST",
+        body: JSON.stringify({ id: "2", op: "reject" }),
+      })
+    );
     expect((await r.json()).item.status).toBe("rejected");
+  });
+
+  it("POST 400s on invalid op and missing id — never falls through to approve", async () => {
+    for (const body of [
+      { id: "1", op: "bogus" },
+      { id: "1" },
+      { op: "approve" },
+      { id: "", op: "approve" },
+    ]) {
+      const r = await gatesPOST(
+        req("http://x/api/admin/socialauto-gates", {
+          method: "POST",
+          body: JSON.stringify(body),
+        })
+      );
+      expect(r.status).toBe(400);
+    }
+    expect(mockSaFetch).not.toHaveBeenCalled();
   });
 });
 
@@ -137,9 +191,16 @@ describe("socialauto-engagement lib", () => {
 describe("admin agency analytics page", () => {
   it("renders metrics board", async () => {
     const { renderToString } = await import("react-dom/server");
-    mockSaFetch.mockResolvedValue(okJson({
-      tcd_eur: 31.5, tsr_pct: 99.2, ppl_active: 4, alv_minutes: 7, hipc_weekly: 0, period: "7d",
-    }));
+    mockSaFetch.mockResolvedValue(
+      okJson({
+        tcd_eur: 31.5,
+        tsr_pct: 99.2,
+        ppl_active: 4,
+        alv_minutes: 7,
+        hipc_weekly: 0,
+        period: "7d",
+      })
+    );
     const mod = await import("@/app/[locale]/admin/analytics/agency/page");
     const el = await mod.default();
     const html = renderToString(el);

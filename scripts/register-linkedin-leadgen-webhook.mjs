@@ -13,12 +13,13 @@
  */
 
 const API = "https://api.linkedin.com/rest";
+// Keep in sync with LINKEDIN_LEADGEN_API_VERSION in src/lib/linkedin-api.ts
+// (this script can't import the TS module).
 const VERSION = "202605";
 
 const token = process.env.LINKEDIN_ACCESS_TOKEN || process.env.LINKEDIN_CAPI_ACCESS_TOKEN;
 const accountId = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
-const webhook =
-  process.env.WEBHOOK_URL || "https://cloudless.gr/api/webhooks/linkedin-leads";
+const webhook = process.env.WEBHOOK_URL || "https://cloudless.gr/api/webhooks/linkedin-leads";
 
 if (!token) {
   console.error("Missing LINKEDIN_ACCESS_TOKEN (or LINKEDIN_CAPI_ACCESS_TOKEN)");

@@ -13,7 +13,13 @@ export const runtime = "nodejs";
 // default serverless timeout — give the proxied call a full minute.
 export const maxDuration = 60;
 
-const VALID_ACTIONS = new Set(["session-heal", "release-browser-lock", "set-tiktok-audit"]);
+const VALID_ACTIONS = new Set([
+  "session-heal",
+  "release-browser-lock",
+  "set-tiktok-audit",
+  "agency-proposal-approve",
+  "agency-proposal-reject",
+]);
 
 /**
  * GET /api/admin/postiz/ops — aggregated SocialAuto ops state
@@ -35,6 +41,12 @@ export const POST = saAdminRoute(async (req: NextRequest) => {
   }
   if (body.action === "set-tiktok-audit" && typeof body.status !== "string") {
     return NextResponse.json({ error: "status_required" }, { status: 400 });
+  }
+  if (
+    (body.action === "agency-proposal-approve" || body.action === "agency-proposal-reject") &&
+    typeof body.id !== "string"
+  ) {
+    return NextResponse.json({ error: "id_required" }, { status: 400 });
   }
   return NextResponse.json({ ok: true, result: await runOpsAction(body as SaOpsAction) });
 });

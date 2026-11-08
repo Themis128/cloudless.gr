@@ -99,7 +99,10 @@ describe("campaigns/linkedin — insights + control", () => {
       costInLocalCurrency: "12.3",
       conversions: 1,
     });
-    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+    const analyticsCall = vi
+      .mocked(fetch)
+      .mock.calls.find((c) => String(c[0]).includes("adAnalytics"));
+    const url = String(analyticsCall?.[0]);
     expect(url).toContain("dateRange.start.year=2026");
     expect(url).toContain("dateRange.end.day=1");
 

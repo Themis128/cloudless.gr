@@ -82,7 +82,8 @@ describe("admin campaigns/linkedin — populated", () => {
             status: "ACTIVE",
             type: "SPONSORED",
             objectiveType: "ENGAGEMENT",
-            totalBudget: { amount: "100.00", currencyCode: "EUR" },
+            // LinkedIn returns budget amounts in minor units (cents).
+            totalBudget: { amount: "10000", currencyCode: "EUR" },
             createdAt: 1727000000000,
           },
           {
@@ -102,6 +103,7 @@ describe("admin campaigns/linkedin — populated", () => {
           clicks: 812,
           costInLocalCurrency: "87.42",
           conversions: 11,
+          currency: "EUR",
         },
       },
       { rollups: [{ slug: "cloudless-boost-sep", leadCount: 7 }] }
@@ -113,7 +115,7 @@ describe("admin campaigns/linkedin — populated", () => {
     expect(c.textContent).toContain("PAUSED");
     expect(c.textContent).toContain("100.00 EUR");
     expect(c.textContent).toContain("51,234"); // impressions
-    expect(c.textContent).toContain("$87.42"); // spend
+    expect(c.textContent).toContain("EUR 87.42"); // spend (account currency)
     expect(c.textContent).toContain("cloudless-boost-sep");
     expect(c.textContent).toContain("CLOUDLESS CAMPAIGNS — CRM LEADS");
     expect(c.textContent).toContain("—"); // null budget fallback

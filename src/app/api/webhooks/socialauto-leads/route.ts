@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
-import { createLead } from "@/lib/espocrm";
+import { createLeadDetailed } from "@/lib/espocrm";
 import { isSocialAutoLead, toEspoLeadData, type SocialAutoLead } from "@/lib/socialauto-leads";
 
 export const dynamic = "force-dynamic";
@@ -78,17 +78,30 @@ export async function POST(req: NextRequest) {
   }
 
   const results = await Promise.all(
-    workItems.map(async (item): Promise<{ ok: boolean; espocrm_lead_id: string | null }> => {
-      if ("invalid" in item) {
-        return { ok: false, espocrm_lead_id: null };
+    workItems.map(
+      async (
+        item
+      ): Promise<{ ok: boolean; espocrm_lead_id: string | null; retryable?: boolean }> => {
+        if ("invalid" in item) {
+          return { ok: false, espocrm_lead_id: null };
+        }
+        const data = toEspoLeadData(item);
+        if (!data.emailAddress) return { ok: false, espocrm_lead_id: null };
+        const { id, failure } = await createLeadDetailed(data);
+        return id
+          ? { ok: true, espocrm_lead_id: id }
+          : { ok: false, espocrm_lead_id: null, retryable: failure !== "permanent" };
       }
-      const data = toEspoLeadData(item);
-      if (!data.emailAddress) return { ok: false, espocrm_lead_id: null };
-      const id = await createLead(data);
-      return { ok: Boolean(id), espocrm_lead_id: id };
-    })
+    )
   );
 
+  // A failed createLead is retryable — SocialAuto redelivers on non-2xx and
+  // createLead dedupes by email, so a 502 can't double-create leads. Invalid
+  // items and missing emails are permanent and stay 200.
+  const hasRetryableFailure = results.some((r) => r.ok === false && r.retryable === true);
+  if (hasRetryableFailure) {
+    return NextResponse.json({ ok: false, error: "upstream_failure", results }, { status: 502 });
+  }
   return NextResponse.json({ ok: true, results });
 }
 
