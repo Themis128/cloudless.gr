@@ -36,7 +36,7 @@
 - **Tailscale Operator** - Running in `tailscale-system` namespace
 - **Proxies**: FTP, TFTP services accessible via Tailscale
 - **Endpoints**: Accessible via MagicDNS (`*.ts.cloudless.gr`)
-- Currently all k3s services run on omv-main; Tailscale on standby for overflow
+- All k3s services run on the single `omv` node (omv-ha removed 2026-08-08, now mail host)
 
 ### Next.js Application
 
@@ -79,10 +79,14 @@ infrastructure/
 
 ### Nodes
 
+> **Updated 2026-11:** single-node cluster. `omv-ha` was drained and removed
+> from k3s on 2026-08-08 and is now a dedicated mail host — the `omv-ha Ready`
+> row below is a stale snapshot.
+
 ```
 NAME      STATUS   ROLES                AGE   VERSION
 omv       Ready    control-plane,etcd     62d   v1.35.4+k3s1
-omv-ha    Ready    <none>                 43d   v1.35.5+k3s1  (standby)
+omv-ha    Ready    <none>                 43d   v1.35.5+k3s1  (standby)   ← STALE, removed 2026-08-08
 ```
 
 ### Key Namespaces Running
