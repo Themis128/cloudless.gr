@@ -1,5 +1,8 @@
 # IAM: Cognito read-only for migration verification
 
+> **Historical — Cognito retired.** Auth is Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`). Kept for reference only.
+
 cognito-readonly-omv-main-cli.json grants the cluster IAM user
 (arn:aws:iam::278585680617:user/omv-main-cli) READ-ONLY access to the Cognito user
 pool us-east-1_1Bq3Mpqer. This unblocks verifying the app client ID, the admin group

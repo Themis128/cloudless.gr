@@ -1,5 +1,8 @@
 # cognito-setup-mcp — Cognito Setup MCP Server
 
+> **Historical — Cognito retired.** Auth is Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`). Kept for reference only.
+
 Programmatic interface for automated Cognito authentication setup.
 
 ## Quick Start

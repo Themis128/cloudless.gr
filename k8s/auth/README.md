@@ -1,5 +1,8 @@
 # oauth2-proxy (manage.cloudless.gr) - Keycloak to Cognito
 
+> **Historical — Cognito retired.** Auth is Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`). Kept for reference only.
+
 oauth2-proxy.yaml repoints the manage.cloudless.gr auth gateway from the now-removed
 Keycloak to AWS Cognito (pool us-east-1_1Bq3Mpqer). It also removes the
 wait-for-keycloak initContainer that left the pod stuck in Init:0/1 forever.
