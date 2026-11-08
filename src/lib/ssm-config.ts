@@ -172,6 +172,9 @@ let cachedAt = 0;
 let d1Cached: AppConfig | null = null;
 let d1CachedAt = 0;
 let d1Inflight: Promise<AppConfig> | null = null;
+// Incremented on cache bust so an in-flight D1 read that started before a
+// bust cannot write its (now stale) result back into the cache.
+let d1Generation = 0;
 
 /** Clears the config cache — used in tests to pick up env changes. */
 export function resetSsmCache(): void {
@@ -180,6 +183,7 @@ export function resetSsmCache(): void {
   d1Cached = null;
   d1CachedAt = 0;
   d1Inflight = null;
+  d1Generation++;
 }
 
 /** Drop cached config after an admin app_config write so reads see it now. */
@@ -343,6 +347,7 @@ export async function getConfig(): Promise<AppConfig> {
 
     if (db) {
       if (d1Cached && Date.now() - d1CachedAt < CACHE_TTL_MS) return d1Cached;
+      const gen = d1Generation;
       // Single-flight: concurrent callers share one D1 round-trip.
       d1Inflight ??= (async () => {
         const d1Config = await getD1Config(db as D1Database);
@@ -351,15 +356,18 @@ export async function getConfig(): Promise<AppConfig> {
       })();
       try {
         const merged = await d1Inflight;
-        d1Cached = merged;
-        d1CachedAt = Date.now();
+        // Skip the cache write if a bust happened while the read was in
+        // flight — the merged result predates the invalidation.
+        if (gen === d1Generation) {
+          d1Cached = merged;
+          d1CachedAt = Date.now();
+        }
         return merged;
       } finally {
-        d1Inflight = null;
+        if (gen === d1Generation) d1Inflight = null;
       }
     }
   } catch (err) {
-    d1Inflight = null;
     console.warn("[config] D1 lookup failed, continuing:", err);
   }
 
