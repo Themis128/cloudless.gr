@@ -83,7 +83,9 @@ async function saGet<T>(path: string): Promise<T | null> {
  *  Mirrors funnel_audit._social_reach: per-account series, point nearest
  *  to the 30-day-ago target date (fallback: earliest point in window). */
 function reachFromSeries(series: SaFollowerSeries[], daysAgo: number): number {
-  const target = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+  const target = new Date(Date.now() - daysAgo * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
   let total = 0;
   for (const s of series) {
     const pts = s.series ?? [];
@@ -94,7 +96,10 @@ function reachFromSeries(series: SaFollowerSeries[], daysAgo: number): number {
     let best = pts[0];
     let bestDist = Infinity;
     for (const p of pts) {
-      const dist = Math.abs(new Date(`${p.date}T00:00:00Z`).getTime() - new Date(`${target}T00:00:00Z`).getTime());
+      const dist = Math.abs(
+        new Date(`${p.date}T00:00:00Z`).getTime() -
+          new Date(`${target}T00:00:00Z`).getTime(),
+      );
       if (dist < bestDist) {
         bestDist = dist;
         best = p;
@@ -120,26 +125,35 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
       ])
     : [null, null, null];
 
-  const sources = { espocrm: espoConfigured && stageData.leads !== null, socialauto: saConfigured && overview !== null };
+  const sources = {
+    espocrm: espoConfigured && stageData.leads !== null,
+    socialauto: saConfigured && overview !== null,
+  };
 
   // ── SocialAuto-side stages ──────────────────────────────────────────
   const reach = followersSeries ? reachFromSeries(followersSeries, 0) : null;
-  const reach30dAgo = followersSeries ? reachFromSeries(followersSeries, 30) : null;
+  const reach30dAgo = followersSeries
+    ? reachFromSeries(followersSeries, 30)
+    : null;
   const engaged = overview?.total_engagement ?? null;
 
   // ── EspoCRM-side stages (funnel_audit.py semantics) ─────────────────
   const leads = stageData.leads;
   const opps = stageData.opportunities;
   const leadsTotal = leads?.length ?? null;
-  const dead = leads?.filter((l) => (l.status ?? "").toLowerCase() === "dead").length ?? 0;
+  const dead =
+    leads?.filter((l) => (l.status ?? "").toLowerCase() === "dead").length ?? 0;
   const nurtured =
     leads?.filter((l) => {
       const s = (l.status ?? "").toLowerCase();
       return s !== "" && !DEAD_LEAD_STATUSES.has(s);
     }).length ?? null;
   const activeOpps =
-    opps?.filter((o) => !CLOSED_STAGES.has((o.stage ?? "").toLowerCase())).length ?? null;
-  const won = opps?.filter((o) => WON_STAGES.has((o.stage ?? "").toLowerCase())).length ?? null;
+    opps?.filter((o) => !CLOSED_STAGES.has((o.stage ?? "").toLowerCase()))
+      .length ?? null;
+  const won =
+    opps?.filter((o) => WON_STAGES.has((o.stage ?? "").toLowerCase())).length ??
+    null;
 
   const leadSources: Record<string, number> = {};
   for (const l of leads ?? []) {
@@ -168,7 +182,11 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
       note: `EspoCRM leads (${dead} dead)`,
     },
     { stage: "nurtured", count: nurtured, note: "leads past 'New'/'Dead'" },
-    { stage: "opportunity", count: activeOpps, note: "EspoCRM opportunities, active only" },
+    {
+      stage: "opportunity",
+      count: activeOpps,
+      note: "EspoCRM opportunities, active only",
+    },
     { stage: "won", count: won, note: "opportunities closed-won" },
   ];
 
@@ -177,7 +195,9 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
   let prev: FunnelStage | null = null;
   for (const s of stages) {
     s.conv_pct =
-      prev && prev.count && s.count !== null ? Math.round((10000 * s.count) / prev.count) / 100 : null;
+      prev && prev.count && s.count !== null
+        ? Math.round((10000 * s.count) / prev.count) / 100
+        : null;
     prev = s;
   }
   let weakest: FunnelStage | null = null;
@@ -186,13 +206,18 @@ export async function buildFunnelAudit(): Promise<FunnelAuditReport> {
     if (s.conv_pct === null || s.conv_pct === undefined) continue;
     if (s.proxy || stages[i - 1].proxy) continue;
     if (s.count === null) continue;
-    if (!weakest || (s.conv_pct ?? 999) < (weakest.conv_pct ?? 999)) weakest = s;
+    if (!weakest || (s.conv_pct ?? 999) < (weakest.conv_pct ?? 999))
+      weakest = s;
   }
   const weakestTransition = weakest
     ? `${stages[stages.indexOf(weakest) - 1].stage}→${weakest.stage} (${weakest.conv_pct}%)`
     : null;
 
-  const reachGrowing = reach !== null && reach30dAgo !== null && reach30dAgo > 0 && reach > reach30dAgo;
+  const reachGrowing =
+    reach !== null &&
+    reach30dAgo !== null &&
+    reach30dAgo > 0 &&
+    reach > reach30dAgo;
   const leadConvVsAudience = reach ? ((leadsTotal ?? 0) / reach) * 100 : 0;
 
   return {
