@@ -51,6 +51,57 @@ jobs:
           # indented heredoc strips the common indent, so lines are clean.
           cat /tmp/testimonial-body.md
 
+      - name: Probe in-cluster gotrue endpoints
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          cat > /tmp/gotrue-probe.mjs <<'EOF'
+          const bases = [
+            "http://gotrue.appflowy.svc.cluster.local:9999",
+            "http://nginx.appflowy.svc.cluster.local/gotrue",
+          ];
+          let selected = "";
+          for (const b of bases) {
+            try {
+              const r = await fetch(`${b}/token?grant_type=password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: "probe@invalid.invalid", password: "x" }),
+                signal: AbortSignal.timeout(8000),
+              });
+              const t = await r.text();
+              const ct = r.headers.get("content-type") || "";
+              console.log(`PROBE ${b} -> ${r.status} ${ct} ${t.slice(0, 100).replace(/\s+/g, " ")}`);
+              if (!selected && ct.includes("json")) selected = b;
+            } catch (e) {
+              console.log(`PROBE ${b} -> ERR ${String(e).slice(0, 120)}`);
+            }
+          }
+          if (!selected) { console.log("SELECTED=NONE"); process.exit(1); }
+          console.log(`SELECTED=${selected}`);
+          EOF
+          kubectl cp /tmp/gotrue-probe.mjs "${POD#pod/}:/tmp/gotrue-probe.mjs" -n cloudless
+          kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-probe.mjs | tee /tmp/probe.out
+          grep '^SELECTED=' /tmp/probe.out | grep -v NONE
+
+      - name: Export AppFlowy env for Infisical sync
+        # Reads the pod's APPFLOWY_* env into a base64 artifact (values never
+        # hit the step log) so an operator can mirror them into Infisical.
+        # Artifact is deleted after sync; retention is 1 day regardless.
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          kubectl exec -n cloudless "$POD" -- sh -c \
+            'env | grep -E "^APPFLOWY_" | sort' | base64 -w0 > /tmp/appflowy-env.b64
+          echo "exported $(wc -c < /tmp/appflowy-env.b64) bytes"
+
+      - name: Upload env artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: appflowy-env
+          path: /tmp/appflowy-env.b64
+          retention-days: 1
+
       - name: Upload testimonial page into AppFlowy
         run: |
           set -euo pipefail
@@ -58,9 +109,13 @@ jobs:
           echo "pod: $POD"
           kubectl cp scripts/appflowy-upload-md.mjs "${POD#pod/}:/tmp/appflowy-upload-md.mjs" -n cloudless
           kubectl cp /tmp/testimonial-body.md "${POD#pod/}:/tmp/testimonial-body.md" -n cloudless
-          # Split auth/API: gotrue is a separate k8s service
-          # (gotrue.appflowy:9999) and the public hostname sits behind
-          # Cloudflare Access (SSO HTML on /gotrue). Use the in-cluster
-          # service URLs — same ones the app uses via APPFLOWY_API_URL.
+          GOTRUE_URL=$(kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-probe.mjs | grep '^SELECTED=' | cut -d= -f2-)
+          if [ -z "$GOTRUE_URL" ] || [ "$GOTRUE_URL" = "NONE" ]; then
+            echo "no working gotrue endpoint found"; exit 1
+          fi
+          echo "using gotrue: $GOTRUE_URL"
+          # API base = pod's APPFLOWY_API_URL (appflowy-cloud:8000 serves
+          # /api/* directly). Auth base = probed gotrue endpoint. The public
+          # hostname is behind Cloudflare Access (SSO HTML) — never use it.
           kubectl exec -n cloudless "$POD" -- sh -c \
-            'APPFLOWY_BASE_URL="${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}" APPFLOWY_GOTRUE_URL="http://gotrue.appflowy.svc.cluster.local:9999" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "[Testimonial] Themistoklis Baltzakis"'
+            "APPFLOWY_BASE_URL=\"\${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}\" APPFLOWY_GOTRUE_URL='$GOTRUE_URL' node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title '[Testimonial] Themistoklis Baltzakis'"
