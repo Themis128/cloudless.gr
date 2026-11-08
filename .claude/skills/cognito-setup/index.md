@@ -1,5 +1,9 @@
 # cognito-setup
 
+> **Historical — Cognito retired.** Auth is Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`). This skill documents the old AWS Cognito local-dev
+> setup and no longer applies. Kept for reference only.
+
 **Automated Cognito authentication setup for local development**
 
 Fully automates AWS credential validation, Cognito Client ID retrieval, and `.env.local` configuration to enable Cognito login in the dev server.
