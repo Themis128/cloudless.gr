@@ -1,64 +1,42 @@
-"use client";
-
-import { useEffect } from "react";
-import { useCookieConsent } from "@/context/CookieConsentContext";
-
 /**
- * LinkedIn Insight Tag — consent-gated, CSP-nonce-safe.
+ * LinkedIn Insight Tag — conversion tracking foundation for LinkedIn Ads.
  *
- * Mirrors the `ConsentGatedPixel` pattern: the LinkedIn loader is appended to
- * the DOM only after the user accepts marketing cookies, so the tag never
- * runs without consent. No inline <script> tags are used — the LinkedIn
- * library is loaded by URL (allowlisted in CSP script-src as snap.licdn.com).
+ * Loads the official tag only when NEXT_PUBLIC_LINKEDIN_PARTNER_ID is set
+ * (the partner ID lives in Campaign Manager → Analyze → Insight Tag). Until
+ * then the component renders nothing, so the site ships dark-safe.
  *
- * The Insight Tag fires PageView automatically on load. Conversion events are
- * triggered manually via `window.lintrk("track", { conversion_id: NNN })`
- * (see `src/lib/linkedin-track.ts`).
- *
- * Partner ID is exposed at build time via `NEXT_PUBLIC_LINKEDIN_PARTNER_ID`.
- * When unset the component renders nothing — useful for local dev and CI.
+ * Same CSP contract as GoogleTagManager: a plain nonce'd inline <script>
+ * injects the external loader — script-src 'strict-dynamic' trusts it, and
+ * connect-src already allows snap.licdn.com / px.ads.linkedin.com.
  */
-export default function LinkedInInsightTag() {
-  const { preferences } = useCookieConsent();
+const PARTNER_ID = (process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID ?? "").trim();
 
-  useEffect(() => {
-    if (!preferences.marketing) return;
+export function LinkedInInsightTag({ nonce }: { nonce?: string }) {
+  if (!PARTNER_ID) return null;
 
-    const partnerId = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID;
-    if (!partnerId) return;
+  const scriptNonce = nonce?.trim() ? nonce : undefined;
 
-    type Lintrk = ((action: string, payload?: Record<string, unknown>) => void) & {
-      q?: unknown[][];
-    };
-    type LinkedInWindow = Window & {
-      _linkedin_data_partner_ids?: string[];
-      _linkedin_partner_id?: string;
-      lintrk?: Lintrk;
-    };
-    const w = window as LinkedInWindow;
-
-    // Skip if loader is already present (HMR / second mount in dev).
-    if (w.lintrk) return;
-
-    w._linkedin_partner_id = partnerId;
-    w._linkedin_data_partner_ids = w._linkedin_data_partner_ids ?? [];
-    if (!w._linkedin_data_partner_ids.includes(partnerId)) {
-      w._linkedin_data_partner_ids.push(partnerId);
-    }
-
-    // Stub lintrk() so calls before the script finishes loading are queued.
-    const stub: Lintrk = ((...args: unknown[]) => {
-      stub.q = stub.q ?? [];
-      stub.q.push(args);
-    }) as Lintrk;
-    stub.q = [];
-    w.lintrk = stub;
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://snap.licdn.com/li.lms-analytics/insight.min.js";
-    document.head.appendChild(script);
-  }, [preferences.marketing]);
-
-  return null;
+  return (
+    // eslint-disable-next-line @next/next/next-script-for-ga -- intentional; see file header
+    <script
+      id="linkedin-insight-tag"
+      {...(scriptNonce ? { nonce: scriptNonce } : {})}
+      dangerouslySetInnerHTML={{
+        __html: `
+_linkedin_partner_id = "${PARTNER_ID}";
+window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+window._linkedin_data_partner_ids.push(_linkedin_partner_id);
+(function(l) {
+  if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
+  window.lintrk.q=[]}
+  var s = document.getElementsByTagName("script")[0];
+  var b = document.createElement("script");
+  b.type = "text/javascript";b.async = true;
+  b.src = "https://snap.licdn.com/li.lms-analytics/insight.min.js";
+  s.parentNode.insertBefore(b, s);
+})(window.lintrk);
+`,
+      }}
+    />
+  );
 }
