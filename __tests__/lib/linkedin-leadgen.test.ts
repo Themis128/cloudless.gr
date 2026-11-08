@@ -266,6 +266,38 @@ describe("fetchLeadFormResponse", () => {
       "transient"
     );
   });
+
+  it("detailed variant keeps a transient batch failure retryable when the single GET is permanent", async () => {
+    const opts = {
+      responseId: "r1",
+      token: "t",
+      ownerSponsoredAccount: "urn:li:sponsoredAccount:1",
+    };
+
+    // batch 429 + single 403 → transient (the finder may succeed on retry)
+    mockFetch
+      .mockResolvedValueOnce(new Response("slow", { status: 429 }))
+      .mockResolvedValueOnce(new Response("gone", { status: 403 }));
+    expect((await fetchLeadFormResponseDetailed(opts)).failure).toBe("transient");
+
+    // batch network throw + single 404 → transient
+    mockFetch
+      .mockRejectedValueOnce(new Error("net"))
+      .mockResolvedValueOnce(new Response("gone", { status: 404 }));
+    expect((await fetchLeadFormResponseDetailed(opts)).failure).toBe("transient");
+
+    // batch permanent 403 + single permanent 404 → permanent
+    mockFetch
+      .mockResolvedValueOnce(new Response("denied", { status: 403 }))
+      .mockResolvedValueOnce(new Response("gone", { status: 404 }));
+    expect((await fetchLeadFormResponseDetailed(opts)).failure).toBe("permanent");
+
+    // batch ok-but-miss + single 404 → permanent (a miss is not a failure)
+    mockFetch
+      .mockResolvedValueOnce(okJson({ results: {} }))
+      .mockResolvedValueOnce(new Response("gone", { status: 404 }));
+    expect((await fetchLeadFormResponseDetailed(opts)).failure).toBe("permanent");
+  });
 });
 
 describe("fetchLeadFormQuestions", () => {

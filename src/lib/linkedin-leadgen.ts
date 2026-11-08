@@ -270,6 +270,10 @@ export async function fetchLeadFormResponseDetailed(
   const leadType = opts.leadType ?? "SPONSORED";
   try {
     // Prefer the finder that includes owner (required for many tokens).
+    // A failed finder still falls through to the unscoped GET, but a
+    // transient failure there must not be discarded: if the single GET
+    // then returns a permanent 4xx, the overall result stays retryable.
+    let batchTransient = false;
     if (opts.ownerSponsoredAccount) {
       const owner = encodeURIComponent(`(sponsoredAccount:${opts.ownerSponsoredAccount})`);
       const ids = encodeURIComponent(`List(${opts.responseId})`);
@@ -277,19 +281,26 @@ export async function fetchLeadFormResponseDetailed(
         `/leadFormResponses?ids=${ids}` +
         `&owner=${owner}` +
         `&leadType=${encodeURIComponent(`(leadType:${leadType})`)}`;
-      const batch = await linkedInGet(path, opts.token);
-      if (batch.ok && batch.json && typeof batch.json === "object") {
-        const results = (batch.json as { results?: Record<string, LeadFormResponse> }).results;
-        const hit = results?.[opts.responseId];
-        if (hit) return { response: hit };
+      try {
+        const batch = await linkedInGet(path, opts.token);
+        if (batch.ok && batch.json && typeof batch.json === "object") {
+          const results = (batch.json as { results?: Record<string, LeadFormResponse> }).results;
+          const hit = results?.[opts.responseId];
+          if (hit) return { response: hit };
+        } else {
+          batchTransient = !batch.ok ? classifyLinkedInStatus(batch.status) === "transient" : true;
+        }
+      } catch {
+        batchTransient = true;
       }
     }
 
     const single = await linkedInGet(`/leadFormResponses/${opts.responseId}`, opts.token);
     if (!single.ok || !single.json || typeof single.json !== "object") {
+      const singleFailure = single.ok ? "transient" : classifyLinkedInStatus(single.status);
       return {
         response: null,
-        failure: single.ok ? "transient" : classifyLinkedInStatus(single.status),
+        failure: batchTransient && singleFailure === "permanent" ? "transient" : singleFailure,
       };
     }
     return { response: single.json as LeadFormResponse };
