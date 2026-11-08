@@ -1,0 +1,65 @@
+name: AppFlowy add testimonial (Micro1 ML interview feedback)
+
+# One-shot CMS write: creates the `[Testimonial] Themistoklis Baltzakis`
+# page in AppFlowy Cloud so it appears on cloudless.gr via
+# /api/testimonials (featured → /links page too).
+#
+# AppFlowy admin write endpoints in the Next.js app are stubs, so this
+# drives the AppFlowy-Cloud page-view API directly from inside the
+# cloudless-app pod (which already carries APPFLOWY_API_URL /
+# APPFLOWY_EMAIL / APPFLOWY_PASSWORD env). Same tailnet+SSH pattern as
+# pi-appflowy-provision.yml. No secrets are printed.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  add-testimonial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
+
+      - name: Write testimonial markdown
+        run: |
+          cat > /tmp/testimonial-body.md <<'MD'
+          **Company**: Micro1
+          **Role**: ML Engineer (MSc/PhD) — interview candidate
+          **Quote**: The Micro1 ML Engineer interview delivered detailed, technically specific feedback on my applied ML work — 3D medical-imaging segmentation (isotropic resampling, z-score normalization, class-imbalance handling, Dice and IoU), PyTorch and Transformers workflows, and Python/pandas depth. A rare level of specificity.
+          **Rating**: 5
+          **Featured**: true
+          MD
+          # heredoc keeps leading spaces out of the field lines? No —
+          # indented heredoc strips the common indent, so lines are clean.
+          cat /tmp/testimonial-body.md
+
+      - name: Upload testimonial page into AppFlowy
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          echo "pod: $POD"
+          kubectl cp scripts/appflowy-upload-md.mjs "${POD#pod/}:/tmp/appflowy-upload-md.mjs" -n cloudless
+          kubectl cp /tmp/testimonial-body.md "${POD#pod/}:/tmp/testimonial-body.md" -n cloudless
+          # Prefer the pod's in-cluster APPFLOWY_API_URL; fall back to the
+          # public hostname. Expanded inside the pod (sh -c), not on the
+          # runner where the var does not exist.
+          kubectl exec -n cloudless "$POD" -- sh -c \
+            'APPFLOWY_BASE_URL="${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "[Testimonial] Themistoklis Baltzakis"'
