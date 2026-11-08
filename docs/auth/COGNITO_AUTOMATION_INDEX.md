@@ -1,5 +1,10 @@
 # Cognito Automation Suite — Complete Index
 
+> **Historical — Cognito retired.** Auth is now Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`, opaque `session_token` cookies). This document describes
+> the old AWS Cognito stack; kept for reference only.
+
+
 This is your entry point for the complete Cognito setup automation system.
 
 ## 📖 Start Here
