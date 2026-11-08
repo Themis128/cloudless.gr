@@ -15,6 +15,8 @@ import {
 	socialOutliers,
 	socialRecommendations,
 	socialMonetization,
+	socialDevapps,
+	socialChannelActions,
 } from "./_social-sections.mjs";
 
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
@@ -927,6 +929,10 @@ async function main() {
 	const saTgChannels = await safeJson("lake/socialauto-telegram/channels.json");
 	const saMonetization = await safeJson("lake/socialauto-monetization/gates.json");
 	const saSurveyResp = await safeJson("lake/socialauto-survey-responses/responses.json");
+	const saDevapps = await safeJson("lake/socialauto-devapps/snapshots.json");
+	const saChannelActions = await safeJson(
+		"lake/socialauto-channel-actions/actions.json"
+	);
 
 	let saInsights = null;
 	try {
@@ -965,6 +971,18 @@ async function main() {
 		saMonetization
 			? sectionOk("social_monetization", socialMonetization(saMonetization))
 			: sectionErr("social_monetization", "missing monetization gates json")
+	);
+	const saDevappsRows = saDevapps ? socialDevapps(saDevapps) : null;
+	sections.push(
+		saDevappsRows?.length
+			? sectionOk("social_devapps", saDevappsRows)
+			: sectionErr("social_devapps", "missing socialauto devapps json")
+	);
+	const saChannelRows = saChannelActions ? socialChannelActions(saChannelActions) : null;
+	sections.push(
+		saChannelRows?.length
+			? sectionOk("social_channel_actions", saChannelRows)
+			: sectionErr("social_channel_actions", "missing socialauto channel-actions json")
 	);
 	sections.push(
 		saLeads
