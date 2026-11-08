@@ -58,10 +58,9 @@ jobs:
           echo "pod: $POD"
           kubectl cp scripts/appflowy-upload-md.mjs "${POD#pod/}:/tmp/appflowy-upload-md.mjs" -n cloudless
           kubectl cp /tmp/testimonial-body.md "${POD#pod/}:/tmp/testimonial-body.md" -n cloudless
-          # gotrue is a separate k8s service (gotrue:9999) — the pod's
-          # APPFLOWY_API_URL (appflowy-cloud:8000) does NOT serve /gotrue
-          # and returns the SPA HTML, which breaks the script's login.
-          # The public hostname routes /gotrue + /api correctly through
-          # nginx, so default to it (pod env has no APPFLOWY_BASE_URL).
+          # Split auth/API: gotrue is a separate k8s service
+          # (gotrue.appflowy:9999) and the public hostname sits behind
+          # Cloudflare Access (SSO HTML on /gotrue). Use the in-cluster
+          # service URLs — same ones the app uses via APPFLOWY_API_URL.
           kubectl exec -n cloudless "$POD" -- sh -c \
-            'APPFLOWY_BASE_URL="${APPFLOWY_BASE_URL:-https://appflowy.cloudless.gr}" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "[Testimonial] Themistoklis Baltzakis"'
+            'APPFLOWY_BASE_URL="${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}" APPFLOWY_GOTRUE_URL="http://gotrue.appflowy.svc.cluster.local:9999" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "[Testimonial] Themistoklis Baltzakis"'
