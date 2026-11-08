@@ -15,11 +15,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
-import { createLead } from "@/lib/espocrm";
+import { createLeadDetailed } from "@/lib/espocrm";
 import {
   buildChallengeResponse,
-  fetchLeadFormQuestions,
-  fetchLeadFormResponse,
+  fetchLeadFormQuestionsDetailed,
+  fetchLeadFormResponseDetailed,
   isLeadCreatedNotification,
   parseLeadGenFormId,
   parseLeadGenFormResponseId,
@@ -27,6 +27,7 @@ import {
   verifyLiSignature,
   type LinkedInLeadNotification,
 } from "@/lib/linkedin-leadgen";
+import { normalizeLinkedInAdAccountId } from "@/lib/linkedin-api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -97,26 +98,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, results: [], warning: "token_missing" });
   }
 
-  const ownerUrn = accountId ? `urn:li:sponsoredAccount:${accountId}` : undefined;
+  const ownerUrn = accountId
+    ? `urn:li:sponsoredAccount:${normalizeLinkedInAdAccountId(accountId)}`
+    : undefined;
 
+  // `retryable` marks failures a LinkedIn redelivery could fix (upstream fetch
+  // or EspoCRM write). Permanent failures (bad URN, unmappable lead) stay 200 —
+  // retrying them can never succeed. If ANY item is retryable-failed we answer
+  // 502 so LinkedIn redelivers the batch; createLead dedupes by email, so the
+  // redelivery can't double-create the items that already succeeded.
   const results = await Promise.all(
     notifications.map(async (n) => {
       if (!isLeadCreatedNotification(n)) {
-        return { ok: true, skipped: true as const, espocrm_lead_id: null };
-      }
-      if (n.leadAction === "DELETED") {
-        return { ok: true, skipped: true as const, espocrm_lead_id: null };
+        return {
+          ok: true,
+          skipped: true as const,
+          retryable: false as const,
+          espocrm_lead_id: null,
+        };
       }
 
       const responseId = parseLeadGenFormResponseId(n.leadGenFormResponse);
       if (!responseId) {
-        return { ok: false, espocrm_lead_id: null };
+        return { ok: false, retryable: false as const, espocrm_lead_id: null };
       }
 
       const ownerSponsoredAccount = n.owner?.sponsoredAccount ?? ownerUrn ?? undefined;
       const leadType = n.leadType ?? "SPONSORED";
 
-      const response = await fetchLeadFormResponse({
+      const { response, failure: fetchFailure } = await fetchLeadFormResponseDetailed({
         responseId,
         token: accessToken,
         ownerSponsoredAccount,
@@ -127,23 +137,33 @@ export async function POST(request: NextRequest) {
           "[linkedin-leads] failed to fetch leadFormResponse",
           responseId.replace(/\n/g, "").replace(/\r/g, "")
         );
-        return { ok: false, espocrm_lead_id: null };
+        return {
+          ok: false,
+          retryable: fetchFailure !== "permanent",
+          espocrm_lead_id: null,
+        };
       }
 
       const formId =
         parseLeadGenFormId(n.leadGenForm) ?? parseLeadGenFormId(response.versionedLeadGenFormUrn);
-      const questions = formId
-        ? await fetchLeadFormQuestions({
+      const questionsResult = formId
+        ? await fetchLeadFormQuestionsDetailed({
             formId,
             token: accessToken,
             ownerSponsoredAccount,
             leadType,
           })
-        : [];
+        : { questions: [], failure: undefined };
+      // A transient questions-fetch failure would strip field labels and can
+      // make a mappable lead look email-less — treat it as retryable rather
+      // than dropping the lead as "permanent".
+      if (questionsResult.failure === "transient") {
+        return { ok: false, retryable: true as const, espocrm_lead_id: null };
+      }
 
       const leadData = toEspoLeadDataFromLeadGen({
         response,
-        questions,
+        questions: questionsResult.questions,
         notification: n,
       });
       if (!leadData?.emailAddress) {
@@ -151,13 +171,24 @@ export async function POST(request: NextRequest) {
           "[linkedin-leads] no email on lead",
           responseId.replace(/\n/g, "").replace(/\r/g, "")
         );
-        return { ok: false, espocrm_lead_id: null };
+        return { ok: false, retryable: false as const, espocrm_lead_id: null };
       }
 
-      const id = await createLead(leadData);
-      return { ok: Boolean(id), espocrm_lead_id: id, skipped: false as const };
+      const { id, failure } = await createLeadDetailed(leadData);
+      return id
+        ? { ok: true, retryable: false as const, espocrm_lead_id: id, skipped: false as const }
+        : {
+            ok: false,
+            retryable: failure !== "permanent",
+            espocrm_lead_id: null,
+            skipped: false as const,
+          };
     })
   );
 
+  const hasRetryableFailure = results.some((r) => r.ok === false && r.retryable === true);
+  if (hasRetryableFailure) {
+    return NextResponse.json({ ok: false, error: "upstream_failure", results }, { status: 502 });
+  }
   return NextResponse.json({ ok: true, results });
 }

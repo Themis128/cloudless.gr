@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
       op: "approve" | "reject";
       comment_draft?: string;
     };
+    if (typeof id !== "string" || !id) {
+      return NextResponse.json({ error: "id_required" }, { status: 400 });
+    }
+    // Anything but an explicit "reject" must never fall through to approve.
+    if (op !== "approve" && op !== "reject") {
+      return NextResponse.json({ error: "invalid_op" }, { status: 400 });
+    }
     const item = op === "reject" ? await rejectGate(id) : await approveGate(id, comment_draft);
     return NextResponse.json({ item });
   } catch (e) {

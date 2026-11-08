@@ -47,6 +47,7 @@ export async function sendSocialAutoEventServer(
         "X-Webhook-Signature": signature,
       },
       body: payload,
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     // Non-fatal.

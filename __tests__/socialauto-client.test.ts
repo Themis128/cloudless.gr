@@ -153,6 +153,25 @@ describe("listPostsInWindow", () => {
     expect(orphan?.integration.name).toBe("(no channel)");
   });
 
+  it("paginates a status past the first page", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }));
+    const fullPage = Array.from({ length: 100 }, (_, i) => post({ id: `pg-${i}`, targets: [] }));
+    // Fetch call order: all 7 statuses' page=1 requests first (in status
+    // order), then "scheduled"'s page=2 once its full page-1 resolves.
+    mockFetch.mockResolvedValueOnce(jsonResponse({ posts: fullPage, total: 101 })); // scheduled p1
+    for (const _s of ["published", "failed", "draft", "approved", "review", "publishing"]) {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ posts: [], total: 0 }));
+    }
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ posts: [post({ id: "pg-last", targets: [] })], total: 101 })
+    ); // scheduled p2
+    const { listPostsInWindow } = await loadLib();
+    const out = await listPostsInWindow("2026-10-01", "2026-10-12");
+    // 100 page-1 + 1 page-2 posts, all published_at inside the window
+    expect(out).toHaveLength(101);
+    expect(out.some((r) => r.id === "pg-last")).toBe(true);
+  });
+
   it("drops posts outside the window and tolerates per-status failures", async () => {
     // one status errors → catch returns empty list for it
     mockFetch.mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }));
@@ -202,10 +221,18 @@ describe("create / update / delete posts", () => {
     expect(url).toContain("/content/posts/p9/publish-now");
   });
 
-  it("type=now publish failure propagates", async () => {
-    mockLoginThen(jsonResponse({ id: "p9" }), jsonResponse({ detail: "no media" }, 422));
+  it("type=now publish failure deletes the orphan post and propagates", async () => {
+    mockLoginThen(
+      jsonResponse({ id: "p9" }),
+      jsonResponse({ detail: "no media" }, 422),
+      jsonResponse({}, 200) // best-effort DELETE of the created post
+    );
     const { createPostFromBody } = await loadLib();
     await expect(createPostFromBody({ ...body, type: "now" } as never)).rejects.toThrow("422");
+    const [delUrl, delInit] = mockFetch.mock.calls[3] as [string, RequestInit];
+    expect(delUrl).toContain("/content/posts/p9");
+    expect(delUrl).not.toContain("publish-now");
+    expect(delInit.method).toBe("DELETE");
   });
 
   it("type=draft posts with null scheduled_at", async () => {

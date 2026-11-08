@@ -277,8 +277,25 @@ function effectiveDate(p: SaPost): string {
   return p.scheduled_at ?? p.published_at ?? p.created_at;
 }
 
-/** Fetch every post the admin window can contain: one request per status,
- *  page_size=100 (the admin window is ±30d — bounded). */
+const SA_POSTS_PAGE_SIZE = 100;
+/** Hard cap per status — 10 pages × 100 posts = 1000/status, far beyond the
+ *  ±30d admin window. Prevents an unbounded loop if upstream misreports. */
+const SA_POSTS_MAX_PAGES = 10;
+
+async function listStatusPosts(status: string): Promise<SaPost[]> {
+  const out: SaPost[] = [];
+  for (let page = 1; page <= SA_POSTS_MAX_PAGES; page++) {
+    const list = await callThrowing<SaPostList>(
+      `/content/posts?status=${status}&page_size=${SA_POSTS_PAGE_SIZE}&page=${page}`
+    ).catch(() => ({ posts: [] as SaPost[], total: 0, page, page_size: SA_POSTS_PAGE_SIZE }));
+    out.push(...list.posts);
+    if (list.posts.length < SA_POSTS_PAGE_SIZE) break;
+  }
+  return out;
+}
+
+/** Fetch every post the admin window can contain: one paginated request set
+ *  per status, page_size=100 (the admin window is ±30d — bounded). */
 async function listAllPosts(): Promise<SaPost[]> {
   const statuses = [
     "scheduled",
@@ -289,17 +306,8 @@ async function listAllPosts(): Promise<SaPost[]> {
     "review",
     "publishing",
   ];
-  const lists = await Promise.all(
-    statuses.map((s) =>
-      callThrowing<SaPostList>(`/content/posts?status=${s}&page_size=100`).catch(() => ({
-        posts: [] as SaPost[],
-        total: 0,
-        page: 1,
-        page_size: 100,
-      }))
-    )
-  );
-  return lists.flatMap((l) => l.posts);
+  const lists = await Promise.all(statuses.map(listStatusPosts));
+  return lists.flat();
 }
 
 /** Posts in a window — exploded per target so each channel shows its own row,
@@ -367,12 +375,19 @@ export async function createPostFromBody(
   });
 
   if (body.type === "now") {
-    await callThrowing<SaPost>(`/content/posts/${encodeURIComponent(post.id)}/publish-now`, {
-      method: "POST",
-    }).catch((err) => {
-      // Post exists but immediate publish failed — surface the upstream error.
+    try {
+      await callThrowing<SaPost>(`/content/posts/${encodeURIComponent(post.id)}/publish-now`, {
+        method: "POST",
+      });
+    } catch (err) {
+      // Don't leave an orphan behind: the post was created with a scheduled_at
+      // and would auto-publish later, duplicating whatever the caller retries.
+      // Best-effort delete, then surface the original upstream error.
+      await callThrowing<void>(`/content/posts/${encodeURIComponent(post.id)}`, {
+        method: "DELETE",
+      }).catch(() => {});
       throw err;
-    });
+    }
   }
 
   return targetIds.map((integration) => ({ postId: post.id, integration }));

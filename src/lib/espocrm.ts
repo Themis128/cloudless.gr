@@ -925,7 +925,18 @@ async function resolveTargetListIds(names: string[]): Promise<string[]> {
   return ids;
 }
 
-export async function createLead(data: LeadData): Promise<string | null> {
+export type LeadCreateFailure = "permanent" | "transient";
+
+export interface LeadCreateResult {
+  id: string | null;
+  /** Set when id is null: "permanent" = retrying can't help (EspoCRM 4xx),
+   *  "transient" = worth retrying (5xx, network). */
+  failure?: LeadCreateFailure;
+}
+
+/** createLead variant that distinguishes permanent vs transient failures so
+ *  webhook callers can decide whether a provider redelivery could succeed. */
+export async function createLeadDetailed(data: LeadData): Promise<LeadCreateResult> {
   try {
     const descLines = [
       data.description,
@@ -1020,7 +1031,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
           method: "PUT",
           body: JSON.stringify(updatePayload),
         });
-        return existing.id;
+        return { id: existing.id };
       }
     }
     const res = await espoFetch("/Lead", {
@@ -1030,14 +1041,22 @@ export async function createLead(data: LeadData): Promise<string | null> {
     });
     if (!res.ok) {
       console.error("[EspoCRM] createLead failed:", res.status);
-      return null;
+      // 4xx (except 408/429) means EspoCRM rejected the payload — redelivery
+      // will fail identically. 5xx/408/429/network are worth retrying.
+      const permanent =
+        res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
+      return { id: null, failure: permanent ? "permanent" : "transient" };
     }
     const created = (await res.json()) as { id: string };
-    return created.id;
+    return { id: created.id };
   } catch (err) {
     console.error("[EspoCRM] createLead error:", err);
-    return null;
+    return { id: null, failure: "transient" };
   }
+}
+
+export async function createLead(data: LeadData): Promise<string | null> {
+  return (await createLeadDetailed(data)).id;
 }
 
 /**

@@ -22,12 +22,16 @@
  */
 
 import { getConfig } from "@/lib/ssm-config";
+import {
+  LINKEDIN_AD_ANALYTICS_API_VERSION,
+  normalizeLinkedInAdAccountId,
+} from "@/lib/linkedin-api";
 import type { AdPlatformAdapter, UserMatch } from "./ad-platform";
 import type { AdMetrics, DemographicBreakdown, DemographicPivot } from "../types";
 import { resolvePivotLabel } from "../lookups";
 
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
-const LINKEDIN_API_VERSION = "202605";
+const LINKEDIN_API_VERSION = LINKEDIN_AD_ANALYTICS_API_VERSION;
 const LINKEDIN_VERSION_HEADER = "LinkedIn-Version";
 const RESTLI_PROTOCOL_HEADER = "X-Restli-Protocol-Version";
 const RESTLI_PROTOCOL_VERSION = "2.0.0";
@@ -187,7 +191,7 @@ export const linkedinAdapter: AdPlatformAdapter = {
     const cfg = await resolveConfig();
     if (!cfg) return null;
 
-    const acct = String(accountId).replace(/[^\w-]/g, "");
+    const acct = normalizeLinkedInAdAccountId(String(accountId));
     let elements: Array<{ id?: number | string }> = [];
     try {
       const list = await fetch(

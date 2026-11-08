@@ -7,7 +7,10 @@ vi.mock("@/lib/ssm-config", () => ({
 
 const mockCreateLead = vi.fn();
 vi.mock("@/lib/espocrm", () => ({
-  createLead: (...args: unknown[]) => mockCreateLead(...args),
+  createLeadDetailed: async (...args: unknown[]) => {
+    const id = (await mockCreateLead(...args)) as string | null;
+    return id ? { id } : { id: null, failure: "transient" as const };
+  },
 }));
 
 import { getConfig } from "@/lib/ssm-config";
@@ -151,13 +154,15 @@ describe("POST /api/webhooks/socialauto-leads", () => {
       ])
     );
 
-    expect(res.status).toBe(200);
+    // createLead returned null → retryable failure → 502 so SocialAuto
+    // redelivers (createLead dedupes by email, so the retry is safe).
+    expect(res.status).toBe(502);
     expect(mockCreateLead).toHaveBeenCalledTimes(2);
     const body = await res.json();
-    expect(body.ok).toBe(true);
+    expect(body.ok).toBe(false);
     expect(body.results).toEqual([
       { ok: true, espocrm_lead_id: "lead-1" },
-      { ok: false, espocrm_lead_id: null },
+      { ok: false, espocrm_lead_id: null, retryable: true },
     ]);
   });
 
