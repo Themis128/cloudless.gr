@@ -49,6 +49,13 @@ if (!args.file) {
 }
 
 const baseUrl = (env.APPFLOWY_BASE_URL || "https://appflowy.cloudless.gr").replace(/\/$/, "");
+// Optional split: gotrue is a separate k8s service — when running inside
+// the cluster, point auth at it directly instead of <baseUrl>/gotrue
+// (which only exists on the nginx-fronted public hostname).
+const gotrueBase = (env.APPFLOWY_GOTRUE_URL
+  ? env.APPFLOWY_GOTRUE_URL.replace(/\/$/, "")
+  : `${baseUrl}/gotrue`
+).replace(/\/$/, "");
 const email = env.APPFLOWY_EMAIL;
 const password = env.APPFLOWY_PASSWORD;
 
@@ -120,7 +127,7 @@ async function main() {
 // --- HTTP helpers -------------------------------------------------------------
 
 async function login() {
-  const url = `${baseUrl}/gotrue/token?grant_type=password`;
+  const url = `${gotrueBase}/token?grant_type=password`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
