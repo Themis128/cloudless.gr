@@ -17,13 +17,9 @@ vi.mock("@/lib/r2-node-bucket", () => ({
   createNodeDataLakeBucket: () => libs.createNodeDataLakeBucket(),
 }));
 
-import { getConfig, resetSsmCache } from "@/lib/ssm-config";
+import { getConfig, resetSsmCache, bustConfigCache } from "@/lib/ssm-config";
 import { getConfig as getD1ConfigMerged } from "@/lib/ssm-config-d1";
-import {
-  getDataLakeBucketFromEnv,
-  serveStaticAsset,
-  listR2Objects,
-} from "@/lib/r2-client";
+import { getDataLakeBucketFromEnv, serveStaticAsset, listR2Objects } from "@/lib/r2-client";
 
 const origEnv = { ...process.env };
 const cleanEnv = () => {
@@ -83,6 +79,61 @@ describe("ssm-config getConfig", () => {
     expect(cfg.EMAIL_FROM).toBe("d1@cloudless.gr");
     expect(cfg.SES_FROM_EMAIL).toBe("d1@cloudless.gr");
     expect(cfg.EMAIL_TO).toBe("tbaltzakis@cloudless.gr");
+  });
+
+  it("D1 path caches merged config and single-flights concurrent calls", async () => {
+    let queries = 0;
+    const db = {
+      prepare: () => {
+        queries++;
+        return {
+          all: async () => ({
+            results: [{ key: "POSTIZ_API_KEY", value: "pz_d1_cached" }],
+          }),
+        };
+      },
+    };
+    libs.getAuthDbFromEnv.mockReturnValue(db);
+
+    // First call queries D1 once; every later call reuses the merged
+    // config — this is what stops N sequential api.cloudflare.com POSTs
+    // per request on the Pi (Sentry CLOUDLESS-GR-B/C).
+    const first = await getConfig();
+    expect(queries).toBe(1);
+    expect(first.POSTIZ_API_KEY).toBe("pz_d1_cached");
+
+    const second = await getConfig();
+    const third = await getConfig();
+    expect(queries).toBe(1);
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+
+    // Admin writes bust the cache → next read re-queries D1.
+    bustConfigCache();
+    await getConfig();
+    expect(queries).toBe(2);
+    await getConfig();
+    expect(queries).toBe(2);
+  });
+
+  it("D1 lookup failure is not cached — next call retries", async () => {
+    let queries = 0;
+    const db = {
+      prepare: () => {
+        queries++;
+        return {
+          all: async () => {
+            throw new Error("d1 boom");
+          },
+        };
+      },
+    };
+    libs.getAuthDbFromEnv.mockReturnValue(db);
+    process.env.CRON_SECRET = "cs_retry";
+
+    expect((await getConfig()).CRON_SECRET).toBe("cs_retry");
+    expect((await getConfig()).CRON_SECRET).toBe("cs_retry");
+    expect(queries).toBe(2);
   });
 
   it("falls back to env when D1 lookup throws", async () => {
@@ -149,14 +200,10 @@ describe("r2-client", () => {
       writeHttpMetadata: (h: Headers) => h.set("Content-Type", "text/css"),
     };
     const bucket = { get: vi.fn(async () => asset) };
-    const res2 = await serveStaticAsset(
-      { ASSETS_BUCKET: bucket as never },
-      "file.css",
-      { cacheSeconds: 60 }
-    );
-    expect(res2!.headers.get("Cache-Control")).toBe(
-      "public, max-age=60, immutable"
-    );
+    const res2 = await serveStaticAsset({ ASSETS_BUCKET: bucket as never }, "file.css", {
+      cacheSeconds: 60,
+    });
+    expect(res2!.headers.get("Cache-Control")).toBe("public, max-age=60, immutable");
     expect(res2!.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res2!.headers.get("Content-Type")).toBe("text/css");
 
@@ -168,9 +215,7 @@ describe("r2-client", () => {
     expect(res3!.headers.get("Content-Type")).toBe("image/png");
 
     bucket.get.mockResolvedValue(null);
-    expect(
-      await serveStaticAsset({ ASSETS_BUCKET: bucket as never }, "m.css")
-    ).toBeNull();
+    expect(await serveStaticAsset({ ASSETS_BUCKET: bucket as never }, "m.css")).toBeNull();
 
     // no workers → null bucket → null
     delete (globalThis as Record<string, unknown>).caches;
@@ -189,10 +234,7 @@ describe("r2-client", () => {
       DATALAKE_BUCKET: mk(["l1"]),
     };
     expect(await listR2Objects(env as never, "assets")).toEqual(["a1"]);
-    expect(await listR2Objects(env as never, "media", "pref")).toEqual([
-      "m1",
-      "m2",
-    ]);
+    expect(await listR2Objects(env as never, "media", "pref")).toEqual(["m1", "m2"]);
     expect(await listR2Objects(env as never, "lake")).toEqual(["l1"]);
     expect(env.MEDIA_BUCKET.list).toHaveBeenCalledWith({
       prefix: "pref",
