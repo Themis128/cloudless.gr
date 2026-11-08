@@ -58,6 +58,8 @@ jobs:
           echo "pod: $POD"
           kubectl cp scripts/appflowy-upload-md.mjs "${POD#pod/}:/tmp/appflowy-upload-md.mjs" -n cloudless
           kubectl cp /tmp/testimonial-body.md "${POD#pod/}:/tmp/testimonial-body.md" -n cloudless
-          kubectl exec -n cloudless "$POD" -- \
-            node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md \
-            --title "[Testimonial] Themistoklis Baltzakis"
+          # Prefer the pod's in-cluster APPFLOWY_API_URL; fall back to the
+          # public hostname. Expanded inside the pod (sh -c), not on the
+          # runner where the var does not exist.
+          kubectl exec -n cloudless "$POD" -- sh -c \
+            'APPFLOWY_BASE_URL="${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "[Testimonial] Themistoklis Baltzakis"'
