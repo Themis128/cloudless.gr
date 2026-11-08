@@ -177,6 +177,20 @@ describe("buildFunnelAudit — happy path", () => {
     mockSa({ followers: followersSeries(50, 100) });
     expect((await buildFunnelAudit()).auction_warning).toBe(false);
   });
+
+  it("falls back to current followers for accounts with no snapshot series", async () => {
+    // New account onboarded mid-window: series empty → current count used.
+    mockSa({
+      followers: [
+        { platform: "x", current: 500, series: [] },
+        ...followersSeries(900, 1000),
+      ],
+    });
+    const { buildFunnelAudit } = await lib();
+    const r = await buildFunnelAudit();
+    const audience = r.stages.find((s) => s.stage === "audience");
+    expect(audience?.count).toBe(1500); // 500 (current) + 1000 (current)
+  });
 });
 
 describe("buildFunnelAudit — degradation", () => {
