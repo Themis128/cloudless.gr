@@ -1,5 +1,7 @@
 # Self-Hosted Mail Server — cloudless.gr (on omv-ha)
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
+
 **Status (2026-08-26):** ✅ **fully live** — outbound (postfix → Resend), mailbox
 (dovecot IMAP/IMAPS + submission :587), webmail (Roundcube at
 `https://webmail.cloudless.gr`), and **inbound** via Cloudflare Email Routing →

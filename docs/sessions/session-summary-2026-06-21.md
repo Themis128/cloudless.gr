@@ -1,5 +1,7 @@
 # Session summary — 2026-06-21 (R-series + best-practices assessment)
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
+
 A complete chronicle of the work shipped in this single day across the
 cloudless.gr serverless app + the k3s self-hosted stack on omv + omv-ha.
 

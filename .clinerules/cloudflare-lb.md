@@ -1,5 +1,7 @@
 # Cloudflare Load Balancer Architecture & Migration
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
+
 ## Overview
 
 The cloudless.gr infrastructure has been migrated from traditional AWS load balancers to Cloudflare-native solutions, leveraging Cloudflare's global network and serverless architecture.

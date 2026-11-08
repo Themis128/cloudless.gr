@@ -1,5 +1,7 @@
 # MCP Server Usage Rules
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
+
 ## Purpose
 
 Rules for MCP server activation and usage patterns based on task categories.

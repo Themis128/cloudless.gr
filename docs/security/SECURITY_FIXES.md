@@ -1,5 +1,7 @@
 # Security Fixes Applied - Backend/Frontend Sync
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
+
 ## Overview
 
 Fixed critical security vulnerabilities in user and admin API endpoints by adding JWT authentication and updating frontend to send authentication headers.

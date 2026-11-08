@@ -1,5 +1,7 @@
 # AWS Knowledge MCP Server
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
+
 Remote MCP server providing up-to-date AWS documentation, best practices, and regional availability information.
 
 ## Configuration

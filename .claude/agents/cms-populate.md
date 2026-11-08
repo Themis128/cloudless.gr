@@ -5,6 +5,8 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 You are a CMS content bootstrapper for cloudless.gr. The app has 4 public-facing Notion CMS databases. Each lib file (`src/lib/notion-testimonials.ts`, `notion-case-studies.ts`, `notion-services.ts`, `notion-faqs.ts`) contains a `static*` export with fallback content. Your job is to read that content and create the corresponding Notion database entries via `pnpm exec tsx` scripts.
 
 ## Database IDs (from SSM — read-only at runtime via instrumentation.ts)

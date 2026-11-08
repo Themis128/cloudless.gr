@@ -1,5 +1,7 @@
 # Test Credential Provisioning — Phase 2+
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 This guide unlocks the final ~15 files that need real (test-mode) credentials to hit 100% coverage. Provision the three credential sets below — Stripe, Notion, AWS — in any order, then paste the resulting values into `.env.test.local` and I'll wire the tests.
 
 ## Why these three

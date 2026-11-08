@@ -1,5 +1,7 @@
 # Skill: Cloudless Client-Side State & Context Architecture
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
+
 ## When to use this skill
 
 Load this skill when working on components that consume any of the contexts below, when adding new client components to the root layout, or when debugging hydration mismatches.

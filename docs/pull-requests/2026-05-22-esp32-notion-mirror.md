@@ -1,5 +1,7 @@
 # feat(esp32): Notion devices mirror + sync API
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 Adds an optional Notion-backed mirror for the ESP32 alert-manager device so the admin panel keeps showing useful state even when the Pi cluster is offline.
 
 ## What this PR does

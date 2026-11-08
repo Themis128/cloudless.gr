@@ -1,5 +1,7 @@
 # Email infrastructure — cloudless.gr
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
+
 Canonical map of mailbox, transactional, and marketing email. Verified
 2026-08-14 against the repo. Self-hosted runbook details:
 [`MAIL-SERVER-SETUP.md`](./MAIL-SERVER-SETUP.md).

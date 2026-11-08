@@ -1,5 +1,7 @@
 # /esp32-restore — restore the ESP32/ESPHome Notion page content
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 Guides restoration of the ESP32 & ESPHome Watchdog Pi Cluster Monitor v2 Notion
 page, which had its content overwritten at ~15:19 UTC 2026-06-02.
 

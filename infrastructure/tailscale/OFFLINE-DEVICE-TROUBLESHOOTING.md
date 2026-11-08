@@ -1,5 +1,7 @@
 # Tailscale Offline Device Troubleshooting
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
+
 ## Issue: Device 100.123.189.49 showing as offline (tagged-devices)
 
 **Analysis Date:** 2026-07-19

@@ -1,5 +1,7 @@
 # LinkedIn Campaigns — Insight Tag + Conversions API
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
+
 End-to-end implementation reference for the LinkedIn paid-acquisition stack on
 `cloudless.gr`. Read this before adding a new campaign, rotating a token, or
 debugging missing conversions in LinkedIn Campaign Manager.

@@ -1,5 +1,7 @@
 # Flaky Test Patterns & Mitigations
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 ## 1. Rate-limit test on cloudless.gr (Lambda/CloudFront)
 
 **Test**: `post-audit-coverage.spec.ts` — "4th rapid same-IP submission is rejected"
