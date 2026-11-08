@@ -39,7 +39,7 @@ needs a redeploy (Lambda env is deploy-time).
 | Symptom | Meaning | Fix |
 | --- | --- | --- |
 | UI shows "not configured" / route 503 | Lambda env vars missing | Set secret → `gh workflow run deploy.yml` |
-| Route 401/403 | Caller isn't an admin | Sign in with a Cognito `admin`-group user |
+| Route 401/403 | Caller isn't an admin | Sign in with a D1 `admin`-role user (Cognito retired — auth is `user-auth-db`) |
 | Route 502 `Cloudflare API error` | Upstream rejected the call | Run `workers-ai-verify.yml`; if scope MISSING, edit the token to add Workers AI Read+Run |
 | Doctor: "token: INVALID" | Token revoked/expired | Create a new token, rotate |
 | Doctor: "route NOT deployed (404)" | deploy.yml hasn't shipped the route | Wait for/trigger deploy |
