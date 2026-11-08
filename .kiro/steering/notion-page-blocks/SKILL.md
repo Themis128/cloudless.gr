@@ -1,3 +1,5 @@
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 ---
 name: notion-page-blocks
 description: "Notion page and block content management — create pages with rich content, read and render block trees, append/update/delete blocks, convert between Notion blocks and HTML/Markdown. Use this skill whenever the user wants to create Notion pages with content, read page content as blocks, build a Notion-powered CMS or blog, render Notion content to HTML, manipulate block children, work with Notion's rich text format, add headings/lists/code/images/embeds to Notion pages, or convert Notion blocks to any output format. Triggers on 'Notion page content', 'Notion blocks', 'render Notion to HTML', 'add content to Notion', 'Notion rich text', 'Notion CMS', 'read Notion page', 'write to Notion page', or any request about page-level content in Notion."

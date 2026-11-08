@@ -1,4 +1,6 @@
 # /ha-failover — Manually trigger or verify CloudFront HA failover
+> **Historical (pre-2026-08-08).** the 2-node keepalived/VIP HA cluster was retired on 2026-08-08; k3s is single-node on `omv` and omv-ha is a mail host. Kept for reference — do not follow as current ops.
+
 
 Guides through a manual HA failover test or recovery for cloudless.gr.
 Primary origin: AWS Lambda (SST). Secondary origin: k3s via Tailscale Funnel (`omv.tail8eb71.ts.net:443`).

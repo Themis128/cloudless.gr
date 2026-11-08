@@ -1,3 +1,5 @@
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
+
 ---
 name: api-security-audit
 description: Audit src/app/api route handlers for hygiene issues — auth coverage, input validation, error leakage, rate limiting, fetch timeouts, secret logging. Use when the user asks to "review API security", "check api routes", or before a deploy that touches /api/. Builds on the patterns already established in src/proxy.ts and src/lib/api-auth.ts.
