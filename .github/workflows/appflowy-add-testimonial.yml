@@ -102,6 +102,34 @@ jobs:
           path: /tmp/appflowy-env.b64
           retention-days: 1
 
+      - name: Diagnose gotrue login response
+        run: |
+          set -euo pipefail
+          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
+          cat > /tmp/gotrue-diag.mjs <<'EOF'
+          const bases = [
+            "http://gotrue.appflowy.svc.cluster.local:9999",
+            "http://nginx.appflowy.svc.cluster.local/gotrue",
+          ];
+          for (const b of bases) {
+            try {
+              const r = await fetch(`${b}/token?grant_type=password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: process.env.APPFLOWY_EMAIL, password: process.env.APPFLOWY_PASSWORD }),
+                redirect: "manual",
+                signal: AbortSignal.timeout(8000),
+              });
+              const t = await r.text();
+              console.log(`DIAG ${b} -> ${r.status} ct=${r.headers.get("content-type")} loc=${r.headers.get("location")} body=${t.slice(0, 160).replace(/\s+/g, " ")}`);
+            } catch (e) {
+              console.log(`DIAG ${b} -> ERR ${String(e).slice(0, 160)}`);
+            }
+          }
+          EOF
+          kubectl cp /tmp/gotrue-diag.mjs "${POD#pod/}:/tmp/gotrue-diag.mjs" -n cloudless
+          kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-diag.mjs
+
       - name: Upload testimonial page into AppFlowy
         run: |
           set -euo pipefail
