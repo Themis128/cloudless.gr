@@ -1,5 +1,10 @@
 # Pending Infrastructure Actions Runbook
 
+> **Historical (pre-2026-08-08).** Written for the 2-node k3s cluster
+> (omv + omv-ha). The cluster is single-node on `omv` since 2026-08-08 and
+> omv-ha is a dedicated mail host — nodeSelector/taint procedures below do
+> not apply to the current topology.
+
 **Generated:** 2026-07-17
 **For:** cloudless.gr k3s cluster (omv + omv-ha nodes)
 

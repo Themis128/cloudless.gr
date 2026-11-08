@@ -1,5 +1,8 @@
 # Cognito Migration — Resolved Values & Remaining Steps
 
+> **Historical — Cognito retired.** Auth is Cloudflare D1 (`user-auth-db`,
+> `src/lib/auth-d1.ts`). Kept for reference only.
+
 Status of the values PR #730 needs before merge/deploy.
 
 ## Live verification (2026-06-08, against deployed `main` image ba22858)

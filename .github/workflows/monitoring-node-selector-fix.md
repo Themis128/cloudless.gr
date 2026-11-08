@@ -1,5 +1,5 @@
 ---
-description: "Patch Prometheus/Alertmanager StatefulSets to add nodeSelector for omv hostname. Fixes pods stuck in Pending due to NoSchedule taint on omv-ha node."
+description: "Patch Prometheus/Alertmanager StatefulSets to add nodeSelector for omv hostname. Fixes pods stuck in Pending due to NoSchedule taint on omv-ha node. HISTORICAL — single-node cluster since 2026-08-08; omv-ha is a mail host, no taint exists."
 on:
   workflow_dispatch:
   push:

@@ -89,6 +89,10 @@ graph TD
     G -->|AI| J[Workers AI / AI Providers]
 ```
 
+> **Note (2026-11):** the `omv-ha Node` leg above is historical — omv-ha was
+> removed from k3s on 2026-08-08 and is now a dedicated mail host. All k3s
+> traffic routes to the single `omv` node.
+
 ### 4. Failover Architecture
 
 #### AI Provider Fallback Chain

@@ -10,7 +10,7 @@ Load this skill when working on components that consume any of the contexts belo
 
 - `isLoading` starts as `true` on **both** SSR and first client render.
 - Navbar renders nothing while loading: `{!isLoading && <NavbarContent />}`.
-- Auth check runs inside `useEffect` via Cognito Amplify (lazy-imported to avoid 2 MB bundle on SSR).
+- Auth check runs inside `useEffect` against the D1 session (`session_token` cookie → `user-auth-db`; Cognito retired — see `src/lib/auth-d1.ts`).
 - **Hydration safe:** server snapshot = `{ isLoading: true, user: null }`, client snapshot on first render = same.
 
 ---
