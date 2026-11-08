@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { getD1ConfigValue, setD1ConfigValue } from "@/lib/ssm-config-d1";
+import { bustConfigCache } from "@/lib/ssm-config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -97,5 +98,6 @@ export async function PUT(request: NextRequest) {
   }
 
   await setD1ConfigValue(db as unknown as D1Database, key, value, description);
+  bustConfigCache();
   return NextResponse.json({ ok: true, key });
 }

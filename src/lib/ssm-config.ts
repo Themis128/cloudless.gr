@@ -165,11 +165,26 @@ import { isWorkersEnvironment, getD1Config } from "./ssm-config-d1";
 
 let cached: AppConfig | null = null;
 let cachedAt = 0;
+// D1 path cache — without it every getConfig() on the Pi (D1-over-REST)
+// issues a fresh SELECT against api.cloudflare.com, so a single request
+// that resolves config per integration call emits N sequential identical
+// POSTs (Sentry CLOUDLESS-GR-B/C).
+let d1Cached: AppConfig | null = null;
+let d1CachedAt = 0;
+let d1Inflight: Promise<AppConfig> | null = null;
 
 /** Clears the config cache — used in tests to pick up env changes. */
 export function resetSsmCache(): void {
   cached = null;
   cachedAt = 0;
+  d1Cached = null;
+  d1CachedAt = 0;
+  d1Inflight = null;
+}
+
+/** Drop cached config after an admin app_config write so reads see it now. */
+export function bustConfigCache(): void {
+  resetSsmCache();
 }
 
 /**
@@ -327,11 +342,24 @@ export async function getConfig(): Promise<AppConfig> {
     const db = getAuthDbFromEnv();
 
     if (db) {
-      const d1Config = await getD1Config(db as D1Database);
-      const envConfig = buildConfigFromEnv();
-      return mergeD1AndEnv(d1Config as Record<string, string>, envConfig);
+      if (d1Cached && Date.now() - d1CachedAt < CACHE_TTL_MS) return d1Cached;
+      // Single-flight: concurrent callers share one D1 round-trip.
+      d1Inflight ??= (async () => {
+        const d1Config = await getD1Config(db as D1Database);
+        const envConfig = buildConfigFromEnv();
+        return mergeD1AndEnv(d1Config as Record<string, string>, envConfig);
+      })();
+      try {
+        const merged = await d1Inflight;
+        d1Cached = merged;
+        d1CachedAt = Date.now();
+        return merged;
+      } finally {
+        d1Inflight = null;
+      }
     }
   } catch (err) {
+    d1Inflight = null;
     console.warn("[config] D1 lookup failed, continuing:", err);
   }
 
