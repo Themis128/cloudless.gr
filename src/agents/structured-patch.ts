@@ -1,8 +1,5 @@
 import { generateObject } from "ai";
-import {
-  createAI,
-  type CloudflareLanguageModelId,
-} from "agents/models/ai-sdk";
+import { createAI, type CloudflareLanguageModelId } from "agents/models/ai-sdk";
 import { z } from "zod";
 
 export const StructuredPatchSchema = z.object({
