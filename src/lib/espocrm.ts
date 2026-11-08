@@ -1346,3 +1346,39 @@ export async function associateDealWithContact(dealId: string, contactId: string
     console.error("[EspoCRM] associateDealWithContact error:", err);
   }
 }
+
+/* ─── Funnel audit (Tolstova stage counts) ────────────────────────────────── */
+
+export interface FunnelLeadRow {
+  status?: string | null;
+  source?: string | null;
+}
+
+export interface FunnelOpportunityRow {
+  stage?: string | null;
+}
+
+export interface FunnelStageData {
+  leads: FunnelLeadRow[] | null;
+  opportunities: FunnelOpportunityRow[] | null;
+}
+
+/**
+ * Raw rows for the admin funnel audit — Lead status/source and Opportunity
+ * stage across the whole CRM (paginated). Returns null per entity on
+ * failure so the caller can distinguish "CRM down" from "zero rows".
+ * Mirrors cu130-slim funnel_audit.py semantics.
+ */
+export async function getFunnelStageData(): Promise<FunnelStageData> {
+  const [leads, opportunities] = await Promise.all([
+    espoListAll<FunnelLeadRow>("Lead", { select: "status,source" }).catch((err) => {
+      console.warn("[EspoCRM] getFunnelStageData Lead fetch failed:", err);
+      return null;
+    }),
+    espoListAll<FunnelOpportunityRow>("Opportunity", { select: "stage" }).catch((err) => {
+      console.warn("[EspoCRM] getFunnelStageData Opportunity fetch failed:", err);
+      return null;
+    }),
+  ]);
+  return { leads, opportunities };
+}
