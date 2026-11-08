@@ -972,14 +972,16 @@ async function main() {
 			? sectionOk("social_monetization", socialMonetization(saMonetization))
 			: sectionErr("social_monetization", "missing monetization gates json")
 	);
+	const saDevappsRows = saDevapps ? socialDevapps(saDevapps) : null;
 	sections.push(
-		saDevapps
-			? sectionOk("social_devapps", socialDevapps(saDevapps))
+		saDevappsRows?.length
+			? sectionOk("social_devapps", saDevappsRows)
 			: sectionErr("social_devapps", "missing socialauto devapps json")
 	);
+	const saChannelRows = saChannelActions ? socialChannelActions(saChannelActions) : null;
 	sections.push(
-		saChannelActions
-			? sectionOk("social_channel_actions", socialChannelActions(saChannelActions))
+		saChannelRows?.length
+			? sectionOk("social_channel_actions", saChannelRows)
 			: sectionErr("social_channel_actions", "missing socialauto channel-actions json")
 	);
 	sections.push(
