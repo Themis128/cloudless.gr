@@ -8,7 +8,6 @@
 > `src/lib/auth-d1.ts`, opaque `session_token` cookies). This document describes
 > the old AWS Cognito stack; kept for reference only.
 
-
 - [x] `scripts/archive/cognito/cognito-setup.py` — Main bash script (338 lines)
   - [x] AWS CLI validation
   - [x] AWS credential checking

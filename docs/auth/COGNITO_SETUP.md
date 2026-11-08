@@ -4,7 +4,6 @@
 > `src/lib/auth-d1.ts`, opaque `session_token` cookies). This document describes
 > the old AWS Cognito stack; kept for reference only.
 
-
 This document covers automated setup of Cognito authentication for local development.
 
 ## Quick Start
