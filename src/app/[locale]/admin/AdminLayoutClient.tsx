@@ -70,6 +70,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/analytics/seo", label: "SEO", Icon: BarChart2 },
       { href: "/admin/gsc", label: "Search Console", Icon: Search },
       { href: "/admin/analytics/funnel", label: "Funnel", Icon: Filter },
+      { href: "/admin/analytics/funnel-audit", label: "Funnel Audit", Icon: Filter },
       { href: "/admin/analytics/social", label: "Social", Icon: Share2 },
       { href: "/admin/kpi", label: "KPI", Icon: Gauge },
       { href: "/admin/cost", label: "Cost", Icon: CircleDollarSign },
