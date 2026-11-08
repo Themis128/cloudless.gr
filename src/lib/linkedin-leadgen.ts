@@ -9,8 +9,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { campaigns } from "@/data/campaigns";
 import type { LeadData } from "@/lib/espocrm";
+import { LINKEDIN_LEADGEN_API_VERSION } from "@/lib/linkedin-api";
 
-export const LINKEDIN_LEADGEN_API_VERSION = "202605";
+export { LINKEDIN_LEADGEN_API_VERSION };
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
 
 export type LinkedInLeadNotification = {

@@ -1,4 +1,5 @@
 import { getConfig } from "@/lib/ssm-config";
+import { LINKEDIN_ADS_API_VERSION, normalizeLinkedInAdAccountId } from "@/lib/linkedin-api";
 
 const LINKEDIN_API = "https://api.linkedin.com/rest";
 
@@ -9,7 +10,9 @@ async function getLinkedInConfig(): Promise<{
 }> {
   const cfg = await getConfig();
   const token = cfg.LINKEDIN_ACCESS_TOKEN;
-  const adAccountId = cfg.LINKEDIN_AD_ACCOUNT_ID;
+  const adAccountId = cfg.LINKEDIN_AD_ACCOUNT_ID
+    ? normalizeLinkedInAdAccountId(cfg.LINKEDIN_AD_ACCOUNT_ID)
+    : "";
   const orgUrn = cfg.LINKEDIN_ORGANIZATION_URN;
   if (!token) throw new Error("LinkedIn not configured");
   return { token, adAccountId, orgUrn };
@@ -22,7 +25,7 @@ async function liiFetch(path: string, options: RequestInit = {}): Promise<Respon
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "LinkedIn-Version": "202608",
+      "LinkedIn-Version": LINKEDIN_ADS_API_VERSION,
       ...options.headers,
     },
   });
@@ -101,6 +104,21 @@ export interface LinkedInInsights {
   clicks: number;
   costInLocalCurrency: string;
   conversions: number;
+  /** ISO currency of `costInLocalCurrency` (e.g. "EUR"), when resolvable. */
+  currency?: string;
+}
+
+/** Account currency for `costInLocalCurrency` — one cheap lookup; failures
+ *  degrade to undefined so the page can fall back to a neutral label. */
+async function getAdAccountCurrency(adAccountId: string): Promise<string | undefined> {
+  try {
+    const res = await liiFetch(`/adAccounts/${adAccountId}`);
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { currency?: string };
+    return data.currency || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getLinkedInInsights(
@@ -116,10 +134,13 @@ export async function getLinkedInInsights(
   try {
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return empty;
-    const res = await liiFetch(
-      `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.start.month=${Number(dateStart.split("-")[1])}&dateRange.start.day=${Number(dateStart.split("-")[2])}&dateRange.end.year=${dateEnd.split("-")[0]}&dateRange.end.month=${Number(dateEnd.split("-")[1])}&dateRange.end.day=${Number(dateEnd.split("-")[2])}&timeGranularity=ALL&accounts%5B0%5D=urn%3Ali%3AsponsoredAccount%3A${adAccountId}&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`
-    );
-    if (!res.ok) return empty;
+    const [currency, res] = await Promise.all([
+      getAdAccountCurrency(adAccountId),
+      liiFetch(
+        `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.start.month=${Number(dateStart.split("-")[1])}&dateRange.start.day=${Number(dateStart.split("-")[2])}&dateRange.end.year=${dateEnd.split("-")[0]}&dateRange.end.month=${Number(dateEnd.split("-")[1])}&dateRange.end.day=${Number(dateEnd.split("-")[2])}&timeGranularity=ALL&accounts%5B0%5D=urn%3Ali%3AsponsoredAccount%3A${adAccountId}&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`
+      ),
+    ]);
+    if (!res.ok) return { ...empty, currency };
     const data = (await res.json()) as {
       elements?: Array<{
         impressions?: number;
@@ -134,6 +155,7 @@ export async function getLinkedInInsights(
       clicks: el.clicks ?? 0,
       costInLocalCurrency: el.costInLocalCurrency ?? "0",
       conversions: el.externalWebsiteConversions ?? 0,
+      currency,
     };
   } catch {
     return empty;

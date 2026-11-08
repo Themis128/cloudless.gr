@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { normalizeLinkedInAdAccountId } from "@/lib/linkedin-api";
 import { createHmac } from "node:crypto";
 import {
   buildChallengeResponse,
@@ -137,6 +138,20 @@ describe("linkedin-leadgen helpers", () => {
   });
 });
 
+describe("normalizeLinkedInAdAccountId", () => {
+  it("accepts bare ids and extracts ids from sponsoredAccount URNs", () => {
+    expect(normalizeLinkedInAdAccountId("512642510")).toBe("512642510");
+    expect(normalizeLinkedInAdAccountId("urn:li:sponsoredAccount:512642510")).toBe("512642510");
+    expect(normalizeLinkedInAdAccountId("urn:li:sponsoredAccount%3A512642510")).toBe("512642510");
+    expect(normalizeLinkedInAdAccountId("  42  ")).toBe("42");
+  });
+
+  it("strips path-unsafe characters from malformed input", () => {
+    expect(normalizeLinkedInAdAccountId("abc/../def")).toBe("abcdef");
+    expect(normalizeLinkedInAdAccountId("acct?id=1")).toBe("acctid1");
+  });
+});
+
 describe("POST /api/webhooks/linkedin-leads", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -242,7 +257,6 @@ describe("POST /api/webhooks/linkedin-leads", () => {
   });
 });
 
-
 describe("linkedin-leads route tails", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -269,9 +283,7 @@ describe("linkedin-leads route tails", () => {
     }));
     vi.doMock("@/lib/linkedin-leadgen", async () => {
       const actual =
-        await vi.importActual<typeof import("@/lib/linkedin-leadgen")>(
-          "@/lib/linkedin-leadgen"
-        );
+        await vi.importActual<typeof import("@/lib/linkedin-leadgen")>("@/lib/linkedin-leadgen");
       return {
         ...actual,
         fetchLeadFormResponse: vi.fn().mockResolvedValue(opts.fetchResp ?? null),
@@ -281,9 +293,7 @@ describe("linkedin-leads route tails", () => {
   };
 
   const req = async (body: string, secret: string) => {
-    const sig = createHmac("sha256", secret)
-      .update(`hmacsha256=${body}`)
-      .digest("hex");
+    const sig = createHmac("sha256", secret).update(`hmacsha256=${body}`).digest("hex");
     const { NextRequest } = await import("next/server");
     return new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads", {
       method: "POST",
@@ -296,9 +306,7 @@ describe("linkedin-leads route tails", () => {
     mockDeps({ secret: "sec" });
     const { GET } = await import("@/app/api/webhooks/linkedin-leads/route");
     const { NextRequest } = await import("next/server");
-    const noParam = await GET(
-      new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads")
-    );
+    const noParam = await GET(new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads"));
     expect(noParam.status).toBe(400);
   });
 
@@ -309,9 +317,7 @@ describe("linkedin-leads route tails", () => {
     const { GET } = await import("@/app/api/webhooks/linkedin-leads/route");
     const { NextRequest } = await import("next/server");
     const r = await GET(
-      new NextRequest(
-        "https://cloudless.gr/api/webhooks/linkedin-leads?challengeCode=x"
-      )
+      new NextRequest("https://cloudless.gr/api/webhooks/linkedin-leads?challengeCode=x")
     );
     expect(r.status).toBe(503);
   });
@@ -360,8 +366,18 @@ describe("linkedin-leads route tails", () => {
     mockDeps({ secret: "sec", token: "tok" });
     const { POST } = await import("@/app/api/webhooks/linkedin-leads/route");
     const body = JSON.stringify([
-      { type: "OTHER", leadAction: "CREATED", leadGenFormResponse: "urn:li:leadGenFormResponse:r1", occurredAt: 1 },
-      { type: "LEAD_ACTION", leadAction: "DELETED", leadGenFormResponse: "urn:li:leadGenFormResponse:r2", occurredAt: 2 },
+      {
+        type: "OTHER",
+        leadAction: "CREATED",
+        leadGenFormResponse: "urn:li:leadGenFormResponse:r1",
+        occurredAt: 1,
+      },
+      {
+        type: "LEAD_ACTION",
+        leadAction: "DELETED",
+        leadGenFormResponse: "urn:li:leadGenFormResponse:r2",
+        occurredAt: 2,
+      },
     ]);
     const r = await POST(await req(body, "sec"));
     const j = (await r.json()) as { results: { skipped?: boolean }[] };
@@ -393,19 +409,20 @@ describe("linkedin-leads route tails", () => {
       occurredAt: 1,
     });
     const r = await POST(await req(body, "sec"));
+    // fetchLeadFormResponse failed → retryable → 502 so LinkedIn redelivers.
+    expect(r.status).toBe(502);
     expect(((await r.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
 
-    // response exists but maps to no email
+    // response exists but maps to no email → permanent → 200
     vi.resetModules();
     mockDeps({
       secret: "sec",
       token: "tok",
       fetchResp: { id: "r1", formResponse: { answers: [] } },
     });
-    const { POST: POST2 } = await import(
-      "@/app/api/webhooks/linkedin-leads/route"
-    );
+    const { POST: POST2 } = await import("@/app/api/webhooks/linkedin-leads/route");
     const r2 = await POST2(await req(body, "sec"));
+    expect(r2.status).toBe(200);
     expect(((await r2.json()) as { results: { ok: boolean }[] }).results[0].ok).toBe(false);
   });
 });
