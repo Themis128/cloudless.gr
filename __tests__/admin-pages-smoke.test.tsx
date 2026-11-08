@@ -179,6 +179,7 @@ import AnalyticsDatalakePage from "@/app/[locale]/admin/analytics/datalake/page"
 import AnalyticsEnginePage from "@/app/[locale]/admin/analytics/engine/page";
 import AnalyticsExplorePage from "@/app/[locale]/admin/analytics/explore/page";
 import AnalyticsFunnelPage from "@/app/[locale]/admin/analytics/funnel/page";
+import AnalyticsFunnelAuditPage from "@/app/[locale]/admin/analytics/funnel-audit/page";
 import AnalyticsSocialPage from "@/app/[locale]/admin/analytics/social/page";
 import AnalyticsUnifiedPage from "@/app/[locale]/admin/analytics/unified/page";
 import AnalyticsWorkspacesPage from "@/app/[locale]/admin/analytics/workspaces/page";
@@ -398,6 +399,35 @@ describe("admin pages — smoke render", () => {
   });
   it("analytics/funnel", async () => {
     await renderPage(<AnalyticsFunnelPage />);
+  });
+  it("analytics/funnel-audit", async () => {
+    hoisted.routes = [
+      [
+        "funnel-audit",
+        {
+          generated_at: "2026-11-08T12:00:00Z",
+          sources: { espocrm: true, socialauto: true },
+          stages: [
+            { stage: "audience", count: 1000, conv_pct: null, note: "followers" },
+            { stage: "engaged", count: 40, proxy: true, conv_pct: 4, note: "proxy" },
+            { stage: "lead", count: 10, conv_pct: 25, note: "leads" },
+            { stage: "nurtured", count: 4, conv_pct: 40, note: "past new" },
+            { stage: "opportunity", count: 2, conv_pct: 50, note: "active" },
+            { stage: "won", count: 1, conv_pct: 50, note: "closed" },
+          ],
+          weakest_transition: "nurtured→opportunity (50%)",
+          auction_warning: false,
+          lead_sources: { "Web Site": 6, LinkedIn: 4 },
+          socialauto_funnel: {
+            lead_tiers: { hot: 1, warm: 2, cold: 7 },
+            conversions: [{ campaign: "spring", count: 1, value: 200 }],
+            total_conversions: 1,
+            total_value: 200,
+          },
+        },
+      ],
+    ];
+    await renderPage(<AnalyticsFunnelAuditPage />);
   });
   it("analytics/social", async () => {
     hoisted.routes = [
