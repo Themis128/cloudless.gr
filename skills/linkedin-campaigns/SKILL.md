@@ -1,5 +1,3 @@
-> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
-
 ---
 name: linkedin-campaigns
 description: |
@@ -13,6 +11,8 @@ description: |
   Manager", or any change under `src/data/campaigns.ts`,
   `src/app/[locale]/campaigns/**`, or `src/app/api/campaigns/**`.
 ---
+
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
 
 # LinkedIn campaigns toolkit
 

@@ -1,6 +1,6 @@
 # Notion Automations & Workflows — Academy Skill
-> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
 
+> **Historical — Notion CMS retired.** the CMS is AppFlowy Cloud; Notion admin routes/handlers were removed. References below are historical. Kept for reference — do not follow as current ops.
 
 > Complete reference for Notion database automations, button actions,
 > webhook integrations, and workflow patterns.

@@ -1,6 +1,6 @@
 # Structured documentation summary
-> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
 
 Inventory of operator docs for cloudless.gr (August 2026). Use with
 [`roadmap/agency-platform-backlog.md`](roadmap/agency-platform-backlog.md) as a

@@ -1,11 +1,11 @@
-> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
-
 ---
 name: pi-runner-failover
 description: "Playbook for keeping CI moving when one or both self-hosted Pi runners (`omv`, `omv-build`) go offline. Covers detection, immediate triage (flip RUNNER_GENERIC to hosted, cancel stuck queued jobs), the per-workflow GH-hosted-with-tailnet fallback pattern, and the operator side (bring Pi runners back). Pairs with `scripts/pi-runner-doctor.py`."
 metadata:
   type: skill
 ---
+
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
 
 # Pi runner failover
 

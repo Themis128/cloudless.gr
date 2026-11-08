@@ -1,6 +1,6 @@
 # EspoCRM — self-hosted CRM (EspoCRM replacement)
-> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
 
+> **Historical (pre-2026-08-08).** omv-ha was removed from the k3s cluster on 2026-08-08 and is now a dedicated mail host — it is not a cluster node. Kept for reference — do not follow as current ops.
 
 EspoCRM (SugarCRM lineage, same family as SuiteCRM) replaces EspoCRM for
 `cloudless.gr`. Deployed on the k3s cluster on `omv`, exposed via Cloudflare

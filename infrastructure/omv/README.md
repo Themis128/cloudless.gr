@@ -1,6 +1,6 @@
 # omv-main (Pi 5) Node — Cluster Architecture
-> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
 
+> **Historical — Cognito retired.** auth is Cloudflare D1 (`user-auth-db`, `src/lib/auth-d1.ts`, opaque `session_token` cookies). Cognito references below describe the old AWS stack. Kept for reference — do not follow as current ops.
 
 > The `omv-main` node is a Raspberry Pi 5 (8GB RAM, NVMe boot) running k3s for the cloudless.gr HA failover cluster.
 
