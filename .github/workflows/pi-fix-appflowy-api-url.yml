@@ -52,11 +52,15 @@ jobs:
           set -euo pipefail
           sleep 15
           FAIL=0
-          for ep in testimonials faqs services docs; do
+          # FAQs legitimately fall back to static when no FAQ pages exist in
+          # AppFlowy yet — warn only. Content endpoints must serve appflowy.
+          for ep in testimonials services docs; do
             HDR=$(curl -sI "https://cloudless.gr/api/$ep" | grep -i '^x-cms-source' || true)
             echo "/api/$ep -> ${HDR:-no header}"
             echo "$HDR" | grep -qi 'appflowy' || FAIL=1
           done
+          HDR=$(curl -sI "https://cloudless.gr/api/faqs" | grep -i '^x-cms-source' || true)
+          echo "/api/faqs -> ${HDR:-no header} (static OK if no AppFlowy FAQ pages yet)"
           [ "$FAIL" -eq 0 ] || { echo "::error::CMS still serving static fallback"; exit 1; }
           curl -s "https://cloudless.gr/api/testimonials" | python3 -c \
             "import json,sys; d=json.load(sys.stdin); print(len(d),'testimonials'); [print('-',t.get('name'),'|',t.get('company')) for t in d]"
