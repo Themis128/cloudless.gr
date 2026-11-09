@@ -16,6 +16,7 @@ export default function TestimonialsSection({
   items: Testimonial[];
 }) {
   const visible = items
+    .filter((item) => item.quote?.trim())
     .slice()
     .sort((a, b) => Number(b.featured) - Number(a.featured))
     .slice(0, 3);
@@ -57,57 +58,60 @@ export default function TestimonialsSection({
         </ScrollReveal>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {visible.map((item, i) => (
-            <ScrollReveal key={item.id} delay={i * 100}>
-              <figure
-                className="flex h-full flex-col rounded-xl border p-6"
-                style={{
-                  background: "var(--surface-raised)",
-                  borderColor: "var(--border-subtle)",
-                  boxShadow: "var(--shadow-md)",
-                }}
-              >
-                {item.rating ? (
-                  <div
-                    className="mb-3 font-mono text-sm tracking-wider"
-                    style={{ color: "var(--accent)" }}
-                    aria-label={`${item.rating} out of 5 stars`}
-                  >
-                    {"★".repeat(item.rating)}
-                    <span style={{ color: "var(--ink-faint, var(--ink-muted))" }}>
-                      {"★".repeat(Math.max(0, 5 - item.rating))}
-                    </span>
-                  </div>
-                ) : null}
-                <blockquote
-                  className="flex-1 text-sm leading-relaxed"
-                  style={{ color: "var(--ink-body)" }}
+          {visible.map((item, i) => {
+            const stars = item.rating ? Math.max(0, Math.min(5, Math.round(item.rating))) : 0;
+            return (
+              <ScrollReveal key={item.id} delay={i * 100}>
+                <figure
+                  className="flex h-full flex-col rounded-xl border p-6"
+                  style={{
+                    background: "var(--surface-raised)",
+                    borderColor: "var(--border-subtle)",
+                    boxShadow: "var(--shadow-md)",
+                  }}
                 >
-                  &ldquo;{item.quote}&rdquo;
-                </blockquote>
-                <figcaption className="mt-6 flex items-center gap-3">
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold"
-                    style={{
-                      background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                      borderColor: "color-mix(in srgb, var(--accent) 25%, transparent)",
-                      color: "var(--accent)",
-                    }}
+                  {stars > 0 ? (
+                    <div
+                      className="mb-3 font-mono text-sm tracking-wider"
+                      style={{ color: "var(--accent)" }}
+                      aria-label={`${item.rating} out of 5 stars`}
+                    >
+                      {"★".repeat(stars)}
+                      <span style={{ color: "var(--ink-faint, var(--ink-muted))" }}>
+                        {"★".repeat(5 - stars)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <blockquote
+                    className="flex-1 text-sm leading-relaxed"
+                    style={{ color: "var(--ink-body)" }}
                   >
-                    {item.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold" style={{ color: "var(--ink-primary)" }}>
-                      {item.name}
-                    </p>
-                    <p className="font-mono text-[10px]" style={{ color: "var(--ink-muted)" }}>
-                      {item.role || item.company}
-                    </p>
-                  </div>
-                </figcaption>
-              </figure>
-            </ScrollReveal>
-          ))}
+                    &ldquo;{item.quote}&rdquo;
+                  </blockquote>
+                  <figcaption className="mt-6 flex items-center gap-3">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold"
+                      style={{
+                        background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                        borderColor: "color-mix(in srgb, var(--accent) 25%, transparent)",
+                        color: "var(--accent)",
+                      }}
+                    >
+                      {item.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold" style={{ color: "var(--ink-primary)" }}>
+                        {item.name}
+                      </p>
+                      <p className="font-mono text-[10px]" style={{ color: "var(--ink-muted)" }}>
+                        {item.role || item.company}
+                      </p>
+                    </div>
+                  </figcaption>
+                </figure>
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
     </section>

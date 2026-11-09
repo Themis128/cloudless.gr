@@ -88,14 +88,14 @@ const fallbackTestimonials = [
 ];
 
 export default async function StorePage() {
-  const cmsTestimonials = await getTestimonials();
+  const cmsTestimonials = (await getTestimonials()).filter((t) => t.quote?.trim());
   const testimonials =
     cmsTestimonials.length > 0
       ? cmsTestimonials.slice(0, 3).map((t) => ({
           quote: t.quote,
           name: t.name,
           role: t.role || t.company,
-          rating: t.rating,
+          rating: t.rating ? Math.max(0, Math.min(5, Math.round(t.rating))) : undefined,
         }))
       : fallbackTestimonials;
 
