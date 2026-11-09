@@ -63,6 +63,11 @@ vi.mock("@/lib/appflowy-case-studies", async () => {
   );
   return { ...actual, getCaseStudies: getCaseStudiesMock };
 });
+const getTestimonialsMock = vi.hoisted(() => vi.fn(async () => []));
+vi.mock("@/lib/appflowy-testimonials", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/appflowy-testimonials")>();
+  return { ...actual, getTestimonials: getTestimonialsMock };
+});
 
 import TermsPage from "@/app/[locale]/terms/page";
 import PrivacyPage from "@/app/[locale]/privacy/page";
@@ -146,6 +151,24 @@ describe("store pages", () => {
   it("store grid page renders", async () => {
     const { container } = render(await StorePage());
     expect(container.textContent).toContain("STORE_GRID");
+  });
+
+  it("store page prefers AppFlowy testimonials over static fallback", async () => {
+    getTestimonialsMock.mockResolvedValueOnce([
+      {
+        id: "cms-t1",
+        name: "CMS Person",
+        company: "CMS Co",
+        role: "",
+        quote: "CMS-sourced quote",
+        rating: 5,
+        featured: true,
+      },
+    ]);
+    const { container } = render(await StorePage());
+    expect(container.textContent).toContain("CMS-sourced quote");
+    expect(container.textContent).toContain("CMS Co");
+    expect(container.textContent).not.toContain("Marina K.");
   });
 
   it("product page renders a real product from store-products", async () => {
