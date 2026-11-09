@@ -162,7 +162,7 @@ export default async function StorePage() {
                       <p className="font-mono text-[10px] text-slate-400">{t.role}</p>
                       {"rating" in t && t.rating ? (
                         <p
-                          className="mt-0.5 font-mono text-[10px] text-neon-cyan"
+                          className="text-neon-cyan mt-0.5 font-mono text-[10px]"
                           aria-label={`${t.rating} out of 5 stars`}
                         >
                           {"★".repeat(t.rating)}

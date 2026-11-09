@@ -36,6 +36,7 @@ import SocialMediaSection from "@/components/SocialMediaSection";
 import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import { getTestimonials } from "@/lib/appflowy-testimonials";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
 import TrackedLink from "@/components/TrackedLink";
 
@@ -96,6 +97,7 @@ export default async function Home({
 
   const { posts: blogPosts } = await getBlogPostsWithSource();
   const latestPosts = blogPosts.slice(0, 3);
+  const testimonials = await getTestimonials();
 
   const services = [
     {
@@ -977,7 +979,7 @@ export default async function Home({
       </section>
 
       {/* ── Testimonials (AppFlowy CMS) ── */}
-      <TestimonialsSection locale={locale} />
+      <TestimonialsSection locale={locale} items={testimonials} />
 
       {/* ── Social Media ── */}
       <SocialMediaSection locale={locale} />

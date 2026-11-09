@@ -1,18 +1,25 @@
-import { getTestimonials } from "@/lib/appflowy-testimonials";
 import ScrollReveal from "@/components/ScrollReveal";
 import { translate, type Locale } from "@/lib/i18n";
+import type { Testimonial } from "@/lib/cms-static";
 
 /**
- * Homepage testimonials section — live AppFlowy CMS data, featured first.
- * Renders nothing when AppFlowy is unconfigured or has no testimonials,
- * so the homepage never shows an empty section.
+ * Homepage testimonials section — presentational; the parent server
+ * component fetches AppFlowy testimonials and passes them in. Renders
+ * nothing when the list is empty so the homepage never shows a blank
+ * section. Featured testimonials sort first; top 3 are shown.
  */
-export default async function TestimonialsSection({ locale }: { locale: Locale }) {
-  const items = (await getTestimonials())
+export default function TestimonialsSection({
+  locale,
+  items,
+}: {
+  locale: Locale;
+  items: Testimonial[];
+}) {
+  const visible = items
     .slice()
     .sort((a, b) => Number(b.featured) - Number(a.featured))
     .slice(0, 3);
-  if (items.length === 0) return null;
+  if (visible.length === 0) return null;
 
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
@@ -35,7 +42,7 @@ export default async function TestimonialsSection({ locale }: { locale: Locale }
               className="font-heading text-3xl font-bold md:text-4xl"
               style={{ color: "var(--ink-primary)" }}
             >
-              {t("testimonialsSection.title", "What clients")} {" "}
+              {t("testimonialsSection.title", "What clients")}{" "}
               <span style={{ color: "var(--accent)" }}>
                 {t("testimonialsSection.titleHighlight", "say")}
               </span>
@@ -50,7 +57,7 @@ export default async function TestimonialsSection({ locale }: { locale: Locale }
         </ScrollReveal>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {items.map((item, i) => (
+          {visible.map((item, i) => (
             <ScrollReveal key={item.id} delay={i * 100}>
               <figure
                 className="flex h-full flex-col rounded-xl border p-6"
