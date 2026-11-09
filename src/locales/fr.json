@@ -148,6 +148,12 @@
     "role": "Architecte Cloud & Ingénieur Croissance",
     "bio": "Architecte cloud certifié avec une expérience pratique en Cloudflare Workers, architectures serverless, analyse de données et marketing IA. J'ai créé cloudless.gr pour les entreprises fatiguées des promesses non tenues."
   },
+  "testimonialsSection": {
+    "label": "[ TÉMOIGNAGES ]",
+    "title": "Ce que disent les",
+    "titleHighlight": "clients",
+    "subtitle": "Des résultats réels issus de missions réelles — des retours vérifiés, sans chiffres inventés."
+  },
   "social": {
     "label": "[ SE CONNECTER ]",
     "title": "Suivez Cloudless",
@@ -233,7 +239,6 @@
     "preferWriting": "Vous préférez écrire ?",
     "preferWritingDesc": "Parlez-nous de votre projet via le formulaire de contact et nous répondrons sous 24 heures."
   },
-
   "store": {
     "title": "Nos Produits",
     "subtitle": "Produits numériques et services pour accélérer votre croissance.",

@@ -63,6 +63,11 @@ vi.mock("@/lib/appflowy-case-studies", async () => {
   );
   return { ...actual, getCaseStudies: getCaseStudiesMock };
 });
+const getTestimonialsMock = vi.hoisted(() => vi.fn(async () => []));
+vi.mock("@/lib/appflowy-testimonials", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/appflowy-testimonials")>();
+  return { ...actual, getTestimonials: getTestimonialsMock };
+});
 
 import TermsPage from "@/app/[locale]/terms/page";
 import PrivacyPage from "@/app/[locale]/privacy/page";
@@ -98,9 +103,7 @@ describe("legal pages", () => {
 
 describe("marketing pages", () => {
   it("partners renders with contact form", async () => {
-    const { container } = render(
-      await PartnersPage({ params: sp({ locale: "en" }) })
-    );
+    const { container } = render(await PartnersPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("CONTACT_FORM");
   });
 
@@ -145,9 +148,27 @@ describe("work page", () => {
 });
 
 describe("store pages", () => {
-  it("store grid page renders", () => {
-    const { container } = render(<StorePage />);
+  it("store grid page renders", async () => {
+    const { container } = render(await StorePage());
     expect(container.textContent).toContain("STORE_GRID");
+  });
+
+  it("store page prefers AppFlowy testimonials over static fallback", async () => {
+    getTestimonialsMock.mockResolvedValueOnce([
+      {
+        id: "cms-t1",
+        name: "CMS Person",
+        company: "CMS Co",
+        role: "",
+        quote: "CMS-sourced quote",
+        rating: 5,
+        featured: true,
+      },
+    ]);
+    const { container } = render(await StorePage());
+    expect(container.textContent).toContain("CMS-sourced quote");
+    expect(container.textContent).toContain("CMS Co");
+    expect(container.textContent).not.toContain("Marina K.");
   });
 
   it("product page renders a real product from store-products", async () => {
@@ -158,9 +179,9 @@ describe("store pages", () => {
   });
 
   it("product page calls notFound for unknown ids", async () => {
-    await expect(
-      ProductPage({ params: sp({ locale: "en", id: "nope-nothing" }) })
-    ).rejects.toThrow("notFound");
+    await expect(ProductPage({ params: sp({ locale: "en", id: "nope-nothing" }) })).rejects.toThrow(
+      "notFound"
+    );
   });
 
   it("success page renders", () => {
@@ -177,12 +198,11 @@ describe("admin/notion legacy redirect", () => {
   });
 
   it("falls back to AppFlowy home for unknown/no slug", async () => {
-    await expect(
-      LegacyNotionRedirectPage({ params: sp({ locale: "en" }) })
-    ).rejects.toThrow("REDIRECT:/admin/appflowy");
+    await expect(LegacyNotionRedirectPage({ params: sp({ locale: "en" }) })).rejects.toThrow(
+      "REDIRECT:/admin/appflowy"
+    );
   });
 });
-
 
 describe("public case-studies page — AppFlowy branch", () => {
   it("renders AppFlowy studies with cover image, metrics, services, industry", async () => {
