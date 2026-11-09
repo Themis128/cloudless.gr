@@ -539,7 +539,9 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       name: "AppFlowy Cloud (Notion replacement)",
       category: "content",
       ...appflowyResult,
-      setupUrl: cfg.APPFLOWY_API_URL || "https://appflowy.cloudless.gr",
+      // setupUrl is user-facing — APPFLOWY_API_URL may be an in-cluster
+      // service DNS name, so always link the public hostname.
+      setupUrl: "https://appflowy.cloudless.gr",
     },
     {
       id: "n8n",
