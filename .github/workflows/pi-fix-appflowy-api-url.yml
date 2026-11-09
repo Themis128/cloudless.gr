@@ -1,0 +1,59 @@
+name: Pi fix — AppFlowy API URL to in-cluster nginx
+
+# The cloudless-app pod's APPFLOWY_API_URL is the PUBLIC hostname
+# (https://appflowy.cloudless.gr), which sits behind Cloudflare Access.
+# Every server-side CMS read (/api/testimonials, /api/faqs, /api/services,
+# /api/docs) gets the SSO HTML page and silently falls back to static
+# content (x-cms-source: static). Same bug class fixed for the testimonial
+# upload workflow 2026-11-09.
+#
+# Fix: point APPFLOWY_API_URL at the in-cluster nginx service, which
+# serves both surfaces — /api/* → appflowy-cloud:8000 and /gotrue/* →
+# gotrue:9999 (path-stripped). Verified live from inside the pod.
+# `kubectl set env` writes an explicit container env that overrides
+# envFrom configmap/secret values.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - name: Connect to tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
+
+      - name: Point APPFLOWY_API_URL in-cluster + rollout restart
+        run: |
+          set -euo pipefail
+          DEP=$(kubectl get deploy -n cloudless -l app=cloudless-app -o name | head -1)
+          echo "deployment: $DEP"
+          kubectl set env -n cloudless "$DEP" \
+            APPFLOWY_API_URL=http://nginx.appflowy.svc.cluster.local
+          kubectl rollout status -n cloudless "$DEP" --timeout=300s
+
+      - name: Verify CMS reads now hit AppFlowy
+        run: |
+          set -euo pipefail
+          sleep 15
+          for ep in testimonials faqs services docs; do
+            HDR=$(curl -sI "https://cloudless.gr/api/$ep" | grep -i '^x-cms-source' || true)
+            echo "/api/$ep -> ${HDR:-no header}"
+          done
+          curl -s "https://cloudless.gr/api/testimonials" | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); print(len(d),'testimonials'); [print('-',t.get('name'),'|',t.get('company')) for t in d]"
