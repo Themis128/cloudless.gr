@@ -51,9 +51,12 @@ jobs:
         run: |
           set -euo pipefail
           sleep 15
+          FAIL=0
           for ep in testimonials faqs services docs; do
             HDR=$(curl -sI "https://cloudless.gr/api/$ep" | grep -i '^x-cms-source' || true)
             echo "/api/$ep -> ${HDR:-no header}"
+            echo "$HDR" | grep -qi 'appflowy' || FAIL=1
           done
+          [ "$FAIL" -eq 0 ] || { echo "::error::CMS still serving static fallback"; exit 1; }
           curl -s "https://cloudless.gr/api/testimonials" | python3 -c \
             "import json,sys; d=json.load(sys.stdin); print(len(d),'testimonials'); [print('-',t.get('name'),'|',t.get('company')) for t in d]"
