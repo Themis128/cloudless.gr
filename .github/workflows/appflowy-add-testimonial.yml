@@ -1,17 +1,51 @@
-name: AppFlowy add testimonial (Micro1 ML interview feedback)
+name: AppFlowy add testimonial
 
-# One-shot CMS write: creates the `[Testimonial] Themistoklis Baltzakis`
-# page in AppFlowy Cloud so it appears on cloudless.gr via
-# /api/testimonials (featured → /links page too).
+# Creates a `[Testimonial] <name>` page in AppFlowy Cloud so it appears on
+# cloudless.gr via /api/testimonials (featured → /links page too).
 #
-# AppFlowy admin write endpoints in the Next.js app are stubs, so this
-# drives the AppFlowy-Cloud page-view API directly from inside the
-# cloudless-app pod (which already carries APPFLOWY_API_URL /
-# APPFLOWY_EMAIL / APPFLOWY_PASSWORD env). Same tailnet+SSH pattern as
-# pi-appflowy-provision.yml. No secrets are printed.
+# Reusable: pass name/company/role/quote (+ optional service/rating/featured)
+# as workflow_dispatch inputs. Defaults reproduce the Micro1 ML-interview
+# testimonial. AppFlowy admin write endpoints in the Next.js app are stubs,
+# so this drives the AppFlowy-Cloud page-view API directly from inside the
+# cloudless-app pod. No secrets are printed.
+#
+# In-cluster endpoints (verified 2026-11-09):
+#   API base  -> nginx.appflowy svc :80  (/api/* → appflowy-cloud:8000)
+#   Auth base -> nginx.appflowy/gotrue (/gotrue/* → gotrue:9999)
+# The pod's APPFLOWY_API_URL env is the PUBLIC hostname, which sits behind
+# Cloudflare Access and returns SSO HTML — never use it as APPFLOWY_BASE_URL.
 
 on:
   workflow_dispatch:
+    inputs:
+      name:
+        description: "Testimonial author name (page title suffix)"
+        required: true
+        default: "Themistoklis Baltzakis"
+      company:
+        description: "Company / org"
+        required: false
+        default: "Micro1"
+      role:
+        description: "Role / context"
+        required: false
+        default: "ML Engineer (MSc/PhD) — interview candidate"
+      quote:
+        description: "Testimonial text"
+        required: true
+        default: "The Micro1 ML Engineer interview delivered detailed, technically specific feedback on my applied ML work — 3D medical-imaging segmentation (isotropic resampling, z-score normalization, class-imbalance handling, Dice and IoU), PyTorch and Transformers workflows, and Python/pandas depth. A rare level of specificity."
+      service:
+        description: "Service line (optional)"
+        required: false
+        default: ""
+      rating:
+        description: "Rating 1-5"
+        required: false
+        default: "5"
+      featured:
+        description: "Show on /links featured section (true/false)"
+        required: false
+        default: "true"
 
 permissions:
   contents: read
@@ -39,34 +73,42 @@ jobs:
         run: scripts/ci/kubectl-via-omv-ssh.sh
 
       - name: Write testimonial markdown
+        env:
+          T_NAME: ${{ inputs.name }}
+          T_COMPANY: ${{ inputs.company }}
+          T_ROLE: ${{ inputs.role }}
+          T_QUOTE: ${{ inputs.quote }}
+          T_SERVICE: ${{ inputs.service }}
+          T_RATING: ${{ inputs.rating }}
+          T_FEATURED: ${{ inputs.featured }}
         run: |
-          cat > /tmp/testimonial-body.md <<'MD'
-          **Company**: Micro1
-          **Role**: ML Engineer (MSc/PhD) — interview candidate
-          **Quote**: The Micro1 ML Engineer interview delivered detailed, technically specific feedback on my applied ML work — 3D medical-imaging segmentation (isotropic resampling, z-score normalization, class-imbalance handling, Dice and IoU), PyTorch and Transformers workflows, and Python/pandas depth. A rare level of specificity.
-          **Rating**: 5
-          **Featured**: true
-          MD
-          # heredoc keeps leading spaces out of the field lines? No —
-          # indented heredoc strips the common indent, so lines are clean.
+          {
+            [ -n "$T_COMPANY" ] && printf '**Company**: %s\n' "$T_COMPANY"
+            [ -n "$T_ROLE" ]    && printf '**Role**: %s\n' "$T_ROLE"
+            printf '**Quote**: %s\n' "$T_QUOTE"
+            [ -n "$T_SERVICE" ] && printf '**Service**: %s\n' "$T_SERVICE"
+            printf '**Rating**: %s\n' "$T_RATING"
+            printf '**Featured**: %s\n' "$T_FEATURED"
+          } > /tmp/testimonial-body.md
           cat /tmp/testimonial-body.md
 
-      - name: Probe in-cluster gotrue endpoints
+      - name: Probe in-cluster AppFlowy API bases
+        # Picks the first base whose /api/workspace answers JSON (401 for a
+        # bogus bearer proves the route is real; HTML means a SPA/CF-Access
+        # catch-all). Runs inside the cloudless-app pod.
         run: |
           set -euo pipefail
           POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
-          cat > /tmp/gotrue-probe.mjs <<'EOF'
+          cat > /tmp/api-probe.mjs <<'EOF'
           const bases = [
-            "http://gotrue.appflowy.svc.cluster.local:9999",
-            "http://nginx.appflowy.svc.cluster.local/gotrue",
+            "http://nginx.appflowy.svc.cluster.local",
+            "http://appflowy-cloud.appflowy.svc.cluster.local:8000",
           ];
           let selected = "";
           for (const b of bases) {
             try {
-              const r = await fetch(`${b}/token?grant_type=password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: "probe@invalid.invalid", password: "x" }),
+              const r = await fetch(`${b}/api/workspace`, {
+                headers: { Authorization: "Bearer invalid", Accept: "application/json" },
                 signal: AbortSignal.timeout(8000),
               });
               const t = await r.text();
@@ -80,70 +122,29 @@ jobs:
           if (!selected) { console.log("SELECTED=NONE"); process.exit(1); }
           console.log(`SELECTED=${selected}`);
           EOF
-          kubectl cp /tmp/gotrue-probe.mjs "${POD#pod/}:/tmp/gotrue-probe.mjs" -n cloudless
-          kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-probe.mjs | tee /tmp/probe.out
+          kubectl cp /tmp/api-probe.mjs "${POD#pod/}:/tmp/api-probe.mjs" -n cloudless
+          kubectl exec -n cloudless "$POD" -- node /tmp/api-probe.mjs | tee /tmp/probe.out
           grep '^SELECTED=' /tmp/probe.out | grep -v NONE
 
-      - name: Export AppFlowy env for Infisical sync
-        # Reads the pod's APPFLOWY_* env into a base64 artifact (values never
-        # hit the step log) so an operator can mirror them into Infisical.
-        # Artifact is deleted after sync; retention is 1 day regardless.
-        run: |
-          set -euo pipefail
-          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
-          kubectl exec -n cloudless "$POD" -- sh -c \
-            'env | grep -E "^APPFLOWY_" | sort' | base64 -w0 > /tmp/appflowy-env.b64
-          echo "exported $(wc -c < /tmp/appflowy-env.b64) bytes"
-
-      - name: Upload env artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: appflowy-env
-          path: /tmp/appflowy-env.b64
-          retention-days: 1
-
-      - name: Diagnose gotrue login response
-        run: |
-          set -euo pipefail
-          POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
-          cat > /tmp/gotrue-diag.mjs <<'EOF'
-          const bases = [
-            "http://gotrue.appflowy.svc.cluster.local:9999",
-            "http://nginx.appflowy.svc.cluster.local/gotrue",
-          ];
-          for (const b of bases) {
-            try {
-              const r = await fetch(`${b}/token?grant_type=password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: process.env.APPFLOWY_EMAIL, password: process.env.APPFLOWY_PASSWORD }),
-                redirect: "manual",
-                signal: AbortSignal.timeout(8000),
-              });
-              const t = await r.text();
-              console.log(`DIAG ${b} -> ${r.status} ct=${r.headers.get("content-type")} loc=${r.headers.get("location")} body=${t.slice(0, 160).replace(/\s+/g, " ")}`);
-            } catch (e) {
-              console.log(`DIAG ${b} -> ERR ${String(e).slice(0, 160)}`);
-            }
-          }
-          EOF
-          kubectl cp /tmp/gotrue-diag.mjs "${POD#pod/}:/tmp/gotrue-diag.mjs" -n cloudless
-          kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-diag.mjs
-
       - name: Upload testimonial page into AppFlowy
+        env:
+          T_NAME: ${{ inputs.name }}
         run: |
           set -euo pipefail
           POD=$(kubectl get pod -n cloudless -l app=cloudless-app -o name | head -1)
           echo "pod: $POD"
           kubectl cp scripts/appflowy-upload-md.mjs "${POD#pod/}:/tmp/appflowy-upload-md.mjs" -n cloudless
           kubectl cp /tmp/testimonial-body.md "${POD#pod/}:/tmp/testimonial-body.md" -n cloudless
-          GOTRUE_URL=$(kubectl exec -n cloudless "$POD" -- node /tmp/gotrue-probe.mjs | grep '^SELECTED=' | cut -d= -f2-)
-          if [ -z "$GOTRUE_URL" ] || [ "$GOTRUE_URL" = "NONE" ]; then
-            echo "no working gotrue endpoint found"; exit 1
+          API_URL=$(kubectl exec -n cloudless "$POD" -- node /tmp/api-probe.mjs | grep '^SELECTED=' | cut -d= -f2-)
+          if [ -z "$API_URL" ] || [ "$API_URL" = "NONE" ]; then
+            echo "no working AppFlowy API base found"; exit 1
           fi
-          echo "using gotrue: $GOTRUE_URL"
-          # API base = pod's APPFLOWY_API_URL (appflowy-cloud:8000 serves
-          # /api/* directly). Auth base = probed gotrue endpoint. The public
-          # hostname is behind Cloudflare Access (SSO HTML) — never use it.
+          # Positional args keep the title injection-safe (names may contain
+          # quotes). nginx serves both surfaces in-cluster: /api/* →
+          # appflowy-cloud, /gotrue/* → gotrue (path-stripped). Verified
+          # live 2026-11-09. Gotrue always goes through nginx —
+          # appflowy-cloud:8000 has no /gotrue route (SPA HTML catch-all).
+          echo "using api: $API_URL"
           kubectl exec -n cloudless "$POD" -- sh -c \
-            "APPFLOWY_BASE_URL=\"\${APPFLOWY_API_URL:-https://appflowy.cloudless.gr}\" APPFLOWY_GOTRUE_URL='$GOTRUE_URL' node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title '[Testimonial] Themistoklis Baltzakis'"
+            'APPFLOWY_BASE_URL="$1" APPFLOWY_GOTRUE_URL="$2" node /tmp/appflowy-upload-md.mjs /tmp/testimonial-body.md --title "$3"' \
+            _ "$API_URL" "http://nginx.appflowy.svc.cluster.local/gotrue" "[Testimonial] $T_NAME"
