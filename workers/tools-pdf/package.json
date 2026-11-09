@@ -11,7 +11,7 @@
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0",
+    "wrangler": "^4.158.0",
     "@cloudflare/workers-types": "^4.20251014.0"
   }
 }
