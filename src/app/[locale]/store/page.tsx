@@ -5,6 +5,7 @@ import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { getTestimonials } from "@/lib/appflowy-testimonials";
 
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
@@ -62,7 +63,7 @@ const storeFAQs = [
   },
 ];
 
-const testimonials = [
+const fallbackTestimonials = [
   {
     quote:
       "The Cloud Architecture Audit saved us 40% on our monthly AWS bill. The recommendations were actionable and well-documented.",
@@ -86,7 +87,18 @@ const testimonials = [
   },
 ];
 
-export default function StorePage() {
+export default async function StorePage() {
+  const cmsTestimonials = await getTestimonials();
+  const testimonials =
+    cmsTestimonials.length > 0
+      ? cmsTestimonials.slice(0, 3).map((t) => ({
+          quote: t.quote,
+          name: t.name,
+          role: t.role || t.company,
+          rating: t.rating,
+        }))
+      : fallbackTestimonials;
+
   return (
     <>
       <JsonLd data={getFAQSchema(storeFAQs)} />
@@ -148,6 +160,14 @@ export default function StorePage() {
                     <div>
                       <p className="text-xs font-semibold text-white">{t.name}</p>
                       <p className="font-mono text-[10px] text-slate-400">{t.role}</p>
+                      {"rating" in t && t.rating ? (
+                        <p
+                          className="mt-0.5 font-mono text-[10px] text-neon-cyan"
+                          aria-label={`${t.rating} out of 5 stars`}
+                        >
+                          {"★".repeat(t.rating)}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

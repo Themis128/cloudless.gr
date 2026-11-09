@@ -148,6 +148,12 @@
     "role": "Cloud Architect & Growth Engineer",
     "bio": "Certified cloud architect — Cloudflare Workers, serverless, data analytics, and AI-powered marketing. Built cloudless.gr for businesses tired of tech that overpromises."
   },
+  "testimonialsSection": {
+    "label": "[ TESTIMONIALS ]",
+    "title": "What clients",
+    "titleHighlight": "say",
+    "subtitle": "Real outcomes from real engagements — verified feedback, no invented metrics."
+  },
   "social": {
     "label": "[ CONNECT ]",
     "title": "Follow Cloudless",
@@ -233,7 +239,6 @@
     "preferWriting": "Prefer writing?",
     "preferWritingDesc": "Tell us about your project in the contact form and we'll reply within 24 hours."
   },
-
   "store": {
     "title": "Our Products",
     "subtitle": "Digital products and services to accelerate your growth.",

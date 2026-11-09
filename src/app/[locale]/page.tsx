@@ -35,6 +35,7 @@ import SocialLinks from "@/components/SocialLinks";
 import SocialMediaSection from "@/components/SocialMediaSection";
 import HomeNewsletterForm from "@/components/HomeNewsletterForm";
 import ContactFormSection from "@/components/ContactFormSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
 import TrackedLink from "@/components/TrackedLink";
 
@@ -974,6 +975,9 @@ export default async function Home({
           </ScrollReveal>
         </div>
       </section>
+
+      {/* ── Testimonials (AppFlowy CMS) ── */}
+      <TestimonialsSection locale={locale} />
 
       {/* ── Social Media ── */}
       <SocialMediaSection locale={locale} />
