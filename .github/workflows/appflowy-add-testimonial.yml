@@ -112,9 +112,11 @@ jobs:
                 signal: AbortSignal.timeout(8000),
               });
               const t = await r.text();
-              const ct = r.headers.get("content-type") || "";
-              console.log(`PROBE ${b} -> ${r.status} ${ct} ${t.slice(0, 100).replace(/\s+/g, " ")}`);
-              if (!selected && ct.includes("json")) selected = b;
+              console.log(`PROBE ${b} -> ${r.status} ${r.headers.get("content-type") || ""} ${t.slice(0, 100).replace(/\s+/g, " ")}`);
+              // Valid = any non-HTML response. appflowy-cloud rejects bad
+              // bearers with 401 text/plain (real API); HTML means a
+              // SPA/CF-Access catch-all.
+              if (!selected && !t.trimStart().startsWith("<")) selected = b;
             } catch (e) {
               console.log(`PROBE ${b} -> ERR ${String(e).slice(0, 120)}`);
             }
