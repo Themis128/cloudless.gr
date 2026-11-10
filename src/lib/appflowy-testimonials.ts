@@ -57,7 +57,7 @@ function mapViewToTestimonial(
     name: stripPrefix(view.name),
     company: parseField(markdown, "Company") || "",
     role: parseField(markdown, "Role") || "",
-    quote: parseField(markdown, "Quote") || markdown || "",
+    quote: parseField(markdown, "Quote"),
     avatar: parseField(markdown, "Avatar") || undefined,
     service: parseField(markdown, "Service") || undefined,
     rating: Number.isFinite(ratingRaw) && ratingRaw > 0 ? Math.min(5, ratingRaw) : undefined,

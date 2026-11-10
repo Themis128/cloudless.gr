@@ -5,18 +5,22 @@ set -euo pipefail
 BASE="${1:-https://cloudless.gr}"
 
 echo "== /api/testimonials =="
-curl -fsS "$BASE/api/testimonials" | python3 -c '
+TMP=$(mktemp -d)
+HEADERS=$(mktemp)
+trap 'rm -rf "$TMP"; rm -f "$HEADERS"' EXIT
+curl -fsS -D "$HEADERS" "$BASE/api/testimonials" -o "$TMP/api.json"
+CMS_SOURCE=$(grep -i '^x-cms-source:' "$HEADERS" | tr -d '\r' | awk '{print $2}' | tail -1)
+echo "x-cms-source: ${CMS_SOURCE:-<missing>}"
+[ "$CMS_SOURCE" = "appflowy" ] || echo "WARNING: API served static fallback, not AppFlowy"
+python3 - "$TMP/api.json" <<'PY'
 import json,sys
-d=json.load(sys.stdin)
+d=json.load(open(sys.argv[1]))
 items=d if isinstance(d,list) else d.get("testimonials",d.get("items",[]))
 print("count=%d" % len(items))
 for t in items:
     print("  - %s | %s | rating=%s | featured=%s" % (
         t.get("name","?"), t.get("company",""), t.get("rating"), t.get("featured")))
-'
-
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+PY
 
 echo "== homepage testimonials section =="
 curl -fsS "$BASE/en" -o "$TMP/home.html"

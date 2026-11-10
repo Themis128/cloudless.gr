@@ -8,8 +8,8 @@ description: Manage Cloudless.gr testimonials end-to-end — AppFlowy `[Testimon
 ## Data model
 
 - Source of truth: **AppFlowy Cloud** on omv k3s. One page per testimonial, title prefix **`[Testimonial] <name>`** — the prefix is what `getTestimonials()` filters on.
-- Page body is markdown with `**Field**` lines parsed by `src/lib/appflowy-testimonials.ts`:
-  - `**Company**`, `**Role**`, `**Quote**`, `**Service**`, `**Rating**` (1–5 int), `**Featured**` (true/false), optional `**Avatar**`.
+- Page body is markdown with `**Field**: value` lines parsed by `src/lib/appflowy-testimonials.ts` — the colon after `**Field**` is required (regex `\*\*Key\*\*:\s*(.+)`):
+  - `**Company**:`, `**Role**:`, `**Quote**:`, `**Service**:`, `**Rating**:` (1–5 int), `**Featured**:` (true/false), optional `**Avatar**:`.
 - Reader: `src/lib/appflowy-testimonials.ts` → `getTestimonials()` (all), `getFeaturedTestimonials()`, `getAllTestimonialsAdmin()`. Unconfigured/unreachable AppFlowy → returns `[]` safely (surfaces must degrade, never 500).
 
 ## Surfaces (all render the same AppFlowy data)
@@ -25,7 +25,7 @@ i18n: `testimonialsSection.*` keys exist in all four locales (`en/el/fr/de`) —
 
 ## Adding a testimonial
 
-1. **Preferred**: AppFlowy admin UI — create page `[Testimonial] <name>` in the testimonials view/space with the `**Field**` markdown above. No deploy needed; surfaces pick it up on next render/ISR.
+1. **Preferred**: AppFlowy admin UI — create page `[Testimonial] <name>` in the testimonials view/space with the `**Field**: value` markdown above. No deploy needed; surfaces pick it up on next render/ISR.
 2. **Scripted**: `scripts/appflowy-upload-md.mjs` (repo root `scripts/`) or `src/lib/appflowy.ts` helpers (`createPage`, `appendBlockToPage`, `updateViewName`). Env: `APPFLOWY_API_URL`/`APPFLOWY_BASE_URL`, `APPFLOWY_EMAIL`, `APPFLOWY_PASSWORD`, `APPFLOWY_WORKSPACE_ID` — never print/commit them.
 3. The generic admin write route `src/app/api/admin/appflowy/**` returns `appflowyWriteNotImplemented` (501 stub) — do NOT route CMS writes through it.
 4. **Namespace hygiene**: only `[Testimonial] <name>` pages render. To retire one without deleting (AppFlowy-Cloud HTTP API has no page-delete endpoint — 405; deletion is a websocket/collab op), rename the page out of the prefix (e.g. `archived-…`) via `updateViewName`/page rename. Verify count drops via `/api/testimonials`.
@@ -33,8 +33,8 @@ i18n: `testimonialsSection.*` keys exist in all four locales (`en/el/fr/de`) —
 ## Content rules
 
 - Public quotes must be real, attributable feedback — no invented metrics, no private recruiter correspondence, no growth-area/negative feedback unless the author explicitly approves.
-- `**Rating**` is clamped 0–5 and rounded at render; still store clean ints.
-- Blank `**Quote**` entries are filtered at render — but fix the CMS page rather than relying on the filter.
+- `**Rating**:` is clamped 0–5 and rounded at render; still store clean ints.
+- Pages with a missing/empty `**Quote**:` parse to `quote=""` and are filtered at render (`TestimonialsSection`, `/store`) — fix the CMS page rather than relying on the filter. There is intentionally no whole-markdown quote fallback.
 
 ## Verify
 
