@@ -14,6 +14,7 @@ import {
 } from "@/lib/espocrm";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
+import { provisionTalkRoom } from "@/lib/socialauto";
 
 export async function POST(request: Request) {
   // Two intentional layers (not a mismatch): proxy.ts caps bursts at 3/60s,
@@ -67,7 +68,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
     }
 
-    const result = await bookConsultation({ name, email, start, end, notes });
+    // Provision the Talk room BEFORE booking so the guest join link can
+    // ride inside the Cal.com booking (visible on the booking page and in
+    // the calendar invite) — best-effort, never blocks the booking.
+    const talkRoom = await provisionTalkRoom({ name, email, start });
+    const talkLink = talkRoom?.room_url ?? null;
+    const bookingNotes = [
+      notes ? String(notes) : "",
+      talkLink ? `Join on Nextcloud Talk: ${talkLink}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n") || undefined;
+
+    const result = await bookConsultation({ name, email, start, end, notes: bookingNotes });
 
     if (!result) {
       return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
@@ -101,6 +114,7 @@ export async function POST(request: Request) {
           const noteLines = [
             `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
             ...(notes ? [`Notes: ${notes}`] : []),
+            ...(talkLink ? [`Talk room: ${talkLink}`] : []),
           ];
           await createContactNote(contactId, noteLines.join("\n"));
         }
@@ -126,6 +140,7 @@ export async function POST(request: Request) {
             "lead_source: calendar_booking",
             `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
             ...(notes ? [`Notes: ${notes}`] : []),
+            ...(talkLink ? [`Talk room: ${talkLink}`] : []),
           ].join("\n"),
         });
       } catch (err) {
@@ -139,6 +154,7 @@ export async function POST(request: Request) {
       success: true,
       eventId: result.eventId,
       meetingLink: result.htmlLink,
+      talkLink,
     });
   } catch (err) {
     const _r = mapIntegrationError(err);
