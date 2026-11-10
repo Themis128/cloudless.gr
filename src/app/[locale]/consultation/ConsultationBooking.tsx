@@ -50,6 +50,7 @@ export default function ConsultationBooking() {
   const [selected, setSelected] = useState<TimeSlot | null>(null);
   const [status, setStatus] = useState<BookStatus>(BOOK_IDLE);
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
+  const [talkLink, setTalkLink] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,8 +111,10 @@ export default function ConsultationBooking() {
       if (res.ok) {
         const data = (await res.json().catch(() => null)) as {
           meetingLink?: string;
+          talkLink?: string;
         } | null;
         setMeetingLink(data?.meetingLink ?? null);
+        setTalkLink(data?.talkLink ?? null);
         setStatus(BOOK_DONE);
       } else {
         setStatus(BOOK_ERROR);
@@ -148,6 +151,16 @@ export default function ConsultationBooking() {
         <p className="mt-2 text-slate-400">
           {t("consultation.confirmedDesc", "A calendar invite is on its way to your inbox.")}
         </p>
+        {talkLink && (
+          <a
+            href={talkLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-neon-cyan mt-6 inline-block font-mono text-sm font-semibold hover:underline"
+          >
+            {t("consultation.joinTalk", "Join on Nextcloud Talk →")}
+          </a>
+        )}
         {meetingLink && (
           <a
             href={meetingLink}

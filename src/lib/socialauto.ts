@@ -246,6 +246,43 @@ export async function listAccounts(): Promise<SaAccount[]> {
   return callThrowing<SaAccount[]>("/accounts");
 }
 
+// ── Consultation Talk room ──────────────────────────────────────────────────
+
+export interface TalkRoomResult {
+  room_url: string | null;
+  token: string | null;
+  reused: boolean;
+}
+
+/** Provision (or reuse) the per-consultation Nextcloud Talk room BEFORE the
+ *  Cal.com booking so the guest join link can ride in the booking notes and
+ *  the confirmation UI. Best-effort: returns nulls on any failure — the
+ *  booking must never block on Talk. */
+export async function provisionTalkRoom(data: {
+  name: string;
+  email: string;
+  start: string;
+}): Promise<TalkRoomResult | null> {
+  try {
+    // Bound the WHOLE operation — saFetch's timeoutMs only covers the final
+    // fetch; getSaConfig/saLogin (15s, retried once on 401) run before it.
+    const res = await Promise.race([
+      saFetch("/talk/consult-room", {
+        method: "POST",
+        body: JSON.stringify(data),
+        timeoutMs: 8_000,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("talk-room provision timed out")), 8_000)
+      ),
+    ]);
+    if (!res.ok) return null;
+    return (await res.json()) as TalkRoomResult;
+  } catch {
+    return null;
+  }
+}
+
 function accountToIntegration(a: SaAccount): PostizIntegration {
   return {
     id: a.id,

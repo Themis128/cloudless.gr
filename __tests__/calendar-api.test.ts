@@ -31,6 +31,11 @@ vi.mock("@/lib/slack-notify", () => ({
   slackBookingNotify: mockSlackBookingNotify,
 }));
 
+const mockProvisionTalkRoom = vi.fn();
+vi.mock("@/lib/socialauto", () => ({
+  provisionTalkRoom: mockProvisionTalkRoom,
+}));
+
 // ---------------------------------------------------------------------------
 // GET /api/calendar/availability
 // ---------------------------------------------------------------------------
@@ -132,6 +137,7 @@ describe("POST /api/calendar/book", () => {
       eventId: "evt_abc123",
       htmlLink: "https://cal.com/booking/evt_abc123",
     });
+    mockProvisionTalkRoom.mockResolvedValue(null);
   });
 
   it("returns 503 when calendar is not configured", async () => {
@@ -265,6 +271,62 @@ describe("POST /api/calendar/book", () => {
     );
     expect(res.status).toBe(500);
   });
+
+  it("appends the Talk join link to booking notes and returns talkLink", async () => {
+    mockProvisionTalkRoom.mockResolvedValue({
+      room_url: "https://cloud.cloudless.gr/call/abc12345",
+      token: "abc12345",
+      reused: false,
+    });
+    const { bookConsultation } = vi.mocked(
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
+    );
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(
+      bookRequest({
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
+        start: futureStart,
+        end: futureEnd,
+        privacyConsent: true,
+        notes: "Looking forward to the call",
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.talkLink).toBe("https://cloud.cloudless.gr/call/abc12345");
+    const call = vi.mocked(bookConsultation).mock.calls[0][0] as { notes?: string };
+    expect(call.notes).toContain("Looking forward to the call");
+    expect(call.notes).toContain(
+      "Join on Nextcloud Talk: https://cloud.cloudless.gr/call/abc12345"
+    );
+    expect(mockProvisionTalkRoom).toHaveBeenCalledWith({
+      name: TEST_USER_NAME,
+      email: TEST_USER_EMAIL,
+      start: futureStart,
+    });
+  });
+
+  it("books without Talk notes when provisioning returns null", async () => {
+    const { bookConsultation } = vi.mocked(
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
+    );
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(
+      bookRequest({
+        name: TEST_USER_NAME,
+        email: TEST_USER_EMAIL,
+        start: futureStart,
+        end: futureEnd,
+        privacyConsent: true,
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.talkLink).toBeNull();
+    const call = vi.mocked(bookConsultation).mock.calls[0][0] as { notes?: string };
+    expect(call.notes ?? "").not.toContain("Nextcloud Talk");
+  });
 });
 
 vi.mock("@/lib/espocrm", () => ({
@@ -272,6 +334,7 @@ vi.mock("@/lib/espocrm", () => ({
   createDeal: vi.fn(async () => "d1"),
   createContactNote: vi.fn(async () => true),
   associateDealWithContact: vi.fn(async () => true),
+  createLead: vi.fn(async () => "l1"),
 }));
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
@@ -294,6 +357,7 @@ describe("POST /api/calendar/book — tail branches", () => {
       eventId: "evt_x",
       htmlLink: "https://cal.com/x",
     });
+    mockProvisionTalkRoom.mockResolvedValue(null);
   });
 
   const book = (over: Record<string, unknown> = {}) =>
