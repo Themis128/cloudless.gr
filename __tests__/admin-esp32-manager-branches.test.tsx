@@ -85,7 +85,9 @@ describe("esp32-manager — branch tails", () => {
     const c = await renderPage();
     const fill = rssiFill(c);
     expect(fill.className).toContain("bg-red-500");
-    expect(parseFloat(fill.style.width)).toBeCloseTo((10 / 70) * 100, 5);
+    // jsdom 31's CSSOM serializes widths to ~5 significant digits
+    // (14.285714…% → "14.2857%") — precision 3 still verifies the value.
+    expect(parseFloat(fill.style.width)).toBeCloseTo((10 / 70) * 100, 3);
   });
 
   it("LED feedback clears after 3.5s; a declined reboot sends nothing", async () => {
