@@ -28,7 +28,7 @@ i18n: `testimonialsSection.*` keys exist in all four locales (`en/el/fr/de`) —
 1. **Preferred**: AppFlowy admin UI — create page `[Testimonial] <name>` in the testimonials view/space with the `**Field**` markdown above. No deploy needed; surfaces pick it up on next render/ISR.
 2. **Scripted**: `scripts/appflowy-upload-md.mjs` (repo root `scripts/`) or `src/lib/appflowy.ts` helpers (`createPage`, `appendBlockToPage`, `updateViewName`). Env: `APPFLOWY_API_URL`/`APPFLOWY_BASE_URL`, `APPFLOWY_EMAIL`, `APPFLOWY_PASSWORD`, `APPFLOWY_WORKSPACE_ID` — never print/commit them.
 3. The generic admin write route `src/app/api/admin/appflowy/**` returns `appflowyWriteNotImplemented` (501 stub) — do NOT route CMS writes through it.
-4. **Namespace hygiene**: only `[Testimonial] ` pages render. To retire one without deleting (AppFlowy-Cloud HTTP API has no page-delete endpoint — 405; deletion is a websocket/collab op), rename the page out of the prefix (e.g. `archived-…`) via `updateViewName`/page rename. Verify count drops via `/api/testimonials`.
+4. **Namespace hygiene**: only `[Testimonial] <name>` pages render. To retire one without deleting (AppFlowy-Cloud HTTP API has no page-delete endpoint — 405; deletion is a websocket/collab op), rename the page out of the prefix (e.g. `archived-…`) via `updateViewName`/page rename. Verify count drops via `/api/testimonials`.
 
 ## Content rules
 
