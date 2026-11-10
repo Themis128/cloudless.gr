@@ -552,3 +552,56 @@ describe("runOpsAction agency proposal actions", () => {
     );
   });
 });
+
+describe("provisionTalkRoom", () => {
+  const ROOM = {
+    room_url: "https://cloud.cloudless.gr/call/abc12345",
+    token: "abc12345",
+    reused: false,
+  };
+
+  it("POSTs to /talk/consult-room and returns the room payload", async () => {
+    mockLoginThen(jsonResponse(ROOM));
+    const { provisionTalkRoom } = await loadLib();
+    const out = await provisionTalkRoom({
+      name: "Jane Doe",
+      email: "jane@example.com",
+      start: "2026-11-20T10:00:00Z",
+    });
+    expect(out).toEqual(ROOM);
+    const call = mockFetch.mock.calls.at(-1);
+    expect(call?.[0]).toBe("https://social.cloudless.gr/api/v1/talk/consult-room");
+    expect((call?.[1] as RequestInit).method).toBe("POST");
+    expect(JSON.parse((call?.[1] as RequestInit).body as string)).toEqual({
+      name: "Jane Doe",
+      email: "jane@example.com",
+      start: "2026-11-20T10:00:00Z",
+    });
+  });
+
+  it("returns null on non-OK response", async () => {
+    mockLoginThen(jsonResponse({ detail: "nope" }, 500));
+    const { provisionTalkRoom } = await loadLib();
+    await expect(
+      provisionTalkRoom({ name: "x", email: "x@y.z", start: "2026-11-20" })
+    ).resolves.toBeNull();
+  });
+
+  it("returns null when SocialAuto is unconfigured", async () => {
+    mockGetConfig.mockResolvedValue({});
+    const { provisionTalkRoom } = await loadLib();
+    await expect(
+      provisionTalkRoom({ name: "x", email: "x@y.z", start: "2026-11-20" })
+    ).resolves.toBeNull();
+  });
+
+  it("returns null when the fetch throws", async () => {
+    mockGetConfig.mockResolvedValue(CONFIGURED);
+    mockFetch.mockResolvedValueOnce(jsonResponse({ access_token: fakeJwt() }));
+    mockFetch.mockRejectedValueOnce(new Error("network down"));
+    const { provisionTalkRoom } = await loadLib();
+    await expect(
+      provisionTalkRoom({ name: "x", email: "x@y.z", start: "2026-11-20" })
+    ).resolves.toBeNull();
+  });
+});
