@@ -87,7 +87,8 @@ export async function getTestimonials(): Promise<Testimonial[]> {
 
 export async function getFeaturedTestimonials(): Promise<Testimonial[]> {
   const all = await getTestimonials();
-  return all.filter((t) => t.featured);
+  // Skip featured rows with empty quotes so /links does not render blank blockquotes.
+  return all.filter((t) => t.featured && Boolean(t.quote?.trim()));
 }
 
 /**
