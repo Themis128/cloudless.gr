@@ -73,12 +73,10 @@ export async function POST(request: Request) {
     // the calendar invite) — best-effort, never blocks the booking.
     const talkRoom = await provisionTalkRoom({ name, email, start });
     const talkLink = talkRoom?.room_url ?? null;
-    const bookingNotes = [
-      notes ? String(notes) : "",
-      talkLink ? `Join on Nextcloud Talk: ${talkLink}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n") || undefined;
+    const bookingNotes =
+      [notes ? String(notes) : "", talkLink ? `Join on Nextcloud Talk: ${talkLink}` : ""]
+        .filter(Boolean)
+        .join("\n") || undefined;
 
     const result = await bookConsultation({ name, email, start, end, notes: bookingNotes });
 
