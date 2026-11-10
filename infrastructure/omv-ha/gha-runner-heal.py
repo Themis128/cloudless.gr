@@ -16,6 +16,7 @@ live Listener (active jobs keep working).
 Usage: gha-runner-heal.py --boot|--check
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -56,8 +57,12 @@ def listener_alive_for_unit(unit: str) -> bool:
     if not listener_alive():
         return False
     # Prefer a listener whose cwd/cmdline references this install path
+    # Listener cmdlines carry the resolved install path, so also match the
+    # realpath (e.g. /home -> /srv/... symlink after a home migration);
+    # otherwise healthy runners get restarted every check, killing jobs.
     r = run("pgrep", "-af", "[R]unner.Listener")
-    if cwd in (r.stdout or ""):
+    out = r.stdout or ""
+    if any(p in out for p in {cwd, os.path.realpath(cwd)}):
         return True
     # If only one runner on the box, any Listener is enough
     if len(list_runner_units()) <= 1 and listener_alive():
