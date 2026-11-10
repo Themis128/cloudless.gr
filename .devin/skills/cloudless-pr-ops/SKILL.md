@@ -20,3 +20,10 @@
 ## Dependabot rebuilds
 
 - After another dep PR lands, lockfile conflicts appear. Rebuild rather than merge-resolve: fresh branch off main, apply the version bump(s) in the right package.json files, `pnpm install` with the repo's pinned pnpm (packageManager field, 9.15.x) in `CI=true` — a symlinked `node_modules` triggers an interactive reinstall prompt that silently aborts in CI mode.
+
+## Test-authoring gotchas (learned on PR #2406)
+
+- **No global RTL cleanup** — `__tests__/setup.ts` does NOT call `cleanup()`; any test file that renders in more than one `it` (or uses `rerender` then asserts absence) must `afterEach(() => cleanup())` itself, else `queryByText` throws "multiple elements".
+- **Async Server Components**: page components that `await` data fetches cannot be rendered directly in jsdom tests ("async Client Component" error). Split data-fetching (async RSC) from presentational components (sync, props-driven), and in tests `render(await Page())` inside an `async` `it` callback.
+- **Coverage margin is razor-thin** — the suite sits at ~99.49–99.5% lines, so ANY new source file needs its own test in the same PR or the gate fails even with all tests green. Cover empty/error branches, not just happy paths.
+- Sentry bot review threads are the usual unresolved-conversation blockers — fix real findings (they caught blank-quote rendering and fractional `"★".repeat(rating)`), resolve via GraphQL, don't dismiss blindly.

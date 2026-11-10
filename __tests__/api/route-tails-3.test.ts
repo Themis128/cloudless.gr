@@ -643,7 +643,7 @@ describe("appflowy-testimonials lib", () => {
     expect(out[1].featured).toBe(false);
 
     m.afText
-      .mockResolvedValueOnce("**Featured**: yes")
+      .mockResolvedValueOnce("**Featured**: yes\n**Quote**: ok")
       .mockResolvedValueOnce("plain quote text");
     const featured = await getFeaturedTestimonials();
     expect(featured).toHaveLength(1);

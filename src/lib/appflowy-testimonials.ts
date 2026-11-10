@@ -57,7 +57,7 @@ function mapViewToTestimonial(
     name: stripPrefix(view.name),
     company: parseField(markdown, "Company") || "",
     role: parseField(markdown, "Role") || "",
-    quote: parseField(markdown, "Quote") || markdown || "",
+    quote: parseField(markdown, "Quote"),
     avatar: parseField(markdown, "Avatar") || undefined,
     service: parseField(markdown, "Service") || undefined,
     rating: Number.isFinite(ratingRaw) && ratingRaw > 0 ? Math.min(5, ratingRaw) : undefined,
@@ -87,7 +87,8 @@ export async function getTestimonials(): Promise<Testimonial[]> {
 
 export async function getFeaturedTestimonials(): Promise<Testimonial[]> {
   const all = await getTestimonials();
-  return all.filter((t) => t.featured);
+  // Skip featured rows with empty quotes so /links does not render blank blockquotes.
+  return all.filter((t) => t.featured && Boolean(t.quote?.trim()));
 }
 
 /**
