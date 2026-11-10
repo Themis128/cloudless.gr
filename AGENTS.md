@@ -33,6 +33,10 @@ The project includes a suite of Python-based agents for research and documentati
 - **Memory:** Persistent filesystem memory at `.agent-memory/memories/AGENTS.md`.
 - **Setup:** Run `./setup-agents.py` to initialize the Python environment.
 
+### Booking, Consultation & Talk Room Integration (2026-10)
+
+- The booking flow (see `src/app/api/agent/book/route.ts`) now provisions a Nextcloud Talk room join link at booking time, integrating SocialAuto and Nextcloud Talk. When a user books a consultation, the system creates a Talk room and includes the join link in the confirmation (via Slack/email). This is coordinated via `src/lib/socialauto.ts` and `src/lib/cal-com.ts`.
+
 ### Custom Claude Agents (2026-10)
 
 The following Claude-powered agents are available (see `.claude/agents/*.md` for full docs):
