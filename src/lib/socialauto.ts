@@ -264,11 +264,18 @@ export async function provisionTalkRoom(data: {
   start: string;
 }): Promise<TalkRoomResult | null> {
   try {
-    const res = await saFetch("/talk/consult-room", {
-      method: "POST",
-      body: JSON.stringify(data),
-      timeoutMs: 8_000,
-    });
+    // Bound the WHOLE operation — saFetch's timeoutMs only covers the final
+    // fetch; getSaConfig/saLogin (15s, retried once on 401) run before it.
+    const res = await Promise.race([
+      saFetch("/talk/consult-room", {
+        method: "POST",
+        body: JSON.stringify(data),
+        timeoutMs: 8_000,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("talk-room provision timed out")), 8_000)
+      ),
+    ]);
     if (!res.ok) return null;
     return (await res.json()) as TalkRoomResult;
   } catch {
