@@ -67,6 +67,40 @@ python .devin/skills/cf-worker-bringup-ops/scripts/env_sync.py \
   `wrangler secret put` wins — written 2026-11-03); delete it after
   merging.
 
+## Ongoing ops — probe + rotation (cu130-slim `scripts/`)
+
+Two scripts landed 2026-11-10 (cu130-slim PR #1654) automate the two
+failure modes this bring-up surfaced:
+
+- **`scripts/mail_pipeline_probe.py`** — synthetic round-trip probe:
+  `mail-outbound /send` → CF Email Sending → Email Routing → mail-ingest
+  → `webmail.cloudless.gr/ingest` → dovecot IMAP. Unique subject token,
+  per-hop verdicts, best-effort CF GraphQL leg, tg_alert on failure.
+  Cron'd every 15 min (`7,22,37,52`) → `~/logs/mail-pipeline-probe.log`.
+  Run manually: `cd ~/cu130-slim && python3 scripts/mail_pipeline_probe.py`
+  (`--no-alert` for dry runs, `MAIL_REPO=` to override the .env lookup).
+- **`scripts/mail_secret_rotate.py`** — `MAIL_OUTBOUND_TOKEN` rotation
+  end-to-end: generate → CF `secrets-bulk` PATCH → both `.env` checkouts
+  (WSL + `/mnt/c/...`) → compose consumer recreate → `/send` smoke.
+  `--dry-run` first; Infisical push warns-and-continues when
+  `secrets.cloudless.gr` is behind CF 1010 — re-run
+  `infisical-sync push` manually afterwards.
+
+Gotchas baked into both:
+
+- workers.dev sits behind bot protection — Python `urllib` **must** send
+  a browser-like `User-Agent` or you get HTTP 403 error 1010 (not 401).
+- After `.env` changes use `docker compose up -d` (recreate), never
+  `restart` — restart keeps baked env.
+- Compose `pull_policy: always` re-pulls `:latest` on `up`; big image
+  pulls have crashed Docker Desktop twice — if the daemon dies mid-up,
+  wait for recovery, `docker rm` hash-prefixed orphans + stale
+  `Created` containers, then `up -d --pull never` the affected services.
+- Consumer fingerprint check (no secrets printed):
+  `docker exec <c> sh -c 'printf %s "$MAIL_OUTBOUND_TOKEN"' | sha256sum`
+  vs `grep '^MAIL_OUTBOUND_TOKEN=' .env | cut -d= -f2- | tr -d '\n' | sha256sum`
+  (the `tr -d '\n'` matters — grep output carries a newline).
+
 ## Smoke check (after Gate 1)
 
 ```bash
