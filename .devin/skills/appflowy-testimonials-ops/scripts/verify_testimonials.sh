@@ -9,7 +9,7 @@ TMP=$(mktemp -d)
 HEADERS=$(mktemp)
 trap 'rm -rf "$TMP"; rm -f "$HEADERS"' EXIT
 curl -fsS -D "$HEADERS" "$BASE/api/testimonials" -o "$TMP/api.json"
-CMS_SOURCE=$(grep -i '^x-cms-source:' "$HEADERS" | tr -d '\r' | awk '{print $2}' | tail -1)
+CMS_SOURCE=$(grep -i '^x-cms-source:' "$HEADERS" | tr -d '\r' | awk '{print $2}' | tail -1 || true)
 echo "x-cms-source: ${CMS_SOURCE:-<missing>}"
 [ "$CMS_SOURCE" = "appflowy" ] || echo "WARNING: API served static fallback, not AppFlowy"
 python3 - "$TMP/api.json" <<'PY'
