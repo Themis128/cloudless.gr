@@ -51,3 +51,16 @@ skill — `github-omv:~/evidence/mpaltzakis-house-2026-11/`.
 - If ffprobe is absent, duration shows `-`; install or ignore.
 - For full SHA-256 (64 hex) verification use the pipeline `manifest.txt`
   on github-omv — this index truncates to 16 hex for readability.
+
+## Linked full-catalog index (added 2026-11-11)
+
+`scripts/video_index_publish.py` — rebuilds `VIDEO_INDEX.pdf` as a COMPLETE
+clickable catalog: pulls every mp4 under omv `video-src/` (ffprobe duration,
+size, fresh SHA-256-16), generates `VIDEO-INDEX.html` with R2 links per clip,
+then runs publish-doc.py (which now also R2-syncs). Verifies PDF annot count
+== inventory count.
+
+- Scheduled task `EvidenceVideoIndexDaily` runs it 05:45 daily (after the
+  04:30 omv backup) — keeps the index fresh as the pipeline adds clips.
+- Manual: `python video_index_publish.py [--case CASE] [--no-upload]`
+- R2 link base is baked in; evidence.cloudless.gr remains the failover host.
