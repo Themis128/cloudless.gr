@@ -17,6 +17,7 @@ Official channels to report cybercrime to the Hellenic Police (verified 2026-11-
 ## What the gov.gr form covers
 
 Categories offered (per joint ministerial decision / government announcement):
+
 - αδικήματα σε βάρος ανηλίκων μέσω διαδικτύου
 - παράνομη πρόσβαση σε ηλεκτρονικό υπολογιστή
 - παράνομη διακίνηση οπτικοακουστικών έργων
@@ -64,6 +65,7 @@ A ready config for the mpaltzakis case lives at
 final submission; capture the protocol/receipt number afterwards.
 
 Wizard gotchas (verified 2026-11-11):
+
 - Server-side state machine: once a step is submitted you CANNOT go back —
   `/preview/` redirects forward, `history.back()` and direct step URLs bounce
   back to preview. To fix anything, start a NEW draft (`/templates/KATHLEG/create`).
@@ -92,6 +94,7 @@ python prep-complaint.py --case mpaltzakis-house-2026-11
 ```
 
 Writes `complaint-package/` next to the correspondence dir:
+
 - copies of the canonical PDFs (EGKLISI, REPORT, AITISI, VIDEO_INDEX)
 - `SUBMISSION-NOTES.txt` — suggested values for every gov.gr field (categories, summary, party details, evidence links)
 - `checklist.txt` — step-by-step gov.gr + email + in-person route
