@@ -132,13 +132,16 @@ def sms_otp(sender="GOVGR", digits=6, wait=90):
                 ).stdout
             except Exception:
                 continue
-            for line in out.splitlines():
-                if sender not in line:
+            for row in re.split(r"(?=Row: \d+ )", out):
+                if sender not in row:
                     continue
-                m_date = re.search(r"\bdate=(\d+)", line)
-                if m_date and int(m_date.group(1)) < since_ms - 120_000:
+                m_date = re.search(r"\bdate=(\d+)", row)
+                if not m_date or int(m_date.group(1)) < since_ms - 120_000:
                     continue
-                m = re.search(rf"\b(\d{{{digits}}})\b", line)
+                m = re.search(r"\baddress=([^,\s]+)", row)
+                if not m or sender not in m.group(1):
+                    continue
+                m = re.search(rf"\b(\d{{{digits}}})\b", row)
                 if m:
                     return m.group(1)
         time.sleep(5)
