@@ -29,6 +29,7 @@ python scripts/build_video_index.py <case_dir> [--out VIDEO-INDEX.pdf]
 ## mpaltzakis-house-2026-11 dossier
 
 Local folder: `C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence\`
+
 - `video-20261109-dlink/`, `video-20261110-dlink/`,
   `video-20261109-incident-1610-1700/` — camera clips with `_strip.jpg` sheets
 - `audio-evidence/` — WAVs + whisper transcripts
