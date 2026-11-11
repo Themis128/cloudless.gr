@@ -378,7 +378,12 @@ def cmd_get(a):
     if "b64" not in out:
         print(json.dumps(out, ensure_ascii=False))
         sys.exit(2)
-    dest = a.out or out["name"] or "attachment.bin"
+    # attachment names come from remote mail — sanitize to basename so a
+    # crafted name can't traverse outside the cwd when --out is omitted
+    raw_name = out.get("name") or "attachment.bin"
+    dest = a.out or os.path.basename(raw_name.replace("\\", "/"))
+    if dest in ("", ".", ".."):
+        dest = "attachment.bin"
     with open(dest, "wb") as f:
         f.write(base64.b64decode(out["b64"]))
     print(

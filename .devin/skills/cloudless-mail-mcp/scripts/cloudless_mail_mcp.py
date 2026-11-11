@@ -99,7 +99,7 @@ def t_send(args):
         body=args.get("body"),
         body_file=args.get("body_file"),
         cc=args.get("cc"),
-        category=args.get("category", "user-mail"),
+        category=args.get("category", "ops-alert"),
         user=args.get("user", "tbaltzakis"),
     )
     buf = io.StringIO()

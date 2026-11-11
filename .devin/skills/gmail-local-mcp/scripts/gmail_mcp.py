@@ -23,6 +23,7 @@ import email.utils
 import json
 import os
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -49,11 +50,19 @@ def _refresh(tfile):
         t.update(n)
         t["expires_at"] = time.time() + n.get("expires_in", 3600) - 60
         # atomic write — a plain open(tfile,"w") truncates first, so a
-        # concurrent reader could see an empty/partial token file
-        tmp = tfile + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(t, f)
-        os.replace(tmp, tfile)
+        # concurrent reader could see an empty/partial token file; unique
+        # tmp name per call so concurrent refreshers don't collide
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(tfile), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(t, f)
+            os.replace(tmp, tfile)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
     return t["access_token"]
 
 
