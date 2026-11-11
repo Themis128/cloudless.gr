@@ -27,8 +27,8 @@ import json
 import os
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 KEYS = os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets")
 CF_ACCOUNT = "fb7dc7b69b662480cd5961a4d1913c78"
@@ -61,12 +61,10 @@ def probe(cfg):
 
 
 def heal(cfg):
-    body = json.dumps(
-        {"name": SECRET_NAME, "text": cfg["token"], "type": "secret_text"}
-    ).encode()
+    body = json.dumps({"name": SECRET_NAME, "text": cfg["token"], "type": "secret_text"}).encode()
     req = urllib.request.Request(
-        "https://api.cloudflare.com/client/v4/accounts/%s/workers/scripts/%s/secrets"
-        % (CF_ACCOUNT, WORKER),
+        f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT}"
+        f"/workers/scripts/{WORKER}/secrets",
         data=body,
         method="PUT",
         headers={
@@ -105,7 +103,7 @@ def main():
         out["error"] = str(e)[:400]
         print(json.dumps(out, ensure_ascii=False))
         return 1
-    for i in range(6):
+    for _ in range(6):
         time.sleep(5)
         status = probe(cfg)
         if status != 401:

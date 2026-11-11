@@ -14,13 +14,24 @@ usage:
 --all-new syncs every roaming skill dir missing from the repo's
 .devin/skills (compares names only).
 """
-import argparse, json, os, shutil, subprocess, sys, time
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
 
 ROAMING = os.path.join(os.environ.get("APPDATA", ""), "devin", "skills")
 REPO = "//wsl.localhost/Ubuntu-24.04/home/tbaltzakis/cloudless.gr"
 WT_PARENT = "//wsl.localhost/Ubuntu-24.04/home/tbaltzakis"
-GIT_ID = ["-c", "user.name=Devin",
-          "-c", "user.email=158243242+devin-ai-integration[bot]@users.noreply.github.com"]
+GIT_ID = [
+    "-c",
+    "user.name=Devin",
+    "-c",
+    "user.email=158243242+devin-ai-integration[bot]@users.noreply.github.com",
+]
 
 
 def git(repo, *args, check=True):
@@ -53,9 +64,11 @@ def main():
 
     if a.all_new:
         have = repo_skills(a.repo)
-        skills = sorted(d for d in os.listdir(ROAMING)
-                        if os.path.isdir(os.path.join(ROAMING, d))
-                        and d not in have)
+        skills = sorted(
+            d
+            for d in os.listdir(ROAMING)
+            if os.path.isdir(os.path.join(ROAMING, d)) and d not in have
+        )
     else:
         skills = a.skills
     if not skills:
@@ -72,8 +85,12 @@ def main():
     wt = WT_PARENT.rstrip("/\\") + "/cloudless-skills-wt-" + stamp
 
     if a.dry_run:
-        print(json.dumps({"skills": skills, "branch": branch,
-                          "worktree": wt, "repo": a.repo}, indent=1))
+        print(
+            json.dumps(
+                {"skills": skills, "branch": branch, "worktree": wt, "repo": a.repo},
+                indent=1,
+            )
+        )
         return 0
 
     print("fetch origin/main ...")
@@ -89,30 +106,60 @@ def main():
             print("copied", s)
         rel = [".devin/skills/" + s for s in skills]
         git(wt, "add", *rel)
-        msg = ("feat(skills): sync roaming Devin skills to repo\n\n"
-               + "\n".join("- " + s for s in skills)
-               + "\n\nGenerated with [Devin](https://devin.ai)\n\n"
-               "Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>")
+        msg = (
+            "feat(skills): sync roaming Devin skills to repo\n\n"
+            + "\n".join("- " + s for s in skills)
+            + "\n\nGenerated with [Devin](https://devin.ai)\n\n"
+            "Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>"
+        )
         git(wt, "commit", "-m", msg)
         print("push ...")
         git(wt, "push", "-u", "origin", branch)
-        body = ("## Summary\nSynced roaming Devin skills into `.devin/skills/`:\n\n"
-                + "\n".join("- `" + s + "`" for s in skills)
-                + "\n\nGenerated with [Devin](https://devin.ai)")
+        body = (
+            "## Summary\nSynced roaming Devin skills into `.devin/skills/`:\n\n"
+            + "\n".join("- `" + s + "`" for s in skills)
+            + "\n\nGenerated with [Devin](https://devin.ai)"
+        )
         r = subprocess.run(
-            ["gh", "pr", "create", "-R", "Themis128/cloudless.gr",
-             "--base", "main", "--head", branch,
-             "--title", "feat(skills): sync " + ", ".join(skills[:3])
-             + (" +%d more" % (len(skills) - 3) if len(skills) > 3 else ""),
-             "--body", body],
-            capture_output=True, text=True, timeout=120)
+            [
+                "gh",
+                "pr",
+                "create",
+                "-R",
+                "Themis128/cloudless.gr",
+                "--base",
+                "main",
+                "--head",
+                branch,
+                "--title",
+                "feat(skills): sync "
+                + ", ".join(skills[:3])
+                + (f" +{len(skills) - 3} more" if len(skills) > 3 else ""),
+                "--body",
+                body,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
         print(r.stdout.strip() or r.stderr.strip())
         pr = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ""
         if "/pull/" in pr:
             num = pr.rsplit("/", 1)[-1]
-            subprocess.run(["gh", "pr", "merge", num, "-R",
-                            "Themis128/cloudless.gr", "--squash", "--auto",
-                            "--delete-branch"], timeout=60)
+            subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "merge",
+                    num,
+                    "-R",
+                    "Themis128/cloudless.gr",
+                    "--squash",
+                    "--auto",
+                    "--delete-branch",
+                ],
+                timeout=60,
+            )
             print("auto-merge armed on PR", num)
     finally:
         git(a.repo, "worktree", "remove", wt, "--force", check=False)

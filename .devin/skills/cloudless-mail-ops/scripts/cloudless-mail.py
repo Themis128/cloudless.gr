@@ -32,8 +32,8 @@ import json
 import os
 import subprocess
 import sys
-import urllib.request
 import urllib.parse
+import urllib.request
 
 SSH = [
     "ssh",

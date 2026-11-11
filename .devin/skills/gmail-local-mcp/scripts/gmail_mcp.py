@@ -17,15 +17,15 @@ Protocol: MCP stdio — newline-delimited JSON-RPC 2.0.
 """
 
 import base64
+import email.header
+import email.mime.text
+import email.utils
 import json
 import os
 import sys
 import time
 import urllib.parse
 import urllib.request
-import email.mime.text
-import email.header
-import email.utils
 
 KEYS = os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets")
 OAUTH_KEYS = os.path.expanduser(r"~\.config\google-calendar-mcp\gcp-oauth.keys.json")
@@ -45,9 +45,7 @@ def _refresh(tfile):
                 "grant_type": "refresh_token",
             }
         ).encode()
-        n = json.loads(
-            urllib.request.urlopen(ci["token_uri"], data=data, timeout=30).read()
-        )
+        n = json.loads(urllib.request.urlopen(ci["token_uri"], data=data, timeout=30).read())
         t.update(n)
         t["expires_at"] = time.time() + n.get("expires_in", 3600) - 60
         json.dump(t, open(tfile, "w"))
@@ -112,9 +110,7 @@ def header(m, name):
 
 def body_text(payload):
     if payload.get("mimeType") == "text/plain" and payload.get("body", {}).get("data"):
-        return base64.urlsafe_b64decode(payload["body"]["data"]).decode(
-            "utf-8", "replace"
-        )
+        return base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", "replace")
     for part in payload.get("parts", []):
         t = body_text(part)
         if t:
@@ -143,9 +139,7 @@ def t_search(args):
     maxn = int(args.get("max_results", 20))
     mode = args.get("mode", "threads")  # threads | messages
     if mode == "messages":
-        res = READ_API(
-            "messages?q=" + urllib.parse.quote(q) + "&maxResults=" + str(maxn)
-        )
+        res = READ_API("messages?q=" + urllib.parse.quote(q) + "&maxResults=" + str(maxn))
         out = []
         for m in res.get("messages", []):
             f = READ_API(
@@ -216,8 +210,7 @@ def t_read_thread(args):
                 "messageIdHeader": header(m, "Message-ID"),
                 "labelIds": m.get("labelIds", []),
                 "attachments": attachments(p),
-                "body": txt[:maxchars]
-                + ("\n...[truncated]" if len(txt) > maxchars else ""),
+                "body": txt[:maxchars] + ("\n...[truncated]" if len(txt) > maxchars else ""),
             }
         )
     return {"threadId": tid, "messages": msgs}
@@ -244,9 +237,7 @@ def t_read_message(args):
     }
 
 
-def _mime_message(
-    to, subject, body, cc=None, bcc=None, in_reply_to=None, references=None
-):
+def _mime_message(to, subject, body, cc=None, bcc=None, in_reply_to=None, references=None):
     msg = email.mime.text.MIMEText(body, "plain", "utf-8")
     msg["To"] = to
     if cc:
