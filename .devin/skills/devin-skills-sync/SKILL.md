@@ -19,6 +19,11 @@ $S --dry-run ...                          # print plan, change nothing
 
 What it does per run:
 
+0. **Lint gate** — runs `ruff check --fix` + `ruff format` on the
+   roaming skill dirs using the REPO's `pyproject.toml` config (CI
+   lints `.devin/skills/**` with F,E,W,I,UP,B,C4 — roaming dirs have no
+   config so default ruff misses most rules). Aborts if unfixable
+   findings remain, so a red Python-Lint PR is never pushed.
 1. `git fetch origin main` in the WSL repo
    (`//wsl.localhost/Ubuntu-24.04/home/tbaltzakis/cloudless.gr`)
 2. `git worktree add` a throwaway worktree on branch
