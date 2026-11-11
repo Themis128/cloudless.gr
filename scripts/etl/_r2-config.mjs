@@ -169,6 +169,13 @@ export const LAKE_SCHEMA_CONTRACTS = {
     "position",
   ],
   "lake/gsc-devices/devices.parquet": ["device", "clicks", "impressions", "ctr", "position"],
+  "lake/ga4-daily/daily.parquet": ["date", "sessions", "total_users", "page_views"],
+  "lake/ga4-channels/channels.parquet": [
+    "channel_group",
+    "sessions",
+    "total_users",
+    "page_views",
+  ],
   "lake/sentry-issues/issues.parquet": ["issue_id", "title", "level", "status", "count_14d"],
   "lake/linkedin-ads/insights.parquet": ["campaign_id", "day", "impressions", "clicks", "spend"],
   "lake/linkedin-ads/demographics.parquet": ["pivot", "pivot_value", "impressions", "clicks", "spend"],
