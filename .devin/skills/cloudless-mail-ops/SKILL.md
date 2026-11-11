@@ -46,6 +46,13 @@ $CM send --to a@b --subject S (--body T | --body-file f) [--cc a,b]
   verified). Requires a non-default `User-Agent` (the worker 403s
   `Python-urllib`). **Text only — no attachments.** For attachments or
   HTML mail use `webmail.cloudless.gr` (behind Cloudflare Access OTP).
+- **External recipients:** the worker's `send_email` binding 502s on any
+  non-@cloudless.gr address (verified 2026-11-11 — self-sends work,
+  hotmail/gmail fail). `send` automatically falls back to SMTP via
+  `ssh omv-ha /usr/sbin/sendmail -t -i` (postfix localhost relay →
+  Resend), which delivers externally. `--category` must be one of the
+  worker's allowlist (`ops-alert` default) even when the fallback is
+  used, since the worker is tried first.
 - Delivery verification: bounces land in INBOX from
   `MAILER-DAEMON@cloudless.gr` ("Undelivered Mail Returned to Sender").
   `search all mailer-daemon --since <date>` checks for fresh bounces.

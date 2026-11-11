@@ -32,6 +32,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -393,6 +394,31 @@ def cmd_get(a):
     )
 
 
+def _smtp_fallback(a, body):
+    """Send via omv-ha postfix sendmail when the CF worker can't reach
+    external recipients (send_email 502s on non-@cloudless.gr addresses).
+    Uses the localhost relay — same path webmail/Roundcube takes."""
+    from email.mime.text import MIMEText
+    from email.utils import formatdate
+
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["From"] = a.user + "@cloudless.gr"
+    msg["To"] = a.to
+    if a.cc:
+        msg["Cc"] = a.cc
+    msg["Subject"] = a.subject
+    msg["Date"] = formatdate(localtime=True)
+    r = subprocess.run(
+        SSH + ["/usr/sbin/sendmail -t -i"],
+        input=msg.as_bytes(),
+        capture_output=True,
+        timeout=60,
+    )
+    if r.returncode != 0:
+        raise RuntimeError("sendmail fallback failed: " + r.stderr.decode("utf-8", "replace")[:300])
+    print(json.dumps({"ok": True, "via": "omv-ha-postfix"}))
+
+
 def cmd_send(a):
     cfg = json.load(open(os.path.join(KEYS, "mail-outbound.json")))
     body = a.body
@@ -411,7 +437,16 @@ def cmd_send(a):
             "User-Agent": "cloudless-mail/1.0",
         },
     )
-    print(urllib.request.urlopen(req, timeout=30).read().decode())
+    try:
+        print(urllib.request.urlopen(req, timeout=30).read().decode())
+    except urllib.error.HTTPError as e:
+        if e.code in (502, 503):
+            # worker's send_email binding only reaches @cloudless.gr —
+            # external recipients need the postfix relay on omv-ha
+            sys.stderr.write(f"worker {e.code}, falling back to omv-ha SMTP\n")
+            _smtp_fallback(a, body)
+        else:
+            raise
 
 
 def main():
@@ -470,7 +505,7 @@ def main():
     sp.add_argument("--body")
     sp.add_argument("--body-file")
     sp.add_argument("--cc")
-    sp.add_argument("--category", default="user-mail")
+    sp.add_argument("--category", default="ops-alert")
     sp.add_argument("--user", default="tbaltzakis")
     sp.set_defaults(f=cmd_send)
 
