@@ -111,6 +111,8 @@ R2 datalake-bucket
    ├── lake/clients/               clients-to-r2
    ├── lake/portals/               portals-to-r2
    ├── lake/gsc-keywords/          gsc-to-r2
+   ├── lake/ga4-daily/             ga4-to-r2
+   ├── lake/ga4-channels/          ga4-to-r2
    ├── lake/sentry-issues/         sentry-to-r2
    ├── lake/linkedin-ads/          linkedin-ads-to-r2
    ├── lake/espocrm-*/             espocrm-to-r2
