@@ -57,6 +57,8 @@ def t_search(args):
     terms = args.get("terms") or args.get("query") or ""
     if isinstance(terms, str):
         terms = terms.split()
+    if not terms:
+        raise ValueError("mail_search requires a non-empty terms or query")
     a = [folder or "all"] + [str(t) for t in terms]
     a += ["--user", user, "--max", str(int(args.get("max", 20)))]
     if args.get("since"):

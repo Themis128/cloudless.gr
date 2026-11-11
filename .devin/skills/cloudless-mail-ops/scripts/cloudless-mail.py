@@ -141,7 +141,7 @@ def match_terms(m, terms):
         if ':' in t:
             field, val = t.split(':', 1)
             if field not in hay:
-                field = 'any'
+                field, val = 'any', t
         else:
             field, val = 'any', t
         if val.lower() not in hay[field].lower():
@@ -168,6 +168,9 @@ def main():
     user = 'tbaltzakis'
     if '--user' in args:
         i = args.index('--user'); user = args[i+1]; del args[i:i+2]
+    if not user or '..' in user or not all(c.isalnum() or c in '._-' for c in user):
+        print(json.dumps({'error': 'invalid user'}))
+        sys.exit(2)
     fdirs = folders(user)
     low = {k.lower(): k for k in fdirs}
 
@@ -328,7 +331,7 @@ def remote(*args):
     )
     if r.returncode != 0:
         sys.stderr.write(r.stderr.decode("utf-8", "replace"))
-        sys.exit(r.returncode)
+        raise RuntimeError(f"remote exited {r.returncode}")
     return r.stdout.decode("utf-8", "replace")
 
 
@@ -471,7 +474,10 @@ def main():
     a = p.parse_args()
     if a.cmd == "send" and not (a.body or a.body_file):
         p.error("send needs --body or --body-file")
-    a.f(a)
+    try:
+        a.f(a)
+    except RuntimeError:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

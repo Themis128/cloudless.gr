@@ -1,0 +1,6 @@
+{
+  "name": "dypa-kpamark",
+  "query": "in:sent to:kpamark@dypa.gov.gr newer_than:30d",
+  "alert_prefix": "ΔΥΠΑ (επανεξέταση επιδόματος) replied!",
+  "chat_id": "7017840434"
+}

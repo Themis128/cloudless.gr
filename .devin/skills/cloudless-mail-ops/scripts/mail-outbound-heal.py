@@ -58,6 +58,8 @@ def probe(cfg):
         return 200
     except urllib.error.HTTPError as e:
         return e.code
+    except Exception as e:
+        return "net:" + type(e).__name__
 
 
 def heal(cfg):
@@ -87,10 +89,16 @@ def main():
     cfg = _cfg()
     status = probe(cfg)
     out = {"probe_status": status, "healed": False}
-    if status != 401 and not force:
+    healthy = isinstance(status, int) and status in (200, 400)
+    if healthy and not force:
         out["ok"] = True
         print(json.dumps(out))
         return 0
+    if not healthy and not (isinstance(status, int) and status == 401):
+        out["ok"] = False
+        out["error"] = "probe failed: " + str(status)
+        print(json.dumps(out, ensure_ascii=False))
+        return 1
     if status == 401:
         out["action"] = "resyncing MAIL_OUTBOUND_TOKEN secret"
     else:
@@ -108,11 +116,11 @@ def main():
         status = probe(cfg)
         if status != 401:
             out["probe_status_after"] = status
-            out["ok"] = status == 400 or status == 200
+            out["ok"] = isinstance(status, int) and status in (200, 400)
             print(json.dumps(out, ensure_ascii=False))
             return 0 if out["ok"] else 1
     out["ok"] = False
-    out["error"] = "still 401 after resync"
+    out["error"] = f"still unhealthy after resync (last probe: {status})"
     print(json.dumps(out, ensure_ascii=False))
     return 1
 

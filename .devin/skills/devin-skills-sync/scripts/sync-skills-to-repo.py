@@ -50,6 +50,40 @@ def repo_skills(repo):
     return set(os.listdir(d)) if os.path.isdir(d) else set()
 
 
+def lint_gate(repo, skills):
+    """Run the repo's ruff config over the roaming skill dirs.
+
+    CI lints the whole repo with pyproject.toml rules (F,E,W,I,UP,B,C4)
+    — the roaming dirs have no config, so default ruff misses most of
+    it. Auto-fix + format in place, then verify; abort if anything
+    unfixable remains so we never push a red PR.
+    """
+    cfg = repo.replace("\\", "/").rstrip("/") + "/pyproject.toml"
+    dirs = [os.path.join(ROAMING, s) for s in skills]
+    ruff = shutil.which("ruff") or "ruff"
+    for args in (["check", "--config", cfg, "--fix"], ["format", "--config", cfg]):
+        r = subprocess.run([ruff] + args + dirs, capture_output=True, text=True, timeout=300)
+        if r.returncode not in (0, 1):  # 1 = findings fixed/remaining
+            sys.stderr.write(r.stderr or r.stdout)
+            sys.exit("ruff " + args[0] + " failed")
+    r = subprocess.run(
+        [ruff, "check", "--config", cfg] + dirs, capture_output=True, text=True, timeout=120
+    )
+    if r.returncode != 0:
+        sys.stderr.write(r.stdout + r.stderr)
+        sys.exit("ruff findings remain — fix manually, then re-run")
+    r = subprocess.run(
+        [ruff, "format", "--config", cfg, "--check"] + dirs,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if r.returncode != 0:
+        sys.stderr.write(r.stdout + r.stderr)
+        sys.exit("ruff format drift remains")
+    print("lint gate: clean")
+
+
 def main():
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -92,6 +126,8 @@ def main():
             )
         )
         return 0
+
+    lint_gate(a.repo, skills)
 
     print("fetch origin/main ...")
     git(a.repo, "fetch", "origin", "main")
