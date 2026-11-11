@@ -331,7 +331,10 @@ def remote(*args):
     )
     if r.returncode != 0:
         sys.stderr.write(r.stderr.decode("utf-8", "replace"))
-        raise RuntimeError(f"remote exited {r.returncode}")
+        # remote script reports errors as JSON on stdout — keep it in the
+        # exception so MCP callers see the structured error, not just exit code
+        detail = r.stdout.decode("utf-8", "replace").strip()
+        raise RuntimeError(detail[:500] or f"remote exited {r.returncode}")
     return r.stdout.decode("utf-8", "replace")
 
 
@@ -476,7 +479,8 @@ def main():
         p.error("send needs --body or --body-file")
     try:
         a.f(a)
-    except RuntimeError:
+    except RuntimeError as e:
+        sys.stderr.write(str(e) + "\n")
         sys.exit(1)
 
 
