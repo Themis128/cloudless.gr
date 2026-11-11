@@ -25,14 +25,29 @@ FOLDER names are case-insensitive; INBOX = root cur/new, others are the
 dot-folders (.Sent -> Sent, .Drafts -> Drafts, .Trash -> Trash, .Junk -> Junk,
 .Heartbeat -> Heartbeat). Omit FOLDER in list/search/read to cover all.
 """
-import argparse, base64, json, os, subprocess, sys, urllib.request, urllib.parse
 
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-       "-i", os.path.expanduser("~/.ssh/id_rsa"),
-       "tbaltzakis@100.95.117.84"]
+import argparse
+import base64
+import json
+import os
+import subprocess
+import sys
+import urllib.request
+import urllib.parse
+
+SSH = [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-i",
+    os.path.expanduser("~/.ssh/id_rsa"),
+    "tbaltzakis@100.95.117.84",
+]
 KEYS = os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets")
 
-REMOTE = r'''
+REMOTE = r"""
 import sys, os, json, email, email.policy, time, base64
 
 BASE = '/var/mail/vhosts/cloudless.gr'
@@ -301,12 +316,16 @@ def main():
     sys.exit(2)
 
 main()
-'''
+"""
 
 
 def remote(*args):
-    r = subprocess.run(SSH + ["sudo", "-n", "python3", "-"] + list(args),
-                       input=REMOTE.encode(), capture_output=True, timeout=120)
+    r = subprocess.run(
+        SSH + ["sudo", "-n", "python3", "-"] + list(args),
+        input=REMOTE.encode(),
+        capture_output=True,
+        timeout=120,
+    )
     if r.returncode != 0:
         sys.stderr.write(r.stderr.decode("utf-8", "replace"))
         sys.exit(r.returncode)
@@ -355,9 +374,17 @@ def cmd_get(a):
     dest = a.out or out["name"] or "attachment.bin"
     with open(dest, "wb") as f:
         f.write(base64.b64decode(out["b64"]))
-    print(json.dumps({"saved": os.path.abspath(dest), "name": out["name"],
-                      "mime": out["mime"], "size": out["size"]},
-                     ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "saved": os.path.abspath(dest),
+                "name": out["name"],
+                "mime": out["mime"],
+                "size": out["size"],
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def cmd_send(a):
@@ -365,15 +392,19 @@ def cmd_send(a):
     body = a.body
     if a.body_file:
         body = open(a.body_file, encoding="utf-8").read()
-    payload = {"to": a.to, "subject": a.subject, "text": body,
-               "category": a.category}
+    payload = {"to": a.to, "subject": a.subject, "text": body, "category": a.category}
     if a.cc:
         payload["cc"] = a.cc
     req = urllib.request.Request(
-        cfg["url"], data=json.dumps(payload).encode(), method="POST",
-        headers={"Authorization": "Bearer " + cfg["token"],
-                 "Content-Type": "application/json",
-                 "User-Agent": "cloudless-mail/1.0"})
+        cfg["url"],
+        data=json.dumps(payload).encode(),
+        method="POST",
+        headers={
+            "Authorization": "Bearer " + cfg["token"],
+            "Content-Type": "application/json",
+            "User-Agent": "cloudless-mail/1.0",
+        },
+    )
     print(urllib.request.urlopen(req, timeout=30).read().decode())
 
 
@@ -387,30 +418,39 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def user_arg(sp):
-        sp.add_argument("--user", default="tbaltzakis",
-                        help="mailbox user under /var/mail/vhosts/cloudless.gr")
+        sp.add_argument(
+            "--user",
+            default="tbaltzakis",
+            help="mailbox user under /var/mail/vhosts/cloudless.gr",
+        )
 
-    sp = sub.add_parser("folders"); user_arg(sp); sp.set_defaults(f=cmd_folders)
+    sp = sub.add_parser("folders")
+    user_arg(sp)
+    sp.set_defaults(f=cmd_folders)
 
-    sp = sub.add_parser("list"); user_arg(sp)
+    sp = sub.add_parser("list")
+    user_arg(sp)
     sp.add_argument("folder", nargs="?")
     sp.add_argument("--max", type=int, default=20)
     sp.add_argument("--since", help="YYYY-MM-DD or epoch")
     sp.set_defaults(f=cmd_list)
 
-    sp = sub.add_parser("search"); user_arg(sp)
+    sp = sub.add_parser("search")
+    user_arg(sp)
     sp.add_argument("folder", nargs="?", default="all")
     sp.add_argument("terms", nargs="+")
     sp.add_argument("--max", type=int, default=20)
     sp.add_argument("--since")
     sp.set_defaults(f=cmd_search)
 
-    sp = sub.add_parser("read"); user_arg(sp)
+    sp = sub.add_parser("read")
+    user_arg(sp)
     sp.add_argument("folder", nargs="?")
     sp.add_argument("substr")
     sp.set_defaults(f=cmd_read)
 
-    sp = sub.add_parser("get"); user_arg(sp)
+    sp = sub.add_parser("get")
+    user_arg(sp)
     sp.add_argument("folder", nargs="?")
     sp.add_argument("substr", help="Maildir filename fragment (e.g. timestamp)")
     sp.add_argument("--att", type=int, help="attachment index (0-based)")

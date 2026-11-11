@@ -59,13 +59,22 @@ $CM send --to a@b --subject S (--body T | --body-file f) [--cc a,b]
 - `sudo -n` is passwordless on omv-ha for this user; if it fails the
   SSH key or sudoers changed — do not retry with a password.
 - `send` returning `HTTP 401` means the worker's `MAIL_OUTBOUND_TOKEN`
-  secret drifted from `mail-outbound.json`. Fix (done 2026-11-11): PUT
-  the token from `mail-outbound.json` as the `MAIL_OUTBOUND_TOKEN`
-  secret on the `mail-outbound` worker
-  (`PUT /accounts/fb7dc7b69b662480cd5961a4d1913c78/workers/scripts/mail-outbound/secrets`,
-  `{name, text, type:"secret_text"}` — via the cloudflare MCP `execute`
-  tool or `wrangler secret put`). Secret changes propagate in seconds;
-  retry once before assuming failure. Worker source:
+  secret drifted from `mail-outbound.json`. **Auto-heal is wired:**
+  `scripts/mail-outbound-heal.py` probes `/send`, and on 401 PUTs the
+  local token as the worker secret via the Cloudflare API
+  (`PUT .../workers/scripts/mail-outbound/secrets`,
+  `{name, text, type:"secret_text"}`), then re-probes and prints a
+  JSON verdict — no secret values in output. `mail-pipeline-watch.py`
+  calls it automatically on probe 401 and retries once, so the 30-min
+  scheduled probe self-repairs. Run it by hand:
+  `python .../cloudless-mail-ops/scripts/mail-outbound-heal.py`.
+  Auth: `secrets/cf-workers-deploy-token` (needs Workers Scripts:Edit —
+  the plain `CLOUDFLARE_API_TOKEN` in cu130-slim/.env lacks it).
+  **Probe semantics:** any non-401 response (400/200) means auth is
+  fine — 400 = malformed probe payload, not a heal failure. Manual fix
+  (done 2026-11-11): same PUT via the cloudflare MCP `execute` tool or
+  `wrangler secret put`. Secret changes propagate in seconds; retry
+  once before assuming failure. Worker source:
   `cloudless-pipeline/workers/mail-outbound/src/index.ts`.
 - The Gmail MCP / google-workspace MCPs are a different account
   (baltzakis.themis@gmail.com); cloudless.gr mail does NOT appear there
