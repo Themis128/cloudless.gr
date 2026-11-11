@@ -101,7 +101,10 @@ def wait_step(tab, substr, timeout=30):
 
 
 def adb_devices():
-    out = subprocess.run([ADB, "devices"], capture_output=True, text=True).stdout
+    try:
+        out = subprocess.run([ADB, "devices"], capture_output=True, text=True, timeout=15).stdout
+    except (subprocess.SubprocessError, OSError):
+        return []
     return [ln.split()[0] for ln in out.splitlines() if "\tdevice" in ln]
 
 
@@ -171,8 +174,7 @@ return e.value}})()"""
         """(()=>{const b=[...document.querySelectorAll('button')]
 .find(e=>e.textContent.trim()==='Επιβεβαίωση');if(b){b.click();return 'ok'}return 'nf'})()"""
     )
-    time.sleep(8)
-    return "/done" in url(tab)
+    return wait_step(tab, "/done", timeout=30)
 
 
 def done_receipt(tab, out_pdf):
