@@ -91,11 +91,14 @@ def send_probe_healed(subject):
 
 def delivered(tag):
     # mail-outbound stores the subject as an =?utf-8?B?...?= encoded word,
-    # so grep for the raw tag AND the leading chars of its base64 form
-    # (first 40 b64 chars stay on one unfolded header line).
+    # so grep for the raw tag AND a prefix of its base64 form. Only whole
+    # 3-byte groups are safe: 52 chars = 39 tag bytes, covering the
+    # timestamp to the second plus 4 hex chars of the uuid suffix —
+    # unique per probe (40 chars stopped at the hour and false-matched
+    # earlier same-hour probes).
     import base64
 
-    pats = [tag, base64.b64encode(tag.encode()).decode()[:40]]
+    pats = [tag, base64.b64encode(tag.encode()).decode()[:52]]
     for pat in pats:
         cmd = (
             "sudo -n grep -rls "
