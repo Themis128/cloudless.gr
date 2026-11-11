@@ -206,7 +206,9 @@ return r.status+'|'+btoa(s)}})"""
         if "|" in v:
             status, b64 = v.split("|", 1)
             data = base64.b64decode(b64)
-            os.makedirs(os.path.dirname(out_pdf), exist_ok=True)
+            out_dir = os.path.dirname(out_pdf)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
             open(out_pdf, "wb").write(data)
             print(f"receipt saved: {out_pdf} ({len(data)} bytes, HTTP {status})")
     return {"issue": issue, "code": code, "issued": issued, "url": u}

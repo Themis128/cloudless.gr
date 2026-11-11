@@ -13,11 +13,12 @@ import html
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-SRC_DIR = r"C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence"
-PUBLISH = (
-    r"C:\Users\tbaltzakis\AppData\Roaming\devin\skills"
-    r"\evidence-doc-publish\scripts\publish-doc.py"
+SKILLS_ROOT = Path(__file__).resolve().parents[2]
+PUBLISH = str(SKILLS_ROOT / "evidence-doc-publish" / "scripts" / "publish-doc.py")
+SRC_DIR = os.environ.get(
+    "EVIDENCE_CASE_SRC", r"C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence"
 )
 
 
