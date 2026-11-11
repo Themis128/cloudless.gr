@@ -13,6 +13,8 @@ import shutil
 import sys
 
 SRC_DIR = r"C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence"
+
+
 def _evidence_token():
     """Bearer token for the tokenized evidence host — resolve, never hardcode."""
     env = os.environ.get("EVIDENCE_TOKEN")
@@ -26,7 +28,9 @@ def _evidence_token():
             token = open(path, encoding="utf-8").read().strip()
             if token:
                 return token
-    sys.exit("FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt")
+    sys.exit(
+        "FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt"
+    )
 
 
 def evidence_base(case):
@@ -37,6 +41,7 @@ def evidence_base(case):
         + case
         + "/"
     )
+
 
 PDFS = [
     "EGKLISI_mpaltzakis_house_2026_11.pdf",

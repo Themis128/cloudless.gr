@@ -19,6 +19,8 @@ PUBLISH = (
     r"C:\Users\tbaltzakis\AppData\Roaming\devin\skills"
     r"\evidence-doc-publish\scripts\publish-doc.py"
 )
+
+
 def _evidence_token():
     """Bearer token for the tokenized evidence host — resolve, never hardcode."""
     env = os.environ.get("EVIDENCE_TOKEN")
@@ -32,7 +34,9 @@ def _evidence_token():
             token = open(path, encoding="utf-8").read().strip()
             if token:
                 return token
-    sys.exit("FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt")
+    sys.exit(
+        "FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt"
+    )
 
 
 def r2_base(case):
@@ -43,6 +47,8 @@ def r2_base(case):
         + case
         + "/"
     )
+
+
 OMV_CASE = "/home/tbaltzakis/evidence/{case}"
 
 REMOTE_CMD = r"""
