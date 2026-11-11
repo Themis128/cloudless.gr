@@ -1,0 +1,6 @@
+{
+  "name": "dypa-da2",
+  "query": "from:da2@dypa.gov.gr newer_than:60d",
+  "alert_prefix": "ΔΥΠΑ Α2 (πρόγραμμα 1.000 πτυχιούχων) replied!",
+  "chat_id": "7017840434"
+}

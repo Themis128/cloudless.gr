@@ -1,0 +1,6 @@
+{
+  "name": "dypa",
+  "query": "in:sent to:protokollo@dypa.gov.gr newer_than:60d",
+  "alert_prefix": "DYPA replied!",
+  "chat_id": "7017840434"
+}
