@@ -122,7 +122,10 @@ def token_check(st):
                 import subprocess
 
                 subprocess.Popen(
-                    [sys.executable.replace("pythonw", "python"), os.path.join(DIR, "auto-reauth.py")],
+                    [
+                        sys.executable.replace("pythonw", "python"),
+                        os.path.join(DIR, "auto-reauth.py"),
+                    ],
                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
                 print("launched proactive auto-reauth.py")
