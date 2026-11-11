@@ -65,6 +65,8 @@ def token_check(st):
             if "refresh_token_expires_in" in n:
                 t["refresh_expires_at"] = now + n["refresh_token_expires_in"] - 3600
             json.dump(t, open(KEYS + "/gmail-token.json", "w"))
+            # clear the dead-token alert so a future failure re-notifies
+            st["sent"] = [k for k in st.get("sent", []) if k != "token-dead"]
             print("token refreshed")
         except Exception as e:
             once(

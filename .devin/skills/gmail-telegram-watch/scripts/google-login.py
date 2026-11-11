@@ -161,12 +161,12 @@ def wait_step(tab, timeout=30):
  return JSON.stringify({email:!!em,pw:!!pw,chooser:chooser,url:location.href,
    challenge:/verify|2-Step|Authenticator|Approve|phone|τηλεόρ/i.test(body)});})()""")
         if state != last:
-            print("state:", state[:200])
+            print("state:", (state or "")[:200])
             last = state
         if logged_in(tab):
             return "logged_in"
         try:
-            s = json.loads(state)
+            s = json.loads(state or "{}")
         except Exception:
             time.sleep(1)
             continue
