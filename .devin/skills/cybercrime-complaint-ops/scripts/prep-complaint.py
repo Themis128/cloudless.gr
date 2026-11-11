@@ -13,10 +13,30 @@ import shutil
 import sys
 
 SRC_DIR = r"C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence"
-TOKEN = (
-    "https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/"
-    "8827d83d8c003907a5818f4c142987d52630e94a38d4fd7a/{case}/"
-)
+def _evidence_token():
+    """Bearer token for the tokenized evidence host — resolve, never hardcode."""
+    env = os.environ.get("EVIDENCE_TOKEN")
+    if env:
+        return env.strip()
+    for path in (
+        os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets", "evidence-token.txt"),
+        os.path.expanduser("~/.config/devin/secrets/evidence-token.txt"),
+    ):
+        if path and os.path.exists(path):
+            token = open(path, encoding="utf-8").read().strip()
+            if token:
+                return token
+    sys.exit("FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt")
+
+
+def evidence_base(case):
+    return (
+        "https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/"
+        + _evidence_token()
+        + "/"
+        + case
+        + "/"
+    )
 
 PDFS = [
     "EGKLISI_mpaltzakis_house_2026_11.pdf",
@@ -112,7 +132,7 @@ def main():
         else:
             missing.append(pdf)
 
-    base = TOKEN.format(case=a.case)
+    base = evidence_base(a.case)
     with open(os.path.join(out, "SUBMISSION-NOTES.txt"), "w", encoding="utf-8") as f:
         f.write(NOTES.format(base=base))
     with open(os.path.join(out, "checklist.txt"), "w", encoding="utf-8") as f:

@@ -19,8 +19,30 @@ PUBLISH = (
     r"C:\Users\tbaltzakis\AppData\Roaming\devin\skills"
     r"\evidence-doc-publish\scripts\publish-doc.py"
 )
-TOKEN = "8827d83d8c003907a5818f4c142987d52630e94a38d4fd7a"
-R2_BASE = "https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/" + TOKEN + "/{case}/"
+def _evidence_token():
+    """Bearer token for the tokenized evidence host — resolve, never hardcode."""
+    env = os.environ.get("EVIDENCE_TOKEN")
+    if env:
+        return env.strip()
+    for path in (
+        os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets", "evidence-token.txt"),
+        os.path.expanduser("~/.config/devin/secrets/evidence-token.txt"),
+    ):
+        if path and os.path.exists(path):
+            token = open(path, encoding="utf-8").read().strip()
+            if token:
+                return token
+    sys.exit("FAIL: no evidence token — set EVIDENCE_TOKEN or write %APPDATA%/devin/secrets/evidence-token.txt")
+
+
+def r2_base(case):
+    return (
+        "https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/"
+        + _evidence_token()
+        + "/"
+        + case
+        + "/"
+    )
 OMV_CASE = "/home/tbaltzakis/evidence/{case}"
 
 REMOTE_CMD = r"""
@@ -44,11 +66,16 @@ def collect(case):
     for line in r.stdout.splitlines():
         parts = line.strip().split("|")
         if len(parts) == 4 and parts[0].endswith(".mp4"):
+            try:
+                dur = float(parts[1]) if parts[1] not in ("", "N/A") else 0.0
+                size = int(parts[2])
+            except ValueError:
+                continue
             rows.append(
                 {
                     "path": parts[0],
-                    "dur": float(parts[1] or 0),
-                    "size": int(parts[2]),
+                    "dur": dur,
+                    "size": size,
                     "sha": parts[3],
                 }
             )
@@ -70,7 +97,7 @@ def build_html(rows, case):
     groups = {}
     for r in rows:
         groups.setdefault(r["path"].split("/")[0], []).append(r)
-    base = R2_BASE.format(case=case)
+    base = r2_base(case)
     out = []
     for cam in sorted(groups):
         clips = sorted(groups[cam], key=lambda r: r["path"])

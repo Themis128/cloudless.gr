@@ -10,7 +10,7 @@ Publishes case documents (έγκληση, αστυνομική αναφορά, �
 ## Facts
 
 - **Case dir on omv:** `/home/tbaltzakis/evidence/mpaltzakis-house-2026-11/`
-- **Base token URL:** `https://evidence.cloudless.gr/t/8827d83d8c003907a5818f4c142987d52630e94a38d4fd7a/mpaltzakis-house-2026-11/`
+- **Base token URL:** `https://evidence.cloudless.gr/t/<EVIDENCE_TOKEN>/mpaltzakis-house-2026-11/`
 - **Local source dir:** `C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence\`
 - **Token server behavior:** no directory listing — only **full file paths** resolve; base URL alone 404s (by design). PDFs serve `application/octet-stream` (download, not inline).
 - **Filenames:** underscore-separated, no dashes (user preference 2026-11-11): `EGKLISI_mpaltzakis_house_2026_11.pdf`, `REPORT_mpaltzakis_house_2026_11.pdf`, `AITISI_ASFALISTIKA_METRA_2026_11.pdf`, `VIDEO_INDEX.pdf`.
@@ -45,10 +45,10 @@ Pipeline: headless Chrome `--print-to-pdf` → scp to omv case dir → `curl` th
 ## R2 offsite sync (added 2026-11-11)
 
 Every successful publish auto-syncs the file to the R2 bucket
-`evidence-mpaltzakis` under `t/<token>/<case>/<name>` via `ssh omv rclone copyto`
+`evidence-mpaltzakis` under `t/<EVIDENCE_TOKEN>/<case>/<name>` via `ssh omv rclone copyto`
 (remote `r2ev`, creds `~/r2-s3-creds` → `~/.config/rclone/rclone.conf`).
-Public base: `https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/<token>/<case>/`
-— same token path as evidence.cloudless.gr. Opt out with `--no-r2`.
+Public base: `https://pub-6db4c5dc5fee4d5ba450ae560cf8340c.r2.dev/t/<EVIDENCE_TOKEN>/<case>/`
+— same token path as evidence.cloudless.gr. The token is a bearer credential: resolve via `--token`, `$EVIDENCE_TOKEN`, or `%APPDATA%/devin/secrets/evidence-token.txt` — never commit it. Opt out with `--no-r2`.
 Daily backstop: omv `evidence-backup-sync.sh` (04:30) rsyncs all cases to
 omv-ha AND rclone-syncs mpaltzakis-house-2026-11 to R2.
 

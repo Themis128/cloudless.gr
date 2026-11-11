@@ -118,7 +118,7 @@ Does NOT submit anything — gov.gr submission is interactive (TAXISnet login + 
 - **Complainant:** Θεμιστοκλής Μπαλτζάκης, Κορωπί Θερμοπυλών 15, ΑΦΜ 115307716, baltzakis.themis@gmail.com
 - **Accused:** Μιχαήλ Μπαλτζάκης, same address, mpaltzakis13@hotmail.com
 - **Incident window:** 09–11/11/2026 — threats/blackmail by email + covert audio/video capture in shared home
-- **Evidence links:** base token `https://evidence.cloudless.gr/t/8827d83d…/mpaltzakis-house-2026-11/` + per-file URLs (EGKLISI, REPORT with 54 clip links, AITISI, VIDEO_INDEX)
+- **Evidence links:** base token `https://evidence.cloudless.gr/t/<EVIDENCE_TOKEN>/mpaltzakis-house-2026-11/` + per-file URLs (EGKLISI, REPORT with 54 clip links, AITISI, VIDEO_INDEX)
 - **Related filings:** έγκληση already lodged with Εισαγγελία Πλημμεληδοδικών; AITISI provisional measures prepared for Ειρηνοδικείο Κορωπίου. The cybercrime complaint should reference both (αριθμοί πρωτοκόλλου when known).
 
 ## Related

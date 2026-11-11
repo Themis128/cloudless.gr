@@ -15,10 +15,34 @@ import urllib.request
 
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 SRC_DIR = r"C:\Users\tbaltzakis\Documents\mpaltzakis-correspondence"
-BASE = "https://evidence.cloudless.gr/t/8827d83d8c003907a5818f4c142987d52630e94a38d4fd7a/{case}/"
+EVIDENCE_BASE = "https://evidence.cloudless.gr/t/{token}/{case}/"
 OMV_DIR = "/home/tbaltzakis/evidence/{case}"
 R2_BUCKET = "evidence-mpaltzakis"
-R2_TOKEN = "8827d83d8c003907a5818f4c142987d52630e94a38d4fd7a"
+
+
+def resolve_token(cli_token):
+    """Evidence URL token is a bearer credential — never hardcode it.
+
+    Resolution order: --token > $EVIDENCE_TOKEN > secrets file.
+    """
+    if cli_token:
+        return cli_token
+    env = os.environ.get("EVIDENCE_TOKEN")
+    if env:
+        return env.strip()
+    candidates = [
+        os.path.join(os.environ.get("APPDATA", ""), "devin", "secrets", "evidence-token.txt"),
+        os.path.expanduser("~/.config/devin/secrets/evidence-token.txt"),
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            token = open(path, encoding="utf-8").read().strip()
+            if token:
+                return token
+    sys.exit(
+        "FAIL: no evidence token. Pass --token, set EVIDENCE_TOKEN, or write "
+        "the token to %APPDATA%/devin/secrets/evidence-token.txt"
+    )
 
 
 def run(cmd, **kw):
@@ -35,6 +59,7 @@ def main():
     ap.add_argument("--case", default="mpaltzakis-house-2026-11")
     ap.add_argument("--no-upload", action="store_true")
     ap.add_argument("--no-r2", action="store_true", help="skip the R2 sync step")
+    ap.add_argument("--token", help="evidence URL token (else $EVIDENCE_TOKEN or secrets file)")
     a = ap.parse_args()
 
     src = a.source if os.path.isabs(a.source) else os.path.join(SRC_DIR, a.source)
@@ -63,21 +88,18 @@ def main():
     run(["scp", "-o", "BatchMode=yes", pdf, "omv:" + tmp])
     run(["ssh", "-o", "BatchMode=yes", "omv", f"mv {tmp} {remote_dir}/{a.out}"])
 
-    link = BASE.format(case=a.case) + a.out
-    req = urllib.request.Request(
-        link, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    )
-    try:
-        code = urllib.request.urlopen(req, timeout=30).status
-    except urllib.error.HTTPError as e:
-        code = e.code
-    print("verify:", code, link)
-    if code != 200:
-        sys.exit(f"FAIL: remote returned {code}")
+    token = resolve_token(a.token)
+    link = EVIDENCE_BASE.format(token=token, case=a.case) + a.out
 
     if a.no_r2:
+        # Without the R2 sync the public URL only serves objects already in
+        # the bucket, so there is nothing meaningful to verify remotely.
+        print("r2 skipped; local+omv copy only:", link)
         return
-    key = f"t/{R2_TOKEN}/{a.case}/{a.out}"
+
+    # R2 sync MUST precede any public-URL verification: evidence.cloudless.gr
+    # is Worker->R2, so a GET before the object lands returns 404.
+    key = f"t/{token}/{a.case}/{a.out}"
     run(
         [
             "ssh",
@@ -88,6 +110,17 @@ def main():
         ]
     )
     print("r2 synced:", key)
+
+    req = urllib.request.Request(
+        link, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    )
+    try:
+        code = urllib.request.urlopen(req, timeout=30).status
+    except urllib.error.HTTPError as e:
+        code = e.code
+    print("verify:", code, link)
+    if code != 200:
+        sys.exit(f"FAIL: remote returned {code}")
 
     # read-back verify: evidence.cloudless.gr is Worker->R2, so a HEAD there
     # proves the police-facing path serves the NEW object (size + etag)

@@ -106,7 +106,13 @@ def adb_devices():
 
 
 def sms_otp(sender="GOVGR", digits=6, wait=90):
-    """Poll adb SMS inbox for the newest OTP from sender. Returns code or None."""
+    """Poll adb SMS inbox for an OTP from sender newer than call start.
+
+    Rows arrive sorted by date DESC, but the newest match could still be a
+    stale code from a previous submission — only accept SMS whose `date`
+    (epoch millis) is at most 2 minutes older than this call.
+    """
+    since_ms = int(time.time() * 1000)
     end = time.time() + wait
     while time.time() < end:
         for dev in adb_devices():
@@ -128,6 +134,9 @@ def sms_otp(sender="GOVGR", digits=6, wait=90):
                 continue
             for line in out.splitlines():
                 if sender not in line:
+                    continue
+                m_date = re.search(r"\bdate=(\d+)", line)
+                if m_date and int(m_date.group(1)) < since_ms - 120_000:
                     continue
                 m = re.search(rf"\b(\d{{{digits}}})\b", line)
                 if m:
