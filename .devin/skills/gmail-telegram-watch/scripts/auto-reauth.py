@@ -41,11 +41,12 @@ class H(BaseHTTPRequestHandler):
         if "code" in p:
             code["code"] = p["code"][0]
             self.send_response(200)
-            self.wfile.write(b"<h2>OK</h2>")
+            body = b"<h2>OK</h2>"
         else:
             self.send_response(400)
-            self.wfile.write(b"missing code")
+            body = b"missing code"
         self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, *a):
         pass
@@ -143,6 +144,7 @@ def consent_tab():
 
 
 deadline = 0
+serve_stop = threading.Event()
 
 
 def main():
@@ -153,7 +155,10 @@ def main():
     srv.timeout = 5
 
     def serve():
-        while "code" not in code and time.time() < deadline:
+        # keep serving for the whole flow — the deadline is extended twice
+        # below (google-login gap + consent retry); keying this loop off
+        # `deadline` let it exit early and drop the OAuth callback.
+        while not serve_stop.is_set() and "code" not in code:
             srv.handle_request()  # returns each request or every 5s on timeout
 
     threading.Thread(target=serve, daemon=True).start()
@@ -223,6 +228,7 @@ def main():
                 if clicked:
                     print("retry clicked:", clicked)
             time.sleep(2)
+    serve_stop.set()
     srv.server_close()
 
     if "code" not in code:

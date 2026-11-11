@@ -108,21 +108,26 @@ def token_check(st):
     # proactive re-consent: fire auto-reauth ~36h before expiry so the
     # consent screens get clicked while watchers still work, not after death
     if exp and exp - now < 36 * 3600 and exp - now > 0:
+        reauth_key = f"proactive-reauth-{int(exp)}"
+        first_notice = reauth_key not in st.get("sent", [])
         once(
             st,
-            f"proactive-reauth-{int(exp)}",
+            reauth_key,
             "Gmail token expires in <36h — launching auto-reauth now.",
         )
-        try:
-            import subprocess
+        # only launch on the first notice — otherwise every daily run would
+        # spawn another auto-reauth.py while the token is still <36h out
+        if first_notice:
+            try:
+                import subprocess
 
-            subprocess.Popen(
-                [sys.executable.replace("pythonw", "python"), os.path.join(DIR, "auto-reauth.py")],
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-            )
-            print("launched proactive auto-reauth.py")
-        except Exception as e2:
-            print("proactive reauth launch err", e2)
+                subprocess.Popen(
+                    [sys.executable.replace("pythonw", "python"), os.path.join(DIR, "auto-reauth.py")],
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                )
+                print("launched proactive auto-reauth.py")
+            except Exception as e2:
+                print("proactive reauth launch err", e2)
 
 
 def skc_reminders(st, today):

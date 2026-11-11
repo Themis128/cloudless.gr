@@ -48,7 +48,12 @@ def _refresh(tfile):
         n = json.loads(urllib.request.urlopen(ci["token_uri"], data=data, timeout=30).read())
         t.update(n)
         t["expires_at"] = time.time() + n.get("expires_in", 3600) - 60
-        json.dump(t, open(tfile, "w"))
+        # atomic write — a plain open(tfile,"w") truncates first, so a
+        # concurrent reader could see an empty/partial token file
+        tmp = tfile + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(t, f)
+        os.replace(tmp, tfile)
     return t["access_token"]
 
 
