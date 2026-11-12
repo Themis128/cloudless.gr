@@ -831,8 +831,7 @@ export default function LangGraphPage() {
                     e.preventDefault();
                     // IME-safe: don't submit while composing CJK text
                     // (keyCode 229 covers Safari's out-of-order compositionend).
-                    if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229)
-                      void send();
+                    if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) void send();
                   }
                 }}
                 placeholder={
