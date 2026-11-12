@@ -130,12 +130,11 @@ async function writeParquet(tmpPath, schema, rows, r2Key) {
 	unlinkSync(tmpPath);
 }
 
-async function writeEmptyAndExit(reason) {
-	console.warn(`[ga4-to-r2] ${reason} — writing empty parquet(s) and exiting 0.`);
-	await writeParquet("/tmp/ga4-daily-empty.parquet", dailySchema, [], "lake/ga4-daily/daily.parquet");
-	await writeParquet("/tmp/ga4-channels-empty.parquet", channelSchema, [], "lake/ga4-channels/channels.parquet");
-	console.log("✓ ga4 → R2 sync complete (empty — skip)");
-	process.exit(0);
+async function failWithoutWriting(reason) {
+	// Never overwrite production lake objects with empty datasets — an auth
+	// or upstream failure must surface as a job failure, not silent data loss.
+	console.error(`[ga4-to-r2] ${reason} — aborting without writing (existing lake objects preserved).`);
+	process.exit(1);
 }
 
 function ymdToIso(ymd) {
@@ -149,7 +148,7 @@ async function main() {
 	try {
 		token = await getAccessToken();
 	} catch (err) {
-		await writeEmptyAndExit(`auth failed (${String(err?.message ?? err).slice(0, 200)})`);
+		await failWithoutWriting(`auth failed (${String(err?.message ?? err).slice(0, 200)})`);
 	}
 
 	// 1) Daily series — 90 days
