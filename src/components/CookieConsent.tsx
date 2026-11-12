@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import { Link } from "@/i18n/navigation";
 import { useCookieConsent, type CookiePreferences } from "@/context/CookieConsentContext";
 import { observeCookieBannerHeight } from "@/lib/cookie-banner-height";
+import { requestDialogClose } from "@/lib/top-layer";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
@@ -95,18 +96,33 @@ export default function CookieConsent() {
         e.clientY <= rect.top + rect.height &&
         rect.left <= e.clientX &&
         e.clientX <= rect.left + rect.width;
-      if (!inside && typeof dialog.close === "function") dialog.close();
+      if (!inside) void requestDialogClose(dialog);
     };
     /* v8 ignore stop */
     if (!("closedBy" in HTMLDialogElement.prototype)) {
       dialog.addEventListener("click", handleBackdropClick);
     }
 
-    // Escape fallback: native modal dialogs handle Esc themselves, but
-    // environments without dialog support (jsdom, legacy embeds) get the
-    // same dismissal path through React state. Idempotent in browsers.
+    // Platform close requests (Esc, back gesture, closedby light-dismiss)
+    // fire `cancel` — route them through the animated close helper so the
+    // exit transition plays instead of an instant unmount. Non-cancelable
+    // repeats (repeated Esc without user activation) close instantly.
+    /* v8 ignore start -- cancel never fires under jsdom */
+    const handleCancel = (e: Event) => {
+      if (!e.cancelable) return;
+      e.preventDefault();
+      void requestDialogClose(dialog);
+    };
+    dialog.addEventListener("cancel", handleCancel);
+    /* v8 ignore stop */
+
+    // Escape fallback for environments without native dialog Esc handling
+    // (jsdom, legacy embeds). Real browsers route Esc through `cancel`
+    // above, so this only acts where dialog.close doesn't exist.
     const handleEscape = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") handleCloseModal();
+      if (e.key !== "Escape") return;
+      if (dialog && typeof dialog.close === "function") return;
+      handleCloseModal();
     };
     document.addEventListener("keydown", handleEscape);
 
@@ -117,6 +133,7 @@ export default function CookieConsent() {
       /* v8 ignore stop */
       dialog.removeEventListener("close", handleClose);
       dialog.removeEventListener("click", handleBackdropClick);
+      dialog.removeEventListener("cancel", handleCancel);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isModalOpen, handleCloseModal]);
@@ -129,7 +146,7 @@ export default function CookieConsent() {
       ref={dialogRef}
       aria-labelledby="cookie-settings-title"
       {...({ closedby: "any" } as Record<string, string>)}
-      className="bg-void-light m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-slate-800 p-6 shadow-2xl [&::backdrop]:bg-black/60 [&::backdrop]:backdrop-blur-sm"
+      className="dialog-motion bg-void-light m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-slate-800 p-6 shadow-2xl [&::backdrop]:bg-black/60 [&::backdrop]:backdrop-blur-sm"
     >
       <h3 id="cookie-settings-title" className="font-heading mb-4 text-lg font-bold text-white">
         {t("cookies.settingsTitle", "Cookie Preferences")}

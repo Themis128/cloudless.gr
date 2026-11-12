@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Command } from "cmdk";
+import { requestDialogClose } from "@/lib/top-layer";
 
 const navItems = [
   { label: "Home", path: "/", icon: "\u2302" },
@@ -71,17 +72,31 @@ export default function CommandPalette() {
         e.clientY <= rect.top + rect.height &&
         rect.left <= e.clientX &&
         e.clientX <= rect.left + rect.width;
-      if (!inside && typeof dialog.close === "function") dialog.close();
+      if (!inside) void requestDialogClose(dialog);
     };
     /* v8 ignore stop */
     if (!("closedBy" in HTMLDialogElement.prototype)) {
       dialog.addEventListener("click", handleBackdropClick);
     }
 
+    // Platform close requests (Esc, back gesture, closedby light-dismiss)
+    // fire `cancel` — route through the animated close helper so the exit
+    // transition plays. Non-cancelable repeats close instantly.
+    /* v8 ignore start -- cancel never fires under jsdom */
+    const handleCancel = (e: Event) => {
+      if (!e.cancelable) return;
+      e.preventDefault();
+      void requestDialogClose(dialog);
+    };
+    dialog.addEventListener("cancel", handleCancel);
+    /* v8 ignore stop */
+
     // Escape fallback for environments without native dialog Esc handling
-    // (jsdom, legacy embeds); idempotent where the platform already closes.
+    // (jsdom, legacy embeds); real browsers route Esc through `cancel`.
     const handleEscape = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      if (typeof dialog.close === "function") return;
+      setOpen(false);
     };
     document.addEventListener("keydown", handleEscape);
 
@@ -92,6 +107,7 @@ export default function CommandPalette() {
       /* v8 ignore stop */
       dialog.removeEventListener("close", handleClose);
       dialog.removeEventListener("click", handleBackdropClick);
+      dialog.removeEventListener("cancel", handleCancel);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
@@ -103,7 +119,7 @@ export default function CommandPalette() {
       ref={dialogRef}
       aria-label="Command palette"
       {...({ closedby: "any" } as Record<string, string>)}
-      className="[&::backdrop]:bg-void/70 mx-auto mt-[20vh] mb-auto w-[calc(100%-2rem)] max-w-lg border-0 bg-transparent p-0 [&::backdrop]:backdrop-blur-sm"
+      className="dialog-motion [&::backdrop]:bg-void/70 mx-auto mt-[20vh] mb-auto w-[calc(100%-2rem)] max-w-lg border-0 bg-transparent p-0 [&::backdrop]:backdrop-blur-sm"
     >
       <Command className="border-neon-cyan/30 bg-void overflow-hidden rounded-lg border shadow-[0_0_40px_rgba(0,255,245,0.1)]">
         <Command.Input

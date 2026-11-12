@@ -29,13 +29,184 @@
 
 /* Native <dialog> modals: keep scroll gestures inside the dialog/backdrop
    from chaining to the page underneath (progressive enhancement — ignored
-   where overscroll-behavior is unsupported). */
+   where overscroll-behavior is unsupported). Layout+style containment keeps
+   dialog internals from invalidating page-level style/layout (no `paint` —
+   it would clip box-shadows). */
 dialog:modal {
   overscroll-behavior: contain;
+  contain: layout style;
 }
 dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
+}
+
+/* ── Top-layer dialog motion (MWG animate-to-from-top-layer) ──────────
+   Entry: pure CSS via @starting-style (Baseline since 2024-08).
+   Exit: needs `overlay` + discrete `display` transitions — Chromium only.
+   Firefox/Safari get the [data-closing] + getAnimations() JS fallback in
+   src/lib/top-layer.ts, which is why the open-state selector excludes
+   [data-closing]. Scoped to .dialog-motion so layout-specific dialogs
+   (e.g. the cart drawer) can opt out. */
+dialog.dialog-motion {
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+  /* Separate declaration: the `transition` shorthand would reset it, and
+     browsers that can't parse it must not drop the whole transition. */
+  transition-behavior: allow-discrete;
+}
+
+:is(dialog.dialog-motion[open]):where(:not([data-closing])) {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transform: scale(1);
+
+    @starting-style {
+      transform: scale(0.96);
+    }
+  }
+
+  &::backdrop {
+    @starting-style {
+      background-color: transparent;
+    }
+  }
+}
+
+dialog.dialog-motion:not([open]) {
+  @media (prefers-reduced-motion: no-preference) {
+    transform: scale(0.96);
+  }
+}
+
+dialog.dialog-motion::backdrop {
+  transition-property: background-color, display, overlay;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.dialog-motion,
+  dialog.dialog-motion::backdrop {
+    transition-duration: 0.1s;
+  }
+}
+
+/* ── Cart drawer (MWG navigation-drawer) ──────────────────────────────
+   Modal <dialog> + horizontal scroll-snap: the sheet's scroll position IS
+   the open/closed state, so touch swipe, momentum and interruption are
+   native. An IntersectionObserver (CartSlideOver.tsx) closes the dialog
+   once the sheet leaves the viewport. */
+.cart-drawer {
+  /* Sheet width: full-bleed on phones, 28rem (old max-w-md) on desktop. */
+  --cart-drawer-width: min(28rem, 100vw);
+  /* 0 = closed/transparent backdrop, 1 = fully open. Driven by the
+     scroll-driven animation below, or the scroll-listener fallback. */
+  --cart-backdrop: 0;
+
+  /* Reset UA dialog styles so the swipe surface covers the viewport. */
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.cart-drawer::backdrop {
+  /* Black/60 + slight blur, matching the previous overlay div. */
+  background: rgb(0 0 0 / calc(var(--cart-backdrop) * 0.6));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.cart-drawer-scroller {
+  position: relative;
+  display: grid;
+  /* Spacer on the left (100%), sheet on the right — the drawer slides in
+     from the right edge like the previous fixed panel. Scrolling between
+     the two snap stops opens/closes it; scrollLeft 0 = closed. */
+  grid-template-columns: 100% var(--cart-drawer-width);
+  overflow-x: scroll;
+  /* Don't let the horizontal swipe chain into page scroll at the edges. */
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  /* Mandatory: the drawer always settles fully open or fully closed. */
+  scroll-snap-type: x mandatory;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cart-drawer-scroller {
+    scroll-behavior: smooth;
+  }
+}
+
+/* The empty spacer = the "closed" snap stop (scrollLeft 0 — also the
+   natural initial position, so no scroll-initial-target fallback needed). */
+.cart-drawer-scroller::after {
+  content: "";
+  grid-column: 1;
+  scroll-snap-align: start;
+}
+
+.cart-drawer-sheet {
+  grid-column: 2;
+  height: 100svh;
+  overflow-y: auto;
+  /* Sheet's right edge snaps to the scrollport's right edge = fully open. */
+  scroll-snap-align: end;
+  scrollbar-width: none;
+  background: #0a0a0f;
+  color-scheme: dark;
+  border-left: 1px solid rgb(0 255 245 / 0.1);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Backdrop fade tied to scroll position — @supports-gated because browsers
+   without animation-timeline would otherwise apply the 0% keyframe value
+   (--cart-backdrop: 1) permanently, leaving an opaque backdrop. */
+@supports (animation-timeline: scroll()) {
+  .cart-drawer {
+    /* Lets .cart-drawer reference the scroller's named scroll timeline. */
+    timeline-scope: --cart-fade;
+    animation: cart-fade-backdrop linear both;
+    animation-timeline: --cart-fade;
+  }
+
+  .cart-drawer-scroller {
+    scroll-timeline: --cart-fade x;
+  }
+
+  /* @property is required — unregistered custom properties are strings and
+     can't interpolate between keyframes. */
+  @property --cart-backdrop {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+
+  @keyframes cart-fade-backdrop {
+    /* Scroll position 0 = drawer closed (sheet off-screen) = no backdrop. */
+    0% {
+      --cart-backdrop: 0;
+    }
+    /* Fully scrolled open = backdrop visible. */
+    100% {
+      --cart-backdrop: 1;
+    }
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────

@@ -684,7 +684,12 @@ describe("CartSlideOver — Mobile", () => {
       </Wrapper>
     );
 
-    const closeBtn = within(container).getByRole("button", { name: "Close cart" });
+    // hidden: true — jsdom treats a closed <dialog> as display:none, so the
+    // always-mounted cart sheet is invisible to the accessibility tree there.
+    const closeBtn = within(container).getByRole("button", {
+      name: "Close cart",
+      hidden: true,
+    });
     expect(closeBtn.className).toMatch(/min-w-11|min-w-\[44px\]/);
     expect(closeBtn.className).toMatch(/min-h-11|min-h-\[44px\]/);
   });

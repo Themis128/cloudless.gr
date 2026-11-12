@@ -73,15 +73,40 @@ checks **inline** in the handler/stylesheet:
   dismiss listeners get flagged by the scanner. Guard `showModal()`/
   `close()` for jsdom. Add `overscroll-behavior: contain` on
   `dialog:modal` and `dialog::backdrop` (see `src/app/theme-v2.css`).
-  Skip conversion when the element must stay mounted for enter/exit
-  transitions or e2e selectors depend on its structure (e.g.
-  `CartSlideOver`) — add an Escape handler instead.
+  Skip conversion only when e2e selectors depend on a structure that a
+  `<dialog>` can't preserve — drawers that must stay mounted for gestures
+  use the `navigation-drawer` scroll-snap pattern instead (see below).
 - **Coverage gate (99.5% lines)** — jsdom has no `showModal()`/`close()`,
-  so native-only calls are uncoverable: wrap them in
-  `/* v8 ignore start */ … /* v8 ignore stop */` (**`ignore next` is NOT
-  honored by this Vitest version**). Cover what jsdom *can* reach —
-  dispatch `new Event("close")` on the dialog to exercise the
-  close→React-state sync, and fire Escape for the fallback path.
+  `scrollTo`, or `IntersectionObserver`, so native-only calls are
+  uncoverable: wrap them in `/* v8 ignore start */ … /* v8 ignore stop */`
+  (**`ignore next` is NOT honored by this Vitest version**). Cover what
+  jsdom *can* reach — dispatch `new Event("close")` on the dialog to
+  exercise the close→React-state sync, fire Escape for the fallback path,
+  and unit-test pure helpers (e.g. `src/lib/top-layer.ts`) with stub
+  elements. jsdom also treats a closed `<dialog>` as hidden: role queries
+  inside it need `hidden: true`.
+- **Top-layer motion** — entry/exit animation is CSS-only:
+  `@starting-style` + `transition-behavior: allow-discrete` (separate
+  declaration, never the shorthand) + `overlay` in transition-property,
+  gated by `:where(:not([data-closing]))` on the open selector. Exit needs
+  Chromium-only `overlay`+display transitions; Firefox/Safari use the
+  `data-closing` + `getAnimations()` fallback in `src/lib/top-layer.ts`
+  (`requestDialogClose`). Route `cancel` events through it; keep the
+  document-Escape fallback but skip it when `dialog.close` exists (real
+  browsers) and never let it close a drawer when another `dialog[open]`
+  is layered above. Respect `prefers-reduced-motion` (transforms only under
+  `no-preference`, 0.1s under `reduce`).
+- **Slide-over drawers** — use the `navigation-drawer` pattern
+  (`CartSlideOver.tsx` + `.cart-drawer*` in theme-v2.css): modal `<dialog>`
+  + horizontal scroll-snap (two snap stops = open/closed),
+  IntersectionObserver on the sheet as state source-of-truth,
+  scroll-driven `--cart-backdrop` fade with a scroll-listener fallback,
+  `cancel`→animated close. For a RIGHT-edge drawer put the spacer column
+  first (`grid-template-columns: 100% var(--w)`), sheet `grid-column: 2` +
+  `scroll-snap-align: end`, spacer `scroll-snap-align: start` — scrollLeft
+  0 is naturally closed so no `scroll-initial-target` fallback is needed.
+  Do NOT use `closedby="any"` on viewport-filling drawers (taps land on the
+  dialog, bypassing the slide-out animation).
 
 For other guides, follow the guide verbatim; when it offers fallbacks, pick
 the Baseline-safe one unless the codebase already requires otherwise.
