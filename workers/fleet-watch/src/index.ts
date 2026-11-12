@@ -49,6 +49,11 @@ const PROBES: Probe[] = [
     good: [200],
   },
   {
+    name: "edge-forms",
+    url: "https://edge-forms.baltzakis-themis.workers.dev/health",
+    good: [200],
+  },
+  {
     name: "postiz-ai-proxy",
     url: "https://postiz-ai-proxy.baltzakis-themis.workers.dev/health",
     good: [200, 401, 403], // auth-gated: any response means the worker is up
