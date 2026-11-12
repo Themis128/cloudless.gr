@@ -76,6 +76,12 @@ checks **inline** in the handler/stylesheet:
   Skip conversion when the element must stay mounted for enter/exit
   transitions or e2e selectors depend on its structure (e.g.
   `CartSlideOver`) — add an Escape handler instead.
+- **Coverage gate (99.5% lines)** — jsdom has no `showModal()`/`close()`,
+  so native-only calls are uncoverable: wrap them in
+  `/* v8 ignore start */ … /* v8 ignore stop */` (**`ignore next` is NOT
+  honored by this Vitest version**). Cover what jsdom *can* reach —
+  dispatch `new Event("close")` on the dialog to exercise the
+  close→React-state sync, and fire Escape for the fallback path.
 
 For other guides, follow the guide verbatim; when it offers fallbacks, pick
 the Baseline-safe one unless the codebase already requires otherwise.
