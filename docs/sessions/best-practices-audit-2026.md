@@ -119,7 +119,7 @@ Reconciling with `docs/optimal-architecture-assessment.md`:
 **Self-hosted apps / HA:**
 
 - [Twenty vs EspoCRM 2026](https://use-apify.com/blog/twenty-crm-vs-espocrm-2026)
-- [n8n 2.0 hardening](https://medium.com/@aksh8t/n8n-2-0-a-hardening-release-that-redefines-enterprise-workflow-automation-a1a59bbb397e)
+- [n8n 2.0 hardening](https://docs.n8n.io/release-notes/)
 - [AWS multi-region active-passive](https://aws.amazon.com/blogs/architecture/disaster-recovery-solutions-with-aws-managed-services-part-3-multi-site-active-passive/)
 - [Workers vs Lambda 2026](https://tech-insider.org/cloudflare-workers-vs-lambda-2026/)
 - [AppFlowy 2026](https://use-apify.com/blog/notion-alternatives-2026)
