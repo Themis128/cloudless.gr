@@ -1,0 +1,16 @@
+{
+  "name": "edge-forms",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-12",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio-db",
+      "database_id": "66fc1f0c-353b-47ce-ac9e-3c4a4cf616cf"
+    }
+  ],
+  "vars": {
+    "WORKER_NAME": "edge-forms"
+  },
+  "observability": { "enabled": true }
+}
