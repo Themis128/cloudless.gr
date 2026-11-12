@@ -60,9 +60,8 @@ export default function CookieConsent() {
     setLocalPrefs(preferences);
   };
 
-  /* ── Focus trap + Escape key for settings modal ────────── */
-  const modalRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  /* ── Native <dialog> for settings modal ────────────────── */
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const isModalOpen = showSettings || settingsVisible;
 
@@ -71,188 +70,167 @@ export default function CookieConsent() {
     closeSettings();
   }, [closeSettings]);
 
-  // Trap focus inside modal and handle Escape key
+  // Native modal dialog provides focus containment, Esc/back-gesture dismissal,
+  // top-layer rendering, scroll locking and focus return — no manual trap needed.
   useEffect(() => {
-    if (!isModalOpen) {
-      // Restore focus when modal closes
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus();
-        previousFocusRef.current = null;
-      }
-      return;
+    const dialog = dialogRef.current;
+    if (!isModalOpen || !dialog) return;
+    // jsdom lacks showModal — degrade to a no-op there (tests don't assert on it)
+    if (!dialog.open && typeof dialog.showModal === "function") dialog.showModal();
+
+    const handleClose = () => handleCloseModal();
+    dialog.addEventListener("close", handleClose);
+
+    // Light-dismiss fallback for browsers without `closedby` support (Safari):
+    // clicks on ::backdrop target the <dialog> itself — close only when the
+    // pointer is outside the dialog's content box.
+    const handleBackdropClick = (e: MouseEvent) => {
+      if (e.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      const inside =
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width;
+      if (!inside && typeof dialog.close === "function") dialog.close();
+    };
+    if (!("closedBy" in HTMLDialogElement.prototype)) {
+      dialog.addEventListener("click", handleBackdropClick);
     }
 
-    // Store the element that had focus before modal opened
-    previousFocusRef.current = document.activeElement as HTMLElement;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleCloseModal();
-        return;
-      }
-
-      if (e.key === "Tab" && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
+    return () => {
+      // Close (not just unmount) so the browser restores focus to the invoker
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      dialog.removeEventListener("close", handleClose);
+      dialog.removeEventListener("click", handleBackdropClick);
     };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    // Auto-focus first focusable element in modal
-    requestAnimationFrame(() => {
-      if (modalRef.current) {
-        const first = modalRef.current.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        first?.focus();
-      }
-    });
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen, handleCloseModal]);
 
   if (!bannerVisible && !settingsVisible) return null;
 
   /* ── Settings panel (inline or modal) ─────────────────── */
   const settingsPanel = (showSettings || settingsVisible) && (
-    <div className="fixed inset-0 z-10001 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cookie-settings-title"
-        className="bg-void-light mx-4 w-full max-w-lg rounded-xl border border-slate-800 p-6 shadow-2xl"
-      >
-        <h3 id="cookie-settings-title" className="font-heading mb-4 text-lg font-bold text-white">
-          {t("cookies.settingsTitle", "Cookie Preferences")}
-        </h3>
-        <p className="mb-6 text-sm text-slate-400">
-          {t(
-            "cookies.settingsDesc",
-            "Choose which cookies you'd like to allow. Necessary cookies are required for the site to function and cannot be disabled."
-          )}
-        </p>
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="cookie-settings-title"
+      {...({ closedby: "any" } as Record<string, string>)}
+      className="bg-void-light m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-slate-800 p-6 shadow-2xl [&::backdrop]:bg-black/60 [&::backdrop]:backdrop-blur-sm"
+    >
+      <h3 id="cookie-settings-title" className="font-heading mb-4 text-lg font-bold text-white">
+        {t("cookies.settingsTitle", "Cookie Preferences")}
+      </h3>
+      <p className="mb-6 text-sm text-slate-400">
+        {t(
+          "cookies.settingsDesc",
+          "Choose which cookies you'd like to allow. Necessary cookies are required for the site to function and cannot be disabled."
+        )}
+      </p>
 
-        {/* Necessary — always on */}
-        <div className="mb-4 rounded-lg border border-slate-700 p-4">
-          <div className={FLEX_BETWEEN}>
-            <div>
-              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.necessary", "Necessary")}</p>
-              <p className={HELP_TEXT_CLASS}>
-                {t(
-                  "cookies.necessaryDesc",
-                  "Essential for the website to function. Includes session cookies, security tokens, and consent preferences."
-                )}
-              </p>
-            </div>
-            <span className="text-neon-cyan shrink-0 font-mono text-xs">
-              {t("cookies.alwaysOn", "Always on")}
-            </span>
+      {/* Necessary — always on */}
+      <div className="mb-4 rounded-lg border border-slate-700 p-4">
+        <div className={FLEX_BETWEEN}>
+          <div>
+            <p className={CATEGORY_TITLE_CLASS}>{t("cookies.necessary", "Necessary")}</p>
+            <p className={HELP_TEXT_CLASS}>
+              {t(
+                "cookies.necessaryDesc",
+                "Essential for the website to function. Includes session cookies, security tokens, and consent preferences."
+              )}
+            </p>
           </div>
+          <span className="text-neon-cyan shrink-0 font-mono text-xs">
+            {t("cookies.alwaysOn", "Always on")}
+          </span>
         </div>
+      </div>
 
-        {/* Analytics */}
-        <div className="mb-4 rounded-lg border border-slate-700 p-4">
-          <div className={FLEX_BETWEEN}>
-            <div className="mr-4">
-              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.analytics", "Analytics")}</p>
-              <p className={HELP_TEXT_CLASS}>
-                {t(
-                  "cookies.analyticsDesc",
-                  "Help us understand how visitors use our site so we can improve the experience. Data is anonymised."
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={localPrefs.analytics}
-              aria-label={t("cookies.analytics", "Analytics") + " cookies"}
-              onClick={() => setLocalPrefs((p) => ({ ...p, analytics: !p.analytics }))}
-              className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
-                localPrefs.analytics ? "bg-neon-cyan/60" : "bg-slate-700"
+      {/* Analytics */}
+      <div className="mb-4 rounded-lg border border-slate-700 p-4">
+        <div className={FLEX_BETWEEN}>
+          <div className="mr-4">
+            <p className={CATEGORY_TITLE_CLASS}>{t("cookies.analytics", "Analytics")}</p>
+            <p className={HELP_TEXT_CLASS}>
+              {t(
+                "cookies.analyticsDesc",
+                "Help us understand how visitors use our site so we can improve the experience. Data is anonymised."
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={localPrefs.analytics}
+            aria-label={t("cookies.analytics", "Analytics") + " cookies"}
+            onClick={() => setLocalPrefs((p) => ({ ...p, analytics: !p.analytics }))}
+            className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
+              localPrefs.analytics ? "bg-neon-cyan/60" : "bg-slate-700"
+            }`}
+          >
+            <span
+              className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${
+                localPrefs.analytics ? "translate-x-4" : ""
               }`}
-            >
-              <span
-                className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${
-                  localPrefs.analytics ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Marketing */}
-        <div className="mb-6 rounded-lg border border-slate-700 p-4">
-          <div className={FLEX_BETWEEN}>
-            <div className="mr-4">
-              <p className={CATEGORY_TITLE_CLASS}>{t("cookies.marketing", "Marketing")}</p>
-              <p className={HELP_TEXT_CLASS}>
-                {t(
-                  "cookies.marketingDesc",
-                  "Used to deliver relevant ads and track campaign effectiveness across platforms."
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={localPrefs.marketing}
-              aria-label={t("cookies.marketing", "Marketing") + " cookies"}
-              onClick={() => setLocalPrefs((p) => ({ ...p, marketing: !p.marketing }))}
-              className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
-                localPrefs.marketing ? "bg-neon-cyan/60" : "bg-slate-700"
-              }`}
-            >
-              <span
-                className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${
-                  localPrefs.marketing ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => savePreferences(localPrefs)}
-            className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2 font-mono text-sm font-semibold transition-all"
-          >
-            {t("cookies.savePreferences", "Save preferences")}
-          </button>
-          <button
-            type="button"
-            onClick={acceptAll}
-            className="min-h-11 rounded-lg border border-slate-700 px-6 py-2 font-mono text-sm text-slate-300 transition-colors hover:border-slate-500"
-          >
-            {t("cookies.acceptAll", "Accept all")}
-          </button>
-          <button
-            type="button"
-            onClick={handleCloseModal}
-            className="min-h-11 rounded-lg px-4 py-2 font-mono text-sm text-slate-400 transition-colors hover:text-slate-300"
-          >
-            {t("cookies.cancel", "Cancel")}
+            />
           </button>
         </div>
       </div>
-    </div>
+
+      {/* Marketing */}
+      <div className="mb-6 rounded-lg border border-slate-700 p-4">
+        <div className={FLEX_BETWEEN}>
+          <div className="mr-4">
+            <p className={CATEGORY_TITLE_CLASS}>{t("cookies.marketing", "Marketing")}</p>
+            <p className={HELP_TEXT_CLASS}>
+              {t(
+                "cookies.marketingDesc",
+                "Used to deliver relevant ads and track campaign effectiveness across platforms."
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={localPrefs.marketing}
+            aria-label={t("cookies.marketing", "Marketing") + " cookies"}
+            onClick={() => setLocalPrefs((p) => ({ ...p, marketing: !p.marketing }))}
+            className={`relative h-8 w-12 shrink-0 rounded-full transition-colors ${
+              localPrefs.marketing ? "bg-neon-cyan/60" : "bg-slate-700"
+            }`}
+          >
+            <span
+              className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${
+                localPrefs.marketing ? "translate-x-4" : ""
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          autoFocus
+          onClick={() => savePreferences(localPrefs)}
+          className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 rounded-lg border px-6 py-2 font-mono text-sm font-semibold transition-all"
+        >
+          {t("cookies.savePreferences", "Save preferences")}
+        </button>
+        <button
+          type="button"
+          onClick={acceptAll}
+          className="min-h-11 rounded-lg border border-slate-700 px-6 py-2 font-mono text-sm text-slate-300 transition-colors hover:border-slate-500"
+        >
+          {t("cookies.acceptAll", "Accept all")}
+        </button>
+        <button
+          type="button"
+          onClick={handleCloseModal}
+          className="min-h-11 rounded-lg px-4 py-2 font-mono text-sm text-slate-400 transition-colors hover:text-slate-300"
+        >
+          {t("cookies.cancel", "Cancel")}
+        </button>
+      </div>
+    </dialog>
   );
 
   /* ── Banner ───────────────────────────────────────────── */

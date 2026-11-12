@@ -27,6 +27,17 @@
   color-scheme: dark;
 }
 
+/* Native <dialog> modals: keep scroll gestures inside the dialog/backdrop
+   from chaining to the page underneath (progressive enhancement — ignored
+   where overscroll-behavior is unsupported). */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 /* ──────────────────────────────────────────────────────────────────
     LIGHT (default)
     Marketing pages, public docs, store, contact, auth.
