@@ -34,6 +34,7 @@ function redirectUnprefixedToDefaultLocale(
     pathname.startsWith("/portal") ||
     pathname.startsWith("/links") ||
     pathname.startsWith("/telegram") ||
+    pathname.startsWith("/viber") ||
     pathname.startsWith("/_next")
   ) {
     return null;
