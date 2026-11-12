@@ -48,7 +48,10 @@ function ensureSchema(env: Env): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
       for (const stmt of SCHEMA) await env.DB.prepare(stmt).run();
-    })();
+    })().catch((e) => {
+      schemaReady = null; // don't cache a rejected init — retry next request
+      throw e;
+    });
   }
   return schemaReady;
 }
@@ -166,7 +169,11 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
   const summary = Object.entries(fields)
     .map(([k, v]) => `*${k}:* ${String(v).slice(0, 200)}`)
     .join("\n");
-  await tg(env, `[edge-forms] new ${form} submission\n${summary}`);
+  try {
+    await tg(env, `[edge-forms] new ${form} submission\n${summary}`);
+  } catch (e) {
+    console.warn("tg notify failed:", e);
+  }
 
   return json(200, { ok: true, id });
 }
@@ -174,7 +181,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method === "OPTIONS") return json(204, {});
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST,OPTIONS,GET" } });
     if (url.pathname === "/health") {
       return json(200, { ok: true, worker: "edge-forms" });
     }

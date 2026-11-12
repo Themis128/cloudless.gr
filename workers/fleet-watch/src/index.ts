@@ -89,7 +89,7 @@ function ensureSchema(env: Env): Promise<void> {
 
 async function tg(env: Env, text: string): Promise<void> {
   if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return;
-  await fetch(
+  const res = await fetch(
     `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`,
     {
       method: "POST",
@@ -97,6 +97,7 @@ async function tg(env: Env, text: string): Promise<void> {
       body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: text.slice(0, 4000) }),
     }
   );
+  if (!res.ok) console.warn("tg sendMessage non-2xx:", res.status);
 }
 
 async function probe(p: Probe): Promise<{ ok: boolean; detail: string }> {
