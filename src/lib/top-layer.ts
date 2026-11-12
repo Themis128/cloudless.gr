@@ -20,6 +20,7 @@ function canTransitionDisplay(): boolean {
   ) {
     return false;
   }
+  /* v8 ignore start -- DOM probe needs a real CSS transition engine; jsdom can't execute it */
   const probe = document.createElement("div");
   // Shorthand is intentional: browsers that can't parse allow-discrete drop
   // the whole declaration, so display:none applies instantly → probe=false.
@@ -30,6 +31,7 @@ function canTransitionDisplay(): boolean {
   probe.style.display = "none";
   displayTransitionSupport = getComputedStyle(probe).display === "block";
   probe.remove();
+  /* v8 ignore stop */
   return displayTransitionSupport;
 }
 
