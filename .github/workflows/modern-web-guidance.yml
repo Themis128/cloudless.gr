@@ -1,0 +1,73 @@
+name: Modern Web Guidance
+
+# Fails PRs that introduce deterministic legacy web-platform patterns
+# (IME-unsafe Enter handlers, unthemed color-scheme overrides, etc.).
+# Scanner: https://github.com/GoogleChrome/modern-web-guidance — the same
+# rules the .agents/skills/modern-web-guidance skill applies during
+# development. Deterministic rules only (~35 rules / 33 guides); the
+# semantic catalog is covered by the skill at authoring time.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "workers/**"
+      - "*.html"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "workers/**"
+      - "*.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modern-web-guidance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  legacy-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Scan for legacy web patterns
+        id: scan
+        run: |
+          npx -y modern-web-guidance@latest legacy-scan . --json > mwg-scan.json
+          count=$(jq -r '.totalFindings' mwg-scan.json)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Modern Web Guidance — legacy pattern scan"
+            echo ""
+            echo "Findings: **$count**"
+            if [ "$count" -gt 0 ]; then
+              echo ""
+              echo '```json'
+              jq '{guides: [.guides[] | {guideId, rules: [.rules[] | {ruleId, count, findings: [.findings[] | {file, line, message}]}]}]}' mwg-scan.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -gt 0 ]; then
+            echo "::error::modern-web-guidance found $count legacy pattern(s) — see step summary"
+            exit 1
+          fi
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-web-guidance-scan
+          path: mwg-scan.json
+          retention-days: 14

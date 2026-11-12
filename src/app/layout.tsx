@@ -40,6 +40,12 @@ export const metadata: Metadata = {
       "tiktok-developers-site-verification": "30QWkDq9g0olcwcIDueeqBix84M0VCXn",
     },
   },
+  // Declares light+dark support before first paint so the UA can theme the
+  // canvas/scrollbars early; the used scheme is pinned per-route by
+  // <html data-theme> + color-scheme in theme-v2.css.
+  other: {
+    "color-scheme": "light dark",
+  },
   // iOS PWA support — apple-touch-icon + status bar style
   appleWebApp: {
     capable: true,

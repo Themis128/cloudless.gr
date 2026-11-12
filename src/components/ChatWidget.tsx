@@ -129,7 +129,9 @@ export default function ChatWidget() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      send(input);
+      // IME-safe: don't send while composing CJK text
+      // (keyCode 229 covers Safari's out-of-order compositionend).
+      if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) send(input);
     }
   }
 

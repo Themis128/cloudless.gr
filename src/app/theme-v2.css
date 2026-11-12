@@ -13,6 +13,20 @@
  * See docs/design-system-v2.md for the full spec and rationale.
  */
 
+/* Native UI (scrollbars, form controls, canvas) follows the active theme.
+   :root declares support for both schemes; [data-theme] pins the used
+   scheme so UA chrome matches the token palette. color-scheme inherits,
+   so nested [data-theme] overrides retarget their subtree too. */
+:root {
+  color-scheme: light dark;
+}
+[data-theme="light"] {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 /* ──────────────────────────────────────────────────────────────────
     LIGHT (default)
     Marketing pages, public docs, store, contact, auth.
