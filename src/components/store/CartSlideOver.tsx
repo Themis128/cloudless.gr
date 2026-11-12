@@ -40,6 +40,26 @@ export default function CartSlideOver() {
   // delivery during the open scroll animation would slam the drawer shut.
   const sawOpenRef = useRef(false);
 
+  // Shared dismiss path for every close gesture (backdrop tap, Esc cancel,
+  // close button via isOpen, swipe settle): animate the sheet to the closed
+  // stop — re-arming sawOpen so the observer still detects the return even
+  // when the open was interrupted before the sheet passed ~50% visibility —
+  // or close instantly when already parked at the stop.
+  const dismissDrawer = () => {
+    const dialog = dialogRef.current;
+    const scroller = scrollerRef.current;
+    if (!dialog || !scroller || !dialog.open) return;
+    /* v8 ignore start -- browser-only; jsdom lacks scrollTo/dialog.close */
+    if (typeof scroller.scrollTo === "function" && scroller.scrollLeft > 1) {
+      sawOpenRef.current = true;
+      scroller.scrollTo({ left: 0, behavior: "auto" });
+    } else if (typeof dialog.close === "function") {
+      dialog.close();
+      closeCartRef.current();
+    }
+    /* v8 ignore stop */
+  };
+
   // Gesture layer: backdrop fade fallback, open/closed detection, and the
   // light-dismiss / Esc handlers. All of it needs real layout, scroll-snap,
   // IntersectionObserver and scroll-timeline APIs that jsdom lacks.
@@ -53,8 +73,6 @@ export default function CartSlideOver() {
       return;
     }
 
-    // 'auto' defers to the CSS scroll-behavior (smooth unless reduced-motion).
-    const scrollTo = (left: number) => scroller.scrollTo({ left, behavior: "auto" });
     const maxScroll = () => scroller.scrollWidth - scroller.clientWidth;
 
     // Backdrop fade fallback where scroll-driven animations are unsupported:
@@ -93,11 +111,27 @@ export default function CartSlideOver() {
     );
     observer.observe(sheet);
 
+    // Parked-at-closed-stop backstop: a scroll-settle debounce is the
+    // reliable signal for swipe-to-close — including swipes that interrupt
+    // the open animation before sawOpen was ever set.
+    const closeIfParked = () => {
+      if (dialog.open && scroller.scrollLeft <= 1) {
+        if (typeof dialog.close === "function") dialog.close();
+        closeCartRef.current();
+      }
+    };
+    let settleTimer: number | undefined;
+    const onScrollSettled = () => {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(closeIfParked, 150);
+    };
+    scroller.addEventListener("scroll", onScrollSettled, { passive: true });
+
     // Light dismiss: taps on the dimmed spacer area close the drawer. Do NOT
     // use closedby="any" — the dialog fills the viewport so taps land on the
     // dialog rather than ::backdrop, and it would close without the slide-out.
     const handleClick = (e: MouseEvent) => {
-      if (!sheet.contains(e.target as Node)) scrollTo(0);
+      if (!sheet.contains(e.target as Node)) dismissDrawer();
     };
     dialog.addEventListener("click", handleClick);
 
@@ -106,13 +140,15 @@ export default function CartSlideOver() {
     const handleCancel = (e: Event) => {
       if (e.cancelable) {
         e.preventDefault();
-        scrollTo(0);
+        dismissDrawer();
       }
     };
     dialog.addEventListener("cancel", handleCancel);
 
     return () => {
       observer.disconnect();
+      window.clearTimeout(settleTimer);
+      scroller.removeEventListener("scroll", onScrollSettled);
       if (onScroll) scroller.removeEventListener("scroll", onScroll);
       dialog.removeEventListener("click", handleClick);
       dialog.removeEventListener("cancel", handleCancel);
@@ -137,19 +173,8 @@ export default function CartSlideOver() {
           behavior: "auto",
         });
       }
-    } else if (dialog.open) {
-      if (typeof scroller.scrollTo === "function" && scroller.scrollLeft > 1) {
-        // Re-arm the observer's closed detection: if the open was interrupted
-        // before the sheet passed ~50% visibility, sawOpen was never set and
-        // the observer would ignore the return to the closed stop — leaving
-        // an invisible modal <dialog> blocking the page.
-        sawOpenRef.current = true;
-        scroller.scrollTo({ left: 0, behavior: "auto" });
-      } else if (typeof dialog.close === "function") {
-        // Already parked at the closed stop (open interrupted instantly) —
-        // no scroll will happen for the observer to detect; close directly.
-        dialog.close();
-      }
+    } else {
+      dismissDrawer();
     }
     /* v8 ignore stop */
   }, [isOpen]);
