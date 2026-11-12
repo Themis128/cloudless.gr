@@ -45,7 +45,9 @@ jobs:
       - name: Scan for legacy web patterns
         id: scan
         run: |
+          set +e
           npx -y modern-web-guidance@latest legacy-scan . --json > mwg-scan.json
+          set -e
           count=$(jq -r '.totalFindings' mwg-scan.json)
           echo "count=$count" >> "$GITHUB_OUTPUT"
           {
