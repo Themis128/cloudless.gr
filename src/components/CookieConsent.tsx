@@ -76,7 +76,9 @@ export default function CookieConsent() {
     const dialog = dialogRef.current;
     if (!isModalOpen || !dialog) return;
     // jsdom lacks showModal — degrade to a no-op there (tests don't assert on it)
+    /* v8 ignore start -- native-only call; jsdom has no showModal */
     if (!dialog.open && typeof dialog.showModal === "function") dialog.showModal();
+    /* v8 ignore stop */
 
     const handleClose = () => handleCloseModal();
     dialog.addEventListener("close", handleClose);
@@ -84,7 +86,7 @@ export default function CookieConsent() {
     // Light-dismiss fallback for browsers without `closedby` support (Safari):
     // clicks on ::backdrop target the <dialog> itself — close only when the
     // pointer is outside the dialog's content box.
-    /* v8 ignore next -- only runs in browsers lacking closedBy; jsdom can't exercise it */
+    /* v8 ignore start -- only runs in browsers lacking closedBy; jsdom can't exercise it */
     const handleBackdropClick = (e: MouseEvent) => {
       if (e.target !== dialog) return;
       const rect = dialog.getBoundingClientRect();
@@ -95,6 +97,7 @@ export default function CookieConsent() {
         e.clientX <= rect.left + rect.width;
       if (!inside && typeof dialog.close === "function") dialog.close();
     };
+    /* v8 ignore stop */
     if (!("closedBy" in HTMLDialogElement.prototype)) {
       dialog.addEventListener("click", handleBackdropClick);
     }
@@ -109,7 +112,9 @@ export default function CookieConsent() {
 
     return () => {
       // Close (not just unmount) so the browser restores focus to the invoker
+      /* v8 ignore start -- dialog.open is always false under jsdom */
       if (dialog.open && typeof dialog.close === "function") dialog.close();
+      /* v8 ignore stop */
       dialog.removeEventListener("close", handleClose);
       dialog.removeEventListener("click", handleBackdropClick);
       document.removeEventListener("keydown", handleEscape);

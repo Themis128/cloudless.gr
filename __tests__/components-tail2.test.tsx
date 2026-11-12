@@ -126,6 +126,18 @@ describe("CommandPalette", () => {
     expect(container.querySelector("dialog")).not.toBeNull();
     await act(async () => fireEvent.keyDown(document, { key: "Escape" }));
     expect(container.innerHTML).toBe("");
+
+    // native 'close' event (Esc/backdrop/programmatic) also closes via state
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+      );
+    });
+    expect(container.querySelector("dialog")).not.toBeNull();
+    await act(async () => {
+      container.querySelector("dialog")?.dispatchEvent(new Event("close"));
+    });
+    expect(container.innerHTML).toBe("");
   });
 });
 

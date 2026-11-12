@@ -387,6 +387,19 @@ describe("CookieConsent", () => {
     expect(c.textContent).not.toContain("Your cookies, your choice");
   });
 
+  it("native dialog 'close' event syncs React state (Esc/backdrop path)", async () => {
+    const c = await renderConsent();
+    await click(screen.getByText("Customise"));
+    expect(c.textContent).toContain("Cookie Preferences");
+    // Browsers fire 'close' after Esc/backdrop/programmatic close — the
+    // component listens for it to reset showSettings/settingsVisible.
+    await act(async () => {
+      document.querySelector("dialog")?.dispatchEvent(new Event("close"));
+    });
+    expect(c.textContent).not.toContain("Cookie Preferences");
+    expect(c.textContent).toContain("Your cookies, your choice");
+  });
+
   it("settings modal is a native <dialog> and autofocuses the save action", async () => {
     await renderConsent();
     await click(screen.getByText("Customise"));
