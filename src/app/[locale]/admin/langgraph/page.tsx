@@ -784,7 +784,13 @@ export default function LangGraphPage() {
                 value={resumeInput}
                 onChange={(e) => setResumeInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void sendResume();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    // IME-safe: don't submit while composing CJK text
+                    // (keyCode 229 covers Safari's out-of-order compositionend).
+                    if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229)
+                      void sendResume();
+                  }
                 }}
                 placeholder="Resume value (e.g. 'yes', JSON, or any text)…"
                 className="flex-1 rounded bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 placeholder-zinc-600 focus:ring-1 focus:ring-yellow-600 focus:outline-none"
@@ -823,7 +829,9 @@ export default function LangGraphPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    void send();
+                    // IME-safe: don't submit while composing CJK text
+                    // (keyCode 229 covers Safari's out-of-order compositionend).
+                    if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) void send();
                   }
                 }}
                 placeholder={

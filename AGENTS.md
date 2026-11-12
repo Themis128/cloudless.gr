@@ -148,3 +148,34 @@ src/
   - Tailscale: restarts tailscaled if status check fails.
 - State is tracked in `/var/lib/nas-auto-remediate/state.json` (per-unit daily restart budget).
 - Each remediation pass is isolated—one failing checker does not abort the run.
+
+## Modern Web Guidance (mandatory for client-side web work)
+
+This repo ships Google's **Modern Web Guidance** skill at
+`.agents/skills/modern-web-guidance/` (also installed globally at
+`~/.config/devin/skills/`). Before writing or changing HTML/CSS or
+client-side JS/TSX — components, layouts, styles, interactions, forms,
+animations, CWV/perf work — invoke the `modern-web-guidance` skill and run:
+
+```bash
+npx -y modern-web-guidance@latest search "<2-5 word action query>"
+npx -y modern-web-guidance@latest retrieve "<guide-id>"
+```
+
+It returns current, cross-browser-verified patterns (dialogs, scroll
+effects, forms/autofill, a11y, performance). Do not skip it — training-data
+patterns are often obsolete. Backend/infra/tooling changes don't need it.
+
+**CI enforcement:** `.github/workflows/modern-web-guidance.yml` runs
+`legacy-scan` on every PR touching web sources and fails on deterministic
+legacy patterns. Conventions the scanner enforces (keep them inline — it
+cannot see through helpers):
+
+- Custom `Enter` keydown submit handlers MUST check
+  `e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229` before
+  acting (IME/CJK safety, incl. Safari's compositionend ordering bug).
+- Theme/color overrides MUST declare `color-scheme` on `:root`/`html` and
+  pin it per `[data-theme]` (see `src/app/theme-v2.css`).
+
+A weekly `modern-web-guidance-audit.yml` sweep (incl. docs/tests) updates
+a tracking issue with any remaining findings — non-blocking.

@@ -1,0 +1,99 @@
+name: Modern Web Guidance Audit
+
+# Weekly non-blocking sweep: legacy-scan including docs/examples/tests
+# (the PR gate covers only src/public/workers). Updates a single tracking
+# issue — findings are advisory, not merge blockers.
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+on:
+  schedule:
+    # Weekly Wednesdays at 06:30 UTC.
+    - cron: '30 6 * * 3'
+  workflow_dispatch:
+    inputs:
+      open_issue:
+        description: Open / update tracking issue on completion
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: modern-web-guidance-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Legacy Pattern Sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+
+      - name: Scan repo incl. docs and tests
+        id: scan
+        run: |
+          set +e
+          npx -y modern-web-guidance@latest legacy-scan . --include-docs-and-tests --json > mwg-scan.json
+          set -e
+          count=$(jq -r '.totalFindings' mwg-scan.json)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Modern Web Guidance — weekly sweep (incl. docs/tests)"
+            echo ""
+            echo "Findings: **$count**"
+            if [ "$count" -gt 0 ]; then
+              echo ""
+              echo '```json'
+              jq '{guides: [.guides[] | {guideId, rules: [.rules[] | {ruleId, count, findings: [.findings[] | {file, line, message}]}]}]}' mwg-scan.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4
+        with:
+          name: modern-web-guidance-sweep-${{ github.run_id }}
+          path: mwg-scan.json
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Update tracking issue
+        if: ${{ github.event.inputs.open_issue != 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FINDINGS: ${{ steps.scan.outputs.count }}
+        run: |
+          set -e
+          TITLE="🌐 Modern Web Guidance — weekly legacy-pattern sweep"
+          if [ "${FINDINGS:-0}" = "0" ]; then
+            BODY="No legacy web-platform patterns found (docs/tests included).
+
+            ---
+            _Auto-updated by modern-web-guidance-audit.yml — run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})._"
+          else
+            BODY="Found **${FINDINGS}** legacy pattern(s) outside the PR-gated paths (docs, examples, tests). Advisory only — the blocking gate is \`modern-web-guidance.yml\`.
+
+            Full JSON report is attached to the workflow run as the \`modern-web-guidance-sweep-*\` artifact.
+
+            ---
+            _Auto-updated by modern-web-guidance-audit.yml — run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})._"
+          fi
+          NUM=$(gh issue list --search "$TITLE in:title" --state open --limit 1 --json number -q '.[0].number' || true)
+          if [ -n "$NUM" ]; then
+            gh issue edit "$NUM" --body "$BODY"
+            echo "Updated existing issue #$NUM"
+          elif [ "${FINDINGS:-0}" != "0" ]; then
+            gh issue create --title "$TITLE" --body "$BODY" --label audit
+          else
+            echo "No findings — skipping issue creation"
+          fi

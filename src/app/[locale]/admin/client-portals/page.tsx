@@ -316,7 +316,12 @@ function StepManager({
           value={newStepName}
           onChange={(e) => setNewStepName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") addStep();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              // IME-safe: don't submit while composing CJK text
+              // (keyCode 229 covers Safari's out-of-order compositionend).
+              if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) addStep();
+            }
           }}
           placeholder="Add custom step…"
           className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
