@@ -29,6 +29,16 @@ export default function CartSlideOver() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // CartContext value isn't memoized — closeCart gets a new identity every
+  // render, so the gesture effect below reads it through a ref and runs once.
+  const closeCartRef = useRef(closeCart);
+  useEffect(() => {
+    closeCartRef.current = closeCart;
+  }, [closeCart]);
+  // Only treat a below-threshold intersection as "closed" after the sheet
+  // was actually seen open — otherwise the observer's initial ratio-0
+  // delivery during the open scroll animation would slam the drawer shut.
+  const sawOpenRef = useRef(false);
 
   // Gesture layer: backdrop fade fallback, open/closed detection, and the
   // light-dismiss / Esc handlers. All of it needs real layout, scroll-snap,
@@ -68,11 +78,13 @@ export default function CartSlideOver() {
       (entries) => {
         const entry = entries.at(-1);
         if (!entry || !dialog.open) return;
-        if (entry.intersectionRatio < visibleThreshold) {
+        if (entry.intersectionRatio > 0.5) sawOpenRef.current = true;
+        if (entry.intersectionRatio < visibleThreshold && sawOpenRef.current) {
           // Sheet fully left the viewport — finish closing the dialog and
           // sync React state so data-open/isOpen reflect reality.
+          sawOpenRef.current = false;
           if (typeof dialog.close === "function") dialog.close();
-          closeCart();
+          closeCartRef.current();
         }
       },
       // root: dialog makes the ratio reflect the sheet's visibility inside
@@ -106,7 +118,7 @@ export default function CartSlideOver() {
       dialog.removeEventListener("cancel", handleCancel);
     };
     /* v8 ignore stop */
-  }, [closeCart]);
+  }, []);
 
   // React state → drawer position. Opening promotes the dialog to the top
   // layer (inert page, focus containment/return, scroll lock, Esc) then

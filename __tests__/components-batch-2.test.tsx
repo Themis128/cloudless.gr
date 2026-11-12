@@ -387,6 +387,27 @@ describe("CookieConsent", () => {
     expect(c.textContent).not.toContain("Your cookies, your choice");
   });
 
+  it("Escape defers to native dialog handling when close() exists", async () => {
+    // Browsers route Esc through the dialog `cancel` event; the document
+    // fallback must NOT also reset state there. Stub close() to simulate.
+    const proto = HTMLDialogElement.prototype as unknown as { close?: () => void };
+    const had = "close" in proto;
+    const orig = proto.close;
+    proto.close = vi.fn();
+    try {
+      const c = await renderConsent();
+      await click(screen.getByText("Customise"));
+      expect(c.textContent).toContain("Cookie Preferences");
+      await act(async () => {
+        fireEvent.keyDown(document, { key: "Escape" });
+      });
+      expect(c.textContent).toContain("Cookie Preferences");
+    } finally {
+      if (had) proto.close = orig;
+      else delete proto.close;
+    }
+  });
+
   it("native dialog 'close' event syncs React state (Esc/backdrop path)", async () => {
     const c = await renderConsent();
     await click(screen.getByText("Customise"));

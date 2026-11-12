@@ -139,6 +139,29 @@ describe("CommandPalette", () => {
     });
     expect(container.innerHTML).toBe("");
   });
+
+  it("Escape defers to native dialog handling when close() exists", async () => {
+    // Browsers route Esc through `cancel`; the document fallback must not
+    // also setOpen(false) there. Stub close() to simulate native support.
+    const proto = HTMLDialogElement.prototype as unknown as { close?: () => void };
+    const had = "close" in proto;
+    const orig = proto.close;
+    proto.close = vi.fn();
+    try {
+      const { container } = render(<CommandPalette />);
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+        );
+      });
+      expect(container.textContent).toContain("Store");
+      await act(async () => fireEvent.keyDown(document, { key: "Escape" }));
+      expect(container.textContent).toContain("Store");
+    } finally {
+      if (had) proto.close = orig;
+      else delete proto.close;
+    }
+  });
 });
 
 // ── AgentCounter ────────────────────────────────────────────────────────────

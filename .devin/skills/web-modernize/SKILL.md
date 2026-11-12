@@ -67,7 +67,7 @@ checks **inline** in the handler/stylesheet:
   `showModal()` (see `src/components/CookieConsent.tsx`,
   `src/components/CommandPalette.tsx`). For light dismiss add
   `closedby="any"` via spread (`{...({ closedby: "any" } as
-  Record<string, string>)}` — TS doesn't know the attribute yet) plus a
+Record<string, string>)}` — TS doesn't know the attribute yet) plus a
   **feature-detected** backdrop-click fallback gated on
   `!("closedBy" in HTMLDialogElement.prototype)` — unconditional manual
   dismiss listeners get flagged by the scanner. Guard `showModal()`/
@@ -80,7 +80,7 @@ checks **inline** in the handler/stylesheet:
   `scrollTo`, or `IntersectionObserver`, so native-only calls are
   uncoverable: wrap them in `/* v8 ignore start */ … /* v8 ignore stop */`
   (**`ignore next` is NOT honored by this Vitest version**). Cover what
-  jsdom *can* reach — dispatch `new Event("close")` on the dialog to
+  jsdom _can_ reach — dispatch `new Event("close")` on the dialog to
   exercise the close→React-state sync, fire Escape for the fallback path,
   and unit-test pure helpers (e.g. `src/lib/top-layer.ts`) with stub
   elements. jsdom also treats a closed `<dialog>` as hidden: role queries
@@ -98,10 +98,16 @@ checks **inline** in the handler/stylesheet:
   `no-preference`, 0.1s under `reduce`).
 - **Slide-over drawers** — use the `navigation-drawer` pattern
   (`CartSlideOver.tsx` + `.cart-drawer*` in theme-v2.css): modal `<dialog>`
-  + horizontal scroll-snap (two snap stops = open/closed),
+  using horizontal scroll-snap (two snap stops = open/closed),
   IntersectionObserver on the sheet as state source-of-truth,
   scroll-driven `--cart-backdrop` fade with a scroll-listener fallback,
-  `cancel`→animated close. For a RIGHT-edge drawer put the spacer column
+  `cancel`→animated close. Gotchas learned in review: unmemoized context
+  callbacks (new identity per render) must be read through a ref so the
+  observer effect runs once; and only treat a below-threshold
+  IntersectionObserver entry as "closed" after the sheet was seen open
+  (`ratio > 0.5` flag) — the initial ratio-0 delivery during the open
+  scroll animation otherwise slams the drawer shut. For a RIGHT-edge
+  drawer put the spacer column
   first (`grid-template-columns: 100% var(--w)`), sheet `grid-column: 2` +
   `scroll-snap-align: end`, spacer `scroll-snap-align: start` — scrollLeft
   0 is naturally closed so no `scroll-initial-target` fallback is needed.

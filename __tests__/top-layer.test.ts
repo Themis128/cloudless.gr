@@ -26,6 +26,20 @@ describe("top-layer helpers", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  it("requestDialogClose awaits running animations before closing", async () => {
+    const close = vi.fn();
+    const dialog = {
+      close,
+      setAttribute: vi.fn(),
+      hasAttribute: vi.fn(() => true),
+      removeAttribute: vi.fn(),
+      getAnimations: () => [{ finished: Promise.resolve() }],
+    } as unknown as HTMLDialogElement;
+
+    await expect(requestDialogClose(dialog)).resolves.toBe(true);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("requestDialogClose bails if something else closed it mid-animation", async () => {
     const close = vi.fn();
     const dialog = {
