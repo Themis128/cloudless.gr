@@ -98,11 +98,20 @@ export default function CookieConsent() {
       dialog.addEventListener("click", handleBackdropClick);
     }
 
+    // Escape fallback: native modal dialogs handle Esc themselves, but
+    // environments without dialog support (jsdom, legacy embeds) get the
+    // same dismissal path through React state. Idempotent in browsers.
+    const handleEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") handleCloseModal();
+    };
+    document.addEventListener("keydown", handleEscape);
+
     return () => {
       // Close (not just unmount) so the browser restores focus to the invoker
       if (dialog.open && typeof dialog.close === "function") dialog.close();
       dialog.removeEventListener("close", handleClose);
       dialog.removeEventListener("click", handleBackdropClick);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isModalOpen, handleCloseModal]);
 

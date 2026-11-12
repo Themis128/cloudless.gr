@@ -72,11 +72,19 @@ export default function CommandPalette() {
       dialog.addEventListener("click", handleBackdropClick);
     }
 
+    // Escape fallback for environments without native dialog Esc handling
+    // (jsdom, legacy embeds); idempotent where the platform already closes.
+    const handleEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+
     return () => {
       // Close (not just unmount) so the browser restores focus to the invoker
       if (dialog.open && typeof dialog.close === "function") dialog.close();
       dialog.removeEventListener("close", handleClose);
       dialog.removeEventListener("click", handleBackdropClick);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
 

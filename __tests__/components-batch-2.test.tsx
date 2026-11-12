@@ -40,7 +40,9 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...rest}>{children}</a>
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }));
 
@@ -62,7 +64,9 @@ vi.mock("@/lib/use-locale", () => ({
 
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...rest}>{children}</a>
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }));
 
@@ -383,32 +387,20 @@ describe("CookieConsent", () => {
     expect(c.textContent).not.toContain("Your cookies, your choice");
   });
 
-  it("traps Tab focus inside the settings modal and auto-focuses the first control", async () => {
+  it("settings modal is a native <dialog> and autofocuses the save action", async () => {
     await renderConsent();
     await click(screen.getByText("Customise"));
-    // rAF auto-focus lands on the first focusable element
+    // The component now uses <dialog> + showModal(): focus containment,
+    // Esc dismissal and focus return are platform-provided (jsdom has no
+    // showModal, so we assert the element contract + autofocus target).
+    const dialog = document.querySelector("dialog");
+    expect(dialog).not.toBeNull();
+    expect(dialog?.hasAttribute("role")).toBe(false);
     await act(async () => {
       vi.advanceTimersByTime(50);
     });
-    const modal = document.querySelector('[role="dialog"]') ?? document.body;
-    const focusables = modal.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    const first = focusables[0] as HTMLElement;
-    const last = focusables[focusables.length - 1] as HTMLElement;
-
-    // Shift+Tab on first wraps to last
-    first.focus();
-    await act(async () => {
-      fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
-    });
-    expect(document.activeElement).toBe(last);
-
-    // Tab on last wraps to first
-    await act(async () => {
-      fireEvent.keyDown(document, { key: "Tab" });
-    });
-    expect(document.activeElement).toBe(first);
+    // autoFocus lands on "Save preferences" (the primary action)
+    expect(document.activeElement?.textContent).toContain("Save preferences");
   });
 
   it("malformed consent cookie falls back to defaults; hook throws outside the provider", async () => {
@@ -515,9 +507,7 @@ describe("WaitingRoomClient", () => {
   });
 
   it("approved → router.push to portal token; error path shows", async () => {
-    fetchWithAuthMock.mockResolvedValue(
-      okJson({ status: "approved", portalToken: "tok123" })
-    );
+    fetchWithAuthMock.mockResolvedValue(okJson({ status: "approved", portalToken: "tok123" }));
     await act(async () => {
       render(<WaitingRoomClient />);
     });
@@ -556,8 +546,7 @@ describe("WaitingRoomClient tails", () => {
   it("shows the enroll error body when the POST is rejected", async () => {
     searchParamsMap = new URLSearchParams("plan=analytics");
     fetchWithAuthMock.mockImplementation(async (url: string) => {
-      if (String(url).includes("enroll"))
-        return okJson({ error: "email must be verified" }, 403);
+      if (String(url).includes("enroll")) return okJson({ error: "email must be verified" }, 403);
       return okJson({ status: "none" });
     });
     let c: HTMLElement | undefined;
