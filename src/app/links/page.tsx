@@ -73,6 +73,13 @@ const LINKS: HubLink[] = [
     sub: "Private channel — build logs, drops & automation playbooks",
   },
   {
+    // Internal route — same-tab nav. /viber 307s to the viber://chat deep
+    // link on mobile (app handoff); the number below covers desktop.
+    href: "/viber",
+    label: "Viber — Cloudless",
+    sub: "Chat directly — +30 697 777 7838 (works on desktop too)",
+  },
+  {
     href: "https://cloud.cloudless.gr/call/zsykkx97",
     label: "Book a free video consult",
     sub: "30 min — hosted on our own self-hosted Nextcloud Talk",
