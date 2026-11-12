@@ -79,8 +79,13 @@ let schemaReady: Promise<void> | null = null;
 function ensureSchema(env: Env): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
-      for (const stmt of SCHEMA) {
-        await env.DB.prepare(stmt).run();
+      try {
+        for (const stmt of SCHEMA) {
+          await env.DB.prepare(stmt).run();
+        }
+      } catch (err) {
+        schemaReady = null; // don't cache a rejected init — retry next sweep
+        throw err;
       }
     })();
   }

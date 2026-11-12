@@ -62,7 +62,7 @@ function json(status: number, body: unknown): Response {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, cf-turnstile-response",
       "Access-Control-Allow-Methods": "POST,OPTIONS,GET",
     },
   });
@@ -181,7 +181,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST,OPTIONS,GET" } });
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, cf-turnstile-response", "Access-Control-Allow-Methods": "POST,OPTIONS,GET" } });
     if (url.pathname === "/health") {
       return json(200, { ok: true, worker: "edge-forms" });
     }
