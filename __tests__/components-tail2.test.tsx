@@ -24,7 +24,9 @@ const searchParamsRef = vi.hoisted(() => ({ current: new URLSearchParams("") }))
 
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children?: React.ReactNode }) => (
-    <a href={href} {...rest}>{children}</a>
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
   useRouter: () => ({ push: routerPush, replace: vi.fn(), back: vi.fn() }),
   usePathname: () => "/en",
@@ -95,7 +97,7 @@ afterEach(() => cleanup());
 // ── CommandPalette ──────────────────────────────────────────────────────────
 
 describe("CommandPalette", () => {
-  it("opens on ctrl+k, navigates on item click, closes on backdrop", async () => {
+  it("opens on ctrl+k, navigates on item click, closes on escape", async () => {
     const { container } = render(<CommandPalette />);
     expect(container.innerHTML).toBe("");
 
@@ -113,17 +115,52 @@ describe("CommandPalette", () => {
     expect(routerPush).toHaveBeenCalledWith("/blog");
     expect(container.innerHTML).toBe("");
 
-    // reopen then close via backdrop
+    // reopen then close via Escape (native <dialog> handles Esc in browsers;
+    // the component's document-level fallback covers non-dialog environments)
     await act(async () => {
       document.dispatchEvent(
         new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
       );
     });
     expect(container.textContent).toContain("Store");
-    await act(async () =>
-      fireEvent.click(container.querySelector(".backdrop-blur-sm")!)
-    );
+    expect(container.querySelector("dialog")).not.toBeNull();
+    await act(async () => fireEvent.keyDown(document, { key: "Escape" }));
     expect(container.innerHTML).toBe("");
+
+    // native 'close' event (Esc/backdrop/programmatic) also closes via state
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+      );
+    });
+    expect(container.querySelector("dialog")).not.toBeNull();
+    await act(async () => {
+      container.querySelector("dialog")?.dispatchEvent(new Event("close"));
+    });
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("Escape defers to native dialog handling when close() exists", async () => {
+    // Browsers route Esc through `cancel`; the document fallback must not
+    // also setOpen(false) there. Stub close() to simulate native support.
+    const proto = HTMLDialogElement.prototype as unknown as { close?: () => void };
+    const had = "close" in proto;
+    const orig = proto.close;
+    proto.close = vi.fn();
+    try {
+      const { container } = render(<CommandPalette />);
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+        );
+      });
+      expect(container.textContent).toContain("Store");
+      await act(async () => fireEvent.keyDown(document, { key: "Escape" }));
+      expect(container.textContent).toContain("Store");
+    } finally {
+      if (had) proto.close = orig;
+      else delete proto.close;
+    }
   });
 });
 
@@ -139,7 +176,9 @@ describe("AgentCounter", () => {
 
     const { container, getByText } = render(<AgentCounter />);
     await waitFor(() => expect(container.textContent).toContain("7"));
-    expect(mockFetch.mock.calls[0][0]).toContain("/api/agents/counter-agent/default?method=getCount");
+    expect(mockFetch.mock.calls[0][0]).toContain(
+      "/api/agents/counter-agent/default?method=getCount"
+    );
 
     for (const label of [/^\+|increment/i, /decrement|^-$/i, /reset/i]) {
       const btn = [...container.querySelectorAll("button")].find((b) =>
@@ -165,29 +204,19 @@ describe("AgentCounter", () => {
 describe("ChunkReloadGuard", () => {
   it("reloads once on a chunk error, ignores repeats and non-chunk errors", async () => {
     render(<ChunkReloadGuard />);
-    const recover = () =>
-      sessionStorage.getItem("cl-chunk-reload");
+    const recover = () => sessionStorage.getItem("cl-chunk-reload");
 
     fireEvent(window, new ErrorEvent("error", { message: "boom" }));
     expect(recover()).toBeNull();
 
-    fireEvent(
-      window,
-      new ErrorEvent("error", { message: "Loading chunk abc-123 failed" })
-    );
+    fireEvent(window, new ErrorEvent("error", { message: "Loading chunk abc-123 failed" }));
     expect(recover()).toBe("1"); // flag set → reload attempted once
 
-    fireEvent(
-      window,
-      new ErrorEvent("error", { message: "Loading chunk abc-123 failed" })
-    );
+    fireEvent(window, new ErrorEvent("error", { message: "Loading chunk abc-123 failed" }));
     expect(recover()).toBe("1"); // still deduped
 
     sessionStorage.clear();
-    fireEvent(
-      window,
-      new Event("unhandledrejection") as unknown as PromiseRejectionEvent
-    );
+    fireEvent(window, new Event("unhandledrejection") as unknown as PromiseRejectionEvent);
     fireEvent(
       window,
       Object.assign(new Event("unhandledrejection"), {
@@ -242,16 +271,15 @@ describe("ContactFormSection campaign flow", () => {
 describe("StoreGrid semantic search", () => {
   it("orders results by /api/search hit ids and tracks the funnel", async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ source: "r2", hits: [{ id: "phy-tshirt" }] }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ source: "r2", hits: [{ id: "phy-tshirt" }] }), { status: 200 })
     );
     const { container } = render(<StoreGrid />);
     fireEvent.change(container.querySelector('input[type="search"], input[type="text"], input')!, {
       target: { value: "shirt" },
     });
-    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 400));
+    });
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/search?q=shirt"),
@@ -277,7 +305,9 @@ describe("StoreGrid semantic search", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { container } = render(<StoreGrid />);
     fireEvent.change(container.querySelector("input")!, { target: { value: "shirt" } });
-    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 400));
+    });
     expect(trackFunnelEvent).toHaveBeenCalledWith(
       "search_query",
       expect.objectContaining({ source: "local-fallback" })
@@ -332,9 +362,10 @@ describe("Navbar tails", () => {
     expect(menu.textContent).toContain("Sign Out");
 
     // Locale buttons call the setter and close the menu.
-    const el = [...menu.querySelectorAll("button")].find(
-      (b) => b.getAttribute("aria-label") === "Set language to Greek"
-    ) ?? [...menu.querySelectorAll("button")].find((b) => b.textContent?.trim() === "EL");
+    const el =
+      [...menu.querySelectorAll("button")].find(
+        (b) => b.getAttribute("aria-label") === "Set language to Greek"
+      ) ?? [...menu.querySelectorAll("button")].find((b) => b.textContent?.trim() === "EL");
     await act(async () => fireEvent.click(el!));
     expect(menuHidden(container)).toBe(true);
   });
@@ -448,14 +479,16 @@ describe("ContactFormSection — tails", () => {
 
   it("success screen → 'Send another message' resets back to the form", async () => {
     searchParamsRef.current = new URLSearchParams("");
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), { status: 200 })
-    );
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const { container } = render(<ContactFormSection source="t" />);
     await fillAndSubmit(container);
     expect(container.textContent).toContain("Message sent successfully");
     await act(async () => {
-      fireEvent.click([...container.querySelectorAll("button")].find(b => b.textContent?.includes("Send another message"))!);
+      fireEvent.click(
+        [...container.querySelectorAll("button")].find((b) =>
+          b.textContent?.includes("Send another message")
+        )!
+      );
     });
     expect(container.querySelector("form")).not.toBeNull();
   });

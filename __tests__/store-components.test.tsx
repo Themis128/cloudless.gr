@@ -207,6 +207,48 @@ describe("CartSlideOver", () => {
     expect(view.getByText("Checkout")).toBeTruthy();
   });
 
+  it("closes on Escape while open", () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+
+    fireEvent.click(view.getByText("Add to Cart"));
+    const drawer = container.querySelector('[data-testid="cart-drawer"]')!;
+    expect(drawer.getAttribute("data-open")).toBe("true");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(drawer.getAttribute("data-open")).toBe("false");
+  });
+
+  it("ignores non-Escape keys and Esc while another dialog is open", () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+
+    fireEvent.click(view.getByText("Add to Cart"));
+    const drawer = container.querySelector('[data-testid="cart-drawer"]')!;
+    expect(drawer.getAttribute("data-open")).toBe("true");
+
+    fireEvent.keyDown(document, { key: "a" });
+    expect(drawer.getAttribute("data-open")).toBe("true");
+
+    // Another modal <dialog> layered above must keep its own Esc handling.
+    const other = document.createElement("dialog");
+    other.setAttribute("open", "");
+    document.body.appendChild(other);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(drawer.getAttribute("data-open")).toBe("true");
+    other.remove();
+  });
+
   it("shows quantity controls for non-recurring products", () => {
     const { container } = render(
       <Wrapper>
@@ -648,9 +690,7 @@ describe("StoreGrid", () => {
       const search = container.querySelector('input[type="text"]')!;
       fireEvent.change(search, { target: { value: "audit" } });
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-      await waitFor(() =>
-        expect(view.getByText("No products match your search.")).toBeTruthy()
-      );
+      await waitFor(() => expect(view.getByText("No products match your search.")).toBeTruthy());
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -669,7 +709,12 @@ describe("CartSlideOver — Mobile", () => {
       </Wrapper>
     );
 
-    const closeBtn = within(container).getByRole("button", { name: "Close cart" });
+    // hidden: true — jsdom treats a closed <dialog> as display:none, so the
+    // always-mounted cart sheet is invisible to the accessibility tree there.
+    const closeBtn = within(container).getByRole("button", {
+      name: "Close cart",
+      hidden: true,
+    });
     expect(closeBtn.className).toMatch(/min-w-11|min-w-\[44px\]/);
     expect(closeBtn.className).toMatch(/min-h-11|min-h-\[44px\]/);
   });
