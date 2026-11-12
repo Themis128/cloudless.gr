@@ -14,6 +14,7 @@ describe("SOCIAL_ACCOUNTS", () => {
       "x",
       "credly",
       "whatsapp",
+      "viber",
       "telegram",
     ]);
   });
@@ -27,9 +28,10 @@ describe("SOCIAL_ACCOUNTS", () => {
 
   it("marks messaging channels as chat", () => {
     expect(SOCIAL_ACCOUNTS.find((a) => a.key === "whatsapp")?.kind).toBe("chat");
+    expect(SOCIAL_ACCOUNTS.find((a) => a.key === "viber")?.kind).toBe("chat");
     expect(SOCIAL_ACCOUNTS.find((a) => a.key === "telegram")?.kind).toBe("chat");
     expect(SOCIAL_ACCOUNTS.filter((a) => a.kind === "follow").length).toBe(
-      SOCIAL_ACCOUNTS.length - 2
+      SOCIAL_ACCOUNTS.length - 3
     );
   });
 });
@@ -40,7 +42,10 @@ describe("SocialLinks", () => {
     const links = container.querySelectorAll("a");
     expect(links).toHaveLength(SOCIAL_ACCOUNTS.length);
     for (const link of links) {
-      expect(link.getAttribute("target")).toBe("_blank");
+      const account = SOCIAL_ACCOUNTS.find(
+        (a) => link.getAttribute("aria-label") === `Cloudless on ${a.name} (${a.handle})`
+      );
+      expect(link.getAttribute("target")).toBe(account?.sameTab ? null : "_blank");
       expect(link.getAttribute("rel")).toContain("noopener");
     }
   });

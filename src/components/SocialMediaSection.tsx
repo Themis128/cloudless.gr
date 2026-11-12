@@ -51,7 +51,7 @@ export default function SocialMediaSection({ locale }: Readonly<{ locale: Locale
             <ScrollReveal key={account.key} delay={i * 60}>
               <a
                 href={account.href}
-                target="_blank"
+                target={account.sameTab ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 data-testid={`social-card-${account.key}`}
                 className="v2-hover-card group flex h-full flex-col rounded-xl p-5"
