@@ -1,7 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format-price";
 import ProductIcon from "@/components/store/ProductIcon";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -19,6 +19,17 @@ export default function CartSlideOver() {
   } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // Escape dismisses the drawer (it has no native <dialog> semantics — the
+  // slide-over stays mounted for its translate transition).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeCart();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, closeCart]);
 
   const hasSubscription = items.some((item) => item.product.recurring);
   const hasOneTime = items.some((item) => !item.product.recurring);
