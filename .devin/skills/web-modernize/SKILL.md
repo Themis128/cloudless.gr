@@ -62,6 +62,20 @@ checks **inline** in the handler/stylesheet:
   (`light dark`) and pin per theme attribute (`[data-theme="light"]` →
   `light`, `[data-theme="dark"]` → `dark`); emit
   `<meta name="color-scheme" content="light dark">` in the root layout.
+- **Modal overlays → native `<dialog>`** — replace `role="dialog"` +
+  `aria-modal` + manual focus-trap/Escape/focus-restore with
+  `showModal()` (see `src/components/CookieConsent.tsx`,
+  `src/components/CommandPalette.tsx`). For light dismiss add
+  `closedby="any"` via spread (`{...({ closedby: "any" } as
+  Record<string, string>)}` — TS doesn't know the attribute yet) plus a
+  **feature-detected** backdrop-click fallback gated on
+  `!("closedBy" in HTMLDialogElement.prototype)` — unconditional manual
+  dismiss listeners get flagged by the scanner. Guard `showModal()`/
+  `close()` for jsdom. Add `overscroll-behavior: contain` on
+  `dialog:modal` and `dialog::backdrop` (see `src/app/theme-v2.css`).
+  Skip conversion when the element must stay mounted for enter/exit
+  transitions or e2e selectors depend on its structure (e.g.
+  `CartSlideOver`) — add an Escape handler instead.
 
 For other guides, follow the guide verbatim; when it offers fallbacks, pick
 the Baseline-safe one unless the codebase already requires otherwise.
