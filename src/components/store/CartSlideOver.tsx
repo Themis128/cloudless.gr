@@ -137,8 +137,19 @@ export default function CartSlideOver() {
           behavior: "auto",
         });
       }
-    } else if (dialog.open && typeof scroller.scrollTo === "function") {
-      scroller.scrollTo({ left: 0, behavior: "auto" });
+    } else if (dialog.open) {
+      if (typeof scroller.scrollTo === "function" && scroller.scrollLeft > 1) {
+        // Re-arm the observer's closed detection: if the open was interrupted
+        // before the sheet passed ~50% visibility, sawOpen was never set and
+        // the observer would ignore the return to the closed stop — leaving
+        // an invisible modal <dialog> blocking the page.
+        sawOpenRef.current = true;
+        scroller.scrollTo({ left: 0, behavior: "auto" });
+      } else if (typeof dialog.close === "function") {
+        // Already parked at the closed stop (open interrupted instantly) —
+        // no scroll will happen for the observer to detect; close directly.
+        dialog.close();
+      }
     }
     /* v8 ignore stop */
   }, [isOpen]);
