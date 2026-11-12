@@ -84,6 +84,7 @@ export default function CookieConsent() {
     // Light-dismiss fallback for browsers without `closedby` support (Safari):
     // clicks on ::backdrop target the <dialog> itself — close only when the
     // pointer is outside the dialog's content box.
+    /* v8 ignore next -- only runs in browsers lacking closedBy; jsdom can't exercise it */
     const handleBackdropClick = (e: MouseEvent) => {
       if (e.target !== dialog) return;
       const rect = dialog.getBoundingClientRect();

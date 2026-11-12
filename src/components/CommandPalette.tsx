@@ -58,6 +58,7 @@ export default function CommandPalette() {
 
     // Light-dismiss fallback for browsers without `closedby` (Safari):
     // ::backdrop clicks target the <dialog> — close only outside its box.
+    /* v8 ignore next -- only runs in browsers lacking closedBy; jsdom can't exercise it */
     const handleBackdropClick = (e: MouseEvent) => {
       if (e.target !== dialog) return;
       const rect = dialog.getBoundingClientRect();

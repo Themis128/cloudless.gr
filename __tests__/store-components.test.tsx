@@ -207,6 +207,23 @@ describe("CartSlideOver", () => {
     expect(view.getByText("Checkout")).toBeTruthy();
   });
 
+  it("closes on Escape while open", () => {
+    const { container } = render(
+      <Wrapper>
+        <AddToCartButton product={mockProduct} />
+        <CartSlideOver />
+      </Wrapper>
+    );
+    const view = within(container);
+
+    fireEvent.click(view.getByText("Add to Cart"));
+    const drawer = container.querySelector('[data-testid="cart-drawer"]')!;
+    expect(drawer.getAttribute("data-open")).toBe("true");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(drawer.getAttribute("data-open")).toBe("false");
+  });
+
   it("shows quantity controls for non-recurring products", () => {
     const { container } = render(
       <Wrapper>
@@ -648,9 +665,7 @@ describe("StoreGrid", () => {
       const search = container.querySelector('input[type="text"]')!;
       fireEvent.change(search, { target: { value: "audit" } });
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-      await waitFor(() =>
-        expect(view.getByText("No products match your search.")).toBeTruthy()
-      );
+      await waitFor(() => expect(view.getByText("No products match your search.")).toBeTruthy());
     } finally {
       globalThis.fetch = originalFetch;
     }
