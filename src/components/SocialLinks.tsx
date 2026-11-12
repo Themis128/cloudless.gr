@@ -24,11 +24,11 @@ const sizeClasses: Record<SocialLinksSize, string> = {
 export default function SocialLinks({ size = "sm", className = "" }: Readonly<SocialLinksProps>) {
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
-      {SOCIAL_ACCOUNTS.map(({ key, name, handle, href, icon }) => (
+      {SOCIAL_ACCOUNTS.map(({ key, name, handle, href, icon, sameTab }) => (
         <a
           key={key}
           href={href}
-          target="_blank"
+          target={sameTab ? undefined : "_blank"}
           rel="noopener noreferrer"
           aria-label={`Cloudless on ${name} (${handle})`}
           className={`bg-void-light/50 hover:text-neon-cyan hover:border-neon-cyan/30 active:text-neon-cyan flex items-center justify-center rounded-lg border border-slate-800 text-slate-400 transition-colors ${sizeClasses[size]}`}
