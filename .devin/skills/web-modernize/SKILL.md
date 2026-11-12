@@ -106,7 +106,14 @@ Record<string, string>)}` — TS doesn't know the attribute yet) plus a
   observer effect runs once; and only treat a below-threshold
   IntersectionObserver entry as "closed" after the sheet was seen open
   (`ratio > 0.5` flag) — the initial ratio-0 delivery during the open
-  scroll animation otherwise slams the drawer shut. For a RIGHT-edge
+  scroll animation otherwise slams the drawer shut. Every dismiss path
+  (React `isOpen→false`, backdrop tap, `cancel`, swipe settle) must share
+  one helper that re-arms the seen-open flag and closes directly when the
+  scroller is already parked at the closed stop — plus a scroll-settle
+  debounce (`scrollLeft <= 1` after ~150ms quiet) as the backstop for
+  gesture-driven closes the observer's flag would otherwise ignore,
+  otherwise an interrupted open leaves an invisible modal `<dialog>`
+  blocking the page. For a RIGHT-edge
   drawer put the spacer column
   first (`grid-template-columns: 100% var(--w)`), sheet `grid-column: 2` +
   `scroll-snap-align: end`, spacer `scroll-snap-align: start` — scrollLeft
