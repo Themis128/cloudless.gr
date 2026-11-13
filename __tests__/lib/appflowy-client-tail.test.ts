@@ -226,6 +226,19 @@ describe("getDocument + collab extraction", () => {
     expect(doc.text).toContain("**Rating**: 5");
   });
 
+  it("does not skip to an internal colon inside a long scalar value", async () => {
+    cfgSecret();
+    // Value contains its own `: ` — the attempt must stay on the field's
+    // delimiter colon, fail the 59-char lookahead, and let the quoted
+    // pattern take the whole value.
+    const long = "Nov 14: meeting notes from the quarterly planning session held today";
+    const blob = Buffer.from(`x **Date**: ${long}'`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain(`**Date**: ${long}`);
+  });
+
   it("falls back to latin-string extraction for plain content", async () => {
     cfgSecret();
     const blob = Buffer.from("garbage A sentence with enough words to survive the filter.");

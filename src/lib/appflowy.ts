@@ -429,19 +429,23 @@ function extractStringsFromCollab(encoded: unknown): string {
       // The `'` terminator is the next delta's length byte — a field whose
       // value is the LAST delta in the collab text_map has no `'` after it
       // (observed live: `**Featured**: true` tail delta silently parsed as
-      // featured=false). For scalar keys the tight printable-char pattern
-      // runs FIRST: it stops at control bytes/quotes, preserves decimals
-      // and hyphens, and can't be fooled by a stray `'` into junk capture.
-      // The bounded scalar run is only valid when it TERMINATES at a
-      // control byte or quote (negative lookahead) — a longer scalar or
-      // one containing `\` fails the lookahead and drops to the quoted
-      // pattern instead of silently truncating. The ^…{0,40} anchor keeps
-      // the attempt near the key so a rejected long value can't skip ahead
-      // to the NEXT field's `: value` inside the same window.
-      const valueMatch = SCALAR_CMS_KEYS.has(key)
-        ? (/^[\s\S]{0,40}?:\s*([^\x00-\x1f\x7f']{1,59})(?![^\x00-\x1f\x7f'])/.exec(window) ??
-          /:\s*([^']{1,800})'/.exec(window))
-        : /:\s*([^']{1,800})'/.exec(window);
+      // featured=false). For scalar keys the bounded printable-char
+      // pattern runs FIRST: it stops at control bytes/quotes, preserves
+      // decimals and hyphens, and can't be fooled by a stray `'` into junk
+      // capture. The attempt is anchored to the FIRST `:` in the window
+      // (the field's own delimiter) — a rejected long value falls through
+      // to the quoted pattern instead of skipping to an internal or
+      // next-field colon.
+      let valueMatch: RegExpExecArray | null = null;
+      if (SCALAR_CMS_KEYS.has(key)) {
+        const colon = window.indexOf(":");
+        if (colon >= 0 && colon <= 40) {
+          valueMatch = /^:\s*([^\x00-\x1f\x7f']{1,59})(?![^\x00-\x1f\x7f'])/.exec(
+            window.slice(colon)
+          );
+        }
+      }
+      valueMatch ??= /:\s*([^']{1,800})'/.exec(window);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")
           .toString("utf8")
