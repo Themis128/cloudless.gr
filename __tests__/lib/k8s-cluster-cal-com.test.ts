@@ -228,15 +228,16 @@ describe("cal-com", () => {
         status: "success",
         data: {
           slots: {
-            "2026-01-02": [{ time: "2026-01-02T10:00:00Z" }],
-            "2026-01-01": [{ time: "2026-01-01T09:00:00Z" }],
+            "2026-01-02": [{ time: "2026-01-02T12:00:00+02:00" }],
+            "2026-01-01": [{ time: "2026-01-01T11:00:00+02:00" }],
           },
         },
       })
     );
     const slots = await getAvailableSlots(3);
     expect(slots).toHaveLength(2);
-    expect(slots[0].start).toBe("2026-01-01T09:00:00Z"); // day sort
+    // offset times normalize to UTC ISO (toISOString emits .000Z)
+    expect(slots[0].start).toBe("2026-01-01T09:00:00.000Z"); // day sort
     expect(slots[0].end).toBe("2026-01-01T09:30:00.000Z");
     const url = vi.mocked(fetch).mock.calls[0][0] as string;
     expect(url).toContain("eventTypeId=4923747");
