@@ -429,10 +429,12 @@ function extractStringsFromCollab(encoded: unknown): string {
       // The `'` terminator is the next delta's length byte — a field whose
       // value is the LAST delta in the collab text_map has no `'` after it
       // (observed live: `**Featured**: true` tail delta silently parsed as
-      // featured=false). Scalar keys get a tight fallback for that case.
-      const valueMatch =
-        /:\s*([^']{1,800})'/.exec(window) ??
-        (SCALAR_CMS_KEYS.has(key) ? /:\s*([A-Za-z0-9✅]{1,40})(?![A-Za-z0-9])/.exec(window) : null);
+      // featured=false). For scalar keys the tight printable-char pattern
+      // runs FIRST: it stops at control bytes/quotes, preserves decimals
+      // and hyphens, and can't be fooled by a stray `'` into junk capture.
+      const valueMatch = SCALAR_CMS_KEYS.has(key)
+        ? (/:\s*([^\x00-\x1f\x7f'\\]{1,60})/.exec(window) ?? /:\s*([^']{1,800})'/.exec(window))
+        : /:\s*([^']{1,800})'/.exec(window);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")
           .toString("utf8")

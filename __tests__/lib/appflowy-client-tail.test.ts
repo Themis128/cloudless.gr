@@ -192,12 +192,25 @@ describe("getDocument + collab extraction", () => {
     cfgSecret();
     // In a real collab blob a tail-position `: true` ends with \0, not ' —
     // the `'`-terminated regex must not be the only path for scalar keys.
-    const blob = Buffer.from(`x **Rating**: 5' y **Featured**: true\u0000`);
+    const blob = Buffer.from(`x **Rating**: 4.5' y **Featured**: true\u0000`);
     mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
     const mod = await import("@/lib/appflowy");
     const doc = (await mod.getDocument("w", "v")) as { text: string };
-    expect(doc.text).toContain("**Rating**: 5");
+    expect(doc.text).toContain("**Rating**: 4.5");
     expect(doc.text).toContain("**Featured**: true");
+  });
+
+  it("does not capture junk when a stray ' precedes a scalar tail delta", async () => {
+    cfgSecret();
+    // A stray ' after alphanumeric junk makes the quoted regex capture
+    // `true\x00abc` → cleaned `trueabc` → strict equality fails. The scalar
+    // path stops at the control byte and stays exact.
+    const blob = Buffer.from(`x **Featured**: true\u0000abc'junk`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain("**Featured**: true");
+    expect(doc.text).not.toContain("\ufffd");
   });
 
   it("falls back to latin-string extraction for plain content", async () => {
