@@ -432,9 +432,7 @@ function extractStringsFromCollab(encoded: unknown): string {
       // featured=false). Scalar keys get a tight fallback for that case.
       const valueMatch =
         /:\s*([^']{1,800})'/.exec(window) ??
-        (SCALAR_CMS_KEYS.has(key)
-          ? /:\s*([A-Za-z0-9✅]{1,40})(?![A-Za-z0-9])/.exec(window)
-          : null);
+        (SCALAR_CMS_KEYS.has(key) ? /:\s*([A-Za-z0-9✅]{1,40})(?![A-Za-z0-9])/.exec(window) : null);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")
           .toString("utf8")
