@@ -432,8 +432,13 @@ function extractStringsFromCollab(encoded: unknown): string {
       // featured=false). For scalar keys the tight printable-char pattern
       // runs FIRST: it stops at control bytes/quotes, preserves decimals
       // and hyphens, and can't be fooled by a stray `'` into junk capture.
+      // The bounded scalar run is only valid when it TERMINATES at a
+      // control byte or quote (negative lookahead) — a longer scalar or
+      // one containing `\` fails the lookahead and drops to the quoted
+      // pattern instead of silently truncating.
       const valueMatch = SCALAR_CMS_KEYS.has(key)
-        ? (/:\s*([^\x00-\x1f\x7f'\\]{1,60})/.exec(window) ?? /:\s*([^']{1,800})'/.exec(window))
+        ? (/:\s*([^\x00-\x1f\x7f']{1,59})(?![^\x00-\x1f\x7f'])/.exec(window) ??
+          /:\s*([^']{1,800})'/.exec(window))
         : /:\s*([^']{1,800})'/.exec(window);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")

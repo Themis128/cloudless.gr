@@ -213,6 +213,16 @@ describe("getDocument + collab extraction", () => {
     expect(doc.text).not.toContain("\ufffd");
   });
 
+  it("falls back to the quoted pattern for scalar values over 59 chars", async () => {
+    cfgSecret();
+    const long = "November 14, 2026 — long-form date string padded out beyond sixty chars";
+    const blob = Buffer.from(`x **Date**: ${long}'`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain(`**Date**: ${long}`);
+  });
+
   it("falls back to latin-string extraction for plain content", async () => {
     cfgSecret();
     const blob = Buffer.from("garbage A sentence with enough words to survive the filter.");
