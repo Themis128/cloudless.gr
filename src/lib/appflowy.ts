@@ -435,9 +435,11 @@ function extractStringsFromCollab(encoded: unknown): string {
       // The bounded scalar run is only valid when it TERMINATES at a
       // control byte or quote (negative lookahead) — a longer scalar or
       // one containing `\` fails the lookahead and drops to the quoted
-      // pattern instead of silently truncating.
+      // pattern instead of silently truncating. The ^…{0,40} anchor keeps
+      // the attempt near the key so a rejected long value can't skip ahead
+      // to the NEXT field's `: value` inside the same window.
       const valueMatch = SCALAR_CMS_KEYS.has(key)
-        ? (/:\s*([^\x00-\x1f\x7f']{1,59})(?![^\x00-\x1f\x7f'])/.exec(window) ??
+        ? (/^[\s\S]{0,40}?:\s*([^\x00-\x1f\x7f']{1,59})(?![^\x00-\x1f\x7f'])/.exec(window) ??
           /:\s*([^']{1,800})'/.exec(window))
         : /:\s*([^']{1,800})'/.exec(window);
       if (valueMatch?.[1]) {
