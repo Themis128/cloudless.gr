@@ -188,6 +188,57 @@ describe("getDocument + collab extraction", () => {
     expect(doc.text).toContain("**Slug**: acme-corp");
   });
 
+  it("extracts scalar fields whose value is the tail delta (no ' terminator)", async () => {
+    cfgSecret();
+    // In a real collab blob a tail-position `: true` ends with \0, not ' —
+    // the `'`-terminated regex must not be the only path for scalar keys.
+    const blob = Buffer.from(`x **Rating**: 4.5' y **Featured**: true\u0000`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain("**Rating**: 4.5");
+    expect(doc.text).toContain("**Featured**: true");
+  });
+
+  it("does not capture junk when a stray ' precedes a scalar tail delta", async () => {
+    cfgSecret();
+    // A stray ' after alphanumeric junk makes the quoted regex capture
+    // `true\x00abc` → cleaned `trueabc` → strict equality fails. The scalar
+    // path stops at the control byte and stays exact.
+    const blob = Buffer.from(`x **Featured**: true\u0000abc'junk`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain("**Featured**: true");
+    expect(doc.text).not.toContain("\ufffd");
+  });
+
+  it("falls back to the quoted pattern for scalar values over 59 chars", async () => {
+    cfgSecret();
+    const long = "November 14, 2026 — long-form date string padded out beyond sixty chars";
+    // A later `: value` sits inside the same window — the scalar attempt
+    // must not skip the long Date and capture Rating's `5` instead.
+    const blob = Buffer.from(`x **Date**: ${long}' y **Rating**: 5'`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain(`**Date**: ${long}`);
+    expect(doc.text).toContain("**Rating**: 5");
+  });
+
+  it("does not skip to an internal colon inside a long scalar value", async () => {
+    cfgSecret();
+    // Value contains its own `: ` — the attempt must stay on the field's
+    // delimiter colon, fail the 59-char lookahead, and let the quoted
+    // pattern take the whole value.
+    const long = "Nov 14: meeting notes from the quarterly planning session held today";
+    const blob = Buffer.from(`x **Date**: ${long}'`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain(`**Date**: ${long}`);
+  });
+
   it("falls back to latin-string extraction for plain content", async () => {
     cfgSecret();
     const blob = Buffer.from("garbage A sentence with enough words to survive the filter.");
