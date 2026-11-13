@@ -117,8 +117,10 @@ export async function getAvailableSlots(daysAhead = DEFAULT_DAYS_AHEAD): Promise
 
   for (const day of Object.keys(slotsByDay).sort()) {
     for (const entry of slotsByDay[day]) {
-      const start = entry.time;
-      const end = new Date(new Date(start).getTime() + slotDurationMs).toISOString();
+      // Cal.com returns `time` in the requested timeZone (e.g. +02:00) —
+      // normalize both ends to UTC ISO to match the google-calendar contract.
+      const start = new Date(entry.time).toISOString();
+      const end = new Date(new Date(entry.time).getTime() + slotDurationMs).toISOString();
       slots.push({ start, end });
     }
   }
