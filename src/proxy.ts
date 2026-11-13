@@ -223,17 +223,17 @@ function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse
 function buildCSP(nonce: string): string {
   return `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://challenges.cloudflare.com;
     style-src 'self' 'unsafe-inline' https:;
     img-src 'self' data: https: blob:;
     font-src 'self' https: data:;
-    connect-src 'self' https: wss: https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://snap.licdn.com https://px.ads.linkedin.com;
+    connect-src 'self' https: wss: https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://snap.licdn.com https://px.ads.linkedin.com https://challenges.cloudflare.com;
     media-src 'self' https:;
     worker-src blob: 'self';
     object-src 'none';
     base-uri 'self';
     form-action 'self' https://www.facebook.com https://connect.facebook.net;
-    frame-src 'self' https://www.googletagmanager.com https://td.doubleclick.net;
+    frame-src 'self' https://www.googletagmanager.com https://td.doubleclick.net https://challenges.cloudflare.com;
     frame-ancestors 'none';
     ${IS_DEV ? "" : "upgrade-insecure-requests;"}
     report-uri /api/csp-report;
