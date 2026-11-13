@@ -188,6 +188,18 @@ describe("getDocument + collab extraction", () => {
     expect(doc.text).toContain("**Slug**: acme-corp");
   });
 
+  it("extracts scalar fields whose value is the tail delta (no ' terminator)", async () => {
+    cfgSecret();
+    // In a real collab blob a tail-position `: true` ends with \0, not ' —
+    // the `'`-terminated regex must not be the only path for scalar keys.
+    const blob = Buffer.from(`x **Rating**: 5' y **Featured**: true\u0000`);
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain("**Rating**: 5");
+    expect(doc.text).toContain("**Featured**: true");
+  });
+
   it("falls back to latin-string extraction for plain content", async () => {
     cfgSecret();
     const blob = Buffer.from("garbage A sentence with enough words to survive the filter.");

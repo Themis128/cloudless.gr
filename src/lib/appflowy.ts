@@ -388,6 +388,18 @@ const CMS_FIELD_KEYS = [
   "CTA",
 ] as const;
 
+// Keys whose values are short scalars/tokens — eligible for the tail-delta
+// fallback when no `'` terminator follows the value in the collab blob.
+const SCALAR_CMS_KEYS = new Set<string>([
+  "Featured",
+  "Published",
+  "Rating",
+  "Price",
+  "Order",
+  "Date",
+  "Locale",
+]);
+
 function extractStringsFromCollab(encoded: unknown): string {
   if (!encoded) return "";
   let blob: Buffer;
@@ -414,7 +426,15 @@ function extractStringsFromCollab(encoded: unknown): string {
         match.index + match[0].length,
         match.index + match[0].length + 900
       );
-      const valueMatch = /:\s*([^']{1,800})'/.exec(window);
+      // The `'` terminator is the next delta's length byte — a field whose
+      // value is the LAST delta in the collab text_map has no `'` after it
+      // (observed live: `**Featured**: true` tail delta silently parsed as
+      // featured=false). Scalar keys get a tight fallback for that case.
+      const valueMatch =
+        /:\s*([^']{1,800})'/.exec(window) ??
+        (SCALAR_CMS_KEYS.has(key)
+          ? /:\s*([A-Za-z0-9✅]{1,40})(?![A-Za-z0-9])/.exec(window)
+          : null);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")
           .toString("utf8")
