@@ -1,7 +1,7 @@
 /**
  * Shared helpers for the k3s standby suite.
  */
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 
 const _apexHost = process.env.K3S_HOST ?? "cloudless.gr";
 export const PRIMARY_HOST = _apexHost;
@@ -88,4 +88,18 @@ export function isNetworkError(err: unknown): boolean {
 
 export function isOriginDown(status: number): boolean {
   return status === 502 || status === 503 || status === 504 || status === 521 || status === 522;
+}
+
+/**
+ * Stub Cloudflare Turnstile for browser tests against the live site.
+ * Since the real sitekey is baked into the Pi build (#2423), the widget
+ * keeps retrying its private-access-token challenge (401s) in headless
+ * Chromium, so "networkidle" never settles and page.goto times out.
+ * Turnstile is third-party and not under test here, so serve an empty
+ * script for every challenges.cloudflare.com request.
+ */
+export async function stubTurnstile(page: Page): Promise<void> {
+  await page.route("https://challenges.cloudflare.com/**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/javascript", body: "" }),
+  );
 }
