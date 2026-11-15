@@ -9,6 +9,7 @@
  */
 
 import { test, expect, type Page } from "../coverage";
+import { stubTurnstile } from "./_helpers";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -233,6 +234,10 @@ test.describe("k3s Typography", () => {
 // ── CSS / JS asset loading on live cluster ─────────────────────────────────
 
 test.describe("k3s CSS / asset loading", () => {
+  test.beforeEach(async ({ page }) => {
+    await stubTurnstile(page);
+  });
+
   test("no CSS asset requests return 4xx on homepage", async ({ page }) => {
     const failed: string[] = [];
     page.on("response", (r) => {

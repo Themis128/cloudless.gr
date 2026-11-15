@@ -4,8 +4,13 @@
  * the canary for Lambda response-size limits (6 MB hard cap for binary).
  */
 import { test, expect } from "../coverage";
+import { stubTurnstile } from "./_helpers";
 
 test.describe("k3s static assets", () => {
+  test.beforeEach(async ({ page }) => {
+    await stubTurnstile(page);
+  });
+
   test("homepage chunks all return 200", async ({ page }) => {
     const failures: { url: string; status: number; type: string }[] = [];
     page.on("response", (r) => {
@@ -43,7 +48,7 @@ test.describe("k3s static assets", () => {
       // ad blockers, or geo-restricted Stripe/EspoCRM/Sentry endpoints will
       // routinely produce console.error noise on first load.
       const thirdParty =
-        /(stripe|hubspot|sentry|facebook|hsforms|hs-scripts|googletagmanager|google-analytics)/i;
+        /(stripe|hubspot|sentry|facebook|hsforms|hs-scripts|googletagmanager|google-analytics|challenges\.cloudflare\.com|turnstile)/i;
       if (thirdParty.test(url) || thirdParty.test(t)) return;
       fatal.push(`console.error: ${t}`);
     });
