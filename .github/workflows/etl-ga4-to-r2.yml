@@ -17,6 +17,7 @@ jobs:
   etl:
     name: Run GA4 → R2 sync
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    environment: ga4
     timeout-minutes: 20
 
     steps:
