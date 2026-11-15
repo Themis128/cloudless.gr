@@ -45,6 +45,10 @@ vi.mock("@/lib/admin-notifications", () => ({
   recordNotification: vi.fn(),
 }));
 
+vi.mock("@/lib/linkedin-server-conversion", () => ({
+  fireLinkedInServerConversion: vi.fn().mockResolvedValue(undefined),
+}));
+
 function makeRequest(body: unknown): Request {
   return new globalThis.Request("http://localhost:4000/api/subscribe", {
     method: "POST",
@@ -85,6 +89,17 @@ describe("POST /api/subscribe", () => {
     expect(data.success).toBe(true);
     expect(notifyTeamMock).toHaveBeenCalledTimes(1);
     expect(notifyTeamMock.mock.calls[0][0]).toContain("New subscriber");
+
+    const { fireLinkedInServerConversion } = await import(
+      "@/lib/linkedin-server-conversion"
+    );
+    expect(fireLinkedInServerConversion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "signup",
+        email: "hello@cloudless.gr",
+        eventId: data.eventId,
+      })
+    );
   });
 
   it("marks the subscriber as a newsletter signup in EspoCRM", async () => {

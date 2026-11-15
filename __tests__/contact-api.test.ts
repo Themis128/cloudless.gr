@@ -7,6 +7,10 @@ vi.mock("@/lib/rate-limit", () => ({
   resetRateLimitStore: vi.fn(),
 }));
 
+vi.mock("@/lib/linkedin-server-conversion", () => ({
+  fireLinkedInServerConversion: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockSendEmailResend = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/email-resend", () => ({
@@ -92,6 +96,17 @@ describe("POST /api/contact", () => {
     const data = await response.json();
     expect(data.success).toBe(true);
     // Vitest sets NODE_ENV=test — contact route skips Resend in test/E2E.
+
+    const { fireLinkedInServerConversion } = await import(
+      "@/lib/linkedin-server-conversion"
+    );
+    expect(fireLinkedInServerConversion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "contact_created",
+        email: "themis@test.com",
+        eventId: data.eventId,
+      })
+    );
   });
 
   it("returns 200 with all optional fields included", async () => {
