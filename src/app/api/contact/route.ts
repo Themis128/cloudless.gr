@@ -14,6 +14,7 @@ import { saveSubmission } from "@/lib/appflowy-forms";
 import { trackEvent } from "@/lib/appflowy-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
+import { fireLinkedInServerConversion } from "@/lib/linkedin-server-conversion";
 import { generateEventId } from "@/lib/meta-pixel";
 import { mapIntegrationError } from "@/lib/api-errors";
 import {
@@ -426,6 +427,8 @@ export async function POST(request: Request) {
       eventSourceUrl: request.headers.get("referer") ?? "https://cloudless.gr/contact",
       source: formSource,
     }).catch(() => {});
+
+    void fireLinkedInServerConversion({ event: "contact_created", email, eventId });
 
     return Response.json({ success: true, eventId });
   } catch (error) {
