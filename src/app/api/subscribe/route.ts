@@ -11,6 +11,7 @@ import { sendContactEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { trackEvent } from "@/lib/appflowy-analytics";
 import { sendSocialAutoEventServer } from "@/lib/socialauto-analytics-server";
+import { fireLinkedInServerConversion } from "@/lib/linkedin-server-conversion";
 
 export async function GET() {
   return Response.json({ error: "POST only" }, { status: 405 });
@@ -128,6 +129,8 @@ export async function POST(request: Request) {
       },
       request
     ).catch(() => {});
+
+    void fireLinkedInServerConversion({ event: "signup", email, eventId });
 
     return Response.json({ success: true, eventId });
   } catch (error) {

@@ -19,6 +19,7 @@ import {
   markStripeEventFailed,
 } from "@/lib/stripe-transactions";
 import { sendPurchaseEvent } from "@/lib/meta-capi";
+import { fireLinkedInServerConversion } from "@/lib/linkedin-server-conversion";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
 /**
@@ -85,6 +86,13 @@ async function handleCheckoutCompleted(
   const paymentCollected = session.payment_status === "paid" || session.mode === "subscription";
 
   if (session.customer_email && paymentCollected) {
+    void fireLinkedInServerConversion({
+      event: "purchase",
+      email: session.customer_email,
+      value: session.amount_total != null ? session.amount_total / 100 : null,
+      currency: (session.currency ?? "eur").toUpperCase(),
+      eventId: session.id,
+    });
     await sendOrderConfirmation(
       session.customer_email,
       session.id,
