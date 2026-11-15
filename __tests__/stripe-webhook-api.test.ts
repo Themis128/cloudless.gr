@@ -50,6 +50,10 @@ vi.mock("@/lib/admin-notifications", () => ({
   recordNotification: vi.fn(),
 }));
 
+vi.mock("@/lib/linkedin-server-conversion", () => ({
+  fireLinkedInServerConversion: vi.fn().mockResolvedValue(undefined),
+}));
+
 function makeRequest(body: string, signature?: string) {
   return new NextRequest("http://localhost:4000/api/webhooks/stripe", {
     method: "POST",
@@ -273,6 +277,17 @@ describe("stripe webhook — tail branches", () => {
     const res = await POST(makeRequest("{}", "sig"));
     expect(res.status).toBe(200);
     expect(notifyTeamMock).toHaveBeenCalled();
+
+    const { fireLinkedInServerConversion } = await import(
+      "@/lib/linkedin-server-conversion"
+    );
+    expect(fireLinkedInServerConversion).toHaveBeenCalledWith({
+      event: "purchase",
+      email: "b@x.dev",
+      value: 99,
+      currency: "EUR",
+      eventId: "cs_1",
+    });
   });
 
   it("espo deal failure is swallowed", async () => {
