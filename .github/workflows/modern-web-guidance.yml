@@ -37,6 +37,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -46,7 +48,37 @@ jobs:
         id: scan
         run: |
           set +e
-          npx -y modern-web-guidance@latest legacy-scan . --json > mwg-scan.json
+          # Scope to files changed by this PR/push — the gate exists to catch
+          # patterns a change *introduces*, not pre-existing repo-wide debt
+          # (a floated @latest scanner release must not retroactively fail
+          # every open PR).
+          case "${{ github.event_name }}" in
+            pull_request)
+              changed=$(git diff --name-only --diff-filter=ACMR "${{ github.event.pull_request.base.sha }}...HEAD")
+              ;;
+            push)
+              if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+                changed=$(git diff --name-only --diff-filter=ACMR "${{ github.event.before }}..HEAD")
+              else
+                changed=$(git diff --name-only --diff-filter=ACMR "HEAD~1..HEAD")
+              fi
+              ;;
+            *)
+              # workflow_dispatch / other events: diff the checked-out ref
+              # against the default branch so a manual run reports the same
+              # introduced-pattern scope as a PR. fetch-depth: 0 above gives
+              # us full history for all branches, so origin/<default> exists.
+              defbranch="${{ github.event.repository.default_branch }}"
+              changed=$(git diff --name-only --diff-filter=ACMR "origin/${defbranch}...HEAD" 2>/dev/null \
+                || git diff --name-only --diff-filter=ACMR "HEAD~1..HEAD")
+              ;;
+          esac
+          mapfile -t file_list < <(printf '%s\n' "$changed" | grep -E '\.(jsx?|tsx?|mjs|cjs|css|html?)$' | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done)
+          if [ "${#file_list[@]}" -eq 0 ]; then
+            echo '{"totalFindings":0}' > mwg-scan.json
+          else
+            npx -y modern-web-guidance@latest legacy-scan "${file_list[@]}" --json > mwg-scan.json
+          fi
           set -e
           count=$(jq -r '.totalFindings' mwg-scan.json)
           echo "count=$count" >> "$GITHUB_OUTPUT"
