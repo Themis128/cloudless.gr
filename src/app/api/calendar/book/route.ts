@@ -15,6 +15,11 @@ import {
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { provisionTalkRoom } from "@/lib/socialauto";
+import {
+  parseAttributionField,
+  formatAttribution,
+  attributionToCalMetadata,
+} from "@/lib/lead-attribution";
 
 export async function POST(request: Request) {
   // Two intentional layers (not a mismatch): proxy.ts caps bursts at 3/60s,
@@ -29,14 +34,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, start, end, notes, privacyConsent } = (await request.json()) as {
-      name?: string;
-      email?: string;
-      start?: string;
-      end?: string;
-      notes?: string;
-      privacyConsent?: boolean;
-    };
+    const { name, email, start, end, notes, privacyConsent, attribution } =
+      (await request.json()) as {
+        name?: string;
+        email?: string;
+        start?: string;
+        end?: string;
+        notes?: string;
+        privacyConsent?: boolean;
+        attribution?: unknown;
+      };
 
     if (!name || !email || !start || !end) {
       return NextResponse.json(
@@ -78,7 +85,21 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join("\n") || undefined;
 
-    const result = await bookConsultation({ name, email, start, end, notes: bookingNotes });
+    const parsedAttribution = parseAttributionField(attribution);
+    if (!parsedAttribution.ok) {
+      return NextResponse.json({ error: parsedAttribution.error }, { status: 400 });
+    }
+    const bookingAttribution = parsedAttribution.data ?? null;
+    const attributionLine = bookingAttribution ? formatAttribution(bookingAttribution) : "";
+
+    const result = await bookConsultation({
+      name,
+      email,
+      start,
+      end,
+      notes: bookingNotes,
+      metadata: attributionToCalMetadata(bookingAttribution),
+    });
 
     if (!result) {
       return NextResponse.json({ error: "Failed to create booking." }, { status: 500 });
@@ -95,7 +116,11 @@ export async function POST(request: Request) {
       message: `${String(name)} (${String(email)}) booked ${String(start)}`,
       actor: String(email),
       route: "/api/calendar/book",
-      metadata: { start, notes: notes ? String(notes).slice(0, 500) : null },
+      metadata: {
+        start,
+        notes: notes ? String(notes).slice(0, 500) : null,
+        attribution: attributionLine || null,
+      },
     });
 
     // EspoCRM: upsert contact + create consultation deal (fire-and-forget)
@@ -113,6 +138,7 @@ export async function POST(request: Request) {
             `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
             ...(notes ? [`Notes: ${notes}`] : []),
             ...(talkLink ? [`Talk room: ${talkLink}`] : []),
+            ...(attributionLine ? [`Attribution: ${attributionLine}`] : []),
           ];
           await createContactNote(contactId, noteLines.join("\n"));
         }
@@ -139,6 +165,7 @@ export async function POST(request: Request) {
             `Consultation booked: ${new Date(start).toLocaleString("en-IE", { timeZone: "Europe/Athens" })}`,
             ...(notes ? [`Notes: ${notes}`] : []),
             ...(talkLink ? [`Talk room: ${talkLink}`] : []),
+            ...(attributionLine ? [`Attribution: ${attributionLine}`] : []),
           ].join("\n"),
         });
       } catch (err) {

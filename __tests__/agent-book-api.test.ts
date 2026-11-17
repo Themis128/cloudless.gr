@@ -310,6 +310,47 @@ describe("POST /api/agent/book", () => {
     expect(res.status).toBe(400);
   });
 
+  it("confirm: forwards sanitized attribution metadata to Cal.com", async () => {
+    const start = new Date(Date.now() + 86_400_000).toISOString();
+    const end = new Date(Date.now() + 86_400_000 + 1_800_000).toISOString();
+    mockGetAvailableSlots.mockResolvedValueOnce([{ start, end }]);
+    mockBookConsultation.mockResolvedValueOnce({
+      eventId: "evt_attr",
+      htmlLink: "https://meet.google.com/attr",
+    });
+
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(
+      authPost(
+        {
+          confirm: true,
+          start,
+          end,
+          attribution: { utmSource: "x", utmMedium: "social", utmCampaign: "q4" },
+        },
+        "auth@cloudless.gr"
+      )
+    );
+    expect(res.status).toBe(200);
+    expect(mockBookConsultation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { utm_source: "x", utm_medium: "social", utm_campaign: "q4" },
+      })
+    );
+  });
+
+  it("confirm: 400 on malformed attribution JSON string", async () => {
+    const start = new Date(Date.now() + 86_400_000).toISOString();
+    const end = new Date(Date.now() + 86_400_000 + 1_800_000).toISOString();
+    mockGetAvailableSlots.mockResolvedValueOnce([{ start, end }]);
+    const { POST } = await import(BOOK_ROUTE);
+    const res = await POST(
+      authPost({ confirm: true, start, end, attribution: "{bad" }, "auth@cloudless.gr")
+    );
+    expect(res.status).toBe(400);
+    expect(mockBookConsultation).not.toHaveBeenCalled();
+  });
+
   it("confirm: fires email + slack notifications after booking", async () => {
     const start = new Date(Date.now() + 86_400_000).toISOString();
     const end = new Date(Date.now() + 86_400_000 + 1_800_000).toISOString();

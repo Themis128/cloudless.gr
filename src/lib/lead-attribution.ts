@@ -142,6 +142,27 @@ export function sanitizeAttribution(input: unknown): LeadAttribution | null {
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/**
+ * Flatten a sanitized LeadAttribution into Cal.com booking metadata keys —
+ * snake_case utm_* fields the SocialAuto calcom webhook maps onto
+ * web_analytics_events.payload for the attribution digest.
+ * Returns undefined when there is nothing to send.
+ */
+export function attributionToCalMetadata(
+  attribution: LeadAttribution | null | undefined
+): Record<string, string> | undefined {
+  if (!attribution) return undefined;
+  const out: Record<string, string> = {};
+  if (attribution.utmSource) out.utm_source = attribution.utmSource;
+  if (attribution.utmMedium) out.utm_medium = attribution.utmMedium;
+  if (attribution.utmCampaign) out.utm_campaign = attribution.utmCampaign;
+  if (attribution.utmTerm) out.utm_term = attribution.utmTerm;
+  if (attribution.utmContent) out.utm_content = attribution.utmContent;
+  if (attribution.referrer) out.referrer = attribution.referrer;
+  if (attribution.landingPage) out.landing_page = attribution.landingPage;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 /** Human-readable one-line summary, used in notes and Slack messages. */
 export function formatAttribution(attribution: LeadAttribution): string {
   const parts: string[] = [];

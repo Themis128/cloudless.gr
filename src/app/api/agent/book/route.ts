@@ -22,6 +22,11 @@ import { slackBookingNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendBookingConfirmation } from "@/lib/email";
 import { mapIntegrationError } from "@/lib/api-errors";
+import {
+  parseAttributionField,
+  formatAttribution,
+  attributionToCalMetadata,
+} from "@/lib/lead-attribution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +47,7 @@ interface ConfirmBody {
   start: string;
   end: string;
   notes?: string;
+  attribution?: unknown;
 }
 
 function isProposeBody(b: unknown): b is ProposeBody {
@@ -129,6 +135,12 @@ async function handleConfirm(
 
   const notes = normalizeNotes(body.notes);
 
+  const parsedAttribution = parseAttributionField(body.attribution);
+  if (!parsedAttribution.ok) {
+    return jsonError(400, parsedAttribution.error);
+  }
+  const attributionLine = parsedAttribution.data ? formatAttribution(parsedAttribution.data) : "";
+
   try {
     const result = await bookConsultation({
       name: userName,
@@ -136,6 +148,7 @@ async function handleConfirm(
       start: body.start,
       end: body.end,
       notes,
+      metadata: attributionToCalMetadata(parsedAttribution.data ?? null),
     });
     if (!result) return jsonError(500, "Failed to create booking.");
 
@@ -161,6 +174,7 @@ async function handleConfirm(
         end: body.end,
         meetLink: result.htmlLink,
         notes: notes ? String(notes).slice(0, 500) : null,
+        attribution: attributionLine || null,
       },
     });
     sendBookingConfirmation({

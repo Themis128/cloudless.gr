@@ -34,12 +34,7 @@ vi.mock("@/lib/ssm-config", () => ({
   getConfig: vi.fn(async () => cfg.values),
 }));
 
-import {
-  isInCluster,
-  getCurrentNamespace,
-  k8sPost,
-  listWatchdogCronJobs,
-} from "@/lib/k8s-cluster";
+import { isInCluster, getCurrentNamespace, k8sPost, listWatchdogCronJobs } from "@/lib/k8s-cluster";
 vi.mock("@/lib/google-calendar", () => ({
   getAvailableSlots: vi.fn(async () => []),
   bookConsultation: vi.fn(async () => null),
@@ -216,7 +211,10 @@ describe("cal-com", () => {
     cfg.values = {};
     const g = await import("@/lib/google-calendar");
     const res = await bookConsultation({
-      name: "n", email: "e", start: "s", end: "e",
+      name: "n",
+      email: "e",
+      start: "s",
+      end: "e",
     });
     expect(g.bookConsultation).toHaveBeenCalled();
     expect(res).toBeNull();
@@ -246,9 +244,7 @@ describe("cal-com", () => {
   it("uses env CAL_API_KEY + CAL_EVENT_TYPE_ID when set", async () => {
     process.env.CAL_API_KEY = "env-key";
     process.env.CAL_EVENT_TYPE_ID = "111";
-    vi.mocked(fetch).mockResolvedValue(
-      jsonRes({ status: "success", data: { slots: {} } })
-    );
+    vi.mocked(fetch).mockResolvedValue(jsonRes({ status: "success", data: { slots: {} } }));
     await getAvailableSlots();
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [
       string,
@@ -282,28 +278,36 @@ describe("cal-com", () => {
       htmlLink: "https://cal.com/booking/bk1",
       meetLink: "https://meet/x",
     });
-    const body = JSON.parse(
-      (vi.mocked(fetch).mock.calls[0][1] as { body: string }).body
-    );
+    const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as { body: string }).body);
     expect(body.bookingFieldsResponses).toEqual({ notes: "n" });
     expect(body.guests).toEqual(["tbaltzakis@cloudless.gr"]);
   });
 
+  it("bookConsultation forwards metadata into the booking payload", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonRes({ status: "success", data: { uid: "bk_meta" } }));
+    await bookConsultation({
+      name: "n",
+      email: "e",
+      start: "s",
+      end: "e",
+      metadata: { utm_source: "linkedin", referrer: "https://x" },
+    });
+    const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as { body: string }).body);
+    expect(body.metadata).toEqual({
+      utm_source: "linkedin",
+      referrer: "https://x",
+    });
+  });
+
   it("bookConsultation returns null on non-OK / missing uid / fetch error", async () => {
     vi.mocked(fetch).mockResolvedValue(jsonRes({}, false, 422));
-    expect(
-      await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })
-    ).toBeNull();
+    expect(await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })).toBeNull();
 
     vi.mocked(fetch).mockResolvedValue(jsonRes({ status: "success", data: {} }));
-    expect(
-      await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })
-    ).toBeNull();
+    expect(await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })).toBeNull();
 
     vi.mocked(fetch).mockRejectedValue(new Error("net"));
-    expect(
-      await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })
-    ).toBeNull();
+    expect(await bookConsultation({ name: "n", email: "e", start: "s", end: "e" })).toBeNull();
   });
 
   it("upcoming/by-email consultations map + filter, [] on failures", async () => {
