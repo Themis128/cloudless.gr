@@ -163,9 +163,6 @@
     "d1:migrate:local": "python3 scripts/ensure-local-d1.py",
     "d1:retire:cloudless-auth": "python3 scripts/d1-retire-cloudless-auth.py"
   },
-  "overrides": {
-    "@hono/node-server": "2.1.0"
-  },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
     "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
@@ -277,7 +274,7 @@
       "@modelcontextprotocol/server@<2.2.0": "2.2.0",
       "@modelcontextprotocol/server@2.0.0": "2.2.0",
       "qs": ">=6.16.1",
-      "hono": ">=4.13.5",
+      "hono": ">=4.13.16",
       "source-map-js@<1.2.2": "1.2.2",
       "follow-redirects@<1.16.2": "1.16.2",
       "markdown-it@<15.0.3": "15.0.3",
@@ -287,7 +284,8 @@
       "fflate@>=0.7.0 <0.7.5": "0.7.5",
       "body-parser@>=2.0.0 <2.4.0": "2.4.0",
       "re2js@<2.8.7": "2.8.7",
-      "satori@<0.33.5": "0.33.5"
+      "satori@<0.33.5": "0.33.5",
+      "@hono/node-server": "2.1.6"
     }
   }
 }
