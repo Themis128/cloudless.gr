@@ -86,9 +86,10 @@ describe("HotjarAnalytics", () => {
 
     const calls: unknown[][] = [];
     (window as { hj?: unknown }).hj = (...a: unknown[]) => calls.push(a);
-
     await act(async () => setAnalytics(false));
     expect(calls).toContainEqual(["consent", false]);
+    // jsdom cannot navigate — window.location.reload() logs "Not implemented"
+    // but still exercises the withdrawal path above.
   });
 
   it("does not double-inject the script on re-render", () => {

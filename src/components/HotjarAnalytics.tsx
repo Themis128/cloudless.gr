@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCookieConsent } from "@/context/CookieConsentContext";
 
 const HOTJAR_SITE_ID = (process.env.NEXT_PUBLIC_HOTJAR_ID ?? "6507725").trim();
@@ -16,11 +16,14 @@ declare global {
 /**
  * Hotjar — session recordings & heatmaps (site id 6507725).
  * Consent-gated on `preferences.analytics`: hj.js is only injected after the
- * visitor grants analytics consent, and withdrawal calls Hotjar's consent API
- * (`hj('consent', false)`) to pause collection. Mirrors ConsentGatedPixel.
+ * visitor grants analytics consent. On withdrawal we call `hj('consent',
+ * false)` and reload — Hotjar's recorder cannot be stopped once loaded, so a
+ * reload is the only reliable way to end an active recording (the reloaded
+ * page sees consent=false and never re-injects). Mirrors ConsentGatedPixel.
  */
 export default function HotjarAnalytics({ nonce }: { nonce?: string }) {
   const { preferences } = useCookieConsent();
+  const injectedRef = useRef(false);
 
   useEffect(() => {
     if (!Number.isInteger(HOTJAR_HJID) || HOTJAR_HJID <= 0) return;
@@ -31,6 +34,12 @@ export default function HotjarAnalytics({ nonce }: { nonce?: string }) {
         window.hj?.("consent", false);
       } catch {
         // hj stub may not exist yet — nothing to pause
+      }
+      if (injectedRef.current) {
+        injectedRef.current = false;
+        /* v8 ignore start -- jsdom cannot navigate; reload is browser-only */
+        window.location.reload();
+        /* v8 ignore stop */
       }
       return;
     }
@@ -51,6 +60,7 @@ export default function HotjarAnalytics({ nonce }: { nonce?: string }) {
       if (nonce) script.setAttribute("nonce", nonce);
       document.head.appendChild(script);
     }
+    injectedRef.current = true;
 
     try {
       w.hj("consent", true);
