@@ -66,10 +66,11 @@ jobs:
             *)
               # workflow_dispatch / other events: diff the checked-out ref
               # against the default branch so a manual run reports the same
-              # introduced-pattern scope as a PR.
+              # introduced-pattern scope as a PR. fetch-depth: 0 above gives
+              # us full history for all branches, so origin/<default> exists.
               defbranch="${{ github.event.repository.default_branch }}"
-              git fetch --no-tags --depth=1 origin "+refs/heads/${defbranch}:refs/remotes/origin/${defbranch}" 2>/dev/null || true
-              changed=$(git diff --name-only --diff-filter=ACMR "origin/${defbranch}...HEAD" 2>/dev/null || true)
+              changed=$(git diff --name-only --diff-filter=ACMR "origin/${defbranch}...HEAD" 2>/dev/null \
+                || git diff --name-only --diff-filter=ACMR "HEAD~1..HEAD")
               ;;
           esac
           mapfile -t file_list < <(printf '%s\n' "$changed" | grep -E '\.(jsx?|tsx?|mjs|cjs|css|html?)$' | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done)
