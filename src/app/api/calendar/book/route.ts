@@ -15,23 +15,11 @@ import {
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { provisionTalkRoom } from "@/lib/socialauto";
-import { parseAttributionField, sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
-
-/** Flatten sanitized first-touch attribution into Cal.com metadata keys —
- * snake_case utm_* fields the SocialAuto calcom webhook maps onto
- * web_analytics_events.payload for the attribution digest. */
-function attributionToCalMetadata(attribution: ReturnType<typeof sanitizeAttribution>): Record<string, string> | undefined {
-  if (!attribution) return undefined;
-  const out: Record<string, string> = {};
-  if (attribution.utmSource) out.utm_source = attribution.utmSource;
-  if (attribution.utmMedium) out.utm_medium = attribution.utmMedium;
-  if (attribution.utmCampaign) out.utm_campaign = attribution.utmCampaign;
-  if (attribution.utmTerm) out.utm_term = attribution.utmTerm;
-  if (attribution.utmContent) out.utm_content = attribution.utmContent;
-  if (attribution.referrer) out.referrer = attribution.referrer;
-  if (attribution.landingPage) out.landing_page = attribution.landingPage;
-  return Object.keys(out).length > 0 ? out : undefined;
-}
+import {
+  parseAttributionField,
+  formatAttribution,
+  attributionToCalMetadata,
+} from "@/lib/lead-attribution";
 
 export async function POST(request: Request) {
   // Two intentional layers (not a mismatch): proxy.ts caps bursts at 3/60s,
@@ -46,15 +34,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, start, end, notes, privacyConsent, attribution } = (await request.json()) as {
-      name?: string;
-      email?: string;
-      start?: string;
-      end?: string;
-      notes?: string;
-      privacyConsent?: boolean;
-      attribution?: unknown;
-    };
+    const { name, email, start, end, notes, privacyConsent, attribution } =
+      (await request.json()) as {
+        name?: string;
+        email?: string;
+        start?: string;
+        end?: string;
+        notes?: string;
+        privacyConsent?: boolean;
+        attribution?: unknown;
+      };
 
     if (!name || !email || !start || !end) {
       return NextResponse.json(

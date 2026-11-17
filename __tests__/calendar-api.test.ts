@@ -343,7 +343,7 @@ vi.mock("@sentry/nextjs", () => ({
   ),
 }));
 
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
+import { upsertContact, createDeal, associateDealWithContact, createLead } from "@/lib/espocrm";
 
 describe("POST /api/calendar/book — tail branches", () => {
   beforeEach(async () => {
@@ -387,6 +387,43 @@ describe("POST /api/calendar/book — tail branches", () => {
     await vi.waitFor(() =>
       expect(vi.mocked(associateDealWithContact)).toHaveBeenCalledWith("d1", "c1")
     );
+  });
+
+  it("forwards sanitized attribution to Cal.com metadata and the EspoCRM lead", async () => {
+    const { bookConsultation } = vi.mocked(
+      await vi.importMock<typeof import("@/lib/cal-com")>("@/lib/cal-com")
+    );
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(
+      book({
+        attribution: {
+          utmSource: "linkedin",
+          utmCampaign: "audit-q4",
+          referrer: "https://www.linkedin.com/feed/",
+        },
+      })
+    );
+    expect(res.status).toBe(200);
+    const call = vi.mocked(bookConsultation).mock.calls[0][0] as {
+      metadata?: Record<string, string>;
+    };
+    expect(call.metadata).toEqual({
+      utm_source: "linkedin",
+      utm_campaign: "audit-q4",
+      referrer: "https://www.linkedin.com/feed/",
+    });
+    await vi.waitFor(() => expect(vi.mocked(createLead)).toHaveBeenCalled());
+    const leadArg = vi.mocked(createLead).mock.calls[0][0] as {
+      description?: string;
+    };
+    expect(leadArg.description).toContain("Attribution:");
+    expect(leadArg.description).toContain("source=linkedin");
+  });
+
+  it("400 on malformed attribution JSON string", async () => {
+    const { POST } = await import("@/app/api/calendar/book/route");
+    const res = await POST(book({ attribution: "{not json" }));
+    expect(res.status).toBe(400);
   });
 
   it("espo sync failure is swallowed", async () => {
