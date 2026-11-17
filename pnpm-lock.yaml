@@ -25,17 +25,18 @@ overrides:
   '@modelcontextprotocol/server@<2.2.0': 2.2.0
   '@modelcontextprotocol/server@2.0.0': 2.2.0
   qs: '>=6.16.1'
-  hono: '>=4.13.5'
+  hono: '>=4.13.16'
   source-map-js@<1.2.2: 1.2.2
   follow-redirects@<1.16.2: 1.16.2
   markdown-it@<15.0.3: 15.0.3
   vite@>=8.2.0 <8.2.4: 8.2.4
   zod@<4.6.6: 4.6.7
+  deepmerge@>=4.2.0 <=4.3.1: 4.1.2
+  fflate@>=0.7.0 <0.7.5: 0.7.5
   body-parser@>=2.0.0 <2.4.0: 2.4.0
   re2js@<2.8.7: 2.8.7
   satori@<0.33.5: 0.33.5
-  deepmerge@>=4.2.0 <=4.3.1: 4.1.2
-  fflate@>=0.7.0 <0.7.5: 0.7.5
+  '@hono/node-server': 2.1.6
 
 importers:
 
@@ -1325,11 +1326,11 @@ packages:
   '@formatjs/intl-localematcher@0.8.14':
     resolution: {integrity: sha512-8O7V38QmbB11+ryJ3KM/znrzXtiqgpXzqNoqDsndHZZ5/zDKTTL+cf5F0mzXkQEwhx8IlWnqYvEovf2S5EwLTw==}
 
-  '@hono/node-server@2.1.5':
-    resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
+  '@hono/node-server@2.1.6':
+    resolution: {integrity: sha512-p/KH9MnfNcsm3sR6x4lNgm5j+QN4Et8srKredl9DZfXiyZ1UQ3aQ2YVpFLbqktYN5JI+DB+VZFKM2PqE5hLKjQ==}
     engines: {node: '>=20'}
     peerDependencies:
-      hono: '>=4.13.5'
+      hono: '>=4.13.16'
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -5018,11 +5019,7 @@ packages:
     resolution: {integrity: sha512-r2SewtskSLUrUoNe4y2T7BkHz02NoYgjBlNqh1d4MgsTzeqrC4hYCC4Ml3UEYHKXyJVGuvbGV48VO5NJpZoghA==}
     peerDependencies:
       agents: '>=0.17.1 <1.0.0'
-      hono: '>=4.13.5'
-
-  hono@4.13.13:
-    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
-    engines: {node: '>=16.9.0'}
+      hono: '>=4.13.16'
 
   hono@4.13.16:
     resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
@@ -9474,11 +9471,7 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
 
-  '@hono/node-server@2.1.5(hono@4.13.13)':
-    dependencies:
-      hono: 4.13.13
-
-  '@hono/node-server@2.1.5(hono@4.13.16)':
+  '@hono/node-server@2.1.6(hono@4.13.16)':
     dependencies:
       hono: 4.13.16
 
@@ -9732,7 +9725,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.6)(zod@4.6.7)':
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.13)
+      '@hono/node-server': 2.1.6(hono@4.13.16)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -9742,7 +9735,7 @@ snapshots:
       eventsource-parser: 3.1.1
       express: 5.3.0
       express-rate-limit: 8.7.1(express@5.3.0)
-      hono: 4.13.13
+      hono: 4.13.16
       jose: 6.2.17
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -9756,7 +9749,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.6)(zod@4.6.7)':
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.16)
+      '@hono/node-server': 2.1.6(hono@4.13.16)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -13247,8 +13240,6 @@ snapshots:
     dependencies:
       agents: 0.33.0(@ai-sdk/provider@4.0.38)(@babel/core@7.29.13)(@babel/runtime@7.29.13)(@modelcontextprotocol/client@2.4.0)(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.6)(zod@4.6.7))(@modelcontextprotocol/server@2.4.0)(ai@7.0.173(zod@4.6.7))(react@19.3.1)(rolldown@1.2.6)(vite@8.2.4(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
       hono: 4.13.16
-
-  hono@4.13.13: {}
 
   hono@4.13.16: {}
 
