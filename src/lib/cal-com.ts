@@ -142,6 +142,9 @@ export async function bookConsultation(data: {
   start: string;
   end: string;
   notes?: string;
+  /** First-touch attribution (utm params + referrer) — stored on the
+   * Cal.com booking and echoed back in webhook payload.metadata. */
+  metadata?: Record<string, string>;
 }): Promise<{ eventId: string; htmlLink: string; meetLink?: string } | null> {
   try {
     if (!process.env.CAL_API_KEY) {
@@ -163,7 +166,7 @@ export async function bookConsultation(data: {
           language: "en",
         },
         guests: ["tbaltzakis@cloudless.gr"],
-        metadata: {},
+        metadata: data.metadata ?? {},
         bookingFieldsResponses: data.notes ? { notes: data.notes } : undefined,
       }),
     });

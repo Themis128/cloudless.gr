@@ -22,6 +22,7 @@ import { slackBookingNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendBookingConfirmation } from "@/lib/email";
 import { mapIntegrationError } from "@/lib/api-errors";
+import { parseAttributionField, formatAttribution, type LeadAttribution } from "@/lib/lead-attribution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ interface ConfirmBody {
   start: string;
   end: string;
   notes?: string;
+  attribution?: unknown;
 }
 
 function isProposeBody(b: unknown): b is ProposeBody {
@@ -93,6 +95,19 @@ async function handlePropose(body: ProposeBody, ip: string): Promise<NextRespons
   }
 }
 
+function attributionToCalMetadata(attribution: LeadAttribution | null): Record<string, string> | undefined {
+  if (!attribution) return undefined;
+  const out: Record<string, string> = {};
+  if (attribution.utmSource) out.utm_source = attribution.utmSource;
+  if (attribution.utmMedium) out.utm_medium = attribution.utmMedium;
+  if (attribution.utmCampaign) out.utm_campaign = attribution.utmCampaign;
+  if (attribution.utmTerm) out.utm_term = attribution.utmTerm;
+  if (attribution.utmContent) out.utm_content = attribution.utmContent;
+  if (attribution.referrer) out.referrer = attribution.referrer;
+  if (attribution.landingPage) out.landing_page = attribution.landingPage;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 async function handleConfirm(
   body: ConfirmBody,
   userEmail: string,
@@ -129,6 +144,12 @@ async function handleConfirm(
 
   const notes = normalizeNotes(body.notes);
 
+  const parsedAttribution = parseAttributionField(body.attribution);
+  if (!parsedAttribution.ok) {
+    return jsonError(400, parsedAttribution.error);
+  }
+  const attributionLine = parsedAttribution.data ? formatAttribution(parsedAttribution.data) : "";
+
   try {
     const result = await bookConsultation({
       name: userName,
@@ -136,6 +157,7 @@ async function handleConfirm(
       start: body.start,
       end: body.end,
       notes,
+      metadata: attributionToCalMetadata(parsedAttribution.data ?? null),
     });
     if (!result) return jsonError(500, "Failed to create booking.");
 
@@ -161,6 +183,7 @@ async function handleConfirm(
         end: body.end,
         meetLink: result.htmlLink,
         notes: notes ? String(notes).slice(0, 500) : null,
+        attribution: attributionLine || null,
       },
     });
     sendBookingConfirmation({

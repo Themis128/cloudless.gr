@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking-slots";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+import { getStoredAttribution } from "@/lib/lead-attribution";
 
 interface TimeSlot {
   start: string;
@@ -100,6 +101,7 @@ export default function ConsultationBooking() {
       privacyConsent: (form.elements.namedItem("privacyConsent") as HTMLInputElement).checked,
       start: selected.start,
       end: selected.end,
+      attribution: getStoredAttribution() ?? undefined,
     };
 
     try {
