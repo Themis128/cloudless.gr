@@ -37,9 +37,7 @@ export default function HotjarAnalytics({ nonce }: { nonce?: string }) {
 
     const w = window;
     if (!w.hj) {
-      const hj: ((...args: unknown[]) => void) & { q?: unknown[][] } = (
-        ...args: unknown[]
-      ) => {
+      const hj: ((...args: unknown[]) => void) & { q?: unknown[][] } = (...args: unknown[]) => {
         (hj.q = hj.q || []).push(args);
       };
       w.hj = hj;

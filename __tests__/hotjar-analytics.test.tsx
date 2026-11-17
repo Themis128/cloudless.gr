@@ -94,9 +94,7 @@ describe("HotjarAnalytics", () => {
   it("does not double-inject the script on re-render", () => {
     render(<Wrapper analytics={true} />);
     render(<Wrapper analytics={true} />);
-    expect(
-      document.head.querySelectorAll('script[src*="static.hotjar.com"]').length
-    ).toBe(1);
+    expect(document.head.querySelectorAll('script[src*="static.hotjar.com"]').length).toBe(1);
   });
 
   it("renders nothing to the DOM", () => {
