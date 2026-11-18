@@ -12,11 +12,7 @@ import {
   passSample,
 } from "@/lib/d1-write-budget";
 import { secureId } from "@/lib/secure-id";
-import {
-  FUNNEL_EVENT_TYPES,
-  isFunnelEventType,
-  type FunnelEventType,
-} from "@/lib/funnel-events";
+import { FUNNEL_EVENT_TYPES, isFunnelEventType, type FunnelEventType } from "@/lib/funnel-events";
 
 export { FUNNEL_EVENT_TYPES, isFunnelEventType };
 export type { FunnelEventType };

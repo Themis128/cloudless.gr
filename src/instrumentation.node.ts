@@ -62,7 +62,8 @@ function bindLocalAuthDb(): void {
     // own computed require inside src/lib/auth-db-node so Turbopack cannot
     // sweep src/** (fonts, server-only libs) into this graph.
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- bundler-visible require is deliberate: must resolve in Pi standalone Node
-    const { loadLocalAuthDbModule } = require("./lib/auth-db-node/loader") as typeof import("./lib/auth-db-node/loader");
+    const { loadLocalAuthDbModule } =
+      require("./lib/auth-db-node/loader") as typeof import("./lib/auth-db-node/loader");
     const getLocalAuthDb = loadLocalAuthDbModule()?.getLocalAuthDb;
     /* v8 ignore start -- bundlers (webpack/vitest) compile the computed require into a throwing empty context, so this success path only runs in plain-node dev graphs */
     const local = getLocalAuthDb?.();
