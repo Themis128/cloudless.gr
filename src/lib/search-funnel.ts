@@ -12,17 +12,14 @@ import {
   passSample,
 } from "@/lib/d1-write-budget";
 import { secureId } from "@/lib/secure-id";
+import {
+  FUNNEL_EVENT_TYPES,
+  isFunnelEventType,
+  type FunnelEventType,
+} from "@/lib/funnel-events";
 
-export const FUNNEL_EVENT_TYPES = [
-  "search_query",
-  "search_result",
-  "search_click",
-  "search_buy",
-  "rec_impression",
-  "rec_click",
-] as const;
-
-export type FunnelEventType = (typeof FUNNEL_EVENT_TYPES)[number];
+export { FUNNEL_EVENT_TYPES, isFunnelEventType };
+export type { FunnelEventType };
 
 export interface FunnelEventInput {
   event_type: FunnelEventType;
@@ -38,10 +35,6 @@ export interface FunnelEventInput {
 
 export function getFunnelD1Binding(): AuthDatabase | null {
   return getAuthDbFromEnv();
-}
-
-export function isFunnelEventType(value: string): value is FunnelEventType {
-  return (FUNNEL_EVENT_TYPES as readonly string[]).includes(value);
 }
 
 export function normalizeFunnelEvent(

@@ -45,7 +45,7 @@ export async function GET() {
     dbResolved = !!db;
     // Only fall back to local sqlite when not forced onto live D1.
     if (!db && process.env.NODE_ENV === "development" && !useLiveHttp) {
-      const { getLocalAuthDb } = await import("@/lib/auth-db-local");
+      const { getLocalAuthDb } = await import("@/lib/auth-db-node/local");
       db = getLocalAuthDb();
       dbResolved = !!db;
     }

@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GET } from "@/app/api/health/route";
-import { getLocalAuthDb, resetLocalAuthDbCache } from "@/lib/auth-db-local";
+import { getLocalAuthDb, resetLocalAuthDbCache } from "@/lib/auth-db-node/local";
 
 describe("GET /api/health", () => {
   const envSnapshot = {

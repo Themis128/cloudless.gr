@@ -4,13 +4,12 @@
  * getAuthDbFromEnv() works without Cognito or a cross-process workerd proxy.
  *
  * Only used when NODE_ENV=development and no Workers binding is present.
- * Must never be imported from edge/proxy or client graphs (loaded via
- * webpackIgnore require from auth-d1.ts).
+ * Must never be imported from edge/proxy or client graphs (loaded via a computed-specifier require from auth-db-node/loader.ts).
  */
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { AuthDatabase } from "./auth-d1";
+import type { AuthDatabase } from "../auth-d1";
 
 const D1_OBJECT_DIRS = [
   join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject"),
