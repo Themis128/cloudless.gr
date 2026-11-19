@@ -188,6 +188,24 @@ After redeploy, always run the smoke test:
 python3 infrastructure/pi-alert-api/tests/smoke_test_live.py
 ```
 
+## Recurring self-ping DOWN/UP flaps (root cause, 2026-11-19)
+
+The `alert-api self-ping (cluster watchdog)` Healthchecks check flapped
+DOWN→UP on every omv reboot. Root cause: the Pi has no working RTC — on
+boot the clock reads a stale date (~200+ days behind), chrony then
+**steps** it forward (`System clock was stepped by 18887432s`), which
+invalidates k3s/letsencrypt-era certs and bounces every pod for ~1-2 min.
+
+Fix applied on omv: `fake-hwclock` is enabled (`fake-hwclock-load.service`
+at sysinit restores `/etc/fake-hwclock.data`, `fake-hwclock-save.timer`
+persists it hourly + at shutdown), so the boot clock is within ~1 h and
+chrony only slews — no step, no cert churn, no flap.
+
+Also note: `database.py`, `flap_guard.py` and `healthchecks_ping.py` are
+now tracked here — previously they existed only in `~/alert-api` on omv,
+so `deploy.py`/image builds from a clean clone would fail at
+`import healthchecks_ping`.
+
 ## See also
 
 - [`PR #304`](https://github.com/Themis128/cloudless.gr/pull/304) — the alert-cleanup PR that introduced this tracked source + verbose rendering.
