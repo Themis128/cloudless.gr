@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getLocalAuthDb, resetLocalAuthDbCache } from "@/lib/auth-db-local";
+import { getLocalAuthDb, resetLocalAuthDbCache } from "@/lib/auth-db-node/local";
 
 describe("getLocalAuthDb", () => {
   const envSnapshot = {
@@ -187,7 +187,7 @@ describe("getLocalAuthDb", () => {
     vi.spyOn(process, "cwd").mockReturnValue(dir);
     vi.resetModules();
     const { getLocalAuthDb: freshGetLocalAuthDb } = await import(
-      "@/lib/auth-db-local"
+      "@/lib/auth-db-node/local"
     );
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = freshGetLocalAuthDb();

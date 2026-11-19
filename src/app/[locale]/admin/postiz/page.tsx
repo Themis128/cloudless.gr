@@ -7,7 +7,7 @@ import type { PostizIntegration, PostizPost, CreatePostBody } from "@/lib/postiz
 /** Resolve the platform identifier from a Postiz post's embedded integration.
  *  Inlined here (rather than importing from @/lib/postiz) so the client
  *  bundle never pulls in `postiz.ts` — that module statically imports
- *  `ssm-config.ts`, whose server-only D1/auth chain (auth-d1 → auth-db-local)
+ *  `ssm-config.ts`, whose server-only D1/auth chain (auth-d1 → auth-db-node/local)
  *  references `node:fs`/`node:path` and breaks the webpack client build with
  *  UnhandledSchemeError. */
 function postIdentifier(post: Pick<PostizPost, "integration">): string {
