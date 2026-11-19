@@ -1,0 +1,79 @@
+name: ntfy archive-reader token mint
+
+# Mints a read-only ntfy user for the SocialAuto notification-archive
+# collector (notify_archive_ingest) — the alert topics are ACL'd
+# deny-all so the archive cannot subscribe anonymously, and the
+# alert-relay publisher token is write-only by design.
+#
+# Self-fires once when this file lands on main; re-run manually with
+# workflow_dispatch to rotate. The token is uploaded as a workflow
+# ARTIFACT (never logged) — download, store to the cu130-slim .env as
+# NTFY_READER_TOKEN, then delete the artifact.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ntfy-reader-token.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  mint:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+
+      - name: Wait for tailnet path to omv
+        run: python3 scripts/ci/tailscale-wait.py 100.74.191.58 22
+
+      - name: Configure kubectl via omv SSH
+        env:
+          OMV_SSH_KEY: ${{ secrets.OMV_SSH_KEY }}
+        run: scripts/ci/kubectl-via-omv-ssh.sh
+
+      - name: Mint archive-reader user + ro grants + token
+        run: |
+          set -euo pipefail
+          POD=$(kubectl -n ntfy get pods -o jsonpath='{.items[0].metadata.name}')
+          echo "pod=$POD"
+
+          # Random per-run password — the collector authenticates with the
+          # minted Bearer token, not the password.
+          PASS=$(head -c 24 /dev/urandom | base64 | tr -d '=+/')
+
+          # Idempotent: create the user (ignore "exists"), grant ro on the
+          # alert topics, mint a labelled token.
+          kubectl -n ntfy exec "$POD" -- sh -c \
+            "NTFY_PASSWORD='$PASS' ntfy user add --role=user archive-reader" \
+            2>&1 | grep -v "already exists" || true
+          kubectl -n ntfy exec "$POD" -- ntfy access archive-reader 'cloudless-*' ro
+          kubectl -n ntfy exec "$POD" -- ntfy access archive-reader 'nextcloud-*' ro
+          kubectl -n ntfy exec "$POD" -- ntfy access archive-reader 'esp32-*' ro
+
+          TOKEN_LINE=$(kubectl -n ntfy exec "$POD" -- \
+            ntfy token add archive-reader --label "archive-reader $(date +%F)")
+          echo "$TOKEN_LINE" | grep -oE 'tk_[A-Za-z0-9]+' > ntfy_reader_token.txt
+          test -s ntfy_reader_token.txt
+          echo "token minted (hidden) — length $(wc -c < ntfy_reader_token.txt)"
+
+      - name: Upload token artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4
+        with:
+          name: ntfy-reader-token
+          path: ntfy_reader_token.txt
+          retention-days: 1
