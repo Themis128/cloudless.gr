@@ -102,7 +102,7 @@ async def upsert_alert(alert: dict) -> dict:
     now = _now()
 
     async with aiosqlite.connect(DB_PATH) as db:
-        if status in ("FIRING", "INFO"):
+        if status in ("FIRING", "INFO", "FLAP_SUPPRESSED"):
             await db.execute(
                 """
                 INSERT INTO alerts
@@ -136,7 +136,7 @@ async def upsert_alert(alert: dict) -> dict:
                 SET status = 'RESOLVED', resolved_at = ?, resolved_by = ?, last_seen = ?
                 WHERE code = ?
             """,
-                (now, alert.get("resolved_by", "esp32"), now, code),
+                (now, alert.get("resolved_by") or "esp32", now, code),
             )
 
         # Always append to history
