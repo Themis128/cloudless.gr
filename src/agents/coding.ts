@@ -223,7 +223,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     try {
       const systemPrompt = buildSystemPrompt(mode);
 
-      const result = await this.env.AI.run("@cf/deepseek-ai/deepseek-v4.1-flash-1017", {
+      const result = await this.env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: "User task and repository context:\n" + prompt },
