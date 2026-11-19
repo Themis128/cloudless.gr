@@ -32,7 +32,7 @@ describe("auth-db-local getLocalAuthDb", () => {
     makeSqlite(FIXTURE_DB);
     vi.stubEnv("AUTH_DB_LOCAL_SQLITE", FIXTURE_DB);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
     resetLocalAuthDbCache();
 
     const db = getLocalAuthDb();
@@ -75,7 +75,7 @@ describe("auth-db-local getLocalAuthDb", () => {
 
   it("returns null when the override path does not exist", async () => {
     vi.stubEnv("AUTH_DB_LOCAL_SQLITE", "/tmp/definitely-missing-xyz.sqlite");
-    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
     resetLocalAuthDbCache();
     expect(getLocalAuthDb()).toBeNull();
   });
@@ -86,7 +86,7 @@ describe("auth-db-local getLocalAuthDb", () => {
     mkdirSync(D1_DIR, { recursive: true });
     makeSqlite(D1_FIXTURE);
     try {
-      const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+      const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
       resetLocalAuthDbCache();
       const db = getLocalAuthDb();
       expect(db?.prepare).toBeTypeOf("function");
@@ -104,7 +104,7 @@ describe("auth-db-local getLocalAuthDb", () => {
     writeFileSync(bad, "definitely not sqlite");
     vi.stubEnv("AUTH_DB_LOCAL_SQLITE", bad);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
     resetLocalAuthDbCache();
     // DatabaseSync tolerates non-db files until first exec — either a working
     // handle or the caught warn path is acceptable; assert it did not throw.
@@ -116,7 +116,7 @@ describe("auth-db-local getLocalAuthDb", () => {
   it("warns and returns null when the override path is not a file", async () => {
     vi.stubEnv("AUTH_DB_LOCAL_SQLITE", "/tmp");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
     resetLocalAuthDbCache();
     expect(getLocalAuthDb()).toBeNull();
     expect(
@@ -144,7 +144,7 @@ describe("auth-db-local getLocalAuthDb", () => {
 
     vi.stubEnv("AUTH_DB_LOCAL_SQLITE", legacy);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-local");
+    const { getLocalAuthDb, resetLocalAuthDbCache } = await import("@/lib/auth-db-node/local");
     resetLocalAuthDbCache();
     const db = getLocalAuthDb();
     expect(db?.prepare).toBeTypeOf("function");

@@ -57,12 +57,14 @@ function bindLocalAuthDb(): void {
   // tokenless `next dev` (CI, Playwright) never fails the instrumentation hook,
   // which would gate the request handler and leave the dev server unready.
   // auth-d1.getAuthDbFromEnv() retries the adapter (and D1 HTTP) per request.
-  const spec = "." + "/lib/" + ["auth", "db", "local"].join("-");
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- computed-specifier require is deliberate: keeps node:sqlite out of the Edge instrumentation graph (see above)
-    const { getLocalAuthDb } = require(spec) as {
-      getLocalAuthDb?: () => AuthDbBinding | null;
-    };
+    // Literal require of the scoped loader: auth-db-node/loader.ts keeps its
+    // own computed require inside src/lib/auth-db-node so Turbopack cannot
+    // sweep src/** (fonts, server-only libs) into this graph.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- bundler-visible require is deliberate: must resolve in Pi standalone Node
+    const { loadLocalAuthDbModule } =
+      require("./lib/auth-db-node/loader") as typeof import("./lib/auth-db-node/loader");
+    const getLocalAuthDb = loadLocalAuthDbModule()?.getLocalAuthDb;
     /* v8 ignore start -- bundlers (webpack/vitest) compile the computed require into a throwing empty context, so this success path only runs in plain-node dev graphs */
     const local = getLocalAuthDb?.();
     if (local && typeof local.prepare === "function") {

@@ -89,9 +89,9 @@ describe("services/page.tsx redirect", () => {
   });
 });
 
-describe("middleware.ts", () => {
-  it("re-exports proxy and keeps the static matcher", async () => {
-    const mw = await import("@/middleware");
+describe("proxy.ts", () => {
+  it("exports the proxy function and keeps the static matcher", async () => {
+    const mw = await import("@/proxy");
     expect(typeof mw.default).toBe("function");
     expect(mw.config.matcher[0]).toContain("api/health");
   });

@@ -8,6 +8,7 @@
  * - JWT-like session tokens (stored server-side, referenced by cookie)
  */
 import { shouldPreferLocalAuthDb } from "../instrumentation-flags";
+import { loadLocalAuthDbModule } from "./auth-db-node/loader";
 
 // Lazy-loaded Node-only modules. `d1-http` uses a literal require() so webpack
 // keeps it in the Pi standalone graph. Local sqlite is loaded with a computed
@@ -552,13 +553,7 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
 function tryLoadLocalAuthDb(): AuthDatabase | null {
   if (process.env.NEXT_RUNTIME === "edge") return null;
   try {
-    // Computed specifier: a literal sqlite-adapter require is traced into
-    // Edge proxy even with webpackIgnore. Module-scoped require() still
-    // resolves in Turbopack Node (eval/new Function require does not).
-    const spec = "." + "/" + ["auth", "db", "local"].join("-");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- computed specifier is deliberate (see above): a literal require would be traced into Edge proxy
-    const mod = require(spec) as { getLocalAuthDb?: () => AuthDatabase | null };
-    return mod.getLocalAuthDb?.() ?? null;
+    return loadLocalAuthDbModule()?.getLocalAuthDb?.() ?? null;
   } catch {
     return null;
   }

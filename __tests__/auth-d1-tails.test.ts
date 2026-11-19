@@ -47,7 +47,7 @@ const FULL_SCHEMA = `
 
 async function localDb(sqlitePath: string) {
   vi.stubEnv("AUTH_DB_LOCAL_SQLITE", sqlitePath);
-  const { resetLocalAuthDbCache, getLocalAuthDb } = await import("@/lib/auth-db-local");
+  const { resetLocalAuthDbCache, getLocalAuthDb } = await import("@/lib/auth-db-node/local");
   resetLocalAuthDbCache();
   const db = getLocalAuthDb();
   if (!db) throw new Error("local db failed to open");
