@@ -94,10 +94,15 @@ jobs:
           # prior archive-reader tokens — a failure above would otherwise
           # leave the collector with no valid credential. Removal skips the
           # just-minted token and is idempotent per value.
-          kubectl -n ntfy exec "$POD" -- ntfy token list archive-reader \
-            | { grep -oE 'tk_[A-Za-z0-9]+' || true; } \
-            | { grep -v "^${TOKEN}$" || true; } \
-            | while read -r OLD; do
-                kubectl -n ntfy exec "$POD" -- ntfy token remove archive-reader "$OLD" || true
-              done
-          echo "prior archive-reader tokens revoked"
+          # Collect first, then iterate — `kubectl exec` would otherwise
+          # inherit the pipe and swallow the remaining token lines on the
+          # first loop iteration.
+          mapfile -t OLD_TOKENS < <(
+            kubectl -n ntfy exec "$POD" -- ntfy token list archive-reader \
+              | { grep -oE 'tk_[A-Za-z0-9]+' || true; } \
+              | { grep -v "^${TOKEN}$" || true; }
+          )
+          for OLD in "${OLD_TOKENS[@]}"; do
+            kubectl -n ntfy exec "$POD" -- ntfy token remove archive-reader "$OLD" || true
+          done
+          echo "prior archive-reader tokens revoked: ${#OLD_TOKENS[@]}"
