@@ -2,7 +2,10 @@
 # Applied imperatively by PR #1861; this file is now the source of truth.
 # Ingress allows: same-namespace pods, kube-system, tailscale, monitoring
 # namespaces + LAN 192.168.1.0/24 (cloudflared connector on omv-ha and other
-# trusted LAN infrastructure reaching NodePort services). The cloudless
+# trusted LAN infrastructure reaching NodePort services) + Tailscale CGNAT
+# 100.64.0.0/10 on namespaces exposed via Tailscale Ingress / tailnet
+# NodePort access (alert-manager, appflowy, cloudless, espocrm, headlamp,
+# meilisearch, monitoring, n8n, ntfy, postiz, uptime-kuma). The cloudless
 # namespace is additionally allowed into the namespaces the app consumes
 # (postiz, n8n, ntfy, appflowy, espocrm, meilisearch, uptime-kuma,
 # monitoring, alert-manager); cloudless egress allows those namespaces.
@@ -43,6 +46,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
@@ -89,6 +95,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
@@ -163,6 +172,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   podSelector: {}
   policyTypes:
   - Ingress
@@ -296,6 +308,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   podSelector: {}
   policyTypes:
   - Ingress
@@ -338,6 +353,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
@@ -387,6 +405,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
@@ -486,6 +507,9 @@ spec:
     - ipBlock:
         cidr: 192.168.1.0/24
   - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
+  - from:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: cloudless
@@ -573,6 +597,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
@@ -709,6 +736,9 @@ spec:
   - from:
     - ipBlock:
         cidr: 192.168.1.0/24
+  - from:
+    - ipBlock:
+        cidr: 100.64.0.0/10
   - from:
     - namespaceSelector:
         matchLabels:
