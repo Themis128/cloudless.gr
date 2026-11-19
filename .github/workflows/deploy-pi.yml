@@ -377,8 +377,9 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.trigger_only)
       )
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-    # Trigger is fast; edge smoke may wait a few minutes for omv pull + health.
-    timeout-minutes: 15
+    # Edge smoke polls /api/health for up to ~30m while omv pulls + rolls
+    # out the image; the job needs headroom beyond the poll window itself.
+    timeout-minutes: 50
     steps:
       - name: Resolve artifact key
         id: key
@@ -451,11 +452,21 @@ jobs:
             https://cloudless.gr/en/contact
           )
 
-          # omv pull can take >6m under SSD load; poll ~12m (24×30s) before failing.
-          echo "Waiting for /api/health version to match ${WANT12} (up to ~12m)…"
+          # omv pull can take >15m under SSD load (observed 2026-11-19:
+          # sha a4181728 landed ~16m post-trigger and the 12m smoke window
+          # false-failed a healthy deploy). Poll ~30m (60×30s).
+          echo "Waiting for /api/health version to match ${WANT12} (up to ~30m)…"
           LIVE=""
           MATCHED=0
-          for i in $(seq 1 24); do
+          # Wall-clock bound: each iteration can cost up to ~90s of curl
+          # timeouts across HEALTH_URLS, so 60 iterations alone could exceed
+          # the job timeout — cap total poll time at 30m via SECONDS.
+          SMOKE_DEADLINE=$((SECONDS + 1800))
+          for i in $(seq 1 60); do
+            if [ "$SECONDS" -ge "$SMOKE_DEADLINE" ]; then
+              echo "  wall-clock deadline reached after ${i} tries"
+              break
+            fi
             for u in "${HEALTH_URLS[@]}"; do
               BODY=$(curl -sS --max-time 15 "$u" || true)
               if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
@@ -476,7 +487,7 @@ jobs:
           done
 
           if [ "$MATCHED" != "1" ]; then
-            echo "::error::Edge health did not report sha ${WANT12} within ~12m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
+            echo "::error::Edge health did not report sha ${WANT12} within ~30m (last=${LIVE:-none}). CF Workflow may still be waiting on omv pull."
             exit 1
           fi
 
