@@ -584,7 +584,7 @@ export const config = {
      * optimizer's mock fetch) that means a 308 HTML body instead of the
      * file — the entire image optimizer 400s "isn't a valid image".
      */
-    String.raw`/((?!api/health|_next/static|_next/image|manifest\.webmanifest|sw\.js|offline\.html|\.well-known|[^?]+\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)`,
+    "/((?!api/health|_next/static|_next/image|manifest\\.webmanifest|sw\\.js|offline\\.html|\\.well-known|[^?]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|otf|html)).*)",
   ],
 };
 

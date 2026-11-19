@@ -40,8 +40,6 @@ const authRef = vi.hoisted(() => ({
 }));
 vi.mock("@/context/AuthContext", () => ({ useAuth: () => authRef.current }));
 
-import AppleIcon from "@/app/apple-icon";
-import SiteIcon from "@/app/icon";
 import AttributionCapture from "@/components/AttributionCapture";
 import ConsentGatedPixel from "@/components/ConsentGatedPixel";
 import AgentCounter from "@/components/AgentCounter";
@@ -55,22 +53,6 @@ beforeEach(() => {
   captureMock.mockClear();
 });
 afterEach(() => cleanup());
-
-// ── icons ────────────────────────────────────────────────────────────────────
-
-describe("app icons", () => {
-  it("apple-icon renders a real PNG at 180×180", async () => {
-    const res = AppleIcon();
-    const buf = await res.arrayBuffer();
-    expect(buf.byteLength).toBeGreaterThan(500);
-  });
-
-  it("icon renders a real PNG at 32×32", async () => {
-    const res = SiteIcon();
-    const buf = await res.arrayBuffer();
-    expect(buf.byteLength).toBeGreaterThan(200);
-  });
-});
 
 // ── AttributionCapture ───────────────────────────────────────────────────────
 

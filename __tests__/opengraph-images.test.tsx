@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * OpenGraph image generators — every route's default export renders a real
  * ImageResponse PNG. Slug variants exercise the resolved-title and
