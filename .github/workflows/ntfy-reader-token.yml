@@ -71,7 +71,7 @@ jobs:
           # token list prints one "tk_..." per row; removing by value is
           # idempotent so a re-run can't accumulate live credentials.
           kubectl -n ntfy exec "$POD" -- ntfy token list archive-reader \
-            | grep -oE 'tk_[A-Za-z0-9]+' \
+            | { grep -oE 'tk_[A-Za-z0-9]+' || true; } \
             | while read -r OLD; do
                 kubectl -n ntfy exec "$POD" -- ntfy token remove archive-reader "$OLD" || true
               done
