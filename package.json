@@ -224,7 +224,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "@vitest/utils": "^5.1.0",
     "cf": "1.0.0-beta.32",
-    "eslint": "^9.39.5",
+    "eslint": "^10.15.0",
     "eslint-config-next": "16.4.6",
     "jsdom": "^31.0.1",
     "markdownlint-cli2": "^0.24.1",
