@@ -6,10 +6,10 @@ Tables:
   esp32_logs    — verbose log lines pushed by the ESP32
   esp32_status  — singleton row: last-known ESP32 hardware state
 """
-import aiosqlite
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+
+import aiosqlite
 
 DB_PATH = "/data/alerts.db"
 log = logging.getLogger("database")
@@ -84,7 +84,7 @@ async def init_db():
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ── Alerts ─────────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ async def upsert_alert(alert: dict) -> dict:
     return await get_alert(code) or {}
 
 
-async def get_alert(code: str) -> Optional[dict]:
+async def get_alert(code: str) -> dict | None:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute("SELECT * FROM alerts WHERE code = ?", (code,)) as cur:

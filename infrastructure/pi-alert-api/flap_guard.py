@@ -13,7 +13,6 @@ notify normally.
 Wired in from main.py.receive_alert() BEFORE slack_notify.send_alert(...).
 """
 import logging
-from typing import Optional
 
 import httpx
 
@@ -27,7 +26,7 @@ VERIFY_MAP = {
 }
 
 
-async def cluster_verifies_down(code: str) -> Optional[bool]:
+async def cluster_verifies_down(code: str) -> bool | None:
     """
     Return:
       True  -> cluster ALSO sees it as down (alert is real)
