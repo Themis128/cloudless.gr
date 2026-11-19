@@ -67,6 +67,15 @@ jobs:
           kubectl -n ntfy exec "$POD" -- ntfy access archive-reader 'nextcloud-*' ro
           kubectl -n ntfy exec "$POD" -- ntfy access archive-reader 'esp32-*' ro
 
+          # Rotate: revoke every prior archive-reader token before minting —
+          # token list prints one "tk_..." per row; removing by value is
+          # idempotent so a re-run can't accumulate live credentials.
+          kubectl -n ntfy exec "$POD" -- ntfy token list archive-reader \
+            | grep -oE 'tk_[A-Za-z0-9]+' \
+            | while read -r OLD; do
+                kubectl -n ntfy exec "$POD" -- ntfy token remove archive-reader "$OLD" || true
+              done
+
           TOKEN_LINE=$(kubectl -n ntfy exec "$POD" -- \
             ntfy token add archive-reader --label "archive-reader $(date +%F)")
           TOKEN=$(echo "$TOKEN_LINE" | grep -oE 'tk_[A-Za-z0-9]+')
