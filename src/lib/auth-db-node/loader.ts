@@ -19,7 +19,10 @@ export function loadLocalAuthDbModule(): {
     const mod = require(spec) as { getLocalAuthDb?: () => AuthDatabase | null };
     /* v8 ignore next -- vitest/webpack compile the computed require into a throwing empty context; the success path only runs in real Node bundles (Pi standalone, Turbopack dev) */
     return mod;
-  } catch {
+  } catch (err) {
+    // Surface resolution/load failures — a silent null is indistinguishable
+    // from "local DB not configured" in bundled/standalone Node builds.
+    console.warn("[auth-db-node] local module load failed:", err);
     return null;
   }
 }
