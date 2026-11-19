@@ -9,6 +9,7 @@ alert-api is broken. This check catches that case independently.
 Pings every PING_EVERY_S. On error from active alerts (any FIRING with critical
 severity), pings /fail to escalate immediately regardless of period.
 """
+
 import asyncio
 import logging
 import os
@@ -22,7 +23,7 @@ PING_URL = os.environ.get(
     "HEALTHCHECKS_API_URL",
     "https://hc-ping.com/48519bfc-608d-448a-83df-b2ed113a694e",
 )
-PING_EVERY_S = 60   # well inside the 5-min Healthchecks period + 3-min grace
+PING_EVERY_S = 60  # well inside the 5-min Healthchecks period + 3-min grace
 
 
 async def _post(url: str, body: str) -> None:
@@ -37,12 +38,17 @@ async def _build_body() -> tuple[str, bool]:
     """Return (body, has_critical) for the current alert state."""
     try:
         import database
+
         active = await database.get_active_alerts()
     except Exception as exc:
         return f"err=get_active_alerts:{exc}", False
     total = len(active)
-    crit = sum(1 for a in active if (a.get("severity") or "").lower() == "critical"
-               and (a.get("status") or "").upper() == "FIRING")
+    crit = sum(
+        1
+        for a in active
+        if (a.get("severity") or "").lower() == "critical"
+        and (a.get("status") or "").upper() == "FIRING"
+    )
     codes = ",".join(a.get("code", "?") for a in active[:5])
     body = f"active={total} critical={crit} codes={codes or '-'}"
     return body, crit > 0

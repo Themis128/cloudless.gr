@@ -6,6 +6,7 @@ Tables:
   esp32_logs    — verbose log lines pushed by the ESP32
   esp32_status  — singleton row: last-known ESP32 hardware state
 """
+
 import logging
 from datetime import UTC, datetime
 
@@ -89,19 +90,21 @@ def _now() -> str:
 
 # ── Alerts ─────────────────────────────────────────────────────────────────────
 
+
 async def upsert_alert(alert: dict) -> dict:
-    code     = alert["code"]
-    host     = alert["host"]
-    service  = alert["service"]
+    code = alert["code"]
+    host = alert["host"]
+    service = alert["service"]
     severity = alert["severity"]
-    message  = alert["message"]
-    status   = alert["status"]
-    count    = alert.get("count", 1)
-    now      = _now()
+    message = alert["message"]
+    status = alert["status"]
+    count = alert.get("count", 1)
+    now = _now()
 
     async with aiosqlite.connect(DB_PATH) as db:
         if status in ("FIRING", "INFO"):
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT INTO alerts
                     (code, host, service, severity, message, status, count, first_seen, last_seen)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -112,29 +115,39 @@ async def upsert_alert(alert: dict) -> dict:
                     last_seen   = excluded.last_seen,
                     resolved_at = NULL,
                     resolved_by = NULL
-            """, (code, host, service, severity, message, status, count, now, now))
+            """,
+                (code, host, service, severity, message, status, count, now, now),
+            )
 
         elif status == "ONGOING":
-            await db.execute("""
+            await db.execute(
+                """
                 UPDATE alerts
                 SET status = 'ONGOING', count = ?, last_seen = ?
                 WHERE code = ?
-            """, (count, now, code))
+            """,
+                (count, now, code),
+            )
 
         elif status == "RESOLVED":
-            await db.execute("""
+            await db.execute(
+                """
                 UPDATE alerts
                 SET status = 'RESOLVED', resolved_at = ?, resolved_by = ?, last_seen = ?
                 WHERE code = ?
-            """, (now, alert.get("resolved_by", "esp32"), now, code))
+            """,
+                (now, alert.get("resolved_by", "esp32"), now, code),
+            )
 
         # Always append to history
-        await db.execute("""
+        await db.execute(
+            """
             INSERT INTO alert_history
                 (code, host, service, severity, message, status, count, ts, resolved_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (code, host, service, severity, message, status, count, now,
-              alert.get("resolved_by")))
+        """,
+            (code, host, service, severity, message, status, count, now, alert.get("resolved_by")),
+        )
 
         await db.commit()
 
@@ -186,13 +199,9 @@ async def get_alert_stats() -> dict:
             "SELECT COUNT(*) FROM alerts WHERE status NOT IN ('RESOLVED')"
         ) as cur:
             stats["active"] = (await cur.fetchone())[0]
-        async with db.execute(
-            "SELECT COUNT(*) FROM alerts WHERE status = 'RESOLVED'"
-        ) as cur:
+        async with db.execute("SELECT COUNT(*) FROM alerts WHERE status = 'RESOLVED'") as cur:
             stats["resolved"] = (await cur.fetchone())[0]
-        async with db.execute(
-            "SELECT severity, COUNT(*) FROM alerts GROUP BY severity"
-        ) as cur:
+        async with db.execute("SELECT severity, COUNT(*) FROM alerts GROUP BY severity") as cur:
             async for row in cur:
                 stats["by_severity"][row[0]] = row[1]
     return stats
@@ -201,24 +210,31 @@ async def get_alert_stats() -> dict:
 async def resolve_alert(code: str, resolved_by: str = "manual") -> bool:
     now = _now()
     async with aiosqlite.connect(DB_PATH) as db:
-        result = await db.execute("""
+        result = await db.execute(
+            """
             UPDATE alerts
             SET status = 'RESOLVED', resolved_at = ?, resolved_by = ?, last_seen = ?
             WHERE code = ? AND status NOT IN ('RESOLVED')
-        """, (now, resolved_by, now, code))
+        """,
+            (now, resolved_by, now, code),
+        )
         if result.rowcount == 0:
             return False
-        await db.execute("""
+        await db.execute(
+            """
             INSERT INTO alert_history
                 (code, host, service, severity, message, status, count, ts, resolved_by)
             SELECT code, host, service, severity, message, 'RESOLVED', count, ?, ?
             FROM alerts WHERE code = ?
-        """, (now, resolved_by, code))
+        """,
+            (now, resolved_by, code),
+        )
         await db.commit()
     return True
 
 
 # ── ESP32 Logs ─────────────────────────────────────────────────────────────────
+
 
 async def insert_log(level: str, message: str) -> dict:
     now = _now()
@@ -254,10 +270,12 @@ async def get_logs(limit: int = 200, offset: int = 0) -> list[dict]:
 
 # ── ESP32 Status ───────────────────────────────────────────────────────────────
 
+
 async def upsert_esp32_status(data: dict) -> dict:
     now = _now()
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
+        await db.execute(
+            """
             UPDATE esp32_status SET
                 ip             = COALESCE(?, ip),
                 rssi           = COALESCE(?, rssi),
@@ -267,15 +285,17 @@ async def upsert_esp32_status(data: dict) -> dict:
                 last_heartbeat = ?,
                 started_at     = COALESCE(started_at, ?)
             WHERE id = 1
-        """, (
-            data.get("ip"),
-            data.get("rssi"),
-            data.get("firmware_ver"),
-            data.get("uptime_s"),
-            data.get("free_ram_bytes"),
-            now,
-            now,
-        ))
+        """,
+            (
+                data.get("ip"),
+                data.get("rssi"),
+                data.get("firmware_ver"),
+                data.get("uptime_s"),
+                data.get("free_ram_bytes"),
+                now,
+                now,
+            ),
+        )
         await db.commit()
     return await get_esp32_status()
 

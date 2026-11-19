@@ -12,6 +12,7 @@ notify normally.
 
 Wired in from main.py.receive_alert() BEFORE slack_notify.send_alert(...).
 """
+
 import logging
 
 import httpx
@@ -43,7 +44,10 @@ async def cluster_verifies_down(code: str) -> bool | None:
             up = ok_min <= r.status_code <= ok_max
             logger.info(
                 "flap-guard %s: cluster check %s -> HTTP %d (up=%s)",
-                code, url, r.status_code, up,
+                code,
+                url,
+                r.status_code,
+                up,
             )
             return not up
     except Exception as exc:
@@ -65,8 +69,7 @@ async def should_suppress(data: dict) -> bool:
         original = data.get("message", "")
         data["status"] = "FLAP_SUPPRESSED"
         data["message"] = (
-            f"{original} [flap-guard: cluster verified target healthy, "
-            f"suppressing Slack notify]"
+            f"{original} [flap-guard: cluster verified target healthy, suppressing Slack notify]"
         )
         return True
     return False
