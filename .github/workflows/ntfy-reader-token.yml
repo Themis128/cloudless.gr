@@ -6,9 +6,11 @@ name: ntfy archive-reader token mint
 # alert-relay publisher token is write-only by design.
 #
 # Self-fires once when this file lands on main; re-run manually with
-# workflow_dispatch to rotate. The token is uploaded as a workflow
-# ARTIFACT (never logged) — download, store to the cu130-slim .env as
-# NTFY_READER_TOKEN, then delete the artifact.
+# workflow_dispatch to rotate. The token is written into the dedicated
+# k8s Secret `ntfy-archive-reader` in the `cloudless` namespace via a
+# stdin Secret manifest (same lane as gh-secret-mirror) — never logged,
+# never an artifact. Sync it to the cu130-slim .env as NTFY_READER_TOKEN
+# (manual or via the Infisical harvest).
 
 on:
   push:
@@ -67,13 +69,23 @@ jobs:
 
           TOKEN_LINE=$(kubectl -n ntfy exec "$POD" -- \
             ntfy token add archive-reader --label "archive-reader $(date +%F)")
-          echo "$TOKEN_LINE" | grep -oE 'tk_[A-Za-z0-9]+' > ntfy_reader_token.txt
-          test -s ntfy_reader_token.txt
-          echo "token minted (hidden) — length $(wc -c < ntfy_reader_token.txt)"
+          TOKEN=$(echo "$TOKEN_LINE" | grep -oE 'tk_[A-Za-z0-9]+')
+          test -n "$TOKEN"
+          # Mask defensively (kubectl stderr should never echo it anyway).
+          echo "::add-mask::$TOKEN"
 
-      - name: Upload token artifact
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4
-        with:
-          name: ntfy-reader-token
-          path: ntfy_reader_token.txt
-          retention-days: 1
+          # Deliver into the gh-actions-mirror Secret data lane: a stdin
+          # manifest keeps the value out of argv/logs; etcd encrypts at
+          # rest and the weekly Infisical harvest can pick it up.
+          kubectl -n cloudless apply -f - <<MANIFEST
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ntfy-archive-reader
+            labels:
+              app.kubernetes.io/managed-by: github-actions
+          type: Opaque
+          stringData:
+            NTFY_READER_TOKEN: "$TOKEN"
+          MANIFEST
+          echo "token delivered to k8s Secret cloudless/ntfy-archive-reader" 
