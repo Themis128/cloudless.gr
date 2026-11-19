@@ -417,7 +417,7 @@ describe("health route tails", () => {
     const localDb = {
       prepare: () => ({ first: async () => ({ ok: 1 }) }),
     };
-    vi.doMock("@/lib/auth-db-local", () => ({ getLocalAuthDb: () => localDb }));
+    vi.doMock("@/lib/auth-db-node/local", () => ({ getLocalAuthDb: () => localDb }));
     vi.doMock("@/lib/rate-limit", () => ({ rateLimit: () => true, getClientIp: () => "x" }));
     vi.stubEnv("NODE_ENV", "development");
     try {

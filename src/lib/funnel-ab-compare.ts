@@ -3,7 +3,7 @@
  * Pure — no D1. Distinct from /admin/ab-tests flag toggles.
  */
 
-import { FUNNEL_EVENT_TYPES } from "@/lib/search-funnel";
+import { FUNNEL_EVENT_TYPES } from "@/lib/funnel-events";
 
 export interface FunnelSummaryLike {
   event_type: string;

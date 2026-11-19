@@ -1,6 +1,10 @@
+// @vitest-environment node
 /**
  * Metadata/static-param tails for public pages: store index, store/[id],
  * contact, twitter-image.
+ *
+ * Node environment: @vercel/og renders through sharp, which rejects
+ * jsdom-realm Uint8Array input (same constraint as app-icons.node.test).
  */
 import { describe, expect, it, vi } from "vitest";
 
