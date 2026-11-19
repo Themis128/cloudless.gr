@@ -88,4 +88,4 @@ jobs:
           stringData:
             NTFY_READER_TOKEN: "$TOKEN"
           MANIFEST
-          echo "token delivered to k8s Secret cloudless/ntfy-archive-reader" 
+          echo "token delivered to k8s Secret cloudless/ntfy-archive-reader"
