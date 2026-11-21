@@ -19,7 +19,8 @@ type Props = {
 /** Render inline markdown: **bold**, `code`, [links](url) */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /(!\[([^\]]*)\]\(([^)]+)\)|@\[([^\]]*)\]\(([^)]+)\)|\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  const regex =
+    /(!\[([^\]]*)\]\(([^)]+)\)|@\[([^\]]*)\]\(([^)]+)\)|\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
   let last = 0;
   let match: RegExpExecArray | null;
   let key = 0;
