@@ -19,7 +19,7 @@ type Props = {
 /** Render inline markdown: **bold**, `code`, [links](url) */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /(\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  const regex = /(!\[([^\]]*)\]\(([^)]+)\)|@\[([^\]]*)\]\(([^)]+)\)|\*\*(.+?)\*\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
   let last = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -28,31 +28,53 @@ function renderInline(text: string): React.ReactNode[] {
     if (match.index > last) {
       parts.push(text.slice(last, match.index));
     }
-    if (match[2]) {
+    if (match[3] !== undefined && match[2] !== undefined) {
+      parts.push(
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={key++}
+          src={match[3]}
+          alt={match[2]}
+          className="mt-3 w-full rounded-xl border border-slate-800"
+          loading="lazy"
+        />
+      );
+    } else if (match[5] !== undefined) {
+      parts.push(
+        <video
+          key={key++}
+          src={match[5]}
+          aria-label={match[4] || "Video"}
+          controls
+          playsInline
+          className="mt-3 w-full rounded-xl border border-slate-800"
+        />
+      );
+    } else if (match[6]) {
       parts.push(
         <strong key={key++} className="font-semibold text-white">
-          {match[2]}
+          {match[6]}
         </strong>
       );
-    } else if (match[3]) {
+    } else if (match[7]) {
       parts.push(
         <code
           key={key++}
           className="text-neon-cyan bg-neon-cyan/5 border-neon-cyan/10 rounded border px-1.5 py-0.5 font-mono text-xs"
         >
-          {match[3]}
+          {match[7]}
         </code>
       );
-    } else if (match[4] && match[5]) {
+    } else if (match[8] && match[9]) {
       parts.push(
         <a
           key={key++}
-          href={match[5]}
+          href={match[9]}
           className="text-neon-cyan hover:underline"
-          target={match[5].startsWith("http") ? "_blank" : undefined}
-          rel={match[5].startsWith("http") ? "noopener noreferrer" : undefined}
+          target={match[9].startsWith("http") ? "_blank" : undefined}
+          rel={match[9].startsWith("http") ? "noopener noreferrer" : undefined}
         >
-          {match[4]}
+          {match[8]}
         </a>
       );
     }
