@@ -8,6 +8,7 @@ import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PageViewBeacon from "@/components/analytics/PageViewBeacon";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
+import SwetrixAnalytics from "@/components/SwetrixAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
 import { GoogleTagManagerHead, GoogleTagManagerNoscript } from "@/components/GoogleTagManager";
 import { instrumentSans, workSans, geistMono } from "@/lib/fonts";
@@ -163,6 +164,7 @@ export default async function RootLayout({
         <PageViewBeacon />
         <PlausibleAnalytics />
         <ClarityAnalytics />
+        <SwetrixAnalytics />
       </body>
     </html>
   );
