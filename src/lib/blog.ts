@@ -534,6 +534,52 @@ These patterns map directly onto how we build client automations: explicit agent
       },
     ],
   },
+  {
+    slug: "gta-6-launched-our-cloud-bill-didnt",
+    title: "GTA 6 Launched. Our Cloud Bill Didn't.",
+    excerpt:
+      "Grand Theft Auto VI is here, Vice City is glowing, and somewhere a Rockstar accountant is smiling. Meanwhile the average SMB cloud bill is still the real heist. A short, funny tour of the biggest entertainment launch in years — and the one expense nobody audits.",
+    date: "2026-11-21",
+    readTime: "4 min read",
+    category: "Cloud",
+    content: `
+Grand Theft Auto VI is out. If you haven't heard, a game about stealing cars in a neon-soaked version of Miami just became the highest-rated game in history, according to the people selling it, which is fair enough.
+
+We at Cloudless have been watching the launch coverage all week, and one thing keeps standing out: this thing cost more than most companies' entire IT budget. Vice City wasn't built on a shoestring. There are mo-cap budgets, motion capture stages, and presumably a catering team the size of a small government.
+
+And yet.
+
+## The heist nobody talks about
+
+Here's the part of GTA 6 coverage you won't see on the trailers: somewhere right now, an SMB owner is paying €800 a month for cloud infrastructure they couldn't explain to a police interrogator.
+
+Duplicate SaaS seats. Servers idling at 3% CPU. A Kubernetes cluster from 2023 that exists because nobody remembers who deployed it. Unused snapshots, forgotten load balancers, an observability stack monitoring nothing.
+
+Rockstar spent a decade building Vice City. Your cloud bill has been building itself for years, silently, in the background, and it has never once asked for a code review.
+
+## Jason and Lucia had a plan. Do you?
+
+The game's whole pitch is two criminals forced to rely on each other. Founders running on unmanaged cloud spend are in a similar position — except instead of a yacht and a skyline, the stakes are a renewal notice and a finance meeting.
+
+The fix isn't glamorous. It's an audit:
+
+1. **Map the spend** — every service, every seat, every GB.
+2. **Find the waste** — the stuff you're paying for and not using.
+3. **Automate the boring parts** — so it stays fixed instead of rotting again.
+
+That's literally what we do at Cloudless. The 30-minute audit is free, the report is yours either way, and no cars get stolen in the process.
+
+## Meanwhile, back in Leonida
+
+Vice City looks incredible. The soundtrack has Tame Impala and SZA on it. There is a pre-load trailer that snuck in new gameplay footage nine days before launch, which is either great marketing or a crime — depending on your point of view, and honestly, in this economy, we respect the hustle.
+
+Your cloud infrastructure doesn't need a trailer. It needs a bill you can actually read.
+
+If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 30 minutes of attention. [Book the free audit](https://cloudless.gr/contact) — we'll bring the spreadsheets, you bring the coffee.
+
+*— The Cloudless team*
+    `.trim(),
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
