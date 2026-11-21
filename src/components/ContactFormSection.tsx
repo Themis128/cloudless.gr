@@ -161,7 +161,10 @@ export default function ContactFormSection({ source = "" }: { source?: string })
           {/* Form */}
           <div className="lg:col-span-3" data-testid="contact-form-panel">
             {isBf2026 && status !== FORM_STATUS_SENT && (
-              <div className="border-neon-cyan/40 bg-neon-cyan/5 mb-6 rounded-xl border p-5" data-testid="bf2026-offer-banner">
+              <div
+                className="border-neon-cyan/40 bg-neon-cyan/5 mb-6 rounded-xl border p-5"
+                data-testid="bf2026-offer-banner"
+              >
                 <p className="text-neon-cyan font-mono text-xs font-semibold tracking-[0.2em]">
                   {t("contact.bf2026Kicker", "[ BLACK FRIDAY — ENDS NOV 30 ]")}
                 </p>
@@ -181,9 +184,7 @@ export default function ContactFormSection({ source = "" }: { source?: string })
                       "✓ Free 12-Automation Checklist + 50% off website design when you book this week."
                     )}
                   </li>
-                  <li>
-                    {t("contact.bf2026Item3", "✓ Yours to keep — no pitch, no obligation.")}
-                  </li>
+                  <li>{t("contact.bf2026Item3", "✓ Yours to keep — no pitch, no obligation.")}</li>
                 </ul>
                 <p className="mt-3 text-xs text-slate-400">
                   {t(
