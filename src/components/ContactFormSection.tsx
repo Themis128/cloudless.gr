@@ -46,10 +46,10 @@ const SCREENING_QUESTIONS = [
     key: "teamSize",
     labelKey: "contact.screen.teamSize.label",
     options: [
-      { value: "2-5 people", labelKey: "contact.screen.teamSize.opt.2_5" },
-      { value: "6-10 people", labelKey: "contact.screen.teamSize.opt.6_10" },
-      { value: "11-20 people", labelKey: "contact.screen.teamSize.opt.11_20" },
-      { value: "20+ people", labelKey: "contact.screen.teamSize.opt.20plus" },
+      { value: "2-5 people", code: "2-5", labelKey: "contact.screen.teamSize.opt.2_5" },
+      { value: "6-10 people", code: "6-10", labelKey: "contact.screen.teamSize.opt.6_10" },
+      { value: "11-20 people", code: "11-20", labelKey: "contact.screen.teamSize.opt.11_20" },
+      { value: "20+ people", code: "20+", labelKey: "contact.screen.teamSize.opt.20plus" },
     ],
   },
   {
@@ -58,40 +58,64 @@ const SCREENING_QUESTIONS = [
     options: [
       {
         value: "Unexplained software and cloud costs",
+        code: "costs",
         labelKey: "contact.screen.topPain.opt.costs",
       },
       {
         value: "Fragile or undocumented infrastructure",
+        code: "fragile",
         labelKey: "contact.screen.topPain.opt.fragile",
       },
       {
         value: "Slow delivery and too many manual steps",
+        code: "slow",
         labelKey: "contact.screen.topPain.opt.slow",
       },
       {
         value: "Scattered tools with no visibility",
+        code: "scatter",
         labelKey: "contact.screen.topPain.opt.scatter",
       },
-      { value: "Not sure yet", labelKey: "contact.screen.topPain.opt.unsure" },
+      { value: "Not sure yet", code: "unsure", labelKey: "contact.screen.topPain.opt.unsure" },
     ],
   },
   {
     key: "setupState",
     labelKey: "contact.screen.setupState.label",
     options: [
-      { value: "Messy multi-cloud sprawl", labelKey: "contact.screen.setupState.opt.sprawl" },
-      { value: "One cloud, but unmanaged", labelKey: "contact.screen.setupState.opt.unmanaged" },
-      { value: "Mostly manual processes", labelKey: "contact.screen.setupState.opt.manual" },
-      { value: "Early stage, little in place", labelKey: "contact.screen.setupState.opt.early" },
+      {
+        value: "Messy multi-cloud sprawl",
+        code: "sprawl",
+        labelKey: "contact.screen.setupState.opt.sprawl",
+      },
+      {
+        value: "One cloud, but unmanaged",
+        code: "unmanaged",
+        labelKey: "contact.screen.setupState.opt.unmanaged",
+      },
+      {
+        value: "Mostly manual processes",
+        code: "manual",
+        labelKey: "contact.screen.setupState.opt.manual",
+      },
+      {
+        value: "Early stage, little in place",
+        code: "early",
+        labelKey: "contact.screen.setupState.opt.early",
+      },
     ],
   },
   {
     key: "timeline",
     labelKey: "contact.screen.timeline.label",
     options: [
-      { value: "This month", labelKey: "contact.screen.timeline.opt.month" },
-      { value: "This quarter", labelKey: "contact.screen.timeline.opt.quarter" },
-      { value: "Just exploring", labelKey: "contact.screen.timeline.opt.exploring" },
+      { value: "This month", code: "month", labelKey: "contact.screen.timeline.opt.month" },
+      { value: "This quarter", code: "quarter", labelKey: "contact.screen.timeline.opt.quarter" },
+      {
+        value: "Just exploring",
+        code: "exploring",
+        labelKey: "contact.screen.timeline.opt.exploring",
+      },
     ],
   },
 ] as const;
@@ -162,16 +186,18 @@ export default function ContactFormSection({ source = "" }: { source?: string })
     const rawMessage = (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value;
     // Screening answers ride inside `message` so every downstream surface
     // (admin email, Slack, CRM, NLP scoring) sees them without API changes.
-    const screeningLines = isBf2026
+    // Compact `key=code` tokens keep the block ~75 chars so the visitor's
+    // message survives downstream 500-char slices (Slack/email/CRM).
+    const screeningPairs = isBf2026
       ? SCREENING_QUESTIONS.map((q) => {
           const node = form.elements.namedItem(`screening-${q.key}`) as RadioNodeList | null;
-          const question = t(q.labelKey, q.key);
-          return node?.value ? `${question}: ${node.value}` : null;
-        }).filter((line): line is string => line !== null)
+          const opt = q.options.find((o) => o.value === node?.value);
+          return opt ? `${q.key}=${opt.code}` : null;
+        }).filter((pair): pair is string => pair !== null)
       : [];
     const message =
-      screeningLines.length > 0
-        ? `[Audit screening]\n${screeningLines.join("\n")}\n\n${rawMessage}`
+      screeningPairs.length > 0
+        ? `[screen] ${screeningPairs.join("|")}\n\n${rawMessage}`
         : rawMessage;
     const payload = {
       name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
