@@ -563,9 +563,9 @@ The game's whole pitch is two criminals forced to rely on each other. Founders r
 
 The fix isn't glamorous. It's an audit:
 
-1. **Map the spend** — every service, every seat, every GB.
-2. **Find the waste** — the stuff you're paying for and not using.
-3. **Automate the boring parts** — so it stays fixed instead of rotting again.
+- **Map the spend** — every service, every seat, every GB.
+- **Find the waste** — the stuff you're paying for and not using.
+- **Automate the boring parts** — so it stays fixed instead of rotting again.
 
 That's literally what we do at Cloudless. The 30-minute audit is free, the report is yours either way, and no cars get stolen in the process.
 
@@ -577,7 +577,7 @@ Your cloud infrastructure doesn't need a trailer. It needs a bill you can actual
 
 If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 30 minutes of attention. [Book the free audit](/contact) — we'll bring the spreadsheets, you bring the coffee.
 
-*— The Cloudless team*
+**— The Cloudless team**
     `.trim(),
   },
 ];
