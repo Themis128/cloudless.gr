@@ -38,6 +38,63 @@ const FIELD_EMAIL = "email";
 const FIELD_COMPANY = "company";
 const FIELD_SERVICE = "service";
 const FIELD_MESSAGE = "message";
+// bf2026 audit qualification screening — 4 quick radio questions per the
+// offer-audit recommendation. Option `value` is the canonical English string
+// stored in the lead payload; `labelKey` resolves the localized display text.
+const SCREENING_QUESTIONS = [
+  {
+    key: "teamSize",
+    labelKey: "contact.screen.teamSize.label",
+    options: [
+      { value: "2-5 people", labelKey: "contact.screen.teamSize.opt.2_5" },
+      { value: "6-10 people", labelKey: "contact.screen.teamSize.opt.6_10" },
+      { value: "11-20 people", labelKey: "contact.screen.teamSize.opt.11_20" },
+      { value: "20+ people", labelKey: "contact.screen.teamSize.opt.20plus" },
+    ],
+  },
+  {
+    key: "topPain",
+    labelKey: "contact.screen.topPain.label",
+    options: [
+      {
+        value: "Unexplained software and cloud costs",
+        labelKey: "contact.screen.topPain.opt.costs",
+      },
+      {
+        value: "Fragile or undocumented infrastructure",
+        labelKey: "contact.screen.topPain.opt.fragile",
+      },
+      {
+        value: "Slow delivery and too many manual steps",
+        labelKey: "contact.screen.topPain.opt.slow",
+      },
+      {
+        value: "Scattered tools with no visibility",
+        labelKey: "contact.screen.topPain.opt.scatter",
+      },
+      { value: "Not sure yet", labelKey: "contact.screen.topPain.opt.unsure" },
+    ],
+  },
+  {
+    key: "setupState",
+    labelKey: "contact.screen.setupState.label",
+    options: [
+      { value: "Messy multi-cloud sprawl", labelKey: "contact.screen.setupState.opt.sprawl" },
+      { value: "One cloud, but unmanaged", labelKey: "contact.screen.setupState.opt.unmanaged" },
+      { value: "Mostly manual processes", labelKey: "contact.screen.setupState.opt.manual" },
+      { value: "Early stage, little in place", labelKey: "contact.screen.setupState.opt.early" },
+    ],
+  },
+  {
+    key: "timeline",
+    labelKey: "contact.screen.timeline.label",
+    options: [
+      { value: "This month", labelKey: "contact.screen.timeline.opt.month" },
+      { value: "This quarter", labelKey: "contact.screen.timeline.opt.quarter" },
+      { value: "Just exploring", labelKey: "contact.screen.timeline.opt.exploring" },
+    ],
+  },
+] as const;
 // Form status literals — extracted to satisfy sonarjs/no-duplicate-string (S1192).
 const FORM_STATUS_IDLE = "idle" as const;
 const FORM_STATUS_SENDING = "sending" as const;
@@ -102,12 +159,26 @@ export default function ContactFormSection({ source = "" }: { source?: string })
     setStatus(FORM_STATUS_SENDING);
 
     const form = e.currentTarget;
+    const rawMessage = (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value;
+    // Screening answers ride inside `message` so every downstream surface
+    // (admin email, Slack, CRM, NLP scoring) sees them without API changes.
+    const screeningLines = isBf2026
+      ? SCREENING_QUESTIONS.map((q) => {
+          const node = form.elements.namedItem(`screening-${q.key}`) as RadioNodeList | null;
+          const question = t(q.labelKey, q.key);
+          return node?.value ? `${question}: ${node.value}` : null;
+        }).filter((line): line is string => line !== null)
+      : [];
+    const message =
+      screeningLines.length > 0
+        ? `[Audit screening]\n${screeningLines.join("\n")}\n\n${rawMessage}`
+        : rawMessage;
     const payload = {
       name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
       email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
       service: (form.elements.namedItem(FIELD_SERVICE) as unknown as HTMLSelectElement).value,
-      message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
+      message,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
       turnstileToken: turnstileToken ?? undefined,
@@ -192,12 +263,17 @@ export default function ContactFormSection({ source = "" }: { source?: string })
                       "✓ Free 12-Automation Checklist + 50% off website design when you book this week."
                     )}
                   </li>
-                  <li>{t("contact.bf2026Item3", "✓ Yours to keep — no pitch, no obligation.")}</li>
+                  <li>
+                    {t(
+                      "contact.bf2026Item3",
+                      "✓ Fixed scope, one point of contact, no lock-in — yours to keep, no pitch."
+                    )}
+                  </li>
                 </ul>
                 <p className="mt-3 text-xs text-slate-400">
                   {t(
                     "contact.bf2026Sub",
-                    "Leave your details below and we'll confirm your slot within 24 hours."
+                    "Answer 4 quick questions below, then leave your details — we confirm your slot within 24 hours."
                   )}
                 </p>
               </div>
@@ -315,6 +391,52 @@ export default function ContactFormSection({ source = "" }: { source?: string })
                     ))}
                   </select>
                 </div>
+
+                {isBf2026 && (
+                  <fieldset className="border-neon-cyan/20 rounded-lg border p-4">
+                    <legend className="text-neon-cyan px-1 font-mono text-xs font-semibold tracking-wider">
+                      {t(
+                        "contact.bf2026ScreeningTitle",
+                        "4 quick questions so we can make the audit count:"
+                      )}
+                    </legend>
+                    <p className="mb-4 text-xs text-slate-500">
+                      {t(
+                        "contact.bf2026ScreeningHint",
+                        "20 seconds — helps us qualify your setup before the call."
+                      )}
+                    </p>
+                    <div className="space-y-5">
+                      {SCREENING_QUESTIONS.map((q) => (
+                        <fieldset key={q.key} className="m-0 border-0 p-0">
+                          <legend className={LABEL_CLASS}>{t(q.labelKey, q.key)} *</legend>
+                          <div className="flex flex-wrap gap-x-5 gap-y-2">
+                            {q.options.map((opt, optIdx) => {
+                              const inputId = `screening-${q.key}-${optIdx}`;
+                              return (
+                                <label
+                                  key={opt.value}
+                                  htmlFor={inputId}
+                                  className="flex cursor-pointer items-center gap-2 text-sm text-slate-300"
+                                >
+                                  <input
+                                    id={inputId}
+                                    type="radio"
+                                    name={`screening-${q.key}`}
+                                    value={opt.value}
+                                    required
+                                    className="h-4 w-4 accent-cyan-400"
+                                  />
+                                  {t(opt.labelKey, opt.value)}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </fieldset>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
 
                 <div>
                   <label htmlFor={FIELD_MESSAGE} className={LABEL_CLASS}>

@@ -211,9 +211,49 @@
     "bf2026Title": "Ihr kostenloses 30-minütiges Digital-Department-Audit",
     "bf2026Item1": "✓ Wir zeigen, wo Ihr Setup Geld verbrennt — Sie gehen mit einem schriftlichen Fahrplan.",
     "bf2026Item2": "✓ Kostenlose 12-Automatisierungen-Checkliste + 50 % Rabatt auf Webdesign bei Buchung diese Woche.",
-    "bf2026Item3": "✓ Gehört Ihnen — kein Pitch, keine Verpflichtung.",
-    "bf2026Sub": "Hinterlassen Sie Ihre Daten — wir bestätigen Ihren Termin innerhalb von 24 Stunden.",
-    "bf2026Prefill": "Ich möchte das kostenlose 30-minütige Digital-Department-Audit buchen (Black-Friday-Angebot)."
+    "bf2026Item3": "✓ Fester Umfang, ein Ansprechpartner, keine Bindung — gehört Ihnen, kein Pitch.",
+    "bf2026Sub": "Beantworten Sie unten 4 kurze Fragen und hinterlassen Sie Ihre Daten — wir bestätigen Ihren Termin innerhalb von 24 Stunden.",
+    "bf2026Prefill": "Ich möchte das kostenlose 30-minütige Digital-Department-Audit buchen (Black-Friday-Angebot).",
+    "bf2026ScreeningTitle": "4 kurze Fragen, damit sich das Audit lohnt:",
+    "bf2026ScreeningHint": "20 Sekunden — hilft uns, Ihr Setup vor dem Gespräch einzuordnen.",
+    "screen": {
+      "teamSize": {
+        "label": "Teamgröße",
+        "opt": {
+          "2_5": "2–5 Personen",
+          "6_10": "6–10 Personen",
+          "11_20": "11–20 Personen",
+          "20plus": "20+ Personen"
+        }
+      },
+      "topPain": {
+        "label": "Größtes Problem gerade jetzt",
+        "opt": {
+          "costs": "Unerklärliche Software- und Cloud-Kosten",
+          "fragile": "Fragile oder undokumentierte Infrastruktur",
+          "slow": "Langsame Lieferung und zu viele manuelle Schritte",
+          "scatter": "Verstreute Tools ohne Transparenz",
+          "unsure": "Noch nicht sicher"
+        }
+      },
+      "setupState": {
+        "label": "Aktuelles Setup",
+        "opt": {
+          "sprawl": "Chaotisches Multi-Cloud",
+          "unmanaged": "Eine Cloud, aber unverwaltet",
+          "manual": "Überwiegend manuelle Prozesse",
+          "early": "Frühes Stadium, wenig vorhanden"
+        }
+      },
+      "timeline": {
+        "label": "Wann möchten Sie starten?",
+        "opt": {
+          "month": "Diesen Monat",
+          "quarter": "Dieses Quartal",
+          "exploring": "Nur neugierig"
+        }
+      }
+    }
   },
   "consultation": {
     "title": "Buchen Sie Ihre kostenlose Beratung.",

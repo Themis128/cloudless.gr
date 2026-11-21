@@ -211,9 +211,49 @@
     "bf2026Title": "Your free 30-minute Digital Department audit",
     "bf2026Item1": "✓ We map where your setup burns money — you leave with the written roadmap.",
     "bf2026Item2": "✓ Free 12-Automation Checklist + 50% off website design when you book this week.",
-    "bf2026Item3": "✓ Yours to keep — no pitch, no obligation.",
-    "bf2026Sub": "Leave your details below and we'll confirm your slot within 24 hours.",
-    "bf2026Prefill": "I'd like to book the free 30-minute Digital Department audit (Black Friday offer)."
+    "bf2026Item3": "✓ Fixed scope, one point of contact, no lock-in — yours to keep, no pitch.",
+    "bf2026Sub": "Answer 4 quick questions below, then leave your details — we confirm your slot within 24 hours.",
+    "bf2026Prefill": "I'd like to book the free 30-minute Digital Department audit (Black Friday offer).",
+    "bf2026ScreeningTitle": "4 quick questions so we can make the audit count:",
+    "bf2026ScreeningHint": "20 seconds — helps us qualify your setup before the call.",
+    "screen": {
+      "teamSize": {
+        "label": "Team size",
+        "opt": {
+          "2_5": "2–5 people",
+          "6_10": "6–10 people",
+          "11_20": "11–20 people",
+          "20plus": "20+ people"
+        }
+      },
+      "topPain": {
+        "label": "Biggest pain point right now",
+        "opt": {
+          "costs": "Unexplained software and cloud costs",
+          "fragile": "Fragile or undocumented infrastructure",
+          "slow": "Slow delivery and too many manual steps",
+          "scatter": "Scattered tools with no visibility",
+          "unsure": "Not sure yet"
+        }
+      },
+      "setupState": {
+        "label": "Current setup",
+        "opt": {
+          "sprawl": "Messy multi-cloud sprawl",
+          "unmanaged": "One cloud, but unmanaged",
+          "manual": "Mostly manual processes",
+          "early": "Early stage, little in place"
+        }
+      },
+      "timeline": {
+        "label": "When do you want to start?",
+        "opt": {
+          "month": "This month",
+          "quarter": "This quarter",
+          "exploring": "Just exploring"
+        }
+      }
+    }
   },
   "consultation": {
     "title": "Book your free consultation.",
