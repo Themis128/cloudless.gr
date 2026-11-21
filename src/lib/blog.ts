@@ -575,7 +575,7 @@ Vice City looks incredible. The soundtrack has Tame Impala and SZA on it. There 
 
 Your cloud infrastructure doesn't need a trailer. It needs a bill you can actually read.
 
-If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 30 minutes of attention. [Book the free audit](https://cloudless.gr/contact) — we'll bring the spreadsheets, you bring the coffee.
+If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 30 minutes of attention. [Book the free audit](/contact) — we'll bring the spreadsheets, you bring the coffee.
 
 *— The Cloudless team*
     `.trim(),
