@@ -211,9 +211,49 @@
     "bf2026Title": "Votre audit Digital Department gratuit de 30 minutes",
     "bf2026Item1": "✓ Nous cartographions où votre système brûle de l'argent — vous repartez avec une feuille de route écrite.",
     "bf2026Item2": "✓ Checklist de 12 automatisations offerte + 50 % de réduction sur la conception de site pour les réservations de cette semaine.",
-    "bf2026Item3": "✓ À vous de garder — sans argumentaire, sans engagement.",
-    "bf2026Sub": "Laissez vos coordonnées ci-dessous et nous confirmerons votre créneau sous 24 h.",
-    "bf2026Prefill": "Je souhaite réserver l'audit Digital Department gratuit de 30 minutes (offre Black Friday)."
+    "bf2026Item3": "✓ Périmètre fixe, un seul interlocuteur, sans engagement — à vous, sans pitch.",
+    "bf2026Sub": "Répondez aux 4 questions rapides ci-dessous puis laissez vos coordonnées — nous confirmons votre créneau sous 24 h.",
+    "bf2026Prefill": "Je souhaite réserver l'audit Digital Department gratuit de 30 minutes (offre Black Friday).",
+    "bf2026ScreeningTitle": "4 questions rapides pour rendre l'audit utile :",
+    "bf2026ScreeningHint": "20 secondes — nous aide à qualifier votre setup avant l'appel.",
+    "screen": {
+      "teamSize": {
+        "label": "Taille de l'équipe",
+        "opt": {
+          "2_5": "2–5 personnes",
+          "6_10": "6–10 personnes",
+          "11_20": "11–20 personnes",
+          "20plus": "20+ personnes"
+        }
+      },
+      "topPain": {
+        "label": "Plus gros problème actuel",
+        "opt": {
+          "costs": "Coûts logiciels et cloud inexpliqués",
+          "fragile": "Infrastructure fragile ou non documentée",
+          "slow": "Livraison lente et trop d'étapes manuelles",
+          "scatter": "Outils dispersés, aucune visibilité",
+          "unsure": "Pas encore sûr(e)"
+        }
+      },
+      "setupState": {
+        "label": "Setup actuel",
+        "opt": {
+          "sprawl": "Gâchis multi-cloud",
+          "unmanaged": "Un cloud, mais non géré",
+          "manual": "Processus surtout manuels",
+          "early": "Stade précoce, peu en place"
+        }
+      },
+      "timeline": {
+        "label": "Quand voulez-vous commencer ?",
+        "opt": {
+          "month": "Ce mois-ci",
+          "quarter": "Ce trimestre",
+          "exploring": "Je me renseigne"
+        }
+      }
+    }
   },
   "consultation": {
     "title": "Réservez votre consultation gratuite.",
