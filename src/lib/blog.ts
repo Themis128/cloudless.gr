@@ -573,7 +573,11 @@ That's literally what we do at Cloudless. The 30-minute audit is free, the repor
 
 Vice City looks incredible. The soundtrack has Tame Impala and SZA on it. There is a pre-load trailer that snuck in new gameplay footage nine days before launch, which is either great marketing or a crime — depending on your point of view, and honestly, in this economy, we respect the hustle.
 
+![GTA 6 launched. Our cloud bill didn't. — branded recap card](/blog/gta6-cloud-bill.png)
+
 Your cloud infrastructure doesn't need a trailer. It needs a bill you can actually read.
+
+@[26-second branded recap: GTA 6 vs your cloud bill](/blog/gta6-cloud-bill.mp4)
 
 If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 30 minutes of attention. [Book the free audit](/contact) — we'll bring the spreadsheets, you bring the coffee.
 
