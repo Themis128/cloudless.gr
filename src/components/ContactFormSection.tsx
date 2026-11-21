@@ -43,6 +43,12 @@ const FORM_STATUS_IDLE = "idle" as const;
 const FORM_STATUS_SENDING = "sending" as const;
 const FORM_STATUS_SENT = "sent" as const;
 const FORM_STATUS_ERROR = "error" as const;
+// LinkedIn Campaign Manager conversion ID for bf2026 "contact_created"
+// (LEAD rule, CONVERSIONS_API). Server-side CAPI fires from /api/contact via
+// fireLinkedInServerConversion — this ID is only for the browser Insight Tag
+// dual-fire; the campaign-slug CAPI mirror intentionally stays a no-op so the
+// same lead is not double-counted.
+const BF2026_LINKEDIN_CONVERSION_ID = 30589812;
 type FormStatus =
   | typeof FORM_STATUS_IDLE
   | typeof FORM_STATUS_SENDING
@@ -137,7 +143,8 @@ export default function ContactFormSection({ source = "" }: { source?: string })
             campaign: effectiveCampaign,
             tier: tier ?? (topic === "fit-call" ? "fit-call" : null),
             orderId: `lead-${Date.now()}`,
-            conversionId: meta?.linkedinConversionId ?? null,
+            conversionId:
+              meta?.linkedinConversionId ?? (isBf2026 ? BF2026_LINKEDIN_CONVERSION_ID : null),
             customer: {
               name: payload.name,
               email: payload.email,
