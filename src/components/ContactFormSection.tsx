@@ -65,6 +65,7 @@ export default function ContactFormSection({ source = "" }: { source?: string })
   const tier = searchParams.get("tier");
   const price = searchParams.get("price");
   const isBf2026 = campaign === "bf2026" || utmCampaign === "bf2026";
+  const effectiveCampaign = campaign ?? (isBf2026 ? "bf2026" : null);
   const isPurchaseFlow = topic === "purchase";
   const isFitCallFlow = topic === "fit-call" || Boolean(campaign);
   const showCampaignBanner = isPurchaseFlow || isFitCallFlow || isBf2026;
@@ -130,10 +131,10 @@ export default function ContactFormSection({ source = "" }: { source?: string })
         );
 
         // Campaign / fit-call arrivals dual-fire LinkedIn Insight Tag + CAPI.
-        if (campaign) {
-          const meta = getCampaign(campaign);
+        if (effectiveCampaign) {
+          const meta = getCampaign(effectiveCampaign);
           fireCampaignConversion({
-            campaign,
+            campaign: effectiveCampaign,
             tier: tier ?? (topic === "fit-call" ? "fit-call" : null),
             orderId: `lead-${Date.now()}`,
             conversionId: meta?.linkedinConversionId ?? null,
