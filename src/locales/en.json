@@ -206,7 +206,14 @@
     "sendAnother": "Send another message →",
     "serviceOfInterest": "SERVICE OF INTEREST",
     "error": "Something went wrong. Please try again.",
-    "privacyConsent": "I agree that my data will be processed to respond to my enquiry, as described in the"
+    "privacyConsent": "I agree that my data will be processed to respond to my enquiry, as described in the",
+    "bf2026Kicker": "[ BLACK FRIDAY — ENDS NOV 30 ]",
+    "bf2026Title": "Your free 30-minute Digital Department audit",
+    "bf2026Item1": "✓ We map where your setup burns money — you leave with the written roadmap.",
+    "bf2026Item2": "✓ Free 12-Automation Checklist + 50% off website design when you book this week.",
+    "bf2026Item3": "✓ Yours to keep — no pitch, no obligation.",
+    "bf2026Sub": "Leave your details below and we'll confirm your slot within 24 hours.",
+    "bf2026Prefill": "I'd like to book the free 30-minute Digital Department audit (Black Friday offer)."
   },
   "consultation": {
     "title": "Book your free consultation.",

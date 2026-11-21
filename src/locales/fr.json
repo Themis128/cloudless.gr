@@ -206,7 +206,14 @@
     "sendAnother": "Envoyer un autre message →",
     "serviceOfInterest": "SERVICE SOUHAITÉ",
     "error": "Une erreur est survenue. Veuillez réessayer.",
-    "privacyConsent": "J'accepte que mes données soient traitées pour répondre à ma demande, comme décrit dans la"
+    "privacyConsent": "J'accepte que mes données soient traitées pour répondre à ma demande, comme décrit dans la",
+    "bf2026Kicker": "[ BLACK FRIDAY — FIN LE 30 NOV ]",
+    "bf2026Title": "Votre audit Digital Department gratuit de 30 minutes",
+    "bf2026Item1": "✓ Nous cartographions où votre système brûle de l'argent — vous repartez avec une feuille de route écrite.",
+    "bf2026Item2": "✓ Checklist de 12 automatisations offerte + 50 % de réduction sur la conception de site pour les réservations de cette semaine.",
+    "bf2026Item3": "✓ À vous de garder — sans argumentaire, sans engagement.",
+    "bf2026Sub": "Laissez vos coordonnées ci-dessous et nous confirmerons votre créneau sous 24 h.",
+    "bf2026Prefill": "Je souhaite réserver l'audit Digital Department gratuit de 30 minutes (offre Black Friday)."
   },
   "consultation": {
     "title": "Réservez votre consultation gratuite.",
