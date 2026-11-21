@@ -61,14 +61,21 @@ export default function ContactFormSection({ source = "" }: { source?: string })
   const topic = searchParams.get("topic");
   const products = searchParams.get("products");
   const campaign = searchParams.get("campaign");
+  const utmCampaign = searchParams.get("utm_campaign");
   const tier = searchParams.get("tier");
   const price = searchParams.get("price");
+  const isBf2026 = campaign === "bf2026" || utmCampaign === "bf2026";
   const isPurchaseFlow = topic === "purchase";
   const isFitCallFlow = topic === "fit-call" || Boolean(campaign);
-  const showCampaignBanner = isPurchaseFlow || isFitCallFlow;
+  const showCampaignBanner = isPurchaseFlow || isFitCallFlow || isBf2026;
 
   let defaultMessage = "";
-  if (isPurchaseFlow || isFitCallFlow) {
+  if (isBf2026) {
+    defaultMessage = t(
+      "contact.bf2026Prefill",
+      "I'd like to book the free 30-minute Digital Department audit (Black Friday offer)."
+    );
+  } else if (isPurchaseFlow || isFitCallFlow) {
     const parts: string[] = [];
     if (isFitCallFlow && !isPurchaseFlow) {
       parts.push("I'd like a free 20-min fit call.");
@@ -153,7 +160,40 @@ export default function ContactFormSection({ source = "" }: { source?: string })
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
           {/* Form */}
           <div className="lg:col-span-3" data-testid="contact-form-panel">
-            {showCampaignBanner && status !== FORM_STATUS_SENT && (
+            {isBf2026 && status !== FORM_STATUS_SENT && (
+              <div className="border-neon-cyan/40 bg-neon-cyan/5 mb-6 rounded-xl border p-5" data-testid="bf2026-offer-banner">
+                <p className="text-neon-cyan font-mono text-xs font-semibold tracking-[0.2em]">
+                  {t("contact.bf2026Kicker", "[ BLACK FRIDAY — ENDS NOV 30 ]")}
+                </p>
+                <p className="font-heading mt-2 text-lg font-bold text-white">
+                  {t("contact.bf2026Title", "Your free 30-minute Digital Department audit")}
+                </p>
+                <ul className="mt-3 space-y-1.5 text-sm text-slate-300">
+                  <li>
+                    {t(
+                      "contact.bf2026Item1",
+                      "✓ We map where your setup burns money — you leave with the written roadmap."
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      "contact.bf2026Item2",
+                      "✓ Free 12-Automation Checklist + 50% off website design when you book this week."
+                    )}
+                  </li>
+                  <li>
+                    {t("contact.bf2026Item3", "✓ Yours to keep — no pitch, no obligation.")}
+                  </li>
+                </ul>
+                <p className="mt-3 text-xs text-slate-400">
+                  {t(
+                    "contact.bf2026Sub",
+                    "Leave your details below and we'll confirm your slot within 24 hours."
+                  )}
+                </p>
+              </div>
+            )}
+            {!isBf2026 && showCampaignBanner && status !== FORM_STATUS_SENT && (
               <div className="border-neon-cyan/30 bg-neon-cyan/5 mb-6 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-neon-cyan mt-0.5 text-lg">&#9889;</span>
