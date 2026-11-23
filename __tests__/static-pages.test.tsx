@@ -78,6 +78,9 @@ import ContactPage from "@/app/[locale]/contact/page";
 import PlaybookPage from "@/app/[locale]/playbook/page";
 import AgentsPage from "@/app/[locale]/agents/page";
 import WorkPage from "@/app/[locale]/work/page";
+import ProjectsPage, {
+  generateMetadata as projectsGenerateMetadata,
+} from "@/app/[locale]/projects/page";
 import StorePage from "@/app/[locale]/store/page";
 import ProductPage from "@/app/[locale]/store/[id]/page";
 import SuccessPage from "@/app/[locale]/store/success/page";
@@ -144,6 +147,52 @@ describe("work page", () => {
   it("renders the page when AppFlowy is unconfigured", async () => {
     const { container } = render(await WorkPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toMatch(/work|case|project/i);
+  });
+});
+
+describe("projects page", () => {
+  it("renders the static lab floor when AppFlowy is unconfigured", async () => {
+    const { container } = render(await ProjectsPage());
+    expect(container.textContent).toContain("UNDER THE HOOD");
+    expect(container.textContent).toContain("ML price-prediction platform");
+    expect(container.textContent).toContain("Launch live app");
+  });
+
+  it("merges explicit Internal AppFlowy projects and skips untyped ones", async () => {
+    appflowyConfigured.mockResolvedValueOnce(true);
+    listProjectsMock.mockResolvedValueOnce([
+      {
+        id: "cms1",
+        name: "CMS Lab Build",
+        title: "CMS Lab Build",
+        type: "Internal",
+        typeExplicit: true,
+        status: "Completed",
+      },
+      {
+        id: "cms2",
+        name: "Untyped Draft",
+        title: "Untyped Draft",
+        type: "Internal",
+        status: "Completed",
+      },
+    ]);
+    const { container } = render(await ProjectsPage());
+    expect(container.textContent).toContain("CMS Lab Build");
+    expect(container.textContent).not.toContain("Untyped Draft");
+  });
+
+  it("falls back to the static floor when AppFlowy throws", async () => {
+    appflowyConfigured.mockResolvedValueOnce(true);
+    listProjectsMock.mockRejectedValueOnce(new Error("appflowy down"));
+    const { container } = render(await ProjectsPage());
+    expect(container.textContent).toContain("UNDER THE HOOD");
+  });
+
+  it("generateMetadata returns a locale-prefixed canonical", async () => {
+    const meta = await projectsGenerateMetadata({ params: sp({ locale: "el" }) });
+    const alternates = meta.alternates as { canonical?: string };
+    expect(alternates.canonical).toBe("https://cloudless.gr/el/projects");
   });
 });
 
