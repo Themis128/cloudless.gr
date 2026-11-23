@@ -215,7 +215,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             progress: fields.progress || 0,
             tags: fields.tags || [],
             url: fields.url || "",
-            typeExplicit: fields.typeExplicit,
+            typeExplicit: fields.typeExplicit ?? false,
           };
           /* v8 ignore start -- unreachable: parseProjectFields/stripProjectPrefix cannot throw */
         } catch {
