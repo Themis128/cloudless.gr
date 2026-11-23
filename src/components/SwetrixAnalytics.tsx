@@ -11,7 +11,11 @@ export default function SwetrixAnalytics({ nonce }: { nonce?: string }) {
 
   return (
     <>
-      <Script src="https://swetrix.org/swetrix.js" strategy="lazyOnload" {...(nonce ? { nonce } : {})} />
+      <Script
+        src="https://swetrix.org/swetrix.js"
+        strategy="lazyOnload"
+        {...(nonce ? { nonce } : {})}
+      />
       <Script id="swetrix-init" strategy="lazyOnload" {...(nonce ? { nonce } : {})}>{`
         if (typeof swetrix === "undefined") return;
         swetrix.init(${JSON.stringify(projectId)}, {
