@@ -38,7 +38,10 @@ async function loadInternalProjects(): Promise<Project[]> {
     if (!ok) return [];
     const all = await listProjects();
     return all.filter(
-      (p) => p.type === "Internal" && (p.status === "Completed" || p.status === "In Progress")
+      (p) =>
+        p.type === "Internal" &&
+        p.typeExplicit === true &&
+        (p.status === "Completed" || p.status === "In Progress")
     );
   } catch {
     return [];
