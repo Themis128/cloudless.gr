@@ -10,7 +10,7 @@
   "devDependencies": {
 
     "cf": "1.0.0-rc.2",
-    "wrangler": "4.161.0"
+    "wrangler": "4.165.0"
 
   }
 }
