@@ -19,7 +19,8 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "partners": "Partners"
+    "partners": "Partners",
+    "projects": "Projects"
   },
   "navbar": {
     "cloudless": "Cloudless",

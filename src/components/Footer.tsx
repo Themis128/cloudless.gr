@@ -80,6 +80,11 @@ export default function Footer() {
                 { href: "/store", key: "common.store", fallback: "Store" },
                 { href: "/blog", key: "common.blog", fallback: "Blog" },
                 {
+                  href: "/projects",
+                  key: "common.projects",
+                  fallback: "Projects",
+                },
+                {
                   href: "/partners",
                   key: "common.partners",
                   fallback: "Partners",

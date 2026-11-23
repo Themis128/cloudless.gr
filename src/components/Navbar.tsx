@@ -15,6 +15,7 @@ const navLinks = [
   { href: "/services", key: "common.services", fallback: "Services" },
   { href: "/store", key: "common.store", fallback: "Store" },
   { href: "/blog", key: "common.blog", fallback: "Blog" },
+  { href: "/projects", key: "common.projects", fallback: "Projects" },
   { href: "/contact", key: "common.contact", fallback: "Contact" },
 ];
 
