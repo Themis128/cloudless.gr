@@ -201,7 +201,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
 
           if (statusFilter && fields.status !== statusFilter) return null;
 
-          return {
+          const project: Project = {
             id: view.view_id,
             name: fields.name || stripProjectPrefix(view.name),
             status: fields.status || "Planning",
@@ -217,6 +217,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             url: fields.url || "",
             typeExplicit: fields.typeExplicit ?? false,
           };
+          return project;
           /* v8 ignore start -- unreachable: parseProjectFields/stripProjectPrefix cannot throw */
         } catch {
           return null;
