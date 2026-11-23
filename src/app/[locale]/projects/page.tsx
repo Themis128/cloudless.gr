@@ -1,7 +1,7 @@
 export const revalidate = 3600;
 
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { loadLabProjects } from "@/lib/lab-projects";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
