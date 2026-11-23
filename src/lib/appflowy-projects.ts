@@ -88,6 +88,7 @@ function parseProjectFields(text: string): Partial<Project> {
     budget: fields["Budget"] ? parseFloat(fields["Budget"]) : null,
     progress: fields["Progress"] ? parseInt(fields["Progress"]) : 0,
     tags: fields["Tags"] ? fields["Tags"].split(",").map((t) => t.trim()) : [],
+    url: fields["Url"] || fields["URL"] || "",
   };
 }
 
@@ -210,7 +211,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             budget: fields.budget ?? null,
             progress: fields.progress || 0,
             tags: fields.tags || [],
-            url: "",
+            url: fields.url || "",
           };
           /* v8 ignore start -- unreachable: parseProjectFields/stripProjectPrefix cannot throw */
         } catch {
