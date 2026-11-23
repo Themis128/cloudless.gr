@@ -94,7 +94,10 @@ function parseProjectFields(text: string): Partial<Project> {
     tags: fields["Tags"] ? fields["Tags"].split(",").map((t) => t.trim()) : [],
     url: fields["Url"] || fields["URL"] || "",
     audience: fields["Audience"]
-      ? fields["Audience"].split(/[,;]/).map((a) => a.trim()).filter(Boolean)
+      ? fields["Audience"]
+          .split(/[,;]/)
+          .map((a) => a.trim())
+          .filter(Boolean)
       : undefined,
     typeExplicit: Boolean(fields["Type"]),
   };

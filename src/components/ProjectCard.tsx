@@ -124,7 +124,7 @@ export default function ProjectCard({
             {project.audience.slice(0, 4).map((a) => (
               <span
                 key={a}
-                className="rounded border border-neon-cyan/20 bg-neon-cyan/5 px-2 py-0.5 font-mono text-[9px] text-neon-cyan/80"
+                className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/80 rounded border px-2 py-0.5 font-mono text-[9px]"
               >
                 {a}
               </span>
