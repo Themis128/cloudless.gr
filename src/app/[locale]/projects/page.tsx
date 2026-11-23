@@ -52,7 +52,7 @@ export async function generateMetadata({
 
 export default async function ProjectsPage() {
   const labProjects = await loadLabProjects();
-  const flagship = labProjects.find((p) => p.name === "Mobile Price Intelligence");
+  const flagship = labProjects.find((p) => p.name.toLowerCase() === "mobile price intelligence");
 
   return (
     <main className="bg-void relative min-h-screen overflow-x-hidden">
