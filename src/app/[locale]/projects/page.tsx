@@ -3,36 +3,52 @@ export const revalidate = 3600;
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { loadLabProjects } from "@/lib/lab-projects";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 const BASE_URL = "https://cloudless.gr";
+const TITLE = "Projects — In-house builds by Cloudless";
+const DESCRIPTION =
+  "Self-built products designed, shipped and operated by Cloudless — live demos with real infrastructure, not mockups.";
 
-export const metadata: Metadata = {
-  title: "Projects — In-house builds by Cloudless",
-  description:
-    "Self-built products designed, shipped and operated by Cloudless — live demos with real infrastructure, not mockups.",
-  alternates: {
-    canonical: `${BASE_URL}/projects`,
-    languages: {
-      en: `${BASE_URL}/en/projects`,
-      el: `${BASE_URL}/el/projects`,
-      de: `${BASE_URL}/de/projects`,
-      fr: `${BASE_URL}/fr/projects`,
-      "x-default": `${BASE_URL}/en/projects`,
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+
+  // Locale-prefixed: unprefixed paths redirect to /en/…, so an unprefixed
+  // canonical would point every localized page at a redirect and contradict
+  // its own hreflang alternates.
+  const canonical = `${BASE_URL}/${safeLocale}/projects`;
+
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/projects`,
+        el: `${BASE_URL}/el/projects`,
+        de: `${BASE_URL}/de/projects`,
+        fr: `${BASE_URL}/fr/projects`,
+        "x-default": `${BASE_URL}/en/projects`,
+      },
     },
-  },
-  openGraph: {
-    type: "website",
-    title: "Projects — In-house builds by Cloudless",
-    description:
-      "Self-built products designed, shipped and operated by Cloudless — live demos with real infrastructure, not mockups.",
-    url: `${BASE_URL}/projects`,
-    siteName: "Cloudless",
-  },
-};
+    openGraph: {
+      type: "website",
+      title: TITLE,
+      description: DESCRIPTION,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 export default async function ProjectsPage() {
   const labProjects = await loadLabProjects();
