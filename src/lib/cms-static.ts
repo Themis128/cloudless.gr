@@ -3,6 +3,8 @@
  * render when AppFlowy is unbound. Do not import Notion adapters from here.
  */
 
+import type { Project } from "./appflowy-projects";
+
 export type FaqCategory = "general" | "pricing" | "technical" | "process";
 
 export interface Faq {
@@ -331,5 +333,31 @@ export const staticCaseStudies: CaseStudy[] = [
     tags: ["Serverless", "Lambda", "Migration", "E-commerce"],
     featured: true,
     date: "2026-01-15",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// In-house builds ("lab" projects)
+// ---------------------------------------------------------------------------
+// Self-built products shown on /work alongside client work. AppFlowy
+// `[Project]` docs with **Type**: Internal merge in at render time — this
+// static list is the curated floor so the section never renders empty.
+
+export const staticLabProjects: Project[] = [
+  {
+    id: "lab-mobile-price-intel",
+    name: "Mobile Price Intelligence",
+    status: "Completed",
+    priority: "High",
+    type: "Internal",
+    owner: "Cloudless",
+    startDate: "2025-11-01",
+    dueDate: "",
+    description:
+      "ML price-prediction platform over a 930-device dataset — Nuxt 4 frontend on Vercel, FastAPI + scikit-learn/XGBoost/LightGBM backend self-hosted on our own k3s/OMV behind Cloudflare Tunnel. Dataset explorer, model comparison, A/B testing and explainability dashboards included.",
+    budget: null,
+    progress: 100,
+    tags: ["Nuxt 4", "FastAPI", "scikit-learn", "XGBoost", "Vercel", "self-hosted"],
+    url: "https://matlab-nuxt-app.vercel.app",
   },
 ];

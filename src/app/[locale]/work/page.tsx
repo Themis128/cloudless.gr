@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { listProjects } from "@/lib/appflowy-projects";
 import type { Project } from "@/lib/appflowy-projects";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { staticLabProjects } from "@/lib/cms-static";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
@@ -31,8 +32,32 @@ async function loadClientProjects(): Promise<Project[]> {
   }
 }
 
+async function loadInternalProjects(): Promise<Project[]> {
+  try {
+    const ok = await isAppFlowyConfigured();
+    if (!ok) return [];
+    const all = await listProjects();
+    return all.filter(
+      (p) => p.type === "Internal" && (p.status === "Completed" || p.status === "In Progress")
+    );
+  } catch {
+    return [];
+  }
+}
+
+function mergeLabProjects(cms: Project[]): Project[] {
+  const seen = new Set(cms.map((p) => p.name.toLowerCase()));
+  const extras = staticLabProjects.filter((p) => !seen.has(p.name.toLowerCase()));
+  return [...cms, ...extras];
+}
+
 export default async function WorkPage() {
-  const projects = await loadClientProjects();
+  const [clientProjects, internalProjects] = await Promise.all([
+    loadClientProjects(),
+    loadInternalProjects(),
+  ]);
+  const projects = clientProjects;
+  const labProjects = mergeLabProjects(internalProjects);
   const active = projects.filter((p) => p.status === "In Progress");
   const completed = projects.filter((p) => p.status === "Completed");
 
@@ -87,8 +112,27 @@ export default async function WorkPage() {
         </section>
       )}
 
+      {/* In-house builds */}
+      {labProjects.length > 0 && (
+        <section className="mx-auto max-w-6xl px-6 pb-24">
+          <h2 className="mb-2 font-mono text-xs font-semibold tracking-widest text-slate-500 uppercase">
+            ⚙ In-house builds
+          </h2>
+          <p className="mb-6 max-w-2xl text-sm text-slate-500">
+            Products we designed, built and run ourselves — live demos, not mockups.
+          </p>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {labProjects.map((p) => (
+              <ScrollReveal key={p.id}>
+                <ProjectCard project={p} linkToNotion={Boolean(p.url)} />
+              </ScrollReveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Empty state */}
-      {projects.length === 0 && (
+      {projects.length === 0 && labProjects.length === 0 && (
         <section className="mx-auto max-w-6xl px-6 pb-24">
           <div className="bg-void-light/30 rounded-xl border border-slate-800 p-16 text-center">
             <p className="font-mono text-slate-500">No client projects to show yet.</p>
