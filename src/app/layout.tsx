@@ -164,7 +164,7 @@ export default async function RootLayout({
         <PageViewBeacon />
         <PlausibleAnalytics />
         <ClarityAnalytics />
-        <SwetrixAnalytics />
+        <SwetrixAnalytics nonce={nonce} />
       </body>
     </html>
   );
