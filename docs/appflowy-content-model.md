@@ -35,7 +35,10 @@ Project fields parsed from the page body: `Name`, `Status`
 (Planning/In Progress/On Hold/Completed/Cancelled), `Priority`
 (Critical/High/Medium/Low), `Type` (Client/Internal/Maintenance), `Owner`,
 `StartDate`, `DueDate`, `Description`, `Budget`, `Progress` (0–100), `Tags`
-(comma-separated), `Url` (live demo link — rendered as an outbound card link).
+(comma-separated), `Url` (live demo link — rendered as an outbound card link),
+`Audience` (comma-separated occupations that benefit — rendered as "Who
+benefits" chips on `ProjectCard` and "Who it's for" on the `/projects`
+flagship deep-dive; `StartDate` renders as "Created …" on both).
 
 `Maintenance`-type projects are parsed but not shown on `/work`.
 

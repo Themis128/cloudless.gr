@@ -359,5 +359,12 @@ export const staticLabProjects: Project[] = [
     progress: 100,
     tags: ["Nuxt 4", "FastAPI", "scikit-learn", "XGBoost", "Vercel", "self-hosted"],
     url: "https://matlab-nuxt-app.vercel.app",
+    audience: [
+      "Data scientists",
+      "ML engineers",
+      "Mobile industry analysts",
+      "Retail pricing teams",
+      "Students & researchers",
+    ],
   },
 ];
