@@ -40,6 +40,8 @@ export interface Project {
   progress: number;
   tags: string[];
   url: string;
+  /** True when the page body had an explicit **Type** line (vs the Internal default). */
+  typeExplicit?: boolean;
 }
 
 export type TaskStatus = "Backlog" | "To Do" | "In Progress" | "In Review" | "Done" | "Blocked";
@@ -88,6 +90,8 @@ function parseProjectFields(text: string): Partial<Project> {
     budget: fields["Budget"] ? parseFloat(fields["Budget"]) : null,
     progress: fields["Progress"] ? parseInt(fields["Progress"]) : 0,
     tags: fields["Tags"] ? fields["Tags"].split(",").map((t) => t.trim()) : [],
+    url: fields["Url"] || fields["URL"] || "",
+    typeExplicit: Boolean(fields["Type"]),
   };
 }
 
@@ -197,7 +201,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
 
           if (statusFilter && fields.status !== statusFilter) return null;
 
-          return {
+          const project: Project = {
             id: view.view_id,
             name: fields.name || stripProjectPrefix(view.name),
             status: fields.status || "Planning",
@@ -210,8 +214,10 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             budget: fields.budget ?? null,
             progress: fields.progress || 0,
             tags: fields.tags || [],
-            url: "",
+            url: fields.url || "",
+            typeExplicit: fields.typeExplicit ?? false,
           };
+          return project;
           /* v8 ignore start -- unreachable: parseProjectFields/stripProjectPrefix cannot throw */
         } catch {
           return null;
