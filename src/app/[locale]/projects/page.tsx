@@ -40,9 +40,7 @@ export default async function ProjectsPage() {
 
   return (
     <main className="bg-void relative min-h-screen overflow-x-hidden">
-      <JsonLd
-        data={getBreadcrumbSchema([{ name: "Projects", url: "/projects" }])}
-      />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Projects", url: "/projects" }])} />
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-24 pb-16">
@@ -54,8 +52,8 @@ export default async function ProjectsPage() {
           In-house builds, <span className="text-neon-cyan">live demos</span>
         </h1>
         <p className="font-body mt-4 max-w-2xl text-slate-400">
-          Products we designed, built and operate ourselves — real users, real
-          infrastructure, zero mockups. Every card links to a running deployment.
+          Products we designed, built and operate ourselves — real users, real infrastructure, zero
+          mockups. Every card links to a running deployment.
         </p>
       </section>
 
@@ -83,9 +81,7 @@ export default async function ProjectsPage() {
             <h2 className="font-heading text-2xl font-bold text-white sm:text-3xl">
               {flagship.name}
             </h2>
-            <p className="font-body mt-4 max-w-3xl text-slate-400">
-              {flagship.description}
-            </p>
+            <p className="font-body mt-4 max-w-3xl text-slate-400">{flagship.description}</p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <div className="border-neon-cyan/20 rounded-lg border p-5">
@@ -93,8 +89,8 @@ export default async function ProjectsPage() {
                   Frontend
                 </p>
                 <p className="mt-2 text-sm text-slate-300">
-                  Nuxt 4 on Vercel — SSR search, dataset explorer, model
-                  comparison and A/B testing dashboards.
+                  Nuxt 4 on Vercel — SSR search, dataset explorer, model comparison and A/B testing
+                  dashboards.
                 </p>
               </div>
               <div className="border-neon-magenta/20 rounded-lg border p-5">
@@ -102,8 +98,8 @@ export default async function ProjectsPage() {
                   Backend
                 </p>
                 <p className="mt-2 text-sm text-slate-300">
-                  FastAPI + scikit-learn / XGBoost / LightGBM, self-hosted on our
-                  own k3s cluster — no managed cloud bill.
+                  FastAPI + scikit-learn / XGBoost / LightGBM, self-hosted on our own k3s cluster —
+                  no managed cloud bill.
                 </p>
               </div>
               <div className="border-neon-green/20 rounded-lg border p-5">
@@ -111,8 +107,7 @@ export default async function ProjectsPage() {
                   Edge
                 </p>
                 <p className="mt-2 text-sm text-slate-300">
-                  Cloudflare Tunnel + DNS — TLS, caching and DDoS protection on
-                  the free tier.
+                  Cloudflare Tunnel + DNS — TLS, caching and DDoS protection on the free tier.
                 </p>
               </div>
             </div>
@@ -130,7 +125,7 @@ export default async function ProjectsPage() {
               )}
               <Link
                 href="/work"
-                className="border-slate-700 text-slate-400 hover:border-neon-cyan/40 hover:text-neon-cyan rounded-lg border px-5 py-2.5 font-mono text-sm transition-colors"
+                className="hover:border-neon-cyan/40 hover:text-neon-cyan rounded-lg border border-slate-700 px-5 py-2.5 font-mono text-sm text-slate-400 transition-colors"
               >
                 See client work →
               </Link>
