@@ -102,7 +102,7 @@ export default async function ProjectsPage() {
             {/* Creation date + beneficiary occupations — sourced from the
                 AppFlowy **StartDate** / **Audience** fields via ProjectCard data. */}
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-              {flagship.startDate && (
+              {flagship.startDate && !Number.isNaN(new Date(flagship.startDate).getTime()) && (
                 <div>
                   <dt className="text-neon-cyan/70 font-mono text-[10px] tracking-widest uppercase">
                     Created

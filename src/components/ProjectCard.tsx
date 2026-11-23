@@ -45,15 +45,13 @@ const TYPE_STYLES: Record<string, string> = {
 
 function formatDate(iso: string) {
   if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      month: "short",
-      year: "numeric",
-      timeZone: "Europe/Athens",
-    });
-  } catch {
-    return null;
-  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB", {
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Athens",
+  });
 }
 
 interface ProjectCardProps {
