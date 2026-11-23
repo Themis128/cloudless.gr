@@ -19,7 +19,8 @@
     "themeSystem": "System",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
-    "partners": "Partnerschaften"
+    "partners": "Partnerschaften",
+    "projects": "Projekte"
   },
   "navbar": {
     "cloudless": "Cloudless",
