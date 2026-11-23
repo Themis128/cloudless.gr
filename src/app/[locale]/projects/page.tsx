@@ -99,6 +99,33 @@ export default async function ProjectsPage() {
             </h2>
             <p className="font-body mt-4 max-w-3xl text-slate-400">{flagship.description}</p>
 
+            {/* Creation date + beneficiary occupations — sourced from the
+                AppFlowy **StartDate** / **Audience** fields via ProjectCard data. */}
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+              {flagship.startDate && !Number.isNaN(new Date(flagship.startDate).getTime()) && (
+                <div>
+                  <dt className="text-neon-cyan/70 font-mono text-[10px] tracking-widest uppercase">
+                    Created
+                  </dt>
+                  <dd className="mt-1 text-sm text-slate-300">
+                    {new Date(flagship.startDate).toLocaleDateString("en-GB", {
+                      month: "long",
+                      year: "numeric",
+                      timeZone: "Europe/Athens",
+                    })}
+                  </dd>
+                </div>
+              )}
+              {flagship.audience && flagship.audience.length > 0 && (
+                <div>
+                  <dt className="text-neon-magenta/70 font-mono text-[10px] tracking-widest uppercase">
+                    Who it&apos;s for
+                  </dt>
+                  <dd className="mt-1 text-sm text-slate-300">{flagship.audience.join(", ")}</dd>
+                </div>
+              )}
+            </dl>
+
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <div className="border-neon-cyan/20 rounded-lg border p-5">
                 <p className="text-neon-cyan font-mono text-[10px] tracking-widest uppercase">

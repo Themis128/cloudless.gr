@@ -40,6 +40,8 @@ export interface Project {
   progress: number;
   tags: string[];
   url: string;
+  /** Occupations/audiences that benefit from the project (from **Audience**). */
+  audience?: string[];
   /** True when the page body had an explicit **Type** line (vs the Internal default). */
   typeExplicit?: boolean;
 }
@@ -91,6 +93,12 @@ function parseProjectFields(text: string): Partial<Project> {
     progress: fields["Progress"] ? parseInt(fields["Progress"]) : 0,
     tags: fields["Tags"] ? fields["Tags"].split(",").map((t) => t.trim()) : [],
     url: fields["Url"] || fields["URL"] || "",
+    audience: fields["Audience"]
+      ? fields["Audience"]
+          .split(/[,;]/)
+          .map((a) => a.trim())
+          .filter(Boolean)
+      : undefined,
     typeExplicit: Boolean(fields["Type"]),
   };
 }
@@ -215,6 +223,7 @@ export async function listProjects(statusFilter?: ProjectStatus): Promise<Projec
             progress: fields.progress || 0,
             tags: fields.tags || [],
             url: fields.url || "",
+            audience: fields.audience,
             typeExplicit: fields.typeExplicit ?? false,
           };
           return project;
@@ -270,6 +279,8 @@ export async function getProject(pageId: string): Promise<Project | null> {
       progress: fields.progress || 0,
       tags: fields.tags || [],
       url: "",
+      audience: fields.audience,
+      typeExplicit: fields.typeExplicit ?? false,
     };
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");

@@ -127,6 +127,8 @@ describe("listProjects", () => {
         Budget: "5000",
         Progress: "40",
         Tags: "a, b",
+        StartDate: "2025-11-01",
+        Audience: "Data scientists; ML engineers, Analysts",
       })
     );
     docText(projectDoc("Alpha", { Priority: "Critical", Status: "In Progress" }));
@@ -142,6 +144,8 @@ describe("listProjects", () => {
       budget: 5000,
       progress: 40,
       tags: ["a", "b"],
+      startDate: "2025-11-01",
+      audience: ["Data scientists", "ML engineers", "Analysts"],
     });
 
     // status filter
@@ -181,7 +185,15 @@ describe("listProjects", () => {
 
 describe("getProject", () => {
   it("maps a document to a Project and returns null on errors", async () => {
-    docText(projectDoc("Dash", { Status: "Completed", Priority: "High", DueDate: "2026-12-01" }));
+    docText(
+      projectDoc("Dash", {
+        Status: "Completed",
+        Priority: "High",
+        DueDate: "2026-12-01",
+        StartDate: "2025-11-01",
+        Audience: "Data scientists, ML engineers",
+      })
+    );
     const p = await projects.getProject("p9");
     expect(p).toMatchObject({
       id: "p9",
@@ -189,6 +201,8 @@ describe("getProject", () => {
       status: "Completed",
       priority: "High",
       dueDate: "2026-12-01",
+      startDate: "2025-11-01",
+      audience: ["Data scientists", "ML engineers"],
     });
     getDocument.mockRejectedValueOnce(new Error("x"));
     expect(await projects.getProject("p9")).toBeNull();

@@ -45,15 +45,13 @@ const TYPE_STYLES: Record<string, string> = {
 
 function formatDate(iso: string) {
   if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      month: "short",
-      year: "numeric",
-      timeZone: "Europe/Athens",
-    });
-  } catch {
-    return null;
-  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB", {
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Athens",
+  });
 }
 
 interface ProjectCardProps {
@@ -114,6 +112,30 @@ export default function ProjectCard({
         </p>
       )}
 
+      {/* Who benefits — occupations/audiences from the CMS **Audience** field */}
+      {project.audience && project.audience.length > 0 && (
+        <div className="mb-4">
+          <span className="font-mono text-[9px] tracking-widest text-slate-500 uppercase">
+            Who benefits
+          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {project.audience.slice(0, 4).map((a) => (
+              <span
+                key={a}
+                className="border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/80 rounded border px-2 py-0.5 font-mono text-[9px]"
+              >
+                {a}
+              </span>
+            ))}
+            {project.audience.length > 4 && (
+              <span className="px-1 py-0.5 font-mono text-[9px] text-slate-500">
+                +{project.audience.length - 4}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tags */}
       {project.tags.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1.5">
@@ -142,7 +164,11 @@ export default function ProjectCard({
         </div>
         {(startFmt || dueFmt) && (
           <span className="font-mono text-[10px] text-slate-600">
-            {startFmt && dueFmt ? `${startFmt} → ${dueFmt}` : (startFmt ?? dueFmt)}
+            {startFmt && dueFmt
+              ? `Created ${startFmt} · Due ${dueFmt}`
+              : startFmt
+                ? `Created ${startFmt}`
+                : `Due ${dueFmt}`}
           </span>
         )}
       </div>
