@@ -285,7 +285,10 @@
     "step3": "Repartez avec un plan",
     "step3Desc": "Prochaines étapes concrètes, périmètre honnête, zéro pression.",
     "preferWriting": "Vous préférez écrire ?",
-    "preferWritingDesc": "Parlez-nous de votre projet via le formulaire de contact et nous répondrons sous 24 heures."
+    "preferWritingDesc": "Parlez-nous de votre projet via le formulaire de contact et nous répondrons sous 24 heures.",
+    "talkNowTitle": "Envie de parler tout de suite ?",
+    "talkNowDesc": "Pas besoin de réserver — rejoignez un appel vidéo instantanément. Aucun compte requis.",
+    "talkNowCta": "Démarrer un appel Talk →"
   },
   "store": {
     "title": "Nos Produits",
