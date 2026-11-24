@@ -398,6 +398,8 @@ const SCALAR_CMS_KEYS = new Set<string>([
   "Order",
   "Date",
   "Locale",
+  "Role",
+  "Company",
 ]);
 
 function extractStringsFromCollab(encoded: unknown): string {
