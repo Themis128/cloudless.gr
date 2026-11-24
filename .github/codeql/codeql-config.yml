@@ -1,0 +1,14 @@
+name: "Cloudless.gr CodeQL config"
+
+paths-ignore:
+  # Test suites are not production attack surface
+  - "__tests__/**"
+  - "e2e/**"
+  - "**/*.test.*"
+  - "**/*.spec.*"
+  - "**/__mocks__/**"
+  # Agent/tooling scratch
+  - ".claude/**"
+  - ".agents/**"
+  - ".cursor/**"
+  - ".devin/**"

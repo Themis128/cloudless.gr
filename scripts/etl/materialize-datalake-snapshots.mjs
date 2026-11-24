@@ -75,7 +75,7 @@ function surveyFunnel(rows) {
 	// Flat survey_responses → per-question answer distribution + audit funnel.
 	const byQ = {};
 	const auditYes = rows.filter((r) =>
-		/^y|yes|tell me/i.test(String((r.answers || {}).audit_interest || ""))
+		/(?:^y|\byes\b|\btell me\b)/i.test(String((r.answers || {}).audit_interest || ""))
 	);
 	for (const r of rows) {
 		for (const [q, a] of Object.entries(r.answers || {})) {

@@ -189,7 +189,8 @@ export default {
       try {
         return await handleSubmit(request, env);
       } catch (e) {
-        return json(500, { error: String(e instanceof Error ? e.message : e) });
+        console.error("edge-forms submit failed:", e);
+        return json(500, { error: "submission failed" });
       }
     }
     return json(404, { error: "not found" });
