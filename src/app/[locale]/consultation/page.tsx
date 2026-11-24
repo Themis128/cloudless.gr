@@ -128,6 +128,28 @@ export default async function ConsultationPage() {
               </ScrollReveal>
 
               <ScrollReveal delay={100}>
+                <div className="neon-border border-neon-cyan/40 bg-void-light/50 rounded-lg p-8">
+                  <h3 className="font-heading text-lg font-bold text-white">
+                    {t("consultation.talkNowTitle", "Rather talk right now?")}
+                  </h3>
+                  <p className="mt-3 text-sm text-slate-400">
+                    {t(
+                      "consultation.talkNowDesc",
+                      "Skip the booking — jump into a video call instantly. No account needed."
+                    )}
+                  </p>
+                  <a
+                    href="https://cloud.cloudless.gr/call/zsykkx97"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 mt-4 inline-flex items-center rounded-lg border px-4 py-2 font-mono text-xs font-medium transition-colors"
+                  >
+                    {t("consultation.talkNowCta", "Start a Talk call →")}
+                  </a>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={200}>
                 <div className="neon-border bg-void-light/50 rounded-lg p-8">
                   <h3 className="font-heading text-lg font-bold text-white">
                     {t("consultation.preferWriting", "Prefer writing?")}

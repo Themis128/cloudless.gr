@@ -285,7 +285,10 @@
     "step3": "Leave with a plan",
     "step3Desc": "Concrete next steps, honest scope, zero pressure.",
     "preferWriting": "Prefer writing?",
-    "preferWritingDesc": "Tell us about your project in the contact form and we'll reply within 24 hours."
+    "preferWritingDesc": "Tell us about your project in the contact form and we'll reply within 24 hours.",
+    "talkNowTitle": "Rather talk right now?",
+    "talkNowDesc": "Skip the booking — jump into a video call instantly. No account needed.",
+    "talkNowCta": "Start a Talk call →"
   },
   "store": {
     "title": "Our Products",
