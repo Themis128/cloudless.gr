@@ -200,6 +200,22 @@ describe("getDocument + collab extraction", () => {
     expect(doc.text).toContain("**Featured**: true");
   });
 
+  it("extracts Role/Company scalar fields at tail position (no ' terminator)", async () => {
+    cfgSecret();
+    // Testimonial pages store **Role**/**Company** as short tokens — when
+    // either lands as the text_map tail delta (observed live: Role value
+    // ended with \0, not '), the quoted pattern finds no terminator and
+    // the field silently parses empty. Both belong to the scalar set.
+    const blob = Buffer.from(
+      `x **Role**: AI Recruiter at Micro1, technical interview assessment\u0000 y **Company**: Micro1\u0000`
+    );
+    mockFetch.mockResolvedValueOnce(json({ data: { data: { encoded_collab: Array.from(blob) } } }));
+    const mod = await import("@/lib/appflowy");
+    const doc = (await mod.getDocument("w", "v")) as { text: string };
+    expect(doc.text).toContain("**Role**: AI Recruiter at Micro1, technical interview assessment");
+    expect(doc.text).toContain("**Company**: Micro1");
+  });
+
   it("does not capture junk when a stray ' precedes a scalar tail delta", async () => {
     cfgSecret();
     // A stray ' after alphanumeric junk makes the quoted regex capture
