@@ -75,7 +75,7 @@ function surveyFunnel(rows) {
 	// Flat survey_responses → per-question answer distribution + audit funnel.
 	const byQ = {};
 	const auditYes = rows.filter((r) =>
-		/^y|yes|tell me/i.test(String((r.answers || {}).audit_interest || ""))
+		/(?:^y|\byes\b|\btell me\b)/i.test(String((r.answers || {}).audit_interest || ""))
 	);
 	for (const r of rows) {
 		for (const [q, a] of Object.entries(r.answers || {})) {
@@ -262,7 +262,7 @@ function gscDevices(rows) {
 
 function gscWeeklyReports(rows, countryRows = [], deviceRows = []) {
 	const topCountry =
-		[...countryRows].sort((a, b) => (Number(b.clicks) || 0) - (Number(a.clicks) || 0))[0]
+		countryRows.toSorted((a, b) => (Number(b.clicks) || 0) - (Number(a.clicks) || 0))[0]
 			?.country ?? "";
 	const deviceClicks = deviceRows.reduce((a, r) => a + (Number(r.clicks) || 0), 0);
 	const mobileClicks = deviceRows
@@ -337,8 +337,7 @@ function gscWeeklyReports(rows, countryRows = [], deviceRows = []) {
 }
 
 function topErrors(rows) {
-	return [...rows]
-		.sort((a, b) => (Number(b.count_14d) || 0) - (Number(a.count_14d) || 0))
+	return rows.toSorted((a, b) => (Number(b.count_14d) || 0) - (Number(a.count_14d) || 0))
 		.slice(0, 10)
 		.map((r) => ({
 			short_id: r.short_id ?? null,
@@ -631,9 +630,7 @@ function linkedinAdsAudience(demographics) {
 	}
 	const rows = [];
 	for (const [type, segs] of byType) {
-		const ranked = segs
-			.slice()
-			.sort((a, b) => (b.clicks || 0) - (a.clicks || 0) || (b.impressions || 0) - (a.impressions || 0))
+		const ranked = segs.toSorted((a, b) => (b.clicks || 0) - (a.clicks || 0) || (b.impressions || 0) - (a.impressions || 0))
 			.slice(0, 8);
 		for (const s of ranked) {
 			rows.push({
