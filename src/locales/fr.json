@@ -53,7 +53,8 @@
     "microCopy1": "Sans engagement. Des conseils concrets en 30 minutes.",
     "microCopy2": "Tarifs transparents. Sans lock-in.",
     "terminalTitle": "cloudless-cli v2.0",
-    "cockpitCaption": "Une semaine typique sur notre propre infrastructure — ce site tourne sur l’architecture que nous construisons pour nos clients."
+    "cockpitCaption": "Une semaine typique sur notre propre infrastructure — ce site tourne sur l’architecture que nous construisons pour nos clients.",
+    "talkNow": "Envie de parler ? Démarrez un appel vidéo gratuit →"
   },
   "stats": {
     "uptime": "SLA Disponibilité",

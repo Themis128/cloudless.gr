@@ -335,6 +335,19 @@ export default async function Home({
                 </TrackedLink>
               </div>
 
+              <div className="animate-fade-in-up mt-3 delay-300">
+                <TrackedLink
+                  href="https://cloud.cloudless.gr/call/zsykkx97"
+                  event="home_hero_talk_click"
+                  params={{ cta: "talk", position: "hero" }}
+                  data-testid="hero-cta-talk"
+                  className="font-mono text-sm underline-offset-4 transition-colors hover:underline"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {t("hero.talkNow", "Prefer to talk? Start a free video call →")}
+                </TrackedLink>
+              </div>
+
               <div
                 className="animate-fade-in-up mt-4 flex flex-col gap-6 font-mono text-xs delay-300 sm:flex-row"
                 style={{ color: "var(--ink-muted)" }}

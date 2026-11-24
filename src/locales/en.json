@@ -53,7 +53,8 @@
     "microCopy1": "No commitment. Actionable insights in 30 minutes.",
     "microCopy2": "Transparent pricing. No lock-in.",
     "terminalTitle": "cloudless-cli v2.0",
-    "cockpitCaption": "A typical week on our own stack — this site runs on the infrastructure we build for clients."
+    "cockpitCaption": "A typical week on our own stack — this site runs on the infrastructure we build for clients.",
+    "talkNow": "Prefer to talk? Start a free video call →"
   },
   "stats": {
     "uptime": "Uptime SLA",
