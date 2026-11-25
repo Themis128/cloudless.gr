@@ -54,7 +54,7 @@ describe("getBlogPostSchema", () => {
 
     expect(schema["@type"]).toBe("BlogPosting");
     expect(schema.headline).toBe("Serverless 101");
-    expect(schema.url).toBe("https://cloudless.gr/blog/serverless-101");
+    expect(schema.url).toBe("https://cloudless.gr/en/blog/serverless-101");
     expect(schema.datePublished).toBe("2026-03-01");
     expect(schema.articleSection).toBe("Serverless");
     expect(schema.author.name).toBe("Cloudless");
