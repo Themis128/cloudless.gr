@@ -56,6 +56,8 @@ export async function generateMetadata({
       languages: {
         en: `${BASE_URL}/en/case-studies/${slug}`,
         el: `${BASE_URL}/el/case-studies/${slug}`,
+        fr: `${BASE_URL}/fr/case-studies/${slug}`,
+        de: `${BASE_URL}/de/case-studies/${slug}`,
         "x-default": `${BASE_URL}/en/case-studies/${slug}`,
       },
     },
