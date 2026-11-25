@@ -93,8 +93,8 @@ export default async function ServicesPage() {
     <>
       <JsonLd
         data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Services", url: "https://cloudless.gr/services" },
+          { name: "Home", url: `https://cloudless.gr/${locale}` },
+          { name: "Services", url: `https://cloudless.gr/${locale}/services` },
         ])}
       />
       <JsonLd data={getFAQSchema(servicesFaqs)} />

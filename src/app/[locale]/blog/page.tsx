@@ -172,8 +172,8 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
     <>
       <JsonLd
         data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Blog", url: "https://cloudless.gr/blog" },
+          { name: "Home", url: `https://cloudless.gr/${locale}` },
+          { name: "Blog", url: `https://cloudless.gr/${locale}/blog` },
         ])}
       />
 
