@@ -169,14 +169,14 @@ export interface BlogPostSchema {
   };
 }
 
-export function getBlogPostSchema(post: BlogPostSchemaInput): BlogPostSchema {
+export function getBlogPostSchema(post: BlogPostSchemaInput & { locale?: string }): BlogPostSchema {
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.excerpt,
     datePublished: post.date,
-    url: `https://cloudless.gr/blog/${post.slug}`,
+    url: `https://cloudless.gr/${post.locale ?? "en"}/blog/${post.slug}`,
     articleSection: post.category,
     ...(post.coverImage ? { image: post.coverImage } : {}),
     author: post.author

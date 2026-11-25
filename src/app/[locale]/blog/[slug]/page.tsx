@@ -164,6 +164,7 @@ export default async function BlogPostPage({ params }: Props) {
           date: post.date,
           slug: post.slug,
           category: post.category,
+          locale,
         })}
       />
       {post.faqs && post.faqs.length > 0 && <JsonLd data={getFAQSchema(post.faqs)} />}

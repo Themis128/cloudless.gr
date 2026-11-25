@@ -39,6 +39,9 @@ export async function generateMetadata({
         "x-default": "https://cloudless.gr/en/blog",
       },
     },
+    openGraph: {
+      url: `https://cloudless.gr/${safeLocale}/blog`,
+    },
   };
 }
 
