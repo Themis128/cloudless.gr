@@ -40,10 +40,13 @@ export default async function PrivacyPolicyPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Privacy Policy", url: "https://cloudless.gr/privacy" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Privacy Policy", url: "https://cloudless.gr/privacy" },
+          ],
+          locale
+        )}
       />
 
       <div className="bg-void min-h-screen">

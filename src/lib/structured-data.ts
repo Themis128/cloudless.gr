@@ -255,7 +255,11 @@ export interface BreadcrumbSchema {
   }>;
 }
 
-export function getBreadcrumbSchema(items: BreadcrumbItem[]): BreadcrumbSchema {
+export function getBreadcrumbSchema(items: BreadcrumbItem[], locale?: string): BreadcrumbSchema {
+  const localized = (url: string): string =>
+    locale && !/cloudless\.gr\/(en|el|fr|de)(\/|$)/.test(url)
+      ? url.replace("https://cloudless.gr", `https://cloudless.gr/${locale}`)
+      : url;
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -263,7 +267,7 @@ export function getBreadcrumbSchema(items: BreadcrumbItem[]): BreadcrumbSchema {
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url,
+      item: localized(item.url),
     })),
   };
 }

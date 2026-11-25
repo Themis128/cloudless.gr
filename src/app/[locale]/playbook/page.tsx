@@ -41,10 +41,13 @@ export default async function PlaybookPage({ params }: PageProps) {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Cloud Migration Playbook", url: "https://cloudless.gr/en/playbook" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Cloud Migration Playbook", url: "https://cloudless.gr/en/playbook" },
+          ],
+          locale
+        )}
       />
       <div className="min-h-screen">
         <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 lg:grid-cols-2 lg:py-28">

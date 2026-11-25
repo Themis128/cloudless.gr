@@ -242,7 +242,7 @@ export default async function Home({
 
   return (
     <>
-      <JsonLd data={getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr" }])} />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr" }], locale)} />
       <JsonLd data={getFAQSchema(faqs)} />
 
       {/* ── Hero ── */}

@@ -36,13 +36,16 @@ export default async function RefundPolicyPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          {
-            name: "Refund & Returns Policy",
-            url: "https://cloudless.gr/refund",
-          },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            {
+              name: "Refund & Returns Policy",
+              url: "https://cloudless.gr/refund",
+            },
+          ],
+          locale
+        )}
       />
 
       <div className="bg-void min-h-screen">

@@ -41,7 +41,7 @@ export default async function ProductPage({
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { locale, id } = await params;
   const product = getProductById(id);
 
   if (!product) notFound();
@@ -55,11 +55,14 @@ export default async function ProductPage({
     image: `https://cloudless.gr${product.image}`,
   });
 
-  const breadcrumbJsonLd = getBreadcrumbSchema([
-    { name: "Home", url: "https://cloudless.gr" },
-    { name: "Store", url: "https://cloudless.gr/store" },
-    { name: product.name, url: `https://cloudless.gr/store/${product.id}` },
-  ]);
+  const breadcrumbJsonLd = getBreadcrumbSchema(
+    [
+      { name: "Home", url: "https://cloudless.gr" },
+      { name: "Store", url: "https://cloudless.gr/store" },
+      { name: product.name, url: `https://cloudless.gr/store/${product.id}` },
+    ],
+    locale
+  );
 
   return (
     <>

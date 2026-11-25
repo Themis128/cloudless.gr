@@ -7,6 +7,7 @@ import { isSupportedLocale, type Locale } from "@/lib/i18n";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
+import { getServerLocale } from "@/lib/server-locale";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 const BASE_URL = "https://cloudless.gr";
@@ -51,12 +52,13 @@ export async function generateMetadata({
 }
 
 export default async function ProjectsPage() {
+  const locale = await getServerLocale();
   const labProjects = await loadLabProjects();
   const flagship = labProjects.find((p) => p.name.toLowerCase() === "mobile price intelligence");
 
   return (
     <main className="bg-void relative min-h-screen overflow-x-hidden">
-      <JsonLd data={getBreadcrumbSchema([{ name: "Projects", url: "/projects" }])} />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Projects", url: "/projects" }], locale)} />
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-24 pb-16">

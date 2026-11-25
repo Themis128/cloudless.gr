@@ -31,10 +31,13 @@ export default async function ContactPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Contact", url: "https://cloudless.gr/contact" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Contact", url: "https://cloudless.gr/contact" },
+          ],
+          locale
+        )}
       />
 
       {/* Header */}

@@ -110,10 +110,13 @@ export default async function PartnersPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Partners", url: "https://cloudless.gr/partners" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Partners", url: "https://cloudless.gr/partners" },
+          ],
+          locale
+        )}
       />
 
       {/* Hero */}

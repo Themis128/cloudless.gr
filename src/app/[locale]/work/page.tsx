@@ -8,6 +8,7 @@ import { loadLabProjects } from "@/lib/lab-projects";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
+import { getServerLocale } from "@/lib/server-locale";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ async function loadClientProjects(): Promise<Project[]> {
 }
 
 export default async function WorkPage() {
+  const locale = await getServerLocale();
   const [clientProjects, labProjects] = await Promise.all([
     loadClientProjects(),
     loadLabProjects(),
@@ -43,7 +45,7 @@ export default async function WorkPage() {
 
   return (
     <main className="bg-void relative min-h-screen overflow-x-hidden">
-      <JsonLd data={getBreadcrumbSchema([{ name: "Work", url: "/work" }])} />
+      <JsonLd data={getBreadcrumbSchema([{ name: "Work", url: "/work" }], locale)} />
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-24 pb-16">

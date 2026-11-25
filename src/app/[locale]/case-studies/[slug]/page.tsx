@@ -99,19 +99,26 @@ async function loadCaseStudy(slug: string): Promise<CaseStudyWithContent | null>
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function CaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function CaseStudyPage({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) notFound();
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white">
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: BASE_URL },
-          { name: "Case Studies", url: `${BASE_URL}/case-studies` },
-          { name: cs.title, url: `${BASE_URL}/case-studies/${cs.slug}` },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: BASE_URL },
+            { name: "Case Studies", url: `${BASE_URL}/case-studies` },
+            { name: cs.title, url: `${BASE_URL}/case-studies/${cs.slug}` },
+          ],
+          locale
+        )}
       />
       {/* Hero */}
       <section className="px-4 pt-24 pb-12">
