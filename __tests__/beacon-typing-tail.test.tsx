@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, act, cleanup } from "@testing-library/react";
 
-const { mockTrackPageView, mockHasConsent, mockSendEvent, mockUsePathname } = vi.hoisted(() => ({
+const {
+  mockTrackPageView,
+  mockHasConsent,
+  mockSendEvent,
+  mockUsePathname,
+  mockTrackClientEvent,
+} = vi.hoisted(() => ({
   mockTrackPageView: vi.fn(),
   mockHasConsent: vi.fn(),
   mockSendEvent: vi.fn(() => Promise.resolve()),
   mockUsePathname: vi.fn(() => "/services"),
+  mockTrackClientEvent: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,15 +28,25 @@ vi.mock("@/lib/socialauto-analytics", () => ({
   sendSocialAutoEvent: mockSendEvent,
 }));
 
+vi.mock("@/lib/track-client-event", () => ({
+  trackClientEvent: mockTrackClientEvent,
+}));
+
 import PageViewBeacon from "@/components/analytics/PageViewBeacon";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 
 describe("PageViewBeacon", () => {
+  const setReferrer = (ref: string) => {
+    Object.defineProperty(document, "referrer", { value: ref, configurable: true });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     mockUsePathname.mockReturnValue("/services");
     document.documentElement.lang = "en";
+    setReferrer("");
   });
 
   afterEach(() => cleanup());
@@ -65,6 +82,70 @@ describe("PageViewBeacon", () => {
     expect(mockSendEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({ path: "/pricing" })
     );
+  });
+
+  it("fires ai_referral once for an AI-engine referrer", () => {
+    mockHasConsent.mockReturnValue(true);
+    setReferrer("https://chatgpt.com/some/chat");
+    render(<PageViewBeacon />);
+    expect(mockTrackClientEvent).toHaveBeenCalledWith("ai_referral", {
+      source: "chatgpt.com",
+      path: "/services",
+    });
+  });
+
+  it("does not fire for suffix-lookalike hosts like notchatgpt.com", () => {
+    mockHasConsent.mockReturnValue(true);
+    setReferrer("https://notchatgpt.com/x");
+    render(<PageViewBeacon />);
+    expect(mockTrackClientEvent).not.toHaveBeenCalled();
+  });
+
+  it("matches subdomain and path-qualified AI referrers", () => {
+    mockHasConsent.mockReturnValue(true);
+    setReferrer("https://x.com/i/grok");
+    render(<PageViewBeacon />);
+    expect(mockTrackClientEvent).toHaveBeenCalledWith(
+      "ai_referral",
+      expect.objectContaining({ source: "x.com/i/grok" })
+    );
+  });
+
+  it("ignores malformed and non-AI referrers", () => {
+    mockHasConsent.mockReturnValue(true);
+    setReferrer("::::not a url");
+    render(<PageViewBeacon />);
+    expect(mockTrackClientEvent).not.toHaveBeenCalled();
+  });
+
+  it("waits for consent granted after landing without another navigation", () => {
+    vi.useFakeTimers();
+    try {
+      mockHasConsent.mockReturnValue(false);
+      setReferrer("https://claude.ai/chat");
+      render(<PageViewBeacon />);
+      expect(mockTrackClientEvent).not.toHaveBeenCalled();
+
+      mockHasConsent.mockReturnValue(true);
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+      expect(mockTrackClientEvent).toHaveBeenCalledWith(
+        "ai_referral",
+        expect.objectContaining({ source: "claude.ai" })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not re-fire across remounts thanks to sessionStorage dedup", () => {
+    mockHasConsent.mockReturnValue(true);
+    setReferrer("https://perplexity.ai/search/1");
+    const { unmount } = render(<PageViewBeacon />);
+    unmount();
+    render(<PageViewBeacon />);
+    expect(mockTrackClientEvent).toHaveBeenCalledTimes(1);
   });
 });
 
