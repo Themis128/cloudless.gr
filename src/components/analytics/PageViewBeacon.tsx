@@ -7,6 +7,9 @@ import { trackPageView, hasAnalyticsConsent } from "@/lib/funnel-client";
 import { sendSocialAutoEvent } from "@/lib/socialauto-analytics";
 import { trackClientEvent } from "@/lib/track-client-event";
 
+/** sessionStorage flag so a reload can't re-fire the referral event. */
+const AI_REFERRAL_KEY = "ai_referral_sent";
+
 /** Referrer host fragments that mark an AI-engine click-through. */
 const AI_REFERRER_HOSTS = [
   "chatgpt.com",
@@ -55,15 +58,19 @@ function detectAiReferrer(): string | null {
 export default function PageViewBeacon() {
   const pathname = usePathname();
   const last = useRef<string | null>(null);
-  const aiChecked = useRef(false);
   const pathRef = useRef<string | null>(null);
 
-  // document.referrer persists for the whole session, so the referral is
-  // still attributable when consent is granted after landing — even if the
-  // user never navigates again.
+  // document.referrer persists for the whole session — including full page
+  // reloads — so the referral stays attributable when consent is granted
+  // after landing, and the sessionStorage flag keeps reloads from re-firing.
   const fireAiReferral = useCallback(() => {
-    if (aiChecked.current || !hasAnalyticsConsent()) return;
-    aiChecked.current = true;
+    if (!hasAnalyticsConsent()) return;
+    try {
+      if (sessionStorage.getItem(AI_REFERRAL_KEY) === "1") return;
+      sessionStorage.setItem(AI_REFERRAL_KEY, "1");
+    } catch {
+      return;
+    }
     const source = detectAiReferrer();
     if (source) {
       trackClientEvent("ai_referral", { source, path: pathRef.current });
@@ -87,7 +94,7 @@ export default function PageViewBeacon() {
   }, [pathname, fireAiReferral]);
 
   useEffect(() => {
-    if (aiChecked.current || hasAnalyticsConsent()) {
+    if (hasAnalyticsConsent()) {
       fireAiReferral();
       return;
     }
