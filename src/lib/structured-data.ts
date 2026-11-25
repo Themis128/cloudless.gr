@@ -17,6 +17,14 @@ export interface OrganizationSchema {
     "@type": "PostalAddress";
     addressCountry: string;
   };
+  areaServed: string[];
+  founder: {
+    "@type": "Person";
+    name: string;
+    jobTitle: string;
+    url: string;
+  };
+  knowsAbout: string[];
   sameAs: string[];
 }
 
@@ -42,9 +50,28 @@ export function getOrganizationSchema(): OrganizationSchema {
       "@type": "PostalAddress",
       addressCountry: "GR",
     },
+    areaServed: ["Greece", "European Union"],
+    founder: {
+      "@type": "Person",
+      name: "Themistoklis Baltzakis",
+      jobTitle: "Founder & Cloud Architect",
+      url: "https://www.credly.com/users/themistoklis-baltzakis",
+    },
+    knowsAbout: [
+      "Cloud Architecture",
+      "Serverless Development",
+      "Data Analytics",
+      "AI Marketing Automation",
+      "Cloud Cost Optimization",
+    ],
     sameAs: [
       "https://www.linkedin.com/company/cloudless-gr",
       "https://www.credly.com/users/themistoklis-baltzakis",
+      "https://www.facebook.com/cloudless.gr",
+      "https://www.instagram.com/cloudless.gr",
+      "https://www.tiktok.com/@cloudless.gr",
+      "https://www.threads.net/@cloudless.gr",
+      "https://x.com/TBaltzakis",
     ],
   };
 }
