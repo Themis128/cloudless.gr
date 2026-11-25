@@ -9,29 +9,40 @@ import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/appflow
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 
 const BASE_URL = "https://cloudless.gr";
-const canonical = `${BASE_URL}/case-studies`;
 
-export const metadata: Metadata = {
-  title: "Case Studies",
-  description:
-    "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
-  alternates: {
-    canonical,
-    languages: {
-      en: `${BASE_URL}/en/case-studies`,
-      el: `${BASE_URL}/el/case-studies`,
-      "x-default": `${BASE_URL}/en/case-studies`,
+const CASE_STUDIES_TITLE = "Case Studies";
+const CASE_STUDIES_DESCRIPTION =
+  "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // Per-locale canonical must match og:url — a bare /case-studies canonical
+  // marked every locale page as a duplicate of the /en redirect target.
+  const canonical = `${BASE_URL}/${locale}/case-studies`;
+  return {
+    title: CASE_STUDIES_TITLE,
+    description: CASE_STUDIES_DESCRIPTION,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/case-studies`,
+        el: `${BASE_URL}/el/case-studies`,
+        "x-default": `${BASE_URL}/en/case-studies`,
+      },
     },
-  },
-  openGraph: {
-    type: "website",
-    title: "Case Studies",
-    description:
-      "Real-world results: how Cloudless helped startups and growing businesses cut cloud costs, migrate to serverless, and ship faster.",
-    url: canonical,
-    siteName: "Cloudless",
-  },
-};
+    openGraph: {
+      type: "website",
+      title: CASE_STUDIES_TITLE,
+      description: CASE_STUDIES_DESCRIPTION,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {
   try {

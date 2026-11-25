@@ -18,7 +18,6 @@ import DeferredRender from "@/components/DeferredRender";
 // each locale gets its own static HTML.
 
 const BASE_URL = "https://cloudless.gr";
-const canonical = `${BASE_URL}/services`;
 
 export async function generateMetadata({
   params,
@@ -34,6 +33,9 @@ export async function generateMetadata({
   const description =
     meta?.services?.description ??
     "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.";
+  // Per-locale canonical must match og:url — a bare /services canonical made
+  // Google see /el/services & co as duplicates of the /en redirect target.
+  const canonical = `${BASE_URL}/${safeLocale}/services`;
 
   return {
     title,

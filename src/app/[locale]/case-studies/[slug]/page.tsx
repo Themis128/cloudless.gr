@@ -41,12 +41,13 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) return { title: "Case Study Not Found" };
-  const canonical = `${BASE_URL}/case-studies/${slug}`;
+  // Per-locale canonical must match og:url — see services/page.tsx.
+  const canonical = `${BASE_URL}/${locale}/case-studies/${slug}`;
   return {
     title: cs.title,
     description: cs.summary,

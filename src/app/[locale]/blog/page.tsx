@@ -28,7 +28,16 @@ export async function generateMetadata({
       meta?.blog?.description ??
       "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
     alternates: {
-      canonical: "https://cloudless.gr/blog",
+      // Per-locale canonical — see services/page.tsx: a bare /blog canonical
+      // marked every locale listing as a duplicate of the /en redirect target.
+      canonical: `https://cloudless.gr/${safeLocale}/blog`,
+      languages: {
+        en: "https://cloudless.gr/en/blog",
+        el: "https://cloudless.gr/el/blog",
+        fr: "https://cloudless.gr/fr/blog",
+        de: "https://cloudless.gr/de/blog",
+        "x-default": "https://cloudless.gr/en/blog",
+      },
     },
   };
 }
