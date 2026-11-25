@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const markdown = `# Cloudless — Cloud Computing, Serverless & AI Marketing
+  const markdown = `# Cloudless — AI & Cloud Consulting, Digital Agency in Greece
 
-Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.
+Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.
 
 ## Our Services
 - **Cloud Architecture & Migration**: Design and migrate your infrastructure to AWS, GCP, or Azure with zero downtime.

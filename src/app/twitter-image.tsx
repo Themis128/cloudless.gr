@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const dynamic = "force-static";
 
-export const alt = "Cloudless — Cloud Computing, Serverless & AI Marketing";
+export const alt = "Cloudless — AI & Cloud Consulting, Digital Agency in Greece";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

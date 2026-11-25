@@ -20,19 +20,25 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   metadataBase: new URL("https://cloudless.gr"),
   title: {
-    default: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    default: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
     template: "%s | Cloudless",
   },
   description:
-    "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+    "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
   keywords: [
+    "AI consulting services",
+    "custom AI solutions",
+    "AI integration services",
+    "AI agents for business",
+    "generative AI services",
+    "business process automation",
     "cloud computing",
+    "cloud migration services",
     "serverless",
     "data analytics",
     "AI marketing",
-    "digital marketing",
-    "cloud migration",
-    "Greece",
+    "digital agency Greece",
+    "cloud services Greece",
   ],
   authors: [{ name: "Cloudless" }],
   verification: {
@@ -57,9 +63,9 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
   },
   openGraph: {
-    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    title: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
     description:
-      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+      "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
     url: "https://cloudless.gr",
     siteName: "Cloudless",
     locale: "en_US",
@@ -67,9 +73,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    title: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
     description:
-      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+      "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
   },
 };
 

@@ -57,7 +57,7 @@ export async function generateMetadata({
 
   return {
     title: {
-      default: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      default: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
       template: "%s | Cloudless",
     },
     alternates: {

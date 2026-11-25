@@ -64,10 +64,10 @@ export async function generateMetadata({
   const meta = (safeMessages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
 
-  const title = meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing";
+  const title = meta?.home?.title ?? "Cloudless — AI & Cloud Consulting, Digital Agency in Greece";
   const description =
     meta?.home?.description ??
-    "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.";
+    "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.";
 
   return {
     title: { absolute: title },
@@ -307,7 +307,7 @@ export default async function Home({
               >
                 {t(
                   "hero.subtitle",
-                  "Cloud architecture, serverless development, data analytics, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days."
+                  "AI consulting, custom AI solutions, cloud architecture, serverless development, and AI marketing — built for 2–20 person teams. No enterprise overhead, no lock-in, measurable results in 14 days."
                 )}{" "}
                 <span style={{ color: "var(--accent)", fontWeight: 500 }}>
                   {t("hero.subtitleHighlight", "Finally.")}
