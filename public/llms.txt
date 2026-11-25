@@ -1,16 +1,19 @@
 # Cloudless
 
-> Websites, cloud infrastructure, and AI automations for small teams that have
-> been let down before — fixed scope, no lock-in, measurable results in 14 days.
-> Cloudless (cloudless.gr) is a Greek cloud/serverless consultancy and product
-> studio serving EU clients in English and Greek.
+> Websites, cloud infrastructure, custom AI solutions and AI agents for small
+> teams that have been let down before — fixed scope, no lock-in, measurable
+> results in 14 days.
+> Cloudless (cloudless.gr) is a Greek AI consulting and digital agency —
+> cloud/serverless consultancy and product studio serving EU clients in
+> English and Greek.
 
 ## Main sections
 
-- [Homepage](https://cloudless.gr/en): productized cloud, serverless and AI
-  automation offers for small teams.
+- [Homepage](https://cloudless.gr/en): productized cloud, serverless, custom AI
+  solutions and AI automation offers for small teams.
 - [Services](https://cloudless.gr/en/services): fixed-scope service packages
-  (cloud migration, serverless backends, AI marketing automation).
+  (AI consulting, custom AI solutions, AI integration, cloud migration,
+  serverless backends, business process automation, AI marketing automation).
 - [Docs](https://cloudless.gr/en/docs): product and API documentation index.
 - [Playbooks](https://cloudless.gr/playbooks): operational playbooks.
 - [Blog](https://cloudless.gr/en/blog): engineering notes and case studies.

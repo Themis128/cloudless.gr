@@ -1,6 +1,6 @@
 # Cloudless — full index
 
-Websites, cloud infrastructure, and AI automations for small teams that have
+Websites, cloud infrastructure, custom AI solutions and AI agents for small teams that have
 been let down before — fixed scope, no lock-in, measurable results in 14 days.
 
 ## Pages

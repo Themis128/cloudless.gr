@@ -45,7 +45,7 @@ export function getOrganizationSchema(): OrganizationSchema {
       height: 512,
     },
     description:
-      "Cloud computing, serverless, and AI marketing solutions for modern businesses. We provide scalable analytics and AI-powered marketing infrastructure.",
+      "AI consulting and digital agency in Greece. Custom AI solutions, AI integration, cloud computing, serverless, and AI-powered marketing infrastructure for startups and SMBs.",
     address: {
       "@type": "PostalAddress",
       addressCountry: "GR",
@@ -58,7 +58,14 @@ export function getOrganizationSchema(): OrganizationSchema {
       url: "https://www.credly.com/users/themistoklis-baltzakis",
     },
     knowsAbout: [
+      "AI Consulting Services",
+      "Custom AI Solutions",
+      "AI Integration Services",
+      "AI Agents for Business",
+      "Generative AI Services",
+      "Business Process Automation",
       "Cloud Architecture",
+      "Cloud Migration Services",
       "Serverless Development",
       "Data Analytics",
       "AI Marketing Automation",

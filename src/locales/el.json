@@ -46,7 +46,7 @@
       "AI χωρίς υπερβολές.",
       "Τεχνολογία που δουλεύει."
     ],
-    "subtitle": "Enterprise cloud; Δεν σας βγαίνει. Freelancer που εξαφανίστηκε ή DIY υποδομή; Δεν θα έπρεπε να είναι δική σας δουλειά. Ιστοσελίδες, cloud υποδομή και AI αυτοματισμοί για ομάδες 2–20 ατόμων — σταθερό κόστος, ένας υπεύθυνος επικοινωνίας, μετρήσιμα αποτελέσματα σε 14 ημέρες.",
+    "subtitle": "Enterprise cloud; Δεν σας βγαίνει. Freelancer που εξαφανίστηκε ή DIY υποδομή; Δεν θα έπρεπε να είναι δική σας δουλειά. Ιστοσελίδες, cloud υποδομή, custom AI solutions και AI agents για ομάδες 2–20 ατόμων — σταθερό κόστος, ένας υπεύθυνος επικοινωνίας, μετρήσιμα αποτελέσματα σε 14 ημέρες.",
     "subtitleHighlight": "Επιτέλους.",
     "ctaPrimary": "Δωρεάν Έλεγχος",
     "ctaSecondary": "Δείτε τις Υπηρεσίες",
@@ -561,12 +561,12 @@
   },
   "meta": {
     "home": {
-      "title": "Cloudless — Cloud Computing, Serverless & AI Marketing",
-      "description": "Ιστοσελίδες, cloud υποδομή και AI αυτοματισμοί για μικρές ομάδες που απογοητεύτηκαν στο παρελθόν — σταθερό κόστος, χωρίς lock-in, μετρήσιμα αποτελέσματα σε 14 ημέρες."
+      "title": "Cloudless — AI & Cloud Consulting, Digital Agency στην Ελλάδα",
+      "description": "Ιστοσελίδες, cloud υποδομή, custom AI solutions και AI agents για μικρές ομάδες που απογοητεύτηκαν στο παρελθόν — σταθερό κόστος, χωρίς lock-in, μετρήσιμα αποτελέσματα σε 14 ημέρες."
     },
     "services": {
-      "title": "Cloud Consulting, Serverless & AI Automation Agency στην Ελλάδα",
-      "description": "Cloud consulting, υπηρεσίες cloud migration, serverless ανάπτυξη, ανάλυση δεδομένων και AI marketing για startups και ΜμΕ στην Ελλάδα. Χωρίς lock-in. Αποτελέσματα σε 14 ημέρες."
+      "title": "AI Consulting, Cloud Migration & Custom AI Solutions στην Ελλάδα",
+      "description": "Digital agency στην Ελλάδα για AI consulting services, custom AI solutions, cloud migration, AI integration και business process automation για startups και ΜμΕ. Χωρίς lock-in. Αποτελέσματα σε 14 ημέρες."
     },
     "contact": {
       "title": "Επικοινωνία",

@@ -46,7 +46,7 @@
       "IA sans le hype.",
       "Une tech qui marche."
     ],
-    "subtitle": "Le cloud enterprise ? Trop cher. Le freelancer disparu ou l'agence qui sur-vend ? Vous connaissez. Sites web, infrastructure cloud et automatisations IA pour les équipes de 2 à 20 personnes — périmètre fixe, un seul interlocuteur, résultats mesurables en 14 jours.",
+    "subtitle": "Le cloud enterprise ? Trop cher. Le freelancer disparu ou l'agence qui sur-vend ? Vous connaissez. Sites web, infrastructure cloud, solutions IA sur mesure et agents IA pour les équipes de 2 à 20 personnes — périmètre fixe, un seul interlocuteur, résultats mesurables en 14 jours.",
     "subtitleHighlight": "Enfin.",
     "ctaPrimary": "Réserver un audit gratuit",
     "ctaSecondary": "Voir les Services",
@@ -561,12 +561,12 @@
   },
   "meta": {
     "home": {
-      "title": "Cloudless — Cloud Computing, Serverless & Marketing IA",
-      "description": "Sites web, infrastructure cloud et automatisations IA pour les petites équipes déjà déçues — périmètre fixe, sans lock-in, résultats mesurables en 14 jours."
+      "title": "Cloudless — Conseil IA & Cloud, Agence Digitale en Grèce",
+      "description": "Sites web, infrastructure cloud, solutions IA sur mesure et agents IA pour les petites équipes déjà déçues — périmètre fixe, sans lock-in, résultats mesurables en 14 jours."
     },
     "services": {
-      "title": "Conseil cloud, serverless & agence d'automatisation IA en Grèce",
-      "description": "Conseil cloud, services de migration cloud, développement serverless, analyse de données et marketing IA pour startups et PME en Grèce. Sans lock-in. Résultats en 14 jours."
+      "title": "Conseil IA, migration cloud & solutions IA sur mesure en Grèce",
+      "description": "Conseil IA, solutions IA sur mesure, migration cloud, intégration IA et automatisation des processus pour startups et PME. Agence digitale en Grèce — sans lock-in. Résultats en 14 jours."
     },
     "contact": {
       "title": "Contact",

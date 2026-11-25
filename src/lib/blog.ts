@@ -584,6 +584,80 @@ If GTA 6 can spend a decade perfecting a fictional city, your real one deserves 
 **— The Cloudless team**
     `.trim(),
   },
+  {
+    slug: "custom-ai-solutions-small-business",
+    title: "Custom AI Solutions for Small Businesses: What Actually Works in 2026",
+    excerpt:
+      "AI consulting services are exploding, but most SMB offers are chatbot-in-a-box. Here's what custom AI solutions, AI integration services, and AI agents for business actually look like when they work — and what they cost.",
+    date: "2026-11-25",
+    readTime: "7 min read",
+    category: "AI Marketing",
+    tags: ["custom AI solutions", "AI consulting", "AI integration", "AI agents", "small business"],
+    content: `
+Search interest in **custom AI solutions** and **AI consulting services** has gone vertical this year — and small businesses are the ones asking. The problem: most of what's sold as "AI" to a 2–20 person company is a generic chatbot pasted onto a website, billed monthly, and forgotten by week three.
+
+This is a field guide to what actually works when a small business buys AI — written by the team that builds it.
+
+## What "custom AI solutions" actually means
+
+A custom AI solution is a workflow in your business that used to need a human's judgment, rebuilt so software does the judgment part and a human supervises the output. Three patterns cover ~90% of what works for SMBs:
+
+- **Document intelligence** — invoices, contracts, and emails classified, extracted, and routed without manual triage. A Greek logistics client cut 11 hours/week of manual invoice handling to zero.
+- **AI agents for business operations** — agents that watch a queue (support inbox, lead form, calendar) and take bounded actions: draft the reply, qualify the lead, book the slot. Humans approve at the edges, not on every step.
+- **AI integration services** — connecting the models you already have access to (Claude, GPT, Gemini) to the systems you already run: CRM, calendar, accounting, helpdesk. The integration is the product, not the model.
+
+## Generative AI services vs. AI automation
+
+Generative AI services produce content — copy, images, summaries. Useful, but they're the shallow end. The compounding wins are **business process automation** with AI inside: a process that used to take a person four steps now takes one, with an audit trail.
+
+If a vendor's proposal is all generation and no automation, you're buying a demo, not a solution.
+
+## What honest AI consulting services look like
+
+A real AI consulting engagement for a small business has three parts:
+
+1. **A process audit, not a pitch.** We map where hours actually go. If AI can't help, we say so — about a third of audits end in "you don't need AI here, you need a better spreadsheet."
+2. **A fixed-scope build.** One workflow, deployed, measured. Not a platform, not a retainer, not a roadmap to nowhere.
+3. **Handover.** You own the prompts, the integrations, and the runbook. No lock-in means the solution keeps working even if we disappear.
+
+## What it costs (real numbers)
+
+For a 2–20 person company in Greece or the EU:
+
+- **Single-workflow automation** (e.g. lead qualification → CRM): fixed-scope engagement, typically live in 2–4 weeks.
+- **AI agent with human approval loop**: same pattern — the agent drafts, a person approves, the system learns from approvals.
+- **Ongoing AI integration**: only makes sense once 2–3 workflows are live and the maintenance surface is real.
+
+All of these run on usage-based infrastructure — Workers, queues, model APIs — so the marginal cost is per task, not per seat. That's the whole point: AI solutions for SMBs should scale down to almost nothing on a quiet month, the same way serverless does.
+
+## Where to start
+
+Pick the most boring, most repetitive, most measurable process in your week — the one where you can count the hours. That's the first candidate. [Book a free 30-minute audit](/contact) and we'll tell you honestly whether it's a fit — and if it isn't, what is.
+    `.trim(),
+    faqs: [
+      {
+        question: "What are custom AI solutions for small businesses?",
+        answer:
+          "Custom AI solutions are business workflows rebuilt so software handles the judgment steps — document intelligence, AI agents that act on queues with human approval, and AI integrations connecting models to your CRM, calendar, and helpdesk. For SMBs they run on usage-based infrastructure, so cost scales with tasks, not seats.",
+      },
+      {
+        question: "How much do AI consulting services cost for an SMB?",
+        answer:
+          "A single-workflow AI automation for a 2–20 person company is typically a fixed-scope engagement that goes live in 2–4 weeks, running on per-task infrastructure costs rather than per-seat licenses. A real engagement starts with a process audit — roughly a third of audits conclude the business needs a simpler fix, not AI.",
+      },
+      {
+        question:
+          "What is the difference between AI integration services and generative AI services?",
+        answer:
+          "Generative AI services produce content — copy, images, summaries. AI integration services connect AI models to your existing systems (CRM, calendar, accounting, helpdesk) so workflows run automatically. Integrations compound value over time; pure generation usually stays a demo.",
+      },
+      {
+        question: "Are AI agents for business safe to run unsupervised?",
+        answer:
+          "The production-safe pattern is bounded action with human approval at the edges: the agent drafts replies, qualifies leads, or books slots, and a person approves the output — with every action logged. Fully unsupervised agents on customer-facing paths are not recommended for SMB deployments.",
+      },
+    ],
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {

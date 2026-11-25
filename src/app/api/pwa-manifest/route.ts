@@ -2,10 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const MANIFEST = {
   id: "/",
-  name: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+  name: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
   short_name: "Cloudless",
   description:
-    "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",
+    "AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered marketing for startups and SMBs.",
   start_url: "/?source=pwa",
   scope: "/",
   lang: "en",
