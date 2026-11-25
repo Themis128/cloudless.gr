@@ -41,7 +41,7 @@ def main() -> int:
 
     if not KEY_FILE.is_file() or KEY_FILE.read_text().strip() != KEY:
         print(f"ERROR: key file missing/mismatched: {KEY_FILE}")
-        print("IndexNow requires https://{}/{}.txt to serve the key.".format(HOST, KEY))
+        print(f"IndexNow requires https://{HOST}/{KEY}.txt to serve the key.")
         return 1
 
     payload = {
