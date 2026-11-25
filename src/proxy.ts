@@ -259,9 +259,31 @@ function isAdminFromSession(session: { groups?: string[] }): boolean {
   return (session.groups ?? []).includes("admin");
 }
 
+const AI_BOT_UA =
+  /GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-SearchBot|Claude-User|anthropic-ai|PerplexityBot|Perplexity-User|Google-Extended|Applebot-Extended|CCBot|Bytespider|Amazonbot|meta-externalagent|YouBot|MistralAI-User|DuckAssistBot|cohere-ai/i;
+
+function logAiBotFetch(request: NextRequest, pathname: string): void {
+  const ua = request.headers.get("user-agent") ?? "";
+  const match = ua.match(AI_BOT_UA);
+  if (!match) return;
+  // Structured line for Loki: which AI engine fetched what. Zero-cost,
+  // no storage — grep pod logs for `"ai_bot_fetch"` to measure crawler interest.
+  // eslint-disable-next-line no-console -- intentional structured telemetry line
+  console.log(
+    JSON.stringify({
+      event: "ai_bot_fetch",
+      bot: match[0],
+      path: pathname,
+      ip: getSharedClientIp(request) ?? "unknown",
+    })
+  );
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = generateNonce();
   const pathname = request.nextUrl.pathname;
+
+  logAiBotFetch(request, pathname);
 
   // Dotfile probes (/.env, /.git/config, /.aws/credentials, ...) must not
   // fall through to the app catch-all, which would serve the 200 homepage

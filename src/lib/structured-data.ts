@@ -45,6 +45,11 @@ export function getOrganizationSchema(): OrganizationSchema {
     sameAs: [
       "https://www.linkedin.com/company/cloudless-gr",
       "https://www.credly.com/users/themistoklis-baltzakis",
+      "https://www.facebook.com/cloudless.gr",
+      "https://www.instagram.com/cloudless.gr",
+      "https://www.tiktok.com/@cloudless.gr",
+      "https://www.threads.net/@cloudless.gr",
+      "https://x.com/TBaltzakis",
     ],
   };
 }
