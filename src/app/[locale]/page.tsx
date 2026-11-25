@@ -67,7 +67,7 @@ export async function generateMetadata({
   const title = meta?.home?.title ?? "Cloudless — AI & Cloud Consulting, Digital Agency in Greece";
   const description =
     meta?.home?.description ??
-    "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.";
+    "AI consulting services, custom AI solutions, cloud & serverless development, and AI marketing for startups and SMBs in Greece. Clear skies. Zero friction.";
 
   return {
     title: { absolute: title },

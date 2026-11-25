@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Cloudless",
   },
   description:
-    "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
+    "AI consulting services, custom AI solutions, cloud & serverless development, and AI marketing for startups and SMBs in Greece. Clear skies. Zero friction.",
   keywords: [
     "AI consulting services",
     "custom AI solutions",
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
     description:
-      "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
+      "AI consulting services, custom AI solutions, cloud & serverless development, and AI marketing for startups and SMBs in Greece. Clear skies. Zero friction.",
     url: "https://cloudless.gr",
     siteName: "Cloudless",
     locale: "en_US",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
     description:
-      "Clear skies. Zero friction. AI consulting services, custom AI solutions, cloud architecture, serverless development, and AI-powered digital marketing for startups and SMBs in Greece and the EU.",
+      "AI consulting services, custom AI solutions, cloud & serverless development, and AI marketing for startups and SMBs in Greece. Clear skies. Zero friction.",
   },
 };
 
