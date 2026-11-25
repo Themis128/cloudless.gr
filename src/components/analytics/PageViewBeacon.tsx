@@ -59,22 +59,27 @@ export default function PageViewBeacon() {
   const pathname = usePathname();
   const last = useRef<string | null>(null);
   const pathRef = useRef<string | null>(null);
+  const sent = useRef(false);
 
   // document.referrer persists for the whole session — including full page
   // reloads — so the referral stays attributable when consent is granted
   // after landing, and the sessionStorage flag keeps reloads from re-firing.
   const fireAiReferral = useCallback(() => {
-    if (!hasAnalyticsConsent()) return;
+    if (sent.current || !hasAnalyticsConsent()) return;
     try {
       if (sessionStorage.getItem(AI_REFERRAL_KEY) === "1") return;
-      sessionStorage.setItem(AI_REFERRAL_KEY, "1");
     } catch {
-      return;
+      // storage unavailable — fall through and evaluate anyway
     }
     const source = detectAiReferrer();
-    if (source) {
-      trackClientEvent("ai_referral", { source, path: pathRef.current });
+    if (!source) return;
+    sent.current = true;
+    try {
+      sessionStorage.setItem(AI_REFERRAL_KEY, "1");
+    } catch {
+      // storage unavailable — the ref keeps it to once per mount
     }
+    trackClientEvent("ai_referral", { source, path: pathRef.current });
   }, []);
 
   useEffect(() => {
