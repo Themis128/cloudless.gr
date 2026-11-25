@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 import { trackPageView, hasAnalyticsConsent } from "@/lib/funnel-client";
@@ -28,8 +28,17 @@ function detectAiReferrer(): string | null {
   const ref = document.referrer;
   if (!ref) return null;
   try {
-    const host = new URL(ref).hostname.toLowerCase();
-    return AI_REFERRER_HOSTS.find((h) => host.endsWith(h)) ?? null;
+    const url = new URL(ref);
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.toLowerCase();
+    return (
+      AI_REFERRER_HOSTS.find((h) => {
+        const slash = h.indexOf("/");
+        const hostPart = slash === -1 ? h : h.slice(0, slash);
+        if (host !== hostPart && !host.endsWith(`.${hostPart}`)) return false;
+        return slash === -1 || path.startsWith(h.slice(slash));
+      }) ?? null
+    );
   } catch {
     return null;
   }
@@ -47,11 +56,26 @@ export default function PageViewBeacon() {
   const pathname = usePathname();
   const last = useRef<string | null>(null);
   const aiChecked = useRef(false);
+  const pathRef = useRef<string | null>(null);
+
+  // document.referrer persists for the whole session, so the referral is
+  // still attributable when consent is granted after landing — even if the
+  // user never navigates again.
+  const fireAiReferral = useCallback(() => {
+    if (aiChecked.current || !hasAnalyticsConsent()) return;
+    aiChecked.current = true;
+    const source = detectAiReferrer();
+    if (source) {
+      trackClientEvent("ai_referral", { source, path: pathRef.current });
+    }
+  }, []);
 
   useEffect(() => {
+    pathRef.current = pathname;
     if (!pathname || last.current === pathname) return;
     last.current = pathname;
     trackPageView();
+    fireAiReferral();
     if (hasAnalyticsConsent()) {
       sendSocialAutoEvent({
         event: "page_view",
@@ -59,15 +83,22 @@ export default function PageViewBeacon() {
         path: pathname,
         locale: document.documentElement.lang || undefined,
       }).catch(() => {});
-      if (!aiChecked.current) {
-        aiChecked.current = true;
-        const source = detectAiReferrer();
-        if (source) {
-          trackClientEvent("ai_referral", { source, path: pathname });
-        }
-      }
     }
-  }, [pathname]);
+  }, [pathname, fireAiReferral]);
+
+  useEffect(() => {
+    if (aiChecked.current || hasAnalyticsConsent()) {
+      fireAiReferral();
+      return;
+    }
+    const timer = setInterval(() => {
+      if (hasAnalyticsConsent()) {
+        clearInterval(timer);
+        fireAiReferral();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [fireAiReferral]);
 
   return null;
 }
