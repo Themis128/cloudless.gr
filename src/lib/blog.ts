@@ -646,7 +646,8 @@ Pick the most boring, most repetitive, most measurable process in your week — 
           "A single-workflow AI automation for a 2–20 person company is typically a fixed-scope engagement that goes live in 2–4 weeks, running on per-task infrastructure costs rather than per-seat licenses. A real engagement starts with a process audit — roughly a third of audits conclude the business needs a simpler fix, not AI.",
       },
       {
-        question: "What is the difference between AI integration services and generative AI services?",
+        question:
+          "What is the difference between AI integration services and generative AI services?",
         answer:
           "Generative AI services produce content — copy, images, summaries. AI integration services connect AI models to your existing systems (CRM, calendar, accounting, helpdesk) so workflows run automatically. Integrations compound value over time; pure generation usually stays a demo.",
       },
