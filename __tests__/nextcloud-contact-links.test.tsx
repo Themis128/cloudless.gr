@@ -51,7 +51,7 @@ describe("Nextcloud integration — contact form sidebar", () => {
     render(<ContactFormSection source="test" />);
     expect(screen.getByText("VIDEO CALL:")).toBeTruthy();
     const talk = screen.getByRole("link", { name: /join a talk call/i });
-    expect(talk.getAttribute("href")).toBe("https://cloud.cloudless.gr/call/zsykkx97");
+    expect(talk.getAttribute("href")).toBe("/call");
   });
 
   it("opens Talk in a new tab without giving it the opener handle", () => {
@@ -67,8 +67,8 @@ describe("Nextcloud integration — contact form sidebar", () => {
 describe("Nextcloud integration — links page", () => {
   it("lists both self-hosted Nextcloud surfaces: Talk consult + workspace", async () => {
     render(await LinksPage());
-    const consult = screen.getByRole("link", { name: /book a free video consult/i });
-    expect(consult.getAttribute("href")).toBe("https://cloud.cloudless.gr/call/zsykkx97");
+    const consult = screen.getByRole("link", { name: /video call now/i });
+    expect(consult.getAttribute("href")).toBe("/call");
     const workspace = screen.getByRole("link", { name: /client workspace/i });
     expect(workspace.getAttribute("href")).toBe("https://cloud.cloudless.gr");
   });
