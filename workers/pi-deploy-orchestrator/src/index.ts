@@ -222,6 +222,11 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
     await step.do("mark-timeout", async () => {
       const raw = await this.env.RELEASES.get("desired.json");
       const cur = raw ? (JSON.parse(await raw.text()) as DesiredState) : ({} as DesiredState);
+      // A different (newer) trigger owns desired.json — a superseded instance
+      // must not overwrite its state or emit a stale timeout notification.
+      if (cur.workflowInstanceId && cur.workflowInstanceId !== instanceId) {
+        return cur;
+      }
       const next: DesiredState = {
         ...cur,
         sha,

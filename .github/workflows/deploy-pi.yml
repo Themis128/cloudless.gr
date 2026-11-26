@@ -89,7 +89,9 @@ jobs:
             fi
             echo "health $candidate → unreachable or invalid"
           done
-          if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
+          # A forced redeploy stamps "<sha>-f<id>" — it is still this commit's
+          # code, so it counts as already-deployed.
+          if case "$LIVE" in "$WANT"|"$WANT"-f*) true;; *) false;; esac; then
             echo "already=true" >> "$GITHUB_OUTPUT"
             {
               echo "## Deploy skipped"

@@ -418,6 +418,11 @@ shutil.rmtree(TMP, ignore_errors=True)
 if health_ok:
     if FORCE:
         run("sudo", "touch", str(FORCED_DONE), check=False)
+        # Drop superseded attempt dirs of this forced deploy so rollback's
+        # newest-dir selection can never pick a rejected attempt.
+        for stale in Path(RELEASES).glob(f"{SHA12}-f{MARKER_ID}r*"):
+            if stale.is_dir() and stale != NEW_REL:
+                run("sudo", "rm", "-rf", str(stale))
     track(event="promote_ok", sha12=SHA12, workflowInstanceId=WF_ID, next_files=str(next_files))
     # prune old releases (keep 5)
     releases = sorted(
