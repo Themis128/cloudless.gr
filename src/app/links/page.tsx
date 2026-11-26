@@ -80,10 +80,10 @@ const LINKS: HubLink[] = [
     sub: "Chat directly — +30 697 777 7838 (works on desktop too)",
   },
   {
-    href: "https://cloud.cloudless.gr/call/zsykkx97",
-    label: "Book a free video consult",
-    sub: "30 min — hosted on our own self-hosted Nextcloud Talk",
-    external: true,
+    // Internal route — same-tab nav. /call 307s to the Talk consult room.
+    href: "/call",
+    label: "Video call now — free consult",
+    sub: "Instant video call in your browser — self-hosted Nextcloud Talk",
   },
   {
     href: "https://cloud.cloudless.gr",

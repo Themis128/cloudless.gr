@@ -6,6 +6,7 @@ import JsonLd from "@/components/JsonLd";
 import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { Link } from "@/i18n/navigation";
 import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
@@ -58,6 +59,12 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
               "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours."
             )}
           </p>
+          <Link
+            href="/call"
+            className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 animate-fade-in-up mt-6 inline-flex min-h-11 items-center rounded-lg border px-4 py-2 font-mono text-xs font-medium transition-colors delay-300"
+          >
+            {t("contact.talkNowCta", "Start a video call now →")}
+          </Link>
         </div>
       </section>
 
