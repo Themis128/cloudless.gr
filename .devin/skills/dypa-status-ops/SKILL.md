@@ -15,6 +15,7 @@ python %APPDATA%/devin/skills/dypa-status-ops/scripts/dypa-status-check.py --day
 ```
 
 Prints three lanes:
+
 1. **dypa.gov.gr program page** — dated announcements + storage links.
    Watch for: «Οριστικοί Πίνακες», «συστατικό σημείωμα», new «Αναμορφωμένος
    Πίνακας». Baseline as of 27/11/2026: newest = 06/11 Νέος Αναμορφωμένος
@@ -47,6 +48,7 @@ wait for approval.
 2. Write body to a file (Greek OK — script handles MIME/UTF-8 correctly):
    `Documents\dypa-1000-ptyxiouxon\YYYY-MM-DD_<topic>-body.txt`
 3. Draft threaded:
+
    ```
    python %APPDATA%/devin/skills/gmail-send-ops/scripts/gmail-schedule-reply.py --draft \
      --to protokollo@dypa.gov.gr \
@@ -56,6 +58,7 @@ wait for approval.
      --thread-id <threadId> \
      --state <state.json>
    ```
+
 4. Show user; on approval `--send --state <state.json>`.
 5. Save sent copy: fetch `messages/<sent-id>?format=full`, dump body to
    `YYYY-MM-DD_<topic>-sent.txt` in the correspondence folder.
