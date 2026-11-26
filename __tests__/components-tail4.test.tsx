@@ -39,10 +39,7 @@ import ClarityAnalytics from "@/components/ClarityAnalytics";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import LenisInitializer from "@/components/LenisInitializer";
 import { readStoredPref, writeStoredPref } from "@/lib/theme-pref";
-import {
-  CookieConsentProvider,
-  CookieConsentContext,
-} from "@/context/CookieConsentContext";
+import { CookieConsentProvider, CookieConsentContext } from "@/context/CookieConsentContext";
 
 describe("client dynamic wrappers", () => {
   it("renders the ssr:false cart/chat/particle boundaries", () => {
@@ -51,7 +48,7 @@ describe("client dynamic wrappers", () => {
         <ClientCartSlideOver />
         <ClientChatWidget />
         <ClientParticleField className="x" particleCount={3} />
-      </>,
+      </>
     );
     expect(container.querySelectorAll("[data-testid='dynamic-stub']")).toHaveLength(3);
   });
@@ -60,12 +57,34 @@ describe("client dynamic wrappers", () => {
 describe("analytics scripts", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    document.head.querySelectorAll('script[src*="clarity.ms"]').forEach((el) => el.remove());
+    // @ts-expect-error – cleaning up globals
+    delete window.clarity;
   });
 
-  it("renders Clarity when the project id is set", () => {
+  it("injects Clarity when the project id is set and analytics consent given", () => {
     vi.stubEnv("NEXT_PUBLIC_CLARITY_PROJECT_ID", "clar-1");
-    render(<ClarityAnalytics />);
-    expect(screen.getByTestId("script-ms-clarity").textContent).toContain("clar-1");
+    render(
+      <CookieConsentContext
+        value={{
+          hasConsented: true,
+          preferences: { necessary: true, analytics: true, marketing: false },
+          bannerVisible: false,
+          settingsVisible: false,
+          acceptAll: vi.fn(),
+          rejectAll: vi.fn(),
+          savePreferences: vi.fn(),
+          openSettings: vi.fn(),
+          closeSettings: vi.fn(),
+        }}
+      >
+        <ClarityAnalytics />
+      </CookieConsentContext>
+    );
+    const script = document.head.querySelector(
+      'script[src*="clarity.ms"]'
+    ) as HTMLScriptElement | null;
+    expect(script?.src).toBe("https://www.clarity.ms/tag/clar-1");
   });
 
   it("renders Plausible when the domain is set", () => {
@@ -83,7 +102,7 @@ describe("LenisInitializer", () => {
         matches: false,
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
-      }),
+      })
     );
     lenisDestroy.mockClear();
   });
@@ -141,7 +160,7 @@ describe("CookieConsentContext tails", () => {
     render(
       <CookieConsentProvider>
         <ConsentProbe />
-      </CookieConsentProvider>,
+      </CookieConsentProvider>
     );
     expect(screen.getByTestId("prefs")).toBeTruthy();
     document.cookie = "cookieConsent=; path=/; max-age=0";
@@ -151,19 +170,17 @@ describe("CookieConsentContext tails", () => {
     const { container } = render(
       <CookieConsentProvider>
         <ConsentProbe />
-      </CookieConsentProvider>,
+      </CookieConsentProvider>
     );
     const btn = (name: string) =>
       Array.from(container.querySelectorAll("button")).find(
-        (b) => b.textContent === name,
+        (b) => b.textContent === name
       ) as HTMLButtonElement;
     act(() => {
       btn("open-settings").click();
       btn("close-settings").click();
       btn("save-prefs").click();
     });
-    expect(
-      container.querySelector("[data-testid='prefs']")?.textContent,
-    ).toContain("necessary");
+    expect(container.querySelector("[data-testid='prefs']")?.textContent).toContain("necessary");
   });
 });
