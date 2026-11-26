@@ -21,8 +21,7 @@ export async function generateMetadata({
     Record<string, Record<string, string>> | undefined;
   return {
     title: meta?.call?.title ?? "Join the call — Cloudless",
-    description:
-      meta?.call?.description ?? "Forwarding you to the Nextcloud Talk call.",
+    description: meta?.call?.description ?? "Forwarding you to the Nextcloud Talk call.",
     robots: { index: false, follow: false },
   };
 }
