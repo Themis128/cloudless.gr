@@ -446,12 +446,15 @@ if health_ok:
 
 # rollback
 track(event="rollback", sha12=SHA12, prev=PREV or "none", workflowInstanceId=WF_ID)
-# PREV is a recorded symlink target — its dir may already have been pruned,
-# which would restore a dangling link, so require the target to exist.
-if PREV and (Path(RELEASES) / Path(PREV).name).is_dir():
+prev_name = Path(PREV).name if PREV else ""
+# PREV is a recorded symlink target — only a different, still-existing dir is
+# a real rollback: a pruned target would restore a dangling link, and when the
+# link dangled at this same SHA, PREV names NEW_REL itself (restoring it and
+# then deleting it below would leave the live link dangling again).
+if PREV and prev_name != NEW_REL.name and (Path(RELEASES) / prev_name).is_dir():
     run("sudo", "ln", "-sfn", PREV, STANDALONE)
     run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
-    prev_sha = Path(PREV).name
+    prev_sha = prev_name
     run(
         *KUBECTL,
         "set",
