@@ -58,7 +58,7 @@ const REDIRECT_SHIMS = ["/admin/notion/*"];
 function dirHasRouteEntry(dir: string): boolean {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return false;
   return readdirSync(dir, { recursive: true }).some((f) =>
-    /(^|\/)(page|route)\.(ts|tsx|mts)$/.test(String(f)),
+    /(^|[\\/])(page|route)\.(ts|tsx|mts)$/.test(String(f)),
   );
 }
 

@@ -13,9 +13,12 @@ describe("getLocalAuthDb", () => {
     AUTH_DB_LOCAL_SQLITE: process.env.AUTH_DB_LOCAL_SQLITE,
   };
   let dir = "";
+  let freshReset: (() => void) | null = null;
 
   afterEach(() => {
     resetLocalAuthDbCache();
+    freshReset?.();
+    freshReset = null;
     process.env.NODE_ENV = envSnapshot.NODE_ENV;
     if (envSnapshot.AUTH_DB_LOCAL_SQLITE === undefined) {
       delete process.env.AUTH_DB_LOCAL_SQLITE;
@@ -186,9 +189,11 @@ describe("getLocalAuthDb", () => {
     writeFileSync(join(scanDir, "b.sqlite"), "x"); // picked by scan
     vi.spyOn(process, "cwd").mockReturnValue(dir);
     vi.resetModules();
-    const { getLocalAuthDb: freshGetLocalAuthDb } = await import(
-      "@/lib/auth-db-node/local"
-    );
+    const {
+      getLocalAuthDb: freshGetLocalAuthDb,
+      resetLocalAuthDbCache: freshResetCache,
+    } = await import("@/lib/auth-db-node/local");
+    freshReset = freshResetCache;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = freshGetLocalAuthDb();
     expect(db).not.toBeNull();
