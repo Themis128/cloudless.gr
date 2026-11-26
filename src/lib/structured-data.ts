@@ -256,10 +256,15 @@ export interface BreadcrumbSchema {
 }
 
 export function getBreadcrumbSchema(items: BreadcrumbItem[], locale?: string): BreadcrumbSchema {
-  const localized = (url: string): string =>
-    locale && !/cloudless\.gr\/(en|el|fr|de)(\/|$)/.test(url)
-      ? url.replace("https://cloudless.gr", `https://cloudless.gr/${locale}`)
-      : url;
+  const localized = (url: string): string => {
+    if (!locale) return url;
+    if (url.startsWith("/") && !/^\/(en|el|fr|de)(\/|$)/.test(url)) {
+      return `https://cloudless.gr/${locale}${url}`;
+    }
+    return /cloudless\.gr\/(en|el|fr|de)(\/|$)/.test(url)
+      ? url
+      : url.replace("https://cloudless.gr", `https://cloudless.gr/${locale}`);
+  };
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
