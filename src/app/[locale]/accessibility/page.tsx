@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Accessibility Statement",
@@ -27,14 +28,18 @@ function Section({
   );
 }
 
-export default function AccessibilityPage() {
+export default async function AccessibilityPage() {
+  const locale = await getServerLocale();
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Accessibility Statement", url: "https://cloudless.gr/accessibility" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Accessibility Statement", url: "https://cloudless.gr/accessibility" },
+          ],
+          locale
+        )}
       />
       <div className="bg-void min-h-screen">
         <div className="mx-auto max-w-3xl px-6 py-20 lg:py-28">

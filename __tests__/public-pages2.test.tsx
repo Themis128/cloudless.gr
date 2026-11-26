@@ -85,7 +85,7 @@ describe("services page", () => {
 
   it("generateMetadata uses locale canonical + fallbacks", async () => {
     const meta = await servicesMeta({ params: params({ locale: "fr" }) });
-    expect(meta.alternates?.canonical).toBe("https://cloudless.gr/services");
+    expect(meta.alternates?.canonical).toBe("https://cloudless.gr/fr/services");
     expect((meta.alternates?.languages as Record<string, string>).fr).toContain("/fr/services");
   });
 });

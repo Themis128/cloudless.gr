@@ -1,5 +1,7 @@
 // Schema.org JSON-LD generators for cloudless.gr
 
+import { routing } from "@/i18n/routing";
+
 export interface OrganizationSchema {
   "@context": "https://schema.org";
   "@type": string[];
@@ -169,14 +171,14 @@ export interface BlogPostSchema {
   };
 }
 
-export function getBlogPostSchema(post: BlogPostSchemaInput): BlogPostSchema {
+export function getBlogPostSchema(post: BlogPostSchemaInput & { locale?: string }): BlogPostSchema {
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.excerpt,
     datePublished: post.date,
-    url: `https://cloudless.gr/blog/${post.slug}`,
+    url: `https://cloudless.gr/${post.locale ?? "en"}/blog/${post.slug}`,
     articleSection: post.category,
     ...(post.coverImage ? { image: post.coverImage } : {}),
     author: post.author
@@ -255,7 +257,19 @@ export interface BreadcrumbSchema {
   }>;
 }
 
-export function getBreadcrumbSchema(items: BreadcrumbItem[]): BreadcrumbSchema {
+export function getBreadcrumbSchema(items: BreadcrumbItem[], locale?: string): BreadcrumbSchema {
+  const localePrefix = routing.locales.join("|");
+  const absoluteLocaleRe = new RegExp(`cloudless\\.gr\\/(${localePrefix})(\\/|$)`);
+  const relativeLocaleRe = new RegExp(`^\\/(${localePrefix})(\\/|$)`);
+  const localized = (url: string): string => {
+    if (!locale) return url;
+    if (url.startsWith("/") && !relativeLocaleRe.test(url)) {
+      return `https://cloudless.gr/${locale}${url}`;
+    }
+    return absoluteLocaleRe.test(url)
+      ? url
+      : url.replace("https://cloudless.gr", `https://cloudless.gr/${locale}`);
+  };
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -263,7 +277,7 @@ export function getBreadcrumbSchema(items: BreadcrumbItem[]): BreadcrumbSchema {
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url,
+      item: localized(item.url),
     })),
   };
 }

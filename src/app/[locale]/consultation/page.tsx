@@ -71,10 +71,13 @@ export default async function ConsultationPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Consultation", url: `https://cloudless.gr/${locale}/consultation` },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Consultation", url: `https://cloudless.gr/${locale}/consultation` },
+          ],
+          locale
+        )}
       />
 
       {/* Header */}

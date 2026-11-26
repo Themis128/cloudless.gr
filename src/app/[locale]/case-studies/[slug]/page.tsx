@@ -41,12 +41,13 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) return { title: "Case Study Not Found" };
-  const canonical = `${BASE_URL}/case-studies/${slug}`;
+  // Per-locale canonical must match og:url — see services/page.tsx.
+  const canonical = `${BASE_URL}/${locale}/case-studies/${slug}`;
   return {
     title: cs.title,
     description: cs.summary,
@@ -55,6 +56,8 @@ export async function generateMetadata({
       languages: {
         en: `${BASE_URL}/en/case-studies/${slug}`,
         el: `${BASE_URL}/el/case-studies/${slug}`,
+        fr: `${BASE_URL}/fr/case-studies/${slug}`,
+        de: `${BASE_URL}/de/case-studies/${slug}`,
         "x-default": `${BASE_URL}/en/case-studies/${slug}`,
       },
     },
@@ -96,19 +99,26 @@ async function loadCaseStudy(slug: string): Promise<CaseStudyWithContent | null>
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function CaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function CaseStudyPage({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) notFound();
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white">
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: BASE_URL },
-          { name: "Case Studies", url: `${BASE_URL}/case-studies` },
-          { name: cs.title, url: `${BASE_URL}/case-studies/${cs.slug}` },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: BASE_URL },
+            { name: "Case Studies", url: `${BASE_URL}/case-studies` },
+            { name: cs.title, url: `${BASE_URL}/case-studies/${cs.slug}` },
+          ],
+          locale
+        )}
       />
       {/* Hero */}
       <section className="px-4 pt-24 pb-12">

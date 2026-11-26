@@ -65,10 +65,13 @@ export default function CookiePolicyPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Cookie Policy", url: "https://cloudless.gr/cookies" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Cookie Policy", url: "https://cloudless.gr/cookies" },
+          ],
+          locale
+        )}
       />
 
       <div className="bg-void min-h-screen">

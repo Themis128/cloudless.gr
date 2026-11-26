@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const revalidate = 3600; // Revalidate hourly
 
 export default async function DocPage({ params }: Props) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
 
   const [doc, allDocs] = await Promise.all([getDocBySlug(slug), getDocs()]);
 
@@ -66,11 +66,14 @@ export default async function DocPage({ params }: Props) {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Docs", url: "https://cloudless.gr/docs" },
-          { name: doc.title, url: `https://cloudless.gr/docs/${slug}` },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Docs", url: "https://cloudless.gr/docs" },
+            { name: doc.title, url: `https://cloudless.gr/docs/${slug}` },
+          ],
+          locale
+        )}
       />
 
       <div className="bg-void min-h-screen text-white">

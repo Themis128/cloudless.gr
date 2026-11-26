@@ -75,7 +75,7 @@ describe("getBlogPostSchema", () => {
   });
 
   it("builds correct url", () => {
-    expect(getBlogPostSchema(input).url).toBe("https://cloudless.gr/blog/my-post");
+    expect(getBlogPostSchema(input).url).toBe("https://cloudless.gr/en/blog/my-post");
   });
 
   it("defaults author to Organization when none given", () => {

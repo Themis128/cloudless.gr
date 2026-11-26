@@ -6,6 +6,7 @@ import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-doc
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Documentation",
@@ -78,6 +79,7 @@ async function loadPublicDocs(): Promise<DocsListItem[]> {
 }
 
 export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
+  const locale = await getServerLocale();
   const resolvedParams = await searchParams;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =
@@ -126,10 +128,13 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Docs", url: "https://cloudless.gr/docs" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Docs", url: "https://cloudless.gr/docs" },
+          ],
+          locale
+        )}
       />
 
       {/* Header */}

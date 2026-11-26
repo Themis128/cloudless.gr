@@ -36,10 +36,13 @@ export default async function TermsPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Terms of Service", url: "https://cloudless.gr/terms" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Terms of Service", url: "https://cloudless.gr/terms" },
+          ],
+          locale
+        )}
       />
 
       <div className="bg-void min-h-screen">

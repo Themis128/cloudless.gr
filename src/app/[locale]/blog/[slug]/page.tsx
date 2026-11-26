@@ -139,7 +139,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BlogPostPage({ params }: Props) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
 
   // Track blog view (fire-and-forget — never blocks render)
   trackEvent({
@@ -164,15 +164,19 @@ export default async function BlogPostPage({ params }: Props) {
           date: post.date,
           slug: post.slug,
           category: post.category,
+          locale,
         })}
       />
       {post.faqs && post.faqs.length > 0 && <JsonLd data={getFAQSchema(post.faqs)} />}
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Blog", url: "https://cloudless.gr/blog" },
-          { name: post.title, url: `https://cloudless.gr/blog/${post.slug}` },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: `https://cloudless.gr/${locale}` },
+            { name: "Blog", url: `https://cloudless.gr/${locale}/blog` },
+            { name: post.title, url: `https://cloudless.gr/${locale}/blog/${post.slug}` },
+          ],
+          locale
+        )}
       />
       {/* Header */}
       <section className="bg-void scanlines relative py-16 text-white md:py-20">

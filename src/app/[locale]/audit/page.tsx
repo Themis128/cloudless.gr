@@ -123,10 +123,13 @@ export default async function AuditPage() {
   return (
     <>
       <JsonLd
-        data={getBreadcrumbSchema([
-          { name: "Home", url: "https://cloudless.gr" },
-          { name: "Free Audit", url: "https://cloudless.gr/audit" },
-        ])}
+        data={getBreadcrumbSchema(
+          [
+            { name: "Home", url: "https://cloudless.gr" },
+            { name: "Free Audit", url: "https://cloudless.gr/audit" },
+          ],
+          locale
+        )}
       />
 
       {/* ── Hero — manifest Element_Hero_Header/Subheader ─────────── */}
