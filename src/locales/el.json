@@ -497,6 +497,9 @@
     "cookieDuration": "Διάρκεια",
     "cookieCategory": "Κατηγορία",
     "cookieTableNote": "Cookies αναλυτικών στατιστικών τρίτων (Microsoft Clarity) αποθηκεύονται μόνο με τη συγκατάθεσή σας στα cookies ανάλυσης. Cookies μάρκετινγκ μόνο με τη συγκατάθεσή σας στα αντίστοιχα cookies.",
+    "cookieClarityPurpose": "Microsoft Clarity — καταγραφές συνεδριών & χάρτες θερμότητας",
+    "cookieClarityDuration": "1 έτος / συνεδρία",
+
     "manageCookiesTitle": "4. Διαχείριση Προτιμήσεων",
     "manageCookies": "Μπορείτε να αλλάξετε τις προτιμήσεις σας ανά πάσα στιγμή.",
     "openCookieSettings": "Ρυθμίσεις Cookies",

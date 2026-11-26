@@ -32,6 +32,10 @@ on:
         description: Skip build; re-trigger Workflow for this SHA (artifact must already be in R2)
         type: boolean
         default: false
+      force_rebuild:
+        description: Rebuild + redeploy even if this SHA is already live (needed after changing build-time NEXT_PUBLIC_* env/secrets)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -68,6 +72,11 @@ jobs:
           set -euo pipefail
           WANT="${{ github.sha }}"
           LIVE=""
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" = "true" ]; then
+            echo "already=false" >> "$GITHUB_OUTPUT"
+            echo "force_rebuild requested — rebuilding live SHA ${WANT}"
+            exit 0
+          fi
           for candidate in \
             https://pi-origin.cloudless.gr/api/health \
             https://cloudless.gr/api/health
@@ -420,7 +429,8 @@ jobs:
               --arg key "$ARTIFACT_KEY" \
               --arg rid "${{ github.run_id }}" \
               --arg rurl "$RUN_URL" \
-              '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl}')" \
+              --argjson fb "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" \
+              '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl, forceRebuild:$fb}')" \
             "${ORCH_URL%/}/trigger")
           echo "$RESP" | tee /tmp/trigger.json
           INSTANCE=$(echo "$RESP" | jq -r .workflowInstanceId)

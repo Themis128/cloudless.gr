@@ -202,7 +202,9 @@ if not SHA or not ARTIFACT_KEY:
 
 standalone_path = Path(STANDALONE)
 CURRENT = standalone_path.resolve().name if standalone_path.is_symlink() else ""
-if CURRENT == SHA12:
+# forceRebuild: same-SHA redeploy requested (e.g. build-time NEXT_PUBLIC_* env
+# changed after the SHA first went live) — pull + re-extract instead of noop.
+if CURRENT == SHA12 and not desired.get("forceRebuild"):
     track(event="noop_already_live", sha12=SHA12, workflowInstanceId=WF_ID)
     sys.exit(0)
 

@@ -188,8 +188,11 @@ export default function CookiePolicyPage() {
                       />
                       <CookieRow
                         name="_clck, _clsk, CLID"
-                        purpose="Microsoft Clarity — session recordings & heatmaps"
-                        duration="1 year / session"
+                        purpose={t(
+                          "legal.cookieClarityPurpose",
+                          "Microsoft Clarity — session recordings & heatmaps"
+                        )}
+                        duration={t("legal.cookieClarityDuration", "1 year / session")}
                         category="analytics"
                       />
                     </tbody>

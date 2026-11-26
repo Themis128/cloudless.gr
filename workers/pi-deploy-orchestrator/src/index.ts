@@ -8,11 +8,7 @@
  * Tracking: every event carries sha / sha12 / artifactKey / workflowInstanceId /
  * githubRunId for correlation across GH, Workflow dashboard, and omv logs.
  */
-import {
-  WorkflowEntrypoint,
-  type WorkflowEvent,
-  type WorkflowStep,
-} from "cloudflare:workers";
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
 export interface Env {
   RELEASES: R2Bucket;
@@ -31,6 +27,7 @@ export interface DeployParams {
   artifactKey: string;
   githubRunId?: string;
   githubRunUrl?: string;
+  forceRebuild?: boolean;
 }
 
 export type DesiredState = {
@@ -41,6 +38,7 @@ export type DesiredState = {
   workflowInstanceId?: string;
   githubRunId?: string;
   githubRunUrl?: string;
+  forceRebuild?: boolean;
   status: "pending" | "success" | "timeout" | "error";
   lastHealthVersion?: string;
   lastProbeAt?: string;
@@ -60,11 +58,7 @@ function requireToken(req: Request, env: Env): boolean {
   return Boolean(env.DEPLOY_ORCHESTRATOR_TOKEN) && token === env.DEPLOY_ORCHESTRATOR_TOKEN;
 }
 
-async function notify(
-  env: Env,
-  text: string,
-  fields: Record<string, string>,
-): Promise<void> {
+async function notify(env: Env, text: string, fields: Record<string, string>): Promise<void> {
   const lines = Object.entries(fields)
     .map(([k, v]) => `*${k}:* \`${v}\``)
     .join("\n");
@@ -104,9 +98,7 @@ async function notify(
   }
 }
 
-async function probeHealth(
-  env: Env,
-): Promise<{ ok: boolean; version: string; url: string }> {
+async function probeHealth(env: Env): Promise<{ ok: boolean; version: string; url: string }> {
   for (const url of [env.HEALTH_URL, env.HEALTH_URL_FALLBACK]) {
     try {
       const res = await fetch(url, {
@@ -127,7 +119,7 @@ async function probeHealth(
 
 export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
   async run(event: WorkflowEvent<DeployParams>, step: WorkflowStep) {
-    const { sha, artifactKey, githubRunId, githubRunUrl } = event.payload;
+    const { sha, artifactKey, githubRunId, githubRunUrl, forceRebuild } = event.payload;
     const instanceId = event.instanceId;
     const s12 = sha12(sha);
 
@@ -140,13 +132,12 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
         workflowInstanceId: instanceId,
         githubRunId,
         githubRunUrl,
+        forceRebuild,
         status: "pending",
       };
-      await this.env.RELEASES.put(
-        "desired.json",
-        JSON.stringify(desired, null, 2),
-        { httpMetadata: { contentType: "application/json" } },
-      );
+      await this.env.RELEASES.put("desired.json", JSON.stringify(desired, null, 2), {
+        httpMetadata: { contentType: "application/json" },
+      });
       return desired;
     });
 
@@ -168,15 +159,11 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
       lastVersion = probe.version;
       const match =
         probe.ok &&
-        (probe.version === sha ||
-          probe.version.startsWith(s12) ||
-          sha.startsWith(probe.version));
+        (probe.version === sha || probe.version.startsWith(s12) || sha.startsWith(probe.version));
 
       await step.do(`track-probe-${attempt}`, async () => {
         const raw = await this.env.RELEASES.get("desired.json");
-        const cur = raw
-          ? (JSON.parse(await raw.text()) as DesiredState)
-          : ({} as DesiredState);
+        const cur = raw ? (JSON.parse(await raw.text()) as DesiredState) : ({} as DesiredState);
         const next: DesiredState = {
           ...cur,
           sha,
@@ -189,11 +176,9 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
           lastHealthVersion: probe.version || undefined,
           lastProbeAt: new Date().toISOString(),
         };
-        await this.env.RELEASES.put(
-          "desired.json",
-          JSON.stringify(next, null, 2),
-          { httpMetadata: { contentType: "application/json" } },
-        );
+        await this.env.RELEASES.put("desired.json", JSON.stringify(next, null, 2), {
+          httpMetadata: { contentType: "application/json" },
+        });
         return {
           attempt,
           match,
@@ -219,9 +204,7 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
 
     await step.do("mark-timeout", async () => {
       const raw = await this.env.RELEASES.get("desired.json");
-      const cur = raw
-        ? (JSON.parse(await raw.text()) as DesiredState)
-        : ({} as DesiredState);
+      const cur = raw ? (JSON.parse(await raw.text()) as DesiredState) : ({} as DesiredState);
       const next: DesiredState = {
         ...cur,
         sha,
@@ -234,11 +217,9 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
         lastHealthVersion: lastVersion || undefined,
         lastProbeAt: new Date().toISOString(),
       };
-      await this.env.RELEASES.put(
-        "desired.json",
-        JSON.stringify(next, null, 2),
-        { httpMetadata: { contentType: "application/json" } },
-      );
+      await this.env.RELEASES.put("desired.json", JSON.stringify(next, null, 2), {
+        httpMetadata: { contentType: "application/json" },
+      });
       await notify(this.env, `Pi deploy TIMEOUT ${s12}`, {
         sha,
         sha12: s12,
@@ -250,9 +231,7 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
       return next;
     });
 
-    throw new Error(
-      `Deploy timeout: want ${s12}, last health version=${lastVersion || "none"}`,
-    );
+    throw new Error(`Deploy timeout: want ${s12}, last health version=${lastVersion || "none"}`);
   }
 }
 
@@ -286,17 +265,14 @@ export default {
         return Response.json({ error: "invalid json" }, { status: 400 });
       }
       if (!body?.sha || !body?.artifactKey) {
-        return Response.json(
-          { error: "sha and artifactKey required" },
-          { status: 400 },
-        );
+        return Response.json({ error: "sha and artifactKey required" }, { status: 400 });
       }
       // Ensure object exists before starting wait loop
       const head = await env.RELEASES.head(body.artifactKey);
       if (!head) {
         return Response.json(
           { error: `artifact missing in R2: ${body.artifactKey}` },
-          { status: 404 },
+          { status: 404 }
         );
       }
 
@@ -307,6 +283,7 @@ export default {
           artifactKey: body.artifactKey,
           githubRunId: body.githubRunId,
           githubRunUrl: body.githubRunUrl,
+          forceRebuild: body.forceRebuild === true,
         },
       });
 
@@ -337,7 +314,7 @@ export default {
           type: "agent-event",
           ...evt,
           receivedAt: new Date().toISOString(),
-        }),
+        })
       );
       return Response.json({ ok: true });
     }
@@ -354,14 +331,11 @@ export default {
         return Response.json({ error: "artifact not found" }, { status: 404 });
       }
       const headers = new Headers();
-      headers.set(
-        "content-type",
-        obj.httpMetadata?.contentType || "application/octet-stream",
-      );
+      headers.set("content-type", obj.httpMetadata?.contentType || "application/octet-stream");
       if (obj.size != null) headers.set("content-length", String(obj.size));
       headers.set(
         "content-disposition",
-        `attachment; filename="${key.split("/").pop() || "release.tar.zst"}"`,
+        `attachment; filename="${key.split("/").pop() || "release.tar.zst"}"`
       );
       return new Response(obj.body, { headers });
     }
@@ -377,7 +351,7 @@ export default {
           "POST /agent-event",
         ],
       },
-      { status: 404 },
+      { status: 404 }
     );
   },
 };

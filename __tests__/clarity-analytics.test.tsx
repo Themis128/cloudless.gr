@@ -54,10 +54,27 @@ describe("ClarityAnalytics", () => {
     expect(typeof window.clarity).toBe("function");
   });
 
-  it("calls clarity consent API with granted state", () => {
+  it("calls clarity consentv2 with granular grant state", () => {
     render(<Wrapper analytics={true} />);
     const q = (window.clarity as { q?: unknown[][] }).q ?? [];
-    expect(q).toContainEqual(["consent", true]);
+    expect(q).toContainEqual(["consentv2", { ad_Storage: "denied", analytics_Storage: "granted" }]);
+  });
+
+  it("injects when consent is granted after initial render", () => {
+    const { rerender } = render(<Wrapper analytics={false} />);
+    expect(document.head.querySelector('script[src*="clarity.ms"]')).toBeNull();
+    rerender(<Wrapper analytics={true} />);
+    expect(document.head.querySelector('script[src*="clarity.ms"]')).not.toBeNull();
+  });
+
+  it("does nothing until the consent cookie is read", () => {
+    render(
+      <CookieConsentContext value={{ ...makeConsent(true), hasConsented: false }}>
+        <ClarityAnalytics />
+      </CookieConsentContext>
+    );
+    expect(document.head.querySelector('script[src*="clarity.ms"]')).toBeNull();
+    expect(window.clarity).toBeUndefined();
   });
 
   it("does not inject when the project id is unset", () => {
