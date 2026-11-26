@@ -204,9 +204,41 @@ standalone_path = Path(STANDALONE)
 CURRENT = standalone_path.resolve().name if standalone_path.is_symlink() else ""
 # forceRebuild: same-SHA redeploy requested (e.g. build-time NEXT_PUBLIC_* env
 # changed after the SHA first went live) — pull + re-extract instead of noop.
-if CURRENT == SHA12 and not desired.get("forceRebuild"):
+# desired.json keeps forceRebuild until the next trigger, so forced runs are
+# deduped per workflowInstanceId (.done on promote, .tries capped at 3) —
+# otherwise every pull-timer tick would reinstall + restart production.
+FORCE = bool(desired.get("forceRebuild"))
+MARKER_ID = "".join(
+    c for c in str(WF_ID or desired.get("githubRunId") or "manual") if c.isalnum() or c in ".-_"
+)
+FORCED_DONE = Path(RELEASES) / f".forced-{MARKER_ID}.done"
+FORCED_TRIES = Path(RELEASES) / f".forced-{MARKER_ID}.tries"
+# CURRENT may be "<sha12>-f<id>" after a forced deploy — compare the base.
+live_base = CURRENT.split("-")[0] if CURRENT else ""
+if live_base == SHA12 and (not FORCE or FORCED_DONE.exists()):
     track(event="noop_already_live", sha12=SHA12, workflowInstanceId=WF_ID)
     sys.exit(0)
+
+if FORCE:
+    tries = 0
+    if FORCED_TRIES.exists():
+        try:
+            tries = int(FORCED_TRIES.read_text().strip() or "0")
+        except (OSError, ValueError):
+            tries = 3
+    if tries >= 3:
+        track(
+            event="noop_forced_exhausted",
+            sha12=SHA12,
+            workflowInstanceId=WF_ID,
+        )
+        sys.exit(0)
+    run(
+        "sudo",
+        "sh",
+        "-c",
+        f"mkdir -p {RELEASES} && printf %s '{tries + 1}' > '{FORCED_TRIES}'",
+    )
 
 if load_high or io_high:
     track(
@@ -274,7 +306,11 @@ else:
     track(event="error", reason="download_failed", sha12=SHA12, artifactKey=ARTIFACT_KEY)
     sys.exit(1)
 
-NEW_REL = Path(RELEASES) / SHA12
+# Forced same-SHA redeploys extract to <sha12>-f<id> so the live release dir
+# is untouched until the replacement validates — PREV stays a real rollback.
+NEW_REL = (
+    Path(RELEASES) / f"{SHA12}-f{MARKER_ID}" if FORCE else Path(RELEASES) / SHA12
+)
 PREV = os.readlink(STANDALONE) if standalone_path.is_symlink() else ""
 
 run("sudo", "mkdir", "-p", RELEASES)
@@ -342,10 +378,11 @@ if next_files < 10:
     sys.exit(1)
 
 run("sudo", "chmod", "-R", "a+rX", str(NEW_REL))
-run("sudo", "ln", "-sfn", f"cloudless-releases/{SHA12}", STANDALONE)
+run("sudo", "ln", "-sfn", f"cloudless-releases/{NEW_REL.name}", STANDALONE)
 run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
 
 KUBECTL = ["sudo", "k3s", "kubectl"]
+APP_VER = f"{SHA}-f{MARKER_ID}" if FORCE else SHA
 run(
     *KUBECTL,
     "set",
@@ -353,7 +390,7 @@ run(
     f"deployment/{DEP}",
     "-n",
     NS,
-    f"APP_VERSION={SHA}",
+    f"APP_VERSION={APP_VER}",
     f"NEXT_PUBLIC_APP_VERSION={SHA}",
     "NEXT_PUBLIC_AUTH_PROVIDER=d1",
     "SSM_DISABLED=1",
@@ -367,7 +404,9 @@ for _ in range(8):
     try:
         d = json.loads(resp_body)
         v = str(d.get("version", ""))
-        if d.get("status") == "ok" and (v.startswith(SHA12) or v == SHA):
+        if d.get("status") == "ok" and (
+            v == APP_VER or (not FORCE and v.startswith(SHA12))
+        ):
             health_ok = True
             break
     except json.JSONDecodeError:
@@ -377,6 +416,8 @@ for _ in range(8):
 shutil.rmtree(TMP, ignore_errors=True)
 
 if health_ok:
+    if FORCE:
+        run("sudo", "touch", str(FORCED_DONE), check=False)
     track(event="promote_ok", sha12=SHA12, workflowInstanceId=WF_ID, next_files=str(next_files))
     # prune old releases (keep 5)
     releases = sorted(

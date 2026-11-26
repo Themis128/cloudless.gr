@@ -484,12 +484,24 @@ jobs:
               if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
                 LIVE=$(echo "$BODY" | jq -r .version)
                 echo "  try ${i}: $u → version=${LIVE}"
-                case "$LIVE" in
-                  "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
-                    MATCHED=1
-                    break 2
-                    ;;
-                esac
+                # force_rebuild: the pre-existing live build already reports
+                # the plain sha — only the puller's "-f<wf>" stamp proves the
+                # rebuilt bundle is actually serving.
+                if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" = "true" ]; then
+                  case "$LIVE" in
+                    ${WANT_SHA}-f*)
+                      MATCHED=1
+                      break 2
+                      ;;
+                  esac
+                else
+                  case "$LIVE" in
+                    "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
+                      MATCHED=1
+                      break 2
+                      ;;
+                  esac
+                fi
               else
                 CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
                 echo "  try ${i}: $u → http=${CODE} (no version json)"

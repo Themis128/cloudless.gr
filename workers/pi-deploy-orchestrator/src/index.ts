@@ -157,9 +157,16 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
       });
 
       lastVersion = probe.version;
+      // Forced same-SHA redeploys must not be satisfied by the build that is
+      // already live: the puller stamps APP_VERSION "<sha>-f<instanceId>" so
+      // health only matches once the rebuilt bundle is actually serving.
       const match =
         probe.ok &&
-        (probe.version === sha || probe.version.startsWith(s12) || sha.startsWith(probe.version));
+        (forceRebuild
+          ? probe.version === `${sha}-f${instanceId}`
+          : probe.version === sha ||
+            probe.version.startsWith(s12) ||
+            sha.startsWith(probe.version));
 
       await step.do(`track-probe-${attempt}`, async () => {
         const raw = await this.env.RELEASES.get("desired.json");
