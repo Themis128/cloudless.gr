@@ -16,11 +16,12 @@ describe("resolveCallToken", () => {
   });
 
   it("treats prototype-property names as plain tokens, not inherited keys", () => {
-    // Object.hasOwn guard: these hit TOKEN_RE passthrough (Talk 404s unknown
-    // rooms), never an inherited member of the alias map.
+    // Object.hasOwn guard: lowercase names hit TOKEN_RE passthrough (Talk
+    // 404s unknown rooms); mixed-case fails the regex. Neither returns an
+    // inherited member of the alias map.
     expect(resolveCallToken("toString")).toBe("toString");
     expect(resolveCallToken("constructor")).toBe("constructor");
-    expect(resolveCallToken("hasOwnProperty")).toBe("hasOwnProperty");
+    expect(resolveCallToken("hasOwnProperty")).toBeNull();
   });
 
   it("rejects invalid tokens", () => {
