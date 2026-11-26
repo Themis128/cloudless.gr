@@ -1,11 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-
-// Boundary fake at the lib seam: loadCaseStudy must take its static-fallback
-// path rather than querying the live CMS (slow/flaky in CI where AppFlowy is
-// configured).
-vi.mock("@/lib/appflowy", () => ({
-  isAppFlowyConfigured: vi.fn().mockResolvedValue(false),
-}));
+import { describe, it, expect } from "vitest";
 
 /**
  * Calls each [locale] page's generateMetadata with a non-English locale and
