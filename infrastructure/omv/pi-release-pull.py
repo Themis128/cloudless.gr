@@ -201,10 +201,44 @@ if not SHA or not ARTIFACT_KEY:
     sys.exit(1)
 
 standalone_path = Path(STANDALONE)
-CURRENT = standalone_path.resolve().name if standalone_path.is_symlink() else ""
-if CURRENT == SHA12:
+# A symlink whose target was deleted still resolves — requires exists() so a
+# dangling link is not mistaken for a live release.
+CURRENT = (
+    standalone_path.resolve().name
+    if standalone_path.is_symlink() and standalone_path.exists()
+    else ""
+)
+# forceRebuild: same-SHA redeploy requested (e.g. build-time NEXT_PUBLIC_* env
+# changed after the SHA first went live) — pull + re-extract instead of noop.
+# desired.json keeps forceRebuild until the next trigger, so forced runs are
+# deduped per workflowInstanceId (.done on promote, .tries capped at 3) —
+# otherwise every pull-timer tick would reinstall + restart production.
+FORCE = bool(desired.get("forceRebuild"))
+MARKER_ID = "".join(
+    c for c in str(WF_ID or desired.get("githubRunId") or "manual") if c.isalnum() or c in ".-_"
+)
+FORCED_DONE = Path(RELEASES) / f".forced-{MARKER_ID}.done"
+FORCED_TRIES = Path(RELEASES) / f".forced-{MARKER_ID}.tries"
+# CURRENT may be "<sha12>-f<id>" after a forced deploy — compare the base.
+live_base = CURRENT.split("-")[0] if CURRENT else ""
+if live_base == SHA12 and (not FORCE or FORCED_DONE.exists()):
     track(event="noop_already_live", sha12=SHA12, workflowInstanceId=WF_ID)
     sys.exit(0)
+
+force_tries = 0
+if FORCE:
+    if FORCED_TRIES.exists():
+        try:
+            force_tries = int(FORCED_TRIES.read_text().strip() or "0")
+        except (OSError, ValueError):
+            force_tries = 3
+    if force_tries >= 3:
+        track(
+            event="noop_forced_exhausted",
+            sha12=SHA12,
+            workflowInstanceId=WF_ID,
+        )
+        sys.exit(0)
 
 if load_high or io_high:
     track(
@@ -217,6 +251,14 @@ if load_high or io_high:
         workflowInstanceId=WF_ID,
     )
     sys.exit(0)
+
+if FORCE:
+    run(
+        "sudo",
+        "sh",
+        "-c",
+        f"mkdir -p {RELEASES} && printf %s '{force_tries + 1}' > '{FORCED_TRIES}'",
+    )
 
 track(
     event="pull_start",
@@ -272,7 +314,11 @@ else:
     track(event="error", reason="download_failed", sha12=SHA12, artifactKey=ARTIFACT_KEY)
     sys.exit(1)
 
-NEW_REL = Path(RELEASES) / SHA12
+# Forced same-SHA redeploys extract to <sha12>-f<id> so the live release dir
+# is untouched until the replacement validates — PREV stays a real rollback.
+NEW_REL = (
+    Path(RELEASES) / f"{SHA12}-f{MARKER_ID}r{force_tries}" if FORCE else Path(RELEASES) / SHA12
+)
 PREV = os.readlink(STANDALONE) if standalone_path.is_symlink() else ""
 
 run("sudo", "mkdir", "-p", RELEASES)
@@ -340,10 +386,11 @@ if next_files < 10:
     sys.exit(1)
 
 run("sudo", "chmod", "-R", "a+rX", str(NEW_REL))
-run("sudo", "ln", "-sfn", f"cloudless-releases/{SHA12}", STANDALONE)
+run("sudo", "ln", "-sfn", f"cloudless-releases/{NEW_REL.name}", STANDALONE)
 run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
 
 KUBECTL = ["sudo", "k3s", "kubectl"]
+APP_VER = f"{SHA}-f{MARKER_ID}" if FORCE else SHA
 run(
     *KUBECTL,
     "set",
@@ -351,7 +398,7 @@ run(
     f"deployment/{DEP}",
     "-n",
     NS,
-    f"APP_VERSION={SHA}",
+    f"APP_VERSION={APP_VER}",
     f"NEXT_PUBLIC_APP_VERSION={SHA}",
     "NEXT_PUBLIC_AUTH_PROVIDER=d1",
     "SSM_DISABLED=1",
@@ -365,7 +412,7 @@ for _ in range(8):
     try:
         d = json.loads(resp_body)
         v = str(d.get("version", ""))
-        if d.get("status") == "ok" and (v.startswith(SHA12) or v == SHA):
+        if d.get("status") == "ok" and (v == APP_VER or (not FORCE and v.startswith(SHA12))):
             health_ok = True
             break
     except json.JSONDecodeError:
@@ -375,6 +422,13 @@ for _ in range(8):
 shutil.rmtree(TMP, ignore_errors=True)
 
 if health_ok:
+    if FORCE:
+        run("sudo", "touch", str(FORCED_DONE), check=False)
+        # Drop superseded attempt dirs of this forced deploy so rollback's
+        # newest-dir selection can never pick a rejected attempt.
+        for stale in Path(RELEASES).glob(f"{SHA12}-f{MARKER_ID}r*"):
+            if stale.is_dir() and stale != NEW_REL:
+                run("sudo", "rm", "-rf", str(stale))
     track(event="promote_ok", sha12=SHA12, workflowInstanceId=WF_ID, next_files=str(next_files))
     # prune old releases (keep 5)
     releases = sorted(
@@ -392,10 +446,15 @@ if health_ok:
 
 # rollback
 track(event="rollback", sha12=SHA12, prev=PREV or "none", workflowInstanceId=WF_ID)
-if PREV:
+prev_name = Path(PREV).name if PREV else ""
+# PREV is a recorded symlink target — only a different, still-existing dir is
+# a real rollback: a pruned target would restore a dangling link, and when the
+# link dangled at this same SHA, PREV names NEW_REL itself (restoring it and
+# then deleting it below would leave the live link dangling again).
+if PREV and prev_name != NEW_REL.name and (Path(RELEASES) / prev_name).is_dir():
     run("sudo", "ln", "-sfn", PREV, STANDALONE)
     run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
-    prev_sha = Path(PREV).name
+    prev_sha = prev_name
     run(
         *KUBECTL,
         "set",
@@ -409,4 +468,10 @@ if PREV:
     run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
     # The shell tolerated a slow rollback rollout (`|| true`); we exit 1 anyway.
     run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s", check=False)
+    # Remove the rejected release dir — a leftover NEW_REL would be picked by
+    # `rollback.py previous` (newest-dir selection) on the next manual
+    # rollback. Only safe once the symlink was restored to PREV; with no
+    # previous release the symlink still targets NEW_REL and deleting it
+    # would dangle the live path.
+    run("sudo", "rm", "-rf", str(NEW_REL))
 sys.exit(1)

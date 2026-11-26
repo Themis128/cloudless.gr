@@ -117,12 +117,32 @@ def flip_to(target: str) -> None:
         f"'{CURRENT}'",
         check=True,
     )
-    log(f"restarting deploy/{DEPLOY} in ns {NS}…")
-    out = remote(
-        f"sudo k3s kubectl -n '{NS}' rollout restart deploy/{DEPLOY} "
-        ">/dev/null && sudo k3s kubectl -n "
-        f"'{NS}' rollout status deploy/{DEPLOY} --timeout=180s"
+    # Stamp APP_VERSION to the restored release — otherwise /api/health keeps
+    # reporting the old build's version (incl. stale "-f<id>" force stamps),
+    # which misleads deploy-pi.yml's already-live checks.
+    stamp = remote(
+        f"sudo k3s kubectl -n '{NS}' get deploy/{DEPLOY} "
+        "-o jsonpath='{.spec.template.spec.containers[*].env[?(@.name==\"APP_VERSION\")].value}'",
     )
+    stamp_changed = target not in stamp.split()
+    if stamp_changed:
+        remote(
+            f"sudo k3s kubectl -n '{NS}' set env deploy/{DEPLOY} "
+            f"APP_VERSION='{target}' NEXT_PUBLIC_APP_VERSION='{target}' >/dev/null",
+            check=True,
+        )
+    log(f"restarting deploy/{DEPLOY} in ns {NS}…")
+    if stamp_changed:
+        # The env patch already triggered a rollout — just wait for it.
+        out = remote(f"sudo k3s kubectl -n '{NS}' rollout status deploy/{DEPLOY} --timeout=180s")
+    else:
+        # Stamp unchanged → no template update → explicit restart so pods
+        # reload the flipped symlink.
+        out = remote(
+            f"sudo k3s kubectl -n '{NS}' rollout restart deploy/{DEPLOY} "
+            ">/dev/null && sudo k3s kubectl -n "
+            f"'{NS}' rollout status deploy/{DEPLOY} --timeout=180s"
+        )
     if out:
         print(out.splitlines()[-1])
 

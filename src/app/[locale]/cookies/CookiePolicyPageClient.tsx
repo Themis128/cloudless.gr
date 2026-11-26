@@ -186,13 +186,22 @@ export default function CookiePolicyPage() {
                         duration="Session"
                         category="necessary"
                       />
+                      <CookieRow
+                        name="_clck, _clsk, CLID"
+                        purpose={t(
+                          "legal.cookieClarityPurpose",
+                          "Microsoft Clarity — session recordings & heatmaps"
+                        )}
+                        duration={t("legal.cookieClarityDuration", "1 year / session")}
+                        category="analytics"
+                      />
                     </tbody>
                   </table>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
                   {t(
                     "legal.cookieTableNote",
-                    "This table will be updated as we add analytics or marketing integrations. Currently, no third-party analytics or marketing cookies are set."
+                    "Third-party analytics cookies (Microsoft Clarity) are only set if you consent to analytics cookies. Marketing cookies are only set if you consent to marketing cookies."
                   )}
                 </p>
               </Section>

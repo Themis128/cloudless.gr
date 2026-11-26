@@ -32,6 +32,10 @@ on:
         description: Skip build; re-trigger Workflow for this SHA (artifact must already be in R2)
         type: boolean
         default: false
+      force_rebuild:
+        description: Rebuild + redeploy even if this SHA is already live (needed after changing build-time NEXT_PUBLIC_* env/secrets)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -68,6 +72,11 @@ jobs:
           set -euo pipefail
           WANT="${{ github.sha }}"
           LIVE=""
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" = "true" ]; then
+            echo "already=false" >> "$GITHUB_OUTPUT"
+            echo "force_rebuild requested — rebuilding live SHA ${WANT}"
+            exit 0
+          fi
           for candidate in \
             https://pi-origin.cloudless.gr/api/health \
             https://cloudless.gr/api/health
@@ -80,7 +89,9 @@ jobs:
             fi
             echo "health $candidate → unreachable or invalid"
           done
-          if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
+          # A forced redeploy stamps "<sha>-f<id>" — it is still this commit's
+          # code, so it counts as already-deployed.
+          if case "$LIVE" in "$WANT"|"$WANT"-f*) true;; *) false;; esac; then
             echo "already=true" >> "$GITHUB_OUTPUT"
             {
               echo "## Deploy skipped"
@@ -132,6 +143,7 @@ jobs:
           NEXT_PUBLIC_GTM_ID: GTM-W7N3J3TV
           NEXT_PUBLIC_GA_MEASUREMENT_ID: G-K05JWC4HTD
           NEXT_PUBLIC_SWETRIX_PROJECT_ID: 9MqhwIADeZo6
+          NEXT_PUBLIC_CLARITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_CLARITY_PROJECT_ID }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAAF-3L3Vbt6mxpq0r
           APP_VERSION: ${{ github.sha }}
           NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
@@ -419,7 +431,8 @@ jobs:
               --arg key "$ARTIFACT_KEY" \
               --arg rid "${{ github.run_id }}" \
               --arg rurl "$RUN_URL" \
-              '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl}')" \
+              --argjson fb "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" \
+              '{sha:$sha, artifactKey:$key, githubRunId:$rid, githubRunUrl:$rurl, forceRebuild:$fb}')" \
             "${ORCH_URL%/}/trigger")
           echo "$RESP" | tee /tmp/trigger.json
           INSTANCE=$(echo "$RESP" | jq -r .workflowInstanceId)
@@ -473,12 +486,26 @@ jobs:
               if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
                 LIVE=$(echo "$BODY" | jq -r .version)
                 echo "  try ${i}: $u → version=${LIVE}"
-                case "$LIVE" in
-                  "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
-                    MATCHED=1
-                    break 2
-                    ;;
-                esac
+                # force_rebuild: the pre-existing live build already reports
+                # the plain sha — only the puller's "-f<wf>" stamp proves the
+                # rebuilt bundle is actually serving.
+                if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild }}" = "true" ]; then
+                  case "$LIVE" in
+                    ${WANT_SHA}-f*)
+                      MATCHED=1
+                      break 2
+                      ;;
+                  esac
+                else
+                  # A previous forced deploy stamped APP_VERSION "<sha>-f<id>" —
+                  # it is still this commit's code, so it satisfies the check.
+                  case "$LIVE" in
+                    "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8}|${WANT_SHA}-f*)
+                      MATCHED=1
+                      break 2
+                      ;;
+                  esac
+                fi
               else
                 CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || true)  # curl -w already prints 000 on failure; `|| echo 000` made it "000000"
                 echo "  try ${i}: $u → http=${CODE} (no version json)"

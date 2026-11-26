@@ -496,7 +496,10 @@
     "cookiePurpose": "Zweck",
     "cookieDuration": "Dauer",
     "cookieCategory": "Kategorie",
-    "cookieTableNote": "Diese Tabelle wird aktualisiert, sobald Analyse- oder Marketing-Integrationen hinzugefügt werden.",
+    "cookieTableNote": "Analyse-Cookies von Drittanbietern (Microsoft Clarity) werden nur mit Ihrer Einwilligung zu Analyse-Cookies gesetzt. Marketing-Cookies nur mit Ihrer Einwilligung zu Marketing-Cookies.",
+    "cookieClarityPurpose": "Microsoft Clarity — Sitzungsaufzeichnungen & Heatmaps",
+    "cookieClarityDuration": "1 Jahr / Sitzung",
+
     "manageCookiesTitle": "4. Einstellungen verwalten",
     "manageCookies": "Sie können Ihre Cookie-Einstellungen jederzeit ändern, indem Sie auf die Schaltfläche unten klicken.",
     "openCookieSettings": "Cookie-Einstellungen öffnen",

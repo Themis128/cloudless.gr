@@ -19,13 +19,13 @@ All layers share: `sha`, `sha12`, `artifactKey`, `workflowInstanceId`, `githubRu
 
 ## Routes
 
-| Method | Path | Auth | Purpose |
-| --- | --- | --- | --- |
-| GET | `/health` | no | Liveness |
-| GET | `/desired` | bearer | Current desired release JSON |
-| GET | `/artifact?key=` | bearer | Stream release tarball from R2 (omv uses this; no R2 keys on Pi) |
-| POST | `/trigger` | bearer | Start Workflow after R2 upload |
-| POST | `/agent-event` | bearer | Agent tracking events |
+| Method | Path             | Auth   | Purpose                                                          |
+| ------ | ---------------- | ------ | ---------------------------------------------------------------- |
+| GET    | `/health`        | no     | Liveness                                                         |
+| GET    | `/desired`       | bearer | Current desired release JSON                                     |
+| GET    | `/artifact?key=` | bearer | Stream release tarball from R2 (omv uses this; no R2 keys on Pi) |
+| POST   | `/trigger`       | bearer | Start Workflow after R2 upload                                   |
+| POST   | `/agent-event`   | bearer | Agent tracking events                                            |
 
 ## Deploy
 
@@ -52,3 +52,21 @@ and secret `DEPLOY_ORCHESTRATOR_TOKEN` to the same token.
 sudo python3 infrastructure/omv/install-pi-release-pull.py
 journalctl -t pi-release-pull -f
 ```
+
+## force_rebuild (same-SHA redeploy)
+
+`deploy-pi.yml` accepts `force_rebuild` for rebuilding + redeploying a SHA that
+is already live — needed when a build-time `NEXT_PUBLIC_*` env/secret changed
+after the SHA first deployed (e.g. enabling a new analytics ID without new
+code). The flag flows trigger → orchestrator → `desired.json` → pull agent.
+
+A forced run needs BOTH updated components, in this order:
+
+1. This worker redeployed (`npx wrangler deploy --config wrangler.jsonc`) — it
+   forwards `forceRebuild` into `desired.json` and verifies the rebuilt bundle
+   via the `-f<instanceId>` APP_VERSION stamp instead of accepting the live SHA.
+2. The omv pull agent updated (`sudo python3 infrastructure/omv/install-pi-release-pull.py`)
+   — it dedupes forced runs per workflowInstanceId (`.done` marker, max 3
+   tries), extracts to `releases/<sha12>-f<id>` so the live build and rollback
+   stay intact, and stamps `APP_VERSION=<sha>-f<id>` so probes can't pass on
+   the old bundle.
