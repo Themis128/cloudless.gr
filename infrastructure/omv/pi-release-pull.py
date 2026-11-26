@@ -201,7 +201,13 @@ if not SHA or not ARTIFACT_KEY:
     sys.exit(1)
 
 standalone_path = Path(STANDALONE)
-CURRENT = standalone_path.resolve().name if standalone_path.is_symlink() else ""
+# A symlink whose target was deleted still resolves — requires exists() so a
+# dangling link is not mistaken for a live release.
+CURRENT = (
+    standalone_path.resolve().name
+    if standalone_path.is_symlink() and standalone_path.exists()
+    else ""
+)
 # forceRebuild: same-SHA redeploy requested (e.g. build-time NEXT_PUBLIC_* env
 # changed after the SHA first went live) — pull + re-extract instead of noop.
 # desired.json keeps forceRebuild until the next trigger, so forced runs are
@@ -440,7 +446,9 @@ if health_ok:
 
 # rollback
 track(event="rollback", sha12=SHA12, prev=PREV or "none", workflowInstanceId=WF_ID)
-if PREV:
+# PREV is a recorded symlink target — its dir may already have been pruned,
+# which would restore a dangling link, so require the target to exist.
+if PREV and (Path(RELEASES) / Path(PREV).name).is_dir():
     run("sudo", "ln", "-sfn", PREV, STANDALONE)
     run("sudo", "chown", "-h", f"{OWNER}:users", STANDALONE)
     prev_sha = Path(PREV).name
@@ -457,7 +465,10 @@ if PREV:
     run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
     # The shell tolerated a slow rollback rollout (`|| true`); we exit 1 anyway.
     run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s", check=False)
-# Remove the rejected release dir — a leftover NEW_REL would be picked by
-# `rollback.py previous` (newest-dir selection) on the next manual rollback.
-run("sudo", "rm", "-rf", str(NEW_REL))
+    # Remove the rejected release dir — a leftover NEW_REL would be picked by
+    # `rollback.py previous` (newest-dir selection) on the next manual
+    # rollback. Only safe once the symlink was restored to PREV; with no
+    # previous release the symlink still targets NEW_REL and deleting it
+    # would dangle the live path.
+    run("sudo", "rm", "-rf", str(NEW_REL))
 sys.exit(1)
