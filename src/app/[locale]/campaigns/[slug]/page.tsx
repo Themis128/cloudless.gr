@@ -9,7 +9,14 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import CampaignHero from "@/components/CampaignHero";
 import TierTable from "@/components/TierTable";
-import { campaigns, getCampaign, isCampaignLocale, type Locale } from "@/data/campaigns";
+import {
+  CAMPAIGN_LOCALES,
+  campaigns,
+  getCampaign,
+  isCampaignLocale,
+  type Locale,
+} from "@/data/campaigns";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 type PageProps = {
   params: Promise<{ locale: string; slug: string }>;
@@ -27,13 +34,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!c) return { title: "Campaign not found" };
   const loc: Locale = isCampaignLocale(rawLocale) ? rawLocale : "en";
   return {
-    title: `${c.headline[loc]} | Cloudless`,
-    description: c.subhead[loc],
-    openGraph: {
-      title: `${c.headline[loc]} ${c.headlineAccent[loc]}`,
+    ...localizedPageMetadata({
+      locale: loc,
+      slug: `campaigns/${slug}`,
+      title: `${c.headline[loc]} | Cloudless`,
       description: c.subhead[loc],
-      images: [{ url: c.ogImage, width: 1200, height: 627 }],
-    },
+      locales: CAMPAIGN_LOCALES,
+      openGraph: {
+        title: `${c.headline[loc]} ${c.headlineAccent[loc]}`,
+        images: [{ url: c.ogImage, width: 1200, height: 627 }],
+      },
+    }),
     robots: { index: c.status === "live", follow: true },
   };
 }

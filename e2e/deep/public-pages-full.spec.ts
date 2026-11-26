@@ -152,4 +152,49 @@ test.describe("locale integrity", () => {
     const alternates = page.locator('link[rel="alternate"][hreflang]');
     expect(await alternates.count()).toBeGreaterThanOrEqual(3);
   });
+
+  test("non-English page emits localized canonical, og:url, and og:locale", async ({ page }) => {
+    await page.goto("/el/services");
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      "https://cloudless.gr/el/services"
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      "https://cloudless.gr/el/services"
+    );
+    await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute("content", "el_GR");
+    const hrefs = await page
+      .locator('link[rel="alternate"][hreflang]')
+      .evaluateAll((els) =>
+        els.map((e) => `${e.getAttribute("hreflang")}=${e.getAttribute("href")}`)
+      );
+    for (const locale of LOCALES) {
+      expect(hrefs).toContain(`${locale}=https://cloudless.gr/${locale}/services`);
+    }
+    expect(hrefs).toContain("x-default=https://cloudless.gr/en/services");
+  });
+
+  test("repaired routes emit a self-referencing canonical per locale", async ({ page }) => {
+    // These routes previously emitted no canonical or a locale-less one —
+    // verify each localized URL now canonicalizes to itself.
+    const routes = [
+      "accessibility",
+      "agents",
+      "contact",
+      "docs",
+      "partners",
+      "privacy",
+      "refund",
+      "terms",
+      "work",
+    ];
+    for (const route of routes) {
+      await page.goto(`/el/${route}`);
+      await expect(
+        page.locator('link[rel="canonical"]'),
+        `canonical on /el/${route}`
+      ).toHaveAttribute("href", `https://cloudless.gr/el/${route}`);
+    }
+  });
 });

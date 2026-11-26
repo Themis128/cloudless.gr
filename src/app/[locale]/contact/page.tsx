@@ -6,6 +6,7 @@ import JsonLd from "@/components/JsonLd";
 import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -17,10 +18,10 @@ export async function generateMetadata({
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
-  return {
-    title: meta?.contact?.title ?? "Contact Us",
-    description: meta?.contact?.description,
-  };
+  const title = meta?.contact?.title ?? "Contact Us";
+  const description = meta?.contact?.description;
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "contact", title, description });
 }
 
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {

@@ -9,6 +9,8 @@ import { trackEvent } from "@/lib/appflowy-analytics";
 import JsonLd from "@/components/JsonLd";
 import { getBlogPostSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import React from "react";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -121,21 +123,18 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const canonical = `https://cloudless.gr/${locale}/blog/${slug}`;
   const post = await getBlogPostBySlug(slug);
   if (!post) return {};
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
 
-  return {
+  return localizedPageMetadata({
+    locale: safeLocale,
+    slug: `blog/${slug}`,
     title: post.title,
     description: post.excerpt,
-    alternates: { canonical },
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      type: "article",
-      publishedTime: post.date,
-    },
-  };
+    openGraph: { type: "article", publishedTime: post.date },
+    untranslatedContent: true,
+  });
 }
 
 export default async function BlogPostPage({ params }: Props) {

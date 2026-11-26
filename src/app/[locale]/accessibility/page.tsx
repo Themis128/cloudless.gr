@@ -3,12 +3,22 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Accessibility Statement",
-  description:
-    "Cloudless.gr accessibility statement — WCAG 2.1 AA compliance and contact for assistance.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Accessibility Statement";
+  const description =
+    "Cloudless.gr accessibility statement — WCAG 2.1 AA compliance and contact for assistance.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "accessibility", title, description });
+}
 
 function Section({
   id,

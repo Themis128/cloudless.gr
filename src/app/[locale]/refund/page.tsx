@@ -4,12 +4,21 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Refund & Returns Policy",
-  description:
-    "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Refund & Returns Policy";
+  const description =
+    "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "refund", title, description });
+}
 
 function Section({
   id,

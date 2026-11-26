@@ -8,8 +8,8 @@ import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-const BASE_URL = "https://cloudless.gr";
 const TITLE = "Projects — In-house builds by Cloudless";
 const DESCRIPTION =
   "Self-built products designed, shipped and operated by Cloudless — live demos with real infrastructure, not mockups.";
@@ -22,32 +22,12 @@ export async function generateMetadata({
   const { locale } = await params;
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
 
-  // Locale-prefixed: unprefixed paths redirect to /en/…, so an unprefixed
-  // canonical would point every localized page at a redirect and contradict
-  // its own hreflang alternates.
-  const canonical = `${BASE_URL}/${safeLocale}/projects`;
-
-  return {
+  return localizedPageMetadata({
+    locale: safeLocale,
+    slug: "projects",
     title: TITLE,
     description: DESCRIPTION,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/projects`,
-        el: `${BASE_URL}/el/projects`,
-        de: `${BASE_URL}/de/projects`,
-        fr: `${BASE_URL}/fr/projects`,
-        "x-default": `${BASE_URL}/en/projects`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title: TITLE,
-      description: DESCRIPTION,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  });
 }
 
 export default async function ProjectsPage({ params }: { params: Promise<{ locale: string }> }) {

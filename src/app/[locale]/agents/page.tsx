@@ -2,14 +2,21 @@ import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import AgentCounter from "@/components/AgentCounter";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Agents",
-  description: "Cloudless Agent Workers — Interactive demos and tools.",
-  alternates: {
-    canonical: "https://cloudless.gr/agents",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Agents";
+  const description = "Cloudless Agent Workers — Interactive demos and tools.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "agents", title, description });
+}
 
 export default async function AgentsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

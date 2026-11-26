@@ -38,6 +38,7 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import { getTestimonials } from "@/lib/appflowy-testimonials";
 import TrackedBlogCard from "@/components/TrackedBlogCard";
 import TrackedLink from "@/components/TrackedLink";
+import { languageAlternates } from "@/lib/seo-metadata";
 
 export const revalidate = 3600;
 
@@ -47,17 +48,6 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  // Per-locale canonicals must match og:url (`${BASE_URL}/${locale}` in the
-  // locale layout). Mapping `en` to the bare apex made Google see /en as a
-  // duplicate of / while og:url said /en — keep them identical per locale.
-  const localePaths: Record<string, string> = {
-    en: "https://cloudless.gr/en",
-    el: "https://cloudless.gr/el",
-    fr: "https://cloudless.gr/fr",
-    de: "https://cloudless.gr/de",
-  };
-  const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
-
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const safeMessages = getMessages(safeLocale);
   const meta = (safeMessages as Record<string, unknown>).meta as
@@ -71,15 +61,12 @@ export async function generateMetadata({
   return {
     title: { absolute: title },
     description,
+    // Per-locale canonicals must match og:url (`${BASE_URL}/${locale}` in the
+    // locale layout). Mapping `en` to the bare apex made Google see /en as a
+    // duplicate of / while og:url said /en — keep them identical per locale.
     alternates: {
-      canonical,
-      languages: {
-        en: localePaths.en,
-        el: localePaths.el,
-        fr: localePaths.fr,
-        de: localePaths.de,
-        "x-default": localePaths.en,
-      },
+      canonical: `https://cloudless.gr/${safeLocale}`,
+      languages: languageAlternates(""),
     },
   };
 }

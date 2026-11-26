@@ -6,12 +6,22 @@ import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-doc
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Documentation",
-  description:
-    "Internal guides, integration references, and how-to documentation for the Cloudless platform.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Documentation";
+  const description =
+    "Internal guides, integration references, and how-to documentation for the Cloudless platform.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "docs", title, description });
+}
 
 export const revalidate = 3600; // Revalidate hourly
 

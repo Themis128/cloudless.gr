@@ -9,15 +9,22 @@ import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Our Work",
-  description:
-    "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms.",
-  alternates: {
-    canonical: "https://cloudless.gr/work",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Our Work";
+  const description =
+    "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "work", title, description });
+}
 
 async function loadClientProjects(): Promise<Project[]> {
   try {

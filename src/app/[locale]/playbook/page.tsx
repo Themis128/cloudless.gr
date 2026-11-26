@@ -5,6 +5,7 @@ import PlaybookLeadForm from "@/components/PlaybookLeadForm";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, translateArray, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 type PageProps = { params: Promise<{ locale: string }> };
 
@@ -16,14 +17,15 @@ async function resolveLocale(params: PageProps["params"]): Promise<Locale> {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const locale = await resolveLocale(params);
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  return {
+  return localizedPageMetadata({
+    locale,
+    slug: "playbook",
     title: t("playbook.title", "The Cloud Migration Playbook"),
     description: t(
       "playbook.subtitle",
       "The exact framework we use with clients to move to the cloud safely, on budget, and without downtime. Free, straight to your inbox."
     ),
-    alternates: { canonical: `https://cloudless.gr/${locale}/playbook` },
-  };
+  });
 }
 
 const DEFAULT_POINTS = [

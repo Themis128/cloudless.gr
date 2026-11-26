@@ -20,6 +20,8 @@ import AttributionCapture from "@/components/AttributionCapture";
 import ConsentGatedPixel from "@/components/ConsentGatedPixel";
 import LinkedInInsightTag from "@/components/LinkedInInsightTag";
 import HtmlLangSync from "@/components/HtmlLangSync";
+import { languageAlternates, ogLocales } from "@/lib/seo-metadata";
+import { isSupportedLocale } from "@/lib/i18n";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
 const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID ?? "";
@@ -48,31 +50,16 @@ export async function generateMetadata({
 }): Promise<import("next").Metadata> {
   const { locale } = await params;
 
-  const ogLocaleMap: Record<string, string> = {
-    en: "en_US",
-    el: "el_GR",
-    fr: "fr_FR",
-    de: "de_DE",
-  };
-
   return {
     title: {
       default: "Cloudless — AI & Cloud Consulting, Digital Agency in Greece",
       template: "%s | Cloudless",
     },
-    alternates: {
-      languages: {
-        en: `${BASE_URL}/en`,
-        el: `${BASE_URL}/el`,
-        fr: `${BASE_URL}/fr`,
-        de: `${BASE_URL}/de`,
-        "x-default": `${BASE_URL}/en`,
-      },
-    },
+    alternates: { languages: languageAlternates("") },
     openGraph: {
       url: `${BASE_URL}/${locale}`,
       siteName: "Cloudless",
-      locale: ogLocaleMap[locale] ?? "en_US",
+      ...ogLocales(isSupportedLocale(locale) ? locale : "en"),
     },
   };
 }

@@ -4,8 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import AuditForm from "./AuditForm";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -22,26 +21,7 @@ export async function generateMetadata({
     meta?.audit?.description ??
     "Book a free 30-minute tech checkup. We review your setup, find the software cost leaks, and hand you a concrete action plan — no sales pitch.";
 
-  // Locale-prefixed: unprefixed paths redirect to /en/…, so an unprefixed
-  // canonical would point every localized page at a redirect and contradict
-  // its own hreflang alternates.
-  const canonical = `${BASE_URL}/${safeLocale}/audit`;
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/audit`,
-        el: `${BASE_URL}/el/audit`,
-        de: `${BASE_URL}/de/audit`,
-        fr: `${BASE_URL}/fr/audit`,
-        "x-default": `${BASE_URL}/en/audit`,
-      },
-    },
-    openGraph: { type: "website", title, description, url: canonical, siteName: "Cloudless" },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "audit", title, description });
 }
 
 export default async function AuditPage({ params }: { params: Promise<{ locale: string }> }) {

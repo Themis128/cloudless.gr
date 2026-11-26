@@ -4,12 +4,21 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description:
-    "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Privacy Policy";
+  const description =
+    "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "privacy", title, description });
+}
 
 /* ── Section helper ──────────────────────────────────────── */
 

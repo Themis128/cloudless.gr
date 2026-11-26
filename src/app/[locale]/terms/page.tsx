@@ -4,12 +4,21 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Terms of Service";
+  const description =
+    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "terms", title, description });
+}
 
 function Section({
   id,
