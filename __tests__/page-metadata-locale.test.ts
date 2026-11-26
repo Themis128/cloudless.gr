@@ -73,3 +73,49 @@ describe("localized page metadata", () => {
     expect(md.alternates?.canonical).toBe("https://cloudless.gr/en/services");
   });
 });
+
+/**
+ * Detail routes serve the same content record in every locale — they must
+ * keep a self-referencing canonical but emit no hreflang alternates that
+ * would point crawlers at untranslated copies.
+ */
+describe("untranslated detail metadata", () => {
+  const DETAILS: Array<{
+    name: string;
+    params: Record<string, string>;
+    canonical: string;
+    load: () => Promise<{ generateMetadata: GenMeta }>;
+  }> = [
+    {
+      name: "blog post",
+      params: { locale: "el", slug: "why-serverless-is-perfect-for-startups" },
+      canonical: "https://cloudless.gr/el/blog/why-serverless-is-perfect-for-startups",
+      load: () => import("@/app/[locale]/blog/[slug]/page"),
+    },
+    {
+      name: "store product",
+      params: { locale: "el", id: "srv-cloud" },
+      canonical: "https://cloudless.gr/el/store/srv-cloud",
+      load: () => import("@/app/[locale]/store/[id]/page"),
+    },
+    {
+      name: "case study",
+      params: { locale: "el", slug: "techflow-aws-cost-reduction" },
+      canonical: "https://cloudless.gr/el/case-studies/techflow-aws-cost-reduction",
+      load: () => import("@/app/[locale]/case-studies/[slug]/page"),
+    },
+  ];
+
+  for (const { name, params, canonical, load } of DETAILS) {
+    it(`${name} emits a canonical but no hreflang alternates`, async () => {
+      const { generateMetadata } = await load();
+      const md = await generateMetadata({ params: Promise.resolve(params) });
+      expect(md.alternates?.canonical).toBe(canonical);
+      const alternates = md.alternates as { languages?: Record<string, string> };
+      expect(alternates.languages).toBeUndefined();
+      const og = md.openGraph as Record<string, unknown> | undefined;
+      expect(og?.url).toBe(canonical);
+      expect(og?.locale).toBe("el_GR");
+    });
+  }
+});
