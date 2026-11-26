@@ -78,8 +78,14 @@ async function loadPublicDocs(): Promise<DocsListItem[]> {
   }
 }
 
-export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
-  const locale = await getServerLocale();
+export default async function DocsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: SearchParams;
+}) {
+  const { locale } = await params;
   const resolvedParams = await searchParams;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =

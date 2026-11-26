@@ -83,8 +83,9 @@ function Arrow({ className = "" }: { className?: string }) {
 
 import { getServices, getServicesFaqs, colorMap, bundleTerminal } from "@/lib/services-data";
 
-export default async function ServicesPage() {
-  const locale = await getServerLocale();
+export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const services = getServices(t);
   const servicesFaqs = getServicesFaqs(t);

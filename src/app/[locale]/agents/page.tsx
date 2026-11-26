@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AgentsPage() {
-  const locale = await getServerLocale();
+export default async function AgentsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   return (
     <main className="bg-void min-h-screen overflow-x-hidden py-24">
       <JsonLd data={getBreadcrumbSchema([{ name: "Agents", url: "/agents" }], locale)} />

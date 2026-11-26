@@ -56,9 +56,11 @@ const sp = (params: Record<string, string> = {}) =>
 afterEach(() => cleanup());
 
 const linkByText = (name: string | RegExp) =>
-  screen.getAllByRole("link").find((a) =>
-    typeof name === "string" ? a.textContent === name : name.test(a.textContent ?? "")
-  );
+  screen
+    .getAllByRole("link")
+    .find((a) =>
+      typeof name === "string" ? a.textContent === name : name.test(a.textContent ?? "")
+    );
 
 const post = (n: number, over: Record<string, unknown> = {}) => ({
   slug: `post-${n}`,
@@ -82,7 +84,9 @@ describe("blog listing page", () => {
   });
 
   it("renders first page with 10 posts and pagination", async () => {
-    const { container } = render(await BlogPage({ searchParams: sp() }));
+    const { container } = render(
+      await BlogPage({ params: sp({ locale: "en" }), searchParams: sp() })
+    );
     expect(container.textContent).toContain("Post Title 1");
     expect(container.textContent).toContain("Post Title 10");
     expect(container.textContent).not.toContain("Post Title 11");
@@ -92,7 +96,10 @@ describe("blog listing page", () => {
 
   it("applies search + category filters and shows filter chips", async () => {
     const { container } = render(
-      await BlogPage({ searchParams: sp({ q: "title 3", category: "Cloud" }) })
+      await BlogPage({
+        params: sp({ locale: "en" }),
+        searchParams: sp({ q: "title 3", category: "Cloud" }),
+      })
     );
     expect(container.textContent).toContain("Post Title 3");
     expect(container.textContent).not.toContain("Post Title 4");
@@ -102,7 +109,9 @@ describe("blog listing page", () => {
   });
 
   it("renders page 2 slice and prev link", async () => {
-    const { container } = render(await BlogPage({ searchParams: sp({ page: "2" }) }));
+    const { container } = render(
+      await BlogPage({ params: sp({ locale: "en" }), searchParams: sp({ page: "2" }) })
+    );
     expect(container.textContent).toContain("Post Title 11");
     expect(linkByText("← Prev")?.getAttribute("href")).toBe("/blog");
     expect(linkByText("Next →")).toBeUndefined();
@@ -110,7 +119,7 @@ describe("blog listing page", () => {
 
   it("shows empty state when filter matches nothing", async () => {
     const { container } = render(
-      await BlogPage({ searchParams: sp({ q: "zzzz-no-match" }) })
+      await BlogPage({ params: sp({ locale: "en" }), searchParams: sp({ q: "zzzz-no-match" }) })
     );
     expect(container.textContent).toContain("No posts found.");
     expect(linkByText("View all posts")).toBeTruthy();
@@ -190,13 +199,18 @@ describe("docs page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isAppFlowyConfigured).mockResolvedValue(true);
-    vi.mocked(getDocs).mockResolvedValue(
-      [doc(1), doc(2), doc(3), doc(4, { published: false })] as never
-    );
+    vi.mocked(getDocs).mockResolvedValue([
+      doc(1),
+      doc(2),
+      doc(3),
+      doc(4, { published: false }),
+    ] as never);
   });
 
   it("renders published docs grouped by category with verification badges", async () => {
-    const { container } = render(await DocsPage({ searchParams: sp() }));
+    const { container } = render(
+      await DocsPage({ params: sp({ locale: "en" }), searchParams: sp() })
+    );
     expect(container.textContent).toContain("Doc Title 1");
     expect(container.textContent).toContain("Doc Title 3");
     expect(container.textContent).not.toContain("Doc Title 4"); // unpublished
@@ -206,7 +220,10 @@ describe("docs page", () => {
 
   it("filters by search query and verification status", async () => {
     const { container } = render(
-      await DocsPage({ searchParams: sp({ q: "title 2", status: "Needs re-verification" }) })
+      await DocsPage({
+        params: sp({ locale: "en" }),
+        searchParams: sp({ q: "title 2", status: "Needs re-verification" }),
+      })
     );
     expect(container.textContent).toContain("Doc Title 2");
     expect(container.textContent).not.toContain("Doc Title 1");
@@ -214,11 +231,15 @@ describe("docs page", () => {
 
   it("renders empty list when AppFlowy is unconfigured or fetch fails", async () => {
     vi.mocked(isAppFlowyConfigured).mockResolvedValue(false);
-    const { container } = render(await DocsPage({ searchParams: sp() }));
+    const { container } = render(
+      await DocsPage({ params: sp({ locale: "en" }), searchParams: sp() })
+    );
     expect(container.textContent).not.toContain("Doc Title 1");
     vi.mocked(isAppFlowyConfigured).mockResolvedValue(true);
     vi.mocked(getDocs).mockRejectedValue(new Error("boom"));
-    const { container: c2 } = render(await DocsPage({ searchParams: sp() }));
+    const { container: c2 } = render(
+      await DocsPage({ params: sp({ locale: "en" }), searchParams: sp() })
+    );
     expect(c2.textContent).not.toContain("Doc Title 1");
   });
 });

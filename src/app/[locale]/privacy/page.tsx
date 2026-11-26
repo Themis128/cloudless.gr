@@ -3,7 +3,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
@@ -33,8 +33,13 @@ function Section({
 
 /* ── Page ─────────────────────────────────────────────────── */
 
-export default async function PrivacyPolicyPage() {
-  const locale = await getServerLocale();
+export default async function PrivacyPolicyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   return (

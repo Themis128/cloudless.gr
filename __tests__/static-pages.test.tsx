@@ -98,7 +98,11 @@ describe("legal pages", () => {
     ["refund", RefundPage, /refund|return/i],
     ["accessibility", AccessibilityPage, /accessib|WCAG/i],
   ])("%s renders policy content", async (_name, Page, pattern) => {
-    const jsx = await (Page as () => Promise<React.ReactElement>)();
+    const jsx = await (
+      Page as (p: { params: Promise<{ locale: string }> }) => Promise<React.ReactElement>
+    )({
+      params: sp({ locale: "en" }),
+    });
     const { container } = render(jsx);
     expect(container.textContent).toMatch(pattern);
   });
@@ -128,7 +132,7 @@ describe("marketing pages", () => {
   });
 
   it("agents page renders", async () => {
-    const { container } = render(await AgentsPage());
+    const { container } = render(await AgentsPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("AGENTS");
   });
 });
@@ -152,7 +156,7 @@ describe("work page", () => {
 
 describe("projects page", () => {
   it("renders the static lab floor when AppFlowy is unconfigured", async () => {
-    const { container } = render(await ProjectsPage());
+    const { container } = render(await ProjectsPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("UNDER THE HOOD");
     expect(container.textContent).toContain("ML price-prediction platform");
     expect(container.textContent).toContain("Launch live app");
@@ -177,7 +181,7 @@ describe("projects page", () => {
         status: "Completed",
       },
     ]);
-    const { container } = render(await ProjectsPage());
+    const { container } = render(await ProjectsPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("CMS Lab Build");
     expect(container.textContent).not.toContain("Untyped Draft");
   });
@@ -185,7 +189,7 @@ describe("projects page", () => {
   it("falls back to the static floor when AppFlowy throws", async () => {
     appflowyConfigured.mockResolvedValueOnce(true);
     listProjectsMock.mockRejectedValueOnce(new Error("appflowy down"));
-    const { container } = render(await ProjectsPage());
+    const { container } = render(await ProjectsPage({ params: sp({ locale: "en" }) }));
     expect(container.textContent).toContain("UNDER THE HOOD");
   });
 

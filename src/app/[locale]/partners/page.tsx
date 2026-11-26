@@ -49,8 +49,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function PartnersPage() {
-  const locale = await getServerLocale();
+export default async function PartnersPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   const formats = [

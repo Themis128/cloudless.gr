@@ -33,8 +33,8 @@ async function loadClientProjects(): Promise<Project[]> {
   }
 }
 
-export default async function WorkPage() {
-  const locale = await getServerLocale();
+export default async function WorkPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const [clientProjects, labProjects] = await Promise.all([
     loadClientProjects(),
     loadLabProjects(),

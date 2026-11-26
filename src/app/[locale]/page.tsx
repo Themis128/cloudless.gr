@@ -28,7 +28,6 @@ const CloudCockpit = dynamic(() => import("@/components/CloudCockpit"), {
 });
 import { getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import { translate, translateArray } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 import { setRequestLocale } from "next-intl/server";
 import StatCounter from "@/components/StatCounter";
 import SocialLinks from "@/components/SocialLinks";
@@ -92,7 +91,7 @@ export default async function Home({
 }>) {
   const { locale: localeParam } = await params;
   setRequestLocale(localeParam);
-  const locale = await getServerLocale();
+  const locale: Locale = isSupportedLocale(localeParam) ? localeParam : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   const { posts: blogPosts } = await getBlogPostsWithSource();

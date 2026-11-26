@@ -356,21 +356,27 @@ describe("blog list page tails", () => {
 
     // Tag-only match: "automation" appears in no title/excerpt — the
     // p.tags.some callback must carry it to post-a.
-    const r1 = await BlogPage({ searchParams: sp({ q: "automation" }) });
+    const r1 = await BlogPage({
+      params: sp({ locale: "en" }),
+      searchParams: sp({ q: "automation" }),
+    });
     const c1 = render(r1).container.textContent ?? "";
     expect(c1).toContain("Alpha");
     expect(c1).not.toContain("Beta Post");
     cleanup();
 
     // activeTag filter + tag chips/sidebar render from real tag data.
-    const r2 = await BlogPage({ searchParams: sp({ tag: "automation" }) });
+    const r2 = await BlogPage({
+      params: sp({ locale: "en" }),
+      searchParams: sp({ tag: "automation" }),
+    });
     const c2 = render(r2).container.textContent ?? "";
     expect(c2).toContain("Alpha");
     expect(c2).not.toContain("Beta Post");
     cleanup();
 
     // Unfiltered render shows tag chips + sidebar tag cloud.
-    const r3 = await BlogPage({ searchParams: sp({}) });
+    const r3 = await BlogPage({ params: sp({ locale: "en" }), searchParams: sp({}) });
     const c3 = render(r3).container.textContent ?? "";
     expect(c3).toContain("Alpha");
     expect(c3).toContain("Beta Post");

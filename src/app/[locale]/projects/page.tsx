@@ -51,8 +51,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProjectsPage() {
-  const locale = await getServerLocale();
+export default async function ProjectsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const labProjects = await loadLabProjects();
   const flagship = labProjects.find((p) => p.name.toLowerCase() === "mobile price intelligence");
 

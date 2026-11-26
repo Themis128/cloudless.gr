@@ -29,7 +29,9 @@ afterEach(() => cleanup());
 
 describe("consultation page", () => {
   it("renders hero, steps sidebar, mailto fallback and the booking widget", async () => {
-    const { container, getByTestId } = render(await ConsultationPage());
+    const { container, getByTestId } = render(
+      await ConsultationPage({ params: sp({ locale: "en" }) })
+    );
     expect(container.textContent).toMatch(/Book your free consultation/);
     expect(container.textContent).toMatch(/Pick a slot/);
     expect(container.textContent).toMatch(/Leave with a plan/);

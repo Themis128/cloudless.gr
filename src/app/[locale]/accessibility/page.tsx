@@ -28,8 +28,12 @@ function Section({
   );
 }
 
-export default async function AccessibilityPage() {
-  const locale = await getServerLocale();
+export default async function AccessibilityPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   return (
     <>
       <JsonLd

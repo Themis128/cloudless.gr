@@ -34,9 +34,12 @@ const labels = {
 
 afterEach(() => cleanup());
 
+const sp = (params: Record<string, unknown> = {}) =>
+  Promise.resolve(params) as Promise<Record<string, unknown>>;
+
 describe("audit page", () => {
   it("renders sections + form", async () => {
-    const el = await AuditPage();
+    const el = await AuditPage({ params: sp({ locale: "en" }) });
     const { getByText, getByPlaceholderText } = render(el as React.ReactElement);
     expect(getByText(/Why traditional systems drag you down/)).toBeTruthy();
     expect(getByText(/The Cloudless Architecture Blueprint/)).toBeTruthy();
@@ -57,21 +60,16 @@ describe("AuditForm", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}", { status: 200 }));
     const { getByPlaceholderText, getByText, container } = render(
-      <AuditForm labels={labels} locale="en" />,
+      <AuditForm labels={labels} locale="en" />
     );
     fireEvent.submit(container.querySelector("form")!);
     await waitFor(() => expect(getByText("Booked")).toBeTruthy());
-    expect(spy).toHaveBeenCalledWith(
-      "/api/audit",
-      expect.objectContaining({ method: "POST" }),
-    );
+    expect(spy).toHaveBeenCalledWith("/api/audit", expect.objectContaining({ method: "POST" }));
     spy.mockRestore();
   });
 
   it("non-ok response shows error state", async () => {
-    const spy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response("x", { status: 500 }));
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("x", { status: 500 }));
     const { getByText, container } = render(<AuditForm labels={labels} locale="en" />);
     fireEvent.submit(container.querySelector("form")!);
     await waitFor(() => expect(getByText("Something went wrong")).toBeTruthy());
