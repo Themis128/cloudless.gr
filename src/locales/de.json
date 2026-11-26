@@ -591,6 +591,10 @@
       "title": "Kostenlose 30-minütige Beratung — Cloudless",
       "description": "Wählen Sie einen freien Termin für eine kostenlose 30-minütige Beratung. Senior-Engineer-Review Ihrer Cloud-, Automatisierungs- oder KI-Umgebung — Sie gehen mit einem konkreten Plan."
     },
+    "call": {
+      "title": "Anruf beitreten — Cloudless",
+      "description": "Weiterleitung zum Nextcloud-Talk-Anruf."
+    },
     "store": {
       "title": "Shop",
       "description": "Premium Cloud Computing, Serverless und KI-Marketing-Servicepakete. Transparente Preise, keine Bindung."
