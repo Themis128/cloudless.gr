@@ -22,11 +22,14 @@ export async function generateMetadata({
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
+  const title = meta?.blog?.title ?? "Blog";
+  const description =
+    meta?.blog?.description ??
+    "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.";
+
   return {
-    title: meta?.blog?.title ?? "Blog",
-    description:
-      meta?.blog?.description ??
-      "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
+    title,
+    description,
     alternates: {
       // Per-locale canonical — see services/page.tsx: a bare /blog canonical
       // marked every locale listing as a duplicate of the /en redirect target.
@@ -40,6 +43,9 @@ export async function generateMetadata({
       },
     },
     openGraph: {
+      type: "website",
+      title,
+      description,
       url: `https://cloudless.gr/${safeLocale}/blog`,
       siteName: "Cloudless",
       locale: { en: "en_US", el: "el_GR", fr: "fr_FR", de: "de_DE" }[safeLocale] ?? "en_US",
