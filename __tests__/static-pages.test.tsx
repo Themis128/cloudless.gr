@@ -106,6 +106,16 @@ describe("legal pages", () => {
     const { container } = render(jsx);
     expect(container.textContent).toMatch(pattern);
   });
+
+  it("renders localized body for a non-English locale", async () => {
+    const jsx = await (
+      TermsPage as (p: { params: Promise<{ locale: string }> }) => Promise<React.ReactElement>
+    )({ params: sp({ locale: "el" }) });
+    const { container } = render(jsx);
+    // getServerLocale used to silently fall back to "en", leaving the whole
+    // localized page body in English — Greek text must render.
+    expect(container.textContent).toMatch(/[α-ωΑ-Ω]/);
+  });
 });
 
 describe("marketing pages", () => {

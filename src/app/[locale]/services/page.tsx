@@ -4,7 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import TerminalBlock from "@/components/TerminalBlock";
 import JsonLd from "@/components/JsonLd";
 import { getServiceSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
-import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { translate, translateArray, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import StatCounter from "@/components/StatCounter";
 import DeferredRender from "@/components/DeferredRender";
@@ -87,7 +87,8 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
   const { locale: rawLocale } = await params;
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const services = getServices(t);
+  const ta = (key: string, fallback: string[]) => translateArray(locale, key, fallback);
+  const services = getServices(t, ta);
   const servicesFaqs = getServicesFaqs(t);
 
   return (
