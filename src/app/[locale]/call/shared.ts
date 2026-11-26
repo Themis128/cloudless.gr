@@ -14,7 +14,7 @@ const CALL_ALIASES: Record<string, string> = {
 };
 
 export function resolveCallToken(token: string): string | null {
-  if (CALL_ALIASES[token]) return CALL_ALIASES[token];
+  if (Object.hasOwn(CALL_ALIASES, token)) return CALL_ALIASES[token];
   return TOKEN_RE.test(token) ? token : null;
 }
 

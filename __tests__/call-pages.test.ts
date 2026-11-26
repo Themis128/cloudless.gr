@@ -12,6 +12,7 @@ const { nextRedirectMock, i18nRedirectMock } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ redirect: nextRedirectMock }));
 vi.mock("@/i18n/navigation", () => ({ redirect: i18nRedirectMock }));
 
+import { getMessages } from "@/lib/i18n";
 import CallRedirectPage, {
   generateMetadata as tokenMetadata,
 } from "@/app/[locale]/call/[token]/page";
@@ -65,9 +66,11 @@ describe("call page metadata", () => {
     expect(meta.title).toBeTruthy();
   });
 
-  it("returns noindex metadata for the bare page, bad locale falls back", async () => {
+  it("returns the English catalog title for the bare page when locale is unknown", async () => {
     const meta = await bareMetadata({ params: params({ locale: "zz" }) });
     expect(meta.robots).toEqual({ index: false, follow: false });
-    expect(meta.title).toBeTruthy();
+    const enMessages = getMessages("en") as Record<string, unknown>;
+    const enTitle = (enMessages.meta as Record<string, Record<string, string>>).call.title;
+    expect(meta.title).toBe(enTitle);
   });
 });

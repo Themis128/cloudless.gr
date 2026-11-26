@@ -15,6 +15,14 @@ describe("resolveCallToken", () => {
     expect(resolveCallToken("3294636523")).toBe("3294636523");
   });
 
+  it("treats prototype-property names as plain tokens, not inherited keys", () => {
+    // Object.hasOwn guard: these hit TOKEN_RE passthrough (Talk 404s unknown
+    // rooms), never an inherited member of the alias map.
+    expect(resolveCallToken("toString")).toBe("toString");
+    expect(resolveCallToken("constructor")).toBe("constructor");
+    expect(resolveCallToken("hasOwnProperty")).toBe("hasOwnProperty");
+  });
+
   it("rejects invalid tokens", () => {
     expect(resolveCallToken("BAD!!token")).toBeNull();
     expect(resolveCallToken("")).toBeNull();
