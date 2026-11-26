@@ -44,7 +44,7 @@ export default async function PlaybookPage({ params }: PageProps) {
         data={getBreadcrumbSchema(
           [
             { name: "Home", url: "https://cloudless.gr" },
-            { name: "Cloud Migration Playbook", url: "https://cloudless.gr/en/playbook" },
+            { name: "Cloud Migration Playbook", url: "https://cloudless.gr/playbook" },
           ],
           locale
         )}

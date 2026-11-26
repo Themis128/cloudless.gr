@@ -41,6 +41,8 @@ export async function generateMetadata({
     },
     openGraph: {
       url: `https://cloudless.gr/${safeLocale}/blog`,
+      siteName: "Cloudless",
+      locale: { en: "en_US", el: "el_GR", fr: "fr_FR", de: "de_DE" }[safeLocale] ?? "en_US",
     },
   };
 }

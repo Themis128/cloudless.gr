@@ -127,8 +127,8 @@ describe("marketing pages", () => {
     expect(container.textContent).toContain("LEAD_FORM");
   });
 
-  it("agents page renders", () => {
-    const { container } = render(<AgentsPage />);
+  it("agents page renders", async () => {
+    const { container } = render(await AgentsPage());
     expect(container.textContent).toContain("AGENTS");
   });
 });
