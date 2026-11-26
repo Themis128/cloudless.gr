@@ -4,8 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -17,29 +16,8 @@ export async function generateMetadata({
   const title = "Refund & Returns Policy";
   const description =
     "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers.";
-  const canonical = `${BASE_URL}/${safeLocale}/refund`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/refund`,
-        el: `${BASE_URL}/el/refund`,
-        de: `${BASE_URL}/de/refund`,
-        fr: `${BASE_URL}/fr/refund`,
-        "x-default": `${BASE_URL}/en/refund`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "refund", title, description });
 }
 
 function Section({

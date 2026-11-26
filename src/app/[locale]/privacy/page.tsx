@@ -4,8 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -17,29 +16,8 @@ export async function generateMetadata({
   const title = "Privacy Policy";
   const description =
     "How Cloudless.gr collects, uses, and protects your personal data. GDPR and CCPA compliant.";
-  const canonical = `${BASE_URL}/${safeLocale}/privacy`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/privacy`,
-        el: `${BASE_URL}/el/privacy`,
-        de: `${BASE_URL}/de/privacy`,
-        fr: `${BASE_URL}/fr/privacy`,
-        "x-default": `${BASE_URL}/en/privacy`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "privacy", title, description });
 }
 
 /* ── Section helper ──────────────────────────────────────── */

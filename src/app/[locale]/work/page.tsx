@@ -10,8 +10,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -23,29 +22,8 @@ export async function generateMetadata({
   const title = "Our Work";
   const description =
     "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms.";
-  const canonical = `${BASE_URL}/${safeLocale}/work`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/work`,
-        el: `${BASE_URL}/el/work`,
-        de: `${BASE_URL}/de/work`,
-        fr: `${BASE_URL}/fr/work`,
-        "x-default": `${BASE_URL}/en/work`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "work", title, description });
 }
 
 async function loadClientProjects(): Promise<Project[]> {

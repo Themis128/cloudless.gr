@@ -8,6 +8,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -26,30 +27,7 @@ export async function generateMetadata({
     meta?.blog?.description ??
     "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.";
 
-  return {
-    title,
-    description,
-    alternates: {
-      // Per-locale canonical — see services/page.tsx: a bare /blog canonical
-      // marked every locale listing as a duplicate of the /en redirect target.
-      canonical: `https://cloudless.gr/${safeLocale}/blog`,
-      languages: {
-        en: "https://cloudless.gr/en/blog",
-        el: "https://cloudless.gr/el/blog",
-        fr: "https://cloudless.gr/fr/blog",
-        de: "https://cloudless.gr/de/blog",
-        "x-default": "https://cloudless.gr/en/blog",
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: `https://cloudless.gr/${safeLocale}/blog`,
-      siteName: "Cloudless",
-      locale: { en: "en_US", el: "el_GR", fr: "fr_FR", de: "de_DE" }[safeLocale] ?? "en_US",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "blog", title, description });
 }
 
 const categoryColors: Record<string, string> = {

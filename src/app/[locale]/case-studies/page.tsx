@@ -7,8 +7,8 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getCaseStudies, staticCaseStudies, type CaseStudy } from "@/lib/appflowy-case-studies";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
 const CASE_STUDIES_TITLE = "Case Studies";
 const CASE_STUDIES_DESCRIPTION =
@@ -20,30 +20,14 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  // Per-locale canonical must match og:url — a bare /case-studies canonical
-  // marked every locale page as a duplicate of the /en redirect target.
-  const canonical = `${BASE_URL}/${locale}/case-studies`;
-  return {
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+
+  return localizedPageMetadata({
+    locale: safeLocale,
+    slug: "case-studies",
     title: CASE_STUDIES_TITLE,
     description: CASE_STUDIES_DESCRIPTION,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/case-studies`,
-        el: `${BASE_URL}/el/case-studies`,
-        fr: `${BASE_URL}/fr/case-studies`,
-        de: `${BASE_URL}/de/case-studies`,
-        "x-default": `${BASE_URL}/en/case-studies`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title: CASE_STUDIES_TITLE,
-      description: CASE_STUDIES_DESCRIPTION,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  });
 }
 
 async function loadCaseStudies(): Promise<CaseStudy[]> {

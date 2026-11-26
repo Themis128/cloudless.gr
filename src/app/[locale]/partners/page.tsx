@@ -7,8 +7,7 @@ import ContactFormSection from "@/components/ContactFormSection";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -25,29 +24,7 @@ export async function generateMetadata({
     meta?.partners?.description ??
     "Sponsored content, product walkthroughs, and brand partnerships with an engaged niche audience of founders and engineers. Media kit and formats inside.";
 
-  const canonical = `${BASE_URL}/${safeLocale}/partners`;
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/partners`,
-        el: `${BASE_URL}/el/partners`,
-        de: `${BASE_URL}/de/partners`,
-        fr: `${BASE_URL}/fr/partners`,
-        "x-default": `${BASE_URL}/en/partners`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "partners", title, description });
 }
 
 export default async function PartnersPage({ params }: { params: Promise<{ locale: string }> }) {

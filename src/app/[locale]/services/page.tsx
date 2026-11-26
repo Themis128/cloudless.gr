@@ -16,8 +16,6 @@ import DeferredRender from "@/components/DeferredRender";
 // core-web-vitals-audit). The locale segment still varies via the URL, so
 // each locale gets its own static HTML.
 
-const BASE_URL = "https://cloudless.gr";
-
 export async function generateMetadata({
   params,
 }: {
@@ -32,31 +30,8 @@ export async function generateMetadata({
   const description =
     meta?.services?.description ??
     "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.";
-  // Per-locale canonical must match og:url — a bare /services canonical made
-  // Google see /el/services & co as duplicates of the /en redirect target.
-  const canonical = `${BASE_URL}/${safeLocale}/services`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/services`,
-        el: `${BASE_URL}/el/services`,
-        de: `${BASE_URL}/de/services`,
-        fr: `${BASE_URL}/fr/services`,
-        "x-default": `${BASE_URL}/en/services`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "services", title, description });
 }
 
 /* ── Arrow SVG ─────────────────────────────────────────────── */
@@ -81,6 +56,7 @@ function Arrow({ className = "" }: { className?: string }) {
 /* ── Service data ─────────────────────────────────────────────── */
 
 import { getServices, getServicesFaqs, colorMap, bundleTerminal } from "@/lib/services-data";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;

@@ -16,6 +16,8 @@ import {
   type CaseStudyWithContent,
 } from "@/lib/appflowy-case-studies";
 import { isAppFlowyConfigured } from "@/lib/appflowy";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
 const BASE_URL = "https://cloudless.gr";
 
@@ -46,32 +48,20 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const cs = await loadCaseStudy(slug);
   if (!cs) return { title: "Case Study Not Found" };
-  // Per-locale canonical must match og:url — see services/page.tsx.
-  const canonical = `${BASE_URL}/${locale}/case-studies/${slug}`;
-  return {
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+
+  return localizedPageMetadata({
+    locale: safeLocale,
+    slug: `case-studies/${slug}`,
     title: cs.title,
     description: cs.summary,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/case-studies/${slug}`,
-        el: `${BASE_URL}/el/case-studies/${slug}`,
-        fr: `${BASE_URL}/fr/case-studies/${slug}`,
-        de: `${BASE_URL}/de/case-studies/${slug}`,
-        "x-default": `${BASE_URL}/en/case-studies/${slug}`,
-      },
-    },
     openGraph: {
       type: "article",
-      title: cs.title,
-      description: cs.summary,
-      url: canonical,
-      siteName: "Cloudless",
       ...(cs.coverImage && {
         images: [{ url: cs.coverImage, width: 1200, height: 630, alt: cs.title }],
       }),
     },
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------

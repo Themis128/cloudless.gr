@@ -4,8 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -17,29 +16,8 @@ export async function generateMetadata({
   const title = "Accessibility Statement";
   const description =
     "Cloudless.gr accessibility statement — WCAG 2.1 AA compliance and contact for assistance.";
-  const canonical = `${BASE_URL}/${safeLocale}/accessibility`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/accessibility`,
-        el: `${BASE_URL}/el/accessibility`,
-        de: `${BASE_URL}/de/accessibility`,
-        fr: `${BASE_URL}/fr/accessibility`,
-        "x-default": `${BASE_URL}/en/accessibility`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "accessibility", title, description });
 }
 
 function Section({

@@ -6,6 +6,7 @@ import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getTestimonials } from "@/lib/appflowy-testimonials";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
@@ -22,12 +23,12 @@ export async function generateMetadata({
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
-  return {
-    title: meta?.store?.title ?? "Store",
-    description:
-      meta?.store?.description ??
-      "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.",
-  };
+  const title = meta?.store?.title ?? "Store";
+  const description =
+    meta?.store?.description ??
+    "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.";
+
+  return localizedPageMetadata({ locale: safeLocale, slug: "store", title, description });
 }
 
 const storeFAQs = [

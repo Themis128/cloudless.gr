@@ -6,8 +6,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import ConsultationBooking from "./ConsultationBooking";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -23,29 +22,8 @@ export async function generateMetadata({
   const description =
     meta?.consultation?.description ??
     "Pick a live slot for a free 30-minute consultation. Senior-engineer review of your cloud, automation, or AI setup — leave with a concrete plan.";
-  const canonical = `${BASE_URL}/${safeLocale}/consultation`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/consultation`,
-        el: `${BASE_URL}/el/consultation`,
-        de: `${BASE_URL}/de/consultation`,
-        fr: `${BASE_URL}/fr/consultation`,
-        "x-default": `${BASE_URL}/en/consultation`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: `${BASE_URL}/${safeLocale}/consultation`,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "consultation", title, description });
 }
 
 export default async function ConsultationPage({

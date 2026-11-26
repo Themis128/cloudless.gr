@@ -4,8 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
-
-const BASE_URL = "https://cloudless.gr";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
 
 export async function generateMetadata({
   params,
@@ -17,29 +16,8 @@ export async function generateMetadata({
   const title = "Terms of Service";
   const description =
     "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.";
-  const canonical = `${BASE_URL}/${safeLocale}/terms`;
 
-  return {
-    title,
-    description,
-    alternates: {
-      canonical,
-      languages: {
-        en: `${BASE_URL}/en/terms`,
-        el: `${BASE_URL}/el/terms`,
-        de: `${BASE_URL}/de/terms`,
-        fr: `${BASE_URL}/fr/terms`,
-        "x-default": `${BASE_URL}/en/terms`,
-      },
-    },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      siteName: "Cloudless",
-    },
-  };
+  return localizedPageMetadata({ locale: safeLocale, slug: "terms", title, description });
 }
 
 function Section({

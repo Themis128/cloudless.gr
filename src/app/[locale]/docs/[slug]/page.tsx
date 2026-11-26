@@ -14,6 +14,8 @@ import { sanitizeCmsHtml } from "@/lib/sanitize-cms-html";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { trackEvent } from "@/lib/appflowy-analytics";
+import { localizedPageMetadata } from "@/lib/seo-metadata";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -29,13 +31,16 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const doc = await getDocBySlug(slug);
   if (!doc) return { title: "Not Found" };
-  return {
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  return localizedPageMetadata({
+    locale: safeLocale,
+    slug: `docs/${slug}`,
     title: doc.title,
     description: doc.description || `${doc.title} — Cloudless documentation`,
-  };
+  });
 }
 
 export const revalidate = 3600; // Revalidate hourly
