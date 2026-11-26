@@ -58,6 +58,12 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
               "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours."
             )}
           </p>
+          <a
+            href="/call"
+            className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 animate-fade-in-up mt-6 inline-flex items-center rounded-lg border px-4 py-2 font-mono text-xs font-medium transition-colors delay-300"
+          >
+            {t("contact.talkNowCta", "Start a video call now →")}
+          </a>
         </div>
       </section>
 

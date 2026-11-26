@@ -124,9 +124,7 @@ export default async function ConsultationPage({
                     )}
                   </p>
                   <a
-                    href="https://cloud.cloudless.gr/call/zsykkx97"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="/call"
                     className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 mt-4 inline-flex items-center rounded-lg border px-4 py-2 font-mono text-xs font-medium transition-colors"
                   >
                     {t("consultation.talkNowCta", "Start a Talk call →")}
