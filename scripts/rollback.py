@@ -117,6 +117,14 @@ def flip_to(target: str) -> None:
         f"'{CURRENT}'",
         check=True,
     )
+    # Stamp APP_VERSION to the restored release — otherwise /api/health keeps
+    # reporting the old build's version (incl. stale "-f<id>" force stamps),
+    # which misleads deploy-pi.yml's already-live checks.
+    remote(
+        f"sudo k3s kubectl -n '{NS}' set env deploy/{DEPLOY} "
+        f"APP_VERSION='{target}' NEXT_PUBLIC_APP_VERSION='{target}' >/dev/null",
+        check=True,
+    )
     log(f"restarting deploy/{DEPLOY} in ns {NS}…")
     out = remote(
         f"sudo k3s kubectl -n '{NS}' rollout restart deploy/{DEPLOY} "

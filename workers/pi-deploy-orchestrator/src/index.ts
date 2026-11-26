@@ -195,6 +195,10 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
         };
         await this.env.RELEASES.put("desired.json", JSON.stringify(next, null, 2), {
           httpMetadata: { contentType: "application/json" },
+          // Conditional write: if another instance published between our read
+          // and this put, R2 rejects with 412 and this superseded run fails
+          // instead of clobbering the newer instance's state.
+          onlyIf: raw ? { etagMatches: raw.etag } : { etagDoesNotMatch: "*" },
         });
         return {
           attempt,
@@ -241,6 +245,9 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
       };
       await this.env.RELEASES.put("desired.json", JSON.stringify(next, null, 2), {
         httpMetadata: { contentType: "application/json" },
+        // Conditional write (same rationale as track-probe): a newer instance
+        // may have published between our read and this put.
+        onlyIf: raw ? { etagMatches: raw.etag } : { etagDoesNotMatch: "*" },
       });
       await notify(this.env, `Pi deploy TIMEOUT ${s12}`, {
         sha,
