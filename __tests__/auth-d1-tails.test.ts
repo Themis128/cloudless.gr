@@ -45,10 +45,13 @@ const FULL_SCHEMA = `
   CREATE TABLE session_log (action TEXT, email TEXT, created_at INTEGER);
 `;
 
+let lastLocalReset: (() => void) | null = null;
+
 async function localDb(sqlitePath: string) {
   vi.stubEnv("AUTH_DB_LOCAL_SQLITE", sqlitePath);
   const { resetLocalAuthDbCache, getLocalAuthDb } = await import("@/lib/auth-db-node/local");
   resetLocalAuthDbCache();
+  lastLocalReset = resetLocalAuthDbCache;
   const db = getLocalAuthDb();
   if (!db) throw new Error("local db failed to open");
   return db;
@@ -60,6 +63,8 @@ async function freshAuthD1() {
 }
 
 afterEach(() => {
+  lastLocalReset?.();
+  lastLocalReset = null;
   vi.unstubAllEnvs();
   process.env.NODE_ENV = ORIG_NODE_ENV;
   if (dir) {

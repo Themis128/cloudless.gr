@@ -73,10 +73,17 @@ class LocalPreparedStatement {
 }
 
 let cached: AuthDatabase | null = null;
+let cachedDb: DatabaseSync | null = null;
 
 /** Test hook — drop the cached adapter so a new sqlite path can be picked up. */
 export function resetLocalAuthDbCache(): void {
   cached = null;
+  try {
+    cachedDb?.close();
+  } catch {
+    // already closed — nothing to release
+  }
+  cachedDb = null;
 }
 
 export function getLocalAuthDb(): AuthDatabase | null {
@@ -93,18 +100,26 @@ export function getLocalAuthDb(): AuthDatabase | null {
     return null;
   }
 
+  let db: DatabaseSync | null = null;
   try {
-    const db = new DatabaseSync(path);
+    const handle = new DatabaseSync(path);
+    db = handle;
     // Allow concurrent readers while wrangler/workerd may also hold the file.
-    db.exec("PRAGMA busy_timeout = 5000;");
-    repairUserRoleForeignKey(db);
+    handle.exec("PRAGMA busy_timeout = 5000;");
+    repairUserRoleForeignKey(handle);
     const adapter: AuthDatabase = {
-      prepare: (query: string) => new LocalPreparedStatement(db, query),
+      prepare: (query: string) => new LocalPreparedStatement(handle, query),
     };
     cached = adapter;
+    cachedDb = handle;
     console.warn(`[auth-db-local] Using local D1 sqlite (${path})`);
     return adapter;
   } catch (err) {
+    try {
+      db?.close();
+    } catch {
+      // close best-effort
+    }
     console.warn("[auth-db-local] Failed to open local D1 sqlite:", err);
     return null;
   }

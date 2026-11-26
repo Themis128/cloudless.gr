@@ -42,6 +42,9 @@ test.describe("stack-audit survey", () => {
   });
 
   test("full submission shows the thank-you state @mutating", async ({ page }) => {
+    // The 429 retry path below waits out the 65s rate-limit window — needs more
+    // than the default 60s test timeout to ever reach the retry click.
+    test.setTimeout(120_000);
     await page.goto("/en/survey");
     for (const fs of await page.locator("fieldset").all()) {
       await fs.locator("button").first().click();

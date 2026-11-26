@@ -293,3 +293,4 @@ mcp.json
 # Merge/backup leftovers
 *.orig
 *.bak*
+.serena/
