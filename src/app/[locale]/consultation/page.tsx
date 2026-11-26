@@ -5,7 +5,6 @@ import JsonLd from "@/components/JsonLd";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 import ConsultationBooking from "./ConsultationBooking";
 
 const BASE_URL = "https://cloudless.gr";
@@ -49,8 +48,13 @@ export async function generateMetadata({
   };
 }
 
-export default async function ConsultationPage() {
-  const locale = await getServerLocale();
+export default async function ConsultationPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   const steps = [

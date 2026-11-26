@@ -6,7 +6,6 @@ import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-doc
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Documentation",
@@ -78,8 +77,14 @@ async function loadPublicDocs(): Promise<DocsListItem[]> {
   }
 }
 
-export default async function DocsPage({ searchParams }: { searchParams: SearchParams }) {
-  const locale = await getServerLocale();
+export default async function DocsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: SearchParams;
+}) {
+  const { locale } = await params;
   const resolvedParams = await searchParams;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
   const filterVerification =

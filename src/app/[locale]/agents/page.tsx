@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { getServerLocale } from "@/lib/server-locale";
 import AgentCounter from "@/components/AgentCounter";
 
 export const metadata: Metadata = {
@@ -12,8 +11,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AgentsPage() {
-  const locale = await getServerLocale();
+export default async function AgentsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   return (
     <main className="bg-void min-h-screen overflow-x-hidden py-24">
       <JsonLd data={getBreadcrumbSchema([{ name: "Agents", url: "/agents" }], locale)} />

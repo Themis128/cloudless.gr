@@ -8,7 +8,6 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -97,8 +96,15 @@ function tagCountsFromPosts(posts: ListingPost[]): Record<string, number> {
   return counts;
 }
 
-export default async function BlogPage({ searchParams }: { searchParams: SearchParams }) {
-  const locale = await getServerLocale();
+export default async function BlogPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: SearchParams;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const resolvedParams = await searchParams;
   const currentPage = Math.max(1, parseInt(String(resolvedParams.page ?? "1"), 10) || 1);

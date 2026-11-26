@@ -118,6 +118,26 @@ describe("getBreadcrumbSchema", () => {
 
     expect(schema.itemListElement).toHaveLength(1);
   });
+
+  it("prefixes non-localized item URLs with the page locale", () => {
+    const schema = getBreadcrumbSchema(
+      [
+        { name: "Home", url: "https://cloudless.gr" },
+        { name: "Terms", url: "https://cloudless.gr/terms" },
+        { name: "Work", url: "/work" },
+      ],
+      "el"
+    );
+
+    expect(schema.itemListElement[0].item).toBe("https://cloudless.gr/el");
+    expect(schema.itemListElement[1].item).toBe("https://cloudless.gr/el/terms");
+    expect(schema.itemListElement[2].item).toBe("https://cloudless.gr/el/work");
+  });
+
+  it("leaves already-localized item URLs unchanged", () => {
+    const schema = getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr/fr" }], "el");
+    expect(schema.itemListElement[0].item).toBe("https://cloudless.gr/fr");
+  });
 });
 
 describe("getFAQSchema", () => {

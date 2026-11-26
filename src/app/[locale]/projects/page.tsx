@@ -7,7 +7,6 @@ import { isSupportedLocale, type Locale } from "@/lib/i18n";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
-import { getServerLocale } from "@/lib/server-locale";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 const BASE_URL = "https://cloudless.gr";
@@ -51,8 +50,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProjectsPage() {
-  const locale = await getServerLocale();
+export default async function ProjectsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const labProjects = await loadLabProjects();
   const flagship = labProjects.find((p) => p.name.toLowerCase() === "mobile price intelligence");
 

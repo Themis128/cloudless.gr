@@ -7,7 +7,6 @@ import ContactFormSection from "@/components/ContactFormSection";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 
 const BASE_URL = "https://cloudless.gr";
 
@@ -49,8 +48,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function PartnersPage() {
-  const locale = await getServerLocale();
+export default async function PartnersPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   const formats = [

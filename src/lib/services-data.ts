@@ -4,7 +4,10 @@
  *
  * Translation keys are still passed in by the page (i18n stays per-render).
  */
-export const getServices = (t: (key: string, fallback: string) => string) => [
+export const getServices = (
+  t: (key: string, fallback: string) => string,
+  ta: (key: string, fallback: string[]) => string[] = (key, fb) => fb
+) => [
   {
     tag: t("servicesSection.service1Tag", "CLOUD"),
     num: "01",
@@ -25,19 +28,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service1Desc",
       "Design resilient, cost-optimised cloud infrastructure on Cloudflare, GCP, or Azure. We handle architecture blueprints, zero-downtime migrations, and Infrastructure as Code — so your team ships faster with less risk."
     ),
-    features: [
+    features: ta("servicesPage.s1Features", [
       "Cloudflare / GCP / Azure architecture design",
       "Zero-downtime migration planning",
       "Cost optimization & right-sizing",
       "Security & compliance review",
       "Infrastructure as Code (Terraform / CDK)",
-    ],
-    stats: [
-      { value: "99.99%", label: "Uptime SLA" },
-      { value: "40-60%", label: "Cost Reduction" },
-      { value: "Zero", label: "Downtime Migrations" },
-      { value: "IaC", label: "First Approach" },
-    ],
+    ]),
+    stats: ta("servicesPage.s1StatLabels", [
+      "Uptime SLA",
+      "Cost Reduction",
+      "Downtime Migrations",
+      "First Approach",
+    ]).map((label, i) => ({ value: ["99.99%", "40-60%", "Zero", "IaC"][i], label })),
     terminal: [
       "$ cloudless infra plan --provider cloudflare",
       "  ✓ VPC + subnets designed",
@@ -69,19 +72,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service2Desc",
       "Build event-driven apps that scale to zero and explode to millions — without managing a single server. Workers, D1, R2, Durable Objects — we wire it all together with CI/CD from day one."
     ),
-    features: [
+    features: ta("servicesPage.s2Features", [
       "Event-driven application design",
       "Cloudflare Workers / D1 / R2 / Durable Objects",
       "CI/CD pipeline setup",
       "Monitoring & alerting",
       "Pay-per-use cost modeling",
-    ],
-    stats: [
-      { value: "60-80%", label: "Infra Savings" },
-      { value: "<50ms", label: "Cold Starts" },
-      { value: "Infinite", label: "Auto-scale" },
-      { value: "CI/CD", label: "From Day One" },
-    ],
+    ]),
+    stats: ta("servicesPage.s2StatLabels", [
+      "Infra Savings",
+      "Cold Starts",
+      "Auto-scale",
+      "From Day One",
+    ]).map((label, i) => ({ value: ["60-80%", "<50ms", "Infinite", "CI/CD"][i], label })),
     terminal: [
       "$ cloudless serverless deploy --stage prod",
       "  ✓ 12 Workers functions deployed",
@@ -114,19 +117,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service3Desc",
       "Turn raw data into decisions. Custom ETL pipelines, real-time dashboards, and BI reporting — all built on modern data stacks so your metrics are always fresh and always actionable."
     ),
-    features: [
+    features: ta("servicesPage.s3Features", [
       "Custom analytics dashboards",
       "ETL pipeline development",
       "Real-time data processing",
       "Business intelligence reporting",
       "Data warehouse design",
-    ],
-    stats: [
-      { value: "Real-time", label: "Data Refresh" },
-      { value: "10x", label: "Faster Insights" },
-      { value: "100%", label: "Data Ownership" },
-      { value: "Custom", label: "KPI Tracking" },
-    ],
+    ]),
+    stats: ta("servicesPage.s3StatLabels", [
+      "Data Refresh",
+      "Faster Insights",
+      "Data Ownership",
+      "KPI Tracking",
+    ]).map((label, i) => ({ value: ["Real-time", "10x", "100%", "Custom"][i], label })),
     terminal: [
       "$ cloudless analytics init --stack modern",
       "  ✓ R2 data lake configured",
@@ -159,19 +162,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service4Desc",
       "AI-powered content, SEO, paid ads, and social automation — driven by real data, not guesswork. We build growth engines that compound month over month."
     ),
-    features: [
+    features: ta("servicesPage.s4Features", [
       "AI-powered content strategy",
       "SEO & search optimization",
       "Paid advertising management",
       "Social media automation",
       "Performance tracking & reporting",
-    ],
-    stats: [
-      { value: "3x", label: "Organic Traffic" },
-      { value: "AI", label: "Content Engine" },
-      { value: "ROAS", label: "Optimised Ads" },
-      { value: "24/7", label: "Social Automation" },
-    ],
+    ]),
+    stats: ta("servicesPage.s4StatLabels", [
+      "Organic Traffic",
+      "Content Engine",
+      "Optimised Ads",
+      "Social Automation",
+    ]).map((label, i) => ({ value: ["3x", "AI", "ROAS", "24/7"][i], label })),
     terminal: [
       "$ cloudless marketing report --month apr",
       "  ✓ 47 AI-generated posts published",
@@ -204,19 +207,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service5Desc",
       "Custom-designed marketing sites and web apps built on Next.js. Lighthouse scores in the high 90s, accessible by default, and wired to your CRM and analytics out of the box."
     ),
-    features: [
+    features: ta("servicesPage.s5Features", [
       "Custom design — no themes or templates",
       "Next.js + Tailwind, fully responsive",
       "WCAG AA accessible by default",
       "CMS integration (Notion / Sanity / Contentful)",
       "Analytics + CRM wiring (EspoCRM, Meta Pixel)",
-    ],
-    stats: [
-      { value: "<2s", label: "Time to Interactive" },
-      { value: "95+", label: "Lighthouse Score" },
-      { value: "WCAG", label: "AA Compliant" },
-      { value: "4 wks", label: "Avg Launch" },
-    ],
+    ]),
+    stats: ta("servicesPage.s5StatLabels", [
+      "Time to Interactive",
+      "Lighthouse Score",
+      "AA Compliant",
+      "Avg Launch",
+    ]).map((label, i) => ({ value: ["<2s", "95+", "WCAG", "4 wks"][i], label })),
     terminal: [
       "$ cloudless web build --target prod",
       "  ✓ Next.js 15 app scaffolded",
@@ -249,19 +252,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service6Desc",
       "Production hosting on Cloudflare Workers with monitoring, backups, security patches, and on-call response baked in. Your site stays fast, secure, and online — without you ever opening a console."
     ),
-    features: [
+    features: ta("servicesPage.s6Features", [
       "Cloudflare Workers managed hosting",
       "24/7 uptime monitoring + alerts",
       "Daily R2 backups with one-click restore",
       "Security patches + dependency updates",
       "Performance + cost optimization quarterly",
-    ],
-    stats: [
-      { value: "99.9%", label: "Uptime SLA" },
-      { value: "24/7", label: "Monitoring" },
-      { value: "Daily", label: "Backups" },
-      { value: "<4h", label: "Response Time" },
-    ],
+    ]),
+    stats: ta("servicesPage.s6StatLabels", [
+      "Uptime SLA",
+      "Monitoring",
+      "Backups",
+      "Response Time",
+    ]).map((label, i) => ({ value: ["99.9%", "24/7", "Daily", "<4h"][i], label })),
     terminal: [
       "$ cloudless hosting status",
       "  ✓ uptime (30d): 99.97%",
@@ -294,19 +297,19 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "servicesSection.service7Desc",
       "EU AI Act obligations are live and fines are sized for enterprises. We inventory your AI systems, classify each against the Act's risk tiers, wire human-oversight checkpoints, and hand you an evidence log your auditor can verify — the same governance stack that runs our own agent fleet."
     ),
-    features: [
+    features: ta("servicesPage.s7Features", [
       "AI system inventory & ownership map",
       "EU AI Act risk-tier classification per system",
       "Human-oversight checkpoint design",
       "Evidence log + audit-ready documentation",
       "Remediation roadmap with owner assignments",
-    ],
-    stats: [
-      { value: "2 wks", label: "Fixed Scope" },
-      { value: "4", label: "Risk Tiers" },
-      { value: "2026", label: "Enforcement Live" },
-      { value: "100%", label: "Evidence-Based" },
-    ],
+    ]),
+    stats: ta("servicesPage.s7StatLabels", [
+      "Fixed Scope",
+      "Risk Tiers",
+      "Enforcement Live",
+      "Evidence-Based",
+    ]).map((label, i) => ({ value: ["2 wks", "4", "2026", "100%"][i], label })),
     terminal: [
       "$ cloudless ai-gov audit --scope smb",
       "  ✓ 14 AI systems inventoried",

@@ -3,7 +3,6 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Accessibility Statement",
@@ -28,8 +27,12 @@ function Section({
   );
 }
 
-export default async function AccessibilityPage() {
-  const locale = await getServerLocale();
+export default async function AccessibilityPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   return (
     <>
       <JsonLd
