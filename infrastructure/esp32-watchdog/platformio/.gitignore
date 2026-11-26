@@ -13,6 +13,4 @@
 # (C:\Users\baltz\.platformio resolves as a relative path in Linux)
 # Both slash variants are needed: git on Linux normalises to "/" internally.
 C:/
-C:\
-"C:\\Users*"
 C:\\Users*
