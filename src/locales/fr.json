@@ -709,7 +709,7 @@
     "getStarted": "Commencer",
     "compareTitle": "Services individuels ou",
     "compareTitleHighlight": "le pack complet ?",
-    "compareSubtitle": "Tous les services. Une équipe. Une mission. 30 % de moins.",
+    "compareSubtitle": "Les quatre services. Une équipe. Une mission. 30 % de moins.",
     "compareTableLabel": "Tableau comparatif des services",
     "compareColService": "SERVICE",
     "compareColIndividual": "INDIVIDUEL",
@@ -731,7 +731,7 @@
     "bundleSave": "ÉCONOMISEZ 30 %",
     "bundleBadge": "Meilleure Offre",
     "bundleTitle": "Moteur de Croissance Full-Stack",
-    "bundleDesc": "Tous les services réunis dans un pack. Infrastructure cloud, applications serverless, tableaux de bord analytics et marketing IA — tout ce dont votre entreprise a besoin pour évoluer.",
+    "bundleDesc": "Les quatre services réunis dans un pack. Infrastructure cloud, applications serverless, tableaux de bord analytics et marketing IA — tout ce dont votre entreprise a besoin pour évoluer.",
     "bundleAlt": "L'alternative ?",
     "bundleAltDesc": "Un CTO (~8 K€/mois) + marketeur (~4 K€/mois) + analyste data (~3 K€/mois) + ingénieur cloud (~5 K€/mois) =",
     "bundleAltTotal": "20 K€+/mois.",
@@ -776,7 +776,7 @@
     "s1StatLabels": [
       "SLA de Disponibilité",
       "Réduction des Coûts",
-      "Migrations sans Interruption",
+      "Coupures de Migration",
       "Première Approche"
     ],
     "s2Features": [
@@ -786,7 +786,12 @@
       "Monitoring & alertes",
       "Modélisation des coûts à l'usage"
     ],
-    "s2StatLabels": ["Économies d'Infra", "Cold Starts", "Auto-scaling", "Dès le 1er Jour"],
+    "s2StatLabels": [
+      "Économies d'Infra",
+      "Cold Starts",
+      "Auto-scaling",
+      "Dès le 1er Jour"
+    ],
     "s3Features": [
       "Tableaux de bord analytics sur mesure",
       "Développement de pipelines ETL",
@@ -820,7 +825,12 @@
       "Intégration CMS (Notion / Sanity / Contentful)",
       "Connexion analytics + CRM (EspoCRM, Meta Pixel)"
     ],
-    "s5StatLabels": ["Time to Interactive", "Score Lighthouse", "Conforme AA", "Lancement Moyen"],
+    "s5StatLabels": [
+      "Time to Interactive",
+      "Score Lighthouse",
+      "Conforme AA",
+      "Lancement Moyen"
+    ],
     "s6Features": [
       "Hébergement géré sur Cloudflare Workers",
       "Surveillance de disponibilité 24/7 + alertes",
@@ -828,7 +838,12 @@
       "Correctifs de sécurité + mises à jour de dépendances",
       "Optimisation performance + coûts trimestrielle"
     ],
-    "s6StatLabels": ["SLA de Disponibilité", "Monitoring", "Sauvegardes", "Temps de Réponse"],
+    "s6StatLabels": [
+      "SLA de Disponibilité",
+      "Monitoring",
+      "Sauvegardes",
+      "Temps de Réponse"
+    ],
     "s7Features": [
       "Inventaire des systèmes IA & carte de propriété",
       "Classification des risques AI Act UE par système",

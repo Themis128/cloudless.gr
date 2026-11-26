@@ -709,7 +709,7 @@
     "getStarted": "Ξεκινήστε",
     "compareTitle": "Μεμονωμένες υπηρεσίες ή",
     "compareTitleHighlight": "πλήρες πακέτο;",
-    "compareSubtitle": "Και οι επτά υπηρεσίες. Μία ομάδα. Μία συνεργασία. 30% λιγότερο.",
+    "compareSubtitle": "Και οι τέσσερις υπηρεσίες. Μία ομάδα. Μία συνεργασία. 30% λιγότερο.",
     "compareTableLabel": "Πίνακας σύγκρισης υπηρεσιών",
     "compareColService": "ΥΠΗΡΕΣΙΑ",
     "compareColIndividual": "ΜΕΜΟΝΩΜΕΝΑ",
@@ -731,7 +731,7 @@
     "bundleSave": "ΕΞΟΙΚΟΝΟΜΗΣΗ 30%",
     "bundleBadge": "Καλύτερη Αξία",
     "bundleTitle": "Full-Stack Μηχανή Ανάπτυξης",
-    "bundleDesc": "Πάρτε όλες τις υπηρεσίες σε ένα πακέτο. Υποδομή cloud, serverless εφαρμογές, analytics dashboards και AI marketing — ό,τι χρειάζεται η επιχείρησή σας για να κλιμακωθεί.",
+    "bundleDesc": "Πάρτε και τις τέσσερις υπηρεσίες σε ένα πακέτο. Υποδομή cloud, serverless εφαρμογές, analytics dashboards και AI marketing — ό,τι χρειάζεται η επιχείρησή σας για να κλιμακωθεί.",
     "bundleAlt": "Η εναλλακτική;",
     "bundleAltDesc": "Ένας CTO (~€8K/μήνα) + marketer (~€4K/μήνα) + data analyst (~€3K/μήνα) + cloud engineer (~€5K/μήνα) =",
     "bundleAltTotal": "€20K+/μήνα.",
@@ -773,7 +773,12 @@
       "Έλεγχος ασφάλειας & συμμόρφωσης",
       "Infrastructure as Code (Terraform / CDK)"
     ],
-    "s1StatLabels": ["SLA Uptime", "Μείωση Κόστους", "Μεταναστεύσεις Downtime", "Πρώτη Προσέγγιση"],
+    "s1StatLabels": [
+      "SLA Uptime",
+      "Μείωση Κόστους",
+      "Διακοπές Μετανάστευσης",
+      "Πρώτη Προσέγγιση"
+    ],
     "s2Features": [
       "Σχεδιασμός event-driven εφαρμογών",
       "Cloudflare Workers / D1 / R2 / Durable Objects",
@@ -781,7 +786,12 @@
       "Monitoring & alerting",
       "Μοντελοποίηση κόστους pay-per-use"
     ],
-    "s2StatLabels": ["Εξοικονόμηση Υποδομής", "Cold Starts", "Auto-scale", "Από την 1η Μέρα"],
+    "s2StatLabels": [
+      "Εξοικονόμηση Υποδομής",
+      "Cold Starts",
+      "Auto-scale",
+      "Από την 1η Μέρα"
+    ],
     "s3Features": [
       "Προσαρμοσμένα analytics dashboards",
       "Ανάπτυξη ETL pipelines",
@@ -815,7 +825,12 @@
       "Ενσωμάτωση CMS (Notion / Sanity / Contentful)",
       "Σύνδεση analytics + CRM (EspoCRM, Meta Pixel)"
     ],
-    "s5StatLabels": ["Time to Interactive", "Lighthouse Score", "AA Συμμόρφωση", "Μέση Κυκλοφορία"],
+    "s5StatLabels": [
+      "Time to Interactive",
+      "Lighthouse Score",
+      "AA Συμμόρφωση",
+      "Μέση Κυκλοφορία"
+    ],
     "s6Features": [
       "Managed hosting σε Cloudflare Workers",
       "24/7 παρακολούθηση uptime + ειδοποιήσεις",
@@ -823,7 +838,12 @@
       "Security patches + ενημερώσεις dependencies",
       "Τριμηνιαία βελτιστοποίηση απόδοσης + κόστους"
     ],
-    "s6StatLabels": ["SLA Uptime", "Παρακολούθηση", "Backups", "Χρόνος Απόκρισης"],
+    "s6StatLabels": [
+      "SLA Uptime",
+      "Παρακολούθηση",
+      "Backups",
+      "Χρόνος Απόκρισης"
+    ],
     "s7Features": [
       "Απογραφή AI συστημάτων & χάρτης ιδιοκτησίας",
       "Ταξινόμηση κινδύνου EU AI Act ανά σύστημα",
@@ -831,7 +851,12 @@
       "Evidence log + τεκμηρίωση audit-ready",
       "Roadmap αποκατάστασης με ανάθεση υπευθύνων"
     ],
-    "s7StatLabels": ["Σταθερό Πεδίο", "Επίπεδα Κινδύνου", "Ενεργή Επιβολή", "Βάσει Αποδείξεων"]
+    "s7StatLabels": [
+      "Σταθερό Πεδίο",
+      "Επίπεδα Κινδύνου",
+      "Ενεργή Επιβολή",
+      "Βάσει Αποδείξεων"
+    ]
   },
   "auditPage": {
     "badge": "ΔΩΡΕΑΝ 30-ΛΕΠΤΟ TECH CHECKUP",

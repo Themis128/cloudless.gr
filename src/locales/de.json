@@ -709,7 +709,7 @@
     "getStarted": "Loslegen",
     "compareTitle": "Einzelne Leistungen oder",
     "compareTitleHighlight": "das volle Bundle?",
-    "compareSubtitle": "Alle Leistungen. Ein Team. Ein Engagement. 30 % weniger.",
+    "compareSubtitle": "Alle vier Leistungen. Ein Team. Ein Engagement. 30 % weniger.",
     "compareTableLabel": "Leistungsvergleichstabelle",
     "compareColService": "LEISTUNG",
     "compareColIndividual": "EINZELN",
@@ -731,7 +731,7 @@
     "bundleSave": "30 % SPAREN",
     "bundleBadge": "Bestes Angebot",
     "bundleTitle": "Full-Stack Growth Engine",
-    "bundleDesc": "Alle Leistungen in einem Bundle. Cloud-Infrastruktur, Serverless-Apps, Analytics-Dashboards und KI-Marketing — alles, was Ihr Unternehmen zum Skalieren braucht.",
+    "bundleDesc": "Alle vier Leistungen in einem Bundle. Cloud-Infrastruktur, Serverless-Apps, Analytics-Dashboards und KI-Marketing — alles, was Ihr Unternehmen zum Skalieren braucht.",
     "bundleAlt": "Die Alternative?",
     "bundleAltDesc": "Ein CTO (~8 T€/Mo) + Marketer (~4 T€/Mo) + Datenanalyst (~3 T€/Mo) + Cloud-Engineer (~5 T€/Mo) =",
     "bundleAltTotal": "20 T€+/Monat.",
@@ -773,7 +773,12 @@
       "Security- & Compliance-Review",
       "Infrastructure as Code (Terraform / CDK)"
     ],
-    "s1StatLabels": ["Uptime-SLA", "Kostensenkung", "Downtime-Migrationen", "Erster Ansatz"],
+    "s1StatLabels": [
+      "Uptime-SLA",
+      "Kostensenkung",
+      "Migrations-Downtime",
+      "Erster Ansatz"
+    ],
     "s2Features": [
       "Event-getriebenes Applikationsdesign",
       "Cloudflare Workers / D1 / R2 / Durable Objects",
@@ -781,7 +786,12 @@
       "Monitoring & Alerting",
       "Pay-per-Use-Kostenmodellierung"
     ],
-    "s2StatLabels": ["Infra-Einsparungen", "Cold Starts", "Auto-Scale", "Ab Tag Eins"],
+    "s2StatLabels": [
+      "Infra-Einsparungen",
+      "Cold Starts",
+      "Auto-Scale",
+      "Ab Tag Eins"
+    ],
     "s3Features": [
       "Maßgeschneiderte Analytics-Dashboards",
       "ETL-Pipeline-Entwicklung",
@@ -789,7 +799,12 @@
       "Business-Intelligence-Reporting",
       "Data-Warehouse-Design"
     ],
-    "s3StatLabels": ["Datenaktualisierung", "Schnellere Insights", "Dateneigentum", "KPI-Tracking"],
+    "s3StatLabels": [
+      "Datenaktualisierung",
+      "Schnellere Insights",
+      "Dateneigentum",
+      "KPI-Tracking"
+    ],
     "s4Features": [
       "KI-gestützte Content-Strategie",
       "SEO & Suchoptimierung",
@@ -810,7 +825,12 @@
       "CMS-Integration (Notion / Sanity / Contentful)",
       "Analytics- + CRM-Anbindung (EspoCRM, Meta Pixel)"
     ],
-    "s5StatLabels": ["Time to Interactive", "Lighthouse-Score", "AA-Konform", "Ø Launch"],
+    "s5StatLabels": [
+      "Time to Interactive",
+      "Lighthouse-Score",
+      "AA-Konform",
+      "Ø Launch"
+    ],
     "s6Features": [
       "Managed Hosting auf Cloudflare Workers",
       "24/7-Uptime-Monitoring + Alerts",
@@ -818,7 +838,12 @@
       "Security-Patches + Dependency-Updates",
       "Quartalsweise Performance- + Kostenoptimierung"
     ],
-    "s6StatLabels": ["Uptime-SLA", "Monitoring", "Backups", "Reaktionszeit"],
+    "s6StatLabels": [
+      "Uptime-SLA",
+      "Monitoring",
+      "Backups",
+      "Reaktionszeit"
+    ],
     "s7Features": [
       "KI-Systeminventar & Ownership-Map",
       "EU-AI-Act-Risikoklassifizierung pro System",
@@ -826,7 +851,12 @@
       "Nachweisprotokoll + audit-fertige Dokumentation",
       "Remediation-Roadmap mit Verantwortlichen"
     ],
-    "s7StatLabels": ["Fester Umfang", "Risikostufen", "Enforcement Aktiv", "Evidenzbasiert"]
+    "s7StatLabels": [
+      "Fester Umfang",
+      "Risikostufen",
+      "Enforcement Aktiv",
+      "Evidenzbasiert"
+    ]
   },
   "auditPage": {
     "badge": "GRATIS 30-MIN TECH CHECKUP",
