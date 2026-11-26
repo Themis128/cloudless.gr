@@ -591,6 +591,10 @@
       "title": "Consultation gratuite de 30 minutes — Cloudless",
       "description": "Choisissez un créneau en direct pour une consultation gratuite de 30 minutes. Revue de votre cloud, automatisation ou stack IA par un ingénieur senior — repartez avec un plan concret."
     },
+    "call": {
+      "title": "Rejoindre l'appel — Cloudless",
+      "description": "Redirection vers l'appel Nextcloud Talk."
+    },
     "store": {
       "title": "Boutique",
       "description": "Forfaits premium de cloud computing, serverless et marketing IA. Tarifs transparents, sans engagement."

@@ -591,6 +591,10 @@
       "title": "Δωρεάν 30λεπτη Συμβουλευτική — Cloudless",
       "description": "Διαλέξτε διαθέσιμη ώρα για δωρεάν 30λεπτη συμβουλευτική. Αξιολόγηση cloud, automation ή AI setup από senior engineer — φεύγετε με συγκεκριμένο πλάνο."
     },
+    "call": {
+      "title": "Σύνδεση στην κλήση — Cloudless",
+      "description": "Σας μεταφέρουμε στην κλήση Nextcloud Talk."
+    },
     "store": {
       "title": "Κατάστημα",
       "description": "Premium πακέτα υπηρεσιών cloud computing, serverless και AI marketing. Διαφανείς τιμές, χωρίς δέσμευση."

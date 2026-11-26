@@ -591,6 +591,10 @@
       "title": "Book a Free 30-Minute Consultation — Cloudless",
       "description": "Pick a live slot for a free 30-minute consultation. Senior-engineer review of your cloud, automation, or AI setup — leave with a concrete plan."
     },
+    "call": {
+      "title": "Join the call — Cloudless",
+      "description": "Forwarding you to the Nextcloud Talk call."
+    },
     "store": {
       "title": "Store",
       "description": "cloud computing, serverless, and AI marketing service packages. Transparent pricing, no lock-in."
