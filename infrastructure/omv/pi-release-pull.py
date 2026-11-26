@@ -457,4 +457,7 @@ if PREV:
     run(*KUBECTL, "rollout", "restart", f"deployment/{DEP}", "-n", NS)
     # The shell tolerated a slow rollback rollout (`|| true`); we exit 1 anyway.
     run(*KUBECTL, "rollout", "status", f"deployment/{DEP}", "-n", NS, "--timeout=180s", check=False)
+# Remove the rejected release dir — a leftover NEW_REL would be picked by
+# `rollback.py previous` (newest-dir selection) on the next manual rollback.
+run("sudo", "rm", "-rf", str(NEW_REL))
 sys.exit(1)
