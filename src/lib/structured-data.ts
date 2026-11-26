@@ -1,5 +1,7 @@
 // Schema.org JSON-LD generators for cloudless.gr
 
+import { routing } from "@/i18n/routing";
+
 export interface OrganizationSchema {
   "@context": "https://schema.org";
   "@type": string[];
@@ -256,12 +258,15 @@ export interface BreadcrumbSchema {
 }
 
 export function getBreadcrumbSchema(items: BreadcrumbItem[], locale?: string): BreadcrumbSchema {
+  const localePrefix = routing.locales.join("|");
+  const absoluteLocaleRe = new RegExp(`cloudless\\.gr\\/(${localePrefix})(\\/|$)`);
+  const relativeLocaleRe = new RegExp(`^\\/(${localePrefix})(\\/|$)`);
   const localized = (url: string): string => {
     if (!locale) return url;
-    if (url.startsWith("/") && !/^\/(en|el|fr|de)(\/|$)/.test(url)) {
+    if (url.startsWith("/") && !relativeLocaleRe.test(url)) {
       return `https://cloudless.gr/${locale}${url}`;
     }
-    return /cloudless\.gr\/(en|el|fr|de)(\/|$)/.test(url)
+    return absoluteLocaleRe.test(url)
       ? url
       : url.replace("https://cloudless.gr", `https://cloudless.gr/${locale}`);
   };
