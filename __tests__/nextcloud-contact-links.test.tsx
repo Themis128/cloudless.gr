@@ -54,13 +54,10 @@ describe("Nextcloud integration — contact form sidebar", () => {
     expect(talk.getAttribute("href")).toBe("/call");
   });
 
-  it("opens Talk in a new tab without giving it the opener handle", () => {
+  it("keeps the video-call link in the same tab (internal /call route)", () => {
     render(<ContactFormSection source="test" />);
     const talk = screen.getByRole("link", { name: /join a talk call/i });
-    expect(talk.getAttribute("target")).toBe("_blank");
-    const rel = talk.getAttribute("rel") ?? "";
-    expect(rel).toContain("noopener");
-    expect(rel).toContain("noreferrer");
+    expect(talk.getAttribute("target")).toBeNull();
   });
 });
 
@@ -73,14 +70,12 @@ describe("Nextcloud integration — links page", () => {
     expect(workspace.getAttribute("href")).toBe("https://cloud.cloudless.gr");
   });
 
-  it("opens both Nextcloud links in a new tab without an opener handle", async () => {
+  it("opens the external Nextcloud workspace in a new tab without an opener handle", async () => {
     render(await LinksPage());
-    for (const name of [/book a free video consult/i, /client workspace/i]) {
-      const link = screen.getByRole("link", { name });
-      expect(link.getAttribute("target")).toBe("_blank");
-      const rel = link.getAttribute("rel") ?? "";
-      expect(rel).toContain("noopener");
-      expect(rel).toContain("noreferrer");
-    }
+    const link = screen.getByRole("link", { name: /client workspace/i });
+    expect(link.getAttribute("target")).toBe("_blank");
+    const rel = link.getAttribute("rel") ?? "";
+    expect(rel).toContain("noopener");
+    expect(rel).toContain("noreferrer");
   });
 });

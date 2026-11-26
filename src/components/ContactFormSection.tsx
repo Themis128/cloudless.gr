@@ -564,14 +564,12 @@ export default function ContactFormSection({ source = "" }: { source?: string })
                   </p>
                   <p>
                     <span className={SIDEBAR_LABEL_CLASS}>VIDEO CALL:</span>{" "}
-                    <a
+                    <Link
                       href="/call"
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 mt-1 inline-flex items-center rounded-lg border px-3 py-1.5 font-mono text-xs font-medium transition-colors"
                     >
                       Join a Talk call — no account needed
-                    </a>
+                    </Link>
                   </p>
                   <p>
                     <span className={SIDEBAR_LABEL_CLASS}>LOCATION:</span>{" "}
