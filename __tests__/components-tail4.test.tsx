@@ -65,7 +65,7 @@ describe("analytics scripts", () => {
   it("injects Clarity when the project id is set and analytics consent given", () => {
     vi.stubEnv("NEXT_PUBLIC_CLARITY_PROJECT_ID", "clar-1");
     render(
-      <CookieConsentContext
+      <CookieConsentContext.Provider
         value={{
           hasConsented: true,
           preferences: { necessary: true, analytics: true, marketing: false },
@@ -79,7 +79,7 @@ describe("analytics scripts", () => {
         }}
       >
         <ClarityAnalytics />
-      </CookieConsentContext>
+      </CookieConsentContext.Provider>
     );
     const script = document.head.querySelector(
       'script[src*="clarity.ms"]'
