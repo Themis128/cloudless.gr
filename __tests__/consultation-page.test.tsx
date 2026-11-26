@@ -19,6 +19,18 @@ vi.mock("@/components/ScrollReveal", () => ({
 vi.mock("@/app/[locale]/consultation/ConsultationBooking", () => ({
   default: () => <div data-testid="booking-widget">BOOKING</div>,
 }));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({
+    href,
+    children,
+    ...rest
+  }: { href: string; children: React.ReactNode } & Record<string, unknown>) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+  redirect: vi.fn(),
+}));
 
 import ConsultationPage, { generateMetadata } from "@/app/[locale]/consultation/page";
 
