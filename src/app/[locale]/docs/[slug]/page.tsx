@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     slug: `docs/${slug}`,
     title: doc.title,
     description: doc.description || `${doc.title} — Cloudless documentation`,
+    untranslatedContent: true,
   });
 }
 

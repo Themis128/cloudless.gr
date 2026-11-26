@@ -174,4 +174,27 @@ test.describe("locale integrity", () => {
     }
     expect(hrefs).toContain("x-default=https://cloudless.gr/en/services");
   });
+
+  test("repaired routes emit a self-referencing canonical per locale", async ({ page }) => {
+    // These routes previously emitted no canonical or a locale-less one —
+    // verify each localized URL now canonicalizes to itself.
+    const routes = [
+      "accessibility",
+      "agents",
+      "contact",
+      "docs",
+      "partners",
+      "privacy",
+      "refund",
+      "terms",
+      "work",
+    ];
+    for (const route of routes) {
+      await page.goto(`/el/${route}`);
+      await expect(
+        page.locator('link[rel="canonical"]'),
+        `canonical on /el/${route}`
+      ).toHaveAttribute("href", `https://cloudless.gr/el/${route}`);
+    }
+  });
 });

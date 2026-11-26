@@ -61,6 +61,7 @@ export async function generateMetadata({
         images: [{ url: cs.coverImage, width: 1200, height: 630, alt: cs.title }],
       }),
     },
+    untranslatedContent: true,
   });
 }
 

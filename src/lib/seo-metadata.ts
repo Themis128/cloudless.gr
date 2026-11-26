@@ -65,6 +65,7 @@ export function localizedPageMetadata({
   description,
   openGraph,
   locales,
+  untranslatedContent = false,
 }: {
   locale: Locale;
   slug?: string;
@@ -72,15 +73,21 @@ export function localizedPageMetadata({
   description?: string;
   openGraph?: Record<string, unknown>;
   locales?: readonly string[];
+  /**
+   * Set when the page body is identical across locales (slug/id detail pages
+   * that load the same English content record regardless of prefix). These
+   * must not advertise hreflang "translations" — crawlers would follow links
+   * to untranslated copies. They still get a self-referencing canonical.
+   */
+  untranslatedContent?: boolean;
 }): Metadata {
   const canonical = `${BASE_URL}/${locale}${slug ? `/${slug}` : ""}`;
   return {
     title,
     description,
-    alternates: {
-      canonical,
-      languages: languageAlternates(slug, locales),
-    },
+    alternates: untranslatedContent
+      ? { canonical }
+      : { canonical, languages: languageAlternates(slug, locales) },
     openGraph: {
       type: "website",
       title,

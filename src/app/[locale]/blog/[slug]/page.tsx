@@ -133,6 +133,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.excerpt,
     openGraph: { type: "article", publishedTime: post.date },
+    untranslatedContent: true,
   });
 }
 

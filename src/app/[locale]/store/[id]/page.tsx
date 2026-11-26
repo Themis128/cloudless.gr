@@ -38,6 +38,7 @@ export async function generateMetadata({
     slug: `store/${id}`,
     title: product.name,
     description: product.description,
+    untranslatedContent: true,
   });
 }
 
