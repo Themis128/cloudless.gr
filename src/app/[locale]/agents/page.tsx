@@ -2,14 +2,43 @@ import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import AgentCounter from "@/components/AgentCounter";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Agents",
-  description: "Cloudless Agent Workers — Interactive demos and tools.",
-  alternates: {
-    canonical: "https://cloudless.gr/agents",
-  },
-};
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Agents";
+  const description = "Cloudless Agent Workers — Interactive demos and tools.";
+  const canonical = `${BASE_URL}/${safeLocale}/agents`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/agents`,
+        el: `${BASE_URL}/el/agents`,
+        de: `${BASE_URL}/de/agents`,
+        fr: `${BASE_URL}/fr/agents`,
+        "x-default": `${BASE_URL}/en/agents`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 export default async function AgentsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

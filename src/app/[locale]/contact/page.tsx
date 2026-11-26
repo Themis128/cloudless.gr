@@ -7,6 +7,8 @@ import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 
+const BASE_URL = "https://cloudless.gr";
+
 export async function generateMetadata({
   params,
 }: {
@@ -17,9 +19,30 @@ export async function generateMetadata({
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
     Record<string, Record<string, string>> | undefined;
+  const title = meta?.contact?.title ?? "Contact Us";
+  const description = meta?.contact?.description;
+  const canonical = `${BASE_URL}/${safeLocale}/contact`;
+
   return {
-    title: meta?.contact?.title ?? "Contact Us",
-    description: meta?.contact?.description,
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/contact`,
+        el: `${BASE_URL}/el/contact`,
+        de: `${BASE_URL}/de/contact`,
+        fr: `${BASE_URL}/fr/contact`,
+        "x-default": `${BASE_URL}/en/contact`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
   };
 }
 

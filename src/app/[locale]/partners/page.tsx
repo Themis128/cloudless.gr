@@ -25,11 +25,13 @@ export async function generateMetadata({
     meta?.partners?.description ??
     "Sponsored content, product walkthroughs, and brand partnerships with an engaged niche audience of founders and engineers. Media kit and formats inside.";
 
+  const canonical = `${BASE_URL}/${safeLocale}/partners`;
+
   return {
     title,
     description,
     alternates: {
-      canonical: `${BASE_URL}/partners`,
+      canonical,
       languages: {
         en: `${BASE_URL}/en/partners`,
         el: `${BASE_URL}/el/partners`,
@@ -42,7 +44,7 @@ export async function generateMetadata({
       type: "website",
       title,
       description,
-      url: `${BASE_URL}/partners`,
+      url: canonical,
       siteName: "Cloudless",
     },
   };

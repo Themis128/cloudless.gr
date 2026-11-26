@@ -9,15 +9,44 @@ import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Our Work",
-  description:
-    "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms.",
-  alternates: {
-    canonical: "https://cloudless.gr/work",
-  },
-};
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Our Work";
+  const description =
+    "Client projects delivered by Cloudless — serverless migrations, analytics pipelines, and AI-powered marketing platforms.";
+  const canonical = `${BASE_URL}/${safeLocale}/work`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/work`,
+        el: `${BASE_URL}/el/work`,
+        de: `${BASE_URL}/de/work`,
+        fr: `${BASE_URL}/fr/work`,
+        "x-default": `${BASE_URL}/en/work`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 async function loadClientProjects(): Promise<Project[]> {
   try {

@@ -6,12 +6,44 @@ import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-doc
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Documentation",
-  description:
-    "Internal guides, integration references, and how-to documentation for the Cloudless platform.",
-};
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Documentation";
+  const description =
+    "Internal guides, integration references, and how-to documentation for the Cloudless platform.";
+  const canonical = `${BASE_URL}/${safeLocale}/docs`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/docs`,
+        el: `${BASE_URL}/el/docs`,
+        de: `${BASE_URL}/de/docs`,
+        fr: `${BASE_URL}/fr/docs`,
+        "x-default": `${BASE_URL}/en/docs`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 export const revalidate = 3600; // Revalidate hourly
 

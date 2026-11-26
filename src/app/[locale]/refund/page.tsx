@@ -5,11 +5,42 @@ import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Refund & Returns Policy",
-  description:
-    "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers.",
-};
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Refund & Returns Policy";
+  const description =
+    "Our refund and returns policy, including the EU 14-day right of withdrawal for consumers.";
+  const canonical = `${BASE_URL}/${safeLocale}/refund`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/refund`,
+        el: `${BASE_URL}/el/refund`,
+        de: `${BASE_URL}/de/refund`,
+        fr: `${BASE_URL}/fr/refund`,
+        "x-default": `${BASE_URL}/en/refund`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 function Section({
   id,

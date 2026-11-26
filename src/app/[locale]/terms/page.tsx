@@ -5,11 +5,42 @@ import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.",
-};
+const BASE_URL = "https://cloudless.gr";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const title = "Terms of Service";
+  const description =
+    "Terms and conditions for using Cloudless.gr services and store. Compliant with EU Consumer Rights Directive.";
+  const canonical = `${BASE_URL}/${safeLocale}/terms`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/terms`,
+        el: `${BASE_URL}/el/terms`,
+        de: `${BASE_URL}/de/terms`,
+        fr: `${BASE_URL}/fr/terms`,
+        "x-default": `${BASE_URL}/en/terms`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 function Section({
   id,
