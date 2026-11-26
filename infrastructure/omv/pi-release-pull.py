@@ -308,9 +308,7 @@ else:
 
 # Forced same-SHA redeploys extract to <sha12>-f<id> so the live release dir
 # is untouched until the replacement validates — PREV stays a real rollback.
-NEW_REL = (
-    Path(RELEASES) / f"{SHA12}-f{MARKER_ID}" if FORCE else Path(RELEASES) / SHA12
-)
+NEW_REL = Path(RELEASES) / f"{SHA12}-f{MARKER_ID}" if FORCE else Path(RELEASES) / SHA12
 PREV = os.readlink(STANDALONE) if standalone_path.is_symlink() else ""
 
 run("sudo", "mkdir", "-p", RELEASES)
@@ -404,9 +402,7 @@ for _ in range(8):
     try:
         d = json.loads(resp_body)
         v = str(d.get("version", ""))
-        if d.get("status") == "ok" and (
-            v == APP_VER or (not FORCE and v.startswith(SHA12))
-        ):
+        if d.get("status") == "ok" and (v == APP_VER or (not FORCE and v.startswith(SHA12))):
             health_ok = True
             break
     except json.JSONDecodeError:
