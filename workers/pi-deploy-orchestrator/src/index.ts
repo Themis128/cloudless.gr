@@ -171,6 +171,16 @@ export class PiDeployWorkflow extends WorkflowEntrypoint<Env, DeployParams> {
       await step.do(`track-probe-${attempt}`, async () => {
         const raw = await this.env.RELEASES.get("desired.json");
         const cur = raw ? (JSON.parse(await raw.text()) as DesiredState) : ({} as DesiredState);
+        // A different (newer) trigger owns desired.json — do not overwrite its
+        // state from this superseded instance.
+        if (cur.workflowInstanceId && cur.workflowInstanceId !== instanceId) {
+          return {
+            attempt,
+            match: false,
+            version: probe.version,
+            healthUrl: probe.url,
+          };
+        }
         const next: DesiredState = {
           ...cur,
           sha,

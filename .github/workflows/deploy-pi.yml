@@ -495,8 +495,10 @@ jobs:
                       ;;
                   esac
                 else
+                  # A previous forced deploy stamped APP_VERSION "<sha>-f<id>" —
+                  # it is still this commit's code, so it satisfies the check.
                   case "$LIVE" in
-                    "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8})
+                    "$WANT_SHA"|"$WANT12"|${WANT_SHA:0:7}|${WANT_SHA:0:8}|${WANT_SHA}-f*)
                       MATCHED=1
                       break 2
                       ;;

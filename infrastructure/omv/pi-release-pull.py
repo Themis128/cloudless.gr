@@ -219,26 +219,20 @@ if live_base == SHA12 and (not FORCE or FORCED_DONE.exists()):
     track(event="noop_already_live", sha12=SHA12, workflowInstanceId=WF_ID)
     sys.exit(0)
 
+force_tries = 0
 if FORCE:
-    tries = 0
     if FORCED_TRIES.exists():
         try:
-            tries = int(FORCED_TRIES.read_text().strip() or "0")
+            force_tries = int(FORCED_TRIES.read_text().strip() or "0")
         except (OSError, ValueError):
-            tries = 3
-    if tries >= 3:
+            force_tries = 3
+    if force_tries >= 3:
         track(
             event="noop_forced_exhausted",
             sha12=SHA12,
             workflowInstanceId=WF_ID,
         )
         sys.exit(0)
-    run(
-        "sudo",
-        "sh",
-        "-c",
-        f"mkdir -p {RELEASES} && printf %s '{tries + 1}' > '{FORCED_TRIES}'",
-    )
 
 if load_high or io_high:
     track(
@@ -251,6 +245,14 @@ if load_high or io_high:
         workflowInstanceId=WF_ID,
     )
     sys.exit(0)
+
+if FORCE:
+    run(
+        "sudo",
+        "sh",
+        "-c",
+        f"mkdir -p {RELEASES} && printf %s '{force_tries + 1}' > '{FORCED_TRIES}'",
+    )
 
 track(
     event="pull_start",
@@ -308,7 +310,9 @@ else:
 
 # Forced same-SHA redeploys extract to <sha12>-f<id> so the live release dir
 # is untouched until the replacement validates — PREV stays a real rollback.
-NEW_REL = Path(RELEASES) / f"{SHA12}-f{MARKER_ID}" if FORCE else Path(RELEASES) / SHA12
+NEW_REL = (
+    Path(RELEASES) / f"{SHA12}-f{MARKER_ID}r{force_tries}" if FORCE else Path(RELEASES) / SHA12
+)
 PREV = os.readlink(STANDALONE) if standalone_path.is_symlink() else ""
 
 run("sudo", "mkdir", "-p", RELEASES)
