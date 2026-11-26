@@ -28,8 +28,10 @@ dot-folders (.Sent -> Sent, .Drafts -> Drafts, .Trash -> Trash, .Junk -> Junk,
 
 import argparse
 import base64
+import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import urllib.error
@@ -213,19 +215,32 @@ def main():
         folder = positional[0] if positional else None
         rows = []
         for name, d in resolve(folder):
-            msgs = []
+            # Stat-first: os.path.getmtime is ~1000x cheaper than parse()
+            # (which reads + MIME-walks every file). List only ever shows
+            # the newest maxn — pre-sort by mtime and parse just enough
+            # candidates instead of the whole mailbox (INBOX has 8k+).
+            cands = []
             for p in iter_msgs(d):
+                try:
+                    cands.append((os.path.getmtime(p), p))
+                except OSError:
+                    continue
+            cands.sort(reverse=True)
+            if since:
+                cands = [c for c in cands if c[0] >= since]
+            parsed = 0
+            taken = 0
+            for mt, p in cands:
+                if taken >= maxn or parsed >= maxn * 10 + 50:
+                    break
+                parsed += 1
                 m = parse(p)
                 if m:
-                    msgs.append(m)
-            msgs.sort(key=lambda m: m['mtime'], reverse=True)
-            for m in msgs[:maxn]:
-                if since and m['mtime'] < since:
-                    continue
-                rows.append({'folder': name, 'date': m['date'], 'from': m['from'],
-                             'to': m['to'], 'subject': m['subject'],
-                             'size': m['size'], 'attachments': m['attachments'],
-                             'file': m['file']})
+                    taken += 1
+                    rows.append({'folder': name, 'date': m['date'], 'from': m['from'],
+                                 'to': m['to'], 'subject': m['subject'],
+                                 'size': m['size'], 'attachments': m['attachments'],
+                                 'file': m['file']})
         print(json.dumps(rows, indent=2, ensure_ascii=False))
         return
 
@@ -323,10 +338,45 @@ main()
 """
 
 
-def remote(*args):
+# File-based transport: the remote helper is pushed ONCE to a stable path
+# (base64 over argv — no stdin pipe, which is what hung `python3 -` under
+# the MCP stdio server), then every call invokes it by path. Re-pushed only
+# when the local REMOTE blob's sha256 differs from the remote file's.
+REMOTE_PATH = "/tmp/cm_remote.py"
+_remote_ready = False
+
+
+def _ensure_remote():
+    global _remote_ready
+    if _remote_ready:
+        return
+    digest = hashlib.sha256(REMOTE.encode()).hexdigest()
     r = subprocess.run(
-        SSH + ["sudo", "-n", "python3", "-"] + list(args),
-        input=REMOTE.encode(),
+        SSH + [f"sha256sum {REMOTE_PATH} 2>/dev/null | cut -d' ' -f1"],
+        capture_output=True,
+        timeout=20,
+    )
+    if r.returncode == 0 and r.stdout.decode().strip() == digest:
+        _remote_ready = True
+        return
+    b64 = base64.b64encode(REMOTE.encode()).decode()
+    r = subprocess.run(
+        SSH + [f"echo {b64} | base64 -d > {REMOTE_PATH} && chmod 600 {REMOTE_PATH}"],
+        capture_output=True,
+        timeout=30,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            "remote helper push failed: " + r.stderr.decode("utf-8", "replace")[:300]
+        )
+    _remote_ready = True
+
+
+def remote(*args):
+    _ensure_remote()
+    cmd = "sudo -n python3 {} {}".format(REMOTE_PATH, " ".join(shlex.quote(str(a)) for a in args))
+    r = subprocess.run(
+        SSH + [cmd],
         capture_output=True,
         timeout=120,
     )
