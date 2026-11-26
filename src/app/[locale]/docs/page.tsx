@@ -6,7 +6,6 @@ import { getDocs as getAppFlowyDocs, type AppFlowyDoc } from "@/lib/appflowy-doc
 import { isAppFlowyConfigured } from "@/lib/appflowy";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Documentation",

@@ -786,12 +786,7 @@
       "Monitoring & alertes",
       "Modélisation des coûts à l'usage"
     ],
-    "s2StatLabels": [
-      "Économies d'Infra",
-      "Cold Starts",
-      "Auto-scaling",
-      "Dès le 1er Jour"
-    ],
+    "s2StatLabels": ["Économies d'Infra", "Cold Starts", "Auto-scaling", "Dès le 1er Jour"],
     "s3Features": [
       "Tableaux de bord analytics sur mesure",
       "Développement de pipelines ETL",
@@ -825,12 +820,7 @@
       "Intégration CMS (Notion / Sanity / Contentful)",
       "Connexion analytics + CRM (EspoCRM, Meta Pixel)"
     ],
-    "s5StatLabels": [
-      "Time to Interactive",
-      "Score Lighthouse",
-      "Conforme AA",
-      "Lancement Moyen"
-    ],
+    "s5StatLabels": ["Time to Interactive", "Score Lighthouse", "Conforme AA", "Lancement Moyen"],
     "s6Features": [
       "Hébergement géré sur Cloudflare Workers",
       "Surveillance de disponibilité 24/7 + alertes",
@@ -838,12 +828,7 @@
       "Correctifs de sécurité + mises à jour de dépendances",
       "Optimisation performance + coûts trimestrielle"
     ],
-    "s6StatLabels": [
-      "SLA de Disponibilité",
-      "Monitoring",
-      "Sauvegardes",
-      "Temps de Réponse"
-    ],
+    "s6StatLabels": ["SLA de Disponibilité", "Monitoring", "Sauvegardes", "Temps de Réponse"],
     "s7Features": [
       "Inventaire des systèmes IA & carte de propriété",
       "Classification des risques AI Act UE par système",

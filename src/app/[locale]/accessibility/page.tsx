@@ -3,7 +3,6 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Accessibility Statement",

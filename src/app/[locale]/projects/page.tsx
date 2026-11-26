@@ -7,7 +7,6 @@ import { isSupportedLocale, type Locale } from "@/lib/i18n";
 import ProjectCard from "@/components/ProjectCard";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
-import { getServerLocale } from "@/lib/server-locale";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 const BASE_URL = "https://cloudless.gr";

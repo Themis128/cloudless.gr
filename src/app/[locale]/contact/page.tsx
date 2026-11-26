@@ -6,7 +6,6 @@ import JsonLd from "@/components/JsonLd";
 import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 
 export async function generateMetadata({
   params,

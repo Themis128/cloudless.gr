@@ -4,7 +4,6 @@ import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 import { translate, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: "Terms of Service",

@@ -5,7 +5,6 @@ import TerminalBlock from "@/components/TerminalBlock";
 import JsonLd from "@/components/JsonLd";
 import { getServiceSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import { translate, translateArray, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import { getServerLocale } from "@/lib/server-locale";
 import StatCounter from "@/components/StatCounter";
 import DeferredRender from "@/components/DeferredRender";
 
