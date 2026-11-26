@@ -441,6 +441,28 @@ DISPATCH = {
 }
 
 
+def _fix_str(s):
+    """Devin's MCP transport delivers non-ASCII args as UTF-8 bytes mapped to
+    surrogateescape codepoints (\\udc80-\\udcff). Re-encode to recover the
+    original bytes, then decode as UTF-8."""
+    if not isinstance(s, str) or not any(0xD800 <= ord(c) <= 0xDFFF for c in s):
+        return s
+    try:
+        return s.encode("utf-8", "surrogateescape").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return s.encode("utf-8", "replace").decode("utf-8", "replace")
+
+
+def _fix_args(o):
+    if isinstance(o, str):
+        return _fix_str(o)
+    if isinstance(o, list):
+        return [_fix_args(v) for v in o]
+    if isinstance(o, dict):
+        return {k: _fix_args(v) for k, v in o.items()}
+    return o
+
+
 def reply(mid, result=None, error=None):
     msg = {"jsonrpc": "2.0", "id": mid}
     if error is not None:
@@ -452,6 +474,12 @@ def reply(mid, result=None, error=None):
 
 
 def main():
+    try:
+        sys.stdin.reconfigure(encoding="utf-8", errors="surrogateescape")
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -481,7 +509,7 @@ def main():
             reply(mid, {"tools": TOOLS})
         elif method == "tools/call":
             name = params.get("name", "")
-            args = params.get("arguments") or {}
+            args = _fix_args(params.get("arguments") or {})
             fn = DISPATCH.get(name)
             if not fn:
                 reply(mid, error={"code": -32601, "message": "unknown tool " + name})
