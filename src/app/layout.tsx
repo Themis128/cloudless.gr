@@ -7,7 +7,6 @@ import { themeForRoute } from "@/components/ThemeProvider";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PageViewBeacon from "@/components/analytics/PageViewBeacon";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
-import ClarityAnalytics from "@/components/ClarityAnalytics";
 import SwetrixAnalytics from "@/components/SwetrixAnalytics";
 import WebMCPProvider from "@/components/WebMCPProvider";
 import { GoogleTagManagerHead, GoogleTagManagerNoscript } from "@/components/GoogleTagManager";
@@ -169,7 +168,6 @@ export default async function RootLayout({
         <WebMCPProvider />
         <PageViewBeacon />
         <PlausibleAnalytics />
-        <ClarityAnalytics />
         <SwetrixAnalytics nonce={nonce} />
       </body>
     </html>

@@ -496,7 +496,7 @@
     "cookiePurpose": "Purpose",
     "cookieDuration": "Duration",
     "cookieCategory": "Category",
-    "cookieTableNote": "This table will be updated as we add analytics or marketing integrations. Currently, no third-party analytics or marketing cookies are set.",
+    "cookieTableNote": "Third-party analytics cookies (Microsoft Clarity) are only set if you consent to analytics cookies. Marketing cookies are only set if you consent to marketing cookies.",
     "manageCookiesTitle": "4. Managing Your Preferences",
     "manageCookies": "You can change your cookie preferences at any time by clicking the button below, or via the \"Cookie Settings\" link in our website footer.",
     "openCookieSettings": "Open Cookie Settings",

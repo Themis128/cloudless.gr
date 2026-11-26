@@ -12,7 +12,7 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
-import HotjarAnalytics from "@/components/HotjarAnalytics";
+import ClarityAnalytics from "@/components/ClarityAnalytics";
 import ClientCartSlideOver from "@/components/ClientCartSlideOver";
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
@@ -85,7 +85,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <CartProvider>
           <CookieConsentProvider>
             <GoogleAnalyticsConsent />
-            <HotjarAnalytics />
+            <ClarityAnalytics />
             {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
             {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
             <AttributionCapture />
