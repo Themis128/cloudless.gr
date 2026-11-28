@@ -91,7 +91,8 @@ export function normalizeGooglePrivateKeyPem(raw) {
 			throw new Error(
 				`GOOGLE_PRIVATE_KEY looks like JSON but is invalid: ${
 					err instanceof Error ? err.message : String(err)
-				}`
+				}`,
+				{ cause: err }
 			);
 		}
 	}
@@ -158,7 +159,8 @@ export function loadGooglePrivateKey(raw) {
 		throw new Error(
 			`GOOGLE_PRIVATE_KEY PEM rejected by Node (${header}): ${
 				err instanceof Error ? err.message : String(err)
-			}. Convert with: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out key.pkcs8.pem`
+			}. Convert with: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out key.pkcs8.pem`,
+			{ cause: err }
 		);
 	}
 }

@@ -128,7 +128,7 @@ describe("POST /api/portal/[token]/comments", () => {
 
   it("persists comment via writePortals", async () => {
     const portal = makePortal();
-    const portalCopy = JSON.parse(JSON.stringify(portal));
+    const portalCopy = structuredClone(portal);
     mockFindPortalByToken.mockResolvedValue(portal);
     mockReadPortals.mockResolvedValue([portalCopy]);
     mockWritePortals.mockResolvedValue(undefined);

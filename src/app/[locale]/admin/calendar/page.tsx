@@ -3,6 +3,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import type { CalendarItem, CalendarItemType, CalendarPlatform } from "@/lib/calendar-shared";
 import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/calendar-shared";
+import { groupBy } from "@/lib/group-by";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -130,12 +131,7 @@ export default function CalendarPage() {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const itemsByDate: Record<string, CalendarItem[]> = {};
-  for (const item of items) {
-    const d = item.date.slice(0, 10);
-    if (!itemsByDate[d]) itemsByDate[d] = [];
-    itemsByDate[d].push(item);
-  }
+  const itemsByDate = groupBy(items, (item) => item.date.slice(0, 10));
 
   return (
     <div>

@@ -223,11 +223,9 @@ describe("createThrottledFetch tails", () => {
   });
 
   it("dedupes concurrent calls onto the in-flight promise", async () => {
-    let release: (r: Response) => void = () => {};
-    const gate = new Promise<Response>((resolve) => {
-      release = resolve;
-    });
-    const base = vi.fn(() => gate);
+    const gate = Promise.withResolvers<Response>();
+    const release = gate.resolve;
+    const base = vi.fn(() => gate.promise);
     const throttled = createThrottledFetch(base);
     const p1 = throttled();
     const p2 = throttled();

@@ -73,7 +73,7 @@ function flushDnsBatch() {
   const { status, names, sampleMsg, timer } = dnsState.batch;
   clearTimeout(timer);
   dnsState.batch = null;
-  const list = [...names].sort();
+  const list = [...names].toSorted();
   if (status === "DOWN") {
     for (const n of list) dnsState.recentDown.add(n);
     if (dnsState.recentTimer) clearTimeout(dnsState.recentTimer);

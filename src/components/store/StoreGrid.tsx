@@ -234,7 +234,7 @@ export default function StoreGrid() {
     }
 
     if (sortBy !== "default") {
-      products = [...products].sort((a, b) => {
+      products = products.toSorted((a, b) => {
         if (sortBy === "price-asc") return a.price - b.price;
         if (sortBy === "price-desc") return b.price - a.price;
         return a.name.localeCompare(b.name);

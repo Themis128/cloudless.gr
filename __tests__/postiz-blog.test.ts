@@ -46,8 +46,8 @@ function queueHappyPath(integrations: unknown[]) {
 }
 
 function lastPostizPostBody(): Record<string, unknown> {
-  const call = [...mockFetch.mock.calls]
-    .reverse()
+  const call = mockFetch.mock.calls
+    .toReversed()
     .find(([url]) => String(url).includes("/posts") && !String(url).includes("?"));
   return JSON.parse(String(call?.[1]?.body ?? "{}"));
 }

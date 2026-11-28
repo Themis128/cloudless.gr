@@ -263,13 +263,7 @@ async function fetchWithTimeout(
   deadline: number,
 ): Promise<Response> {
   const remaining = Math.max(0, deadline - Date.now());
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), remaining);
-  try {
-    return await fetchUpstream(target, request, headers, controller.signal);
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetchUpstream(target, request, headers, AbortSignal.timeout(remaining));
 }
 
 async function proxyWebSocket(

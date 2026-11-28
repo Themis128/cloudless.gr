@@ -119,7 +119,7 @@ describe("getBlogPostsWithSource (merged sources)", () => {
 
     const { posts } = await getBlogPostsWithSource();
     const times = posts.map((p) => new Date(p.date).getTime());
-    expect(times).toEqual([...times].sort((a, b) => b - a));
+    expect(times).toEqual(times.toSorted((a, b) => b - a));
     expect(posts[0].slug).toBe("2099-06-01-newest");
   });
 });

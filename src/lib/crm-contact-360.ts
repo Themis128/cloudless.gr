@@ -151,7 +151,7 @@ async function listEventsForEmail(
   }));
 
   const touches: Contact360AttributionTouch[] = [];
-  for (const row of [...rows].reverse()) {
+  for (const row of rows.toReversed()) {
     const touch = touchFromEventRow(row);
     if (touch) touches.push(touch);
   }

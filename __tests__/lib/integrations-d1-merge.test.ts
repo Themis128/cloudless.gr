@@ -112,7 +112,7 @@ describe("getIntegrationsAsync — env/D1 merge for every key", () => {
     blankEnv();
     mockGetConfig.mockResolvedValue({});
     const cfg = await getIntegrationsAsync();
-    expect(Object.keys(cfg).sort()).toEqual([...KEYS].sort());
+    expect(Object.keys(cfg).sort()).toEqual(KEYS.toSorted());
   });
 
   it("fills every missing env value from the matching D1 key", async () => {

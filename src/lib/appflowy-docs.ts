@@ -140,11 +140,7 @@ export async function groupDocsByCategory(
   docs?: AppFlowyDoc[]
 ): Promise<Record<string, AppFlowyDoc[]>> {
   const all = docs ?? (await getDocs());
-  return all.reduce<Record<string, AppFlowyDoc[]>>((acc, doc) => {
-    const key = doc.category || "General";
-    (acc[key] ??= []).push(doc);
-    return acc;
-  }, {});
+  return Object.groupBy(all, (doc) => doc.category || "General") as Record<string, AppFlowyDoc[]>;
 }
 
 function slugifyHeading(text: string): string {

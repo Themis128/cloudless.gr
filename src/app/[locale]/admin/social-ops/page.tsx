@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { SaOpsConsole } from "@/lib/socialauto";
+import { groupBy } from "@/lib/group-by";
 
 /**
  * Social Ops admin page — /[locale]/admin/social-ops
@@ -81,13 +82,10 @@ export default function SocialOpsPage() {
   const queue = data?.publish_queue ?? {};
   const audit = data?.tiktok_audit ?? null;
   const auditStatus = audit ? String(audit.status) : "not_submitted";
-  const byPlatform = (data?.accounts ?? []).reduce<Record<string, SaOpsConsole["accounts"]>>(
-    (acc, a) => {
-      (acc[a.platform] ??= []).push(a);
-      return acc;
-    },
-    {}
-  );
+  const byPlatform = groupBy(data?.accounts ?? [], (a) => a.platform) as Record<
+    string,
+    SaOpsConsole["accounts"]
+  >;
 
   return (
     <div className="space-y-6">

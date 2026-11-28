@@ -43,21 +43,15 @@ const GCAL_TIMEOUT_MS = 10_000;
 
 async function calendarFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GCAL_TIMEOUT_MS);
-  try {
-    return await fetch(`${CALENDAR_API}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetch(`${CALENDAR_API}${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(GCAL_TIMEOUT_MS),
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
 }
 
 interface TimeSlot {

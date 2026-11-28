@@ -862,7 +862,7 @@ function HistoryTab({
               </tr>
             </thead>
             <tbody>
-              {[...history].reverse().map((h, i) => (
+              {history.toReversed().map((h, i) => (
                 <tr
                   key={`hist-${i}`}
                   className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"

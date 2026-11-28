@@ -272,7 +272,7 @@ export class APITestHelper {
               this.validateSchema(item, schema[0], `${endpoint}[${index}]`);
             } catch (e) {
               const msg = e instanceof Error ? e.message : String(e);
-              throw new Error(`[${this.testName}] ${endpoint}[${index}]: ${msg}`);
+              throw new Error(`[${this.testName}] ${endpoint}[${index}]: ${msg}`, { cause: e });
             }
           });
         }
@@ -306,7 +306,7 @@ export class APITestHelper {
                 this.validateSchema(dataObj[prop], propSchema, `${endpoint}.${prop}`);
               } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
-                throw new Error(`[${this.testName}] ${msg}`);
+                throw new Error(`[${this.testName}] ${msg}`, { cause: e });
               }
             }
           }

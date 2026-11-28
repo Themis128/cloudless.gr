@@ -173,11 +173,11 @@ export async function getTrendingProducts(env: Env, days = 30, limit = 6): Promi
         .all<{ payload_json: string }>();
       const rows = result.results ?? [];
       if (rows.length === 0) {
-        return [...products].sort((a, b) => b.price - a.price).slice(0, limit);
+        return products.toSorted((a, b) => b.price - a.price).slice(0, limit);
       }
       // Since product IDs aren't first-class attributes in stripe_transaction yet,
       // we use a price-weighted trending fallback for now.
-      return [...products].sort((a, b) => b.price - a.price).slice(0, limit);
+      return products.toSorted((a, b) => b.price - a.price).slice(0, limit);
     } catch (err) {
       console.warn(
         "[Recommendations] D1 trending failed, falling back to price sort:",
@@ -188,7 +188,7 @@ export async function getTrendingProducts(env: Env, days = 30, limit = 6): Promi
   }
 
   // Fallback: sort by price descending
-  return [...products].sort((a, b) => b.price - a.price).slice(0, limit);
+  return products.toSorted((a, b) => b.price - a.price).slice(0, limit);
 }
 
 export function resetRecommendationCache(): void {

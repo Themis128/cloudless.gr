@@ -851,7 +851,7 @@ describe("StoreGrid tails", () => {
     const names = Array.from(container.querySelectorAll('[data-testid="product-card"] h3')).map(
       (h) => h.textContent ?? ""
     );
-    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    const sorted = names.toSorted((a, b) => a.localeCompare(b));
     expect(names).toEqual(sorted);
   });
 });

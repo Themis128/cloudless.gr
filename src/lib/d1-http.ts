@@ -98,7 +98,8 @@ async function queryRemote(sql: string, params: unknown[]): Promise<D1HttpQueryR
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `D1 HTTP query returned invalid JSON (${res.status}; ${reason}; len=${raw.length})`
+      `D1 HTTP query returned invalid JSON (${res.status}; ${reason}; len=${raw.length})`,
+      { cause: err }
     );
   }
   if (!res.ok || body.success === false) {

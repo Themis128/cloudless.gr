@@ -120,7 +120,7 @@ export class KumaDnsCoalescer {
 
     const flush: CoalesceFlush = {
       status,
-      names: [...names].sort((a, b) => a.localeCompare(b)),
+      names: [...names].toSorted((a, b) => a.localeCompare(b)),
       sampleMsg,
       urls: [...urls],
     };

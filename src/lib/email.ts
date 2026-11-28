@@ -78,7 +78,9 @@ export async function sendEmail(options: {
       });
     } catch (err) {
       console.error("[email-sender] Cloudflare Email failed:", err);
-      throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`, {
+        cause: err,
+      });
     }
     return;
   }
@@ -301,7 +303,8 @@ export async function sendCartAbandonedNotice(
   tier?: string
 ) {
   const amountStr = `€${amount.toFixed(2)} ${currency.toUpperCase()}`;
-  const what = tier ? `${tier}${campaign ? ` (${campaign})` : ""}` : campaign || "your order";
+  const campaignNote = campaign ? ` (${campaign})` : "";
+  const what = tier ? `${tier}${campaignNote}` : campaign || "your order";
   await sendEmail({
     to: email,
     from: SENDERS.orders,

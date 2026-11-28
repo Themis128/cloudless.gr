@@ -47,7 +47,8 @@ function buildHeaders() {
       throw new Error(
         `CMS_PARITY_HEADERS_JSON is not valid JSON: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
+        { cause: error }
       );
     }
   }

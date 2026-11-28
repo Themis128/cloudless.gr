@@ -108,7 +108,7 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    throw new Error(`AppFlowy GoTrue unreachable: ${(err as Error).message}`);
+    throw new Error(`AppFlowy GoTrue unreachable: ${(err as Error).message}`, { cause: err });
   }
 
   if (!res.ok) {

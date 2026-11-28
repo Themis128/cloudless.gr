@@ -22,6 +22,6 @@ describe("SELFHOSTED_PUBLIC_URLS", () => {
   });
 
   it("has exactly the expected apps", () => {
-    expect(Object.keys(SELFHOSTED_PUBLIC_URLS).sort()).toEqual(APPS.slice().sort());
+    expect(Object.keys(SELFHOSTED_PUBLIC_URLS).sort()).toEqual(APPS.toSorted());
   });
 });

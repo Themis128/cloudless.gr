@@ -20,7 +20,9 @@ export class Orchestrator extends EventEmitter {
     try {
       this.config = OrchestratorConfigSchema.parse(config);
     } catch (error) {
-      throw new Error(`Invalid orchestrator configuration: ${JSON.stringify(error)}`);
+      throw new Error(`Invalid orchestrator configuration: ${JSON.stringify(error)}`, {
+        cause: error,
+      });
     }
 
     this.client = createClient({
