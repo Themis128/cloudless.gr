@@ -1,0 +1,6 @@
+{
+  "name": "koropi-tdee",
+  "query": "to:takoropiou@astynomia.gr",
+  "alert_prefix": "[AT Koropi TDEE]",
+  "chat_id": "7017840434"
+}

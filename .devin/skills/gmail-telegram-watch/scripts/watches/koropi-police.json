@@ -1,0 +1,6 @@
+{
+  "name": "koropi-police",
+  "query": "astynomia",
+  "alert_prefix": "[AT Koropi]",
+  "chat_id": "7017840434"
+}

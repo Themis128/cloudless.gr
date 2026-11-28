@@ -1,0 +1,6 @@
+{
+  "name": "iordanakeion-class",
+  "query": "from:baltzakis.themis@gmail.com to:contact@iordanakeion.gr subject:διόρθωση τμήματος newer_than:30d",
+  "alert_prefix": "Σχολείο (Ιορδανάκειον) — απάντηση για τμήμα!",
+  "chat_id": "7017840434"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "telekom-growthhub",
+  "query": "from:(growthhub.telekom.com OR growthhub_team@telekom.com)",
+  "alert_prefix": "[Telekom]",
+  "chat_id": "7017840434"
+}

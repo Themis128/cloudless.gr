@@ -1,5 +1,6 @@
 """Case-mail watcher: polls Gmail for replies from the authorities handling
-the unemployment-benefit case (Synigoros / DYPA / SEPE-YEKA) and posts them
+the unemployment-benefit case (Synigoros / DYPA / SEPE-YEKA) plus the police case
+(AT/TDEE Koropias, Cybercrime Division) and posts them
 to Telegram. One-shot per run — meant for a scheduled task every ~5 min.
 State (seen message ids) kept in case-watch-state.json next to this file."""
 
@@ -19,7 +20,9 @@ BOT = open(KEYS + "/tg-bot-token").read().strip()
 QUERY = (
     "in:anywhere -in:trash newer_than:2d "
     "(from:synigoros.gr OR from:dypa.gov.gr OR from:gov.gr OR "
-    "from:hli.gov.gr OR from:yeka.gr OR from:efka.gov.gr)"
+    "from:hli.gov.gr OR from:yeka.gr OR from:efka.gov.gr OR "
+    "from:idika.gr OR from:opeka.gr OR from:astynomia.gr OR "
+    "from:cybercrimeunit.gov.gr)"
 )
 
 
@@ -82,8 +85,21 @@ def is_otp(subject):
     return bool(OTP_SUBJ.search(dec(subject)))
 
 
+def load_state():
+    try:
+        return json.load(open(STATE, encoding="utf-8"))
+    except Exception:
+        return {"seen": []}
+
+
+def save_state(st):
+    tmp = STATE + ".tmp"
+    json.dump(st, open(tmp, "w", encoding="utf-8"))
+    os.replace(tmp, STATE)
+
+
 def main():
-    st = json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {"seen": []}
+    st = load_state()
     seen = set(st.get("seen", []))
     res = api("messages?q=" + urllib.parse.quote(QUERY) + "&maxResults=20")
     fresh = []
@@ -99,7 +115,7 @@ def main():
         fresh.append(full)
     # keep state bounded
     st["seen"] = list(seen)[-500:]
-    json.dump(st, open(STATE, "w", encoding="utf-8"))
+    save_state(st)
     for m in fresh:
         frm = header(m, "From")
         sub = dec(header(m, "Subject"))
@@ -112,7 +128,7 @@ def main():
             continue
         snip = (m.get("snippet") or "")[:300]
         tg(
-            f"📨 Νέο mail από αρχή (υπόθεση επιδόματος):\n\nFrom: {frm}\nDate: {dt}\nSubject: {sub}\n\n{snip}"
+            f"📨 Νέο mail από αρχή ({'υπόθεση αστυνομίας' if ('astynomia.gr' in frm or 'cybercrime' in frm) else 'υπόθεση επιδόματος'}):\n\nFrom: {frm}\nDate: {dt}\nSubject: {sub}\n\n{snip}"
         )
         print("alerted:", frm, "|", sub)
 

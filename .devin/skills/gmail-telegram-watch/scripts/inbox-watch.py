@@ -26,6 +26,7 @@ QUERY = (
     "-category:promotions -category:social -category:forums "
     "-from:synigoros.gr -from:dypa.gov.gr -from:gov.gr "
     "-from:hli.gov.gr -from:yeka.gr -from:efka.gov.gr "
+    "-from:idika.gr -from:opeka.gr "
     "-from:micro1.ai"
 )
 
@@ -89,8 +90,21 @@ def is_otp(subject):
     return bool(OTP_SUBJ.search(dec(subject)))
 
 
+def load_state():
+    try:
+        return json.load(open(STATE, encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_state(st):
+    tmp = STATE + ".tmp"
+    json.dump(st, open(tmp, "w", encoding="utf-8"))
+    os.replace(tmp, STATE)
+
+
 def main():
-    st = json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+    st = load_state()
     seen = set(st.get("seen", []))
     seeded = st.get("seeded", False)
     res = api("messages?q=" + urllib.parse.quote(QUERY) + "&maxResults=50")
@@ -104,7 +118,7 @@ def main():
             fresh.append(m["id"])
     st["seen"] = list(seen)[-1000:]
     st["seeded"] = True
-    json.dump(st, open(STATE, "w", encoding="utf-8"))
+    save_state(st)
     if not seeded or not fresh:
         print(f"[inbox] {'seeded' if not seeded else 'no new'} ({len(msgs)} matched)")
         return
@@ -146,11 +160,11 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print("err", e)
-        st = json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+        st = load_state()
         if time.time() - st.get("err_alert", 0) > 86400:
             try:
                 tg("inbox-watch error: " + str(e))
                 st["err_alert"] = time.time()
-                json.dump(st, open(STATE, "w", encoding="utf-8"))
+                save_state(st)
             except Exception:
                 pass

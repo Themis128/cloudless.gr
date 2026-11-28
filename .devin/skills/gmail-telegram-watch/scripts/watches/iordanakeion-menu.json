@@ -1,0 +1,6 @@
+{
+  "name": "iordanakeion-menu",
+  "query": "from:baltzakis.themis@gmail.com to:contact@iordanakeion.gr subject:μενού σίτισης newer_than:30d",
+  "alert_prefix": "Σχολείο (Ιορδανάκειον) — απάντηση για μενού!",
+  "chat_id": "7017840434"
+}

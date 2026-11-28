@@ -78,6 +78,7 @@ Config shape: `{"name","query","alert_prefix","chat_id"}` — state goes to
 | `gmail-thread-watch.py <cfg>` | thread watcher — alerts on new INBOUND msgs (SENT filtered), errors → TG once/24h |
 | `run-all-watches.py` / `.bat` / `.vbs` | master runner — executes every `watches/*.json`; `.vbs` launches the `.bat` windowless (this is what `DevinGmailWatch` calls via `wscript.exe`) |
 | `new-watch.py` | CLI to create + baseline + confirm a watch |
+| `battle-test-watch.py <name> [--keep-test]` | one-shot end-to-end test: injects fake inbound via messages.insert, repoints state, runs watcher, restores state, trashes test msg; prints PASS/FAIL (needs Telegram check). Tested 2026-11-14 on eispa-mpinisi |
 | `self-test.py [flags]` | full check: Gmail auth, every watch's thread+state, schtasks task. Flags: `--tg` live test msg, `--fix` recreates DevinGmailWatch if missing, `--tg-alert` Telegrams only on failure |
 | `run-self-test.bat` / `.vbs` | wrapper scheduled as `GmailWatchSelfTest` (every 6h, via wscript): `self-test.py --fix --tg-alert` → self-healing loop, silent on success, log `self-test.log` |
 | `tg-send.py "<text>" [--chat ID]` | generic Telegram notify CLI — any script/agent can alert the user |
@@ -87,6 +88,7 @@ Config shape: `{"name","query","alert_prefix","chat_id"}` — state goes to
 | `cdp.py` | minimal CDP helper — `Tab.click_text`/`click_xy` use real `Input.dispatchMouseEvent` (needed for Google account chooser) |
 | `oauth-callback-once.py` | localhost:50000 OAuth callback listener → writes `secrets/gmail-send-code.txt` |
 | `google-login.py` | automated Google sign-in for the debug profile (password from secrets; TOTP/phone-prompt 2FA handling) |
+| `iordanakeion-menu-watch.py` | Iordanakeion canteen-menu watchdog — schtasks `IordanakeionMenuWatch` Mon–Thu 19:00; alerts TG + auto-emails `contact@iordanakeion.gr` if no epafos «Γεγονός» mail covers the next school day. State: `iordanakeion-menu-watch-state.json`. Pair: `watches/iordanakeion-menu.json` (reply watch on the 28/11 menu-question thread) |
 | `gmail_auth.py` | manual OAuth re-consent fallback |
 | `inbox-watch.py` | sweep: alerts on ANY new mail (`in:anywhere -in:sent`, minus authority domains + bulk categories); first run seeds silently |
 | `case-watch.py` | sweep: any new mail from authority domains (synigoros/dypa/gov/hli/yeka/efka), `in:anywhere -in:trash` |
