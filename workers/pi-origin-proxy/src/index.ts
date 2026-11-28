@@ -263,7 +263,19 @@ async function fetchWithTimeout(
   deadline: number,
 ): Promise<Response> {
   const remaining = Math.max(0, deadline - Date.now());
-  return fetchUpstream(target, request, headers, AbortSignal.timeout(remaining));
+  // Deadline covers response headers only; the streamed body must outlive
+  // it, so this keeps a cancellable controller instead of
+  // AbortSignal.timeout. Also forwards client disconnects upstream.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), remaining);
+  const onClientAbort = () => controller.abort();
+  request.signal.addEventListener("abort", onClientAbort, { once: true });
+  try {
+    return await fetchUpstream(target, request, headers, controller.signal);
+  } finally {
+    clearTimeout(timer);
+    request.signal.removeEventListener("abort", onClientAbort);
+  }
 }
 
 async function proxyWebSocket(
@@ -337,14 +349,14 @@ export default {
       try {
         upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       } catch (firstErr) {
-        if (!idempotent || Date.now() >= deadline) throw firstErr;
+        if (!idempotent || request.signal.aborted || Date.now() >= deadline) throw firstErr;
         console.error("pi-tunnel-proxy: first attempt failed, retrying", firstErr);
         await sleep(200);
         upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       }
 
       // Tunnel flaps often return 502 HTML from Cloudflare on the pi-origin hop.
-      if (idempotent && upstream.status === 502 && Date.now() < deadline) {
+      if (idempotent && !request.signal.aborted && upstream.status === 502 && Date.now() < deadline) {
         await sleep(200);
         try {
           const retry = await fetchWithTimeout(targetStr, request, headers, deadline);
