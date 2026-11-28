@@ -263,7 +263,19 @@ async function fetchWithTimeout(
   deadline: number,
 ): Promise<Response> {
   const remaining = Math.max(0, deadline - Date.now());
-  return fetchUpstream(target, request, headers, AbortSignal.timeout(remaining));
+  // Deadline covers response headers only; the streamed body must outlive
+  // it, so this keeps a cancellable controller instead of
+  // AbortSignal.timeout. Also forwards client disconnects upstream.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), remaining);
+  const onClientAbort = () => controller.abort();
+  request.signal.addEventListener("abort", onClientAbort, { once: true });
+  try {
+    return await fetchUpstream(target, request, headers, controller.signal);
+  } finally {
+    clearTimeout(timer);
+    request.signal.removeEventListener("abort", onClientAbort);
+  }
 }
 
 async function proxyWebSocket(
