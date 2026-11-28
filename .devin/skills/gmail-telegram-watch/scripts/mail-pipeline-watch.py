@@ -37,8 +37,11 @@ SSH = [
     "tbaltzakis@100.95.117.84",
 ]
 TO = "tbaltzakis@cloudless.gr"
+MAILBOX_DIR = "/var/mail/vhosts/cloudless.gr/tbaltzakis"
 POLL_SECS = 15
 DEADLINE_SECS = 360
+RETRY_DEADLINE_SECS = 240
+FRESH_MINS = 20
 FAIL_ALERT_EVERY = 4 * 3600
 
 
@@ -100,23 +103,42 @@ def delivered(tag):
 
     pats = [tag, base64.b64encode(tag.encode()).decode()[:52]]
     for pat in pats:
-        cmd = (
-            "sudo -n grep -rls "
+        # Scope to the probe's own mailbox and only files touched in the
+        # last FRESH_MINS — a recursive grep over the whole vhosts tree
+        # (3k+ INBOX messages) repeatedly blew the 60s subprocess timeout
+        # and produced false FAILs when every poll errored.
+        cmd = "sudo -n sh -c " + repr(
+            "find "
+            + MAILBOX_DIR
+            + " -type f -mmin -"
+            + str(FRESH_MINS)
+            + " -print0 2>/dev/null | xargs -0 -r grep -ls "
             + repr(pat)
-            + " /var/mail/vhosts/cloudless.gr/ 2>/dev/null | head -1"
+            + " 2>/dev/null | head -1"
         )
         r = subprocess.run(SSH + [cmd], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            raise RuntimeError(f"ssh poll rc={r.returncode}: {(r.stderr or '')[:200]}")
         if r.stdout.strip():
             return True
     return False
 
 
+def load():
+    try:
+        return json.load(open(STATE, encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def save(st):
-    json.dump(st, open(STATE, "w", encoding="utf-8"))
+    tmp = STATE + ".tmp"
+    json.dump(st, open(tmp, "w", encoding="utf-8"))
+    os.replace(tmp, STATE)
 
 
 def fail(msg):
-    st = json.load(open(STATE)) if os.path.exists(STATE) else {}
+    st = load()
     if time.time() - st.get("fail_alert", 0) > FAIL_ALERT_EVERY:
         try:
             tg(
@@ -132,31 +154,81 @@ def fail(msg):
     print("FAIL:", msg)
 
 
-def main():
-    tag = "PIPELINE-TEST-AUTO-" + time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+def poll_until(tag, deadline_secs):
+    """Poll for delivery; returns (found, poll_errors)."""
+    deadline = time.time() + deadline_secs
+    errors = 0
+    while time.time() < deadline:
+        time.sleep(POLL_SECS)
+        try:
+            if delivered(tag):
+                return True, errors
+        except Exception as e:
+            errors += 1
+            print("poll err", e)
+    return False, errors
+
+
+def mark_ok():
+    st = load()
+    st["last_ok"] = time.time()
+    save(st)
+
+
+def new_tag():
+    return "PIPELINE-TEST-AUTO-" + time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+
+
+def send_or_fail(tag):
     try:
         res = send_probe_healed(tag)
         print("sent:", res)
         if not res.get("ok"):
             fail("mail-outbound /send rejected: " + json.dumps(res)[:300])
-            return
+            return False
+        return True
     except Exception as e:
         fail("mail-outbound /send threw: " + str(e)[:300])
+        return False
+
+
+def main():
+    tag = new_tag()
+    if not send_or_fail(tag):
         return
 
-    deadline = time.time() + DEADLINE_SECS
-    while time.time() < deadline:
-        time.sleep(POLL_SECS)
-        try:
-            if delivered(tag):
-                st = json.load(open(STATE)) if os.path.exists(STATE) else {}
-                st["last_ok"] = time.time()
-                save(st)
-                print("OK delivered:", tag)
-                return
-        except Exception as e:
-            print("poll err", e)
-    fail(f"probe not delivered within {DEADLINE_SECS}s: {tag}")
+    found, errors = poll_until(tag, DEADLINE_SECS)
+    if found:
+        mark_ok()
+        print("OK delivered:", tag)
+        return
+
+    # One automatic retry: CF Email Sending -> Email Routing occasionally
+    # drops a single message between send_email accept and worker
+    # invocation (observed 2026-11-17 ~06:30-07:10 EET — no worker hit, no
+    # ingest POST, no Gmail fallback, no bounce). A second probe
+    # distinguishes a transient drop from a real outage.
+    tag2 = new_tag()
+    print("first probe lost; retrying once as", tag2)
+    if not send_or_fail(tag2):
+        return
+    found2, errors2 = poll_until(tag2, RETRY_DEADLINE_SECS)
+    if found2:
+        mark_ok()
+        print("OK delivered on retry (transient drop):", tag2)
+        return
+
+    if errors + errors2 == 0:
+        fail(
+            f"probe not delivered within {DEADLINE_SECS}s "
+            f"(+{RETRY_DEADLINE_SECS}s retry): {tag} / {tag2}"
+        )
+    else:
+        fail(
+            f"probe not delivered; {errors + errors2}/"
+            f"{2 * (DEADLINE_SECS // POLL_SECS)} polls failed "
+            f"(SSH/Tailscale?): {tag} / {tag2}"
+        )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,6 @@
+{
+  "name": "synigoros-press",
+  "query": "to:press@synigoros.gr newer_than:60d",
+  "alert_prefix": "\u03a3\u03c5\u03bd\u03ae\u03b3\u03bf\u03c1\u03bf\u03c2 \u03a0\u03bf\u03bb\u03af\u03c4\u03b7 replied!",
+  "chat_id": "7017840434"
+}

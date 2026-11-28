@@ -42,11 +42,19 @@ def gmail_token():
 
 
 def api(path):
-    r = urllib.request.Request(
-        "https://gmail.googleapis.com/gmail/v1/users/me/" + path,
-        headers={"Authorization": "Bearer " + gmail_token()},
-    )
-    return json.loads(urllib.request.urlopen(r, timeout=30).read())
+    last = None
+    for attempt in range(3):
+        try:
+            r = urllib.request.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/" + path,
+                headers={"Authorization": "Bearer " + gmail_token()},
+            )
+            return json.loads(urllib.request.urlopen(r, timeout=30).read())
+        except Exception as e:
+            last = e
+            if attempt < 2:
+                time.sleep(5 * (attempt + 1))
+    raise last
 
 
 def tg(text):
@@ -78,8 +86,21 @@ def is_otp(subject):
     return bool(OTP_SUBJ.search(dec(subject)))
 
 
+def load_state():
+    try:
+        return json.load(open(STATE, encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_state(st):
+    tmp = STATE + ".tmp"
+    json.dump(st, open(tmp, "w", encoding="utf-8"))
+    os.replace(tmp, STATE)
+
+
 def main():
-    st = json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+    st = load_state()
 
     q = urllib.parse.quote(QUERY)
     res = api(f"messages?q={q}&maxResults=20")
@@ -92,7 +113,7 @@ def main():
     fresh = [m for m in msgs if m["id"] not in st.get("seen", [])]
     if "seen" not in st:
         st["seen"] = [m["id"] for m in msgs]
-        json.dump(st, open(STATE, "w", encoding="utf-8"))
+        save_state(st)
         print("baseline", len(msgs), "msgs")
         return
 
@@ -118,7 +139,7 @@ def main():
         print("alerted:", sub)
 
     st["seen"] = [m["id"] for m in msgs]
-    json.dump(st, open(STATE, "w", encoding="utf-8"))
+    save_state(st)
 
 
 if __name__ == "__main__":
@@ -126,11 +147,11 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print("err", e)
-        st = json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+        st = load_state()
         if not st.get("err_alert") or time.time() - st["err_alert"] > 86400:
             try:
                 tg(f"SKC watch error: {e}")
                 st["err_alert"] = time.time()
-                json.dump(st, open(STATE, "w", encoding="utf-8"))
+                save_state(st)
             except Exception:
                 pass
