@@ -273,6 +273,119 @@ export interface UpsertContactOptions {
   skipExisting?: boolean;
 }
 
+type EspoConflictContact = { id: string; emailAddress?: string };
+
+function parseConflictContacts(text: string): EspoConflictContact[] {
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [];
+  }
+}
+
+/** Compute base email (without + alias) for conflict matching. */
+function contactBaseEmail(email: string): string {
+  const plusIdx = email.indexOf("+");
+  const atIdx = email.indexOf("@");
+  return plusIdx > 0 && atIdx > plusIdx ? email.slice(0, plusIdx) + email.slice(atIdx) : email;
+}
+
+type ApplyContactUpdate = (
+  id: string,
+  body: Record<string, unknown>
+) => Promise<{ ok: boolean; detail: string }>;
+
+/** Resolve a 409 on the initial Contact create. Every path returns an id or
+ *  null — the caller never falls through to the phone-retry block. */
+async function resolveInitialContactConflict(
+  contact: EspoContact,
+  conflictText: string,
+  payload: Record<string, unknown>,
+  applyUpdate: ApplyContactUpdate,
+  skipExisting: boolean
+): Promise<string | null> {
+  // EspoCRM's 409 returns a JSON array of duplicate contact records.
+  const conflictContacts = parseConflictContacts(conflictText);
+  // Try to find a contact in the 409 array that matches our email
+  const match = conflictContacts.find(
+    (c) => c.emailAddress === contact.email || c.emailAddress === contactBaseEmail(contact.email)
+  );
+  if (match) {
+    await applyUpdate(match.id, payload);
+    void invalidateEspoContactCaches(match.id);
+    return match.id;
+  }
+  // 409 body didn't have our contact — try email search as fallback.
+  // A lookup failure must not abort the conflict resolution below.
+  let conflictId: string | null = null;
+  try {
+    conflictId = await findContactByEmail(contact.email);
+  } catch {
+    // Lookup incomplete — fall through to the conflictContacts fallback
+  }
+  if (conflictId) {
+    await applyUpdate(conflictId, payload);
+    void invalidateEspoContactCaches(conflictId);
+    return conflictId;
+  }
+  // The 409 is a "duplicates exist" response — EspoCRM found a duplicate
+  // by name or other field, not email. Use the first contact from the
+  // 409 array and update it with our data (including the new email).
+  // A skipExisting caller must not claim (or touch) a record that only
+  // matched on name — bail out instead.
+  if (skipExisting) {
+    console.warn(
+      "[EspoCRM] upsertContact: skipExisting — 409 matched on name only, not writing for",
+      safeLog(contact.email)
+    );
+    return null;
+  }
+  if (conflictContacts[0]?.id) {
+    const dup = conflictContacts[0];
+    await updateConflictContact(dup.id, payload);
+    void invalidateEspoContactCaches(dup.id);
+    return dup.id;
+  }
+  console.error(
+    "[EspoCRM] upsertContact: 409 conflict but could not resolve contact for",
+    safeLog(contact.email)
+  );
+  return null;
+}
+
+/** Resolve a 409 on the phone-less retry create. */
+async function resolveRetryContactConflict(
+  contact: EspoContact,
+  retryConflictText: string,
+  retryPayload: Record<string, unknown>,
+  applyUpdate: ApplyContactUpdate,
+  skipExisting: boolean
+): Promise<string | null> {
+  const retryContacts = parseConflictContacts(retryConflictText);
+  // Use the first contact from the 409 array. Update it with the
+  // phone-less payload: the original one was just rejected for its
+  // phone number and would fail the same validation on PUT.
+  if (retryContacts[0]?.id && !skipExisting) {
+    const dup = retryContacts[0];
+    await updateConflictContact(dup.id, retryPayload);
+    void invalidateEspoContactCaches(dup.id);
+    return dup.id;
+  }
+  // Fallback to email search
+  const conflictId = await findContactByEmail(contact.email);
+  if (conflictId) {
+    await applyUpdate(conflictId, retryPayload);
+    void invalidateEspoContactCaches(conflictId);
+    return conflictId;
+  }
+  console.error(
+    "[EspoCRM] upsertContact: 409 after phone retry but could not resolve contact for",
+    safeLog(contact.email)
+  );
+  return null;
+}
+
 export async function upsertContact(
   contact: EspoContact,
   options: UpsertContactOptions = {}
@@ -322,66 +435,13 @@ export async function upsertContact(
     // EspoCRM's 409 returns a JSON array of duplicate contact records.
     if (create.status === 409) {
       const conflictText = await create.text().catch(() => "");
-      // Parse the 409 body — it's a JSON array of matching contacts
-      let conflictContacts: Array<{ id: string; emailAddress?: string }> = [];
-      try {
-        const parsed = JSON.parse(conflictText);
-        conflictContacts = Array.isArray(parsed) ? parsed : [parsed];
-      } catch {
-        // Not JSON — fall through to email search
-      }
-      // Try to find a contact in the 409 array that matches our email
-      // Compute base email (without + alias) for matching
-      const plusIdx = contact.email.indexOf("+");
-      const atIdx = contact.email.indexOf("@");
-      const baseEmail =
-        plusIdx > 0 && atIdx > plusIdx
-          ? contact.email.slice(0, plusIdx) + contact.email.slice(atIdx)
-          : contact.email;
-      const match = conflictContacts.find(
-        (c) => c.emailAddress === contact.email || c.emailAddress === baseEmail
+      return resolveInitialContactConflict(
+        contact,
+        conflictText,
+        payload,
+        applyUpdate,
+        skipExisting
       );
-      if (match) {
-        await applyUpdate(match.id, payload);
-        void invalidateEspoContactCaches(match.id);
-        return match.id;
-      }
-      // 409 body didn't have our contact — try email search as fallback.
-      // A lookup failure must not abort the conflict resolution below.
-      let conflictId: string | null = null;
-      try {
-        conflictId = await findContactByEmail(contact.email);
-      } catch {
-        // Lookup incomplete — fall through to the conflictContacts fallback
-      }
-      if (conflictId) {
-        await applyUpdate(conflictId, payload);
-        void invalidateEspoContactCaches(conflictId);
-        return conflictId;
-      }
-      // The 409 is a "duplicates exist" response — EspoCRM found a duplicate
-      // by name or other field, not email. Use the first contact from the
-      // 409 array and update it with our data (including the new email).
-      // A skipExisting caller must not claim (or touch) a record that only
-      // matched on name — bail out instead.
-      if (skipExisting) {
-        console.warn(
-          "[EspoCRM] upsertContact: skipExisting — 409 matched on name only, not writing for",
-          safeLog(contact.email)
-        );
-        return null;
-      }
-      if (conflictContacts[0]?.id) {
-        const dup = conflictContacts[0];
-        await updateConflictContact(dup.id, payload);
-        void invalidateEspoContactCaches(dup.id);
-        return dup.id;
-      }
-      console.error(
-        "[EspoCRM] upsertContact: 409 conflict but could not resolve contact for",
-        safeLog(contact.email)
-      );
-      return null;
     }
     // A Response body can only be read once: keep the text of the failed
     // create so the final error log still has it after the phone check.
@@ -403,34 +463,13 @@ export async function upsertContact(
         // The retry may also hit a 409 — parse the conflict body.
         if (create.status === 409) {
           const retryConflictText = await create.text().catch(() => "");
-          let retryContacts: Array<{ id: string; emailAddress?: string }> = [];
-          try {
-            const parsed = JSON.parse(retryConflictText);
-            retryContacts = Array.isArray(parsed) ? parsed : [parsed];
-          } catch {
-            // Not JSON — fall through
-          }
-          // Use the first contact from the 409 array. Update it with the
-          // phone-less payload: the original one was just rejected for its
-          // phone number and would fail the same validation on PUT.
-          if (retryContacts[0]?.id && !skipExisting) {
-            const dup = retryContacts[0];
-            await updateConflictContact(dup.id, retryPayload);
-            void invalidateEspoContactCaches(dup.id);
-            return dup.id;
-          }
-          // Fallback to email search
-          const conflictId = await findContactByEmail(contact.email);
-          if (conflictId) {
-            await applyUpdate(conflictId, retryPayload);
-            void invalidateEspoContactCaches(conflictId);
-            return conflictId;
-          }
-          console.error(
-            "[EspoCRM] upsertContact: 409 after phone retry but could not resolve contact for",
-            safeLog(contact.email)
+          return resolveRetryContactConflict(
+            contact,
+            retryConflictText,
+            retryPayload,
+            applyUpdate,
+            skipExisting
           );
-          return null;
         }
       }
     }
@@ -934,6 +973,55 @@ export interface LeadCreateResult {
   failure?: LeadCreateFailure;
 }
 
+/** Update an existing Lead on re-ingest: union target-list memberships,
+ *  never regress status, merge description lines instead of replacing. */
+async function updateExistingLeadRecord(
+  existing: { id: string; description?: string },
+  payload: Record<string, unknown>,
+  targetListIds: string[],
+  data: LeadData
+): Promise<void> {
+  // targetListsIds is set-replacing and NOT selectable via searchParams —
+  // read current memberships through the relation endpoint, then union
+  // so a re-ingest doesn't drop lists the lead already belongs to. If the
+  // read fails, leave memberships untouched rather than wiping them.
+  if (targetListIds.length) {
+    const rel = await espoFetch(`/Lead/${existing.id}/targetLists?select=id`);
+    if (rel.ok) {
+      const current = (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map(
+        (r) => r.id
+      );
+      payload.targetListsIds = [...new Set([...current, ...targetListIds])];
+    } else {
+      delete payload.targetListsIds;
+    }
+  }
+  // Never regress status on a re-ingest — an In Process / Converted
+  // lead keeps its stage, and empty-string values must not overwrite
+  // stored fields (e.g. firstName). JSON.stringify drops undefined keys.
+  const updatePayload = Object.fromEntries(
+    Object.entries(payload).filter(([k, v]) => k !== "status" && v !== "" && v !== undefined)
+  );
+  // lastName falls back to the email prefix on create — on update only
+  // send it when the caller actually supplied a name.
+  if (!data.lastName) delete updatePayload.lastName;
+  // Description accumulates context per ingest — merge lines instead of
+  // replacing, preserving existing campaign/UTM history.
+  if (existing.description && updatePayload.description) {
+    const merged = new Set([
+      ...existing.description.split("\n"),
+      ...String(updatePayload.description).split("\n"),
+    ]);
+    updatePayload.description = [...merged].filter(Boolean).join("\n");
+  } else if (existing.description && !updatePayload.description) {
+    delete updatePayload.description;
+  }
+  await espoFetch(`/Lead/${existing.id}`, {
+    method: "PUT",
+    body: JSON.stringify(updatePayload),
+  });
+}
+
 /** createLead variant that distinguishes permanent vs transient failures so
  *  webhook callers can decide whether a provider redelivery could succeed. */
 export async function createLeadDetailed(data: LeadData): Promise<LeadCreateResult> {
@@ -992,45 +1080,7 @@ export async function createLeadDetailed(data: LeadData): Promise<LeadCreateResu
       };
       const existing = dupData.list[0];
       if (existing) {
-        // targetListsIds is set-replacing and NOT selectable via searchParams —
-        // read current memberships through the relation endpoint, then union
-        // so a re-ingest doesn't drop lists the lead already belongs to. If the
-        // read fails, leave memberships untouched rather than wiping them.
-        if (targetListIds.length) {
-          const rel = await espoFetch(`/Lead/${existing.id}/targetLists?select=id`);
-          if (rel.ok) {
-            const current = (((await rel.json()) as { list?: { id: string }[] }).list ?? []).map(
-              (r) => r.id
-            );
-            payload.targetListsIds = [...new Set([...current, ...targetListIds])];
-          } else {
-            delete payload.targetListsIds;
-          }
-        }
-        // Never regress status on a re-ingest — an In Process / Converted
-        // lead keeps its stage, and empty-string values must not overwrite
-        // stored fields (e.g. firstName). JSON.stringify drops undefined keys.
-        const updatePayload = Object.fromEntries(
-          Object.entries(payload).filter(([k, v]) => k !== "status" && v !== "" && v !== undefined)
-        );
-        // lastName falls back to the email prefix on create — on update only
-        // send it when the caller actually supplied a name.
-        if (!data.lastName) delete updatePayload.lastName;
-        // Description accumulates context per ingest — merge lines instead of
-        // replacing, preserving existing campaign/UTM history.
-        if (existing.description && updatePayload.description) {
-          const merged = new Set([
-            ...existing.description.split("\n"),
-            ...String(updatePayload.description).split("\n"),
-          ]);
-          updatePayload.description = [...merged].filter(Boolean).join("\n");
-        } else if (existing.description && !updatePayload.description) {
-          delete updatePayload.description;
-        }
-        await espoFetch(`/Lead/${existing.id}`, {
-          method: "PUT",
-          body: JSON.stringify(updatePayload),
-        });
+        await updateExistingLeadRecord(existing, payload, targetListIds, data);
         return { id: existing.id };
       }
     }

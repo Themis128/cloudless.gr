@@ -303,7 +303,8 @@ export async function sendCartAbandonedNotice(
   tier?: string
 ) {
   const amountStr = `€${amount.toFixed(2)} ${currency.toUpperCase()}`;
-  const what = tier ? `${tier}${campaign ? ` (${campaign})` : ""}` : campaign || "your order";
+  const campaignNote = campaign ? ` (${campaign})` : "";
+  const what = tier ? `${tier}${campaignNote}` : campaign || "your order";
   await sendEmail({
     to: email,
     from: SENDERS.orders,

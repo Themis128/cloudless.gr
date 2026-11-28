@@ -39,7 +39,7 @@ function fail(e: unknown) {
 async function ollamaFetch(
   path: string,
   body: unknown,
-  timeoutMs = DEFAULT_TIMEOUT,
+  timeoutMs = DEFAULT_TIMEOUT
 ): Promise<unknown> {
   const res = await fetch(`${OLLAMA_BASE}${path}`, {
     method: "POST",
@@ -80,8 +80,19 @@ Returns the assistant message content.`,
       .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
       .optional()
       .describe("Prior conversation turns to include for context"),
-    temperature: z.number().min(0).max(2).optional().describe("Sampling temperature (default: 0.1)"),
-    max_tokens: z.number().int().min(1).max(32768).optional().describe("Max tokens to generate (default: 4096)"),
+    temperature: z
+      .number()
+      .min(0)
+      .max(2)
+      .optional()
+      .describe("Sampling temperature (default: 0.1)"),
+    max_tokens: z
+      .number()
+      .int()
+      .min(1)
+      .max(32768)
+      .optional()
+      .describe("Max tokens to generate (default: 4096)"),
   },
   async ({ prompt, model, system, history, temperature, max_tokens }) => {
     try {
@@ -103,7 +114,7 @@ Returns the assistant message content.`,
     } catch (e) {
       return fail(e);
     }
-  },
+  }
 );
 
 // ── Tool: ollama_generate ──────────────────────────────────────────────────
@@ -117,8 +128,19 @@ Returns the raw completion text.`,
     prompt: z.string().describe("Prompt text"),
     model: z.string().optional().describe(`Model name (default: ${DEFAULT_MODEL})`),
     system: z.string().optional().describe("System prompt"),
-    temperature: z.number().min(0).max(2).optional().describe("Sampling temperature (default: 0.1)"),
-    max_tokens: z.number().int().min(1).max(32768).optional().describe("Max tokens (default: 4096)"),
+    temperature: z
+      .number()
+      .min(0)
+      .max(2)
+      .optional()
+      .describe("Sampling temperature (default: 0.1)"),
+    max_tokens: z
+      .number()
+      .int()
+      .min(1)
+      .max(32768)
+      .optional()
+      .describe("Max tokens (default: 4096)"),
   },
   async ({ prompt, model, system, temperature, max_tokens }) => {
     try {
@@ -137,7 +159,7 @@ Returns the raw completion text.`,
     } catch (e) {
       return fail(e);
     }
-  },
+  }
 );
 
 // ── Tool: ollama_list_models ───────────────────────────────────────────────
@@ -149,7 +171,11 @@ server.tool(
   async () => {
     try {
       const data = (await ollamaGet("/api/tags")) as {
-        models?: Array<{ name: string; size: number; details?: { parameter_size?: string; quantization_level?: string } }>;
+        models?: Array<{
+          name: string;
+          size: number;
+          details?: { parameter_size?: string; quantization_level?: string };
+        }>;
       };
       const models = data?.models ?? [];
       if (!models.length) return ok("No models pulled yet. Use ollama_pull_model to pull one.");
@@ -163,8 +189,40 @@ server.tool(
     } catch (e) {
       return fail(e);
     }
-  },
+  }
 );
+
+interface PullProgress {
+  lastStatus: string;
+  digest: string;
+}
+
+async function consumeOllamaPullStream(body: ReadableStream<Uint8Array>): Promise<PullProgress> {
+  const reader = body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  let lastStatus = "";
+  let digest = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line) as { status?: string; digest?: string; error?: string };
+        if (obj.error) throw new Error(obj.error);
+        if (obj.status) lastStatus = obj.status;
+        if (obj.digest) digest = obj.digest;
+      } catch {
+        // ignore parse errors on partial lines
+      }
+    }
+  }
+  return { lastStatus, digest };
+}
 
 // ── Tool: ollama_pull_model ────────────────────────────────────────────────
 
@@ -180,43 +238,19 @@ Common models: qwen2.5-coder, llama3.1, mistral, codellama, deepseek-coder-v2`,
     try {
       // Ollama pull streams NDJSON — consume until done/error
       const signal = AbortSignal.timeout(600_000); // 10 min for large models
-      let lastStatus = "";
-      let digest = "";
-      {
-        const res = await fetch(`${OLLAMA_BASE}/api/pull`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model, stream: true }),
-          signal,
-        });
-        if (!res.ok || !res.body) throw new Error(`Pull request failed: ${res.status}`);
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const obj = JSON.parse(line) as { status?: string; digest?: string; error?: string };
-              if (obj.error) throw new Error(obj.error);
-              if (obj.status) lastStatus = obj.status;
-              if (obj.digest) digest = obj.digest;
-            } catch {
-              // ignore parse errors on partial lines
-            }
-          }
-        }
-      }
+      const res = await fetch(`${OLLAMA_BASE}/api/pull`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, stream: true }),
+        signal,
+      });
+      if (!res.ok || !res.body) throw new Error(`Pull request failed: ${res.status}`);
+      const { lastStatus, digest } = await consumeOllamaPullStream(res.body);
       return ok(`✅ Pulled **${model}**\nStatus: ${lastStatus}\nDigest: ${digest || "n/a"}`);
     } catch (e) {
       return fail(e);
     }
-  },
+  }
 );
 
 // ── Tool: ollama_show_model ────────────────────────────────────────────────
@@ -236,14 +270,15 @@ server.tool(
         details?: Record<string, unknown>;
       };
       const parts: string[] = [];
-      if (data.details) parts.push(`## Details\n\`\`\`json\n${JSON.stringify(data.details, null, 2)}\n\`\`\``);
+      if (data.details)
+        parts.push(`## Details\n\`\`\`json\n${JSON.stringify(data.details, null, 2)}\n\`\`\``);
       if (data.parameters) parts.push(`## Parameters\n\`\`\`\n${data.parameters}\n\`\`\``);
       if (data.template) parts.push(`## Template\n\`\`\`\n${data.template}\n\`\`\``);
       return ok(parts.join("\n\n") || "(no metadata)");
     } catch (e) {
       return fail(e);
     }
-  },
+  }
 );
 
 // ── Start ──────────────────────────────────────────────────────────────────
