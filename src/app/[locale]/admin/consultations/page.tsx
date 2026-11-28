@@ -2,6 +2,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useRef, useState } from "react";
 import { Video, Calendar, User, ExternalLink } from "lucide-react";
+import { groupBy } from "@/lib/group-by";
 
 interface Consultation {
   id: string;
@@ -189,7 +190,7 @@ export default function ConsultationsPage() {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const consultationsByDate = Object.groupBy(consultations, (c) =>
+  const consultationsByDate = groupBy(consultations, (c) =>
     new Date(c.start).toLocaleDateString("en-CA", { timeZone: "Europe/Athens" })
   );
 
