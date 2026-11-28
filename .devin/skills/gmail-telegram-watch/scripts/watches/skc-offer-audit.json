@@ -1,0 +1,6 @@
+{
+  "name": "skc-offer-audit",
+  "query": "from:sofiakakkava.com subject:\"Offer Audit Report\"",
+  "alert_prefix": "SKC Offer Audit reply — report may have arrived!",
+  "chat_id": "7017840434"
+}

@@ -27,11 +27,16 @@ def tg(text):
 
 
 def load_state():
-    return json.load(open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+    try:
+        return json.load(open(STATE, encoding="utf-8"))
+    except Exception:
+        return {}
 
 
 def save_state(st):
-    json.dump(st, open(STATE, "w", encoding="utf-8"))
+    tmp = STATE + ".tmp"
+    json.dump(st, open(tmp, "w", encoding="utf-8"))
+    os.replace(tmp, STATE)
 
 
 def once(st, key, text):

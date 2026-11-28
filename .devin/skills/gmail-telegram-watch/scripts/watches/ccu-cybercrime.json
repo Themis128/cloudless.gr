@@ -1,0 +1,6 @@
+{
+  "name": "ccu-cybercrime",
+  "query": "cybercrimeunit.gov.gr",
+  "alert_prefix": "[DDE Cybercrime]",
+  "chat_id": "7017840434"
+}

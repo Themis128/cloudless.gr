@@ -1,0 +1,6 @@
+{
+  "name": "iordanakeion",
+  "query": "from:iordanakeion.gr newer_than:90d",
+  "alert_prefix": "School (Ιορδανάκειον) replied!",
+  "chat_id": "7017840434"
+}

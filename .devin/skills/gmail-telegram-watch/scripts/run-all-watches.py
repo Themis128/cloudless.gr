@@ -8,5 +8,7 @@ import subprocess
 DIR = os.path.dirname(os.path.abspath(__file__))
 PY = r"C:\Program Files\Python312\python.exe"
 
-for cfg in sorted(glob.glob(os.path.join(DIR, "watches", "*.json"))):
+for cfg in sorted(
+    c for c in glob.glob(os.path.join(DIR, "watches", "*.json")) if not c.endswith("-state.json")
+):
     subprocess.call([PY, os.path.join(DIR, "gmail-thread-watch.py"), cfg])

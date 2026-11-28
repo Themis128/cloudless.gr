@@ -1,0 +1,6 @@
+{
+  "name": "vodafone-career",
+  "query": "from:career.vodafone.com",
+  "alert_prefix": "[Vodafone]",
+  "chat_id": "7017840434"
+}

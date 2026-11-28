@@ -1,0 +1,6 @@
+{
+  "name": "greptile-kb2",
+  "query": "from:greptile.com newer_than:60d",
+  "alert_prefix": "[Greptile]",
+  "chat_id": "7017840434"
+}

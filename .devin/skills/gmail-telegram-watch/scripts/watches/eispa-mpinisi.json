@@ -1,0 +1,6 @@
+{
+  "name": "eispa-mpinisi",
+  "query": "to:protokollo@eispa.gr",
+  "alert_prefix": "[Eispa Mishisi]",
+  "chat_id": "7017840434"
+}
