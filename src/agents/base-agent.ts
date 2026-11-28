@@ -19,7 +19,7 @@ export class BaseAgent extends EventEmitter implements IAgent {
     try {
       this.config = AgentConfigSchema.parse(config);
     } catch (error) {
-      throw new Error(`Invalid agent configuration: ${JSON.stringify(error)}`);
+      throw new Error(`Invalid agent configuration: ${JSON.stringify(error)}`, { cause: error });
     }
 
     this.client = createClient({

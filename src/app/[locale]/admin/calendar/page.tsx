@@ -130,12 +130,7 @@ export default function CalendarPage() {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const itemsByDate: Record<string, CalendarItem[]> = {};
-  for (const item of items) {
-    const d = item.date.slice(0, 10);
-    if (!itemsByDate[d]) itemsByDate[d] = [];
-    itemsByDate[d].push(item);
-  }
+  const itemsByDate = Object.groupBy(items, (item) => item.date.slice(0, 10));
 
   return (
     <div>

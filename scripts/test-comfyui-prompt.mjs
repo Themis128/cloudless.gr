@@ -97,7 +97,7 @@ function postPrompt(host, payload, timeout) {
             const parsed = data ? JSON.parse(data) : {};
             resolve({ status: res.statusCode, data: parsed });
           } catch (e) {
-            reject(new Error(`Failed to parse response: ${e.message}\nRaw: ${data}`));
+            reject(new Error(`Failed to parse response: ${e.message}\nRaw: ${data}`, { cause: e }));
           }
         });
       }

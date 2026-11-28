@@ -169,7 +169,7 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
     : `*Subscribers*\n— (EspoCRM error)`;
 
   // Current week's top draft (most recent by createdAt)
-  const sorted = [...data.drafts].sort((a, b) =>
+  const sorted = data.drafts.toSorted((a, b) =>
     (b.createdAt || "").localeCompare(a.createdAt || "")
   );
   const top = sorted[0];

@@ -41,23 +41,17 @@ async function ollamaFetch(
   body: unknown,
   timeoutMs = DEFAULT_TIMEOUT,
 ): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${OLLAMA_BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Ollama ${res.status}: ${text.slice(0, 200)}`);
-    }
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
+  const res = await fetch(`${OLLAMA_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Ollama ${res.status}: ${text.slice(0, 200)}`);
   }
+  return await res.json();
 }
 
 async function ollamaGet(path: string): Promise<unknown> {
@@ -185,16 +179,15 @@ Common models: qwen2.5-coder, llama3.1, mistral, codellama, deepseek-coder-v2`,
   async ({ model }) => {
     try {
       // Ollama pull streams NDJSON — consume until done/error
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 600_000); // 10 min for large models
+      const signal = AbortSignal.timeout(600_000); // 10 min for large models
       let lastStatus = "";
       let digest = "";
-      try {
+      {
         const res = await fetch(`${OLLAMA_BASE}/api/pull`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model, stream: true }),
-          signal: ctrl.signal,
+          signal,
         });
         if (!res.ok || !res.body) throw new Error(`Pull request failed: ${res.status}`);
         const reader = res.body.getReader();
@@ -218,8 +211,6 @@ Common models: qwen2.5-coder, llama3.1, mistral, codellama, deepseek-coder-v2`,
             }
           }
         }
-      } finally {
-        clearTimeout(timer);
       }
       return ok(`✅ Pulled **${model}**\nStatus: ${lastStatus}\nDigest: ${digest || "n/a"}`);
     } catch (e) {

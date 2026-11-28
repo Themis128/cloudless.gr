@@ -64,8 +64,7 @@ async function workersAiAnalyze(input: AnalyzeLeadInput): Promise<LeadNlpResult 
     `message=${input.message.slice(0, 1500)}`,
   ].join("\n");
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const signal = AbortSignal.timeout(3000);
   try {
     // callWorkersAiChat has no AbortSignal — race with timeout instead.
     const text = await Promise.race([
@@ -81,7 +80,7 @@ async function workersAiAnalyze(input: AnalyzeLeadInput): Promise<LeadNlpResult 
         { maxTokens: 220, model: NLP_MODEL }
       ),
       new Promise<never>((_, reject) => {
-        controller.signal.addEventListener("abort", () => reject(new Error("nlp timeout")));
+        signal.addEventListener("abort", () => reject(new Error("nlp timeout")));
       }),
     ]);
     const raw = extractJsonObject(text);
@@ -101,8 +100,6 @@ async function workersAiAnalyze(input: AnalyzeLeadInput): Promise<LeadNlpResult 
     };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

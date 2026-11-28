@@ -189,12 +189,9 @@ export default function ConsultationsPage() {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const consultationsByDate: Record<string, Consultation[]> = {};
-  for (const c of consultations) {
-    const d = new Date(c.start).toLocaleDateString("en-CA", { timeZone: "Europe/Athens" });
-    if (!consultationsByDate[d]) consultationsByDate[d] = [];
-    consultationsByDate[d].push(c);
-  }
+  const consultationsByDate = Object.groupBy(consultations, (c) =>
+    new Date(c.start).toLocaleDateString("en-CA", { timeZone: "Europe/Athens" })
+  );
 
   const upcoming = consultations.filter((c) => c.status === "upcoming");
 

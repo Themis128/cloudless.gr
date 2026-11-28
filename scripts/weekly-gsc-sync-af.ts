@@ -70,7 +70,9 @@ async function readJsonOrThrow(res: Response, label: string): Promise<unknown> {
     return JSON.parse(text) as unknown;
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    throw new Error(`${label}: invalid JSON (HTTP ${res.status}; ${reason}; len=${text.length})`);
+    throw new Error(`${label}: invalid JSON (HTTP ${res.status}; ${reason}; len=${text.length})`, {
+      cause: err,
+    });
   }
 }
 

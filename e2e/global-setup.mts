@@ -31,7 +31,8 @@ async function probe(
   } catch (err) {
     throw new Error(
       `[e2e:preflight] Could not reach ${url}: ${(err as Error).message}\n` +
-        `The dev server on port 4000 is not responding. Start it with \`pnpm dev\` or let Playwright launch it.`
+        `The dev server on port 4000 is not responding. Start it with \`pnpm dev\` or let Playwright launch it.`,
+    { cause: err }
     );
   }
 

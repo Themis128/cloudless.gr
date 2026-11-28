@@ -115,7 +115,7 @@ function sshRunOn(node: NodeName, command: string, timeoutMs = 60_000): Promise<
       config.privateKey = resolvePrivateKey();
       if (SSH_PASSPHRASE) config.passphrase = SSH_PASSPHRASE;
     } catch (e) {
-      return reject(new Error(`Cannot resolve SSH key: ${String(e)}`));
+      return reject(new Error(`Cannot resolve SSH key: ${String(e)}`, { cause: e }));
     }
 
     const timer = setTimeout(() => {

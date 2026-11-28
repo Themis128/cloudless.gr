@@ -212,8 +212,8 @@ export async function listAnomalyHistory(limit = 50): Promise<AnomalyHistoryRow[
   const capped = Math.max(1, Math.min(200, Math.trunc(limit)));
   const db = getAuthDbFromEnv();
   if (!db) {
-    return [...memory]
-      .sort((a, b) => b.createdAt - a.createdAt)
+    return memory
+      .toSorted((a, b) => b.createdAt - a.createdAt)
       .slice(0, capped)
       .map(({ createdAt: _c, ...row }) => row);
   }

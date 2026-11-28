@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   const clients = await readPendingClients();
   // Newest waiting first
-  const sorted = [...clients].sort((a, b) => {
+  const sorted = clients.toSorted((a, b) => {
     if (a.status === "waiting" && b.status !== "waiting") return -1;
     if (a.status !== "waiting" && b.status === "waiting") return 1;
     return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();

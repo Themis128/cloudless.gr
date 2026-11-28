@@ -169,7 +169,7 @@ export function preprocessStripeAnalyticsSnapshot(
   snapshot: StripeAnalyticsSnapshot
 ): PreprocessedAnalyticsSummary {
   const hasData = snapshot.totals.events > 0;
-  const sortedTrend = [...snapshot.dailyTrend].sort((left, right) =>
+  const sortedTrend = snapshot.dailyTrend.toSorted((left, right) =>
     left.day.localeCompare(right.day)
   );
   const comparisonWindowDays = Math.min(7, sortedTrend.length);

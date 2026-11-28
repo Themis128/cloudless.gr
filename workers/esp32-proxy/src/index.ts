@@ -47,12 +47,10 @@ async function proxyRequest(
   path: string,
   init: RequestInit = {},
 ): Promise<unknown> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(`${alertApiUrl}${path}`, {
       ...init,
-      signal: controller.signal,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (res.status === 404) {
       return { error: "ESP32 management unavailable", offline: true, _status: 503 };
@@ -61,8 +59,6 @@ async function proxyRequest(
     return { ...(data as object), _status: res.status };
   } catch {
     return { error: "Pi unreachable", offline: true, _status: 503 };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -89,10 +85,8 @@ export default {
 
     // ── GET /api/esp32/devices ────────────────────────────────────────────────
     if (request.method === "GET" && path === "/api/esp32/devices") {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        const res = await fetch(`${alertApi}/api/esp32/status`, { signal: controller.signal });
+        const res = await fetch(`${alertApi}/api/esp32/status`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
         if (!res.ok) return json({ error: "No ESP32 devices found" }, 404, origin);
         const raw = (await res.json()) as Record<string, unknown>;
         const device = {
@@ -108,8 +102,6 @@ export default {
         return json([device], 200, origin);
       } catch {
         return json({ error: "Pi unreachable", offline: true }, 503, origin);
-      } finally {
-        clearTimeout(timer);
       }
     }
 

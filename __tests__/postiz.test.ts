@@ -67,8 +67,8 @@ function mockScheduleFetch(postBody: unknown = [{ id: "p1" }], postStatus = 200)
 }
 
 function lastPostBody(): Record<string, unknown> {
-  const postCall = [...mockFetch.mock.calls]
-    .reverse()
+  const postCall = mockFetch.mock.calls
+    .toReversed()
     .find(([url]) => String(url).includes("/posts"));
   return JSON.parse(postCall![1].body as string) as Record<string, unknown>;
 }

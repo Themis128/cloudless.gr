@@ -16,7 +16,7 @@ describe("plans module", () => {
   });
 
   it("PLAN_KEYS set matches PLAN_LABELS keys", () => {
-    expect([...PLAN_KEYS].sort()).toEqual(Object.keys(PLAN_LABELS).sort());
+    expect([...PLAN_KEYS].toSorted()).toEqual(Object.keys(PLAN_LABELS).sort());
   });
 
   describe("isValidPlan", () => {

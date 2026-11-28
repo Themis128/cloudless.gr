@@ -81,13 +81,10 @@ export default function SocialOpsPage() {
   const queue = data?.publish_queue ?? {};
   const audit = data?.tiktok_audit ?? null;
   const auditStatus = audit ? String(audit.status) : "not_submitted";
-  const byPlatform = (data?.accounts ?? []).reduce<Record<string, SaOpsConsole["accounts"]>>(
-    (acc, a) => {
-      (acc[a.platform] ??= []).push(a);
-      return acc;
-    },
-    {}
-  );
+  const byPlatform = Object.groupBy(data?.accounts ?? [], (a) => a.platform) as Record<
+    string,
+    SaOpsConsole["accounts"]
+  >;
 
   return (
     <div className="space-y-6">

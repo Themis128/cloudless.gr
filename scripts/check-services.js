@@ -81,7 +81,7 @@ async function checkGoogleCalendar() {
     await jwt.authorize();
     await calendar.events.list({ calendarId, maxResults: 1 });
   } catch (e) {
-    throw new Error(`Google Calendar API unreachable (${e.message})`);
+    throw new Error(`Google Calendar API unreachable (${e.message})`, { cause: e });
   }
 }
 

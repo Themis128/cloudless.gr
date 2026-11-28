@@ -136,7 +136,7 @@ export async function runWorkersAiChatLoop(
   const lastUserMsg = initialMessages.filter((m) => m.role === "user").at(-1)?.content ?? "";
   const bookingReply = allowBooking ? tryParseBookingReply(lastUserMsg) : null;
   if (bookingReply) {
-    const prevAssistant = [...initialMessages].reverse().find((m) => m.role === "assistant");
+    const prevAssistant = initialMessages.toReversed().find((m) => m.role === "assistant");
     // Accept any prior assistant message that looks like a slot table:
     // - markdown pipe table (|), tab-separated table, or the prompt phrase
     const prevContent = prevAssistant?.content ?? "";

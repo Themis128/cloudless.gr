@@ -69,11 +69,10 @@ function mapAppFlowyDoc(doc: AppFlowyDoc): DocsListItem {
 }
 
 function groupByCategory(docs: DocsListItem[]): Record<string, DocsListItem[]> {
-  return docs.reduce<Record<string, DocsListItem[]>>((acc, doc) => {
-    const key = doc.category || "General";
-    (acc[key] ??= []).push(doc);
-    return acc;
-  }, {});
+  return Object.groupBy(docs, (doc) => doc.category || "General") as Record<
+    string,
+    DocsListItem[]
+  >;
 }
 
 async function loadPublicDocs(): Promise<DocsListItem[]> {

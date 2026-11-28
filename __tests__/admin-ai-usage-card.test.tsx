@@ -121,11 +121,9 @@ describe("AdminAiUsageCard", () => {
     // React 19 no longer warns on setState after unmount, so instead of a
     // console.error spy this checks that the late promise chain really ran
     // (the body was read, the rejection was handled) and changed nothing.
-    let resolveOk!: (r: Response) => void;
-    let rejectErr!: (e: unknown) => void;
-    fetchWithAuthMock
-      .mockReturnValueOnce(new Promise<Response>((r) => (resolveOk = r)))
-      .mockReturnValueOnce(new Promise<Response>((_, j) => (rejectErr = j)));
+    const okResult = Promise.withResolvers<Response>();
+    const errResult = Promise.withResolvers<Response>();
+    fetchWithAuthMock.mockReturnValueOnce(okResult.promise).mockReturnValueOnce(errResult.promise);
     const late = json(payload(true));
     const jsonSpy = vi.spyOn(late, "json");
     const unhandled = vi.fn();
@@ -136,8 +134,8 @@ describe("AdminAiUsageCard", () => {
     a.unmount();
     b.unmount();
     await act(async () => {
-      resolveOk(late);
-      rejectErr(new Error("late"));
+      okResult.resolve(late);
+      errResult.reject(new Error("late"));
     });
     await act(async () => {});
     await new Promise((r) => setTimeout(r, 0));

@@ -50,21 +50,15 @@ const GSC_TIMEOUT_MS = 10_000;
 async function gscQuery(siteUrl: string, body: object): Promise<Response> {
   const token = await getAccessToken();
   const encoded = encodeURIComponent(siteUrl);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GSC_TIMEOUT_MS);
-  try {
-    return await fetch(`${GSC_API}/${encoded}/searchAnalytics/query`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetch(`${GSC_API}/${encoded}/searchAnalytics/query`, {
+    method: "POST",
+    signal: AbortSignal.timeout(GSC_TIMEOUT_MS),
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 /* ------------------------------------------------------------------ */

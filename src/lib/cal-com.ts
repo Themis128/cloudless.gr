@@ -48,22 +48,16 @@ async function getApiKey(): Promise<string> {
 
 async function calFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const apiKey = await getApiKey();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), CAL_TIMEOUT_MS);
-  try {
-    return await fetch(`${CAL_API}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "cal-api-version": CAL_API_VERSION,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetch(`${CAL_API}${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(CAL_TIMEOUT_MS),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "cal-api-version": CAL_API_VERSION,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
 }
 
 function eventTypeId(): number {

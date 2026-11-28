@@ -186,7 +186,7 @@ describe("client-portals route", () => {
   it("PATCH dispatches every action", async () => {
     // fresh copy per read so mutations don't leak between actions
     m.readPortals.mockImplementation(() =>
-      Promise.resolve([JSON.parse(JSON.stringify(portal))])
+      Promise.resolve([structuredClone(portal)])
     );
     const patch = (body: Record<string, unknown>) =>
       portalsRoute.PATCH(req("/x", { method: "PATCH", body: JSON.stringify({ token: "t1", ...body }) }));

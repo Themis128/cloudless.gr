@@ -1216,13 +1216,10 @@ export async function getDealsByStage(): Promise<Record<string, unknown[]>> {
         const all = await espoListAll<{ stage: string }>("Opportunity", {
           select: "name,amount,stage,closeDate,createdAt,probability",
         });
-        const grouped: Record<string, unknown[]> = {};
-        for (const d of all) {
-          const stage = d.stage ?? "Unknown";
-          if (!grouped[stage]) grouped[stage] = [];
-          grouped[stage].push(d);
-        }
-        return grouped;
+        return Object.groupBy(all, (d) => d.stage ?? "Unknown") as Record<
+          string,
+          unknown[]
+        >;
       } catch {
         return {};
       }

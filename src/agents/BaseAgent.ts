@@ -21,7 +21,7 @@ export abstract class BaseAgent extends EventEmitter {
     try {
       this.config = AgentConfigSchema.parse(config);
     } catch (error) {
-      throw new Error(`Invalid agent configuration: ${JSON.stringify(error)}`);
+      throw new Error(`Invalid agent configuration: ${JSON.stringify(error)}`, { cause: error });
     }
 
     // Explicitly initialize the type-safe Redis client instance mapping hooks

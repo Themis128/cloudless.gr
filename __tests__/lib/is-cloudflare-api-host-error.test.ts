@@ -38,8 +38,7 @@ describe("isCloudflareApiHostError", () => {
 
   it("recurses into error.cause", () => {
     const cause = new Error("EAI_AGAIN");
-    const outer = new Error("Outer error");
-    (outer as Error & { cause: Error }).cause = cause;
+    const outer = new Error("Outer error", { cause });
     expect(isCloudflareApiHostError(outer)).toBe(true);
   });
 

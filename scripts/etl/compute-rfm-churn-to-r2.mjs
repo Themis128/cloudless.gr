@@ -53,7 +53,7 @@ async function loadTransactions() {
 
 function quintile(values, v) {
 	if (values.length === 0) return 1;
-	const sorted = [...values].sort((a, b) => a - b);
+	const sorted = values.toSorted((a, b) => a - b);
 	const idx = sorted.findIndex((x) => x >= v);
 	const pct = idx < 0 ? 1 : idx / sorted.length;
 	return Math.min(5, Math.floor(pct * 5) + 1);
@@ -61,7 +61,7 @@ function quintile(values, v) {
 
 function recencyQuintile(values, v) {
 	if (values.length === 0) return 1;
-	const sorted = [...values].sort((a, b) => a - b);
+	const sorted = values.toSorted((a, b) => a - b);
 	const idx = sorted.findIndex((x) => x >= v);
 	const pct = idx < 0 ? 1 : idx / sorted.length;
 	return 6 - Math.min(5, Math.floor(pct * 5) + 1);

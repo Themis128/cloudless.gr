@@ -215,7 +215,7 @@ export function pickLruCategory(recent: RecentPost[]): Category {
   for (const cat of CATEGORIES) {
     if (!lastSeen.has(cat)) return cat;
   }
-  return [...CATEGORIES].sort((a, b) =>
+  return CATEGORIES.toSorted((a, b) =>
     (lastSeen.get(a) ?? "").localeCompare(lastSeen.get(b) ?? "")
   )[0];
 }

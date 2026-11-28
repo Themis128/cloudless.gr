@@ -26,13 +26,7 @@ const getWebmastersToken = createGoogleAuth("https://www.googleapis.com/auth/web
 const getIndexingToken = createGoogleAuth("https://www.googleapis.com/auth/indexing");
 
 async function fetchWithTimeout(url: string, opts: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    return await fetch(url, { ...opts, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetch(url, { ...opts, signal: AbortSignal.timeout(TIMEOUT_MS) });
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────

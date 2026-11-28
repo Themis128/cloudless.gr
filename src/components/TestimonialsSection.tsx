@@ -17,8 +17,7 @@ export default function TestimonialsSection({
 }) {
   const visible = items
     .filter((item) => item.quote?.trim())
-    .slice()
-    .sort((a, b) => Number(b.featured) - Number(a.featured))
+    .toSorted((a, b) => Number(b.featured) - Number(a.featured))
     .slice(0, 3);
   if (visible.length === 0) return null;
 

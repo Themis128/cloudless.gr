@@ -78,7 +78,9 @@ export async function sendEmail(options: {
       });
     } catch (err) {
       console.error("[email-sender] Cloudflare Email failed:", err);
-      throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`, {
+        cause: err,
+      });
     }
     return;
   }
