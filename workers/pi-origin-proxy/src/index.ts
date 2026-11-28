@@ -349,14 +349,14 @@ export default {
       try {
         upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       } catch (firstErr) {
-        if (!idempotent || Date.now() >= deadline) throw firstErr;
+        if (!idempotent || request.signal.aborted || Date.now() >= deadline) throw firstErr;
         console.error("pi-tunnel-proxy: first attempt failed, retrying", firstErr);
         await sleep(200);
         upstream = await fetchWithTimeout(targetStr, request, headers, deadline);
       }
 
       // Tunnel flaps often return 502 HTML from Cloudflare on the pi-origin hop.
-      if (idempotent && upstream.status === 502 && Date.now() < deadline) {
+      if (idempotent && !request.signal.aborted && upstream.status === 502 && Date.now() < deadline) {
         await sleep(200);
         try {
           const retry = await fetchWithTimeout(targetStr, request, headers, deadline);
